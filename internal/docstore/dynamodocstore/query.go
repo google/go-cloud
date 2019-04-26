@@ -44,7 +44,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 		limit: q.Limit,
 		count: 0, // manually count limit since dynamodb uses "limit" as scan limit before filtering
 	}
-	it.items, it.last, err = it.qr.run(ctx, nil)
+	it.items, it.last, it.asFunc, err = it.qr.run(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			in.FilterExpression = ce.Filter()
 			in.ProjectionExpression = ce.Projection()
 		}
-		return &queryRunner{c: c, scanIn: in}, nil
+		return &queryRunner{c: c, scanIn: in, beforeRun: q.BeforeQuery}, nil
 	}
 
 	// Do a query.
@@ -111,6 +111,7 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			FilterExpression:          ce.Filter(),
 			ProjectionExpression:      ce.Projection(),
 		},
+		beforeRun: q.BeforeQuery,
 	}, nil
 }
 
@@ -247,26 +248,69 @@ func fpEqual(fp []string, s string) bool {
 }
 
 type queryRunner struct {
-	c       *collection
-	scanIn  *dynamodb.ScanInput
-	queryIn *dynamodb.QueryInput
+	c         *collection
+	scanIn    *dynamodb.ScanInput
+	queryIn   *dynamodb.QueryInput
+	beforeRun func(asFunc func(i interface{}) bool) error
 }
 
-func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, err error) {
+func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, asFunc func(i interface{}) bool, err error) {
 	if qr.scanIn != nil {
 		qr.scanIn.ExclusiveStartKey = startAfter
+		if qr.beforeRun != nil {
+			asFunc := func(i interface{}) bool {
+				p, ok := i.(**dynamodb.ScanInput)
+				if !ok {
+					return false
+				}
+				*p = qr.scanIn
+				return true
+			}
+			if err := qr.beforeRun(asFunc); err != nil {
+				return nil, nil, nil, err
+			}
+		}
 		out, err := qr.c.db.ScanWithContext(ctx, qr.scanIn)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
-		return out.Items, out.LastEvaluatedKey, nil
+		return out.Items, out.LastEvaluatedKey,
+			func(i interface{}) bool {
+				p, ok := i.(**dynamodb.ScanOutput)
+				if !ok {
+					return false
+				}
+				*p = out
+				return true
+			}, nil
 	}
 	qr.queryIn.ExclusiveStartKey = startAfter
+	if qr.beforeRun != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**dynamodb.QueryInput)
+			if !ok {
+				return false
+			}
+			*p = qr.queryIn
+			return true
+		}
+		if err := qr.beforeRun(asFunc); err != nil {
+			return nil, nil, nil, err
+		}
+	}
 	out, err := qr.c.db.QueryWithContext(ctx, qr.queryIn)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return out.Items, out.LastEvaluatedKey, nil
+	return out.Items, out.LastEvaluatedKey,
+		func(i interface{}) bool {
+			p, ok := i.(**dynamodb.QueryOutput)
+			if !ok {
+				return false
+			}
+			*p = out
+			return true
+		}, nil
 }
 
 func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
@@ -345,12 +389,13 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 }
 
 type documentIterator struct {
-	qr    *queryRunner
-	items []map[string]*dynamodb.AttributeValue
-	curr  int
-	limit int
-	count int // number of items returned
-	last  map[string]*dynamodb.AttributeValue
+	qr     *queryRunner
+	items  []map[string]*dynamodb.AttributeValue
+	curr   int
+	limit  int
+	count  int // number of items returned
+	last   map[string]*dynamodb.AttributeValue
+	asFunc func(i interface{}) bool
 }
 
 func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error {
@@ -360,7 +405,7 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 	if it.curr >= len(it.items) {
 		// Make a new query request at the end of this page.
 		var err error
-		it.items, it.last, err = it.qr.run(ctx, it.last)
+		it.items, it.last, it.asFunc, err = it.qr.run(ctx, it.last)
 		if err != nil {
 			return err
 		}
@@ -379,6 +424,10 @@ func (it *documentIterator) Stop() {
 	it.last = nil
 }
 
+func (it *documentIterator) As(i interface{}) bool {
+	return it.asFunc(i)
+}
+
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	qr, err := c.planQuery(q)
 	if err != nil {
@@ -394,5 +443,5 @@ func (qr *queryRunner) queryPlan() string {
 	if qr.queryIn.IndexName != nil {
 		return fmt.Sprintf("Index: %q", *qr.queryIn.IndexName)
 	}
-	return ""
+	return "Table"
 }

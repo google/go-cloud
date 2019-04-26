@@ -151,6 +151,12 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	// but that would require copying all the messages.
 	for i, m := range ms {
 		m.AckID = t.nextAckID + i
+
+		if m.BeforeSend != nil {
+			if err := m.BeforeSend(func(interface{}) bool { return false }); err != nil {
+				return err
+			}
+		}
 	}
 	t.nextAckID += len(ms)
 	for _, s := range t.subs {
@@ -311,6 +317,9 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 	}
 	return nil
 }
+
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
 
 // SendNacks implements driver.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {

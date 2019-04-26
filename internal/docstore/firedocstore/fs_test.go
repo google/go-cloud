@@ -30,10 +30,10 @@ import (
 
 const (
 	// projectID is the project ID that was used during the last test run using --record.
-	projectID      = "go-cloud-test-216917"
-	collectionName = "docstore-test"
-	keyName        = "_id"
-	endPoint       = "firestore.googleapis.com:443"
+	projectID       = "go-cloud-test-216917"
+	collectionName1 = "docstore-test-1"
+	collectionName2 = "docstore-test-2"
+	endPoint        = "firestore.googleapis.com:443"
 )
 
 type harness struct {
@@ -52,7 +52,13 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName, keyName, nil)
+	return newCollection(h.client, projectID, collectionName1, drivertest.KeyField, nil)
+}
+
+func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
+	return newCollection(h.client, projectID, collectionName2, "", func(doc docstore.Document) string {
+		return drivertest.HighScoreKey(doc).(string)
+	})
 }
 
 func (h *harness) Close() {
@@ -106,7 +112,7 @@ func TestConformance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc})
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc}, nil)
 }
 
 // Firedocstore-specific tests.

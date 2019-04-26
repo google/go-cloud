@@ -183,6 +183,8 @@ func toBigFloat(x reflect.Value) *big.Float {
 
 func (it *docIterator) Stop() { it.cancel() }
 
+func (it *docIterator) As(i interface{}) bool { return false }
+
 // Converts the query to a Firestore proto. Also returns filters that need to be
 // evaluated on the client.
 func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []driver.Filter, error) {

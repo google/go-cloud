@@ -27,7 +27,6 @@ import (
 )
 
 func main() {
-	srv := server.New(nil)
 	r := mux.NewRouter()
 	r.HandleFunc("/", handle)
 
@@ -35,8 +34,9 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+	srv := server.New(r, nil)
 	log.Printf("Listening on port %s", port)
-	log.Fatal(srv.ListenAndServe(fmt.Sprintf(":%s", port), r))
+	log.Fatal(srv.ListenAndServe(fmt.Sprintf(":%s", port)))
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {

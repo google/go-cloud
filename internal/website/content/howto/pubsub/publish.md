@@ -369,6 +369,65 @@ defer topic.Shutdown(ctx)
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenTopic
 
+## Kafka {#kafka}
+
+The Go CDK can publish to a [Kafka][] cluster. A Kafka URL only includes the
+topic name. The brokers in the Kafka cluster are discovered from the
+`KAFKA_BROKERS` environment variable (which is a comma-delimited list of
+hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
+
+```go
+import (
+    "gocloud.dev/pubsub"
+    _ "gocloud.dev/pubsub/kafkapubsub"
+)
+
+// ...
+
+topic, err := pubsub.OpenTopic(ctx, "kafka://mytopic")
+if err != nil {
+    return err
+}
+defer topic.Shutdown(ctx)
+```
+
+[Kafka]: https://kafka.apache.org/
+
+### Kafka Constructor {#kafka-ctor}
+
+The [`kafkapubsub.OpenTopic`][] constructor opens a Kafka topic to publish
+messages to. Depending on your Kafka cluster configuration (see
+`auto.create.topics.enable`), you may need to provision the topic beforehand.
+
+In addition to the list of brokers, you'll need a [`*sarama.Config`][], which
+exposes many knobs that can affect performance and semantics; review and set
+them carefully. [`kafkapubsub.MinimalConfig`][] provides a minimal config to get
+you started.
+
+```go
+import (
+    "gocloud.dev/pubsub/kafkapubsub"
+)
+
+// ...
+
+// The set of brokers in the Kafka cluster.
+addrs := []string{"1.2.3.4:9092"}
+// The Kafka client configuration to use.
+config := kafkapubsub.MinimalConfig()
+
+// Construct a *pubsub.Topic to send messages to "my-topic".
+topic, err := kafkapubsub.OpenTopic(addrs, config, "my-topic", nil)
+if err != nil {
+  return err
+}
+defer topic.Shutdown(ctx)
+```
+
+[`*sarama.Config`]: https://godoc.org/github.com/Shopify/sarama#Config
+[`kafkapubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenTopic
+[`kafkapubsub.MinimalConfig`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig
+
 ## In-Memory {#mem}
 
 The Go CDK includes an in-memory Pub/Sub provider useful for local testing.

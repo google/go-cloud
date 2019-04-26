@@ -1,0 +1,219 @@
+---
+version: 1
+interactions:
+- request:
+    body: "--d438767e09cb038bb48032e680a4b45b57396989db1a085ea8b2d908869a\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"precondition-key\"}\n\r\n--d438767e09cb038bb48032e680a4b45b57396989db1a085ea8b2d908869a\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nhello world\r\n--d438767e09cb038bb48032e680a4b45b57396989db1a085ea8b2d908869a--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=d438767e09cb038bb48032e680a4b45b57396989db1a085ea8b2d908869a
+      User-Agent:
+      - google-api-go-client/0.5 go-cloud/blob/0.1.0
+      X-Goog-Api-Client:
+      - gl-go/1.12.0 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&ifGenerationMatch=-999&prettyPrint=false&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: '{"error":{"errors":[{"domain":"global","reason":"conditionNotMet","message":"Precondition
+      Failed","locationType":"header","location":"If-Match","debugInfo":"com.google.net.rpc3.RpcException:
+      cloud.bigstore.ResponseCode.ErrorCode::INCORRECT_GENERATION_SPECIFIED: Expected
+      generation to match -999, but actual value was 1556223607374273.\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:144)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:204)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:44)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handleRequestReceived(RequestHandler.java:307)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:256)\n\tat
+      com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat
+      com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:202)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
+      com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
+      com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:203)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
+      com.google.common.context.ContextRunnable.run(ContextRunnable.java:35)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
+      java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
+      Expected generation to match -999, but actual value was 1556223607374273.\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:291)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:299)\n\t...
+      17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=PRECONDITION_FAILED,
+      category=USER_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException:
+      cloud.bigstore.ResponseCode.ErrorCode::INCORRECT_GENERATION_SPECIFIED: Expected
+      generation to match -999, but actual value was 1556223607374273.\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:144)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:204)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:44)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handleRequestReceived(RequestHandler.java:307)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:256)\n\tat
+      com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat
+      com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:202)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
+      com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
+      com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:203)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
+      com.google.common.context.ContextRunnable.run(ContextRunnable.java:35)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
+      java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
+      Expected generation to match -999, but actual value was 1556223607374273.\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:291)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:299)\n\t...
+      17 more\n, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=preconditionFailed,
+      internalReason=Reason{arguments={}, cause=null, code=gdata.CoreErrorDomain.CONDITION_NOT_MET,
+      createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::INCORRECT_GENERATION_SPECIFIED:
+      Expected generation to match -999, but actual value was 1556223607374273.\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:144)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:204)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:44)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handleRequestReceived(RequestHandler.java:307)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:256)\n\tat
+      com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat
+      com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:202)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
+      com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
+      com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:203)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
+      com.google.common.context.ContextRunnable.run(ContextRunnable.java:35)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
+      java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
+      Expected generation to match -999, but actual value was 1556223607374273.\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:291)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:299)\n\t...
+      17 more\n, errorProtoCode=CONDITION_NOT_MET, errorProtoDomain=gdata.CoreErrorDomain,
+      filteredMessage=null, location=null, message=null, unnamedArguments=[]}, location=headers.If-Match,
+      message=Precondition Failed, reason=conditionNotMet, rpcCode=412} Precondition
+      Failed: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::INCORRECT_GENERATION_SPECIFIED:
+      Expected generation to match -999, but actual value was 1556223607374273.\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:144)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:204)\n\tat
+      com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:44)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handleRequestReceived(RequestHandler.java:307)\n\tat
+      com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:256)\n\tat
+      com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat
+      com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:202)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
+      com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
+      com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:203)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
+      com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
+      com.google.common.context.ContextRunnable.run(ContextRunnable.java:35)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
+      java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
+      Expected generation to match -999, but actual value was 1556223607374273.\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:291)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:299)\n\t...
+      17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:259)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:239)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:453)\n\tat
+      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:802)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:460)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:204)\n\tat
+      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:319)\n\tat
+      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:311)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:457)\n\tat
+      com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"}],"code":412,"message":"Precondition
+      Failed"}}'
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="46,44,43,39"
+      Content-Length:
+      - "12103"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 25 Apr 2019 20:20:59 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - agent_rejected
+      X-Guploader-Upload-Result:
+      - agent_rejected
+      X-Guploader-Uploadid:
+      - AEnB2UoDmiCJTtJ_hgniEnzp46LEvdbeRflQIR-J0m80Q29sA_r9bYPUri8hdijf_ySdmf0lyAk3_cmF3dovFATe3yXivzkCPQ
+    status: 412 Precondition Failed
+    code: 412
+    duration: ""
+- request:
+    body: "--a06e1c9d5bc28c9d527cbc660eadb26af2d27d3b90e2a3a7ac63cf3e98a1\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"precondition-key\"}\n\r\n--a06e1c9d5bc28c9d527cbc660eadb26af2d27d3b90e2a3a7ac63cf3e98a1\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nhello world\r\n--a06e1c9d5bc28c9d527cbc660eadb26af2d27d3b90e2a3a7ac63cf3e98a1--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=a06e1c9d5bc28c9d527cbc660eadb26af2d27d3b90e2a3a7ac63cf3e98a1
+      User-Agent:
+      - google-api-go-client/0.5 go-cloud/blob/0.1.0
+      X-Goog-Api-Client:
+      - gl-go/1.12.0 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&ifGenerationNotMatch=-999&prettyPrint=false&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: '{"kind":"storage#object","id":"go-cloud-blob-test-bucket/precondition-key/1556223659419926","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/precondition-key","name":"precondition-key","bucket":"go-cloud-blob-test-bucket","generation":"1556223659419926","metageneration":"1","contentType":"text/plain;
+      charset=utf-8","timeCreated":"2019-04-25T20:20:59.419Z","updated":"2019-04-25T20:20:59.419Z","storageClass":"REGIONAL","timeStorageClassUpdated":"2019-04-25T20:20:59.419Z","size":"11","md5Hash":"XrY7u+Ae7tCTyyK7j1rNww==","mediaLink":"https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/precondition-key?generation=1556223659419926&alt=media","acl":[{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/precondition-key/1556223659419926/project-owners-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/precondition-key/acl/project-owners-892942638129","bucket":"go-cloud-blob-test-bucket","object":"precondition-key","generation":"1556223659419926","entity":"project-owners-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"owners"},"etag":"CJbSpPOI7OECEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/precondition-key/1556223659419926/project-editors-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/precondition-key/acl/project-editors-892942638129","bucket":"go-cloud-blob-test-bucket","object":"precondition-key","generation":"1556223659419926","entity":"project-editors-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"editors"},"etag":"CJbSpPOI7OECEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/precondition-key/1556223659419926/project-viewers-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/precondition-key/acl/project-viewers-892942638129","bucket":"go-cloud-blob-test-bucket","object":"precondition-key","generation":"1556223659419926","entity":"project-viewers-892942638129","role":"READER","projectTeam":{"projectNumber":"892942638129","team":"viewers"},"etag":"CJbSpPOI7OECEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/precondition-key/1556223659419926/user-rvangent@google.com","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/precondition-key/acl/user-rvangent@google.com","bucket":"go-cloud-blob-test-bucket","object":"precondition-key","generation":"1556223659419926","entity":"user-rvangent@google.com","role":"OWNER","email":"rvangent@google.com","etag":"CJbSpPOI7OECEAE="}],"owner":{"entity":"user-rvangent@google.com"},"crc32c":"yZRlqg==","etag":"CJbSpPOI7OECEAE="}'
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="46,44,43,39"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "2783"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 25 Apr 2019 20:20:59 GMT
+      Etag:
+      - CJbSpPOI7OECEAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - success
+      X-Guploader-Upload-Result:
+      - success
+      X-Guploader-Uploadid:
+      - AEnB2UpN0fnRV7h3soeauF7bSsCJl6C6GpVXXQ_qP1qWUQaXaxjqLArS-QKdpAy2DUJyGhD1ryQzMuUESyGstta7gbJ5h1khjA
+    status: 200 OK
+    code: 200
+    duration: ""

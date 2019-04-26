@@ -39,6 +39,7 @@
 // gcppubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
+//  - Message.BeforeSend: *pb.PubsubMessage
 //  - Message: *pb.PubsubMessage
 //  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
@@ -244,7 +245,20 @@ func openTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	var ms []*pb.PubsubMessage
 	for _, dm := range dms {
-		ms = append(ms, &pb.PubsubMessage{Data: dm.Body, Attributes: dm.Metadata})
+		psm := &pb.PubsubMessage{Data: dm.Body, Attributes: dm.Metadata}
+		if dm.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**pb.PubsubMessage); ok {
+					*p = psm
+					return true
+				}
+				return false
+			}
+			if err := dm.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		ms = append(ms, psm)
 	}
 	req := &pb.PublishRequest{Topic: t.path, Messages: ms}
 	if _, err := t.client.Publish(ctx, req); err != nil {
@@ -376,6 +390,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	}
 	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{Subscription: s.path, AckIds: ids2})
 }
+
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
