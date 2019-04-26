@@ -30,6 +30,7 @@
 // As
 //
 // firedocstore exposes the following types for As:
+// - Collection.As: *firestore.Client
 // - Query.BeforeQuery: *firestore.RunQueryRequest
 // - DocumentIterator: firestore.Firestore_RunQueryClient
 package firedocstore
@@ -672,4 +673,13 @@ func withResourceHeader(ctx context.Context, resource string) context.Context {
 	md = md.Copy()
 	md[resourcePrefixHeader] = []string{resource}
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+func (c *collection) As(i interface{}) bool {
+	p, ok := i.(**vkit.Client)
+	if !ok {
+		return false
+	}
+	*p = c.client
+	return true
 }
