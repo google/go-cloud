@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -190,6 +191,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 	t.Run("TestCanceledWrite", func(t *testing.T) {
 		testCanceledWrite(t, newHarness)
+	})
+	t.Run("TestConcurrentWriteAndRead", func(t *testing.T) {
+		testConcurrentWriteAndRead(t, newHarness)
 	})
 	t.Run("TestMetadata", func(t *testing.T) {
 		testMetadata(t, newHarness)
@@ -1819,6 +1823,72 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete got %v, want NotFound error", err)
 		}
 	})
+}
+
+// testConcurrentWriteAndRead tests that concurrent writing to multiple blob
+// keys and concurrent reading from multiple blob keys works.
+func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blob.NewBucket(drv)
+	defer b.Close()
+
+	// Prepare data. Each of the numKeys blobs has dataSize bytes, with each byte
+	// set to the numeric key index. For example, the blob at "key0" consists of
+	// all dataSize bytes set to 0.
+	const numKeys = 20
+	const dataSize = 4 * 1024
+	keyData := make(map[int][]byte)
+	for k := 0; k < numKeys; k++ {
+		data := make([]byte, dataSize)
+		for i := 0; i < dataSize; i++ {
+			data[i] = byte(k)
+		}
+		keyData[k] = data
+	}
+
+	blobName := func(k int) string {
+		return fmt.Sprintf("key%d", k)
+	}
+
+	var wg sync.WaitGroup
+
+	// Write all blobs concurrently.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			if err := b.WriteAll(ctx, blobName(key), keyData[key], nil); err != nil {
+				t.Fatal(err)
+			}
+			wg.Done()
+		}(k)
+		defer b.Delete(ctx, blobName(k))
+	}
+	wg.Wait()
+
+	// Read all blobs concurrently and verify that they contain the expected data.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			buf, err := b.ReadAll(ctx, blobName(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(buf, keyData[key]) {
+				t.Errorf("read data mismatch for key %d", key)
+			}
+			wg.Done()
+		}(k)
+	}
+	wg.Wait()
 }
 
 // testKeys tests a variety of weird keys.
