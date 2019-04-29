@@ -14,10 +14,9 @@
 
 package rabbitpubsub
 
-// To run these tests against a real RabbitMQ server, first run:
-//     docker run -d --hostname my-rabbit --name rabbit -p 5672:5672 rabbitmq:3
+// To run these tests against a real RabbitMQ server, first run localrabbit.sh.
 // Then wait a few seconds for the server to be ready.
-// If no server is running, the tests will use a fake (see fake_tset.go).
+// If no server is running, the tests will use a fake (see fake_test.go).
 
 import (
 	"context"
