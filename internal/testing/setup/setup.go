@@ -292,6 +292,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 		rec.RemoveQueryParams("se", "sig")
 		rec.RemoveQueryParams("X-Ms-Date")
 		rec.ClearHeaders("X-Ms-Date")
+		rec.ClearHeaders("User-Agent") // includes the full Go version
 		client, err = rec.Client(ctx, option.WithoutAuthentication())
 		if err != nil {
 			t.Fatal(err)

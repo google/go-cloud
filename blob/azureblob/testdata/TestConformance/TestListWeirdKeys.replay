@@ -4,7 +4,8 @@
   "Converter": {
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
-      "^X-Ms-Date$"
+      "^X-Ms-Date$",
+      "^User-Agent$"
     ],
     "RemoveRequestHeaders": [
       "^Authorization$",
@@ -34,7 +35,7 @@
   },
   "Entries": [
     {
-      "ID": "5fe26df95f967517",
+      "ID": "0649fa030bbe3467",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket?comp=list\u0026delimiter=\u0026maxresults=1000\u0026prefix=list-weirdkeys-\u0026restype=container",
@@ -43,7 +44,7 @@
             "gzip"
           ],
           "User-Agent": [
-            "go-cloud/blob/0.1.0 Azure-Storage/0.6 (go1.12; linux)"
+            "CLEARED"
           ],
           "X-Ms-Date": [
             "CLEARED"
@@ -65,13 +66,13 @@
             "application/xml"
           ],
           "Date": [
-            "Mon, 29 Apr 2019 21:39:19 GMT"
+            "Mon, 29 Apr 2019 21:50:21 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Request-Id": [
-            "eee5d573-a01e-002d-6ed4-fe1674000000"
+            "ce968853-801e-00df-2fd5-fec4e0000000"
           ],
           "X-Ms-Version": [
             "2018-11-09"
@@ -81,7 +82,7 @@
       }
     },
     {
-      "ID": "895b8812e5e45042",
+      "ID": "dd5f238a59e513b9",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket?comp=list\u0026delimiter=\u0026maxresults=1000\u0026prefix=list-weirdkeys-\u0026restype=container",
@@ -90,7 +91,7 @@
             "gzip"
           ],
           "User-Agent": [
-            "go-cloud/blob/0.1.0 Azure-Storage/0.6 (go1.12; linux)"
+            "CLEARED"
           ],
           "X-Ms-Date": [
             "CLEARED"
@@ -112,13 +113,13 @@
             "application/xml"
           ],
           "Date": [
-            "Mon, 29 Apr 2019 21:39:19 GMT"
+            "Mon, 29 Apr 2019 21:50:21 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Request-Id": [
-            "eee5d590-a01e-002d-04d4-fe1674000000"
+            "ce968859-801e-00df-33d5-fec4e0000000"
           ],
           "X-Ms-Version": [
             "2018-11-09"

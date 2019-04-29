@@ -4,7 +4,8 @@
   "Converter": {
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
-      "^X-Ms-Date$"
+      "^X-Ms-Date$",
+      "^User-Agent$"
     ],
     "RemoveRequestHeaders": [
       "^Authorization$",
@@ -34,7 +35,7 @@
   },
   "Entries": [
     {
-      "ID": "afe0889758483667",
+      "ID": "47a0ba02ac93a0c9",
       "Request": {
         "Method": "DELETE",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/does-not-exist",
@@ -43,7 +44,7 @@
             "gzip"
           ],
           "User-Agent": [
-            "go-cloud/blob/0.1.0 Azure-Storage/0.6 (go1.12; linux)"
+            "CLEARED"
           ],
           "X-Ms-Date": [
             "CLEARED"
@@ -71,7 +72,7 @@
             "application/xml"
           ],
           "Date": [
-            "Mon, 29 Apr 2019 21:39:47 GMT"
+            "Mon, 29 Apr 2019 21:50:50 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -80,13 +81,13 @@
             "BlobNotFound"
           ],
           "X-Ms-Request-Id": [
-            "5486d2b6-001e-006f-33d4-fe3d60000000"
+            "07ae3ff4-401e-0068-0cd5-fecbe5000000"
           ],
           "X-Ms-Version": [
             "2018-11-09"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjU0ODZkMmI2LTAwMWUtMDA2Zi0zM2Q0LWZlM2Q2MDAwMDAwMApUaW1lOjIwMTktMDQtMjlUMjE6Mzk6NDcuMzI4MTIzOFo8L01lc3NhZ2U+PC9FcnJvcj4="
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjA3YWUzZmY0LTQwMWUtMDA2OC0wY2Q1LWZlY2JlNTAwMDAwMApUaW1lOjIwMTktMDQtMjlUMjE6NTA6NTAuODY3Nzk4OFo8L01lc3NhZ2U+PC9FcnJvcj4="
       }
     }
   ]
