@@ -195,33 +195,6 @@ func TestOpenCollectionURL(t *testing.T) {
 	}
 }
 
-func TestIDFieldNodup(t *testing.T) {
-	must := func(err error) {
-		t.Helper()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	ctx := context.Background()
-	client := newTestClient(t)
-	defer func() { client.Disconnect(ctx) }()
-	db := client.Database(dbName)
-	dc, err := newCollection(db.Collection("idfield"), "Name", nil, &Options{LowercaseFields: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	coll := docstore.NewCollection(dc)
-
-	must(coll.Put(ctx, map[string]interface{}{"name": 1}))
-	type S struct {
-		Name int
-		Val  string
-	}
-	must(coll.Put(ctx, &S{Name: 2, Val: "X"}))
-
-}
-
 func TestLowercaseFields(t *testing.T) {
 	// Verify that the LowercaseFields option works in all cases.
 	must := func(err error) {
