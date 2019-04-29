@@ -19,8 +19,8 @@
 set -euo pipefail
 
 echo "Starting MongoDB..."
-docker rm -f mongo 2> /dev/null || :
-docker run -d --name mongo  -p 27017:27017 mongo:4
-echo "...done"
+docker rm -f mongo &> /dev/null || :
+docker run -d --name mongo  -p 27017:27017 mongo:4 &> /dev/null
+echo "...done. Run \"docker rm -f mongo\" to clean up the container."
 echo
 

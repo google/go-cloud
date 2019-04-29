@@ -19,7 +19,7 @@
 set -euo pipefail
 
 echo "Starting RabbitMQ..."
-docker rm -f rabbit 2> /dev/null || :
-docker run -d --name rabbit -p 5672:5672 rabbitmq:3
-echo "...done"
+docker rm -f rabbit &> /dev/null || :
+docker run -d --name rabbit -p 5672:5672 rabbitmq:3 &> /dev/null
+echo "...done. Run \"docker rm -f rabbit\" to clean up the container."
 echo
