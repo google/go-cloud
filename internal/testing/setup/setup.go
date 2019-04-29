@@ -246,51 +246,6 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 	return conn, done
 }
 
-// NewAzureTestPipeline creates a new connection for testing against Azure Blob.
-func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
-	mode := recorder.ModeReplaying
-	if *Record {
-		mode = recorder.ModeRecording
-	}
-
-	azMatchers := &replay.ProviderMatcher{
-		// Note: We can't match the User-Agent header because Azure includes the
-		// "go" version in it.
-		// Headers: []string{"User-Agent"},
-		URLScrubbers: []*regexp.Regexp{
-			regexp.MustCompile(`se=[^?]*`),
-			regexp.MustCompile(`sig=[^?]*`),
-		},
-	}
-	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
-	f := []pipeline.Factory{
-		// Sets User-Agent for recorder.
-		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
-			Value: useragent.AzureUserAgentPrefix(api),
-		}),
-		credential,
-		pipeline.MethodFactoryMarker(),
-	}
-
-	httpClient := &http.Client{Transport: r}
-	// Create a pipeline that uses httpClient to make requests.
-	p := pipeline.NewPipeline(f, pipeline.Options{
-		HTTPSender: pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
-			return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
-				r, err := httpClient.Do(request.WithContext(ctx))
-				if err != nil {
-					err = pipeline.NewError(err, "HTTP request failed")
-				}
-				return pipeline.NewHTTPResponse(r), err
-			}
-		}),
-	})
-	return p, done, httpClient
-}
-
 type myPolicy struct {
 	node pipeline.Policy
 }
@@ -311,7 +266,8 @@ func (f myPolicyFactory) New(node pipeline.Policy, opts *pipeline.PolicyOptions)
 	return &myPolicy{node: node}
 }
 
-func NewAzureTestPipeline2(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
+// NewAzureTestPipeline creates a new connection for testing against Azure Blob.
+func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	var client *http.Client

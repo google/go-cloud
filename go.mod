@@ -99,5 +99,3 @@ require (
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	pack.ag/amqp v0.11.0
 )
-
-

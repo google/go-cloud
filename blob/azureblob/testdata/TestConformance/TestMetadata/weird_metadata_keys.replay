@@ -1,0 +1,369 @@
+{
+  "Initial": null,
+  "Version": "0.2",
+  "Converter": {
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Ms-Date$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": null,
+    "RemoveParams": [
+      "^se$",
+      "^sig$",
+      "^X-Ms-Date$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "63ffaa19460d79ce",
+      "Request": {
+        "Method": "PUT",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "go-cloud/blob/0.1.0 Azure-Storage/0.6 (go1.12; linux)"
+          ],
+          "X-Ms-Blob-Cache-Control": [
+            ""
+          ],
+          "X-Ms-Blob-Content-Disposition": [
+            ""
+          ],
+          "X-Ms-Blob-Content-Encoding": [
+            ""
+          ],
+          "X-Ms-Blob-Content-Language": [
+            ""
+          ],
+          "X-Ms-Blob-Content-Md5": [
+            "XUFAKrxLKna5cZ2REBfFkg=="
+          ],
+          "X-Ms-Blob-Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "X-Ms-Blob-Type": [
+            "BlockBlob"
+          ],
+          "X-Ms-Date": [
+            "CLEARED"
+          ],
+          "X-Ms-Meta-Foo__0x20__bar__0x20__baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Ms-Meta-Foo__0x22__bar__0x22__baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Ms-Meta-Foo__0x2f____0x2f__bar__0x2f____0x2f____0x2f__baz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Ms-Meta-Foo__0x2f__bar__0x2f__baz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Ms-Meta-Foo__0x5c__bar__0x5c__baz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Ms-Meta-__0x0____0x1____0x2____0x3____0x4____0x5____0x6____0x7____0x8____0x9____0xa____0xb____0xc____0xd____0xe____0xf__": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Ms-Meta-__0x10____0x11____0x12____0x13____0x14____0x15____0x16____0x17____0x18____0x19____0x1a____0x1b____0x1c____0x1d____0x1e____0x1f__": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Ms-Meta-__0x20____0x21____0x22____0x23____0x24____0x25____0x26____0x27____0x28____0x29____0x2a____0x2b____0x2c____0x2d____0x2e____0x2f__": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Ms-Meta-__0x263a____0x263a____0x263a__": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Ms-Meta-__0x2e____0x2e____0x2f__foo__0x2f____0x2e____0x2e____0x2f__bar__0x2f____0x2e____0x2e____0x2f____0x2e____0x2e____0x2f__baz__0x2e____0x2e____0x2f__": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x2e____0x2e____0x5c__bar__0x5c____0x2e____0x2e____0x5c____0x2e____0x2e____0x5c__baz__0x2e____0x2e____0x5c__": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x5c__bar__0x5c____0x5c____0x5c__baz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Ms-Meta-__0x31__2345": [
+            "12345"
+          ],
+          "X-Ms-Meta-__0x3a____0x3b____0x3c____0x3d____0x3e____0x3f__": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Ms-Meta-__0x40__": [
+            "@"
+          ],
+          "X-Ms-Meta-__0x5b____0x5c____0x5d____0x5e___": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Ms-Meta-__0x60__": [
+            "%60"
+          ],
+          "X-Ms-Meta-__0x7b____0x7c____0x7d____0x7e____0x7f__": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Ms-Version": [
+            "2018-11-09"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 201,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Content-Md5": [
+            "XUFAKrxLKna5cZ2REBfFkg=="
+          ],
+          "Date": [
+            "Mon, 29 Apr 2019 20:49:47 GMT"
+          ],
+          "Etag": [
+            "\"0x8D6CCE438381D64\""
+          ],
+          "Last-Modified": [
+            "Mon, 29 Apr 2019 20:49:48 GMT"
+          ],
+          "Server": [
+            "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
+          ],
+          "X-Ms-Request-Id": [
+            "78a14d09-001e-0124-67cd-fe4aaf000000"
+          ],
+          "X-Ms-Request-Server-Encrypted": [
+            "true"
+          ],
+          "X-Ms-Version": [
+            "2018-11-09"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "ed7f68e873d9e70e",
+      "Request": {
+        "Method": "HEAD",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata",
+        "Header": {
+          "User-Agent": [
+            "go-cloud/blob/0.1.0 Azure-Storage/0.6 (go1.12; linux)"
+          ],
+          "X-Ms-Date": [
+            "CLEARED"
+          ],
+          "X-Ms-Version": [
+            "2018-11-09"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": null
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Disposition": [
+            ""
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Md5": [
+            "XUFAKrxLKna5cZ2REBfFkg=="
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Mon, 29 Apr 2019 20:49:47 GMT"
+          ],
+          "Etag": [
+            "\"0x8D6CCE438381D64\""
+          ],
+          "Last-Modified": [
+            "Mon, 29 Apr 2019 20:49:48 GMT"
+          ],
+          "Server": [
+            "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
+          ],
+          "X-Ms-Access-Tier": [
+            "Hot"
+          ],
+          "X-Ms-Access-Tier-Inferred": [
+            "true"
+          ],
+          "X-Ms-Blob-Type": [
+            "BlockBlob"
+          ],
+          "X-Ms-Creation-Time": [
+            "Mon, 29 Apr 2019 20:49:48 GMT"
+          ],
+          "X-Ms-Lease-State": [
+            "available"
+          ],
+          "X-Ms-Lease-Status": [
+            "unlocked"
+          ],
+          "X-Ms-Meta-Foo__0x20__bar__0x20__baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Ms-Meta-Foo__0x22__bar__0x22__baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Ms-Meta-Foo__0x2f____0x2f__bar__0x2f____0x2f____0x2f__baz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Ms-Meta-Foo__0x2f__bar__0x2f__baz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Ms-Meta-Foo__0x5c__bar__0x5c__baz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Ms-Meta-__0x0____0x1____0x2____0x3____0x4____0x5____0x6____0x7____0x8____0x9____0xa____0xb____0xc____0xd____0xe____0xf__": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Ms-Meta-__0x10____0x11____0x12____0x13____0x14____0x15____0x16____0x17____0x18____0x19____0x1a____0x1b____0x1c____0x1d____0x1e____0x1f__": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Ms-Meta-__0x20____0x21____0x22____0x23____0x24____0x25____0x26____0x27____0x28____0x29____0x2a____0x2b____0x2c____0x2d____0x2e____0x2f__": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Ms-Meta-__0x263a____0x263a____0x263a__": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Ms-Meta-__0x2e____0x2e____0x2f__foo__0x2f____0x2e____0x2e____0x2f__bar__0x2f____0x2e____0x2e____0x2f____0x2e____0x2e____0x2f__baz__0x2e____0x2e____0x2f__": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x2e____0x2e____0x5c__bar__0x5c____0x2e____0x2e____0x5c____0x2e____0x2e____0x5c__baz__0x2e____0x2e____0x5c__": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x5c__bar__0x5c____0x5c____0x5c__baz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Ms-Meta-__0x31__2345": [
+            "12345"
+          ],
+          "X-Ms-Meta-__0x3a____0x3b____0x3c____0x3d____0x3e____0x3f__": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Ms-Meta-__0x40__": [
+            "@"
+          ],
+          "X-Ms-Meta-__0x5b____0x5c____0x5d____0x5e___": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Ms-Meta-__0x60__": [
+            "%60"
+          ],
+          "X-Ms-Meta-__0x7b____0x7c____0x7d____0x7e____0x7f__": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Ms-Request-Id": [
+            "78a14d12-001e-0124-6fcd-fe4aaf000000"
+          ],
+          "X-Ms-Server-Encrypted": [
+            "true"
+          ],
+          "X-Ms-Tag-Count": [
+            "0"
+          ],
+          "X-Ms-Version": [
+            "2018-11-09"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "a1d214f452c4543f",
+      "Request": {
+        "Method": "DELETE",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "go-cloud/blob/0.1.0 Azure-Storage/0.6 (go1.12; linux)"
+          ],
+          "X-Ms-Date": [
+            "CLEARED"
+          ],
+          "X-Ms-Delete-Snapshots": [
+            "include"
+          ],
+          "X-Ms-Version": [
+            "2018-11-09"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": null
+      },
+      "Response": {
+        "StatusCode": 202,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 29 Apr 2019 20:49:47 GMT"
+          ],
+          "Server": [
+            "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
+          ],
+          "X-Ms-Delete-Type-Permanent": [
+            "true"
+          ],
+          "X-Ms-Request-Id": [
+            "78a14d23-001e-0124-7fcd-fe4aaf000000"
+          ],
+          "X-Ms-Version": [
+            "2018-11-09"
+          ]
+        },
+        "Body": ""
+      }
+    }
+  ]
+}

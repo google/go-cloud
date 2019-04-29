@@ -83,7 +83,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, done, httpClient := setup.NewAzureTestPipeline2(ctx, t, "blob", credential, string(accountName))
+	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, "blob", credential, string(accountName))
 	return &harness{pipeline: p, credential: credential, closer: done, httpClient: httpClient}, nil
 }
 
