@@ -105,7 +105,12 @@ const gatherLoadMode packages.LoadMode = packages.NeedName |
 	packages.NeedFiles |
 	packages.NeedTypes |
 	packages.NeedSyntax |
-	packages.NeedTypesInfo
+	packages.NeedTypesInfo |
+	packages.NeedImports |
+	// TODO(light): We really only need name from deps, but there's no way to
+	// specify that in the current go/packages API. This sadly makes this program
+	// 10x slower. Reported as https://github.com/golang/go/issues/31699.
+	packages.NeedDeps
 
 // signifierCommentPrefix is the start of the comment used to signify whether
 // the example should be included in the output.

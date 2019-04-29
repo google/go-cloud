@@ -53,12 +53,12 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, rt, done := setup.NewAWSSession(t, region)
+	sess, rt, done := setup.NewAWSSession2(ctx, t, region)
 	return &harness{session: sess, opts: nil, rt: rt, closer: done}, nil
 }
 
 func newHarnessUsingLegacyList(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, rt, done := setup.NewAWSSession(t, region)
+	sess, rt, done := setup.NewAWSSession2(ctx, t, region)
 	return &harness{session: sess, opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }
 
@@ -226,7 +226,7 @@ func TestOpenBucket(t *testing.T) {
 			var sess client.ConfigProvider
 			if !test.nilSession {
 				var done func()
-				sess, _, done = setup.NewAWSSession(t, region)
+				sess, _, done = setup.NewAWSSession2(ctx, t, region)
 				defer done()
 			}
 
