@@ -58,8 +58,6 @@ func (s *fakeSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 	return s.msgs[:n], nil
 }
 
-func (s *fakeSub) AckFunc() func() { return func() {} }
-
 // inMiddleThird returns true if this test is in the middle third of the running
 // time; used for burstiness tests.
 func (s *fakeSub) inMiddleThird() bool {

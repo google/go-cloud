@@ -122,7 +122,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 
 	sopts := SubscriptionOptions{}
 	if h.autodelete {
-		sopts.AckFuncForReceiveAndDelete = func() {}
+		sopts.ReceiveAndDelete = true
 	}
 	ds, err = openSubscription(ctx, h.ns, t.sbTopic, sbSub, &sopts)
 	if err != nil {

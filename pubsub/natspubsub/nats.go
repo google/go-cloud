@@ -49,7 +49,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"path"
@@ -137,13 +136,6 @@ const Scheme = "nats"
 //
 // The URL host+path is used as the subject.
 //
-// The following query parameters are supported:
-//   - ackfunc: One of "log", "noop", "panic"; defaults to "panic". Determines
-//       the behavior if pubsub.Subscription.Ack (which is a meaningless no-op
-//       for NATS) is called: "log" means a log.Printf warning will be emitted;
-//       "noop" means nothing will happen; and "panic" means the application
-//       will panic. See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
-//       for more background.
 // No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
@@ -163,32 +155,13 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	return OpenTopic(o.Connection, subject, &o.TopicOptions)
 }
 
-// AckWarning is a message that may be used in ackFuncs.
-const AckWarning = "pubsub.Subscription.Ack was called for a NATS message; Ack is a meaningless no-op for NATS due to its at-most-once semantics. See the package documentation for how to disable this message."
-
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	q := u.Query()
-
-	var ackFunc func()
-	s := q.Get("ackfunc")
-	switch s {
-	case "log":
-		ackFunc = func() { log.Printf(AckWarning) }
-	case "noop":
-		ackFunc = func() {}
-	case "", "panic":
-		ackFunc = func() { panic(AckWarning) }
-	default:
-		return nil, fmt.Errorf("open subscription %v: invalid ackfunc %q (valid values are log, noop, panic)", u, s)
-	}
-	q.Del("ackfunc")
-
-	for param := range q {
+	for param := range u.Query() {
 		return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
 	}
 	subject := path.Join(u.Host, u.Path)
-	return OpenSubscription(o.Connection, subject, ackFunc, &o.SubscriptionOptions)
+	return OpenSubscription(o.Connection, subject, &o.SubscriptionOptions)
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by NATS.
@@ -300,48 +273,29 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 func (*topic) Close() error { return nil }
 
 type subscription struct {
-	nc      *nats.Conn
-	nsub    *nats.Subscription
-	ackFunc func()
+	nc   *nats.Conn
+	nsub *nats.Subscription
 }
 
 // OpenSubscription returns a *pubsub.Subscription representing a NATS subscription.
 // The subject is the NATS Subject to subscribe to; for more info, see
 // https://nats.io/documentation/writing_applications/subjects.
 //
-// ackFunc will be called when the application calls pubsub.Topic.Ack on a
-// received message; Ack is a meaningless no-op for NATS. You can provide an
-// empty function to leave it a no-op, or panic/log a warning if you don't
-// expect Ack to be called.
-// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
-// for more background.
-//
 // TODO(dlc) - Options for queue groups?
-func OpenSubscription(nc *nats.Conn, subject string, ackFunc func(), _ *SubscriptionOptions) (*pubsub.Subscription, error) {
-	ds, err := openSubscription(nc, subject, ackFunc)
+func OpenSubscription(nc *nats.Conn, subject string, _ *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(nc, subject)
 	if err != nil {
 		return nil, err
 	}
 	return pubsub.NewSubscription(ds, recvBatcherOpts, nil), nil
 }
 
-func openSubscription(nc *nats.Conn, subject string, ackFunc func()) (driver.Subscription, error) {
+func openSubscription(nc *nats.Conn, subject string) (driver.Subscription, error) {
 	sub, err := nc.SubscribeSync(subject)
 	if err != nil {
 		return nil, err
 	}
-	if ackFunc == nil {
-		return nil, errors.New("natspubsub: ackFunc is required")
-	}
-	return &subscription{nc, sub, ackFunc}, nil
-}
-
-// AckFunc implements driver.Subscription.AckFunc.
-func (s *subscription) AckFunc() func() {
-	if s == nil {
-		return nil
-	}
-	return s.ackFunc
+	return &subscription{nc, sub}, nil
 }
 
 // ReceiveBatch implements driver.ReceiveBatch.
@@ -389,17 +343,17 @@ func messageAsFunc(msg *nats.Msg) func(interface{}) bool {
 	}
 }
 
-// SendAcks implements driver.Subscription.SendAcks. It should never be called
-// because we provide a non-nil AckFunc.
+// SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	panic("unreachable")
+	// Ack is a no-op.
+	return nil
 }
 
 // CanNack implements driver.CanNack.
 func (s *subscription) CanNack() bool { return false }
 
 // SendNacks implements driver.Subscription.SendNacks. It should never be called
-// because we provide a non-nil AckFunc.
+// because we return false for CanNack.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
 	panic("unreachable")
 }

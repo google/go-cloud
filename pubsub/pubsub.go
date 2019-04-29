@@ -38,45 +38,23 @@
 //
 // At-most-once and At-least-once Delivery
 //
-// Some PubSub systems guarantee that messages received by subscribers but not
-// acknowledged are delivered again. These at-least-once systems require that
-// subscribers call an Ack function to indicate that they have fully processed a
-// message.
+// The semantics of message deliver vary across PubSub providers.
+// Some providers guarantee that messages received by subscribers but not
+// acknowledged are delivered again (at-least-once semantics). In others,
+// a message will be delivered only once, if it is delivered at all
+// (at-most-once semantics). Some providers support both modes via options.
 //
-// In other PubSub systems, a message will be delivered only once, if it is
-// delivered at all. These at-most-once systems do not need subscribers to Ack;
-// the message is essentially auto-acked when it is delivered.
-//
-// This package accommodates both kinds of systems. See the provider-specific
-// package documentation to see whether it is at-most-once or at-least-once.
-// Some providers support both modes.
-//
-// Application developers should think carefully about which kind of semantics
-// the application needs. Even though the application code may look similar, the
-// system-level characteristics are quite different.
+// This package accommodates both kinds of systems, but application developers
+// should think carefully about which kind of semantics the application needs.
+// Even though the application code may look similar, system-level
+// characteristics are quite different. See the provider-specific package
+// documentation for more information about message delivery semantics.
 //
 // After receiving a Message via Subscription.Receive:
-//  - If your application ever uses an at-least-once provider, it should always
-//    call Message.Ack/Nack after processing a message.
-//  - If your application only uses at-most-once providers, you can omit the
-//    call to Message.Ack. It should never call Message.Nack, as that operation
-//    doesn't make sense for an at-most-once system.
-//
-// The Subscription constructor for at-most-once-providers will require a
-// function that will be called whenever the application calls Message.Ack.
-// This forces the application developer to be explicit about what happens when
-// Ack is called, since the provider has no meaningful implementation. Common
-// function to supply are:
-//  - func() {}: Do nothing. Use this if your application does call Message.Ack;
-//    it makes explicit that Ack for the provider is a no-op.
-//  - func() { panic("ack called!") }: panic. This is appropriate if your
-//    application only uses at-most-once providers and you don't expect it to
-//    ever call Message.Ack.
-//  - func() { log.Info("ack called!") }: log. Softer than panicking.
-//
-// Since Message.Nack never makes sense for some providers (for example, for
-// at-most-once providers, the provider can't redeliver the message), Nack will
-// panic if called for some providers.
+//  - Always call either Message.Ack/Nack after processing the message.
+//  - For some providers, Ack will be a no-op.
+//  - For some providers, Nack is not supported and will panic; you can call
+//    Message.Nackable to see.
 //
 // OpenCensus Integration
 //
@@ -168,8 +146,13 @@ type Message struct {
 }
 
 // Ack acknowledges the message, telling the server that it does not need to be
-// sent again to the associated Subscription. It returns immediately, but the
-// actual ack is sent in the background, and is not guaranteed to succeed.
+// sent again to the associated Subscription. It will be a no-op for some
+// providers; see
+// https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more info.
+//
+// Ack returns immediately, but the actual ack is sent in the background, and
+// s not guaranteed to succeed.
 func (m *Message) Ack() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -180,29 +163,32 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
-/*
-// TODO(rvangent): Decide whether to expose this.
 // Nackable returns true iff Nack can be called without panicking.
 //
 // Some providers do not support Nack; for example, at-most-once providers
-// can't redeliver a message.
+// can't redeliver a message. See
+// https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more info.
 func (m *Message) Nackable() bool {
 	return m.nackable
 }
-*/
 
 // Nack (short for negative acknowledgment) tells the server that this Message
-// was not processed and should be redelivered. It returns immediately, but the
-// actual nack is sent in the background, and is not guaranteed to succeed.
+// was not processed and should be redelivered.
 //
-// Nack is a performance optimization for retrying transient failures. Nack
+// Nack panics for some providers, as Nack is meaningless when messages can't be
+// redelivered. You can call Nackable to determine if Nack is available. See
+// https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// fore more info.
+//
+// Nack returns immediately, but the actual nack is sent in the background,
+// and is not guaranteed to succeed.
+//
+// Nack is a performance optimization for retrying transient failures. It
 // must not be used for message parse errors or other messages that the
 // application will never be able to process: calling Nack will cause them to
 // be redelivered and overload the server. Instead, an application should call
 // Ack and log the failure in some monitored way.
-//
-// Nack panics for some providers, as Nack is meaningless when messages can't be
-// redelivered.
 func (m *Message) Nack() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -385,7 +371,6 @@ type Subscription struct {
 	tracer *oc.Tracer
 	// ackBatcher makes batches of acks and nacks and sends them to the server.
 	ackBatcher    *batcher.Batcher
-	ackFunc       func()          // if non-nil, used for Ack
 	canNack       bool            // true iff the driver supports Nack
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
 	cancel        func()          // for canceling backgroundCtx
@@ -618,33 +603,25 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 				asFunc:   m.AsFunc,
 				nackable: s.canNack,
 			}
-			if s.ackFunc == nil {
-				m2.ack = func(isAck bool) {
-					// Ignore the error channel. Errors are dealt with
-					// in the ackBatcher handler.
-					_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
-				}
-			} else {
-				// Note: isAck will be false, as m2.nackable is false and
-				// so Message.Nack will panic.
-				m2.ack = func(isAck bool) { s.ackFunc() }
+			m2.ack = func(isAck bool) {
+				// Ignore the error channel. Errors are dealt with
+				// in the ackBatcher handler.
+				_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
 			}
-			if s.ackFunc == nil {
-				// Add a finalizer that complains if the Message we return isn't
-				// acked or nacked.
-				_, file, lineno, ok := runtime.Caller(1) // the caller of Receive
-				runtime.SetFinalizer(m2, func(m *Message) {
-					m.mu.Lock()
-					defer m.mu.Unlock()
-					if !m.isAcked {
-						var caller string
-						if ok {
-							caller = fmt.Sprintf(" (%s:%d)", file, lineno)
-						}
-						log.Printf("A pubsub.Message was never Acked or Nacked%s", caller)
+			// Add a finalizer that complains if the Message we return isn't
+			// acked or nacked.
+			_, file, lineno, ok := runtime.Caller(1) // the caller of Receive
+			runtime.SetFinalizer(m2, func(m *Message) {
+				m.mu.Lock()
+				defer m.mu.Unlock()
+				if !m.isAcked {
+					var caller string
+					if ok {
+						caller = fmt.Sprintf(" (%s:%d)", file, lineno)
 					}
-				})
-			}
+					log.Printf("A pubsub.Message was never Acked or Nacked%s", caller)
+				}
+			})
 			return m2, nil
 		}
 		// No messages are available.
@@ -777,15 +754,9 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 		backgroundCtx:    ctx,
 		recvBatchOpts:    recvBatchOpts,
 		runningBatchSize: initialBatchSize,
-		ackFunc:          ds.AckFunc(),
 		canNack:          ds.CanNack(),
 	}
-	if s.ackFunc != nil && s.canNack {
-		panic("invalid to have CanNack() true but AckFunc() non-nil")
-	}
-	if s.ackFunc == nil {
-		s.ackBatcher = newAckBatcher(ctx, s, ds, ackBatcherOpts)
-	}
+	s.ackBatcher = newAckBatcher(ctx, s, ds, ackBatcherOpts)
 	return s
 }
 

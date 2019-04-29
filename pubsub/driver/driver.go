@@ -137,18 +137,14 @@ type Subscription interface {
 	// pubsub.NewSubscription.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
-	// For at-most-once systems, AckFunc should return a function to be called
-	// whenever pubsub.Message.Ack is called. For at-least-once systems (those that
-	// support Ack), AckFunc should return nil.
-	AckFunc() func()
-
 	// SendAcks should acknowledge the messages with the given ackIDs on
 	// the server so that they will not be received again for this
 	// subscription if the server gets the acks before their deadlines.
 	// This method should return only after all the ackIDs are sent, an
 	// error occurs, or the context is done.
 	//
-	// If AckFunc returns a non-nil func, SendAcks will never be called.
+	// It is acceptable for SendAcks to be a no-op for providers that don't
+	// support message acknowledgement.
 	//
 	// SendAcks may be called concurrently from multiple goroutines.
 	//
@@ -169,7 +165,8 @@ type Subscription interface {
 	// This method should return only after all the ackIDs are sent, an
 	// error occurs, or the context is done.
 	//
-	// If AckFunc returns a non-nil func, SendNacks will never be called.
+	// If the provider does not suppport nacking of messages, return false from
+	// CanNack, and SendNacks will never be called.
 	//
 	// SendNacks may be called concurrently from multiple goroutines.
 	//
