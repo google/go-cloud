@@ -1,6 +1,9 @@
 language: go
 go_import_path: gocloud.dev
 
+services:
+  - docker
+
 before_install:
   - "df -k"
   # The Bash that comes with OS X is ancient.
@@ -23,6 +26,7 @@ script:
 
 env:
   global:
+  - GOPROXY=https://proxy.golang.org
   - GO111MODULE=on
 
 # When updating Go versions:
