@@ -246,11 +246,19 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 	return conn, done
 }
 
-type myPolicy struct {
+// contentTypeInjectPolicy and contentTypeInjector are somewhat of a hack to
+// overcome an impedance mismatch between the Azure pipeline library and
+// httpreplay - the tool we use to record/replay HTTP traffic for tests.
+// azure-pipeline-go does not set the Content-Type header in its requests,
+// setting X-Ms-Blob-Content-Type instead; however, httpreplay expects
+// Content-Type to be non-empty in some cases. This injector makes sure that
+// the content type is copied into the right header when that is originally
+// empty. It's only used for testing.
+type contentTypeInjectPolicy struct {
 	node pipeline.Policy
 }
 
-func (p *myPolicy) Do(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+func (p *contentTypeInjectPolicy) Do(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
 	if len(request.Header.Get("Content-Type")) == 0 {
 		cType := request.Header.Get("X-Ms-Blob-Content-Type")
 		request.Header.Set("Content-Type", cType)
@@ -259,11 +267,11 @@ func (p *myPolicy) Do(ctx context.Context, request pipeline.Request) (pipeline.R
 	return response, err
 }
 
-type myPolicyFactory struct {
+type contentTypeInjector struct {
 }
 
-func (f myPolicyFactory) New(node pipeline.Policy, opts *pipeline.PolicyOptions) pipeline.Policy {
-	return &myPolicy{node: node}
+func (f contentTypeInjector) New(node pipeline.Policy, opts *pipeline.PolicyOptions) pipeline.Policy {
+	return &contentTypeInjectPolicy{node: node}
 }
 
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
@@ -309,7 +317,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
 			Value: useragent.AzureUserAgentPrefix(api),
 		}),
-		myPolicyFactory{},
+		contentTypeInjector{},
 		credential,
 		pipeline.MethodFactoryMarker(),
 	}
