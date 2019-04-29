@@ -1874,9 +1874,7 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	// Read all blobs concurrently and verify that they contain the expected data.
 	for k := 0; k < numKeys; k++ {
 		wg.Add(1)
-		// TODO: should be a "go func..." here, removed it for now to see how it
-		// works w/o concurrency in reading
-		func(key int) {
+		go func(key int) {
 			buf, err := b.ReadAll(ctx, blobName(key))
 			if err != nil {
 				t.Fatal(err)
