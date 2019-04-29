@@ -99,3 +99,5 @@ require (
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	pack.ag/amqp v0.11.0
 )
+
+replace cloud.google.com/go => /usr/local/google/home/eliben/gohack/cloud.google.com/go

@@ -291,6 +291,88 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 	return p, done, httpClient
 }
 
+type myPolicy struct {
+	node pipeline.Policy
+}
+
+func (p *myPolicy) Do(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+	if len(request.Header.Get("Content-Type")) == 0 {
+		cType := request.Header.Get("X-Ms-Blob-Content-Type")
+		request.Header.Set("Content-Type", cType)
+	}
+	response, err := p.node.Do(ctx, request)
+	return response, err
+}
+
+type myPolicyFactory struct {
+}
+
+func (f myPolicyFactory) New(node pipeline.Policy, opts *pipeline.PolicyOptions) pipeline.Policy {
+	return &myPolicy{node: node}
+}
+
+func NewAzureTestPipeline2(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
+	httpreplay.DebugHeaders()
+	path := filepath.Join("testdata", t.Name()+".replay")
+	var client *http.Client
+	var done func()
+	if *Record {
+		t.Logf("Recording into golden file %s", path)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		rec, err := httpreplay.NewRecorder(path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rec.RemoveQueryParams("se", "sig")
+		rec.RemoveQueryParams("X-Ms-Date")
+		rec.ClearHeaders("X-Ms-Date")
+		client, err = rec.Client(ctx, option.WithoutAuthentication())
+		if err != nil {
+			t.Fatal(err)
+		}
+		done = func() {
+			if err := rec.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	} else { // replay
+		t.Logf("Replaying from golden file %s", path)
+		rep, err := httpreplay.NewReplayer(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client, err = rep.Client(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		done = func() { _ = rep.Close() } // Don't care about Close error on replay.
+	}
+	f := []pipeline.Factory{
+		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
+			Value: useragent.AzureUserAgentPrefix(api),
+		}),
+		myPolicyFactory{},
+		credential,
+		pipeline.MethodFactoryMarker(),
+	}
+	// Create a pipeline that uses client to make requests.
+	p := pipeline.NewPipeline(f, pipeline.Options{
+		HTTPSender: pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
+			return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+				r, err := client.Do(request.WithContext(ctx))
+				if err != nil {
+					err = pipeline.NewError(err, "HTTP request failed")
+				}
+				return pipeline.NewHTTPResponse(r), err
+			}
+		}),
+	})
+
+	return p, done, client
+}
+
 // NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test recordings.
 func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (func(), *http.Client) {
 	mode := recorder.ModeReplaying
