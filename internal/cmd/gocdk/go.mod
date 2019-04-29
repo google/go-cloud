@@ -3,7 +3,6 @@ module gocloud.dev/internal/cmd/gocdk
 go 1.12
 
 require (
-	git.apache.org/thrift.git v0.12.0 // indirect
 	github.com/google/go-cmp v0.3.0
 	gocloud.dev v0.13.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
