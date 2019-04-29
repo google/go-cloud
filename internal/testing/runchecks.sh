@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Runs only tests relevant to the current pull request.
-# At the moment, this only gates running the Wire test suite.
-# See https://github.com/google/go-cloud/issues/28 for solving the
-# general case.
+# This script runs all checks for Go CDK on Travis, including go test suites,
+# compatibility checks, consistency checks, Wire, etc.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euxo pipefail
