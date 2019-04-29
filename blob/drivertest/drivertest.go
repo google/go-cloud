@@ -1882,14 +1882,8 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(buf) != dataSize {
-				t.Errorf("data size for key %d, got %d want %d", key, len(buf), dataSize)
-			}
-			for i := 0; i < len(buf); i++ {
-				if int(buf[i]) != key {
-					t.Errorf("read data for key %d, got %d want %d at index %d", key, int(buf[i]), key, i)
-					break
-				}
+			if !bytes.Equal(buf, keyData[key]) {
+				t.Errorf("read data mismatch for key %d", key)
 			}
 			wg.Done()
 		}(k)
