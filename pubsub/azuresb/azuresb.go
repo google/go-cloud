@@ -492,7 +492,12 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 }
 
 // CanNack implements driver.CanNack.
-func (s *subscription) CanNack() bool { return true }
+func (s *subscription) CanNack() bool {
+	if s == nil {
+		return false
+	}
+	return s.opts.AckFuncForReceiveAndDelete == nil
+}
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
@@ -557,6 +562,12 @@ func isNotFoundErr(err error) bool {
 }
 
 func errorCode(err error) gcerrors.ErrorCode {
+	// Unfortunately Azure sometimes returns common.Retryable or even
+	// errors.errorString, which don't expose anything other than the error
+	// string :-(.
+	if strings.Contains(err.Error(), "status code 404") {
+		return gcerrors.NotFound
+	}
 	aerr, ok := err.(*amqp.Error)
 	if !ok {
 		return gcerrors.Unknown
