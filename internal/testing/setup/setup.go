@@ -314,6 +314,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 		done = func() { _ = rep.Close() } // Don't care about Close error on replay.
 	}
 	f := []pipeline.Factory{
+		// Sets User-Agent for recorder.
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
 			Value: useragent.AzureUserAgentPrefix(api),
 		}),
