@@ -246,41 +246,88 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 	return conn, done
 }
 
+// contentTypeInjectPolicy and contentTypeInjector are somewhat of a hack to
+// overcome an impedance mismatch between the Azure pipeline library and
+// httpreplay - the tool we use to record/replay HTTP traffic for tests.
+// azure-pipeline-go does not set the Content-Type header in its requests,
+// setting X-Ms-Blob-Content-Type instead; however, httpreplay expects
+// Content-Type to be non-empty in some cases. This injector makes sure that
+// the content type is copied into the right header when that is originally
+// empty. It's only used for testing.
+type contentTypeInjectPolicy struct {
+	node pipeline.Policy
+}
+
+func (p *contentTypeInjectPolicy) Do(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+	if len(request.Header.Get("Content-Type")) == 0 {
+		cType := request.Header.Get("X-Ms-Blob-Content-Type")
+		request.Header.Set("Content-Type", cType)
+	}
+	response, err := p.node.Do(ctx, request)
+	return response, err
+}
+
+type contentTypeInjector struct {
+}
+
+func (f contentTypeInjector) New(node pipeline.Policy, opts *pipeline.PolicyOptions) pipeline.Policy {
+	return &contentTypeInjectPolicy{node: node}
+}
+
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
 func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
-	mode := recorder.ModeReplaying
+	httpreplay.DebugHeaders()
+	path := filepath.Join("testdata", t.Name()+".replay")
+	var client *http.Client
+	var done func()
 	if *Record {
-		mode = recorder.ModeRecording
-	}
-
-	azMatchers := &replay.ProviderMatcher{
-		// Note: We can't match the User-Agent header because Azure includes the
-		// "go" version in it.
-		// Headers: []string{"User-Agent"},
-		URLScrubbers: []*regexp.Regexp{
-			regexp.MustCompile(`se=[^?]*`),
-			regexp.MustCompile(`sig=[^?]*`),
-		},
-	}
-	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
+		t.Logf("Recording into golden file %s", path)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		rec, err := httpreplay.NewRecorder(path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rec.RemoveQueryParams("se", "sig")
+		rec.RemoveQueryParams("X-Ms-Date")
+		rec.ClearHeaders("X-Ms-Date")
+		rec.ClearHeaders("User-Agent") // includes the full Go version
+		client, err = rec.Client(ctx, option.WithoutAuthentication())
+		if err != nil {
+			t.Fatal(err)
+		}
+		done = func() {
+			if err := rec.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	} else { // replay
+		t.Logf("Replaying from golden file %s", path)
+		rep, err := httpreplay.NewReplayer(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client, err = rep.Client(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		done = func() { _ = rep.Close() } // Don't care about Close error on replay.
 	}
 	f := []pipeline.Factory{
 		// Sets User-Agent for recorder.
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
 			Value: useragent.AzureUserAgentPrefix(api),
 		}),
+		contentTypeInjector{},
 		credential,
 		pipeline.MethodFactoryMarker(),
 	}
-
-	httpClient := &http.Client{Transport: r}
-	// Create a pipeline that uses httpClient to make requests.
+	// Create a pipeline that uses client to make requests.
 	p := pipeline.NewPipeline(f, pipeline.Options{
 		HTTPSender: pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
 			return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
-				r, err := httpClient.Do(request.WithContext(ctx))
+				r, err := client.Do(request.WithContext(ctx))
 				if err != nil {
 					err = pipeline.NewError(err, "HTTP request failed")
 				}
@@ -288,7 +335,8 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 			}
 		}),
 	})
-	return p, done, httpClient
+
+	return p, done, client
 }
 
 // NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test recordings.
