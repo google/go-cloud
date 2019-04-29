@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Runs only tests relevant to the current pull request.
-# At the moment, this only gates running the Wire test suite.
-# See https://github.com/google/go-cloud/issues/28 for solving the
-# general case.
+# This script runs all checks for Go CDK on Travis, including go test suites,
+# compatibility checks, consistency checks, Wire, etc.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euxo pipefail
@@ -57,6 +55,13 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
     echo "Diff doesn't affect tests; not running them"
     exit 0
   fi
+fi
+
+# start_local_deps.sh requires that Docker is installed, via Travis services,
+# which are only supported on Linux.
+# Without the dependencies running, tests that depend on them are skipped.
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  ./internal/testing/start_local_deps.sh
 fi
 
 # Run Go tests for the root. Only do coverage for the Linux build

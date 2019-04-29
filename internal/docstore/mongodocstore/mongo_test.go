@@ -14,8 +14,7 @@
 
 package mongodocstore
 
-// To run these tests against a real MongoDB server, first run:
-//     docker run -d --name my-mongo  -p 27017:27017 mongo:4
+// To run these tests against a real MongoDB server, first run ./localmongo.sh.
 // Then wait a few seconds for the server to be ready.
 
 import (
