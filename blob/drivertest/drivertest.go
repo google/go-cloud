@@ -1825,8 +1825,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
-// testConcurrentWriteAndRead tests that concurrent writing and reading of
-// keys into a blob works.
+// testConcurrentWriteAndRead tests that concurrent writing to multiple blob
+// keys and concurrent reading from multiple blob keys works.
 func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
@@ -1841,7 +1841,9 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	b := blob.NewBucket(drv)
 	defer b.Close()
 
-	// Prepare data. Each blob dataSize bytes equal to its numeric key.
+	// Prepare data. Each of the numKeys blobs has dataSize bytes, with each byte
+	// set to the numeric key index. For example, the blob at "key0" consists of
+	// all dataSize bytes set to 0.
 	const numKeys = 20
 	const dataSize = 4 * 1024
 	keyData := make(map[int][]byte)
@@ -1868,6 +1870,7 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 			}
 			wg.Done()
 		}(k)
+		defer b.Delete(ctx, blobName(k))
 	}
 	wg.Wait()
 
