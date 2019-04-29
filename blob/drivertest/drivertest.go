@@ -1843,7 +1843,7 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 
 	// Prepare data. Each blob dataSize bytes equal to its numeric key.
 	const numKeys = 20
-	const dataSize = 8 * 1024
+	const dataSize = 4 * 1024
 	keyData := make(map[int][]byte)
 	for k := 0; k < numKeys; k++ {
 		data := make([]byte, dataSize)
