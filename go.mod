@@ -100,4 +100,4 @@ require (
 	pack.ag/amqp v0.11.0
 )
 
-replace cloud.google.com/go => /usr/local/google/home/eliben/gohack/cloud.google.com/go
+
