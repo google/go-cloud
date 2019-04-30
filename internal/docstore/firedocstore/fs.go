@@ -213,8 +213,12 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string, n
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
 	if unordered {
-		panic("unordered unimplemented")
+		return c.runActionsUnordered(ctx, actions)
 	}
+	return c.runActionsOrdered(ctx, actions)
+}
+
+func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Action) driver.ActionListError {
 	// Split the actions into groups, each of which can be done with a single RPC.
 	// - Consecutive writes are grouped together.
 	// - Consecutive gets with the same field paths are grouped together.
@@ -226,7 +230,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, u
 	var err error
 	for _, g := range groups {
 		if g[0].Kind == driver.Get {
-			n, err = c.runGets(ctx, g)
+			n, err = c.runGetsOrdered(ctx, g)
 			nRun += n
 		} else {
 			err = c.runWrites(ctx, g)
@@ -255,55 +259,70 @@ func shouldSplit(cur, new *driver.Action) bool {
 }
 
 // Run a sequence of Get actions by calling the BatchGetDocuments RPC.
-// It returns the number of successful gets, as well as an error.
-func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, error) {
-	req, err := c.newGetRequest(gets)
-	if err != nil {
-		return 0, err
-	}
-	streamClient, err := c.client.BatchGetDocuments(withResourceHeader(ctx, req.Database), req)
-	if err != nil {
-		return 0, err
-	}
-	// BatchGetDocuments is a streaming RPC.
-	// Read the stream and organize by path, since results may arrive out of order.
-	resps := map[string]*pb.BatchGetDocumentsResponse{}
-	for {
-		resp, err := streamClient.Recv()
-		if err == io.EOF {
-			break
-		}
+// It returns the number of initial successful gets, as well as an error.
+func (c *collection) runGetsOrdered(ctx context.Context, gets []*driver.Action) (int, error) {
+	errs := c.runGets(ctx, gets)
+	for i, err := range errs {
 		if err != nil {
-			return 0, err
-		}
-		switch r := resp.Result.(type) {
-		case *pb.BatchGetDocumentsResponse_Found:
-			resps[r.Found.Name] = resp
-		case *pb.BatchGetDocumentsResponse_Missing:
-			resps[r.Missing] = nil
-		default:
-			return 0, gcerr.Newf(gcerr.Internal, nil, "unknown BatchGetDocumentsResponse result type")
-		}
-	}
-	// Now process the result for each input document.
-	for i, path := range req.Documents {
-		resp, ok := resps[path]
-		if !ok {
-			return i, gcerr.Newf(gcerr.Internal, nil, "no BatchGetDocumentsResponse for %q", path)
-		}
-		if resp == nil {
-			return i, gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", path)
-		}
-		pdoc := resp.Result.(*pb.BatchGetDocumentsResponse_Found).Found
-		// TODO(jba): support field paths in decoding.
-		if err := decodeDoc(pdoc, gets[i].Doc, c.nameField); err != nil {
 			return i, err
 		}
 	}
 	return len(gets), nil
 }
 
+// runGets executs a group of Get actions by calling the BatchGetDocuments RPC.
+// It returns the error for each Get action in order.
+func (c *collection) runGets(ctx context.Context, gets []*driver.Action) []error {
+	errs := make([]error, len(gets))
+	setErr := func(err error) {
+		for i := range errs {
+			errs[i] = err
+		}
+	}
+
+	req, err := c.newGetRequest(gets)
+	if err != nil {
+		setErr(err)
+		return errs
+	}
+
+	indexByPath := map[string]int{} // from document path to index in gets slice
+	for i, path := range req.Documents {
+		indexByPath[path] = i
+	}
+	streamClient, err := c.client.BatchGetDocuments(withResourceHeader(ctx, req.Database), req)
+	if err != nil {
+		setErr(err)
+		return errs
+	}
+	for {
+		resp, err := streamClient.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			setErr(err)
+			return errs
+		}
+		switch r := resp.Result.(type) {
+		case *pb.BatchGetDocumentsResponse_Found:
+			pdoc := r.Found
+			i := indexByPath[pdoc.Name]
+			errs[i] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
+		case *pb.BatchGetDocumentsResponse_Missing:
+			i := indexByPath[r.Missing]
+			errs[i] = gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", r.Missing)
+		default:
+			setErr(gcerr.Newf(gcerr.Internal, nil, "unknown BatchGetDocumentsResponse result type"))
+			return errs
+		}
+	}
+	return errs
+}
+
 func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocumentsRequest, error) {
+	// TODO(jba): fail if two documents have the same name. The only way to
+	// distinguish BatchGet responses is by name.
 	req := &pb.BatchGetDocumentsRequest{Database: c.dbPath}
 	for _, a := range gets {
 		docName, _, err := c.docName(a.Doc)
@@ -485,6 +504,38 @@ func (c *collection) updateWrites(doc driver.Document, docName string, mods []dr
 	}
 	// For now, we don't have any transforms.
 	return []*pb.Write{w}, nil
+}
+
+func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action) driver.ActionListError {
+	// Split into groups the same way, but run them concurrently.
+	// TODO(jba): group without considering order.
+	groups := driver.SplitActions(actions, shouldSplit)
+	errs := make([]error, len(actions))
+	var wg sync.WaitGroup
+	groupBaseIndex := 0 // index in actions of first action in group
+	for _, g := range groups {
+		g := g
+		base := groupBaseIndex
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if g[0].Kind == driver.Get {
+				errs := c.runGets(ctx, g)
+				for i, err := range errs {
+					errs[base+i] = err
+				}
+			} else {
+				err := c.runWrites(ctx, g)
+				// Writes run in a transaction, so there is a single error for the group.
+				for i := 0; i < len(g); i++ {
+					errs[base+i] = err
+				}
+			}
+		}()
+		groupBaseIndex += len(g)
+	}
+	wg.Wait()
+	return driver.NewActionListError(errs)
 }
 
 ////////////////
