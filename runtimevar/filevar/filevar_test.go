@@ -205,6 +205,7 @@ func TestOpenVariableURL(t *testing.T) {
 	jsonPath = filepath.ToSlash(jsonPath)
 	txtPath = filepath.ToSlash(txtPath)
 	nonexistentPath = filepath.ToSlash(nonexistentPath)
+	secretsPath = filepath.ToSlash(secretsPath)
 	if os.PathSeparator != '/' {
 		if !strings.HasPrefix(jsonPath, "/") {
 			jsonPath = "/" + jsonPath
@@ -214,6 +215,9 @@ func TestOpenVariableURL(t *testing.T) {
 		}
 		if !strings.HasPrefix(nonexistentPath, "/") {
 			nonexistentPath = "/" + nonexistentPath
+		}
+		if !strings.HasPrefix(secretsPath, "/") {
+			secretsPath = "/" + secretsPath
 		}
 	}
 

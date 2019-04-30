@@ -243,11 +243,13 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	// are collapsed to the single directory entry.
 	var lastPrefix string
 
-	// If the Prefix contains a Path Separator, we can set the root of the Walk
+	// If the Prefix contains a "/", we can set the root of the Walk
 	// to the path specified by the Prefix as any files below the path will not
 	// match the Prefix.
+	// Note that we use "/" explicitly and not os.PathSeparator, as the opts.Prefix
+	// is in the unescaped form.
 	root := b.dir
-	if i := strings.LastIndexByte(opts.Prefix, os.PathSeparator); i > -1 {
+	if i := strings.LastIndex(opts.Prefix, "/"); i > -1 {
 		root = filepath.Join(root, opts.Prefix[:i])
 	}
 
