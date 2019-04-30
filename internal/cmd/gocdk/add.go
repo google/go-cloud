@@ -36,7 +36,7 @@ type portableTypeInfo struct {
 }
 
 var portableTypes = []*portableTypeInfo{
-	&portableTypeInfo{
+	{
 		name:       "blob.Bucket",
 		goDemoPath: "/demo/blob.bucket/demo_blob_bucket.go",
 		demoURL:    "/demo/blob",
