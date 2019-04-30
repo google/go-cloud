@@ -1,2 +1,2 @@
-<!-- https://zwbetz.com/create-header-links-hugo-vs-javascript/ -->
+{{- /* https://zwbetz.com/create-header-links-hugo-vs-javascript/ */ -}}
 {{ . | replaceRE "(<h[2-9] id=\"([^\"]+)\">)(.+)(</h[2-9]+>)" `${1} ${3}<a href="#${2}">🔗</a>${4}` | safeHTML }}
