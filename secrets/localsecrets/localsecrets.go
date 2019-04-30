@@ -103,7 +103,7 @@ func NewKeeper(sk [32]byte) *secrets.Keeper {
 }
 
 // Base64Key takes a secret key as a base64 string and converts it
-// to a [32]byte, cropping it if necessary.
+// to a [32]byte, erroring if the decoded data is not 32 bytes.
 func Base64Key(base64str string) ([32]byte, error) {
 	var sk32 [32]byte
 	key, err := base64.StdEncoding.DecodeString(base64str)
@@ -135,13 +135,11 @@ func ByteKey(sk string) ([32]byte, error) {
 // used as the secret key argument to NewKeeper.
 func ThirtyTwoByteSecret() ([32]byte, error) {
 	var sk32 [32]byte
-	randomBytes := make([]byte, 32)
-	// Read random numbers into the passed slice until it's full
-	_, err := rand.Read(randomBytes)
+	// Read random numbers into the passed slice until it's full.
+	_, err := rand.Read(sk32[:])
 	if err != nil {
 		return sk32, err
 	}
-	copy(sk32[:], randomBytes)
 	return sk32, nil
 }
 
