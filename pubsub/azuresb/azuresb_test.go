@@ -223,7 +223,7 @@ func (sbAsTest) MessageCheck(m *pubsub.Message) error {
 }
 
 func (sbAsTest) BeforeSend(as func(interface{}) bool) error {
-	var m servicebus.Message
+	var m *servicebus.Message
 	if !as(&m) {
 		return fmt.Errorf("cast failed for %T", &m)
 	}

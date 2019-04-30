@@ -127,8 +127,6 @@ type topic struct {
 	pubc   <-chan amqp.Confirmation // Go channel for server acks of publishes
 	retc   <-chan amqp.Return       // Go channel for "returned" undeliverable messages
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
-
-	sendBatchHook func() // for testing
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by
@@ -159,9 +157,8 @@ func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.T
 
 func newTopic(conn amqpConnection, name string) *topic {
 	return &topic{
-		conn:          conn,
-		exchange:      name,
-		sendBatchHook: func() {},
+		conn:     conn,
+		exchange: name,
 	}
 }
 
@@ -227,7 +224,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	if err := t.establishChannel(ctx); err != nil {
 		return err
 	}
-	t.sendBatchHook()
+
 	// Receive from Go channels concurrently or we will deadlock with the Publish
 	// RPC. (The amqp package docs recommend setting the capacity of the Go channel
 	// to the number of messages to be published, but we can't do that because we
