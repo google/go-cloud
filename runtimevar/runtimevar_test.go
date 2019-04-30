@@ -640,7 +640,7 @@ func TestBytesDecoder(t *testing.T) {
 
 func TestDecryptDecoder(t *testing.T) {
 	ctx := context.Background()
-	secretKey, err := localsecrets.ThirtyTwoByteSecret()
+	secretKey, err := localsecrets.NewRandomKey()
 	if err != nil {
 		t.Fatal(err)
 	}

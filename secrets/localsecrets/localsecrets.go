@@ -112,7 +112,7 @@ func Base64Key(base64str string) ([32]byte, error) {
 	}
 	keySize := len([]byte(key))
 	if keySize != 32 {
-		return sk32, fmt.Errorf("Base64Key: secret material is %v bytes, want 32 bytes", keySize)
+		return sk32, fmt.Errorf("Base64Key: secret key material is %v bytes, want 32 bytes", keySize)
 	}
 	copy(sk32[:], key)
 	return sk32, nil
@@ -125,15 +125,15 @@ func ByteKey(sk string) ([32]byte, error) {
 	skb := []byte(sk)
 	keySize := len(skb)
 	if keySize != 32 {
-		return sk32, fmt.Errorf("ByteKey: secret material is %v bytes, want 32 bytes", keySize)
+		return sk32, fmt.Errorf("ByteKey: secret key material is %v bytes, want 32 bytes", keySize)
 	}
 	copy(sk32[:], skb)
 	return sk32, nil
 }
 
-// ThirtyTwoByteSecret will generate random secret material suitable to be
+// NewRandomKey will generate random secret key material suitable to be
 // used as the secret key argument to NewKeeper.
-func ThirtyTwoByteSecret() ([32]byte, error) {
+func NewRandomKey() ([32]byte, error) {
 	var sk32 [32]byte
 	// Read random numbers into the passed slice until it's full.
 	_, err := rand.Read(sk32[:])

@@ -28,11 +28,11 @@ import (
 type harness struct{}
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	secret1, err := ThirtyTwoByteSecret()
+	secret1, err := NewRandomKey()
 	if err != nil {
 		log.Fatal(err)
 	}
-	secret2, err := ThirtyTwoByteSecret()
+	secret2, err := NewRandomKey()
 	if err != nil {
 		log.Fatal(err)
 	}

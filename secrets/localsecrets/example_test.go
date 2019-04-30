@@ -27,7 +27,7 @@ func Example() {
 	// localsecrets.Keeper untilizes the golang.org/x/crypto/nacl/secretbox package
 	// for the crypto implementation, and secretbox requires a secret key
 	// that is a [32]byte. localsecrets
-	secretKey, err := localsecrets.ThirtyTwoByteSecret()
+	secretKey, err := localsecrets.NewRandomKey()
 	if err != nil {
 		log.Fatal(err)
 	}

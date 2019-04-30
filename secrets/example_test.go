@@ -30,7 +30,7 @@ func Example() {
 
 	// Construct a *secrets.Keeper from one of the secrets subpackages.
 	// This example uses localsecrets.
-	sk, err := localsecrets.ThirtyTwoByteSecret()
+	sk, err := localsecrets.NewRandomKey()
 	if err != nil {
 		log.Fatal(err)
 	}
