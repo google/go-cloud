@@ -640,7 +640,10 @@ func TestBytesDecoder(t *testing.T) {
 
 func TestDecryptDecoder(t *testing.T) {
 	ctx := context.Background()
-	secretKey := localsecrets.ByteKey("I'm a secret string!")
+	secretKey, err := localsecrets.ThirtyTwoByteSecret()
+	if err != nil {
+		t.Fatal(err)
+	}
 	keeper := localsecrets.NewKeeper(secretKey)
 
 	tests := []struct {

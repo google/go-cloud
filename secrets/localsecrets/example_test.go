@@ -26,10 +26,11 @@ import (
 func Example() {
 	// localsecrets.Keeper untilizes the golang.org/x/crypto/nacl/secretbox package
 	// for the crypto implementation, and secretbox requires a secret key
-	// that is a [32]byte. Because most users will have keys which are strings,
-	// the localsecrets package supplies a helper function to convert your key
-	// and also crop it to size, if necessary.
-	secretKey := localsecrets.ByteKey("I'm a secret string!")
+	// that is a [32]byte. localsecrets
+	secretKey, err := localsecrets.ThirtyTwoByteSecret()
+	if err != nil {
+		log.Fatal(err)
+	}
 	keeper := localsecrets.NewKeeper(secretKey)
 	defer keeper.Close()
 

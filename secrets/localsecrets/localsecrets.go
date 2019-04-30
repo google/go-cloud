@@ -81,7 +81,11 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		}
 		return NewKeeper(sk), nil
 	}
-	return NewKeeper(ByteKey(u.Host)), nil
+	sk, err := ByteKey(u.Host)
+	if err != nil {
+		return nil, err
+	}
+	return NewKeeper(sk), nil
 }
 
 // keeper holds a secret for use in symmetric encryption,
@@ -106,16 +110,39 @@ func Base64Key(base64str string) ([32]byte, error) {
 	if err != nil {
 		return sk32, err
 	}
+	keySize := len([]byte(key))
+	if keySize != 32 {
+		return sk32, fmt.Errorf("Base64Key: secret material is %v bytes, want 32 bytes", keySize)
+	}
 	copy(sk32[:], key)
 	return sk32, nil
 }
 
 // ByteKey takes a secret key as a string and converts it
-// to a [32]byte, cropping it if necessary.
-func ByteKey(sk string) [32]byte {
+// to a [32]byte, erroring if the string is not 32 bytes of data.
+func ByteKey(sk string) ([32]byte, error) {
 	var sk32 [32]byte
-	copy(sk32[:], []byte(sk))
-	return sk32
+	skb := []byte(sk)
+	keySize := len(skb)
+	if keySize != 32 {
+		return sk32, fmt.Errorf("ByteKey: secret material is %v bytes, want 32 bytes", keySize)
+	}
+	copy(sk32[:], skb)
+	return sk32, nil
+}
+
+// ThirtyTwoByteSecret will generate random secret material suitable to be
+// used as the secret key argument to NewKeeper.
+func ThirtyTwoByteSecret() ([32]byte, error) {
+	var sk32 [32]byte
+	randomBytes := make([]byte, 32)
+	// Read random numbers into the passed slice until it's full
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return sk32, err
+	}
+	copy(sk32[:], randomBytes)
+	return sk32, nil
 }
 
 const nonceSize = 24

@@ -35,7 +35,7 @@ func Example_openKeeper() {
 	// All secrets.OpenKeeper URLs also work with "secrets+" or "secrets+keeper+" prefixes,
 	// e.g., "secrets+base64key://..." or "secrets+variable+base64key://...".
 	// All secrets URLs also work with the "secrets+" prefix, e.g., "secrets+base64key://".
-	k, err := secrets.OpenKeeper(ctx, "base64key://bXktc2VjcmV0LWtleQ==")
+	k, err := secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=")
 	if err != nil {
 		log.Fatal(err)
 	}
