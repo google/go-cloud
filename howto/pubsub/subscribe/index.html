@@ -106,7 +106,7 @@ you can start multiple goroutines:</p>
 <p>The rest of this guide will discuss how to accomplish the first step: opening
 a subscription for your chosen Pub/Sub provider.</p>
 
-<h2 id="constructors-versus-url-openers">Constructors versus URL openers</h2>
+<h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
 
 <p>If you know that your program is always going to use a particular Pub/Sub
 provider or you need fine-grained control over the connection settings, you
@@ -117,7 +117,7 @@ on configuration, you can use <code>pubsub.OpenSubscription</code>, making sure 
 <a href="https://godoc.org/gocloud.dev#hdr-URLs">documentation on URLs</a> for more details. This guide will show how to use
 both forms for each pub/sub provider.</p>
 
-<h2 id="sqs">Amazon Simple Queueing Service</h2>
+<h2 id="sqs"> Amazon Simple Queueing Service<a class="anchor" href="#sqs" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can subscribe to an Amazon <a href="https://aws.amazon.com/sqs/">Simple Queueing Service</a> (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
@@ -149,7 +149,7 @@ variables or your AWS CLI configuration.</p>
 <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> decoded before being returned. See the <a href="https://gocloud.dev/howto/pubsub/publish/#sns">SNS publishing guide</a>
 for more details.</p>
 
-<h3 id="sqs-ctor">Amazon Simple Queueing Service Constructor</h3>
+<h3 id="sqs-ctor"> Amazon Simple Queueing Service Constructor<a class="anchor" href="#sqs-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSubscription"><code>awssnssqs.OpenSubscription</code></a> constructor opens an SQS queue. You must
 first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
@@ -179,7 +179,7 @@ first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="gcp">Google Cloud Pub/Sub</h2>
+<h2 id="gcp"> Google Cloud Pub/Sub<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can receive messages from a Google <a href="https://cloud.google.com/pubsub/docs/">Cloud Pub/Sub</a> subscription.
 The URLs use the project ID and the subscription ID.
@@ -200,7 +200,7 @@ The URLs use the project ID and the subscription ID.
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="gcp-ctor">Google Cloud Pub/Sub Constructor</h3>
+<h3 id="gcp-ctor"> Google Cloud Pub/Sub Constructor<a class="anchor" href="#gcp-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenSubscription"><code>gcppubsub.OpenSubscription</code></a> constructor opens a Cloud Pub/Sub
 subscription. You must first obtain <a href="https://cloud.google.com/docs/authentication/production">GCP credentials</a> and then
@@ -247,7 +247,7 @@ reused among subscriptions.)</p>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="azure">Azure Service Bus</h2>
+<h2 id="azure"> Azure Service Bus<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can recieve messages from an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> subscription
 over <a href="https://www.amqp.org/">AMQP 1.0</a>. The URL for subscribing is the topic name with the
@@ -271,7 +271,7 @@ you need to copy <a href="https://docs.microsoft.com/en-us/azure/service-bus-mes
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="azure-ctor">Azure Service Bus Constructor</h3>
+<h3 id="azure-ctor"> Azure Service Bus Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/azuresb#OpenSubscription"><code>azuresb.OpenSubscription</code></a> constructor opens an Azure Service Bus
 subscription. You must first connect to the topic and subscription using the
@@ -316,7 +316,7 @@ package to make this easier.</p>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="rabbitmq">RabbitMQ</h2>
+<h2 id="rabbitmq"> RabbitMQ<a class="anchor" href="#rabbitmq" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can receive messages from an <a href="https://www.rabbitmq.com/protocol.html">AMQP 0.9.1</a> queue, the dialect of
 AMQP spoken by <a href="https://www.rabbitmq.com">RabbitMQ</a>. A RabbitMQ URL only includes the queue name.
@@ -340,7 +340,7 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="rabbitmq-ctor">RabbitMQ Constructor</h3>
+<h3 id="rabbitmq-ctor"> RabbitMQ Constructor<a class="anchor" href="#rabbitmq-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenSubscription"><code>rabbitpubsub.OpenSubscription</code></a> constructor opens a RabbitMQ queue.
 You must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
@@ -361,7 +361,7 @@ You must first create an <a href="https://godoc.org/github.com/streadway/amqp#Co
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="nats">NATS</h2>
+<h2 id="nats"> NATS<a class="anchor" href="#nats" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can publish to a <a href="https://nats.io/">NATS</a> subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the <code>NATS_SERVER_URL</code>
@@ -396,7 +396,7 @@ will first attempt to decode the payload using <a href="https://golang.org/pkg/e
 return the message payload as the <code>Data</code> with no metadata to accomodate
 subscribing to messages coming from a source not using the Go CDK.</p>
 
-<h3 id="nats-ctor">NATS Constructor</h3>
+<h3 id="nats-ctor"> NATS Constructor<a class="anchor" href="#nats-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription"><code>natspubsub.OpenSubscription</code></a> constructor opens a NATS subject as a
 topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"><code>*nats.Conn</code></a> to your NATS instance.</p>
@@ -425,7 +425,7 @@ topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="kafka">Kafka</h2>
+<h2 id="kafka"> Kafka<a class="anchor" href="#kafka" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can receive messages from a <a href="https://kafka.apache.org/">Kafka</a> cluster.
 A Kafka URL includes the consumer group name, plus at least one instance
@@ -453,7 +453,7 @@ hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="kafka-ctor">Kafka Constructor</h3>
+<h3 id="kafka-ctor"> Kafka Constructor<a class="anchor" href="#kafka-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenSubscription"><code>kafkapubsub.OpenSubscription</code></a> constructor creates a consumer in a
 consumer group, subscribed to one or more topics.</p>
@@ -484,7 +484,7 @@ you started.</p>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="mem">In-Memory</h2>
+<h2 id="mem"> In-Memory<a class="anchor" href="#mem" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
 The names in <code>mem://</code> URLs are a process-wide namespace, so subscriptions to
@@ -514,7 +514,7 @@ you open a topic <code>mem://topicA</code> and open two subscriptions with
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="mem-ctor">In-Memory Constructor</h3>
+<h3 id="mem-ctor"> In-Memory Constructor<a class="anchor" href="#mem-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>To create a subscription to an in-memory Pub/Sub topic, pass the <a href="https://gocloud.dev/howto/pubsub/publish/#mem-ctor">topic you
 created</a> into the <a href="https://godoc.org/gocloud.dev/pubsub/mempubsub#NewSubscription"><code>mempubsub.NewSubscription</code> function</a>.

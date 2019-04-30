@@ -57,7 +57,7 @@ $ ./upload s3://go-cloud-bucket gopher.png
 $ ./upload azblob://go-cloud-bucket gopher.png</code></pre></div>
 <p>(You can download the finished tutorial <a href="https://github.com/google/go-cloud/tree/master/samples/tutorial/">from GitHub</a>).</p>
 
-<h2 id="setup">Setup</h2>
+<h2 id="setup"> Setup<a class="anchor" href="#setup" aria-label="Link to Section">🔗</a></h2>
 
 <p>We start with a skeleton for our program to read from command-line
 arguments to configure the bucket URL.</p>
@@ -80,7 +80,7 @@ arguments to configure the bucket URL.</p>
 <span class="p">}</span></code></pre></div>
 <p>Now that we have a basic skeleton in place, let&rsquo;s start filling in the pieces.</p>
 
-<h2 id="connecting-to-the-bucket">Connecting to the bucket</h2>
+<h2 id="connecting-to-the-bucket"> Connecting to the bucket<a class="anchor" href="#connecting-to-the-bucket" aria-label="Link to Section">🔗</a></h2>
 
 <p>The easiest way to open a portable bucket API is with <code>blob.OpenBucket</code>.</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">package</span> <span class="nx">main</span>
@@ -125,7 +125,7 @@ principle of the Go CDK, <code>blob.Bucket</code> does not support creating a bu
 instead focuses solely on interacting with it. This separates the concerns of
 provisioning infrastructure and using infrastructure.</p>
 
-<h2 id="reading-the-file">Reading the file</h2>
+<h2 id="reading-the-file"> Reading the file<a class="anchor" href="#reading-the-file" aria-label="Link to Section">🔗</a></h2>
 
 <p>We need to read our file into a slice of bytes before uploading it. The process
 is the usual one:</p>
@@ -146,7 +146,7 @@ is the usual one:</p>
         <span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;Failed to read file: %s&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
     <span class="p">}</span>
 <span class="p">}</span></code></pre></div>
-<h2 id="writing-the-file-to-the-bucket">Writing the file to the bucket</h2>
+<h2 id="writing-the-file-to-the-bucket"> Writing the file to the bucket<a class="anchor" href="#writing-the-file-to-the-bucket" aria-label="Link to Section">🔗</a></h2>
 
 <p>Now, we have <code>data</code>, our file in a slice of bytes. Let&rsquo;s get to the fun part and
 write those bytes to the bucket!</p>
@@ -182,7 +182,7 @@ number of bytes written and any error that might have occurred.</p>
 <p>Alternatively, we could have used the shortcut <code>b.WriteAll(ctx, file, data,
 nil)</code>.</p>
 
-<h2 id="uploading-an-image">Uploading an image</h2>
+<h2 id="uploading-an-image"> Uploading an image<a class="anchor" href="#uploading-an-image" aria-label="Link to Section">🔗</a></h2>
 
 <p>That&rsquo;s it! Let&rsquo;s try it out. As setup, we will need to create an
 <a href="https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html">S3 bucket</a>, a <a href="https://cloud.google.com/storage/docs/creating-buckets">GCS bucket</a>, and an
@@ -220,7 +220,7 @@ $ ./upload s3://go-cloud-bucket gopher.png</code></pre></div>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ ./upload azblob://go-cloud-bucket gopher.png</code></pre></div>
 <p>If we check the buckets, we should see our gopher in each of them! We&rsquo;re done!</p>
 
-<h2 id="wrapping-up">Wrapping Up</h2>
+<h2 id="wrapping-up"> Wrapping Up<a class="anchor" href="#wrapping-up" aria-label="Link to Section">🔗</a></h2>
 
 <p>In conclusion, we have a program that can seamlessly switch between multiple
 Cloud storage providers using just one code path. You can see the finished

@@ -43,7 +43,7 @@ logic is written in a cloud-agnostic manner using MySQL, the generic blob
 API, and the generic runtimevar API. All platform-specific code is set up by
 <a href="https://github.com/google/wire">Wire</a>.
 
-<h2 id="prerequisites">Prerequisites</h2>
+<h2 id="prerequisites"> Prerequisites<a class="anchor" href="#prerequisites" aria-label="Link to Section">🔗</a></h2>
 
 <p>You will need to install the following software for this tutorial:</p>
 
@@ -56,17 +56,17 @@ API, and the generic runtimevar API. All platform-specific code is set up by
 <li><a href="https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest">az CLI</a></li>
 </ul>
 
-<h2 id="prerequisite-cloning-the-guestbook-sample">Prerequisite: Cloning the Guestbook Sample</h2>
+<h2 id="prerequisite-cloning-the-guestbook-sample"> Prerequisite: Cloning the Guestbook Sample<a class="anchor" href="#prerequisite-cloning-the-guestbook-sample" aria-label="Link to Section">🔗</a></h2>
 
 <p>Before you can do anything else, you need to clone the Go CDK repository. The
 repository contains the Guestbook sample.</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">git clone https://github.com/google/go-cloud.git
 <span class="nb">cd</span> go-cloud/samples/guestbook</code></pre></div>
-<h2 id="building">Building</h2>
+<h2 id="building"> Building<a class="anchor" href="#building" aria-label="Link to Section">🔗</a></h2>
 
 <p>Run the following in the <code>samples/guestbook</code> directory:</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go generate <span class="o">&amp;&amp;</span> go build</code></pre></div>
-<h2 id="running-locally">Running Locally</h2>
+<h2 id="running-locally"> Running Locally<a class="anchor" href="#running-locally" aria-label="Link to Section">🔗</a></h2>
 
 <p>You will need to run a local MySQL database server and create a local message of
 the day. <code>localdb/main.go</code> runs the local MySQL database server using Docker:</p>
@@ -88,12 +88,12 @@ go run localdb/main.go</code></pre></div>
 (SIGINT).</p>
 
 
-<h2 id="running-on-azure">Running on Azure</h2>
+<h2 id="running-on-azure"> Running on Azure<a class="anchor" href="#running-on-azure" aria-label="Link to Section">🔗</a></h2>
 
 <p>If you want to run this sample on Azure, you first need to set up an Azure
 account. Use the <code>az</code> CLI to log in.</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">az login</code></pre></div>
-<h3 id="provision-resources-with-terraform">Provision resources with Terraform</h3>
+<h3 id="provision-resources-with-terraform"> Provision resources with Terraform<a class="anchor" href="#provision-resources-with-terraform" aria-label="Link to Section">🔗</a></h3>
 
 <p>We&rsquo;ll use <a href="https://www.terraform.io/">Terraform</a>, a tool for initializing cloud resources, to set up your
 project.</p>
@@ -111,7 +111,7 @@ Outputs:
 <span class="nv">access_key</span> <span class="o">=</span> <span class="o">[</span>redacted<span class="o">]</span>
 <span class="nv">storage_account</span> <span class="o">=</span> <span class="o">[</span>redacated<span class="o">]</span>
 <span class="nv">storage_container</span> <span class="o">=</span> <span class="o">[</span>redacted<span class="o">]</span></code></pre></div>
-<h3 id="running">Running</h3>
+<h3 id="running"> Running<a class="anchor" href="#running" aria-label="Link to Section">🔗</a></h3>
 
 <p>You will need to run a local MySQL database server, similar to what we did for
 running locally earlier. Open a new terminal window, and run:</p>
@@ -137,12 +137,12 @@ the <code>guestbook</code> application:</p>
 <p>You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
 (SIGINT).</p>
 
-<h2 id="cleanup">Cleanup</h2>
+<h2 id="cleanup"> Cleanup<a class="anchor" href="#cleanup" aria-label="Link to Section">🔗</a></h2>
 
 <p>To clean up the created resources, run <code>terraform destroy</code> inside the <code>azure</code>
 directory using the same variables you entered during <code>terraform apply</code>.</p>
 
-<h2 id="gophers">Gophers</h2>
+<h2 id="gophers"> Gophers<a class="anchor" href="#gophers" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go gopher was designed by Renee French and used under the
 <a href="https://creativecommons.org/licenses/by/3.0/">Creative Commons 3.0 Attributions</a>

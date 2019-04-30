@@ -232,6 +232,32 @@ body {
   margin: 2rem 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
+.MainContent h1 .anchor,
+.MainContent h2 .anchor,
+.MainContent h3 .anchor,
+.MainContent h4 .anchor,
+.MainContent h5 .anchor,
+.MainContent h6 .anchor {
+  display: none;
+  font-size: 1rem;
+  margin: 0 0.2rem;
+}
+.MainContent h1 :link:hover,
+.MainContent h2 :link:hover,
+.MainContent h3 :link:hover,
+.MainContent h4 :link:hover,
+.MainContent h5 :link:hover,
+.MainContent h6 :link:hover {
+  text-decoration: none;
+}
+.MainContent h1:hover .anchor,
+.MainContent h2:hover .anchor,
+.MainContent h3:hover .anchor,
+.MainContent h4:hover .anchor,
+.MainContent h5:hover .anchor,
+.MainContent h6:hover .anchor {
+  display: inline;
+}
 /* Code */
 .MainContent code {
   font-size: 85%;

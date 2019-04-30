@@ -40,7 +40,7 @@ logic is written in a cloud-agnostic manner using MySQL, the generic blob
 API, and the generic runtimevar API. All platform-specific code is set up by
 <a href="https://github.com/google/wire">Wire</a>.
 
-<h2 id="prerequisites">Prerequisites</h2>
+<h2 id="prerequisites"> Prerequisites<a class="anchor" href="#prerequisites" aria-label="Link to Section">🔗</a></h2>
 
 <p>You will need to install the following software for this tutorial:</p>
 
@@ -53,17 +53,17 @@ API, and the generic runtimevar API. All platform-specific code is set up by
 <li><a href="https://cloud.google.com/sdk/downloads">gcloud CLI</a></li>
 </ul>
 
-<h2 id="prerequisite-cloning-the-guestbook-sample">Prerequisite: Cloning the Guestbook Sample</h2>
+<h2 id="prerequisite-cloning-the-guestbook-sample"> Prerequisite: Cloning the Guestbook Sample<a class="anchor" href="#prerequisite-cloning-the-guestbook-sample" aria-label="Link to Section">🔗</a></h2>
 
 <p>Before you can do anything else, you need to clone the Go CDK repository. The
 repository contains the Guestbook sample.</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">git clone https://github.com/google/go-cloud.git
 <span class="nb">cd</span> go-cloud/samples/guestbook</code></pre></div>
-<h2 id="building">Building</h2>
+<h2 id="building"> Building<a class="anchor" href="#building" aria-label="Link to Section">🔗</a></h2>
 
 <p>Run the following in the <code>samples/guestbook</code> directory:</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go generate <span class="o">&amp;&amp;</span> go build</code></pre></div>
-<h2 id="running-locally">Running Locally</h2>
+<h2 id="running-locally"> Running Locally<a class="anchor" href="#running-locally" aria-label="Link to Section">🔗</a></h2>
 
 <p>You will need to run a local MySQL database server and create a local message of
 the day. <code>localdb/main.go</code> runs the local MySQL database server using Docker:</p>
@@ -85,7 +85,7 @@ go run localdb/main.go</code></pre></div>
 (SIGINT).</p>
 
 
-<h2 id="running-on-google-cloud-platform-gcp">Running on Google Cloud Platform (GCP)</h2>
+<h2 id="running-on-google-cloud-platform-gcp"> Running on Google Cloud Platform (GCP)<a class="anchor" href="#running-on-google-cloud-platform-gcp" aria-label="Link to Section">🔗</a></h2>
 
 <p>If you want to run this sample on GCP, you need to create a project, download
 the gcloud SDK, install <code>kubectl</code> and log in.</p>
@@ -109,12 +109,12 @@ terraform apply
 go run deploy/main.go</code></pre></div>
 <p>The deploy script will display the URL of your running service.</p>
 
-<h2 id="cleanup">Cleanup</h2>
+<h2 id="cleanup"> Cleanup<a class="anchor" href="#cleanup" aria-label="Link to Section">🔗</a></h2>
 
 <p>To clean up the created resources, run <code>terraform destroy</code> inside the <code>gcp</code>
 directory using the same variables you entered during <code>terraform apply</code>.</p>
 
-<h2 id="gophers">Gophers</h2>
+<h2 id="gophers"> Gophers<a class="anchor" href="#gophers" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go gopher was designed by Renee French and used under the
 <a href="https://creativecommons.org/licenses/by/3.0/">Creative Commons 3.0 Attributions</a>

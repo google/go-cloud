@@ -59,7 +59,7 @@ like this:</p>
 <p>The rest of this guide will discuss how to accomplish the first step: opening
 a topic for your chosen Pub/Sub provider.</p>
 
-<h2 id="constructors-versus-url-openers">Constructors versus URL openers</h2>
+<h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
 
 <p>If you know that your program is always going to use a particular Pub/Sub
 provider or you need fine-grained control over the connection settings, you
@@ -70,7 +70,7 @@ import&rdquo;</a> the driver package to link it in. See the
 <a href="https://godoc.org/gocloud.dev#hdr-URLs">documentation on URLs</a> for more details. This guide will show how to use
 both forms for each pub/sub provider.</p>
 
-<h2 id="sns">Amazon Simple Notification Service</h2>
+<h2 id="sns"> Amazon Simple Notification Service<a class="anchor" href="#sns" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can publish to an Amazon <a href="https://aws.amazon.com/sns/">Simple Notification Service</a> (SNS)
 topic. SNS URLs in the Go CDK use the Amazon Resource Name (ARN) to identify
@@ -102,7 +102,7 @@ these will be <a href="/howto/pubsub/subscribe/#sqs">automatically Base64 decode
 receiving messages from a topic in a program that does not use the Go CDK,
 you may need to manually Base64 decode the message payload.</p>
 
-<h3 id="sns-ctor">Amazon Simple Notification Service Constructor</h3>
+<h3 id="sns-ctor"> Amazon Simple Notification Service Constructor<a class="anchor" href="#sns-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenTopic"><code>awssnssqs.OpenTopic</code></a> constructor opens an SNS topic. You must first
 create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
@@ -131,7 +131,7 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="gcp">Google Cloud Pub/Sub</h2>
+<h2 id="gcp"> Google Cloud Pub/Sub<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can publish to a Google <a href="https://cloud.google.com/pubsub/docs/">Cloud Pub/Sub</a> topic. The URLs use the
 project ID and the topic ID. <code>pubsub.OpenTopic</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application Default
@@ -151,7 +151,7 @@ Credentials</a>.</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="gcp-ctor">Google Cloud Pub/Sub Constructor</h3>
+<h3 id="gcp-ctor"> Google Cloud Pub/Sub Constructor<a class="anchor" href="#gcp-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenTopic"><code>gcppubsub.OpenTopic</code></a> constructor opens a Cloud Pub/Sub topic. You
 must first obtain <a href="https://cloud.google.com/docs/authentication/production">GCP credentials</a> and then create a gRPC
@@ -196,7 +196,7 @@ topics.)</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="azure">Azure Service Bus</h2>
+<h2 id="azure"> Azure Service Bus<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can publish to an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> topic over <a href="https://www.amqp.org/">AMQP 1.0</a>.
 The URL for publishing is the topic name. <code>pubsub.OpenTopic</code> will use the
@@ -221,7 +221,7 @@ connection string. The connection string can be obtained
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="azure-ctor">Azure Service Bus Constructor</h3>
+<h3 id="azure-ctor"> Azure Service Bus Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/azuresb#OpenTopic"><code>azuresb.OpenTopic</code></a> constructor opens an Azure Service Bus topic. You
 must first connect to the topic using the <a href="https://github.com/Azure/azure-service-bus-go">Azure Service Bus library</a> and
@@ -262,7 +262,7 @@ then pass it to <code>azuresb.OpenTopic</code>. There are also helper functions 
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="rabbitmq">RabbitMQ</h2>
+<h2 id="rabbitmq"> RabbitMQ<a class="anchor" href="#rabbitmq" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can publish to an <a href="https://www.rabbitmq.com/protocol.html">AMQP 0.9.1</a> fanout exchange, the dialect of
 AMQP spoken by <a href="https://www.rabbitmq.com">RabbitMQ</a>. A RabbitMQ URL only includes the exchange name.
@@ -286,7 +286,7 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="rabbitmq-ctor">RabbitMQ Constructor</h3>
+<h3 id="rabbitmq-ctor"> RabbitMQ Constructor<a class="anchor" href="#rabbitmq-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenTopic"><code>rabbitpubsub.OpenTopic</code></a> constructor opens a RabbitMQ exchange. You
 must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
@@ -307,7 +307,7 @@ must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connec
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="nats">NATS</h2>
+<h2 id="nats"> NATS<a class="anchor" href="#nats" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can publish to a <a href="https://nats.io/">NATS</a> subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the <code>NATS_SERVER_URL</code>
@@ -333,7 +333,7 @@ environment variable (which is something like <code>nats://nats.example.com</cod
 <p>Because NATS does not natively support metadata, messages sent to NATS will
 be encoded with <a href="https://golang.org/pkg/encoding/gob/">gob</a>.</p>
 
-<h3 id="nats-ctor">NATS Constructor</h3>
+<h3 id="nats-ctor"> NATS Constructor<a class="anchor" href="#nats-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenTopic"><code>natspubsub.OpenTopic</code></a> constructor opens a NATS subject as a topic. You
 must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"><code>*nats.Conn</code></a> to your NATS instance.</p>
@@ -358,7 +358,7 @@ must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="kafka">Kafka</h2>
+<h2 id="kafka"> Kafka<a class="anchor" href="#kafka" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK can publish to a <a href="https://kafka.apache.org/">Kafka</a> cluster. A Kafka URL only includes the
 topic name. The brokers in the Kafka cluster are discovered from the
@@ -382,7 +382,7 @@ hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="kafka-ctor">Kafka Constructor</h3>
+<h3 id="kafka-ctor"> Kafka Constructor<a class="anchor" href="#kafka-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenTopic"><code>kafkapubsub.OpenTopic</code></a> constructor opens a Kafka topic to publish
 messages to. Depending on your Kafka cluster configuration (see
@@ -412,7 +412,7 @@ you started.</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="mem">In-Memory</h2>
+<h2 id="mem"> In-Memory<a class="anchor" href="#mem" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
 The names in <code>mem://</code> URLs are a process-wide namespace, so subscriptions to
@@ -433,7 +433,7 @@ more in the <a href="https://gocloud.dev/howto/pubsub/subscribe/#mem">subscripti
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="mem-ctor">In-Memory Constructor</h3>
+<h3 id="mem-ctor"> In-Memory Constructor<a class="anchor" href="#mem-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>To create an in-memory Pub/Sub topic, use the <a href="https://godoc.org/gocloud.dev/pubsub/mempubsub#NewTopic"><code>mempubsub.NewTopic</code>
 function</a>. You can use the returned topic to create in-memory

@@ -40,7 +40,7 @@ logic is written in a cloud-agnostic manner using MySQL, the generic blob
 API, and the generic runtimevar API. All platform-specific code is set up by
 <a href="https://github.com/google/wire">Wire</a>.
 
-<h2 id="prerequisites">Prerequisites</h2>
+<h2 id="prerequisites"> Prerequisites<a class="anchor" href="#prerequisites" aria-label="Link to Section">🔗</a></h2>
 
 <p>You will need to install the following software for this tutorial:</p>
 
@@ -53,17 +53,17 @@ API, and the generic runtimevar API. All platform-specific code is set up by
 <li><a href="https://docs.aws.amazon.com/cli/latest/userguide/installing.html">aws CLI</a></li>
 </ul>
 
-<h2 id="prerequisite-cloning-the-guestbook-sample">Prerequisite: Cloning the Guestbook Sample</h2>
+<h2 id="prerequisite-cloning-the-guestbook-sample"> Prerequisite: Cloning the Guestbook Sample<a class="anchor" href="#prerequisite-cloning-the-guestbook-sample" aria-label="Link to Section">🔗</a></h2>
 
 <p>Before you can do anything else, you need to clone the Go CDK repository. The
 repository contains the Guestbook sample.</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">git clone https://github.com/google/go-cloud.git
 <span class="nb">cd</span> go-cloud/samples/guestbook</code></pre></div>
-<h2 id="building">Building</h2>
+<h2 id="building"> Building<a class="anchor" href="#building" aria-label="Link to Section">🔗</a></h2>
 
 <p>Run the following in the <code>samples/guestbook</code> directory:</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go generate <span class="o">&amp;&amp;</span> go build</code></pre></div>
-<h2 id="running-locally">Running Locally</h2>
+<h2 id="running-locally"> Running Locally<a class="anchor" href="#running-locally" aria-label="Link to Section">🔗</a></h2>
 
 <p>You will need to run a local MySQL database server and create a local message of
 the day. <code>localdb/main.go</code> runs the local MySQL database server using Docker:</p>
@@ -85,26 +85,26 @@ go run localdb/main.go</code></pre></div>
 (SIGINT).</p>
 
 
-<h2 id="running-on-amazon-web-services-aws">Running on Amazon Web Services (AWS)</h2>
+<h2 id="running-on-amazon-web-services-aws"> Running on Amazon Web Services (AWS)<a class="anchor" href="#running-on-amazon-web-services-aws" aria-label="Link to Section">🔗</a></h2>
 
 <p>If you want to run this sample on AWS, you need to set up an account, download
 the AWS command line interface, and log in. There&rsquo;s <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html">help here</a>
 if you need it.</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">aws configure</code></pre></div>
-<h3 id="agree-to-the-debian-terms-and-conditions">Agree to the Debian Terms and Conditions</h3>
+<h3 id="agree-to-the-debian-terms-and-conditions"> Agree to the Debian Terms and Conditions<a class="anchor" href="#agree-to-the-debian-terms-and-conditions" aria-label="Link to Section">🔗</a></h3>
 
 <p>You have to agree to the <a href="https://aws.amazon.com/marketplace/pp?sku=55q52qvgjfpdj2fpfy9mb1lo4">Debian Terms and Conditions</a> in order to
 provision the resources. Click through the &ldquo;Continue to Subscribe&rdquo; button at the
 top, then log in to your AWS account and subscribe to Debian.</p>
 
-<h3 id="ssh-key">SSH Key</h3>
+<h3 id="ssh-key"> SSH Key<a class="anchor" href="#ssh-key" aria-label="Link to Section">🔗</a></h3>
 
 <p>You will also need an SSH key to SSH into the EC2 instance. If you don&rsquo;t already
 have one, you can follow <a href="https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/">this guide from GitHub</a>. Follow the
 instructions for &ldquo;Adding your key to the ssh-agent&rdquo; if you want the key to
 persist across terminal sessions.</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">ssh-add</code></pre></div>
-<h3 id="provision-resources-with-terraform">Provision resources with Terraform</h3>
+<h3 id="provision-resources-with-terraform"> Provision resources with Terraform<a class="anchor" href="#provision-resources-with-terraform" aria-label="Link to Section">🔗</a></h3>
 
 <p>You can now use Terraform, a tool for initializing cloud resources, to set up
 your project. This will create an EC2 instance you can SSH to and run your
@@ -120,7 +120,7 @@ terraform init
 <span class="c1"># Keep track of the output of this command as it is needed later.</span>
 <span class="c1"># You can replace us-west-1 with whatever region you want.</span>
 terraform apply -var <span class="nv">region</span><span class="o">=</span>us-west-1 -var <span class="nv">ssh_public_key</span><span class="o">=</span><span class="s2">&#34;</span><span class="k">$(</span>cat ~/.ssh/id_rsa.pub<span class="k">)</span><span class="s2">&#34;</span></code></pre></div>
-<h3 id="connect-to-the-new-server-and-run-the-guestbook-binary">Connect to the new server and run the guestbook binary</h3>
+<h3 id="connect-to-the-new-server-and-run-the-guestbook-binary"> Connect to the new server and run the guestbook binary<a class="anchor" href="#connect-to-the-new-server-and-run-the-guestbook-binary" aria-label="Link to Section">🔗</a></h3>
 
 <p>You now need to connect to the new remote server to execute the <code>guestbook</code>
 binary. The final output of <code>terraform apply</code> lists the variables <code>guestbook</code>
@@ -155,16 +155,16 @@ server$ <span class="nv">AWS_REGION</span><span class="o">=</span>&lt;your regio
 </span><span class="se"></span>  -db_user<span class="o">=</span>root <span class="se">\
 </span><span class="se"></span>  -db_password<span class="o">=</span>&lt;your database_root_password&gt; <span class="se">\
 </span><span class="se"></span>  -motd_var<span class="o">=</span>/guestbook/motd</code></pre></div>
-<h3 id="view-the-guestbook-application">View the guestbook application</h3>
+<h3 id="view-the-guestbook-application"> View the guestbook application<a class="anchor" href="#view-the-guestbook-application" aria-label="Link to Section">🔗</a></h3>
 
 <p>You can now visit the server at <code>http://&lt;your instance_host&gt;:8080/</code>.</p>
 
-<h2 id="cleanup">Cleanup</h2>
+<h2 id="cleanup"> Cleanup<a class="anchor" href="#cleanup" aria-label="Link to Section">🔗</a></h2>
 
 <p>To clean up the created resources, run <code>terraform destroy</code> inside the <code>aws</code>
 directory using the same variables you entered during <code>terraform apply</code>.</p>
 
-<h2 id="gophers">Gophers</h2>
+<h2 id="gophers"> Gophers<a class="anchor" href="#gophers" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go gopher was designed by Renee French and used under the
 <a href="https://creativecommons.org/licenses/by/3.0/">Creative Commons 3.0 Attributions</a>

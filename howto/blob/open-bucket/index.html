@@ -35,7 +35,7 @@ if (!doNotTrack) {
 storage provider. Every storage provider is a little different, but the Go CDK
 lets you interact with all of them using the <a href="https://godoc.org/gocloud.dev/blob#Bucket"><code>*blob.Bucket</code> type</a>.</p>
 
-<h2 id="constructors-versus-url-openers">Constructors versus URL openers</h2>
+<h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
 
 <p>If you know that your program is always going to use a particular storage
 provider or you need fine-grained control over the connection settings, you
@@ -46,7 +46,7 @@ import&rdquo;</a> the driver package to link it in. See the
 <a href="https://godoc.org/gocloud.dev#hdr-URLs">documentation on URLs</a> for more details. This guide will show how to use
 both forms for each storage provider.</p>
 
-<h2 id="s3">S3</h2>
+<h2 id="s3"> S3<a class="anchor" href="#s3" aria-label="Link to Section">🔗</a></h2>
 
 <p>S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
 You can specify the <code>region</code> query parameter to ensure your application connects
@@ -71,7 +71,7 @@ in the environment variables or your AWS CLI configuration.</p>
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/s3blob#URLOpener"><code>s3blob.URLOpener</code></a>.</p>
 
-<h3 id="s3-ctor">S3 Constructor</h3>
+<h3 id="s3-ctor"> S3 Constructor<a class="anchor" href="#s3-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/blob/s3blob"><code>s3blob.OpenBucket</code></a> constructor opens an <a href="https://aws.amazon.com/s3/">S3</a> bucket. You must first
 create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your bucket:</p>
@@ -102,7 +102,7 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h3 id="s3-compatible">S3-compatible storage servers</h3>
+<h3 id="s3-compatible"> S3-compatible storage servers<a class="anchor" href="#s3-compatible" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can also interact with <a href="https://en.wikipedia.org/wiki/Amazon_S3#S3_API_and_competing_services">S3-compatible storage servers</a> that
 recognize the same REST HTTP endpoints as S3, like <a href="https://www.minio.io/">Minio</a>, <a href="https://ceph.com/">Ceph</a>, or
@@ -116,7 +116,7 @@ parameters like so:</p>
     <span class="s">&#34;s3ForcePathStyle=true&#34;</span><span class="p">)</span></code></pre></div>
 <p>See <a href="https://godoc.org/gocloud.dev/aws#ConfigFromURLParams"><code>aws.ConfigFromURLParams</code></a> for more details on supported URL options for S3.</p>
 
-<h2 id="gcs">Google Cloud Storage</h2>
+<h2 id="gcs"> Google Cloud Storage<a class="anchor" href="#gcs" aria-label="Link to Section">🔗</a></h2>
 
 <p><a href="https://cloud.google.com/storage/">Google Cloud Storage</a> (GCS) URLs in the Go CDK closely resemble the URLs
 you would see in the <code>gsutil</code> CLI. <code>blob.OpenBucket</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application
@@ -141,7 +141,7 @@ Default Credentials</a>.</p>
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener"><code>gcsblob.URLOpener</code></a>.</p>
 
-<h3 id="gcs-ctor">Google Cloud Storage Constructor</h3>
+<h3 id="gcs-ctor"> Google Cloud Storage Constructor<a class="anchor" href="#gcs-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket"><code>gcsblob.OpenBucket</code></a> constructor opens a GCS bucket. You must first
 create a <code>*net/http.Client</code> that sends requests authorized by <a href="https://cloud.google.com/docs/authentication/production">Google Cloud
@@ -182,7 +182,7 @@ other API that takes in a <code>*gcp.HTTPClient</code>.) You can find functions 
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h2 id="azure">Azure Storage</h2>
+<h2 id="azure"> Azure Storage<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h2>
 
 <p>Azure Storage URLs in the Go CDK allow you to identify <a href="https://azure.microsoft.com/en-us/services/storage/">Azure Storage</a> containers
 when opening a bucket with <code>blob.OpenBucket</code>. Go CDK uses the environment
@@ -212,7 +212,7 @@ is required, along with one of the other two.</p>
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/azureblob#URLOpener"><code>azureblob.URLOpener</code></a>.</p>
 
-<h3 id="azure-ctor">Azure Storage Constructor</h3>
+<h3 id="azure-ctor"> Azure Storage Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket"><code>azureblob.OpenBucket</code></a> constructor opens an Azure Storage container.
 <code>azureblob</code> operates on <a href="https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs">Azure Storage Block Blobs</a>. You must first create
@@ -253,7 +253,7 @@ you can open a container.</p>
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h2 id="local">Local Storage</h2>
+<h2 id="local"> Local Storage<a class="anchor" href="#local" aria-label="Link to Section">🔗</a></h2>
 
 <p>The Go CDK provides blob drivers for storing data in memory and on the local
 filesystem. These are primarily intended for testing and local development,
@@ -283,7 +283,7 @@ separator, so on Windows, <code>C:\foo\bar</code> would be written as
     <span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">bucket2</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
-<h3 id="local-ctor">Local Storage Constructors</h3>
+<h3 id="local-ctor"> Local Storage Constructors<a class="anchor" href="#local-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>You can create an in-memory bucket with <a href="https://godoc.org/gocloud.dev/blob/memblob#OpenBucket"><code>memblob.OpenBucket</code></a>:</p>
 
@@ -335,7 +335,7 @@ separator, so on Windows, <code>C:\foo\bar</code> would be written as
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h2 id="what-s-next">What&rsquo;s Next</h2>
+<h2 id="what-s-next"> What&rsquo;s Next<a class="anchor" href="#what-s-next" aria-label="Link to Section">🔗</a></h2>
 
 <p>Now that you have opened a bucket, you can <a href="https://gocloud.dev/howto/blob/data/">store data in and access data
 from</a> the bucket using portable operations.</p></div>
