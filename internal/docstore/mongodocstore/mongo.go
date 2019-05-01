@@ -189,7 +189,7 @@ const mongoIDField = "_id"
 // TODO(jba): use bulk RPCs.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
 	if unordered {
-		panic("unordered unimplemented")
+		return driver.ActionListError{{0, gcerr.Newf(gcerr.Unimplemented, nil, "unordered actions")}}
 	}
 	for i, a := range actions {
 		if err := c.runAction(ctx, a); err != nil {

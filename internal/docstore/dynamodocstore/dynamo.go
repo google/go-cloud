@@ -197,7 +197,7 @@ func (c *collection) KeyFields() []string {
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
 	if unordered {
-		panic("unordered unimplemented")
+		return driver.ActionListError{{0, gcerr.Newf(gcerr.Unimplemented, nil, "unordered actions")}}
 	}
 	groups := c.splitActions(actions)
 	nRun := 0 // number of actions successfully run

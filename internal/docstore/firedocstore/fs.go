@@ -213,7 +213,7 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string, n
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
 	if unordered {
-		panic("unordered unimplemented")
+		return driver.ActionListError{{0, gcerr.Newf(gcerr.Unimplemented, nil, "unordered actions")}}
 	}
 	// Split the actions into groups, each of which can be done with a single RPC.
 	// - Consecutive writes are grouped together.

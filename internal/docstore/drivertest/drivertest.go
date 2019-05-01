@@ -155,6 +155,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
+	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
 
 	t.Run("Query", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testQuery) })
 
@@ -1032,6 +1033,113 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	}
 	if err := dels.Do(ctx); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func testUnorderedActions(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+
+	// (Temporary) skip if the driver does not implement unordered actions.
+	err := coll.Actions().Unordered().Do(ctx)
+	if err != nil && gcerrors.Code(err.(docstore.ActionListError)[0].Err) == gcerrors.Unimplemented {
+		t.Skip("unordered actions not yet implemented")
+	}
+
+	defer cleanUpTable(t, newDocmap, coll)
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	compare := func(gots, wants []docmap) {
+		for i := 0; i < len(gots); i++ {
+			got := gots[i]
+			want := docmap{}
+			for k, v := range wants[i] {
+				want[k] = v
+			}
+			want[docstore.RevisionField] = got[docstore.RevisionField]
+			if !cmp.Equal(got, want) {
+				t.Errorf("%d: got %v, want %v", i, got, want)
+			}
+		}
+	}
+
+	var docs []docmap
+	for i := 0; i < 9; i++ {
+		docs = append(docs, docmap{KeyField: fmt.Sprintf("testUnorderedActions%d", i), "s": fmt.Sprint(i)})
+	}
+
+	// Put the first three docs.
+	actions := coll.Actions().Unordered()
+	for i := 0; i < 3; i++ {
+		actions.Put(docs[i])
+	}
+	must(actions.Do(ctx))
+
+	// Get the first three and put three more.
+	actions = coll.Actions().Unordered()
+	var gdocs []docmap
+	for i := 0; i < 3; i++ {
+		doc := docmap{KeyField: docs[i][KeyField]}
+		gdocs = append(gdocs, doc)
+		actions.Get(doc)
+	}
+	for i := 3; i < 6; i++ {
+		actions.Put(docs[i])
+	}
+	must(actions.Do(ctx))
+	compare(gdocs, docs[:3])
+
+	// Delete the first three, get the second three, and put three more.
+	actions = coll.Actions().Unordered()
+	gdocs = []docmap{
+		{KeyField: docs[3][KeyField]},
+		{KeyField: docs[4][KeyField]},
+		{KeyField: docs[5][KeyField]},
+	}
+	actions.Put(docs[6])
+	actions.Get(gdocs[0])
+	actions.Delete(docs[0])
+	actions.Delete(docs[1])
+	actions.Put(docs[7])
+	actions.Get(gdocs[1])
+	actions.Delete(docs[2])
+	actions.Get(gdocs[2])
+	actions.Put(docs[8])
+	must(actions.Do(ctx))
+	compare(gdocs, docs[3:6])
+
+	// Get the first four. The first three should fail.
+	actions = coll.Actions().Unordered()
+	gdocs = []docmap{
+		{KeyField: docs[0][KeyField]},
+		{KeyField: docs[1][KeyField]},
+		{KeyField: docs[2][KeyField]},
+		{KeyField: docs[3][KeyField]},
+	}
+	for i := 0; i < len(gdocs); i++ {
+		actions.Get(gdocs[i])
+	}
+	err = actions.Do(ctx)
+	if err == nil {
+		t.Fatal("want error, got nil")
+	}
+	alerr, ok := err.(docstore.ActionListError)
+	if !ok {
+		t.Fatalf("got %v (%T), want ActionListError", alerr, alerr)
+	}
+	for _, e := range alerr {
+		i := e.Index
+		if i == 3 && e.Err != nil {
+			t.Errorf("index 3: got %v, want nil", e.Err)
+		}
+		if i < 3 && gcerrors.Code(e.Err) != gcerrors.NotFound {
+			t.Errorf("index %d: got %v, want NotFound", i, e.Err)
+		}
 	}
 }
 
