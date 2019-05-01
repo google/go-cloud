@@ -295,7 +295,6 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, e
 			return i, gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", path)
 		}
 		pdoc := resp.Result.(*pb.BatchGetDocumentsResponse_Found).Found
-		// TODO(jba): support field paths in decoding.
 		if err := decodeDoc(pdoc, gets[i].Doc, c.nameField); err != nil {
 			return i, err
 		}
