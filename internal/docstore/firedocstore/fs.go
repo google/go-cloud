@@ -270,7 +270,7 @@ func (c *collection) runGetsOrdered(ctx context.Context, gets []*driver.Action) 
 	return len(gets), nil
 }
 
-// runGets executs a group of Get actions by calling the BatchGetDocuments RPC.
+// runGets executes a group of Get actions by calling the BatchGetDocuments RPC.
 // It returns the error for each Get action in order.
 func (c *collection) runGets(ctx context.Context, gets []*driver.Action) []error {
 	errs := make([]error, len(gets))
