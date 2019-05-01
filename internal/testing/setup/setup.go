@@ -339,20 +339,51 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 	return p, done, client
 }
 
-// NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test recordings.
+// NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test
+// recordings.
 func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (func(), *http.Client) {
-	mode := recorder.ModeReplaying
+	httpreplay.DebugHeaders()
+	path := filepath.Join("testdata", t.Name()+".replay")
+	var client *http.Client
+	var done func()
 	if *Record {
-		mode = recorder.ModeRecording
+		// TODO(eliben): refactor this to remove repetition of setting up
+		// httpreplay. Tracked in #770
+		t.Logf("Recording into golden file %s", path)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		rec, err := httpreplay.NewRecorder(path, nil)
+		rec.RemoveQueryParams("se", "sig")
+		rec.RemoveQueryParams("X-Ms-Date")
+		rec.ClearHeaders("X-Ms-Date")
+		rec.ClearHeaders("User-Agent") // includes the full Go version
+		if err != nil {
+			t.Fatal(err)
+		}
+		client, err = rec.Client(ctx, option.WithoutAuthentication())
+		if err != nil {
+			t.Fatal(err)
+		}
+		done = func() {
+			if err := rec.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	} else { // replay
+		t.Logf("Replaying from golden file %s", path)
+		rep, err := httpreplay.NewReplayer(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client, err = rep.Client(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		done = func() { _ = rep.Close() } // Don't care about Close error on replay.
 	}
 
-	azMatchers := &replay.ProviderMatcher{}
-	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
-
-	return done, &http.Client{Transport: r}
+	return done, client
 }
 
 // FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.
