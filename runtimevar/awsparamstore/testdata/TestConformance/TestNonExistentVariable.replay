@@ -1,0 +1,95 @@
+{
+  "Initial": null,
+  "Version": "0.2",
+  "Converter": {
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Amz-Date$"
+    ],
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$",
+      "^X-Amz-Security-Token$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "9332e70a6403bb6e",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://ssm.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "25"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ],
+          "X-Amz-Target": [
+            "AmazonSSM.GetParameter"
+          ]
+        },
+        "MediaType": "application/x-amz-json-1.1",
+        "BodyParts": [
+          "eyJOYW1lIjoiZG9lcy1ub3QtZXhpc3QifQ=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 400,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "50"
+          ],
+          "Content-Type": [
+            "application/x-amz-json-1.1"
+          ],
+          "Date": [
+            "Wed, 01 May 2019 16:57:25 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "eea5f444-9e83-4546-860d-c95b1a2eb89d"
+          ]
+        },
+        "Body": "H4sIAAAAAAAAAKtWio8vqSxIVbJSCkgsSsxNLUkt8ssvccsvzUtRqgUAF48DRR4AAAA="
+      }
+    }
+  ]
+}
