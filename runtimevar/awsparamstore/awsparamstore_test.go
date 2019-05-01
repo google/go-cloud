@@ -44,7 +44,7 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	sess, _, done := setup.NewAWSSession(t, region)
+	sess, _, done := setup.NewAWSSession2(context.Background(), t, region)
 	return &harness{session: sess, closer: done}, nil
 }
 
