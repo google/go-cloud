@@ -131,9 +131,12 @@ func TestOpenVariable(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := OpenVariable(http.DefaultClient, test.URL, runtimevar.StringDecoder, nil)
+		v, err := OpenVariable(http.DefaultClient, test.URL, runtimevar.StringDecoder, nil)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if v != nil {
+			v.Close()
 		}
 	}
 }
@@ -181,6 +184,7 @@ func TestWatcher_ErrorCode(t *testing.T) {
 	}
 
 	watcher := newWatcher(http.DefaultClient, endpointURL, runtimevar.StringDecoder, nil)
+	defer watcher.Close()
 	for _, test := range tests {
 		actualGCErr := watcher.ErrorCode(test.Err)
 		if test.GCErr != actualGCErr {
@@ -202,6 +206,7 @@ func TestWatcher_WatchVariable(t *testing.T) {
 			Timeout: time.Duration(1 * time.Millisecond),
 		}
 		watcher := newWatcher(httpClient, endpointURL, runtimevar.StringDecoder, nil)
+		defer watcher.Close()
 		state, _ := watcher.WatchVariable(context.Background(), &state{})
 
 		val, err := state.Value()
@@ -219,6 +224,7 @@ func TestOpenVariableURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
 	baseURL := h.(*harness).mockServer.baseURL
 
 	ctx := context.Background()
@@ -248,23 +254,26 @@ func TestOpenVariableURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		v, err := runtimevar.OpenVariable(ctx, test.URL)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
-		if err != nil {
-			continue
-		}
-		snapshot, err := v.Watch(ctx)
-		if (err != nil) != test.WantWatchErr {
-			t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
-		}
-		if err != nil {
-			continue
-		}
-		if !cmp.Equal(snapshot.Value, test.Want) {
-			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
-		}
+		t.Run(test.URL, func(t *testing.T) {
+			v, err := runtimevar.OpenVariable(ctx, test.URL)
+			if (err != nil) != test.WantErr {
+				t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+			}
+			if err != nil {
+				return
+			}
+			defer v.Close()
+			snapshot, err := v.Watch(ctx)
+			if (err != nil) != test.WantWatchErr {
+				t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
+			}
+			if err != nil {
+				return
+			}
+			if !cmp.Equal(snapshot.Value, test.Want) {
+				t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
+			}
+		})
 	}
 }
 
