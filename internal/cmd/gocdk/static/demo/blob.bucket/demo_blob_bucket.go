@@ -37,7 +37,7 @@ func init() {
 	http.HandleFunc("/demo/blob.bucket/write", blobBucketWriteHandler)
 }
 
-var url string
+var bucketURL string
 var bucket *blob.Bucket
 var bucketErr string
 
@@ -48,12 +48,12 @@ func init() {
 	// TODO(rvangent): BLOB_BUCKET_URL should be in each biome's config such
 	// that it can be read here.
 	var err error
-	url := os.Getenv("BLOB_BUCKET_URL")
-	if url == "" {
+	bucketURL = os.Getenv("BLOB_BUCKET_URL")
+	if bucketURL == "" {
 		// TODO(rvangent): This is a terrible default, remove once "write" is working.
-		url = "file:///tmp"
+		bucketURL = "file:///tmp"
 	}
-	bucket, err = blob.OpenBucket(context.Background(), url)
+	bucket, err = blob.OpenBucket(context.Background(), bucketURL)
 	if err != nil {
 		bucketErr = fmt.Sprintf("Failed to open blob.Bucket: %v", err)
 	}
@@ -92,7 +92,7 @@ const blobBucketBaseTemplate = `
 
 func blobBucketBaseHandler(w http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.New("base").Parse(blobBucketBaseTemplate))
-	err := tmpl.Execute(w, url)
+	err := tmpl.Execute(w, bucketURL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

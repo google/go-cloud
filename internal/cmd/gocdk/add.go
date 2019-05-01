@@ -87,7 +87,7 @@ func instantiatePortableType(pctx *processContext, pt *portableTypeInfo, force b
 	dstPath := path.Join(pctx.workdir, filepath.Base(pt.goDemoPath))
 	if !force {
 		if _, err := os.Stat(dstPath); err == nil {
-			return xerrors.Errorf("%q has already been added to your project. Use --force if you want to re-add it, overwriting previous files")
+			return xerrors.Errorf("%q has already been added to your project. Use --force if you want to re-add it, overwriting previous files", pt.name)
 		}
 	}
 
