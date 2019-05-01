@@ -31,10 +31,10 @@ import (
 // how it works.
 
 func init() {
-	http.HandleFunc("/demo/blob/", blobBucketBaseHandler)
-	http.HandleFunc("/demo/blob/list", blobBucketListHandler)
-	http.HandleFunc("/demo/blob/view", blobBucketViewHandler)
-	http.HandleFunc("/demo/blob/write", blobBucketWriteHandler)
+	http.HandleFunc("/demo/blob.bucket/", blobBucketBaseHandler)
+	http.HandleFunc("/demo/blob.bucket/list", blobBucketListHandler)
+	http.HandleFunc("/demo/blob.bucket/view", blobBucketViewHandler)
+	http.HandleFunc("/demo/blob.bucket/write", blobBucketWriteHandler)
 }
 
 var url string
@@ -61,45 +61,50 @@ func init() {
 
 // TODO(rvangent): This is pretty raw HTML. Should we have a common style sheet/etc. for demos?
 
+// Input: (string) blob.Bucket URL.
 const blobBucketBaseTemplate = `
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>blob.Bucket demo</title>
+<head>
+  <meta charset="UTF-8">
+  <title>blob.Bucket demo</title>
 </head>
 <body>
-	<p>
-	This page demonstrates the use of a Go CDK blob.Bucket.
-	</p>
-	<p>
-	It is currently using a blob.Bucket based on the URL "{{ . }}", which
-	can be configured via the environment variable "BLOB_BUCKET_URL".
-	</p>
-	<p>
-	See <a href="https://godoc.org/gocloud.dev#hdr-URLs">here</a> for more
-	information about URLs in Go CDK APIs.
-	</p>
-	<ul>
- 	  <li><a href="./list">List</a> the contents of the bucket</li>
- 	  <li><a href="./view">View</a> the contents of a specific blob in the bucket</li>
-		<li><a href="./write">Write</a> a new blob into the bucket</li>
-	</ul>
+  <p>
+    This page demonstrates the use of a Go CDK blob.Bucket.
+  </p>
+  <p>
+    It is currently using a blob.Bucket based on the URL "{{ . }}", which
+    can be configured via the environment variable "BLOB_BUCKET_URL".
+  </p>
+  <p>
+    See <a href="https://godoc.org/gocloud.dev#hdr-URLs">here</a> for more
+    information about URLs in Go CDK APIs.
+  </p>
+  <ul>
+    <li><a href="./list">List</a> the contents of the bucket</li>
+    <li><a href="./view">View</a> the contents of a specific blob in the bucket</li>
+    <li><a href="./write">Write</a> a new blob into the bucket</li>
+  </ul>
 </body>
 </html>
 `
 
 func blobBucketBaseHandler(w http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.New("base").Parse(blobBucketBaseTemplate))
-	tmpl.Execute(w, url)
+	err := tmpl.Execute(w, url)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
+// Input: []*blob.ListObject.
 const blobBucketListTemplate = `
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>blob.Bucket demo</title>
+<head>
+  <meta charset="UTF-8">
+  <title>blob.Bucket demo</title>
 </head>
 <body>
   {{range .}}
@@ -111,7 +116,7 @@ const blobBucketListTemplate = `
       {{end}}
     </div>
   {{else}}
-    <div><strong>no blobs</strong></div>
+    <div>no blobs in bucket</div>
   {{end}}
 </body>
 </html>
@@ -121,26 +126,17 @@ const blobBucketListTemplate = `
 // query parameter. Each listed directory is a link to list that directory,
 // and each non-directory is a link to view that file.
 func blobBucketListHandler(w http.ResponseWriter, req *http.Request) {
-	tmpl := template.Must(template.New("list").Parse(blobBucketListTemplate))
-	var items []*blob.ListObject
-	defer func() {
-		err := tmpl.Execute(w, items)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	}()
-
 	if bucketErr != "" {
 		http.Error(w, bucketErr, http.StatusInternalServerError)
 		return
 	}
-
 	opts := &blob.ListOptions{
 		Delimiter: "/",
 		Prefix:    req.FormValue("prefix"),
 	}
 	iter := bucket.List(opts)
 	ctx := req.Context()
+	var items []*blob.ListObject
 	for {
 		item, err := iter.Next(ctx)
 		if err == io.EOF {
@@ -151,6 +147,12 @@ func blobBucketListHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		items = append(items, item)
+	}
+
+	tmpl := template.Must(template.New("list").Parse(blobBucketListTemplate))
+	err := tmpl.Execute(w, items)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 

@@ -39,11 +39,11 @@ var portableTypes = []*portableTypeInfo{
 	{
 		name:       "blob.Bucket",
 		goDemoPath: "/demo/blob.bucket/demo_blob_bucket.go",
-		demoURL:    "/demo/blob",
+		demoURL:    "/demo/blob.bucket/",
 	},
 }
 
-// TODO(rvangent): Add tests for add(), includign for each supported portableType.
+// TODO(rvangent): Add tests for add(), including for each supported portableType.
 
 func add(ctx context.Context, pctx *processContext, args []string) error {
 	// Compute a sorted slice of available portable types for usage.
@@ -110,6 +110,6 @@ func instantiatePortableType(pctx *processContext, pt *portableTypeInfo, force b
 		return err
 	}
 	logger.Printf("  added %s to your project.", filepath.Base(pt.goDemoPath))
-	logger.Printf("Visit http://127.0.0.1:8080%s to see a demo of %s functionality.", pt.demoURL, pt.name)
+	logger.Printf("Run 'gocdk serve' and visit http://127.0.0.1:8080%s to see a demo of %s functionality.", pt.demoURL, pt.name)
 	return nil
 }
