@@ -106,7 +106,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		initEnv()
 	}
 
-	done, sender := setup.NewAzureKeyVaultTestClient(ctx, t)
+	sender, done := setup.NewAzureKeyVaultTestClient(ctx, t)
 	client, err := Dial()
 	if err != nil {
 		return nil, err
