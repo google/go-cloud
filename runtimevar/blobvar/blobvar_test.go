@@ -147,29 +147,32 @@ func TestOpenVariable(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		os.Setenv("BLOBVAR_BUCKET_URL", test.BucketURL)
+		t.Run(test.BucketURL, func(t *testing.T) {
+			os.Setenv("BLOBVAR_BUCKET_URL", test.BucketURL)
 
-		opener := &defaultOpener{}
-		u, err := url.Parse(test.URL)
-		if err != nil {
-			t.Error(err)
-		}
-		v, err := opener.OpenVariableURL(ctx, u)
-		if (err != nil) != test.WantErr {
-			t.Errorf("BucketURL %s URL %s: got error %v, want error %v", test.BucketURL, test.URL, err, test.WantErr)
-		}
-		if err != nil {
-			continue
-		}
-		snapshot, err := v.Watch(ctx)
-		if (err != nil) != test.WantWatchErr {
-			t.Errorf("BucketURL %s URL %s: got Watch error %v, want error %v", test.BucketURL, test.URL, err, test.WantWatchErr)
-		}
-		if err != nil {
-			continue
-		}
-		if !cmp.Equal(snapshot.Value, test.Want) {
-			t.Errorf("BucketURL %s URL %s: got snapshot value\n%v\n  want\n%v", test.BucketURL, test.URL, snapshot.Value, test.Want)
-		}
+			opener := &defaultOpener{}
+			u, err := url.Parse(test.URL)
+			if err != nil {
+				t.Error(err)
+			}
+			v, err := opener.OpenVariableURL(ctx, u)
+			if (err != nil) != test.WantErr {
+				t.Errorf("BucketURL %s URL %s: got error %v, want error %v", test.BucketURL, test.URL, err, test.WantErr)
+			}
+			if err != nil {
+				return
+			}
+			defer v.Close()
+			snapshot, err := v.Watch(ctx)
+			if (err != nil) != test.WantWatchErr {
+				t.Errorf("BucketURL %s URL %s: got Watch error %v, want error %v", test.BucketURL, test.URL, err, test.WantWatchErr)
+			}
+			if err != nil {
+				return
+			}
+			if !cmp.Equal(snapshot.Value, test.Want) {
+				t.Errorf("BucketURL %s URL %s: got snapshot value\n%v\n  want\n%v", test.BucketURL, test.URL, snapshot.Value, test.Want)
+			}
+		})
 	}
 }
