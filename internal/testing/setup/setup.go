@@ -101,9 +101,10 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 // from files. rf is a modifier function that will be invoked with the address
 // of the httpreplay.Recorder object used to obtain the client; this function
 // can mutate the recorder to add provider-specific header filters, for example.
-// An initial state is returned for tests that need a state to have
-// deterministic results.
-func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder), opts ...option.ClientOption) (*http.Client, func(), int64) {
+// An initState is returned for tests that need a state to have deterministic
+// results, for example, a seed to generate random sequences.
+func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder),
+	opts ...option.ClientOption) (c *http.Client, cleanup func(), initState int64) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
@@ -114,28 +115,28 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 		state := time.Now()
 		b, _ := state.MarshalBinary()
 		rec, err := httpreplay.NewRecorder(path, b)
+		if err != nil {
+			t.Fatal(err)
+		}
 		rf(rec)
+		c, err = rec.Client(ctx, opts...)
 		if err != nil {
 			t.Fatal(err)
 		}
-		client, err := rec.Client(ctx, opts...)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cleanup := func() {
+		cleanup = func() {
 			if err := rec.Close(); err != nil {
 				t.Fatal(err)
 			}
 		}
 
-		return client, cleanup, state.Unix()
+		return c, cleanup, state.UnixNano()
 	}
 	t.Logf("Replaying from golden file %s", path)
 	rep, err := httpreplay.NewReplayer(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := rep.Client(ctx)
+	c, err = rep.Client(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,11 +144,14 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 	if err := recState.UnmarshalBinary(rep.Initial()); err != nil {
 		t.Fatal(err)
 	}
-	return client, func() { rep.Close() }, recState.Unix()
+	return c, func() { rep.Close() }, recState.UnixNano()
 }
 
 // NewAWSSession2 is like NewAWSSession, but it uses a different record/replay proxy.
-func NewAWSSession2(ctx context.Context, t *testing.T, region string) (*session.Session, http.RoundTripper, func(), int64) {
+// An initState is returned for tests that need a state to have deterministic
+// results, for example, a seed to generate random sequences.
+func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session,
+	rt http.RoundTripper, cleanup func(), initState int64) {
 	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature", "X-Amz-Security-Token")
 		r.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
