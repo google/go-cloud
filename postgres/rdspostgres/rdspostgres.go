@@ -13,6 +13,17 @@
 // limitations under the License.
 
 // Package rdspostgres provides connections to AWS RDS PostgreSQL instances.
+//
+// URLs
+//
+// For mysql.Open, rdspostgres registers for the scheme "rdspostgres".
+// The default URL opener will create a connection using the default
+// credentials from the environment, as described in
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+//
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 package rdspostgres // import "gocloud.dev/postgres/rdspostgres"
 
 import (
@@ -24,6 +35,8 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"strings"
+	"sync"
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
@@ -54,9 +67,32 @@ type Params struct {
 	TraceOpts []ocsql.TraceOption
 }
 
+func init() {
+	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
+}
+
+// lazySessionOpener obtains Application Default Credentials on the first call
+// to OpenPostgresURL.
+type lazySessionOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazySessionOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	o.init.Do(func() {
+		certSource := new(rds.CertFetcher)
+		o.opener = &URLOpener{CertSource: certSource}
+	})
+	return o.opener.OpenPostgresURL(ctx, u)
+}
+
 // URLOpener opens RDS PostgreSQL URLs
 // like "rdspostgres://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb".
 type URLOpener struct {
+	// CertSource specifies how the opener will obtain authentication information.
+	// CertSource must not be nil.
+	CertSource rds.CertPoolProvider
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
@@ -65,27 +101,21 @@ type URLOpener struct {
 // postgres.DefaultMux.
 const Scheme = "rdspostgres"
 
-func init() {
-	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
-}
-
 // OpenPostgresURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	cf := new(rds.CertFetcher)
-	vals := u.Query()
-	u.RawQuery = vals.Encode()
-
+	if uo.CertSource == nil {
+		return nil, fmt.Errorf("rdspostgres: URLOpener CertSource is nil")
+	}
 	password, _ := u.User.Password()
-	params := Params{
+	params := &Params{
 		Endpoint:  u.Host,
 		User:      u.User.Username(),
 		Password:  password,
-		Database:  u.RawPath,
+		Database:  strings.TrimPrefix(u.Path, "/"),
 		Values:    u.Query(),
 		TraceOpts: uo.TraceOpts,
 	}
-	db, _, err := Open(ctx, cf, &params)
-
+	db, _, err := Open(ctx, uo.CertSource, params)
 	return db, err
 }
 
