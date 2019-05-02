@@ -44,7 +44,7 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	sess, _, done := setup.NewAWSSession(t, region)
+	sess, _, done := setup.NewAWSSession2(context.Background(), t, region)
 	return &harness{session: sess, closer: done}, nil
 }
 
@@ -148,10 +148,11 @@ func TestNoConnectionError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	v, err := NewVariable(sess, "variable-name", nil, nil)
+	v, err := OpenVariable(sess, "variable-name", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer v.Close()
 	_, err = v.Watch(context.Background())
 	if err == nil {
 		t.Error("got nil want error")
@@ -177,9 +178,12 @@ func TestOpenVariable(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := runtimevar.OpenVariable(ctx, test.URL)
+		v, err := runtimevar.OpenVariable(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err == nil {
+			v.Close()
 		}
 	}
 }

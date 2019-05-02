@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -29,7 +28,7 @@ import (
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
 	opts := options.Find()
 	if len(q.FieldPaths) > 0 {
-		opts.Projection = projectionDoc(q.FieldPaths)
+		opts.Projection = c.projectionDoc(q.FieldPaths)
 	}
 	if q.Limit > 0 {
 		lim := int64(q.Limit)
@@ -37,7 +36,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 	}
 	filter := bson.D{} // must be a zero-length slice, not nil
 	for _, f := range q.Filters {
-		bf, err := filterToBSON(f)
+		bf, err := c.filterToBSON(f)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +46,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 	if err != nil {
 		return nil, fmt.Errorf("Find: %v", err)
 	}
-	return &docIterator{cursor: cursor, ctx: ctx}, nil
+	return &docIterator{cursor: cursor, idField: c.idField, ctx: ctx}, nil
 }
 
 var mongoQueryOps = map[string]string{
@@ -63,8 +62,11 @@ var mongoQueryOps = map[string]string{
 // The MongoDB document corresponding to "field op value" is
 //   {field: {mop: value}}
 // where mop is the mongo version of op (see the mongoQueryOps map above).
-func filterToBSON(f driver.Filter) (bson.E, error) {
-	key := strings.Join(f.FieldPath, ".")
+func (c *collection) filterToBSON(f driver.Filter) (bson.E, error) {
+	key := c.toMongoFieldPath(f.FieldPath)
+	if c.idField != "" && key == c.idField {
+		key = mongoIDField
+	}
 	val, err := encodeValue(f.Value)
 	if err != nil {
 		return bson.E{}, err
@@ -77,8 +79,9 @@ func filterToBSON(f driver.Filter) (bson.E, error) {
 }
 
 type docIterator struct {
-	cursor *mongo.Cursor
-	ctx    context.Context // remember for Stop
+	cursor  *mongo.Cursor
+	idField string
+	ctx     context.Context // remember for Stop
 }
 
 func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
@@ -92,10 +95,23 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 	if err := it.cursor.Decode(&m); err != nil {
 		return fmt.Errorf("cursor.Decode: %v", err)
 	}
-	return decodeDoc(m, doc)
+	return decodeDoc(m, doc, it.idField)
 }
 
 func (it *docIterator) Stop() {
 	// Ignore error on Close.
 	_ = it.cursor.Close(it.ctx)
+}
+
+func (it *docIterator) As(i interface{}) bool {
+	p, ok := i.(**mongo.Cursor)
+	if !ok {
+		return false
+	}
+	*p = it.cursor
+	return true
+}
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	return "unknown", nil
 }

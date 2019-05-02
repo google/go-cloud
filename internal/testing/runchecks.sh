@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Runs only tests relevant to the current pull request.
-# At the moment, this only gates running the Wire test suite.
-# See https://github.com/google/go-cloud/issues/28 for solving the
-# general case.
+# This script runs all checks for Go CDK on Travis, including go test suites,
+# compatibility checks, consistency checks, Wire, etc.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euxo pipefail
@@ -59,6 +57,13 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   fi
 fi
 
+# start_local_deps.sh requires that Docker is installed, via Travis services,
+# which are only supported on Linux.
+# Without the dependencies running, tests that depend on them are skipped.
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  ./internal/testing/start_local_deps.sh
+fi
+
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 result=0
@@ -89,9 +94,14 @@ fi;
 # ./internal/testing/alldeps
 #
 # Whenever project dependencies change, rerun ./internal/testing/listdeps.sh
-./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
-  echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
-}
+#
+# Run this only on the latest version of Go, since module behavior may differ
+# across versions.
+if [[ $(go version) == *1\.12* ]]; then
+  ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
+    echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
+  }
+fi
 
 # Ensure that any new packages have the corresponding entries in Hugo.
 missing_packages="$(internal/website/listnewpkgs.sh)"
@@ -100,6 +110,11 @@ if ! [[ -z "$missing_packages" ]]; then
   echo "$missing_packages" 1>&2
   result=1
 fi
+
+# Ensure that all examples used in Hugo match what's in source.
+internal/website/gatherexamples/run.sh | diff internal/website/data/examples.json - > /dev/null || {
+  echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
+}
 
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.
@@ -113,7 +128,7 @@ wire check ./... || result=1
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
-for path in "./internal/cmd/gocdk" "./internal/contributebot" "./samples/appengine"; do
+for path in "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
   ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)

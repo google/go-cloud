@@ -22,19 +22,24 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"sync/atomic"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 )
 
 func serve(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "serve")
-	address := f.String("address", "localhost:8080", "address to serve on")
-	biome := f.String("biome", "dev", "biome to apply and use configuration from")
+	opts := new(serveOptions)
+	f.StringVar(&opts.address, "address", "localhost:8080", "`host:port` address to serve on")
+	f.StringVar(&opts.biome, "biome", "dev", "`name` of biome to apply and use configuration from")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
@@ -45,25 +50,73 @@ func serve(ctx context.Context, pctx *processContext, args []string) error {
 	}
 
 	// Check first that we're in a Go module.
-	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	var err error
+	opts.moduleRoot, err = findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
 
-	// TODO(light): Verify that biome configuration permits serving.
-	// https://github.com/google/go-cloud/issues/1833
+	// Verify that biome configuration permits serving.
+	biomeConfig, err := readBiomeConfig(opts.moduleRoot, opts.biome)
+	if xerrors.As(err, new(*biomeNotFoundError)) {
+		// TODO(light): Keep err in formatting chain for debugging.
+		return xerrors.Errorf("gocdk serve: biome configuration not found for %s. "+
+			"Make sure that %s exists and has `\"serve_enabled\": true`.",
+			opts.biome, filepath.Join(findBiomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
+	}
+	if err != nil {
+		return xerrors.Errorf("gocdk serve: %w", err)
+	}
+	if biomeConfig.ServeEnabled == nil || !*biomeConfig.ServeEnabled {
+		return xerrors.Errorf("gocdk serve: biome %s has not enabled serving. "+
+			"Add `\"serve_enabled\": true` to %s and try again.",
+			opts.biome, filepath.Join(findBiomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
+	}
 
-	// Start main serve loop.
+	// Start reverse proxy on address.
+	proxyListener, err := net.Listen("tcp", opts.address)
+	if err != nil {
+		return xerrors.Errorf("gocdk serve: %w", err)
+	}
+	opts.actualAddress = proxyListener.Addr().(*net.TCPAddr)
+	myProxy := new(serveProxy)
+	group, groupCtx := errgroup.WithContext(ctx)
+	group.Go(func() error {
+		return runHTTPServer(groupCtx, proxyListener, myProxy)
+	})
+
+	// Start main build loop.
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
-	if err := serveLoop(ctx, pctx, logger, *address, moduleRoot, *biome); err != nil {
+	group.Go(func() error {
+		return serveBuildLoop(groupCtx, pctx, logger, myProxy, opts)
+	})
+	if err := group.Wait(); err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
 	return nil
 }
 
-func serveLoop(ctx context.Context, pctx *processContext, logger *log.Logger, address string, moduleRoot, biome string) error {
+type serveOptions struct {
+	moduleRoot string
+	biome      string
+	address    string
+
+	// actualAddress is the local address that the reverse proxy is
+	// listening on.
+	actualAddress *net.TCPAddr
+}
+
+// serveBuildLoop builds and runs the user's server and sets the proxy's
+// backend whenever a new built server becomes healthy. This loop will continue
+// until ctx's Done channel is closed. serveBuildLoop returns an error only
+// if it was unable to start the main build loop.
+func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logger, myProxy *serveProxy, opts *serveOptions) error {
+	// Listen for SIGUSR1 to trigger rebuild.
+	reload, reloadDone := notifyUserSignal1()
+	defer reloadDone()
+
 	// Log biome that is being used.
-	logger.Printf("Preparing to serve %s...", biome)
+	logger.Printf("Preparing to serve %s...", opts.biome)
 
 	// Create a temporary build directory.
 	buildDir, err := ioutil.TempDir("", "gocdk-build")
@@ -77,47 +130,76 @@ func serveLoop(ctx context.Context, pctx *processContext, logger *log.Logger, ad
 	}()
 
 	// Apply Terraform configuration in biome.
-	if err := apply(ctx, pctx, []string{biome}); err != nil {
+	if err := apply(ctx, pctx, []string{opts.biome}); err != nil {
 		return err
 	}
 
 	// Build and run the server.
-	// TODO(light): Bind host is ignored for now because eventually this
-	// subprocess will be reverse proxied. The proxy should respect the host.
-	_, portString, err := net.SplitHostPort(address)
-	if err != nil {
-		return err
+	allocA := &serverAlloc{
+		exePath: filepath.Join(buildDir, "serverA"),
+		port:    opts.actualAddress.Port + 1,
 	}
-	port, err := net.LookupPort("tcp", portString)
-	if err != nil {
-		return xerrors.Errorf("resolve port for %q: %w", address, err)
+	allocB := &serverAlloc{
+		exePath: filepath.Join(buildDir, "serverB"),
+		port:    opts.actualAddress.Port + 2,
 	}
-	alloc := &serverAlloc{
-		exePath: filepath.Join(buildDir, "server"),
-		port:    port,
+	spareAlloc, liveAlloc := allocA, allocB
+	var process *exec.Cmd
+loop:
+	for first := true; ; first = false {
+		// After the first iteration of the loop, each iteration should wait for a
+		// change in the filesystem before proceeding.
+		if !first {
+			// TODO(#1881): Actually check filesystem instead of SIGUSR1.
+			select {
+			case <-reload:
+			case <-ctx.Done():
+				break loop
+			}
+		}
+
+		// Build and run the server.
+		logger.Println("Building server...")
+		if err := buildForServe(ctx, pctx, opts.moduleRoot, spareAlloc.exePath); err != nil {
+			logger.Printf("Build: %v", err)
+			if process == nil {
+				myProxy.setBuildError(err)
+			}
+			continue
+		}
+		newProcess, err := spareAlloc.start(ctx, pctx, logger, opts.moduleRoot)
+		if err != nil {
+			logger.Printf("Starting server: %v", err)
+			if process == nil {
+				myProxy.setBuildError(err)
+			}
+			continue
+		}
+
+		// Server started successfully. Cut traffic over.
+		myProxy.setBackend(spareAlloc.url(""))
+		if process == nil {
+			// First time server came up healthy: log greeting message to user.
+			proxyURL := "http://" + formatTCPAddr(opts.actualAddress) + "/"
+			logger.Printf("Serving at %s\nUse Ctrl-C to stop", proxyURL)
+		} else {
+			// Iterative build complete, kill old server.
+			logger.Print("Reload complete.")
+			endServerProcess(process)
+		}
+		process = newProcess
+		spareAlloc, liveAlloc = liveAlloc, spareAlloc
 	}
-	logger.Println("Building server...")
-	if err := buildForServe(ctx, pctx, moduleRoot, alloc.exePath); err != nil {
-		return err
-	}
-	process, err := alloc.start(ctx, pctx, logger)
-	if err != nil {
-		return err
-	}
-	logger.Printf("Serving at %s\nUse Ctrl-C to stop", alloc.url(""))
-	// TODO(light): Loop on filesystem change.
-	<-ctx.Done()
 	logger.Println("Shutting down...")
-	if err := signalGracefulShutdown(process.Process); err != nil {
-		process.Process.Kill()
+	if process != nil {
+		endServerProcess(process)
 	}
-	process.Wait()
 	return nil
 }
 
 // buildForServe runs Wire and `go build` at moduleRoot to create exePath.
 func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string, exePath string) error {
-	moduleEnv := append(append([]string(nil), pctx.env...), "GO111MODULE=on")
+	moduleEnv := pctx.overrideEnv("GO111MODULE=on")
 
 	if wireExe, err := exec.LookPath("wire"); err == nil {
 		// TODO(light): Only run Wire if needed, but that requires source analysis.
@@ -166,10 +248,12 @@ func (alloc *serverAlloc) url(path string) *url.URL {
 
 // start starts the server process specified by the alloc and waits for
 // it to become healthy.
-func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logger *log.Logger) (*exec.Cmd, error) {
+func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logger *log.Logger, workdir string) (*exec.Cmd, error) {
 	// Run server.
 	logger.Print("Starting server...")
-	process := exec.Command(alloc.exePath, fmt.Sprintf("--address=localhost:%d", alloc.port))
+	process := exec.Command(alloc.exePath)
+	process.Dir = workdir
+	process.Env = pctx.overrideEnv("PORT=" + strconv.Itoa(alloc.port))
 	process.Stdout = pctx.stdout
 	process.Stderr = pctx.stderr
 	if err := process.Start(); err != nil {
@@ -191,13 +275,63 @@ func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logge
 	logger.Printf("Waiting for server %s to report ready...", alloc.url("/"))
 	err = waitForHealthy(ctx, alloc.url("/healthz/readiness"))
 	if err != nil {
-		if err := signalGracefulShutdown(process.Process); err != nil {
-			process.Process.Kill()
-		}
-		process.Wait()
+		endServerProcess(process)
 		return nil, xerrors.Errorf("start server: %w", err)
 	}
 	return process, nil
+}
+
+// runHTTPServer runs an HTTP server until ctx's Done channel is closed.
+// It returns an error only if the server returned an error before the Done
+// channel was closed.
+func runHTTPServer(ctx context.Context, l net.Listener, handler http.Handler) error {
+	server := &http.Server{
+		Handler: handler,
+	}
+	serverDone := make(chan error)
+	go func() {
+		serverDone <- server.Serve(l)
+	}()
+	select {
+	case err := <-serverDone:
+		return err
+	case <-ctx.Done():
+		// Don't pass ctx, since this context determines the shutdown timeout.
+		server.Shutdown(context.Background())
+		<-serverDone
+		return nil
+	}
+}
+
+// serveProxy is a reverse HTTP proxy that can hot-swap to other sources.
+// The zero value will serve Bad Gateway responses until setBackend or
+// setBuildError is called.
+type serveProxy struct {
+	backend atomic.Value
+}
+
+// setBackend serves any future requests by reverse proxying to the given URL.
+func (p *serveProxy) setBackend(target *url.URL) {
+	p.backend.Store(httputil.NewSingleHostReverseProxy(target))
+}
+
+// setBuildError serves any future requests by serving an Internal Server Error
+// with the error's message as the body.
+func (p *serveProxy) setBuildError(e error) {
+	p.backend.Store(e)
+}
+
+func (p *serveProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch b := p.backend.Load().(type) {
+	case nil:
+		http.Error(w, "waiting for initial build...", http.StatusBadGateway)
+	case error:
+		http.Error(w, b.Error(), http.StatusInternalServerError)
+	case http.Handler:
+		b.ServeHTTP(w, r)
+	default:
+		panic("unreachable")
+	}
 }
 
 // waitForHealthy polls a URL repeatedly until the server responds with a
@@ -230,6 +364,23 @@ func waitForHealthy(ctx context.Context, u *url.URL) error {
 			return xerrors.Errorf("wait for healthy: %w", ctx.Err())
 		}
 	}
+}
+
+// endServerProcess kills and waits for a subprocess to exit.
+func endServerProcess(process *exec.Cmd) {
+	if err := signalGracefulShutdown(process.Process); err != nil {
+		process.Process.Kill()
+	}
+	process.Wait()
+}
+
+// formatTCPAddr converts addr into a "host:port" string usable for a
+// URL.
+func formatTCPAddr(addr *net.TCPAddr) string {
+	if addr.IP.IsUnspecified() {
+		return fmt.Sprintf("localhost:%d", addr.Port)
+	}
+	return addr.String()
 }
 
 // statusCodeInRange reports whether the given HTTP status code is in the range

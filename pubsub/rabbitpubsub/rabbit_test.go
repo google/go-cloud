@@ -14,10 +14,9 @@
 
 package rabbitpubsub
 
-// To run these tests against a real RabbitMQ server, first run:
-//     docker run -d --hostname my-rabbit --name rabbit -p 5672:5672 rabbitmq:3
+// To run these tests against a real RabbitMQ server, first run localrabbit.sh.
 // Then wait a few seconds for the server to be ready.
-// If no server is running, the tests will use a fake (see fake_tset.go).
+// If no server is running, the tests will use a fake (see fake_test.go).
 
 import (
 	"context"
@@ -25,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -150,48 +148,6 @@ func (h *harness) Close() {
 
 func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
 
-// This test is important for the RabbitMQ driver because the underlying client is
-// poorly designed with respect to concurrency, so we must make sure to exercise the
-// driver with concurrent calls.
-//
-// We can't make this a conformance test at this time because there is no way
-// to set the batcher's maxHandlers parameter to anything other than 1.
-func TestPublishConcurrently(t *testing.T) {
-	// See if we can call SendBatch concurrently without deadlock or races.
-	ctx := context.Background()
-	conn := mustDialRabbit(t)
-	defer conn.Close()
-
-	if err := declareExchange(conn, "t"); err != nil {
-		t.Fatal(err)
-	}
-	// The queue is needed, or RabbitMQ says the message is unroutable.
-	if err := bindQueue(conn, "s", "t"); err != nil {
-		t.Fatal(err)
-	}
-
-	topic := newTopic(conn, "t")
-	errc := make(chan error, 100)
-	for g := 0; g < cap(errc); g++ {
-		g := g
-		go func() {
-			var msgs []*driver.Message
-			for i := 0; i < 10; i++ {
-				msgs = append(msgs, &driver.Message{
-					Metadata: map[string]string{"a": strconv.Itoa(i)},
-					Body:     []byte(fmt.Sprintf("msg-%d-%d", g, i)),
-				})
-			}
-			errc <- topic.SendBatch(ctx, msgs)
-		}()
-	}
-	for i := 0; i < cap(errc); i++ {
-		if err := <-errc; err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
 func TestUnroutable(t *testing.T) {
 	// Expect that we get an error on publish if the exchange has no queue bound to it.
 	// The error should be a MultiError containing one error per message.
@@ -208,8 +164,8 @@ func TestUnroutable(t *testing.T) {
 		{Body: []byte("")},
 	}
 	err := topic.SendBatch(ctx, msgs)
-	merr, ok := err.(MultiError)
-	if !ok {
+	var merr MultiError
+	if !topic.ErrorAs(err, &merr) {
 		t.Fatalf("got error of type %T, want MultiError", err)
 	}
 	if got, want := len(merr), len(msgs); got != want {
@@ -255,62 +211,6 @@ func TestOpens(t *testing.T) {
 		t.Error("got nil, want non-nil")
 	} else {
 		got.Shutdown(ctx)
-	}
-}
-
-func TestCancelSendAndReceive(t *testing.T) {
-	conn := mustDialRabbit(t)
-	defer conn.Close()
-
-	if err := declareExchange(conn, "t"); err != nil {
-		t.Fatal(err)
-	}
-	// The queue is needed, or RabbitMQ says the message is unroutable.
-	if err := bindQueue(conn, "s", "t"); err != nil {
-		t.Fatal(err)
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	topic := newTopic(conn, "t")
-	topic.sendBatchHook = cancel
-	msgs := []*driver.Message{
-		{Body: []byte("")},
-	}
-	var err error
-	for err == nil {
-		err = topic.SendBatch(ctx, msgs)
-	}
-	ec := errorCodeForTest(err)
-	// Error might either be from context being canceled, or channel subsequently being closed.
-	if ec != gcerrors.Canceled && ec != gcerrors.FailedPrecondition {
-		t.Errorf("got %v, want context.Canceled or FailedPrecondition", err)
-	}
-
-	ctx, cancel = context.WithCancel(context.Background())
-	defer cancel()
-	if err := topic.SendBatch(ctx, msgs); err != nil {
-		t.Fatal(err)
-	}
-	sub := newSubscription(conn, "s")
-	sub.receiveBatchHook = cancel
-	_, err = sub.ReceiveBatch(ctx, 4)
-	if err != context.Canceled {
-		t.Errorf("got %v, want context.Canceled", err)
-	}
-}
-
-// Includes some cases that are handled elsewhere in production code.
-func errorCodeForTest(err error) gcerrors.ErrorCode {
-	switch err {
-	case nil:
-		return gcerrors.OK
-	case context.Canceled:
-		return gcerrors.Canceled
-
-	case context.DeadlineExceeded:
-		return gcerrors.DeadlineExceeded
-	default:
-		return errorCode(err)
 	}
 }
 
@@ -457,6 +357,14 @@ func (r rabbitAsTest) MessageCheck(m *pubsub.Message) error {
 		if !m.As(&d) {
 			return fmt.Errorf("cast failed for %T", &d)
 		}
+	}
+	return nil
+}
+
+func (rabbitAsTest) BeforeSend(as func(interface{}) bool) error {
+	var pub *amqp.Publishing
+	if !as(&pub) {
+		return fmt.Errorf("cast failed for %T", &pub)
 	}
 	return nil
 }

@@ -91,32 +91,53 @@ func (q *Query) Limit(n int) *Query {
 	return q
 }
 
+// BeforeQuery takes a callback function that will be called before the Query is
+// executed to the underlying provider's query functionality. The callback takes
+// a parameter, asFunc, that converts its argument to provider-specific types.
+// See https://godoc.org/gocloud.dev#hdr-As for background information.
+func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query {
+	q.dq.BeforeQuery = f
+	return q
+}
+
 // Get returns an iterator for retrieving the documents specified by the query. If
 // field paths are provided, only those paths are set in the resulting documents.
 //
 // Call Stop on the iterator when finished.
 func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
+	dcoll := q.coll.driver
+	wrapErr := func(err error) error { return wrapError(dcoll, err) }
+	if err := q.init(fps); err != nil {
+		return &DocumentIterator{err: wrapErr(err)}
+	}
+	it, err := dcoll.RunGetQuery(ctx, q.dq)
+	return &DocumentIterator{iter: it, wrapError: wrapErr, err: wrapErr(err)}
+}
+
+func (q *Query) init(fps []FieldPath) error {
 	if q.err != nil {
-		return &DocumentIterator{err: q.err}
+		return q.err
 	}
-	for _, fp := range fps {
-		fp, err := parseFieldPath(fp)
-		if err != nil {
-			q.err = err
-			return &DocumentIterator{err: q.err}
+	if q.dq.FieldPaths == nil {
+		for _, fp := range fps {
+			fp, err := parseFieldPath(fp)
+			if err != nil {
+				q.err = err
+				return err
+			}
+			q.dq.FieldPaths = append(q.dq.FieldPaths, fp)
 		}
-		q.dq.FieldPaths = append(q.dq.FieldPaths, fp)
 	}
-	it, err := q.coll.driver.RunGetQuery(ctx, q.dq)
-	return &DocumentIterator{iter: it, err: err}
+	return nil
 }
 
 // DocumentIterator iterates over documents.
 //
 // Always call Stop on the iterator.
 type DocumentIterator struct {
-	iter driver.DocumentIterator
-	err  error
+	iter      driver.DocumentIterator
+	wrapError func(error) error
+	err       error // already wrapped
 }
 
 // Next stores the next document in dst. It returns io.EOF if there are no more
@@ -128,10 +149,10 @@ func (it *DocumentIterator) Next(ctx context.Context, dst Document) error {
 	}
 	ddoc, err := driver.NewDocument(dst)
 	if err != nil {
-		it.err = err
-		return err
+		it.err = it.wrapError(err)
+		return it.err
 	}
-	it.err = it.iter.Next(ctx, ddoc)
+	it.err = it.wrapError(it.iter.Next(ctx, ddoc))
 	return it.err
 }
 
@@ -143,4 +164,25 @@ func (it *DocumentIterator) Stop() {
 	}
 	it.err = io.EOF
 	it.iter.Stop()
+}
+
+// As converts i to provider-specific types.
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
+func (it *DocumentIterator) As(i interface{}) bool {
+	if i == nil {
+		return false
+	}
+	return it.iter.As(i)
+}
+
+// Plan describes how the query would be executed if its Get method were called with
+// the given field paths. Plan uses only information available to the client, so it
+// cannot know whether a service uses indexes or scans internally.
+func (q *Query) Plan(fps ...FieldPath) (string, error) {
+	if err := q.init(fps); err != nil {
+		return "", err
+	}
+	return q.coll.driver.QueryPlan(q.dq)
 }

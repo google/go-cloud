@@ -31,8 +31,8 @@ import (
 // This code is copied from memdocstore/codec.go, with some changes:
 // - special treatment for primitive.Binary
 
-func encodeDoc(doc driver.Document) (map[string]interface{}, error) {
-	var e encoder
+func encodeDoc(doc driver.Document, lowercaseFields bool) (map[string]interface{}, error) {
+	e := encoder{lowercaseFields: lowercaseFields}
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
@@ -48,7 +48,8 @@ func encodeValue(x interface{}) (interface{}, error) {
 }
 
 type encoder struct {
-	val interface{}
+	val             interface{}
+	lowercaseFields bool
 }
 
 func (e *encoder) EncodeNil()                 { e.val = nil }
@@ -77,7 +78,7 @@ func (e *encoder) EncodeList(n int) driver.Encoder {
 	// All slices and arrays are encoded as []interface{}
 	s := make([]interface{}, n)
 	e.val = s
-	return &listEncoder{s: s}
+	return &listEncoder{s: s, encoder: encoder{lowercaseFields: e.lowercaseFields}}
 }
 
 type listEncoder struct {
@@ -93,15 +94,14 @@ type mapEncoder struct {
 	encoder
 }
 
-func (e *encoder) EncodeMap(n int, isStruct bool) driver.Encoder {
+func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
 	m := make(map[string]interface{}, n)
 	e.val = m
-	return &mapEncoder{m: m, isStruct: isStruct}
+	return &mapEncoder{m: m, encoder: encoder{lowercaseFields: e.lowercaseFields}}
 }
 
 func (e *mapEncoder) MapKey(k string) {
-	// The BSON codec encodes structs by  lower-casing field names.
-	if e.isStruct {
+	if e.lowercaseFields {
 		k = strings.ToLower(k)
 	}
 	e.m[k] = e.val
@@ -110,7 +110,15 @@ func (e *mapEncoder) MapKey(k string) {
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(m map[string]interface{}, ddoc driver.Document) error {
+func decodeDoc(m map[string]interface{}, ddoc driver.Document, idField string) error {
+	switch idField {
+	case mongoIDField: // do nothing
+	case "": // user uses idFunc
+		delete(m, mongoIDField)
+	default: // user documents have a different ID field
+		m[idField] = m[mongoIDField]
+		delete(m, mongoIDField)
+	}
 	return ddoc.Decode(decoder{m})
 }
 

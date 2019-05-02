@@ -23,45 +23,51 @@ import (
 	"gocloud.dev/gcp"
 )
 
-func Example_read() {
+func Example() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#gcs-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create an HTTP client.
-	// This example uses the default HTTP transport and the credentials created
-	// above.
-	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	// This example uses the default HTTP transport and the credentials
+	// created above.
+	client, err := gcp.NewHTTPClient(
+		gcp.DefaultTransport(),
+		gcp.CredentialsTokenSource(creds))
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	// Create a *blob.Bucket.
-	b, err := gcsblob.OpenBucket(ctx, client, "my-bucket", nil)
+	bucket, err := gcsblob.OpenBucket(ctx, client, "my-bucket", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
-
-	// Now we can use b to read or write files to the container.
-	data, err := b.ReadAll(ctx, "my-key")
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = data
+	defer bucket.Close()
 }
 
 func Example_openBucket() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#gcs
+
+	// import _ "gocloud.dev/blob/gcsblob"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// OpenBucket creates a *blob.Bucket from a URL.
 	// This URL will open the bucket "my-bucket" using default credentials.
-	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
-	defer b.Close()
-	_, _ = b, err
+	bucket, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bucket.Close()
 }

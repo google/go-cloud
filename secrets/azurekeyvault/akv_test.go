@@ -106,7 +106,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		initEnv()
 	}
 
-	done, sender := setup.NewAzureKeyVaultTestClient(ctx, t)
+	sender, done := setup.NewAzureKeyVaultTestClient(ctx, t)
 	client, err := Dial()
 	if err != nil {
 		return nil, err
@@ -173,6 +173,7 @@ func TestNoConnectionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer k.Close()
 	if _, err := k.Encrypt(context.Background(), []byte("secrets")); err == nil {
 		t.Error("Encrypt: got nil, want no connection error")
 	}
@@ -246,9 +247,14 @@ func TestOpenKeeper(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := secrets.OpenKeeper(ctx, test.URL)
+		keeper, err := secrets.OpenKeeper(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err == nil {
+			if err = keeper.Close(); err != nil {
+				t.Errorf("%s: got error during close: %v", test.URL, err)
+			}
 		}
 	}
 }

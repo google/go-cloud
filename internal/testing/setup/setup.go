@@ -95,54 +95,63 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 	})
 }
 
-// NewAWSSession2 is like NewAWSSession, but it uses a different record/replay proxy.
-func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
+// NewRecordReplayClient creates a new http.Client for tests. This client's
+// activity is being either recorded to files (when *Record is set) or replayed
+// from files. rf is a modifier function that will be invoked with the address
+// of the httpreplay.Recorder object used to obtain the client; this function
+// can mutate the recorder to add provider-specific header filters, for example.
+func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder), opts ...option.ClientOption) (c *http.Client, cleanup func()) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
 		t.Logf("Recording into golden file %s", path)
-	} else {
-		t.Logf("Replaying from golden file %s", path)
-	}
-	if *Record {
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			t.Fatal(err)
 		}
 		rec, err := httpreplay.NewRecorder(path, nil)
+		rf(rec)
 		if err != nil {
 			t.Fatal(err)
 		}
-		rec.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature")
-		rec.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
-		rec.ClearHeaders("X-Amz-Date")
-		rec.ClearHeaders("User-Agent") // AWS includes the Go version
-		c, err := rec.Client(ctx, option.WithoutAuthentication())
+		client, err := rec.Client(ctx, opts...)
 		if err != nil {
 			t.Fatal(err)
 		}
-		rt = c.Transport
 		cleanup = func() {
 			if err := rec.Close(); err != nil {
 				t.Fatal(err)
 			}
 		}
-	} else { // replay
-		rep, err := httpreplay.NewReplayer(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		c, err := rep.Client(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		rt = c.Transport
-		cleanup = func() { _ = rep.Close() } // Don't care about Close error on replay.
+
+		return client, cleanup
 	}
-	sess, err := awsSession(region, &http.Client{Transport: rt})
+	t.Logf("Replaying from golden file %s", path)
+	rep, err := httpreplay.NewReplayer(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sess, rt, cleanup
+	client, err := rep.Client(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cleanup = func() { _ = rep.Close() } // Don't care about Close error on replay.
+	return client, cleanup
+}
+
+// NewAWSSession2 is like NewAWSSession, but it uses a different record/replay proxy.
+func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
+	client, cleanup := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+		r.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature", "X-Amz-Security-Token")
+		r.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
+		r.ClearHeaders("X-Amz-Date")
+		r.ClearQueryParams("X-Amz-Date")
+		r.ClearHeaders("User-Agent") // AWS includes the Go version
+	}, option.WithoutAuthentication())
+	sess, err := awsSession(region, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sess, client.Transport, cleanup
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.
@@ -151,44 +160,23 @@ func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *ses
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
 func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt http.RoundTripper, done func()) {
-	mode := recorder.ModeReplaying
-	if *Record {
-		mode = recorder.ModeRecording
-	}
-
-	// GFEs scrub X-Google- and X-GFE- headers from requests and responses.
-	// Drop them from recordings made by users inside Google.
-	// http://g3doc/gfe/g3doc/gfe3/design/http_filters/google_header_filter
-	// (internal Google documentation).
-	gfeDroppedHeaders := regexp.MustCompile("^X-(Google|GFE)-")
-
-	gcpMatcher := &replay.ProviderMatcher{
-		Headers:             []string{"User-Agent"},
-		DropRequestHeaders:  gfeDroppedHeaders,
-		DropResponseHeaders: gfeDroppedHeaders,
-		URLScrubbers: []*regexp.Regexp{
-			regexp.MustCompile(`Expires=[^?]*`),
-		},
-		BodyScrubbers: []*regexp.Regexp{regexp.MustCompile(`(?m)^\s*--.*$`)},
-	}
-	r, done, err := replay.NewRecorder(t, mode, gcpMatcher, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
-
+	var co option.ClientOption
 	if *Record {
 		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
 			t.Fatalf("failed to get default credentials: %v", err)
 		}
-		client, err = gcp.NewHTTPClient(r, gcp.CredentialsTokenSource(creds))
-		if err != nil {
-			t.Fatal(err)
-		}
+		co = option.WithTokenSource(gcp.CredentialsTokenSource(creds))
 	} else {
-		client = &gcp.HTTPClient{Client: http.Client{Transport: r}}
+		co = option.WithoutAuthentication()
 	}
-	return client, r, done
+	c, cleanup := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+		r.ClearQueryParams("Expires")
+		r.ClearQueryParams("Signature")
+		r.ClearHeaders("Expires")
+		r.ClearHeaders("Signature")
+	}, co)
+	return &gcp.HTTPClient{Client: *c}, c.Transport, cleanup
 }
 
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
@@ -237,41 +225,56 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 	return conn, done
 }
 
+// contentTypeInjectPolicy and contentTypeInjector are somewhat of a hack to
+// overcome an impedance mismatch between the Azure pipeline library and
+// httpreplay - the tool we use to record/replay HTTP traffic for tests.
+// azure-pipeline-go does not set the Content-Type header in its requests,
+// setting X-Ms-Blob-Content-Type instead; however, httpreplay expects
+// Content-Type to be non-empty in some cases. This injector makes sure that
+// the content type is copied into the right header when that is originally
+// empty. It's only used for testing.
+type contentTypeInjectPolicy struct {
+	node pipeline.Policy
+}
+
+func (p *contentTypeInjectPolicy) Do(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+	if len(request.Header.Get("Content-Type")) == 0 {
+		cType := request.Header.Get("X-Ms-Blob-Content-Type")
+		request.Header.Set("Content-Type", cType)
+	}
+	response, err := p.node.Do(ctx, request)
+	return response, err
+}
+
+type contentTypeInjector struct {
+}
+
+func (f contentTypeInjector) New(node pipeline.Policy, opts *pipeline.PolicyOptions) pipeline.Policy {
+	return &contentTypeInjectPolicy{node: node}
+}
+
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
 func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
-	mode := recorder.ModeReplaying
-	if *Record {
-		mode = recorder.ModeRecording
-	}
-
-	azMatchers := &replay.ProviderMatcher{
-		// Note: We can't match the User-Agent header because Azure includes the
-		// "go" version in it.
-		// Headers: []string{"User-Agent"},
-		URLScrubbers: []*regexp.Regexp{
-			regexp.MustCompile(`se=[^?]*`),
-			regexp.MustCompile(`sig=[^?]*`),
-		},
-	}
-	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
+	client, done := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+		r.RemoveQueryParams("se", "sig")
+		r.RemoveQueryParams("X-Ms-Date")
+		r.ClearHeaders("X-Ms-Date")
+		r.ClearHeaders("User-Agent") // includes the full Go version
+	}, option.WithoutAuthentication())
 	f := []pipeline.Factory{
 		// Sets User-Agent for recorder.
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
 			Value: useragent.AzureUserAgentPrefix(api),
 		}),
+		contentTypeInjector{},
 		credential,
 		pipeline.MethodFactoryMarker(),
 	}
-
-	httpClient := &http.Client{Transport: r}
-	// Create a pipeline that uses httpClient to make requests.
+	// Create a pipeline that uses client to make requests.
 	p := pipeline.NewPipeline(f, pipeline.Options{
 		HTTPSender: pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
 			return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
-				r, err := httpClient.Do(request.WithContext(ctx))
+				r, err := client.Do(request.WithContext(ctx))
 				if err != nil {
 					err = pipeline.NewError(err, "HTTP request failed")
 				}
@@ -279,23 +282,20 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 			}
 		}),
 	})
-	return p, done, httpClient
+
+	return p, done, client
 }
 
-// NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test recordings.
-func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (func(), *http.Client) {
-	mode := recorder.ModeReplaying
-	if *Record {
-		mode = recorder.ModeRecording
-	}
-
-	azMatchers := &replay.ProviderMatcher{}
-	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
-
-	return done, &http.Client{Transport: r}
+// NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test
+// recordings.
+func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (*http.Client, func()) {
+	client, cleanup := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+		r.RemoveQueryParams("se", "sig")
+		r.RemoveQueryParams("X-Ms-Date")
+		r.ClearHeaders("X-Ms-Date")
+		r.ClearHeaders("User-Agent") // includes the full Go version
+	}, option.WithoutAuthentication())
+	return client, cleanup
 }
 
 // FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.

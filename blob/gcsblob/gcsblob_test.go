@@ -30,6 +30,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/googleapi"
@@ -142,16 +143,36 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
+	var objp **storage.ObjectHandle
+	if !as(&objp) {
+		return errors.New("BeforeRead.As failed to get ObjectHandle")
+	}
+	var sr *storage.Reader
+	if !as(&sr) {
+		return errors.New("BeforeRead.As failed to get Reader")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+	var objp **storage.ObjectHandle
+	if !as(&objp) {
+		return errors.New("Writer.As failed to get ObjectHandle")
+	}
 	var sw *storage.Writer
 	if !as(&sw) {
-		return errors.New("Writer.As failed")
+		return errors.New("Writer.As failed to get Writer")
 	}
 	sw.ContentLanguage = language
 	return nil
 }
 
 func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+	var coh *CopyObjectHandles
+	if !as(&coh) {
+		return errors.New("BeforeCopy.As failed to get CopyObjectHandles")
+	}
 	var copier *storage.Copier
 	if !as(&copier) {
 		return errors.New("BeforeCopy.As failed")
@@ -280,6 +301,159 @@ func TestOpenBucket(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPreconditions tests setting of ObjectHandle preconditions via As.
+func TestPreconditions(t *testing.T) {
+	const (
+		key     = "precondition-key"
+		key2    = "precondition-key2"
+		content = "hello world"
+	)
+
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bucket := blob.NewBucket(drv)
+	defer bucket.Close()
+
+	// Try writing with a failing precondition.
+	if err := bucket.WriteAll(ctx, key, []byte(content), &blob.WriterOptions{
+		BeforeWrite: func(asFunc func(interface{}) bool) error {
+			var objp **storage.ObjectHandle
+			if !asFunc(&objp) {
+				return errors.New("Writer.As failed to get ObjectHandle")
+			}
+			// Replace the ObjectHandle with a new one that adds Conditions.
+			*objp = (*objp).If(storage.Conditions{GenerationMatch: -999})
+			return nil
+		},
+	}); err == nil || gcerrors.Code(err) != gcerrors.FailedPrecondition {
+		t.Errorf("got error %v, wanted FailedPrecondition for Write", err)
+	}
+
+	// Repeat with a precondition that will pass.
+	if err := bucket.WriteAll(ctx, key, []byte(content), &blob.WriterOptions{
+		BeforeWrite: func(asFunc func(interface{}) bool) error {
+			var objp **storage.ObjectHandle
+			if !asFunc(&objp) {
+				return errors.New("Writer.As failed to get ObjectHandle")
+			}
+			// Replace the ObjectHandle with a new one that adds Conditions.
+			*objp = (*objp).If(storage.Conditions{DoesNotExist: true})
+			return nil
+		},
+	}); err != nil {
+		t.Errorf("got error %v, wanted nil", err)
+	}
+	defer bucket.Delete(ctx, key)
+
+	// Try reading with a failing precondition.
+	_, err = bucket.NewReader(ctx, key, &blob.ReaderOptions{
+		BeforeRead: func(asFunc func(interface{}) bool) error {
+			var objp **storage.ObjectHandle
+			if !asFunc(&objp) {
+				return errors.New("Reader.As failed to get ObjectHandle")
+			}
+			// Replace the ObjectHandle with a new one.
+			*objp = (*objp).Generation(999999)
+			return nil
+		},
+	})
+	if err == nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v, wanted NotFound for Read", err)
+	}
+
+	attrs, err := bucket.Attributes(ctx, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var oa storage.ObjectAttrs
+	if !attrs.As(&oa) {
+		t.Fatal("Attributes.As failed")
+	}
+	generation := oa.Generation
+
+	// Repeat with a precondition that will pass.
+	reader, err := bucket.NewReader(ctx, key, &blob.ReaderOptions{
+		BeforeRead: func(asFunc func(interface{}) bool) error {
+			var objp **storage.ObjectHandle
+			if !asFunc(&objp) {
+				return errors.New("Reader.As failed to get ObjectHandle")
+			}
+			// Replace the ObjectHandle with a new one.
+			*objp = (*objp).Generation(generation)
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	gotBytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(gotBytes); got != content {
+		t.Errorf("got %q want %q", got, content)
+	}
+
+	// Try copying with a failing precondition on Dst.
+	err = bucket.Copy(ctx, key2, key, &blob.CopyOptions{
+		BeforeCopy: func(asFunc func(interface{}) bool) error {
+			var coh *CopyObjectHandles
+			if !asFunc(&coh) {
+				return errors.New("Copy.As failed to get CopyObjectHandles")
+			}
+			// Replace the dst ObjectHandle with a new one.
+			coh.Dst = coh.Dst.If(storage.Conditions{GenerationMatch: -999})
+			return nil
+		},
+	})
+	if err == nil || gcerrors.Code(err) != gcerrors.FailedPrecondition {
+		t.Errorf("got error %v, wanted FailedPrecondition for Copy", err)
+	}
+
+	// Try copying with a failing precondition on Src.
+	err = bucket.Copy(ctx, key2, key, &blob.CopyOptions{
+		BeforeCopy: func(asFunc func(interface{}) bool) error {
+			var coh *CopyObjectHandles
+			if !asFunc(&coh) {
+				return errors.New("Copy.As failed to get CopyObjectHandles")
+			}
+			// Replace the src ObjectHandle with a new one.
+			coh.Src = coh.Src.Generation(9999999)
+			return nil
+		},
+	})
+	if err == nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v, wanted NotFound for Copy", err)
+	}
+
+	// Repeat with preconditions on Dst and Src that will succeed.
+	err = bucket.Copy(ctx, key2, key, &blob.CopyOptions{
+		BeforeCopy: func(asFunc func(interface{}) bool) error {
+			var coh *CopyObjectHandles
+			if !asFunc(&coh) {
+				return errors.New("Reader.As failed to get CopyObjectHandles")
+			}
+			coh.Dst = coh.Dst.If(storage.Conditions{DoesNotExist: true})
+			coh.Src = coh.Src.Generation(generation)
+			return nil
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	defer bucket.Delete(ctx, key2)
 }
 
 func TestURLOpenerForParams(t *testing.T) {

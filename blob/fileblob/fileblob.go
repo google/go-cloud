@@ -243,9 +243,19 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	// are collapsed to the single directory entry.
 	var lastPrefix string
 
+	// If the Prefix contains a "/", we can set the root of the Walk
+	// to the path specified by the Prefix as any files below the path will not
+	// match the Prefix.
+	// Note that we use "/" explicitly and not os.PathSeparator, as the opts.Prefix
+	// is in the unescaped form.
+	root := b.dir
+	if i := strings.LastIndex(opts.Prefix, "/"); i > -1 {
+		root = filepath.Join(root, opts.Prefix[:i])
+	}
+
 	// Do a full recursive scan of the root directory.
 	var result driver.ListPage
-	err := filepath.Walk(b.dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			// Couldn't read this file/directory for some reason; just skip it.
 			return nil
@@ -352,12 +362,12 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	_, info, xa, err := b.forKey(key)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       xa.CacheControl,
 		ContentDisposition: xa.ContentDisposition,
 		ContentEncoding:    xa.ContentEncoding,
@@ -379,6 +389,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
+	}
+	if opts.BeforeRead != nil {
+		if err := opts.BeforeRead(func(interface{}) bool { return false }); err != nil {
+			return nil, err
+		}
 	}
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
@@ -420,8 +435,8 @@ func (r *reader) Close() error {
 	return r.c.Close()
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 func (r *reader) As(i interface{}) bool { return false }

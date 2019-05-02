@@ -74,9 +74,10 @@
 //    ever call Message.Ack.
 //  - func() { log.Info("ack called!") }: log. Softer than panicking.
 //
-// Since Message.Nack never makes sense for at-most-once providers (the provider
-// can't redeliver the message), Nack will always panic if called for at-most-once
-// providers.
+// Since Message.Nack never makes sense for some providers (for example, for
+// at-most-once providers, the provider can't redeliver the message), Nack will
+// panic if called for some providers. You can call Message.CanNack to see if
+// it is available.
 //
 // OpenCensus Integration
 //
@@ -135,11 +136,23 @@ type Message struct {
 	// message has no associated metadata.
 	Metadata map[string]string
 
+	// BeforeSend is a callback used when sending a message. It will always be
+	// set to nil for received messages.
+	//
+	// The callback will be called exactly once, before the message is sent.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeSend func(asFunc func(interface{}) bool) error
+
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
 
 	// ack is a closure that queues this message for the action (ack or nack).
 	ack func(isAck bool)
+
+	// nackable is true iff Nack can be called without panicking.
+	nackable bool
 
 	// mu guards isAcked in case Ack/Nack is called concurrently.
 	mu sync.Mutex
@@ -162,17 +175,37 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
-// Nack tells the server that this Message was not processed and should be
-// redelivered. It returns immediately, but the actual nack is sent in the
-// background, and is not guaranteed to succeed.
+/*
+// TODO(rvangent): Decide whether to expose this.
+// Nackable returns true iff Nack can be called without panicking.
 //
-// Nack panics for at-most-once providers, as Nack is meaningless when
-// messages can't be redelivered.
+// Some providers do not support Nack; for example, at-most-once providers
+// can't redeliver a message.
+func (m *Message) Nackable() bool {
+	return m.nackable
+}
+*/
+
+// Nack (short for negative acknowledgment) tells the server that this Message
+// was not processed and should be redelivered. It returns immediately, but the
+// actual nack is sent in the background, and is not guaranteed to succeed.
+//
+// Nack is a performance optimization for retrying transient failures. Nack
+// must not be used for message parse errors or other messages that the
+// application will never be able to process: calling Nack will cause them to
+// be redelivered and overload the server. Instead, an application should call
+// Ack and log the failure in some monitored way.
+//
+// Nack panics for some providers, as Nack is meaningless when messages can't be
+// redelivered.
 func (m *Message) Nack() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.isAcked {
 		panic(fmt.Sprintf("Ack/Nack called twice on message: %+v", m))
+	}
+	if !m.nackable {
+		panic("Message.Nack is not supported for this provider")
 	}
 	m.ack(false)
 	m.isAcked = true
@@ -233,8 +266,9 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 		}
 	}
 	dm := &driver.Message{
-		Body:     m.Body,
-		Metadata: m.Metadata,
+		Body:       m.Body,
+		Metadata:   m.Metadata,
+		BeforeSend: m.BeforeSend,
 	}
 	return t.batcher.Add(ctx, dm)
 }
@@ -347,6 +381,7 @@ type Subscription struct {
 	// ackBatcher makes batches of acks and nacks and sends them to the server.
 	ackBatcher    *batcher.Batcher
 	ackFunc       func()          // if non-nil, used for Ack
+	canNack       bool            // true iff the driver supports Nack
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
 	cancel        func()          // for canceling backgroundCtx
 
@@ -576,6 +611,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 				Body:     m.Body,
 				Metadata: md,
 				asFunc:   m.AsFunc,
+				nackable: s.canNack,
 			}
 			if s.ackFunc == nil {
 				m2.ack = func(isAck bool) {
@@ -584,13 +620,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
 				}
 			} else {
-				m2.ack = func(isAck bool) {
-					if isAck {
-						s.ackFunc()
-						return
-					}
-					panic("Message.Nack is not supported for this provider")
-				}
+				// Note: isAck will be false, as m2.nackable is false and
+				// so Message.Nack will panic.
+				m2.ack = func(isAck bool) { s.ackFunc() }
 			}
 			if s.ackFunc == nil {
 				// Add a finalizer that complains if the Message we return isn't
@@ -740,8 +772,12 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 		backgroundCtx:    ctx,
 		recvBatchOpts:    recvBatchOpts,
 		runningBatchSize: initialBatchSize,
+		ackFunc:          ds.AckFunc(),
+		canNack:          ds.CanNack(),
 	}
-	s.ackFunc = ds.AckFunc()
+	if s.ackFunc != nil && s.canNack {
+		panic("invalid to have CanNack() true but AckFunc() non-nil")
+	}
 	if s.ackFunc == nil {
 		s.ackBatcher = newAckBatcher(ctx, s, ds, ackBatcherOpts)
 	}
@@ -798,6 +834,9 @@ type errorCoder interface {
 }
 
 func wrapError(ec errorCoder, err error) error {
+	if err == nil {
+		return nil
+	}
 	if gcerr.DoNotWrap(err) {
 		return err
 	}

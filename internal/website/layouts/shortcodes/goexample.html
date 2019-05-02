@@ -1,0 +1,29 @@
+{{/*
+Usage:
+
+goexample "gocloud.dev/foo.ExampleBar"
+goexample src="gocloud.dev/foo.ExampleBar"
+goexample src="gocloud.dev/foo.ExampleBar" imports="0"
+
+*/ -}}
+{{ if .IsNamedParams -}}
+  {{ with index .Site.Data.examples (.Get "src") -}}
+    {{ if and .imports (ne ($.Get "imports") "0") -}}
+      {{ highlight (printf "%s\n\n%s\n" .imports .code) "go" "" -}}
+    {{ else -}}
+      {{ highlight (printf "%s\n" .code) "go" "" -}}
+    {{ end -}}
+  {{ else -}}
+    {{ errorf "%s: Example %q does not exist" ($.Page.File.Path) (.Get "src") -}}
+  {{end -}}
+{{ else -}}
+  {{ with index .Site.Data.examples (.Get 0) -}}
+    {{ if .imports -}}
+      {{ highlight (printf "%s\n\n%s\n" .imports .code) "go" "" -}}
+    {{ else -}}
+      {{ highlight (printf "%s\n" .code) "go" "" -}}
+    {{ end -}}
+  {{ else -}}
+    {{ errorf "%s: Example %q does not exist" ($.Page.File.Path) (.Get 0) -}}
+  {{end -}}
+{{ end -}}

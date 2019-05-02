@@ -51,6 +51,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.
 	ctx := context.Background()
@@ -76,6 +77,9 @@ func Example_openKeeper() {
 	// The "algorithm" query parameter (required) holds the algorithm.
 	// See https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt
 	// for more information.
-	k, err := secrets.OpenKeeper(ctx, "azurekeyvault://mykeyvaultname/mykeyname?algorithm=RSA-OAEP-256")
-	_, _ = k, err
+	keeper, err := secrets.OpenKeeper(ctx, "azurekeyvault://mykeyvaultname/mykeyname?algorithm=RSA-OAEP-256")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeper.Close()
 }

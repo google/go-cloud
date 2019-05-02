@@ -52,6 +52,15 @@ type Message struct {
 	// see Topic.As for more details.
 	// AsFunc must be populated on messages returned from ReceiveBatch.
 	AsFunc func(interface{}) bool
+
+	// BeforeSend is a callback used when sending a message. It should remain
+	// nil on messages returned from ReceiveBatch.
+	//
+	// The callback must be called exactly once, before the message is sent.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeSend func(asFunc func(interface{}) bool) error
 }
 
 // Topic publishes messages.
@@ -147,6 +156,12 @@ type Subscription interface {
 	// of calls to SendAcks/SendNacks via a batcher.Options passed to
 	// pubsub.NewSubscription.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
+
+	// CanNack must return true iff the driver supports Nacking messages.
+	//
+	// If CanNack returns false, SendNacks will never be called, and Nack will
+	// panic if called.
+	CanNack() bool
 
 	// SendNacks should notify the server that the messages with the given ackIDs
 	// are not being processed by this client, so that they will be received

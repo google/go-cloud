@@ -138,6 +138,15 @@ resource "github_issue_label" "enhancement" {
   description = "New feature or request"
 }
 
+# The "good first issue" label is treated specially by GitHub:
+# https://help.github.com/en/articles/helping-new-contributors-find-your-project-with-labels
+resource "github_issue_label" "good_first_issue" {
+  repository  = "${github_repository.repo.name}"
+  name        = "good first issue"
+  color       = "7057ff"
+  description = "Good for newcomers"
+}
+
 resource "github_issue_label" "process" {
   repository  = "${github_repository.repo.name}"
   name        = "process"

@@ -46,7 +46,7 @@ func Example() {
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
 	// Construct a *runtimevar.Variable that watches the blob.
-	v, err := blobvar.NewVariable(bucket, "cfg-variable-name", decoder, nil)
+	v, err := blobvar.OpenVariable(bucket, "cfg-variable-name", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

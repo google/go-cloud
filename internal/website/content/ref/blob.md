@@ -31,6 +31,7 @@ listing blobs in a bucket.
 ## Usage Samples
 
 * [CLI Tutorial]({{< ref "/tutorials/cli-uploader.md" >}})
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-blob)
 * [Guestbook
   sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
 * [blob package examples](https://godoc.org/gocloud.dev/blob#pkg-examples)

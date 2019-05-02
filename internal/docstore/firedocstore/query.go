@@ -46,6 +46,19 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 		Parent:    path.Dir(c.collPath),
 		QueryType: &pb.RunQueryRequest_StructuredQuery{sq},
 	}
+	if q.BeforeQuery != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**pb.RunQueryRequest)
+			if !ok {
+				return false
+			}
+			*p = req
+			return true
+		}
+		if err := q.BeforeQuery(asFunc); err != nil {
+			return nil, err
+		}
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	sc, err := c.client.RunQuery(ctx, req)
 	if err != nil {
@@ -182,6 +195,15 @@ func toBigFloat(x reflect.Value) *big.Float {
 }
 
 func (it *docIterator) Stop() { it.cancel() }
+
+func (it *docIterator) As(i interface{}) bool {
+	p, ok := i.(*pb.Firestore_RunQueryClient)
+	if !ok {
+		return false
+	}
+	*p = it.streamClient
+	return true
+}
 
 // Converts the query to a Firestore proto. Also returns filters that need to be
 // evaluated on the client.
@@ -322,4 +344,8 @@ func isNaN(x interface{}) bool {
 
 func fieldRef(fp []string) *pb.StructuredQuery_FieldReference {
 	return &pb.StructuredQuery_FieldReference{FieldPath: toServiceFieldPath(fp)}
+}
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	return "unknown", nil
 }

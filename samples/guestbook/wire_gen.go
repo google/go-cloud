@@ -179,21 +179,24 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	db, cleanup, err := cloudmysql.Open(ctx, remoteCertSource, params)
 	if err != nil {
 		return nil, nil, err
 	}
-	bucket, cleanup, err := gcpBucket(ctx, flags, httpClient)
-	if err != nil {
-		return nil, nil, err
-	}
-	runtimeConfigManagerClient, cleanup2, err := gcpruntimeconfig.Dial(ctx, tokenSource)
+	bucket, cleanup2, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	variable, cleanup3, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
+	runtimeConfigManagerClient, cleanup3, err := gcpruntimeconfig.Dial(ctx, tokenSource)
 	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	variable, cleanup4, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
+	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -201,10 +204,11 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	mainApplication := newApplication(db, bucket, variable)
 	router := newRouter(mainApplication)
 	stackdriverLogger := sdserver.NewRequestLogger()
-	v, cleanup4 := appHealthChecks(db)
+	v, cleanup5 := appHealthChecks(db)
 	monitoredresourceInterface := monitoredresource.Autodetect()
-	exporter, cleanup5, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
+	exporter, cleanup6, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
 	if err != nil {
+		cleanup5()
 		cleanup4()
 		cleanup3()
 		cleanup2()
@@ -222,6 +226,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
+		cleanup6()
 		cleanup5()
 		cleanup4()
 		cleanup3()
@@ -298,7 +303,7 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
-	return awsparamstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
+	return awsparamstore.OpenVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -318,7 +323,7 @@ func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob
 // azureMOTDVar is a Wire provider function that returns the Message of the Day
 // variable read from a blob stored in Azure.
 func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtimevar.Variable, error) {
-	return blobvar.NewVariable(b, flags.motdVar, runtimevar.StringDecoder, &blobvar.Options{
+	return blobvar.OpenVariable(b, flags.motdVar, runtimevar.StringDecoder, &blobvar.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -357,7 +362,7 @@ func gcpMOTDVar(ctx context.Context, client2 runtimeconfig.RuntimeConfigManagerC
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := gcpruntimeconfig.NewVariable(client2, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
+	v, err := gcpruntimeconfig.OpenVariable(client2, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
@@ -391,7 +396,7 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 // localRuntimeVar is a Wire provider function that returns the Message of the
 // Day variable based on a local file.
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
+	v, err := filevar.OpenVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {

@@ -222,6 +222,14 @@ func (sbAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
+func (sbAsTest) BeforeSend(as func(interface{}) bool) error {
+	var m *servicebus.Message
+	if !as(&m) {
+		return fmt.Errorf("cast failed for %T", &m)
+	}
+	return nil
+}
+
 func sanitize(s string) string {
 	// First trim some not-so-useful strings that are part of all test names.
 	s = strings.Replace(s, "TestConformance/Test", "", 1)

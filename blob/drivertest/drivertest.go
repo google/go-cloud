@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -64,7 +65,8 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 1. Calls BucketCheck.
 // 2. Creates a blob in a directory, using BeforeWrite as a WriterOption.
 // 3. Fetches the blob's attributes and calls AttributeCheck.
-// 4. Creates a Reader for the blob and calls ReaderCheck.
+// 4. Creates a Reader for the blob using BeforeReader as a ReaderOption,
+//    and calls ReaderCheck with the resulting Reader.
 // 5. Calls List using BeforeList as a ListOption, with Delimiter set so
 //    that only the directory is returned, and calls ListObjectCheck
 //    on the single directory list entry returned.
@@ -83,6 +85,9 @@ type AsTest interface {
 	BucketCheck(b *blob.Bucket) error
 	// ErrorCheck will be called to allow verification of Bucket.ErrorAs.
 	ErrorCheck(b *blob.Bucket, err error) error
+	// BeforeRead will be passed directly to ReaderOptions as part of reading
+	// a test blob.
+	BeforeRead(as func(interface{}) bool) error
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
@@ -126,23 +131,30 @@ func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) (ret error) {
 	return nil
 }
 
+func (verifyAsFailsOnNil) BeforeRead(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want BeforeReader's As to return false when passed nil")
+	}
+	return nil
+}
+
 func (verifyAsFailsOnNil) BeforeWrite(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want Writer.As to return false when passed nil")
+		return errors.New("want BeforeWrite's As to return false when passed nil")
 	}
 	return nil
 }
 
 func (verifyAsFailsOnNil) BeforeCopy(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want Copy.As to return false when passed nil")
+		return errors.New("want BeforeCopy's As to return false when passed nil")
 	}
 	return nil
 }
 
 func (verifyAsFailsOnNil) BeforeList(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want List.As to return false when passed nil")
+		return errors.New("want BeforeList's As to return false when passed nil")
 	}
 	return nil
 }
@@ -190,6 +202,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 	t.Run("TestCanceledWrite", func(t *testing.T) {
 		testCanceledWrite(t, newHarness)
+	})
+	t.Run("TestConcurrentWriteAndRead", func(t *testing.T) {
+		testConcurrentWriteAndRead(t, newHarness)
 	})
 	t.Run("TestMetadata", func(t *testing.T) {
 		testMetadata(t, newHarness)
@@ -1821,6 +1836,72 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
+// testConcurrentWriteAndRead tests that concurrent writing to multiple blob
+// keys and concurrent reading from multiple blob keys works.
+func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blob.NewBucket(drv)
+	defer b.Close()
+
+	// Prepare data. Each of the numKeys blobs has dataSize bytes, with each byte
+	// set to the numeric key index. For example, the blob at "key0" consists of
+	// all dataSize bytes set to 0.
+	const numKeys = 20
+	const dataSize = 4 * 1024
+	keyData := make(map[int][]byte)
+	for k := 0; k < numKeys; k++ {
+		data := make([]byte, dataSize)
+		for i := 0; i < dataSize; i++ {
+			data[i] = byte(k)
+		}
+		keyData[k] = data
+	}
+
+	blobName := func(k int) string {
+		return fmt.Sprintf("key%d", k)
+	}
+
+	var wg sync.WaitGroup
+
+	// Write all blobs concurrently.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			if err := b.WriteAll(ctx, blobName(key), keyData[key], nil); err != nil {
+				t.Fatal(err)
+			}
+			wg.Done()
+		}(k)
+		defer b.Delete(ctx, blobName(k))
+	}
+	wg.Wait()
+
+	// Read all blobs concurrently and verify that they contain the expected data.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			buf, err := b.ReadAll(ctx, blobName(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(buf, keyData[key]) {
+				t.Errorf("read data mismatch for key %d", key)
+			}
+			wg.Done()
+		}(k)
+	}
+	wg.Wait()
+}
+
 // testKeys tests a variety of weird keys.
 func testKeys(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "weird-keys"
@@ -2018,12 +2099,12 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.AttributesCheck(&attrs); err != nil {
+	if err := st.AttributesCheck(attrs); err != nil {
 		t.Error(err)
 	}
 
 	// Verify Reader.As.
-	r, err := b.NewReader(ctx, key, nil)
+	r, err := b.NewReader(ctx, key, &blob.ReaderOptions{BeforeRead: st.BeforeRead})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -25,11 +25,12 @@ delivery](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overvi
 * [Amazon SNS+SQS](https://godoc.org/gocloud.dev/pubsub/awssnssqs)
 * [Azure Service Bus](https://godoc.org/gocloud.dev/pubsub/azuresb)
 * [RabbitMQ](https://godoc.org/gocloud.dev/pubsub/rabbitpubsub)
+* [Kafka](https://godoc.org/gocloud.dev/pubsub/kafkapubsub)
 * [NATS](https://godoc.org/gocloud.dev/pubsub/natspubsub)
 * [In-memory local Pub/Sub](https://godoc.org/gocloud.dev/pubsub/mempubsub) -
   mainly useful for local testing
 
 ## Usage Samples
 
-* [gcmsg sample](https://github.com/google/go-cloud/tree/master/samples/gcmsg)
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-pubsub)
 * [pubsub package examples](https://godoc.org/gocloud.dev/pubsub#pkg-examples)

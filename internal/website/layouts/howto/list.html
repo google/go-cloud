@@ -1,6 +1,6 @@
 {{ define "main" -}}
 <h1>{{ .Title }}</h1>
-{{ .Content }}
+{{ partial "header-link.html" .Content }}
 {{ if or .Data.Pages .Sections }}
 <ul class="HowtoList">
 {{- range .Sections.GroupBy "Weight" }}

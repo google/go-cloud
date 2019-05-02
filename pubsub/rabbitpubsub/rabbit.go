@@ -127,8 +127,6 @@ type topic struct {
 	pubc   <-chan amqp.Confirmation // Go channel for server acks of publishes
 	retc   <-chan amqp.Return       // Go channel for "returned" undeliverable messages
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
-
-	sendBatchHook func() // for testing
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by
@@ -159,9 +157,8 @@ func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.T
 
 func newTopic(conn amqpConnection, name string) *topic {
 	return &topic{
-		conn:          conn,
-		exchange:      name,
-		sendBatchHook: func() {},
+		conn:     conn,
+		exchange: name,
 	}
 }
 
@@ -227,7 +224,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	if err := t.establishChannel(ctx); err != nil {
 		return err
 	}
-	t.sendBatchHook()
+
 	// Receive from Go channels concurrently or we will deadlock with the Publish
 	// RPC. (The amqp package docs recommend setting the capacity of the Go channel
 	// to the number of messages to be published, but we can't do that because we
@@ -245,7 +242,20 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	var perr error
 	for _, m := range ms {
-		if perr = ch.Publish(t.exchange, toPublishing(m)); perr != nil {
+		pub := toPublishing(m)
+		if m.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**amqp.Publishing); ok {
+					*p = &pub
+					return true
+				}
+				return false
+			}
+			if err := m.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		if perr = ch.Publish(t.exchange, pub); perr != nil {
 			cancel()
 			break
 		}
@@ -635,14 +645,15 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 	return s.sendAcksOrNacks(ctx, ackIDs, true)
 }
 
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
+
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
 	return s.sendAcksOrNacks(ctx, ackIDs, false)
 }
 
 func (s *subscription) sendAcksOrNacks(ctx context.Context, ackIDs []driver.AckID, ack bool) error {
-	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks/Nacks
-	// don't block each other.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

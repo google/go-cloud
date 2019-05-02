@@ -40,9 +40,8 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 	if err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
-	biomePath := findBiomeDir(moduleRoot, biome)
 
-	if err := ensureTerraformInit(ctx, pctx, biomePath); err != nil {
+	if err := ensureTerraformInit(ctx, pctx, moduleRoot, biome); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
@@ -50,7 +49,7 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
 	c := exec.CommandContext(ctx, "terraform", "apply")
-	c.Dir = biomePath
+	c.Dir = findBiomeDir(moduleRoot, biome)
 	c.Stdin = pctx.stdin
 	c.Stdout = pctx.stdout
 	c.Stderr = pctx.stderr
@@ -62,7 +61,9 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 
 // ensureTerraformInit checks for a .terraform directory at the biome root.
 // If one doesn't exist, ensureTerraformInit runs terraform init.
-func ensureTerraformInit(ctx context.Context, pctx *processContext, biomePath string) error {
+func ensureTerraformInit(ctx context.Context, pctx *processContext, moduleRoot, biome string) error {
+	// Check for .terraform directory.
+	biomePath := findBiomeDir(moduleRoot, biome)
 	_, err := os.Stat(filepath.Join(biomePath, ".terraform"))
 	if err == nil {
 		// .terraform exists, no op.
@@ -72,7 +73,23 @@ func ensureTerraformInit(ctx context.Context, pctx *processContext, biomePath st
 		// Some other error occurred.
 		return xerrors.Errorf("ensure terraform init: %w", err)
 	}
-	// Run terraform init.
+
+	// .terraform directory does not exist; make sure biome directory exists.
+	_, err = os.Stat(biomePath)
+	if os.IsNotExist(err) {
+		notFound := &biomeNotFoundError{
+			moduleRoot: moduleRoot,
+			biome:      biome,
+			frame:      xerrors.Caller(0),
+			detail:     err,
+		}
+		return xerrors.Errorf("ensure terraform init: %w", notFound)
+	}
+	if err != nil {
+		return xerrors.Errorf("ensure terraform init: %w", err)
+	}
+
+	// Biome exists but not initialized. Need to run terraform init.
 	c := exec.CommandContext(ctx, "terraform", "init")
 	c.Dir = biomePath
 	c.Stdout = pctx.stdout

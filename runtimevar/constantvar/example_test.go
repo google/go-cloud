@@ -97,6 +97,7 @@ func Example_openVariable() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer v.Close()
 
 	snapshot, err := v.Latest(ctx)
 	if err != nil {

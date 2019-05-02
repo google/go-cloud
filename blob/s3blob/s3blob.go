@@ -47,6 +47,7 @@
 //  - ListOptions.BeforeList: *s3.ListObjectsV2Input, or *s3.ListObjectsInput
 //      when Options.UseLegacyList == true.
 //  - Reader: s3.GetObjectOutput
+//  - ReaderOptions.BeforeRead: *s3.GetObjectInput
 //  - Attributes: s3.HeadObjectOutput
 //  - CopyOptions.BeforeCopy: *s3.CopyObjectInput
 //  - WriterOptions.BeforeWrite: *s3manager.UploadInput
@@ -211,8 +212,8 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
@@ -464,7 +465,7 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key)
 	in := &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
@@ -472,7 +473,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	resp, err := b.client.HeadObjectWithContext(ctx, in)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
 
 	md := make(map[string]string, len(resp.Metadata))
@@ -481,7 +482,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		// keys & values.
 		md[escape.HexUnescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       aws.StringValue(resp.CacheControl),
 		ContentDisposition: aws.StringValue(resp.ContentDisposition),
 		ContentEncoding:    aws.StringValue(resp.ContentEncoding),
@@ -517,6 +518,18 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset))
 	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+	}
+	if opts.BeforeRead != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**s3.GetObjectInput); ok {
+				*p = in
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeRead(asFunc); err != nil {
+			return nil, err
+		}
 	}
 	resp, err := b.client.GetObjectWithContext(ctx, in)
 	if err != nil {
@@ -559,7 +572,10 @@ func eTagToMD5(etag *string) []byte {
 	// Un-hex; we return nil on error. In particular, we'll get an error here
 	// for multi-part uploaded blobs, whose ETag will contain a "-" and so will
 	// never be a legal hex encoding.
-	md5, _ := hex.DecodeString(unquoted)
+	md5, err := hex.DecodeString(unquoted)
+	if err != nil {
+		return nil
+	}
 	return md5
 }
 

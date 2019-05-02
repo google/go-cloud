@@ -26,13 +26,13 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/wire"
 	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/health"
 	"gocloud.dev/health/sqlhealth"
 	"gocloud.dev/runtimevar"
@@ -279,26 +279,20 @@ func (app *application) sign(w http.ResponseWriter, r *http.Request) {
 // serveBlob handles a request for a static asset by retrieving it from a bucket.
 func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 	key := mux.Vars(r)["key"]
-	blobRead, err := app.bucket.NewReader(r.Context(), key, nil)
+	blobReader, err := app.bucket.NewReader(r.Context(), key, nil)
 	if err != nil {
-		// TODO(light): Distinguish 404.
-		// https://github.com/google/go-cloud/issues/2
 		log.Println("serve blob:", err)
-		http.Error(w, "blob read error", http.StatusInternalServerError)
+		if gcerrors.Code(err) == gcerrors.NotFound {
+			http.Error(w, "blob not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "blob read error", http.StatusInternalServerError)
+		}
 		return
 	}
-	// TODO(light): Get content type from blob storage.
-	// https://github.com/google/go-cloud/issues/9
-	switch {
-	case strings.HasSuffix(key, ".png"):
-		w.Header().Set("Content-Type", "image/png")
-	case strings.HasSuffix(key, ".jpg"):
-		w.Header().Set("Content-Type", "image/jpeg")
-	default:
-		w.Header().Set("Content-Type", "application/octet-stream")
-	}
-	w.Header().Set("Content-Length", strconv.FormatInt(blobRead.Size(), 10))
-	if _, err = io.Copy(w, blobRead); err != nil {
+	defer blobReader.Close()
+	w.Header().Set("Content-Type", blobReader.ContentType())
+	w.Header().Set("Content-Length", strconv.FormatInt(blobReader.Size(), 10))
+	if _, err = io.Copy(w, blobReader); err != nil {
 		log.Println("Copying blob:", err)
 	}
 }

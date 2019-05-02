@@ -439,7 +439,8 @@ type Bucket struct {
 	tracer *oc.Tracer
 
 	// mu protects the closed variable.
-	// Read locks are kept to prevent closing until a call finishes.
+	// Read locks are kept to allow holding a read lock for long-running calls,
+	// and thereby prevent closing until a call finishes.
 	mu     sync.RWMutex
 	closed bool
 }
@@ -564,22 +565,22 @@ func (b *Bucket) Exists(ctx context.Context, key string) (bool, error) {
 //
 // If the blob does not exist, Attributes returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
-func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
+func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err error) {
 	if !utf8.ValidString(key) {
-		return Attributes{}, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Attributes key must be a valid UTF-8 string: %q", key)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Attributes key must be a valid UTF-8 string: %q", key)
 	}
 
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
-		return Attributes{}, errClosed
+		return nil, errClosed
 	}
 	ctx = b.tracer.Start(ctx, "Attributes")
 	defer func() { b.tracer.End(ctx, err) }()
 
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
-		return Attributes{}, wrapError(b.b, err)
+		return nil, wrapError(b.b, err)
 	}
 	var md map[string]string
 	if len(a.Metadata) > 0 {
@@ -591,7 +592,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err 
 			md[strings.ToLower(k)] = v
 		}
 	}
-	return Attributes{
+	return &Attributes{
 		CacheControl:       a.CacheControl,
 		ContentDisposition: a.ContentDisposition,
 		ContentEncoding:    a.ContentEncoding,
@@ -640,7 +641,9 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	if opts == nil {
 		opts = &ReaderOptions{}
 	}
-	dopts := &driver.ReaderOptions{}
+	dopts := &driver.ReaderOptions{
+		BeforeRead: opts.BeforeRead,
+	}
 	tctx := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
 		// If err == nil, we handed the end closure off to the returned *Writer; it
@@ -896,7 +899,7 @@ func (b *Bucket) Close() error {
 	if prev {
 		return errClosed
 	}
-	return b.b.Close()
+	return wrapError(b.b, b.b.Close())
 }
 
 // DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.
@@ -910,8 +913,15 @@ type SignedURLOptions struct {
 }
 
 // ReaderOptions sets options for NewReader and NewRangedReader.
-// It is provided for future extensibility.
-type ReaderOptions struct{}
+type ReaderOptions struct {
+	// BeforeRead is a callback that will be called exactly once, before
+	// any data is read (unless NewReader returns an error before then, in which
+	// case it may not be called at all).
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeRead func(asFunc func(interface{}) bool) error
+}
 
 // WriterOptions sets options for NewWriter.
 type WriterOptions struct {

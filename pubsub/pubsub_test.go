@@ -108,6 +108,7 @@ func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 func (*driverSub) IsRetryable(error) bool             { return false }
 func (*driverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 func (*driverSub) AckFunc() func()                    { return nil }
+func (*driverSub) CanNack() bool                      { return false }
 func (*driverSub) Close() error                       { return nil }
 
 func TestSendReceive(t *testing.T) {
@@ -245,6 +246,7 @@ func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([
 	return nil, ctx.Err()
 }
 func (blockingDriverSub) AckFunc() func()        { return nil }
+func (blockingDriverSub) CanNack() bool          { return false }
 func (blockingDriverSub) IsRetryable(error) bool { return false }
 func (blockingDriverSub) Close() error           { return nil }
 
@@ -352,6 +354,7 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 func (*failSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
 func (*failSub) IsRetryable(err error) bool                                { return isRetryable(err) }
 func (*failSub) AckFunc() func()                                           { return nil }
+func (*failSub) CanNack() bool                                             { return false }
 func (*failSub) Close() error                                              { return nil }
 
 // TODO(jba): add a test for retry of SendAcks.
@@ -379,6 +382,7 @@ func (erroringSubscription) SendAcks(context.Context, []driver.AckID) error { re
 func (erroringSubscription) IsRetryable(err error) bool                     { return isRetryable(err) }
 func (erroringSubscription) ErrorCode(error) gcerrors.ErrorCode             { return gcerrors.AlreadyExists }
 func (erroringSubscription) AckFunc() func()                                { return nil }
+func (erroringSubscription) CanNack() bool                                  { return false }
 func (erroringSubscription) Close() error                                   { return errDriver }
 
 // TestErrorsAreWrapped tests that all errors returned from the driver are

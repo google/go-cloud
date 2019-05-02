@@ -59,20 +59,24 @@ func TestPlanQuery(t *testing.T) {
 	cmpopt := cmp.AllowUnexported(dynamodb.ScanInput{}, dynamodb.QueryInput{}, dynamodb.AttributeValue{})
 
 	for _, test := range []struct {
-		desc                    string
-		tableSortKey            string
+		desc string
+		// In all cases, the table has a partition key called "tableP".
+		tableSortKey            string   // if non-empty, the table sort key
 		localIndexSortKey       string   // if non-empty, there is a local index with this sort key
+		localIndexFields        []string // the fields projected into the local index
 		globalIndexPartitionKey string   // if non-empty, there is a global index with this partition key
 		globalIndexSortKey      string   // if non-empty, the global index  has this sort key
 		globalIndexFields       []string // the fields projected into the global index
 		query                   *driver.Query
 		want                    interface{} // either a ScanInput or a QueryInput
+		wantPlan                string
 	}{
 		{
 			desc: "empty query",
 			// A query with no filters requires a scan.
-			query: &driver.Query{},
-			want:  &dynamodb.ScanInput{TableName: &c.table},
+			query:    &driver.Query{},
+			want:     &dynamodb.ScanInput{TableName: &c.table},
+			wantPlan: "Scan",
 		},
 		{
 			desc: "equality filter on table partition field",
@@ -84,6 +88,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition field (sort key)",
@@ -95,6 +100,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on other field",
@@ -106,6 +112,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("other"),
 				ExpressionAttributeValues: eavs(1),
 			},
+			wantPlan: "Scan",
 		},
 		{
 			desc: "non-equality filter on table partition field",
@@ -118,6 +125,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
 			},
+			wantPlan: "Scan",
 		},
 		{
 			desc: "equality filter on partition, filter on other",
@@ -133,6 +141,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("other", "tableP"),
 				ExpressionAttributeValues: eavs(2),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on partition, filter on sort",
@@ -149,6 +158,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP", "tableS"),
 				ExpressionAttributeValues: eavs(2),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition, filter on local index sort",
@@ -165,6 +175,49 @@ func TestPlanQuery(t *testing.T) {
 				KeyConditionExpression:   aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames: eans("tableP", "localS"),
 			},
+			wantPlan: `Index: "local"`,
+		},
+		{
+			desc: "equality filter on table partition, filter on local index sort, bad projection",
+			// The equality filter on the table's partition key allows us to query
+			// the table. There seems to be a better choice: a local index with a sort key
+			// that is mentioned in the query. But the query wants the entire document,
+			// and the local index only has some fields.
+			localIndexSortKey: "localS",
+			localIndexFields:  []string{}, // keys only
+			query: &driver.Query{Filters: []driver.Filter{
+				{[]string{"tableP"}, "=", 1},
+				{[]string{"localS"}, "<=", 1},
+			}},
+			want: &dynamodb.QueryInput{
+				KeyConditionExpression:   aws.String("#1 = :1"),
+				FilterExpression:         aws.String("#0 <= :0"),
+				ExpressionAttributeNames: eans("localS", "tableP"),
+			},
+			wantPlan: "Table",
+		},
+		{
+			desc: "equality filter on table partition, filter on local index sort, good projection",
+			// Same as above, but now the query no longer asks for all fields, so
+			// even though the local index's project doesn't appear to cover the
+			// selected fields (because of DocstoreRevision), DynamoDB will read the
+			// other fields from the table.
+			localIndexSortKey: "localS",
+			localIndexFields:  []string{}, // keys only
+			query: &driver.Query{
+				FieldPaths: [][]string{{"tableP"}, {"localS"}},
+				Filters: []driver.Filter{
+					{[]string{"tableP"}, "=", 1},
+					{[]string{"localS"}, "<=", 1},
+				}},
+			want: &dynamodb.QueryInput{
+				IndexName:                 aws.String("local"),
+				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
+				ExpressionAttributeNames:  eans("tableP", "localS", "DocstoreRevision"),
+				ExpressionAttributeValues: eavs(2),
+				ProjectionExpression:      aws.String("#0, #1, #2"),
+			},
+			wantPlan: `Index: "local"`,
 		},
 		{
 			desc: "equality filter on table partition, filters on local index and table sort",
@@ -182,6 +235,7 @@ func TestPlanQuery(t *testing.T) {
 				FilterExpression:         aws.String("#0 <= :0"),
 				ExpressionAttributeNames: eans("localS", "tableP", "tableS"),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on other field with index",
@@ -194,6 +248,7 @@ func TestPlanQuery(t *testing.T) {
 				KeyConditionExpression:   aws.String("#0 = :0"),
 				ExpressionAttributeNames: eans("other"),
 			},
+			wantPlan: `Index: "global"`,
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort",
@@ -212,6 +267,7 @@ func TestPlanQuery(t *testing.T) {
 				KeyConditionExpression:   aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames: eans("tableP", "globalS"),
 			},
+			wantPlan: `Index: "global"`,
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort, bad projection",
@@ -233,6 +289,7 @@ func TestPlanQuery(t *testing.T) {
 				FilterExpression:         aws.String("#0 <= :0"),
 				ExpressionAttributeNames: eans("globalS", "tableP"),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort, bad projection 2",
@@ -255,6 +312,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeValues: eavs(2),
 				ProjectionExpression:      aws.String("#2, #3"),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort, good projection",
@@ -276,6 +334,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP", "globalS", "other", "DocstoreRevision"),
 				ExpressionAttributeValues: eavs(2),
 			},
+			wantPlan: `Index: "global"`,
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
@@ -285,27 +344,20 @@ func TestPlanQuery(t *testing.T) {
 			} else {
 				c.description.LocalSecondaryIndexes = []*dynamodb.LocalSecondaryIndexDescription{
 					{
-						IndexName: aws.String("local"),
-						KeySchema: keySchema("tableP", "localS"),
+						IndexName:  aws.String("local"),
+						KeySchema:  keySchema("tableP", test.localIndexSortKey),
+						Projection: indexProjection(test.localIndexFields),
 					},
 				}
 			}
 			if test.globalIndexPartitionKey == "" {
 				c.description.GlobalSecondaryIndexes = nil
 			} else {
-				var proj *dynamodb.Projection
-				if test.globalIndexFields == nil {
-					proj = indexProjection("ALL")
-				} else if len(test.globalIndexFields) == 0 {
-					proj = indexProjection("KEYS_ONLY")
-				} else {
-					proj = indexProjection("INCLUDE", test.globalIndexFields...)
-				}
 				c.description.GlobalSecondaryIndexes = []*dynamodb.GlobalSecondaryIndexDescription{
 					{
 						IndexName:  aws.String("global"),
 						KeySchema:  keySchema(test.globalIndexPartitionKey, test.globalIndexSortKey),
-						Projection: proj,
+						Projection: indexProjection(test.globalIndexFields),
 					},
 				}
 			}
@@ -331,7 +383,11 @@ func TestPlanQuery(t *testing.T) {
 				t.Fatalf("bad type for test.want: %T", test.want)
 			}
 			if diff := cmp.Diff(got, test.want, cmpopt); diff != "" {
-				t.Error(diff)
+				t.Error("input:\n", diff)
+			}
+			gotPlan := gotRunner.queryPlan()
+			if diff := cmp.Diff(gotPlan, test.wantPlan); diff != "" {
+				t.Error("plan:\n", diff)
 			}
 		})
 	}
@@ -345,7 +401,16 @@ func keySchema(pkey, skey string) []*dynamodb.KeySchemaElement {
 	}
 }
 
-func indexProjection(ptype string, fields ...string) *dynamodb.Projection {
+func indexProjection(fields []string) *dynamodb.Projection {
+	var ptype string
+	switch {
+	case fields == nil:
+		ptype = "ALL"
+	case len(fields) == 0:
+		ptype = "KEYS_ONLY"
+	default:
+		ptype = "INCLUDE"
+	}
 	proj := &dynamodb.Projection{ProjectionType: &ptype}
 	for _, f := range fields {
 		f := f
@@ -354,7 +419,7 @@ func indexProjection(ptype string, fields ...string) *dynamodb.Projection {
 	return proj
 }
 
-func TestFieldsIncluded(t *testing.T) {
+func TestGlobalFieldsIncluded(t *testing.T) {
 	c := &collection{partitionKey: "tableP", sortKey: "tableS"}
 	gi := &dynamodb.GlobalSecondaryIndexDescription{
 		KeySchema: keySchema("globalP", "globalS"),
@@ -407,13 +472,13 @@ func TestFieldsIncluded(t *testing.T) {
 				proj *dynamodb.Projection
 				want bool
 			}{
-				{"ALL", indexProjection("ALL"), true},
-				{"KEYS_ONLY", indexProjection("KEYS_ONLY"), test.wantKeysOnly},
-				{"INCLUDE", indexProjection("INCLUDE", "f", "g"), test.wantInclude},
+				{"ALL", indexProjection(nil), true},
+				{"KEYS_ONLY", indexProjection([]string{}), test.wantKeysOnly},
+				{"INCLUDE", indexProjection([]string{"f", "g"}), test.wantInclude},
 			} {
 				t.Run(p.name, func(t *testing.T) {
 					gi.Projection = p.proj
-					got := c.fieldsIncluded(q, gi)
+					got := c.globalFieldsIncluded(q, gi)
 					if got != p.want {
 						t.Errorf("got %t, want %t", got, p.want)
 					}

@@ -35,13 +35,6 @@ import (
 type avmap = map[string]*dynamodb.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	if c.description == nil {
-		out, err := c.db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &c.table})
-		if err != nil {
-			return nil, err
-		}
-		c.description = out.Table
-	}
 	qr, err := c.planQuery(q)
 	if err != nil {
 		return nil, err
@@ -51,7 +44,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 		limit: q.Limit,
 		count: 0, // manually count limit since dynamodb uses "limit" as scan limit before filtering
 	}
-	it.items, it.last, err = it.qr.run(ctx, nil)
+	it.items, it.last, it.asFunc, err = it.qr.run(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +91,7 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			in.FilterExpression = ce.Filter()
 			in.ProjectionExpression = ce.Projection()
 		}
-		return &queryRunner{c: c, scanIn: in}, nil
+		return &queryRunner{c: c, scanIn: in, beforeRun: q.BeforeQuery}, nil
 	}
 
 	// Do a query.
@@ -118,12 +111,14 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			FilterExpression:          ce.Filter(),
 			ProjectionExpression:      ce.Projection(),
 		},
+		beforeRun: q.BeforeQuery,
 	}, nil
 }
 
 // Return the best choice of queryable (table or index) for this query.
-// If indexName is nil but pkey is not empty, then use the table.
-// If all return values are zero, no query will work: do a scan.
+// How to interpret the return values:
+// - If indexName is nil but pkey is not empty, then use the table.
+// - If all return values are zero, no query will work: do a scan.
 func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, skey string) {
 	// If the query has an "=" filter on the table's partition key, look at the table
 	// and local indexes.
@@ -136,7 +131,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 		// If one has a sort key in the query, use it.
 		for _, li := range c.description.LocalSecondaryIndexes {
 			pkey, skey := keyAttributes(li.KeySchema)
-			if hasFilter(q, skey) {
+			if hasFilter(q, skey) && localFieldsIncluded(q, li) {
 				return li.IndexName, pkey, skey
 			}
 		}
@@ -148,7 +143,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 		if skey == "" {
 			continue // We'll visit global indexes without a sort key later.
 		}
-		if hasEqualityFilter(q, pkey) && hasFilter(q, skey) && c.fieldsIncluded(q, gi) {
+		if hasEqualityFilter(q, pkey) && hasFilter(q, skey) && c.globalFieldsIncluded(q, gi) {
 			return gi.IndexName, pkey, skey
 		}
 	}
@@ -162,7 +157,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 	// Check the global indexes.
 	for _, gi := range c.description.GlobalSecondaryIndexes {
 		pkey, skey := keyAttributes(gi.KeySchema)
-		if hasEqualityFilter(q, pkey) && c.fieldsIncluded(q, gi) {
+		if hasEqualityFilter(q, pkey) && c.globalFieldsIncluded(q, gi) {
 			return gi.IndexName, pkey, skey
 		}
 	}
@@ -173,12 +168,21 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 	return nil, "", ""
 }
 
-// Reports whether the fields selected by the query are projected into (that is,
-// contained directly in) the global index. We need this check before using the
-// index, because if a global index doesn't have all the desired fields, then a
-// separate RPC for each returned item would be necessary to retrieve those fields,
-// and we'd rather scan than do that.
-func (c *collection) fieldsIncluded(q *driver.Query, gi *dynamodb.GlobalSecondaryIndexDescription) bool {
+// localFieldsIncluded reports whether a local index supports all the selected fields
+// of a query. Since DynamoDB will read explicitly provided fields from the table if
+// they are not projected into the index, the only case where a local index cannot
+// be used is when the query wants all the fields, and the index projection is not ALL.
+// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html#LSI.Projections.
+func localFieldsIncluded(q *driver.Query, li *dynamodb.LocalSecondaryIndexDescription) bool {
+	return len(q.FieldPaths) > 0 || *li.Projection.ProjectionType == "ALL"
+}
+
+// globalFieldsIncluded reports whether the fields selected by the query are
+// projected into (that is, contained directly in) the global index. We need this
+// check before using the index, because if a global index doesn't have all the
+// desired fields, then a separate RPC for each returned item would be necessary to
+// retrieve those fields, and we'd rather scan than do that.
+func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dynamodb.GlobalSecondaryIndexDescription) bool {
 	proj := gi.Projection
 	if *proj.ProjectionType == "ALL" {
 		// The index has all the fields of the table: we're good.
@@ -254,26 +258,69 @@ func fpEqual(fp []string, s string) bool {
 }
 
 type queryRunner struct {
-	c       *collection
-	scanIn  *dynamodb.ScanInput
-	queryIn *dynamodb.QueryInput
+	c         *collection
+	scanIn    *dynamodb.ScanInput
+	queryIn   *dynamodb.QueryInput
+	beforeRun func(asFunc func(i interface{}) bool) error
 }
 
-func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, err error) {
+func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, asFunc func(i interface{}) bool, err error) {
 	if qr.scanIn != nil {
 		qr.scanIn.ExclusiveStartKey = startAfter
+		if qr.beforeRun != nil {
+			asFunc := func(i interface{}) bool {
+				p, ok := i.(**dynamodb.ScanInput)
+				if !ok {
+					return false
+				}
+				*p = qr.scanIn
+				return true
+			}
+			if err := qr.beforeRun(asFunc); err != nil {
+				return nil, nil, nil, err
+			}
+		}
 		out, err := qr.c.db.ScanWithContext(ctx, qr.scanIn)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
-		return out.Items, out.LastEvaluatedKey, nil
+		return out.Items, out.LastEvaluatedKey,
+			func(i interface{}) bool {
+				p, ok := i.(**dynamodb.ScanOutput)
+				if !ok {
+					return false
+				}
+				*p = out
+				return true
+			}, nil
 	}
 	qr.queryIn.ExclusiveStartKey = startAfter
+	if qr.beforeRun != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**dynamodb.QueryInput)
+			if !ok {
+				return false
+			}
+			*p = qr.queryIn
+			return true
+		}
+		if err := qr.beforeRun(asFunc); err != nil {
+			return nil, nil, nil, err
+		}
+	}
 	out, err := qr.c.db.QueryWithContext(ctx, qr.queryIn)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return out.Items, out.LastEvaluatedKey, nil
+	return out.Items, out.LastEvaluatedKey,
+		func(i interface{}) bool {
+			p, ok := i.(**dynamodb.QueryOutput)
+			if !ok {
+				return false
+			}
+			*p = out
+			return true
+		}, nil
 }
 
 func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
@@ -352,12 +399,13 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 }
 
 type documentIterator struct {
-	qr    *queryRunner
-	items []map[string]*dynamodb.AttributeValue
-	curr  int
-	limit int
-	count int // number of items returned
-	last  map[string]*dynamodb.AttributeValue
+	qr     *queryRunner
+	items  []map[string]*dynamodb.AttributeValue
+	curr   int
+	limit  int
+	count  int // number of items returned
+	last   map[string]*dynamodb.AttributeValue
+	asFunc func(i interface{}) bool
 }
 
 func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error {
@@ -367,7 +415,7 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 	if it.curr >= len(it.items) {
 		// Make a new query request at the end of this page.
 		var err error
-		it.items, it.last, err = it.qr.run(ctx, it.last)
+		it.items, it.last, it.asFunc, err = it.qr.run(ctx, it.last)
 		if err != nil {
 			return err
 		}
@@ -384,4 +432,26 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 func (it *documentIterator) Stop() {
 	it.items = nil
 	it.last = nil
+}
+
+func (it *documentIterator) As(i interface{}) bool {
+	return it.asFunc(i)
+}
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	qr, err := c.planQuery(q)
+	if err != nil {
+		return "", err
+	}
+	return qr.queryPlan(), nil
+}
+
+func (qr *queryRunner) queryPlan() string {
+	if qr.scanIn != nil {
+		return "Scan"
+	}
+	if qr.queryIn.IndexName != nil {
+		return fmt.Sprintf("Index: %q", *qr.queryIn.IndexName)
+	}
+	return "Table"
 }

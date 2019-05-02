@@ -48,6 +48,7 @@
 //  - ListObject: azblob.BlobItem for objects, azblob.BlobPrefix for "directories"
 //  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
 //  - Reader: azblob.DownloadResponse
+//  - Reader.BeforeRead: *azblob.BlockBlobURL, *azblob.BlobAccessConditions
 //  - Attributes: azblob.BlobGetPropertiesResponse
 //  - CopyOptions.BeforeCopy: azblob.Metadata, *azblob.ModifiedAccessConditions, *azblob.BlobAccessConditions
 //  - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
@@ -392,8 +393,8 @@ func (r *reader) Read(p []byte) (int, error) {
 func (r *reader) Close() error {
 	return r.body.Close()
 }
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 func (r *reader) As(i interface{}) bool {
 	p, ok := i.(*azblob.DownloadResponse)
@@ -408,13 +409,31 @@ func (r *reader) As(i interface{}) bool {
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
+	blockBlobURLp := &blockBlobURL
+	accessConditions := &azblob.BlobAccessConditions{}
 
 	end := length
 	if end < 0 {
 		end = azblob.CountToEnd
 	}
+	if opts.BeforeRead != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**azblob.BlockBlobURL); ok {
+				*p = blockBlobURLp
+				return true
+			}
+			if p, ok := i.(**azblob.BlobAccessConditions); ok {
+				*p = accessConditions
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeRead(asFunc); err != nil {
+			return nil, err
+		}
+	}
 
-	blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
+	blobDownloadResponse, err := blockBlobURLp.Download(ctx, offset, end, *accessConditions, false)
 	if err != nil {
 		return nil, err
 	}
@@ -489,12 +508,12 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
 
 	azureMD := blobPropertiesResponse.NewMetadata()
@@ -504,7 +523,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		// keys & values.
 		md[escape.HexUnescape(k)] = escape.URLUnescape(v)
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       blobPropertiesResponse.CacheControl(),
 		ContentDisposition: blobPropertiesResponse.ContentDisposition(),
 		ContentEncoding:    blobPropertiesResponse.ContentEncoding(),

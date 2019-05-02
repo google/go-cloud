@@ -31,14 +31,18 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(drivertest.KeyField), nil
+	return newCollection(drivertest.KeyField, nil)
+}
+
+func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
+	return newCollection("", drivertest.HighScoreKey)
 }
 
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
 	// CodecTester is nil because memdocstore has no native representation.
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, nil, nil)
 }
 
 type docmap = map[string]interface{}
@@ -46,7 +50,11 @@ type docmap = map[string]interface{}
 func TestUpdateAtomic(t *testing.T) {
 	// Check that update is atomic.
 	ctx := context.Background()
-	coll := docstore.NewCollection(newCollection(drivertest.KeyField))
+	dc, err := newCollection(drivertest.KeyField, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
 	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B"}
 
 	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
@@ -74,16 +82,28 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"memdocstore://", false},
-		// Invalid parameter.
-		{"memdocstore://?param=value", true},
+		{"mem://_id", false},
+		{"mem://foo.bar", false},
+		{"mem://", true},             // missing key
+		{"mem://?param=value", true}, // invalid parameter
 	}
-
 	ctx := context.Background()
 	for _, test := range tests {
 		_, err := docstore.OpenCollection(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+func TestMissingKeyCreateFailsWithKeyFunc(t *testing.T) {
+	dc, err := newCollection("", func(docstore.Document) interface{} { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := docstore.NewCollection(dc)
+	err = c.Create(context.Background(), map[string]interface{}{})
+	if err == nil {
+		t.Error("got nil, want error")
 	}
 }

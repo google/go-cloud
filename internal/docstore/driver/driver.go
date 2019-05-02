@@ -46,6 +46,13 @@ type Collection interface {
 	// multiple ones, depending on their service offerings.
 	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
+	// QueryPlan returns the plan for the query.
+	QueryPlan(*Query) (string, error)
+
+	// As converts i to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	As(i interface{}) bool
+
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerr.ErrorCode
@@ -87,6 +94,22 @@ type ActionListError []struct {
 	Err   error
 }
 
+// NewActionListError creates an ActionListError from a slice of errors.
+// If the ith element err of the slice is non-nil, the resulting ActionListError
+// will have an item {i, err}.
+func NewActionListError(errs []error) ActionListError {
+	var alerr ActionListError
+	for i, err := range errs {
+		if err != nil {
+			alerr = append(alerr, struct {
+				Index int
+				Err   error
+			}{i, err})
+		}
+	}
+	return alerr
+}
+
 // A Query defines a query operation to find documents within a collection based
 // on a set of requirements.
 type Query struct {
@@ -102,6 +125,11 @@ type Query struct {
 	// Limit sets the maximum number of results returned by running the query. When
 	// Limit <= 0, the driver implementation should return all possible results.
 	Limit int
+
+	// BeforeQuery is a callback that must be called exactly once before the
+	// underlying provider's query is executed. asFunc allows providers to expose
+	// provider-specific types.
+	BeforeQuery func(asFunc func(interface{}) bool) error
 }
 
 // A Filter defines a filter expression used to filter the query result.
@@ -126,6 +154,10 @@ type DocumentIterator interface {
 	// Stop terminates the iterator before Next return io.EOF, allowing any cleanup
 	// needed.
 	Stop()
+
+	// As converts i to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	As(i interface{}) bool
 }
 
 // EqualOp is the name of the equality operator.

@@ -16,21 +16,34 @@ package dynamodocstore
 
 import (
 	"context"
+	"errors"
+	"net/url"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
 	"gocloud.dev/internal/testing/setup"
 )
 
+// To create the tables and indexes needed for these tests, run create_tables.sh in
+// this directory.
+//
+// The docstore-test-2 table is set up to work with queries on the drivertest.HighScore
+// struct like so:
+//   table:        "Game" partition key, "Player" sort key
+//   local index:  "Game" partition key, "Score" sort key
+//   global index: "Player" partition key, "Time" sort key
+// The conformance test queries should exercise all of these.
+
 const (
-	region         = "us-east-2"
-	collectionName = "docstore-test"
-	partKey        = "_kind"
-	sortKey        = "_id"
+	region          = "us-east-2"
+	collectionName1 = "docstore-test-1"
+	collectionName2 = "docstore-test-2"
 )
 
 type harness struct {
@@ -48,54 +61,116 @@ func (h *harness) Close() {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName, partKey, sortKey), nil
+	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "")
+}
+
+func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
+	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player")
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
+	var db *dyn.DynamoDB
+	if !coll.As(&db) {
+		return errors.New("Collection.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	var si *dyn.ScanInput
+	var qi *dyn.QueryInput
+	switch {
+	case as(&si):
+		si.ConsistentRead = aws.Bool(true)
+	case as(&qi):
+		qi.ConsistentRead = aws.Bool(true)
+	default:
+		return errors.New("Query.BeforeQuery failed")
+	}
+	return nil
+}
+
+func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
+	var so *dyn.ScanOutput
+	var qo *dyn.QueryOutput
+	if !it.As(&so) && !it.As(&qo) {
+		return errors.New("DocumentIterator.As failed")
+	}
+	return nil
 }
 
 func TestConformance(t *testing.T) {
-	if *setup.Record {
-		clearTable(t)
-	}
+	// Note: when running -record repeatedly in a short time period, change the argument
+	// in the call below to generate unique transaction tokens.
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
-	drivertest.RunConformanceTests(t, newHarness, &codecTester{})
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 
-func clearTable(t *testing.T) {
-	sess, err := session.NewSession(&aws.Config{Region: aws.String(region)})
+// Dynamodocstore-specific tests.
+
+func TestQueryErrors(t *testing.T) {
+	// Verify that bad queries return the right errors.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	db := dyn.New(sess)
-	in := &dyn.ScanInput{
-		TableName:            aws.String(collectionName),
-		ProjectionExpression: aws.String("#pk, #sk"),
-		ExpressionAttributeNames: map[string]*string{
-			"#pk": aws.String(partKey),
-			"#sk": aws.String(sortKey),
-		},
+	defer h.Close()
+	dc, err := h.MakeTwoKeyCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for {
-		out, err := db.Scan(in)
+	coll := docstore.NewCollection(dc)
+
+	// Here we are comparing a key field with the wrong type. DynamoDB cares about this
+	// because even though it's a document store and hence schemaless, the key fields
+	// do have a schema (that is, they have known, fixed types).
+	iter := coll.Query().Where("Game", "=", 1).Get(ctx)
+	defer iter.Stop()
+	err = iter.Next(ctx, &h)
+	if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
+		t.Errorf("got %v (code %s, type %T), want InvalidArgument", err, c, err)
+	}
+}
+
+func TestProcessURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"dynamodb://docstore-test?partition_key=_kind", false},
+		// OK.
+		{"dynamodb://docstore-test?partition_key=_kind&sort_key=_id", false},
+		// OK, overriding region.
+		{"dynamodb://docstore-test?partition_key=_kind&region=" + region, false},
+		// Unknown parameter.
+		{"dynamodb://docstore-test?partition_key=_kind&param=value", true},
+		// With path.
+		{"dynamodb://docstore-test/subcoll?partition_key=_kind", true},
+		// Missing partition_key.
+		{"dynamodb://docstore-test?sort_key=_id", true},
+	}
+
+	sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := &URLOpener{ConfigProvider: sess}
+	for _, test := range tests {
+		u, err := url.Parse(test.URL)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(out.Items) > 0 {
-			bwin := &dyn.BatchWriteItemInput{
-				RequestItems: map[string][]*dyn.WriteRequest{},
-			}
-			var wrs []*dyn.WriteRequest
-			for _, item := range out.Items {
-				wrs = append(wrs, &dyn.WriteRequest{
-					DeleteRequest: &dyn.DeleteRequest{Key: item},
-				})
-			}
-			bwin.RequestItems[collectionName] = wrs
-			if _, err := db.BatchWriteItem(bwin); err != nil {
-				t.Fatal(err)
-			}
+		_, _, _, _, err = o.processURL(u)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
-		if out.LastEvaluatedKey == nil {
-			break
-		}
-		in.ExclusiveStartKey = out.LastEvaluatedKey
 	}
 }

@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"os/signal"
 
 	"golang.org/x/sys/unix"
 )
@@ -32,4 +33,12 @@ func signalGracefulShutdown(p *os.Process) error {
 // interruptSignals returns the set of interrupt signals to listen for.
 func interruptSignals() []os.Signal {
 	return []os.Signal{unix.SIGTERM, unix.SIGINT}
+}
+
+// notifyUserSignal1 returns a channel that receives SIGUSR1 on Unix systems.
+// On Windows, it returns a nil channel.
+func notifyUserSignal1() (_ <-chan os.Signal, stop func()) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, unix.SIGUSR1)
+	return c, func() { signal.Stop(c) }
 }

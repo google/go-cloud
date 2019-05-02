@@ -30,4 +30,5 @@ Top-level package documentation: <https://godoc.org/gocloud.dev/secrets>
 
 ## Usage Samples
 
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-secrets)
 * [Secrets package examples](https://godoc.org/gocloud.dev/secrets#example-package)

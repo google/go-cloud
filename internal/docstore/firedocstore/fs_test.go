@@ -16,9 +16,12 @@ package firedocstore
 
 import (
 	"context"
+	"errors"
+	"net/url"
 	"testing"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
 	"gocloud.dev/internal/testing/setup"
@@ -28,10 +31,10 @@ import (
 
 const (
 	// projectID is the project ID that was used during the last test run using --record.
-	projectID      = "go-cloud-test-216917"
-	collectionName = "docstore-test"
-	keyName        = "_id"
-	endPoint       = "firestore.googleapis.com:443"
+	projectID       = "go-cloud-test-216917"
+	collectionName1 = "docstore-test-1"
+	collectionName2 = "docstore-test-2"
+	endPoint        = "firestore.googleapis.com:443"
 )
 
 type harness struct {
@@ -50,7 +53,13 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName, keyName), nil
+	return newCollection(h.client, projectID, collectionName1, drivertest.KeyField, nil)
+}
+
+func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
+	return newCollection(h.client, projectID, collectionName2, "", func(doc docstore.Document) string {
+		return drivertest.HighScoreKey(doc).(string)
+	})
 }
 
 func (h *harness) Close() {
@@ -92,8 +101,42 @@ func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: value.(*pb.Document).Fields}}}
+	mv := &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{
+		Fields: value.(*pb.Document).Fields,
+	}}}
 	return doc.Decode(decoder{mv})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
+	var fc *vkit.Client
+	if !coll.As(&fc) {
+		return errors.New("Collection.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	var req *pb.RunQueryRequest
+	if !as(&req) {
+		return errors.New("Query.BeforeQuery failed")
+	}
+	_ = req.GetStructuredQuery()
+	return nil
+}
+
+func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
+	var c pb.Firestore_RunQueryClient
+	if !it.As(&c) {
+		return errors.New("DocumentIterator.As failed")
+	}
+	_, err := c.Header()
+	return err
 }
 
 func TestConformance(t *testing.T) {
@@ -102,5 +145,66 @@ func TestConformance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc})
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc}, nil)
+}
+
+// Firedocstore-specific tests.
+
+func TestCollectionNameFromURL(t *testing.T) {
+	tests := []struct {
+		URL          string
+		WantErr      bool
+		WantProject  string
+		WantCollPath string
+	}{
+		{"firestore://proj/coll", false, "proj", "coll"},
+		{"firestore://proj/coll/doc/subcoll", false, "proj", "coll/doc/subcoll"},
+		{"firestore://proj/", true, "", ""},
+		{"firestore:///coll", true, "", ""},
+	}
+	for _, test := range tests {
+		u, err := url.Parse(test.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotProj, gotCollPath, gotErr := collectionNameFromURL(u)
+		if (gotErr != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
+		}
+		if gotProj != test.WantProject || gotCollPath != test.WantCollPath {
+			t.Errorf("%s: got project ID %s, collection path %s want project ID %s, collection path %s",
+				test.URL, gotProj, gotCollPath, test.WantProject, test.WantCollPath)
+		}
+	}
+}
+
+func TestOpenCollection(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"firestore://myproject/mycoll?name_field=_id", false},
+		// OK, hierarchical collection.
+		{"firestore://myproject/mycoll/mydoc/subcoll?name_field=_id", false},
+		// Missing project ID.
+		{"firestore:///mycoll?name_field=_id", true},
+		// Empty collection.
+		{"firestore://myproject/", true},
+		// Missing name field.
+		{"firestore://myproject/mycoll", true},
+		// Invalid param.
+		{"firestore://myproject/mycoll?name_field=_id&param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := docstore.OpenCollection(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
 }
