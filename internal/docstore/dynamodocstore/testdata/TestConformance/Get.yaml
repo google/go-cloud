@@ -14,7 +14,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190501T095737Z
+      - 20190502T125303Z
       X-Amz-Target:
       - DynamoDB_20120810.DescribeTable
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -29,18 +29,18 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Wed, 01 May 2019 09:57:37 GMT
+      - Thu, 02 May 2019 12:53:03 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "3620240070"
       X-Amzn-Requestid:
-      - B2LPM6OOKDC4QHQNAB9MP50T4NVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - QO1CGJEU4PIN788MTGL08L41AJVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"ClientRequestToken":"b04883e5-6a15-4a8d-a563-afa467d49dec","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"e8f4a8b0-993e-4df8-883a-0ad8be9c3978"},"f":{"N":"32.3"},"i":{"N":"95"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"name":{"S":"testGet1"},"s":{"S":"a
+    body: '{"ClientRequestToken":"bb3a8364-f935-4131-b8a3-430403eda73d","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"ef722116-529f-4cc1-8ad6-29697b316d2f"},"f":{"N":"32.3"},"i":{"N":"95"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"name":{"S":"testGet1"},"s":{"S":"a
       string"}},"TableName":"docstore-test-1"}}]}'
     form: {}
     headers:
@@ -53,7 +53,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190501T095737Z
+      - 20190502T125303Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactWriteItems
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -68,13 +68,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Wed, 01 May 2019 09:57:37 GMT
+      - Thu, 02 May 2019 12:53:03 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "2745614147"
       X-Amzn-Requestid:
-      - 5L42VTC5RAQV38QO5PLCFOKD9JVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - 4BNUQ41J8L85QIAAA742IE0TB7VV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -91,13 +91,13 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190501T095737Z
+      - 20190502T125303Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactGetItems
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Responses":[{"Item":{"i":{"N":"95"},"s":{"S":"a string"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"f":{"N":"32.3"},"name":{"S":"testGet1"},"DocstoreRevision":{"S":"e8f4a8b0-993e-4df8-883a-0ad8be9c3978"}}}]}'
+    body: '{"Responses":[{"Item":{"i":{"N":"95"},"s":{"S":"a string"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"f":{"N":"32.3"},"name":{"S":"testGet1"},"DocstoreRevision":{"S":"ef722116-529f-4cc1-8ad6-29697b316d2f"}}}]}'
     headers:
       Connection:
       - keep-alive
@@ -106,13 +106,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Wed, 01 May 2019 09:57:37 GMT
+      - Thu, 02 May 2019 12:53:03 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "3021145603"
+      - "1453375197"
       X-Amzn-Requestid:
-      - 1GRVE2UGUTI5E9UNK50EVEKMRRVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - PQUFCV3ER0ULJR2CEQ6F69T313VV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -130,13 +130,13 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190501T095737Z
+      - 20190502T125303Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactGetItems
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Responses":[{"Item":{"m":{"M":{"b":{"S":"two"}}},"DocstoreRevision":{"S":"e8f4a8b0-993e-4df8-883a-0ad8be9c3978"},"f":{"N":"32.3"}}}]}'
+    body: '{"Responses":[{"Item":{"m":{"M":{"b":{"S":"two"}}},"DocstoreRevision":{"S":"ef722116-529f-4cc1-8ad6-29697b316d2f"},"f":{"N":"32.3"}}}]}'
     headers:
       Connection:
       - keep-alive
@@ -145,13 +145,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Wed, 01 May 2019 09:57:37 GMT
+      - Thu, 02 May 2019 12:53:03 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "1340766600"
+      - "1564352082"
       X-Amzn-Requestid:
-      - 3C073JMD50C7TMM4ASBBO8QRB7VV4KQNSO5AEMVJF66Q9ASUAAJG
+      - BTK8P55I05VV924C58HUAHLI27VV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""

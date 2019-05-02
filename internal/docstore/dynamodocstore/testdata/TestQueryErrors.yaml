@@ -14,28 +14,28 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190501T095740Z
+      - 20190502T125306Z
       X-Amz-Target:
       - DynamoDB_20120810.DescribeTable
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Table":{"AttributeDefinitions":[{"AttributeName":"Game","AttributeType":"S"},{"AttributeName":"Player","AttributeType":"S"},{"AttributeName":"Score","AttributeType":"N"},{"AttributeName":"Time","AttributeType":"S"}],"CreationDateTime":1.556147916461E9,"GlobalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/global","IndexName":"global","IndexSizeBytes":0,"IndexStatus":"ACTIVE","ItemCount":0,"KeySchema":[{"AttributeName":"Player","KeyType":"HASH"},{"AttributeName":"Time","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"},"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5}}],"ItemCount":0,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Player","KeyType":"RANGE"}],"LocalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/local","IndexName":"local","IndexSizeBytes":0,"ItemCount":0,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Score","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"}}],"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5},"TableArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2","TableId":"5c4c6014-7e6a-4db7-93de-a174552cf78d","TableName":"docstore-test-2","TableSizeBytes":0,"TableStatus":"ACTIVE"}}'
+    body: '{"Table":{"AttributeDefinitions":[{"AttributeName":"Game","AttributeType":"S"},{"AttributeName":"Player","AttributeType":"S"},{"AttributeName":"Score","AttributeType":"N"},{"AttributeName":"Time","AttributeType":"S"}],"CreationDateTime":1.556147916461E9,"GlobalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/global","IndexName":"global","IndexSizeBytes":212,"IndexStatus":"ACTIVE","ItemCount":2,"KeySchema":[{"AttributeName":"Player","KeyType":"HASH"},{"AttributeName":"Time","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"},"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5}}],"ItemCount":2,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Player","KeyType":"RANGE"}],"LocalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/local","IndexName":"local","IndexSizeBytes":212,"ItemCount":2,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Score","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"}}],"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5},"TableArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2","TableId":"5c4c6014-7e6a-4db7-93de-a174552cf78d","TableName":"docstore-test-2","TableSizeBytes":266,"TableStatus":"ACTIVE"}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - "1401"
+      - "1407"
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Wed, 01 May 2019 09:57:40 GMT
+      - Thu, 02 May 2019 12:53:06 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "1345340988"
+      - "325584166"
       X-Amzn-Requestid:
-      - I24GMV74PT2O0T7KC2HP8G43DNVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - R6B6JV80JRI0TS3BDI1SP2CVKBVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -53,7 +53,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190501T095740Z
+      - 20190502T125306Z
       X-Amz-Target:
       - DynamoDB_20120810.Query
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -70,13 +70,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Wed, 01 May 2019 09:57:40 GMT
+      - Thu, 02 May 2019 12:53:06 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "1880536678"
       X-Amzn-Requestid:
-      - G7MDCETM01VUFSG488HUEORBCJVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - G8C20N1T9I9VBVQ4R1OLRD8PKVVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 400 Bad Request
     code: 400
     duration: ""

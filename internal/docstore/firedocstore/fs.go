@@ -46,6 +46,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
 	ts "github.com/golang/protobuf/ptypes/timestamp"
@@ -270,9 +271,12 @@ func (c *collection) runGetsOrdered(ctx context.Context, gets []*driver.Action) 
 	return len(gets), nil
 }
 
+var nextGet int32 // atomic
+
 // runGets executes a group of Get actions by calling the BatchGetDocuments RPC.
 // It returns the error for each Get action in order.
 func (c *collection) runGets(ctx context.Context, gets []*driver.Action) []error {
+	getID := atomic.AddInt32(&nextGet, 1)
 	errs := make([]error, len(gets))
 	setErr := func(err error) {
 		for i := range errs {
@@ -287,7 +291,10 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) []error
 	}
 
 	indexByPath := map[string]int{} // from document path to index in gets slice
+	fmt.Printf("================ runGets #%d with %d actions ================\n", getID, len(gets))
+	fmt.Println(req.Documents)
 	for i, path := range req.Documents {
+		fmt.Printf("------- %d: ...%s\n", i, path[30:])
 		indexByPath[path] = i
 	}
 	streamClient, err := c.client.BatchGetDocuments(withResourceHeader(ctx, req.Database), req)
@@ -307,12 +314,21 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) []error
 		switch r := resp.Result.(type) {
 		case *pb.BatchGetDocumentsResponse_Found:
 			pdoc := r.Found
-			i := indexByPath[pdoc.Name]
-			errs[i] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
+			fmt.Printf("Get #%d: -- Found ...%s\n", getID, pdoc.Name[30:])
+			i, ok := indexByPath[pdoc.Name]
+			if !ok {
+				errs[i] = gcerr.Newf(gcerr.Internal, nil, "no index for path %s", pdoc.Name)
+			} else {
+				fmt.Printf("Get #%d: decoding path %s at index %d into doc %v\n", getID,
+					pdoc.Name, i, gets[i].Doc.Origin)
+				errs[i] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
+			}
 		case *pb.BatchGetDocumentsResponse_Missing:
+			fmt.Printf("-- Missing ...%s\n", r.Missing[30:])
 			i := indexByPath[r.Missing]
 			errs[i] = gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", r.Missing)
 		default:
+			panic("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
 			setErr(gcerr.Newf(gcerr.Internal, nil, "unknown BatchGetDocumentsResponse result type"))
 			return errs
 		}

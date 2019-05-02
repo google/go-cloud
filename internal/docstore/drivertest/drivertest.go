@@ -1054,7 +1054,16 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		}
 	}
 
+	// Make separately named docs for each test. Otherwise the concurrency confuses the replayer.
+	//	makeDocs := func(prefix string) []docmap {
+
+	var docs []docmap
+	for i := 0; i < 9; i++ {
+		docs = append(docs, docmap{KeyField: fmt.Sprintf("testUnorderedActions%d", i), "s": fmt.Sprint(i)})
+	}
+
 	compare := func(gots, wants []docmap) {
+		t.Helper()
 		for i := 0; i < len(gots); i++ {
 			got := gots[i]
 			want := docmap{}
@@ -1063,14 +1072,9 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 			}
 			want[docstore.RevisionField] = got[docstore.RevisionField]
 			if !cmp.Equal(got, want) {
-				t.Errorf("%d: got %v, want %v", i, got, want)
+				t.Errorf("index #%d:\ngot  %v\nwant %v", i, got, want)
 			}
 		}
-	}
-
-	var docs []docmap
-	for i := 0; i < 9; i++ {
-		docs = append(docs, docmap{KeyField: fmt.Sprintf("testUnorderedActions%d", i), "s": fmt.Sprint(i)})
 	}
 
 	// Put the first three docs.
@@ -1079,6 +1083,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		actions.Put(docs[i])
 	}
 	must(actions.Do(ctx))
+	fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
 	// Get the first three and put three more.
 	actions = coll.Actions().Unordered()
@@ -1092,6 +1097,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		actions.Put(docs[i])
 	}
 	must(actions.Do(ctx))
+	fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 	compare(gdocs, docs[:3])
 
 	// Delete the first three, get the second three, and put three more.
@@ -1111,6 +1117,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	actions.Get(gdocs[2])
 	actions.Put(docs[8])
 	must(actions.Do(ctx))
+	fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 	compare(gdocs, docs[3:6])
 
 	// Get the first four. The first three should fail.
