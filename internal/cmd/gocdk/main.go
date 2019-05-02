@@ -27,12 +27,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// generate_static converts the files in static/ into constants in a new
+// generate_static converts the files in _static/ into constants in a new
 // file,
-//go:generate go run generate_static.go
-
-// TODO(rvangent): Add a presubmit to Travis to ensure that the generated file
-// is up-to-date based on the contents of static/.
+//go:generate go run generate_static.go -- static.go
 
 func main() {
 	pctx, err := osProcessContext()

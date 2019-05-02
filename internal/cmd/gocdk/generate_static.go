@@ -14,11 +14,12 @@
 
 // +build ignore
 
-// This script is called by "go generate". It converts the files in static/
+// This script is called by "go generate". It converts the files in _static/
 // into constants in a new .go file.
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -57,10 +58,15 @@ func (zeroModTimeFileInfo) ModTime() time.Time {
 }
 
 func main() {
-	var fs http.FileSystem = zeroModTimeFS{http.Dir("./static")}
+	flag.Parse()
+	outfile := flag.Arg(0)
+	if outfile == "" {
+		log.Fatalln("usage: generate_static <output filename>")
+	}
+	var fs http.FileSystem = zeroModTimeFS{http.Dir("./_static")}
 	err := vfsgen.Generate(fs, vfsgen.Options{
-		Filename:     "static.go", // output file name
-		VariableName: "static",    // output variable name
+		Filename:     outfile,
+		VariableName: "static", // output variable name
 	})
 	if err != nil {
 		log.Fatalln(err)
