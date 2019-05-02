@@ -58,9 +58,22 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
-	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
-	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	return createTopic(ctx, h.pubClient, topicName, topicPath)
+	// We may encounter topics that were created by a previous test run and were
+	// not properly cleaned up. In such a case delete the existing token and create
+	// a new topic with a higher topic number (to avoid cool-off issues between
+	// deletion and re-creation of the same topic).
+	for {
+		topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
+		topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+		dt, cleanup, err := createTopic(ctx, h.pubClient, topicName, topicPath)
+		// TODO: not for submit; how to test this error correctly?
+		if err != nil && strings.Contains(err.Error(), "AlreadyExists") {
+			// Delete the token and retry
+			h.pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
+			continue
+		}
+		return dt, cleanup, err
+	}
 }
 
 func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName, topicPath string) (dt driver.Topic, cleanup func(), err error) {

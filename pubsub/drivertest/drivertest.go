@@ -39,8 +39,9 @@ import (
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// CreateTopic creates a new topic in the provider and returns a driver.Topic for testing.
-	// The topic may have to be removed manually if the test is abruptly terminated or the network connection fails.
+	// CreateTopic creates a new topic in the provider and returns a driver.Topic
+	// for testing. The topic may have to be removed manually if the test is
+	// abruptly terminated or the network connection fails.
 	CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error)
 
 	// MakeNonexistentTopic makes a driver.Topic referencing a topic that
