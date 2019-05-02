@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
@@ -100,7 +101,9 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 // from files. rf is a modifier function that will be invoked with the address
 // of the httpreplay.Recorder object used to obtain the client; this function
 // can mutate the recorder to add provider-specific header filters, for example.
-func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder), opts ...option.ClientOption) (c *http.Client, cleanup func()) {
+// An initial state is returned for tests that need a state to have
+// deterministic results.
+func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder), opts ...option.ClientOption) (*http.Client, func(), int64) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
@@ -108,7 +111,9 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			t.Fatal(err)
 		}
-		rec, err := httpreplay.NewRecorder(path, nil)
+		state := time.Now()
+		b, _ := state.MarshalBinary()
+		rec, err := httpreplay.NewRecorder(path, b)
 		rf(rec)
 		if err != nil {
 			t.Fatal(err)
@@ -117,13 +122,13 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 		if err != nil {
 			t.Fatal(err)
 		}
-		cleanup = func() {
+		cleanup := func() {
 			if err := rec.Close(); err != nil {
 				t.Fatal(err)
 			}
 		}
 
-		return client, cleanup
+		return client, cleanup, state.Unix()
 	}
 	t.Logf("Replaying from golden file %s", path)
 	rep, err := httpreplay.NewReplayer(path)
@@ -134,13 +139,16 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 	if err != nil {
 		t.Fatal(err)
 	}
-	cleanup = func() { _ = rep.Close() } // Don't care about Close error on replay.
-	return client, cleanup
+	recState := new(time.Time)
+	if err := recState.UnmarshalBinary(rep.Initial()); err != nil {
+		t.Fatal(err)
+	}
+	return client, func() { rep.Close() }, recState.Unix()
 }
 
 // NewAWSSession2 is like NewAWSSession, but it uses a different record/replay proxy.
-func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
-	client, cleanup := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+func NewAWSSession2(ctx context.Context, t *testing.T, region string) (*session.Session, http.RoundTripper, func(), int64) {
+	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature", "X-Amz-Security-Token")
 		r.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
 		r.ClearHeaders("X-Amz-Date")
@@ -151,7 +159,7 @@ func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *ses
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sess, client.Transport, cleanup
+	return sess, client.Transport, cleanup, state
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.
@@ -170,7 +178,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 	} else {
 		co = option.WithoutAuthentication()
 	}
-	c, cleanup := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+	c, cleanup, _ := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.ClearQueryParams("Expires")
 		r.ClearQueryParams("Signature")
 		r.ClearHeaders("Expires")
@@ -255,7 +263,7 @@ func (f contentTypeInjector) New(node pipeline.Policy, opts *pipeline.PolicyOpti
 
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
 func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
-	client, done := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+	client, done, _ := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("se", "sig")
 		r.RemoveQueryParams("X-Ms-Date")
 		r.ClearHeaders("X-Ms-Date")
@@ -289,7 +297,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 // NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test
 // recordings.
 func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (*http.Client, func()) {
-	client, cleanup := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
+	client, cleanup, _ := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("se", "sig")
 		r.RemoveQueryParams("X-Ms-Date")
 		r.ClearHeaders("X-Ms-Date")
