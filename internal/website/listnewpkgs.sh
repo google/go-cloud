@@ -33,7 +33,7 @@ function files_exist() {  # assumes nullglob
 
 # Find all directories that do not begin with '.' or contain 'testdata'. Use the %P printf
 # directive to remove the initial './'.
-for pkg in $(find . -type d \( -name '.?*' -prune -o -name testdata -prune -o -printf '%P ' \)); do
+for pkg in $(find . -type d \( -name '[._]?*' -prune -o -name testdata -prune -o -printf '%P ' \)); do
   # Only consider directories that contain Go source files.
   outfile="$OUTDIR/$pkg/_index.md"
   if files_exist $pkg/*.go && [[ ! -e "$outfile" ]]; then
