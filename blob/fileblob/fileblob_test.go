@@ -144,6 +144,7 @@ type verifyPathError struct{}
 func (verifyPathError) Name() string { return "verify ErrorAs handles os.PathError" }
 
 func (verifyPathError) BucketCheck(b *blob.Bucket) error             { return nil }
+func (verifyPathError) BeforeRead(as func(interface{}) bool) error   { return nil }
 func (verifyPathError) BeforeWrite(as func(interface{}) bool) error  { return nil }
 func (verifyPathError) BeforeCopy(as func(interface{}) bool) error   { return nil }
 func (verifyPathError) BeforeList(as func(interface{}) bool) error   { return nil }
