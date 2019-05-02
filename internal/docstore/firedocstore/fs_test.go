@@ -85,26 +85,18 @@ func (c *codecTester) NativeDecode(value, dest interface{}) error {
 }
 
 func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
-	doc, err := driver.NewDocument(x)
-	if err != nil {
-		return nil, err
-	}
 	var e encoder
-	if err := doc.Encode(&e); err != nil {
+	if err := drivertest.MustDocument(x).Encode(&e); err != nil {
 		return nil, err
 	}
 	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
 }
 
 func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
-	doc, err := driver.NewDocument(dest)
-	if err != nil {
-		return err
-	}
 	mv := &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{
 		Fields: value.(*pb.Document).Fields,
 	}}}
-	return doc.Decode(decoder{mv})
+	return drivertest.MustDocument(dest).Decode(decoder{mv})
 }
 
 type verifyAs struct{}

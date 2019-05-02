@@ -178,12 +178,14 @@ func scrubRecording(filepath string, dropRequestHeaders, dropResponseHeaders *re
 	return c.Save()
 }
 
-// NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
-// These options allow a recorder/replayer to intercept RPCs and save RPCs to the file at filename,
-// or read the RPCs from the file and return them.
-func NewGCPDialOptions(t *testing.T, mode recorder.Mode, filename string) (opts []grpc.DialOption, done func()) {
+// NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC
+// dial request. These options allow a recorder/replayer to intercept RPCs and
+// save RPCs to the file at filename, or read the RPCs from the file and return
+// them. When recording is set to true, we're in recording mode; otherwise we're
+// in replaying mode.
+func NewGCPDialOptions(t *testing.T, recording bool, filename string) (opts []grpc.DialOption, done func()) {
 	path := filepath.Join("testdata", filename)
-	if mode == recorder.ModeRecording {
+	if recording {
 		t.Logf("Recording into golden file %s", path)
 		r, err := rpcreplay.NewRecorder(path, nil)
 		if err != nil {
