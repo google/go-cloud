@@ -108,10 +108,11 @@ func NewActionListError(errs []error) ActionListError {
 	return alerr
 }
 
+// RunActionsOptions controls the behavior of RunActions.
 type RunActionsOptions struct {
 	// Unordered let the actions be executed in any order, perhaps concurrently.
-	// All of the actions should be executed, even if some fail. The returned slice
-	// should have an element for each action that fails.
+	// All of the actions should be executed, even if some fail. The returned
+	// ActionListError should have an element for each action that fails.
 	Unordered bool
 
 	// BeforeDo is a callback that must be called exactly once before each one or

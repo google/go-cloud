@@ -231,7 +231,7 @@ func (e ActionListError) Unwrap() error {
 }
 
 // BeforeDo takes a callback function that will be called before the ActionList
-// is executed to the underlying provider's action functionality. The callback
+// is executed by the underlying provider's action functionality. The callback
 // takes a parameter, asFunc, that converts its argument to provider-specific
 // types. See https://godoc.org/gocloud.dev#hdr-As for background information.
 func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *ActionList {
