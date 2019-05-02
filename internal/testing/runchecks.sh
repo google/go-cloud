@@ -89,6 +89,19 @@ if [ -n "$DIFF" ]; then
   exit 1;
 fi;
 
+# Ensure that "go generate" is up to date for gocdk.
+tmpstaticgo=$(mktemp)
+function cleanupstaticgo() {
+  rm -rf "$tmpstaticgo"
+}
+trap cleanupstaticgo EXIT
+pushd internal/cmd/gocdk/
+go run generate_static.go -- "$tmpstaticgo"
+cat "$tmpstaticgo" | diff ./static.go - || {
+  echo "FAIL: gocdk static files changed; run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
+}
+popd
+
 # Ensure that the code has no extra dependencies (including transitive
 # dependencies) that we're not already aware of by comparing with
 # ./internal/testing/alldeps

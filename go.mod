@@ -75,6 +75,8 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/shurcooL/httpfs v0.0.0-20181222201310-74dc9339e414 // indirect
+	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
