@@ -96,9 +96,9 @@ const blobBucketListTemplate = `
   {{range .}}
     <div>
       {{if .IsDir}}
-        <a href="/demo/blob/list?prefix={{ .Key }}">{{ .Key }}</a>
+        <a href="./list?prefix={{ .Key }}">{{ .Key }}</a>
       {{else}}
-        <a href="/demo/blob/view?key={{ .Key }}">{{ .Key }}</a>
+        <a href="./view?key={{ .Key }}">{{ .Key }}</a>
       {{end}}
     </div>
   {{else}}
@@ -163,6 +163,7 @@ func blobBucketViewHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	defer reader.Close()
 	io.Copy(w, reader)
+	// TODO(rvangent): Consider setting Content-Type, Content-Length headers.
 }
 
 func blobBucketWriteHandler(w http.ResponseWriter, req *http.Request) {
