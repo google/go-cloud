@@ -33,6 +33,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
@@ -94,7 +95,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		Endpoint:  u.Host,
 		User:      u.User.Username(),
 		Password:  password,
-		Database:  u.RawPath,
+		Database:  strings.TrimPrefix(u.Path, "/"),
 		TraceOpts: uo.TraceOpts,
 	}
 	db, _, err := Open(ctx, uo.CertSource, params)
