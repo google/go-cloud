@@ -61,7 +61,7 @@ func Example_openKeeper() {
 
 	// Using "base64key://", the URL hostname must be a base64-encoded key.
 	// The first 32 bytes of the decoding are used as the secret key.
-	keeper, err = secrets.OpenKeeper(ctx, "base64key://bXktc2VjcmV0LWtleQ==")
+	keeper, err = secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=")
 	if err != nil {
 		log.Fatal(err)
 	}
