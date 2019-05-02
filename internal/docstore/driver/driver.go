@@ -94,6 +94,22 @@ type ActionListError []struct {
 	Err   error
 }
 
+// NewActionListError creates an ActionListError from a slice of errors.
+// If the ith element err of the slice is non-nil, the resulting ActionListError
+// will have an item {i, err}.
+func NewActionListError(errs []error) ActionListError {
+	var alerr ActionListError
+	for i, err := range errs {
+		if err != nil {
+			alerr = append(alerr, struct {
+				Index int
+				Err   error
+			}{i, err})
+		}
+	}
+	return alerr
+}
+
 // A Query defines a query operation to find documents within a collection based
 // on a set of requirements.
 type Query struct {
