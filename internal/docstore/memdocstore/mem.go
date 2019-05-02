@@ -142,16 +142,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, u
 			}()
 		}
 		wg.Wait()
-		var alerr driver.ActionListError
-		for i, err := range errs {
-			if err != nil {
-				alerr = append(alerr, struct {
-					Index int
-					Err   error
-				}{i, err})
-			}
-		}
-		return alerr
+		return driver.NewActionListError(errs)
 	}
 	// Run each action in order, stopping at the first error.
 	for i, a := range actions {
