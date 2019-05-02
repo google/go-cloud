@@ -13,16 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Starts all local instances needed for Go CDK tests.
-# You must have Docker installed.
-# Run this script from the top level of the tree, e.g.:
-#   ./internal/testing/start_local_deps.sh
+# Starts a local etcd instance via Docker.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euo pipefail
 
-./pubsub/kafkapubsub/localkafka.sh
-./pubsub/rabbitpubsub/localrabbit.sh
-./runtimevar/etcd/localetcd.sh
-./internal/docstore/mongodocstore/localmongo.sh
-
+# Clean up and run etcd.
+echo "Starting etcd..."
+docker rm -f etcd &> /dev/null || :
+docker run -d -p 2379:2379 -p 4001:4001 --name etcd quay.io/coreos/etcd:v3.3 /usr/local/bin/etcd --advertise-client-urls http://0.0.0.0:2379 --listen-client-urls http://0.0.0.0:2379 &> /dev/null
+echo "...done. Run \"docker rm -f etcd\" to clean up the container."
+echo
