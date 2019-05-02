@@ -71,11 +71,10 @@ type Encoder interface {
 	EncodeList(n int) Encoder
 	ListIndex(i int)
 
-	// EncodeMap is called when a map is encountered. Its first argument is the
-	// number of fields in the map; the second argument is false. The encoding
-	// algorithm will call the returned Encoder that many times to encode the
-	// successive values of the map. After each such call, MapKey will be called with
-	// the key of the element just encoded.
+	// EncodeMap is called when a map is encountered. Its argument is the number of
+	// fields in the map. The encoding algorithm will call the returned Encoder that
+	// many times to encode the successive values of the map. After each such call,
+	// MapKey will be called with the key of the element just encoded.
 	//
 	// For example, map[string}int{"A": 1, "B": 2} will result in these calls:
 	//     enc2 := enc.EncodeMap(2)
@@ -84,11 +83,10 @@ type Encoder interface {
 	//     enc2.EncodeInt(2)
 	//     enc2.MapKey("B")
 	//
-	// EncodeMap is also called for structs, with a second argument of true. The map
-	// then consists of the exported fields of the struct. For struct{A, B int}{1,
-	// 2}, if EncodeStruct returns false, the same sequence of calls as above will
-	// occur.
-	EncodeMap(n int, isStruct bool) Encoder
+	// EncodeMap is also called for structs. The map then consists of the exported
+	// fields of the struct. For struct{A, B int}{1, 2}, if EncodeStruct returns
+	// false, the same sequence of calls as above will occur.
+	EncodeMap(n int) Encoder
 	MapKey(string)
 
 	// If the encoder wants to encode a value in a special way it should do so here
@@ -229,7 +227,7 @@ func encodeMap(v reflect.Value, enc Encoder) error {
 		return nil
 	}
 	keys := v.MapKeys()
-	enc2 := enc.EncodeMap(len(keys), false)
+	enc2 := enc.EncodeMap(len(keys))
 	for _, k := range keys {
 		sk, err := stringifyMapKey(k)
 		if err != nil {
@@ -269,7 +267,7 @@ func stringifyMapKey(k reflect.Value) (string, error) {
 }
 
 func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) error {
-	e2 := e.EncodeMap(len(fields), true)
+	e2 := e.EncodeMap(len(fields))
 	for _, f := range fields {
 		fv, ok := fieldByIndex(v, f.Index)
 		if ok {
