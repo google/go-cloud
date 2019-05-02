@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -29,7 +28,7 @@ import (
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
 	opts := options.Find()
 	if len(q.FieldPaths) > 0 {
-		opts.Projection = projectionDoc(q.FieldPaths)
+		opts.Projection = c.projectionDoc(q.FieldPaths)
 	}
 	if q.Limit > 0 {
 		lim := int64(q.Limit)
@@ -37,7 +36,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 	}
 	filter := bson.D{} // must be a zero-length slice, not nil
 	for _, f := range q.Filters {
-		bf, err := filterToBSON(f)
+		bf, err := c.filterToBSON(f)
 		if err != nil {
 			return nil, err
 		}
@@ -63,12 +62,11 @@ var mongoQueryOps = map[string]string{
 // The MongoDB document corresponding to "field op value" is
 //   {field: {mop: value}}
 // where mop is the mongo version of op (see the mongoQueryOps map above).
-func filterToBSON(f driver.Filter) (bson.E, error) {
-	key := strings.Join(f.FieldPath, ".")
-	// Lowercase fields to match BSON lower-casing of struct encoding.
-	// This is INCORRECT. It is a temporary fix for #1899.
-	// TODO(jba): remove when we fix #1899.
-	key = strings.ToLower(key)
+func (c *collection) filterToBSON(f driver.Filter) (bson.E, error) {
+	key := c.toMongoFieldPath(f.FieldPath)
+	if c.idField != "" && key == c.idField {
+		key = mongoIDField
+	}
 	val, err := encodeValue(f.Value)
 	if err != nil {
 		return bson.E{}, err
