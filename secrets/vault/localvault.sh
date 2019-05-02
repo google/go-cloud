@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Starts all local instances needed for Go CDK tests.
-# You must have Docker installed.
-# Run this script from the top level of the tree, e.g.:
-#   ./internal/testing/start_local_deps.sh
+# Starts a local Vault instance via Docker.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euo pipefail
 
-./pubsub/kafkapubsub/localkafka.sh
-./pubsub/rabbitpubsub/localrabbit.sh
-./internal/docstore/mongodocstore/localmongo.sh
-./secrets/vault/localvault.sh
+echo "Starting Vault Server..."
+docker rm -f dev-vault &> /dev/null || :
+docker run --cap-add=IPC_LOCK -d --name=dev-vault -e 'VAULT_DEV_ROOT_TOKEN_ID=faketoken' -p 8200:8200 vault:1.1.2 &> /dev/null
+echo "...done. Run \"docker rm -f dev-vault\" to clean up the container."
+echo
+

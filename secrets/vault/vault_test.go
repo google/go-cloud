@@ -21,19 +21,19 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/transit"
-	vhttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/vault"
 	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
 )
 
+// To run these tests against a real Vault server, first run ./localvault.sh.
+// Then wait a few seconds for the server to be ready.
+
 const (
 	keyID1     = "test-secrets"
 	keyID2     = "test-secrets2"
-	apiAddress = "http://127.0.0.1:0"
+	apiAddress = "http://127.0.0.1:8200"
+	testToken  = "faketoken"
 )
 
 type harness struct {
@@ -45,13 +45,18 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper,
 	return &keeper{keyID: keyID1, client: h.client}, &keeper{keyID: keyID2, client: h.client}, nil
 }
 
-func (h *harness) Close() {
-	h.close()
-}
+func (h *harness) Close() {}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	// Start a new test server.
-	c, cleanup := testVaultServer(t)
+	c, err := Dial(ctx, &Config{
+		Token: testToken,
+		APIConfig: api.Config{
+			Address: apiAddress,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
 	// Enable the Transit Secrets Engine to use Vault as an Encryption as a Service.
 	c.Logical().Write("sys/mounts/transit", map[string]interface{}{
 		"type": "transit",
@@ -59,28 +64,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 	return &harness{
 		client: c,
-		close:  cleanup,
 	}, nil
-}
-
-func testVaultServer(t *testing.T) (*api.Client, func()) {
-	coreCfg := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		// Enable the testing transit backend.
-		LogicalBackends: map[string]logical.Factory{
-			"transit": transit.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreCfg, &vault.TestClusterOptions{
-		HandlerFunc: vhttp.Handler,
-	})
-	cluster.Start()
-	tc := cluster.Cores[0]
-	vault.TestWaitActive(t, tc.Core)
-
-	tc.Client.SetToken(cluster.RootToken)
-	return tc.Client, cluster.Cleanup
 }
 
 func TestConformance(t *testing.T) {
