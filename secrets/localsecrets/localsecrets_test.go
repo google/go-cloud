@@ -63,6 +63,35 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 	return nil
 }
 
+func TestSmallData(t *testing.T) {
+	tests := [][]byte{
+		nil,
+		{},
+		{0},
+		{65},
+	}
+	ctx := context.Background()
+	key, err := NewRandomKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := NewKeeper(key)
+	defer keeper.Close()
+
+	for _, data := range tests {
+		// Decrypt should fail, as none of the inputs are long enough to hold
+		// the nonce.
+		_, err := keeper.Decrypt(ctx, data)
+		if err == nil {
+			t.Errorf("got nil from Decrypt, want error")
+		}
+		// But Encrypt should work fine.
+		if _, err := keeper.Encrypt(ctx, data); err != nil {
+			t.Errorf("got error %v from Encrypt", err)
+		}
+	}
+}
+
 func TestOpenKeeper(t *testing.T) {
 	tests := []struct {
 		URL     string
