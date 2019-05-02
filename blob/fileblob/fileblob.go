@@ -390,6 +390,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, err
 	}
+	if opts.BeforeRead != nil {
+		if err := opts.BeforeRead(func(interface{}) bool { return false }); err != nil {
+			return nil, err
+		}
+	}
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
 			return nil, err

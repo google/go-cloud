@@ -65,7 +65,8 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 1. Calls BucketCheck.
 // 2. Creates a blob in a directory, using BeforeWrite as a WriterOption.
 // 3. Fetches the blob's attributes and calls AttributeCheck.
-// 4. Creates a Reader for the blob and calls ReaderCheck.
+// 4. Creates a Reader for the blob using BeforeReader as a ReaderOption,
+//    and calls ReaderCheck with the resulting Reader.
 // 5. Calls List using BeforeList as a ListOption, with Delimiter set so
 //    that only the directory is returned, and calls ListObjectCheck
 //    on the single directory list entry returned.
@@ -84,6 +85,9 @@ type AsTest interface {
 	BucketCheck(b *blob.Bucket) error
 	// ErrorCheck will be called to allow verification of Bucket.ErrorAs.
 	ErrorCheck(b *blob.Bucket, err error) error
+	// BeforeRead will be passed directly to ReaderOptions as part of reading
+	// a test blob.
+	BeforeRead(as func(interface{}) bool) error
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
@@ -127,23 +131,30 @@ func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) (ret error) {
 	return nil
 }
 
+func (verifyAsFailsOnNil) BeforeRead(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want BeforeReader's As to return false when passed nil")
+	}
+	return nil
+}
+
 func (verifyAsFailsOnNil) BeforeWrite(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want Writer.As to return false when passed nil")
+		return errors.New("want BeforeWrite's As to return false when passed nil")
 	}
 	return nil
 }
 
 func (verifyAsFailsOnNil) BeforeCopy(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want Copy.As to return false when passed nil")
+		return errors.New("want BeforeCopy's As to return false when passed nil")
 	}
 	return nil
 }
 
 func (verifyAsFailsOnNil) BeforeList(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want List.As to return false when passed nil")
+		return errors.New("want BeforeList's As to return false when passed nil")
 	}
 	return nil
 }
@@ -2093,7 +2104,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	// Verify Reader.As.
-	r, err := b.NewReader(ctx, key, nil)
+	r, err := b.NewReader(ctx, key, &blob.ReaderOptions{BeforeRead: st.BeforeRead})
 	if err != nil {
 		t.Fatal(err)
 	}

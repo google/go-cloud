@@ -13,6 +13,17 @@
 // limitations under the License.
 
 // Package rdsmysql provides connections to AWS RDS MySQL instances.
+//
+// URLs
+//
+// For mysql.Open, rdsmysql registers for the scheme "rdsmysql".
+// The default URL opener will create a connection using the default
+// credentials from the environment, as described in
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+//
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 package rdsmysql // import "gocloud.dev/mysql/rdsmysql"
 
 import (
@@ -21,12 +32,15 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"net/url"
+	"strings"
 	"sync"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/wire"
 	"gocloud.dev/aws/rds"
+	gcmysql "gocloud.dev/mysql"
 )
 
 // Set is a Wire provider set that provides a *sql.DB given
@@ -51,6 +65,41 @@ type Params struct {
 
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
+}
+
+// URLOpener opens RDS MySQL URLs
+// like "rdsmysql://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb".
+type URLOpener struct {
+	// CertSource specifies how the opener will obtain authentication information.
+	// CertSource must not be nil.
+	CertSource rds.CertPoolProvider
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
+}
+
+// Scheme is the URL scheme rdsmysql registers its URLOpener under on
+// mysql.DefaultMux.
+const Scheme = "rdsmysql"
+
+func init() {
+	gcmysql.DefaultURLMux().RegisterMySQL(Scheme, &URLOpener{})
+}
+
+// OpenMySQLURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
+func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	if uo.CertSource == nil {
+		return nil, fmt.Errorf("rdsmysql: URLOpener CertSource is nil")
+	}
+	password, _ := u.User.Password()
+	params := &Params{
+		Endpoint:  u.Host,
+		User:      u.User.Username(),
+		Password:  password,
+		Database:  strings.TrimPrefix(u.Path, "/"),
+		TraceOpts: uo.TraceOpts,
+	}
+	db, _, err := Open(ctx, uo.CertSource, params)
+	return db, err
 }
 
 // Open opens an encrypted connection to an RDS MySQL database.

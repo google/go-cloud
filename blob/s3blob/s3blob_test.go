@@ -124,6 +124,14 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
+	var req *s3.GetObjectInput
+	if !as(&req) {
+		return errors.New("BeforeRead As failed")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var req *s3manager.UploadInput
 	if !as(&req) {

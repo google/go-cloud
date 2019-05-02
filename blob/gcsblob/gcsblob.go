@@ -41,8 +41,9 @@
 //  - ListObject: storage.ObjectAttrs
 //  - ListOptions.BeforeList: *storage.Query
 //  - Reader: *storage.Reader
+//  - ReaderOptions.BeforeRead: **storage.ObjectHandle, *storage.Reader
 //  - Attributes: storage.ObjectAttrs
-//  - CopyOptions.BeforeCopy: *storage.Copier
+//  - CopyOptions.BeforeCopy: *CopyObjectHandles, *storage.Copier
 //  - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
@@ -395,9 +396,43 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	r, err := obj.NewRangeReader(ctx, offset, length)
-	if err != nil {
-		return nil, err
+
+	// Add an extra level of indirection so that BeforeRead can replace obj
+	// if needed. For example, ObjectHandle.If returns a new ObjectHandle.
+	// Also, make the Reader lazily in case this replacement happens.
+	objp := &obj
+	makeReader := func() (*storage.Reader, error) {
+		return (*objp).NewRangeReader(ctx, offset, length)
+	}
+
+	var r *storage.Reader
+	var rerr error
+	madeReader := false
+	if opts.BeforeRead != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(***storage.ObjectHandle); ok && !madeReader {
+				*p = objp
+				return true
+			}
+			if p, ok := i.(**storage.Reader); ok {
+				if !madeReader {
+					r, rerr = makeReader()
+					madeReader = true
+				}
+				*p = r
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeRead(asFunc); err != nil {
+			return nil, err
+		}
+	}
+	if !madeReader {
+		r, rerr = makeReader()
+	}
+	if rerr != nil {
+		return nil, rerr
 	}
 	modTime, _ := r.LastModified()
 	return &reader{
@@ -480,17 +515,41 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	return w, nil
 }
 
+// CopyObjectHandles holds the ObjectHandles for the destination and source
+// of a Copy. It is used by the BeforeCopy As hook.
+type CopyObjectHandles struct {
+	Dst, Src *storage.ObjectHandle
+}
+
 // Copy implements driver.Copy.
 func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
 	dstKey = escapeKey(dstKey)
 	srcKey = escapeKey(srcKey)
 	bkt := b.client.Bucket(b.name)
-	copier := bkt.Object(dstKey).CopierFrom(bkt.Object(srcKey))
+
+	// Add an extra level of indirection so that BeforeCopy can replace the
+	// dst or src ObjectHandles if needed.
+	// Also, make the Copier lazily in case this replacement happens.
+	handles := CopyObjectHandles{
+		Dst: bkt.Object(dstKey),
+		Src: bkt.Object(srcKey),
+	}
+	makeCopier := func() *storage.Copier {
+		return handles.Dst.CopierFrom(handles.Src)
+	}
+
+	var copier *storage.Copier
 	if opts.BeforeCopy != nil {
 		asFunc := func(i interface{}) bool {
-			switch v := i.(type) {
-			case **storage.Copier:
-				*v = copier
+			if p, ok := i.(**CopyObjectHandles); ok && copier == nil {
+				*p = &handles
+				return true
+			}
+			if p, ok := i.(**storage.Copier); ok {
+				if copier == nil {
+					copier = makeCopier()
+				}
+				*p = copier
 				return true
 			}
 			return false
@@ -498,6 +557,9 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 		if err := opts.BeforeCopy(asFunc); err != nil {
 			return err
 		}
+	}
+	if copier == nil {
+		copier = makeCopier()
 	}
 	_, err := copier.Run(ctx)
 	return err
