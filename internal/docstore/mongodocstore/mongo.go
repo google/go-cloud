@@ -146,22 +146,32 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	if collName == "" {
 		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Path (collection name)", u)
 	}
-	return OpenCollection(o.Client.Database(dbName).Collection(collName), idField, &o.Options), nil
+	return OpenCollection(o.Client.Database(dbName).Collection(collName), idField, &o.Options)
 }
 
 type collection struct {
-	coll    *mongo.Collection
-	idField string
-	idFunc  func(docstore.Document) interface{}
+	coll          *mongo.Collection
+	idField       string
+	idFunc        func(docstore.Document) interface{}
+	revisionField string
+	opts          *Options
 }
 
-type Options struct{}
+type Options struct {
+	// Lowercase all field names for document encoding, field selection, update modifications
+	// and queries.
+	LowercaseFields bool
+}
 
 // OpenCollection opens a MongoDB collection for use with Docstore.
 // The idField argument is the name of the document field to use for the document ID
 // (MongoDB's _id field). If it is empty, the field "_id" will be used.
-func OpenCollection(mcoll *mongo.Collection, idField string, _ *Options) *docstore.Collection {
-	return docstore.NewCollection(newCollection(mcoll, idField, nil))
+func OpenCollection(mcoll *mongo.Collection, idField string, opts *Options) (*docstore.Collection, error) {
+	dc, err := newCollection(mcoll, idField, nil, opts)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(dc), nil
 }
 
 // OpenCollectionWithIDFunc opens a MongoDB collection for use with Docstore.
@@ -169,16 +179,34 @@ func OpenCollection(mcoll *mongo.Collection, idField string, _ *Options) *docsto
 // be used for the document ID (MongoDB's _id field). IDFunc should return nil if the
 // document is missing the information to construct an ID. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionWithIDFunc(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}, _ *Options) *docstore.Collection {
-	return docstore.NewCollection(newCollection(mcoll, "", idFunc))
+func OpenCollectionWithIDFunc(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}, opts *Options) (*docstore.Collection, error) {
+	dc, err := newCollection(mcoll, "", idFunc, opts)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(dc), nil
 }
 
-func newCollection(mcoll *mongo.Collection, idField string, idFunc func(docstore.Document) interface{}) *collection {
-	c := &collection{coll: mcoll, idField: idField, idFunc: idFunc}
+func newCollection(mcoll *mongo.Collection, idField string, idFunc func(docstore.Document) interface{}, opts *Options) (*collection, error) {
+	if opts == nil {
+		opts = &Options{}
+	}
+	c := &collection{
+		coll:          mcoll,
+		idField:       idField,
+		idFunc:        idFunc,
+		revisionField: docstore.RevisionField,
+		opts:          opts,
+	}
 	if c.idField == "" && c.idFunc == nil {
 		c.idField = mongoIDField
 	}
-	return c
+
+	if opts.LowercaseFields {
+		c.idField = strings.ToLower(c.idField)
+		c.revisionField = strings.ToLower(c.revisionField)
+	}
+	return c, nil
 }
 
 // From https://docs.mongodb.com/manual/core/document: "The field name _id is
@@ -230,7 +258,7 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 	}
 	opts := options.FindOne()
 	if len(a.FieldPaths) > 0 {
-		opts.Projection = projectionDoc(a.FieldPaths)
+		opts.Projection = c.projectionDoc(a.FieldPaths)
 	}
 	res := c.coll.FindOne(ctx, bson.D{{"_id", id}}, opts)
 	if res.Err() != nil {
@@ -246,12 +274,19 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 
 // Construct a mongo "projection document" from field paths.
 // Always include the revision field.
-func projectionDoc(fps [][]string) bson.D {
-	proj := bson.D{{Key: docstore.RevisionField, Value: 1}}
+func (c *collection) projectionDoc(fps [][]string) bson.D {
+	proj := bson.D{{Key: c.revisionField, Value: 1}}
 	for _, fp := range fps {
-		proj = append(proj, bson.E{Key: strings.Join(fp, "."), Value: 1})
+		proj = append(proj, bson.E{Key: c.toMongoFieldPath(fp), Value: 1})
 	}
 	return proj
+}
+
+func (c *collection) toMongoFieldPath(fp []string) string {
+	if c.opts.LowercaseFields {
+		sliceToLower(fp)
+	}
+	return strings.Join(fp, ".")
 }
 
 func (c *collection) create(ctx context.Context, a *driver.Action) error {
@@ -263,14 +298,10 @@ func (c *collection) create(ctx context.Context, a *driver.Action) error {
 	if err != nil && c.idField == "" {
 		return err
 	}
-	mdoc, err := encodeDoc(a.Doc)
+	mdoc, err := c.encodeDoc(a.Doc, id)
 	if err != nil {
 		return err
 	}
-	if id != nil {
-		mdoc[mongoIDField] = id
-	}
-	mdoc[docstore.RevisionField] = driver.UniqueString()
 	result, err := c.coll.InsertOne(ctx, mdoc)
 	if err != nil {
 		return err
@@ -285,16 +316,14 @@ func (c *collection) create(ctx context.Context, a *driver.Action) error {
 
 func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool) error {
 	// See https://docs.mongodb.com/manual/reference/method/db.collection.replaceOne
-	doc, err := encodeDoc(a.Doc)
-	if err != nil {
-		return err
-	}
 	id, err := c.docID(a.Doc)
 	if err != nil {
 		return err
 	}
-	doc[mongoIDField] = id
-	doc[docstore.RevisionField] = driver.UniqueString()
+	mdoc, err := c.encodeDoc(a.Doc, id)
+	if err != nil {
+		return err
+	}
 	opts := options.Replace()
 	if upsert {
 		opts.SetUpsert(true) // Document will be created if it doesn't exist.
@@ -303,7 +332,7 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 	if err != nil {
 		return err
 	}
-	result, err := c.coll.ReplaceOne(ctx, filter, doc, opts)
+	result, err := c.coll.ReplaceOne(ctx, filter, mdoc, opts)
 	if err != nil {
 		return err
 	}
@@ -311,6 +340,21 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", id)
 	}
 	return nil
+}
+
+func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]interface{}, error) {
+	mdoc, err := encodeDoc(doc, c.opts.LowercaseFields)
+	if err != nil {
+		return nil, err
+	}
+	if id != nil {
+		if c.idField != "" {
+			delete(mdoc, c.idField)
+		}
+		mdoc[mongoIDField] = id
+	}
+	mdoc[c.revisionField] = driver.UniqueString()
+	return mdoc, nil
 }
 
 func (c *collection) delete(ctx context.Context, a *driver.Action) error {
@@ -342,7 +386,7 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 		unsets bson.D
 	)
 	for _, m := range a.Mods {
-		key := strings.Join(m.FieldPath, ".")
+		key := c.toMongoFieldPath(m.FieldPath)
 		if m.Value == nil {
 			unsets = append(unsets, bson.E{Key: key, Value: ""})
 		} else {
@@ -359,7 +403,7 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 		return nil
 	}
 	updateDoc := map[string]bson.D{}
-	updateDoc["$set"] = append(sets, bson.E{Key: docstore.RevisionField, Value: driver.UniqueString()})
+	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: driver.UniqueString()})
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}
@@ -382,7 +426,7 @@ func (c *collection) makeFilter(doc driver.Document) (filter bson.D, id, rev int
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	rev, err = doc.GetField(docstore.RevisionField)
+	rev, err = doc.GetField(c.revisionField)
 	if err != nil && gcerrors.Code(err) != gcerrors.NotFound {
 		return nil, nil, nil, err
 	}
@@ -390,7 +434,7 @@ func (c *collection) makeFilter(doc driver.Document) (filter bson.D, id, rev int
 	filter = bson.D{{"_id", id}}
 	// If the given document has a revision, it must match the stored document.
 	if rev != nil {
-		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
+		filter = append(filter, bson.E{Key: c.revisionField, Value: rev})
 	}
 	return filter, id, rev, nil
 }
@@ -434,4 +478,10 @@ func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 		}
 	}
 	return gcerrors.Unknown
+}
+
+func sliceToLower(s []string) {
+	for i, e := range s {
+		s[i] = strings.ToLower(e)
+	}
 }

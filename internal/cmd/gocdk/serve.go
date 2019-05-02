@@ -191,7 +191,9 @@ loop:
 		spareAlloc, liveAlloc = liveAlloc, spareAlloc
 	}
 	logger.Println("Shutting down...")
-	endServerProcess(process)
+	if process != nil {
+		endServerProcess(process)
+	}
 	return nil
 }
 

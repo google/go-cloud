@@ -205,6 +205,7 @@ func TestOpenVariableURL(t *testing.T) {
 	jsonPath = filepath.ToSlash(jsonPath)
 	txtPath = filepath.ToSlash(txtPath)
 	nonexistentPath = filepath.ToSlash(nonexistentPath)
+	secretsPath = filepath.ToSlash(secretsPath)
 	if os.PathSeparator != '/' {
 		if !strings.HasPrefix(jsonPath, "/") {
 			jsonPath = "/" + jsonPath
@@ -214,6 +215,9 @@ func TestOpenVariableURL(t *testing.T) {
 		}
 		if !strings.HasPrefix(nonexistentPath, "/") {
 			nonexistentPath = "/" + nonexistentPath
+		}
+		if !strings.HasPrefix(secretsPath, "/") {
+			secretsPath = "/" + secretsPath
 		}
 	}
 
@@ -246,23 +250,26 @@ func TestOpenVariableURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		v, err := runtimevar.OpenVariable(ctx, test.URL)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
-		if err != nil {
-			continue
-		}
-		snapshot, err := v.Watch(ctx)
-		if (err != nil) != test.WantWatchErr {
-			t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
-		}
-		if err != nil {
-			continue
-		}
-		if !cmp.Equal(snapshot.Value, test.Want) {
-			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
-		}
+		t.Run(test.URL, func(t *testing.T) {
+			v, err := runtimevar.OpenVariable(ctx, test.URL)
+			if (err != nil) != test.WantErr {
+				t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+			}
+			if err != nil {
+				return
+			}
+			defer v.Close()
+			snapshot, err := v.Watch(ctx)
+			if (err != nil) != test.WantWatchErr {
+				t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
+			}
+			if err != nil {
+				return
+			}
+			if !cmp.Equal(snapshot.Value, test.Want) {
+				t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
+			}
+		})
 	}
 }
 
