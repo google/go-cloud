@@ -30,14 +30,14 @@ import (
 func waitForDirChange(ctx context.Context, path string, pollInterval time.Duration) error {
 	tick := time.NewTicker(pollInterval)
 	defer tick.Stop()
-	init, err := snapshotTree(path)
+	initSnapshot, err := snapshotTree(path)
 	if err != nil {
 		return xerrors.Errorf("wait for %s to change: %w", path, err)
 	}
 	for {
 		select {
 		case <-tick.C:
-			same, err := init.sameAs(path)
+			same, err := initSnapshot.sameAs(path)
 			if err != nil {
 				// TODO(light): Log error.
 				continue
@@ -103,6 +103,7 @@ func snapshotTree(path string) (*dirSnapshot, error) {
 			return nil, xerrors.Errorf("snapshot tree %s: %w", path, err)
 		}
 		snap := newDirSnapshot(contents)
+		// Save snapshot in requested variable.
 		*curr.dst = snap
 
 		// Push subdirectories onto stack in reverse order, so they are popped in
