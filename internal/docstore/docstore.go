@@ -85,6 +85,7 @@ type ActionList struct {
 	coll      *Collection
 	actions   []*Action
 	unordered bool
+	beforeDo  func(asFunc func(interface{}) bool) error
 }
 
 // An Action is a read or write on a single document.
@@ -229,6 +230,15 @@ func (e ActionListError) Unwrap() error {
 	return nil
 }
 
+// BeforeDo takes a callback function that will be called before the ActionList
+// is executed by the underlying provider's action functionality. The callback
+// takes a parameter, asFunc, that converts its argument to provider-specific
+// types. See https://godoc.org/gocloud.dev#hdr-As for background information.
+func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *ActionList {
+	l.beforeDo = f
+	return l
+}
+
 // Do executes the action list.
 //
 // If Do returns a non-nil error, it will be of type ActionListError. If any action
@@ -257,7 +267,11 @@ func (l *ActionList) Do(ctx context.Context) error {
 	if len(alerr) > 0 {
 		return alerr
 	}
-	alerr = ActionListError(l.coll.driver.RunActions(ctx, das, l.unordered))
+	dopts := &driver.RunActionsOptions{
+		Unordered: l.unordered,
+		BeforeDo:  l.beforeDo,
+	}
+	alerr = ActionListError(l.coll.driver.RunActions(ctx, das, dopts))
 	if len(alerr) == 0 {
 		return nil // Explicitly return nil, because alerr is not of type error.
 	}
