@@ -41,6 +41,11 @@ var portableTypes = []*portableTypeInfo{
 		goDemoPath: "/demo/blob.bucket/demo_blob_bucket.go",
 		demoURL:    "/demo/blob.bucket/",
 	},
+	{
+		name:       "runtimevar.Variable",
+		goDemoPath: "/demo/runtimevar.variable/demo_runtimevar_variable.go",
+		demoURL:    "/demo/runtimevar.variable/",
+	},
 }
 
 // TODO(rvangent): Add tests for addPortableType(), including for each supported portableType.
