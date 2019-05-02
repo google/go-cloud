@@ -97,8 +97,6 @@ func instantiatePortableType(pctx *processContext, pt *portableTypeInfo, force b
 	}
 	defer srcFile.Close()
 
-	// TODO(rvangent): This creates the demo file at the top level of the user's
-	// project. Should we create a subdirectory/sub-package?
 	destFile, err := os.Create(dstPath)
 	if err != nil {
 		return err
