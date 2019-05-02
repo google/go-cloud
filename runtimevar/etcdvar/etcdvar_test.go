@@ -51,7 +51,7 @@ type harness struct{}
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	if etcdError != nil {
-		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
+		t.Skip("No local etcd server running, see runtimevar/etcdvar/localetcd.sh")
 	}
 	return &harness{}, nil
 }
