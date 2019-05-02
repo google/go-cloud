@@ -249,7 +249,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 	}()
 
 	// The test will hang here if the message isn't available, so use a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	_, err = sub.Receive(ctx2)
 	if err == nil || ctx2.Err() != nil || gcerrors.Code(err) != gcerrors.NotFound {
@@ -384,7 +384,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 		t.Error(diff)
 	}
 	// The test will hang here if the messages aren't redelivered, so use a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	got = nil
@@ -547,7 +547,7 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// The test will hang here if the message isn't redelivered, so use a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	// We're looking to re-receive dms[2].
@@ -585,7 +585,7 @@ func publishN(ctx context.Context, t *testing.T, topic *pubsub.Topic, n int) []*
 // Receive and ack n messages from sub.
 func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int) []*pubsub.Message {
 	// The test will hang here if the message(s) aren't available, so use a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
@@ -897,7 +897,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}()
 
 	// The test will hang here if Receive doesn't fail quickly, so set a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	_, subErr := nonExistentSub.Receive(ctx2)
 	if subErr == nil || ctx2.Err() != nil || gcerrors.Code(subErr) != gcerrors.NotFound {
