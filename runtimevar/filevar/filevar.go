@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package filevar provides a runtimevar implementation with variables
-// backed by the filesystem. Use New to construct a *runtimevar.Variable.
+// backed by the filesystem. Use OpenVariable to construct a *runtimevar.Variable.
 //
 // Configuration files can be updated using any commands (cp, mv) or
 // tools/editors. This package does not guarantee read consistency since
@@ -78,7 +78,7 @@ type URLOpener struct {
 	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
 
-	// Options specifies the options to pass to New.
+	// Options specifies the options to pass to OpenVariable.
 	Options Options
 }
 
@@ -101,7 +101,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	if os.PathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
 	}
-	return New(filepath.FromSlash(path), decoder, &o.Options)
+	return OpenVariable(filepath.FromSlash(path), decoder, &o.Options)
 }
 
 // Options sets options.
@@ -111,11 +111,11 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// New constructs a *runtimevar.Variable backed by the file at path.
+// OpenVariable constructs a *runtimevar.Variable backed by the file at path.
 // The file holds raw bytes; provide a decoder to decode the raw bytes into the
 // appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func New(path string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+func OpenVariable(path string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	w, err := newWatcher(path, decoder, opts)
 	if err != nil {
 		return nil, err
@@ -277,7 +277,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 
 		// If it's a new value, decode and return it.
 		if cur == nil || cur.err != nil || !bytes.Equal(cur.raw, b) {
-			if val, err := decoder.Decode(b); err != nil {
+			if val, err := decoder.Decode(ctx, b); err != nil {
 				cur = w.updateState(&state{err: err}, cur)
 			} else {
 				cur = w.updateState(&state{val: val, updateTime: time.Now(), raw: b}, cur)

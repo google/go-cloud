@@ -19,6 +19,7 @@ package driver
 
 import (
 	"encoding"
+	"fmt"
 	"reflect"
 	"strconv"
 
@@ -263,7 +264,7 @@ func stringifyMapKey(k reflect.Value) (string, error) {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return strconv.FormatUint(k.Uint(), 10), nil
 	default:
-		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode key %s of type %s", k, k.Type())
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode key %v of type %s", k, k.Type())
 	}
 }
 
@@ -369,6 +370,9 @@ func Decode(v reflect.Value, d Decoder) error {
 }
 
 func decode(v reflect.Value, d Decoder) error {
+	if !v.CanSet() {
+		return fmt.Errorf("while decoding: cannot set %+v", v)
+	}
 	// A Null value sets anything nullable to nil.
 	// If the value isn't nullable, we keep going.
 	// TODO(jba): should we treat decoding a null into a non-nullable as an error, or

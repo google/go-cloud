@@ -15,7 +15,7 @@
 // Package gcpruntimeconfig provides a runtimevar implementation with
 // variables read from GCP Cloud Runtime Configurator
 // (https://cloud.google.com/deployment-manager/runtime-configurator).
-// Use NewVariable to construct a *runtimevar.Variable.
+// Use OpenVariable to construct a *runtimevar.Variable.
 //
 // URLs
 //
@@ -169,7 +169,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: %v", u, err)
 	}
-	return NewVariable(o.Client, rn, decoder, &o.Options)
+	return OpenVariable(o.Client, rn, decoder, &o.Options)
 }
 
 // Options sets options.
@@ -179,12 +179,12 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// NewVariable constructs a *runtimevar.Variable backed by the variable name in
+// OpenVariable constructs a *runtimevar.Variable backed by the variable name in
 // GCP Cloud Runtime Configurator.
 // Runtime Configurator returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func NewVariable(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+func OpenVariable(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(client, name, decoder, opts)), nil
 }
 
@@ -325,7 +325,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	}
 
 	// Decode the value.
-	val, err := w.decoder.Decode(b)
+	val, err := w.decoder.Decode(ctx, b)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}

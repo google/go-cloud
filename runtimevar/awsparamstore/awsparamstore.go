@@ -15,7 +15,7 @@
 // Package awsparamstore provides a runtimevar implementation with variables
 // read from AWS Systems Manager Parameter Store
 // (https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html)
-// Use NewVariable to construct a *runtimevar.Variable.
+// Use OpenVariable to construct a *runtimevar.Variable.
 //
 // URLs
 //
@@ -132,7 +132,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		return nil, fmt.Errorf("open variable %v: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	return NewVariable(configProvider, path.Join(u.Host, u.Path), decoder, &o.Options)
+	return OpenVariable(configProvider, path.Join(u.Host, u.Path), decoder, &o.Options)
 }
 
 // Options sets options.
@@ -142,12 +142,12 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// NewVariable constructs a *runtimevar.Variable backed by the variable name in
+// OpenVariable constructs a *runtimevar.Variable backed by the variable name in
 // AWS Systems Manager Parameter Store.
 // Parameter Store returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func NewVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+func OpenVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(sess, name, decoder, opts)), nil
 }
 
@@ -281,7 +281,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	descP := descResp.Parameters[0]
 
 	// New value (or at least, new version). Decode it.
-	val, err := w.decoder.Decode([]byte(*getP.Value))
+	val, err := w.decoder.Decode(ctx, []byte(*getP.Value))
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}

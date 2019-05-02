@@ -31,8 +31,8 @@ import (
 // This code is copied from memdocstore/codec.go, with some changes:
 // - special treatment for primitive.Binary
 
-func encodeDoc(doc driver.Document) (map[string]interface{}, error) {
-	var e encoder
+func encodeDoc(doc driver.Document, lowercaseFields bool) (map[string]interface{}, error) {
+	e := encoder{lowercaseFields: lowercaseFields}
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
@@ -48,7 +48,8 @@ func encodeValue(x interface{}) (interface{}, error) {
 }
 
 type encoder struct {
-	val interface{}
+	val             interface{}
+	lowercaseFields bool
 }
 
 func (e *encoder) EncodeNil()                 { e.val = nil }
@@ -77,7 +78,7 @@ func (e *encoder) EncodeList(n int) driver.Encoder {
 	// All slices and arrays are encoded as []interface{}
 	s := make([]interface{}, n)
 	e.val = s
-	return &listEncoder{s: s}
+	return &listEncoder{s: s, encoder: encoder{lowercaseFields: e.lowercaseFields}}
 }
 
 type listEncoder struct {
@@ -93,15 +94,14 @@ type mapEncoder struct {
 	encoder
 }
 
-func (e *encoder) EncodeMap(n int, isStruct bool) driver.Encoder {
+func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
 	m := make(map[string]interface{}, n)
 	e.val = m
-	return &mapEncoder{m: m, isStruct: isStruct}
+	return &mapEncoder{m: m, encoder: encoder{lowercaseFields: e.lowercaseFields}}
 }
 
 func (e *mapEncoder) MapKey(k string) {
-	// The BSON codec encodes structs by  lower-casing field names.
-	if e.isStruct {
+	if e.lowercaseFields {
 		k = strings.ToLower(k)
 	}
 	e.m[k] = e.val
@@ -110,7 +110,15 @@ func (e *mapEncoder) MapKey(k string) {
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(m map[string]interface{}, ddoc driver.Document) error {
+func decodeDoc(m map[string]interface{}, ddoc driver.Document, idField string) error {
+	switch idField {
+	case mongoIDField: // do nothing
+	case "": // user uses idFunc
+		delete(m, mongoIDField)
+	default: // user documents have a different ID field
+		m[idField] = m[mongoIDField]
+		delete(m, mongoIDField)
+	}
 	return ddoc.Decode(decoder{m})
 }
 
@@ -194,7 +202,38 @@ func (d decoder) AsBytes() ([]byte, bool) {
 }
 
 func (d decoder) AsInterface() (interface{}, error) {
-	return d.val, nil
+	return toGoValue(d.val)
+}
+
+func toGoValue(v interface{}) (interface{}, error) {
+	switch v := v.(type) {
+	case primitive.A:
+		r := make([]interface{}, len(v))
+		for i, e := range v {
+			d, err := toGoValue(e)
+			if err != nil {
+				return nil, err
+			}
+			r[i] = d
+		}
+		return r, nil
+	case primitive.Binary:
+		return v.Data, nil
+	case primitive.DateTime:
+		return bsonDateTimeToTime(v), nil
+	case map[string]interface{}:
+		r := map[string]interface{}{}
+		for k, e := range v {
+			d, err := toGoValue(e)
+			if err != nil {
+				return nil, err
+			}
+			r[k] = d
+		}
+		return r, nil
+	default:
+		return v, nil
+	}
 }
 
 func (d decoder) ListLen() (int, bool) {
@@ -233,8 +272,12 @@ func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 		return true, v.Data, nil
 	case primitive.DateTime:
 		// A DateTime represents milliseconds since the Unix epoch.
-		return true, time.Unix(int64(v)/1000, int64(v)%1000*1e6), nil
+		return true, bsonDateTimeToTime(v), nil
 	default:
 		return false, nil, nil
 	}
+}
+
+func bsonDateTimeToTime(dt primitive.DateTime) time.Time {
+	return time.Unix(int64(dt)/1000, int64(dt)%1000*1e6)
 }

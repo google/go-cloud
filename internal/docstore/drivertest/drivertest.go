@@ -18,23 +18,47 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"math"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/docstore"
 	ds "gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
+
+// TODO(jba): Test RunActions with unordered=true. We can't actually test the ordering,
+// but we can check that all actions are executed even if some fail.
+
+// TODO(jba): test an ordered list of actions, with an expected error in the middle,
+// and check that we get the right error back and that the actions after the error
+// aren't executed.
+
+// TODO(jba): test that a malformed action is returned as an error and none of the
+// actions are executed.
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
 	// MakeCollection makes a driver.Collection for testing.
+	// The collection should have a single primary key field of type string named
+	// drivertest.KeyField.
 	MakeCollection(context.Context) (driver.Collection, error)
+
+	// MakeTwoKeyCollection makes a driver.Collection for testing.
+	// The collection will consist entirely of HighScore structs (see below), whose
+	// two primary key fields are "Game" and "Player", both strings. Use
+	// drivertest.HighScoreKey as the key function.
+	MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error)
 
 	// Close closes resources used by the harness.
 	Close()
@@ -44,13 +68,16 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
-// Enum of types not supported by native codecs. We chose to describe this negatively
-// (types that aren't supported rather than types that are) to make the more
-// inclusive cases easier to write. A driver can return nil for
-// CodecTester.UnsupportedTypes, then add values from this enum one by one until all
-// tests pass.
+// UnsupportedType is an enum for types not supported by native codecs. We chose
+// to describe this negatively (types that aren't supported rather than types
+// that are) to make the more inclusive cases easier to write. A driver can
+// return nil for CodecTester.UnsupportedTypes, then add values from this enum
+// one by one until all tests pass.
 type UnsupportedType int
 
+// These are known unsupported types by one or more driver. Each of them
+// corresponses to an unsupported type specific test which if the driver
+// actually supports.
 const (
 	// Native codec doesn't support any unsigned integer type
 	Uint UnsupportedType = iota
@@ -60,6 +87,8 @@ const (
 	Arrays
 	// Native codec doesn't support full time precision
 	NanosecondTimes
+	// Native codec doesn't support [][]byte
+	BinarySet
 )
 
 // CodecTester describes functions that encode and decode values using both the
@@ -72,8 +101,50 @@ type CodecTester interface {
 	DocstoreDecode(value, dest interface{}) error
 }
 
+// AsTest represents a test of As functionality.
+type AsTest interface {
+	// Name should return a descriptive name for the test.
+	Name() string
+	// CollectionCheck will be called to allow verification of Collection.As.
+	CollectionCheck(coll *docstore.Collection) error
+	// BeforeQuery will be passed directly to Query.BeforeQuery as part of doing
+	// the test query.
+	BeforeQuery(as func(interface{}) bool) error
+	// QueryCheck will be called after calling Query. It should call it.As and
+	// verify the results.
+	QueryCheck(it *docstore.DocumentIterator) error
+}
+
+type verifyAsFailsOnNil struct{}
+
+func (verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) CollectionCheck(coll *docstore.Collection) error {
+	if coll.As(nil) {
+		return errors.New("want Collection.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeQuery(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Query.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) QueryCheck(it *docstore.DocumentIterator) error {
+	if it.As(nil) {
+		return errors.New("want DocumentIterator.As to return false when passed nil")
+	}
+	return nil
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, asTests []AsTest) {
+	// TODO(jba): add conformance tests for unordered lists after all drivers have them.
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
 	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
@@ -81,10 +152,26 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
-	t.Run("Codec", func(t *testing.T) { testCodec(t, ct) })
-}
+	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
+	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
+	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 
-const KeyField = "_id"
+	t.Run("Query", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testQuery) })
+
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("As", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				withTwoKeyCollection(t, newHarness, func(t *testing.T, coll *docstore.Collection) {
+					testAs(t, coll, st)
+				})
+			})
+		}
+	})
+}
 
 func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
 	ctx := context.Background()
@@ -102,6 +189,25 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 	f(t, coll)
 }
 
+func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	dc, err := h.MakeTwoKeyCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := ds.NewCollection(dc)
+	f(t, coll)
+}
+
+// KeyField is the primary key field for the main test collection.
+const KeyField = "name"
+
 type docmap = map[string]interface{}
 
 var nonexistentDoc = docmap{KeyField: "doesNotExist"}
@@ -109,10 +215,15 @@ var nonexistentDoc = docmap{KeyField: "doesNotExist"}
 func testCreate(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	named := docmap{KeyField: "testCreate1", "b": true}
-	unnamed := docmap{"b": false}
+	// TODO(#1857): dynamodb requires the sort key field when it is defined. We
+	// don't generate random sort key so we need to skip the unnamed test and
+	// figure out what to do in this situation.
+	// unnamed := docmap{"b": false}
 	// Attempt to clean up
 	defer func() {
-		_, _ = coll.Actions().Delete(named).Delete(unnamed).Do(ctx)
+		_ = coll.Actions().Delete(named).
+			// Delete(unnamed).
+			Do(ctx)
 	}()
 
 	createThenGet := func(doc docmap) {
@@ -132,7 +243,7 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	}
 
 	createThenGet(named)
-	createThenGet(unnamed)
+	// createThenGet(unnamed)
 
 	// Can't create an existing doc.
 	if err := coll.Create(ctx, named); err == nil {
@@ -221,23 +332,36 @@ func testGet(t *testing.T, coll *ds.Collection) {
 		"s":      "a string",
 		"i":      int64(95),
 		"f":      32.3,
+		"m":      map[string]interface{}{"a": "one", "b": "two"},
 	}
 	must(coll.Put(ctx, doc))
-	// If only the key fields are present, the full document is populated.
+	// If Get is called with no field paths, the full document is populated.
 	got := docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got))
 	doc[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc); diff != "" {
 		t.Error(diff)
 	}
-	// TODO(jba): test with field paths
+
+	// If Get is called with field paths, the resulting document has only those fields.
+	got = docmap{KeyField: doc[KeyField]}
+	must(coll.Get(ctx, got, "f", "m.b"))
+	want := docmap{
+		KeyField:         doc[KeyField],
+		ds.RevisionField: got[ds.RevisionField], // copy returned revision field
+		"f":              32.3,
+		"m":              docmap{"b": "two"},
+	}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error("Get with field paths:\n", diff)
+	}
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
-	if n, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
-		t.Fatalf("after %d successful actions: %v", n, err)
+	if errs := coll.Actions().Put(doc).Delete(doc).Do(ctx); errs != nil {
+		t.Fatal(errs)
 	}
 	// The document should no longer exist.
 	if err := coll.Get(ctx, doc); err == nil {
@@ -250,8 +374,8 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 
 	// Delete will fail if the revision field is mismatched.
 	got := docmap{KeyField: doc[KeyField]}
-	if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
-		t.Fatal(err)
+	if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
+		t.Fatal(errs)
 	}
 	doc["x"] = "y"
 	if err := coll.Put(ctx, doc); err != nil {
@@ -270,13 +394,13 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	}
 
 	got := docmap{KeyField: doc[KeyField]}
-	_, err := coll.Actions().Update(doc, ds.Mods{
+	errs := coll.Actions().Update(doc, ds.Mods{
 		"a": "X",
 		"b": nil,
 		"c": "C",
 	}).Get(got).Do(ctx)
-	if err != nil {
-		t.Fatal(err)
+	if errs != nil {
+		t.Fatal(errs)
 	}
 	want := docmap{
 		KeyField:         doc[KeyField],
@@ -351,8 +475,8 @@ func testData(t *testing.T, coll *ds.Collection) {
 	} {
 		doc := docmap{KeyField: "testData", "val": test.in}
 		got := docmap{KeyField: doc[KeyField]}
-		if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
-			t.Fatal(err)
+		if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
+			t.Fatal(errs)
 		}
 		want := docmap{
 			"val":            test.want,
@@ -370,15 +494,20 @@ func testData(t *testing.T, coll *ds.Collection) {
 
 }
 
-func testCodec(t *testing.T, ct CodecTester) {
+var (
+	// A time with non-zero milliseconds, but zero nanoseconds.
+	milliTime = time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6, time.UTC)
+	// A time with non-zero nanoseconds.
+	nanoTime = time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6+7, time.UTC)
+)
+
+// Test that encoding from a struct and then decoding into the same struct works properly.
+// The decoding is "type-driven" because the decoder knows the expected type of the value
+// it is decoding--it is the type of a struct field.
+func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 	if ct == nil {
 		t.Skip("no CodecTester")
 	}
-	// A time with non-zero milliseconds, but zero nanoseconds.
-	milliTime := time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6, time.UTC)
-	// A time with non-zero nanoseconds.
-	nanoTime := time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6+7, time.UTC)
-
 	check := func(in, dec interface{}, encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
 		t.Helper()
 		enc, err := encode(in)
@@ -393,27 +522,8 @@ func testCodec(t *testing.T, ct CodecTester) {
 		}
 	}
 
-	// A round trip with the docstore codec should work for all docstore-supported types,
-	// regardless of native driver support.
-	type DocstoreRoundTrip struct {
-		N  *int
-		I  int
-		U  uint
-		F  float64
-		C  complex128
-		St string
-		B  bool
-		By []byte
-		L  []int
-		A  [2]int
-		M  map[string]bool
-		P  *string
-		T  time.Time
-	}
-	// TODO(jba): add more fields: structs; embedding.
-
 	s := "bar"
-	dsrt := &DocstoreRoundTrip{
+	dsrt := &docstoreRoundTrip{
 		N:  nil,
 		I:  1,
 		U:  2,
@@ -429,26 +539,11 @@ func testCodec(t *testing.T, ct CodecTester) {
 		T:  milliTime,
 	}
 
-	check(dsrt, &DocstoreRoundTrip{}, ct.DocstoreEncode, ct.DocstoreDecode)
+	check(dsrt, &docstoreRoundTrip{}, ct.DocstoreEncode, ct.DocstoreDecode)
 
 	// Test native-to-docstore and docstore-to-native round trips with a smaller set
 	// of types.
-
-	// All native codecs should support these types. If one doesn't, remove it from this
-	// struct and make a new single-field struct for it.
-	type NativeMinimal struct {
-		N  *int
-		I  int
-		F  float64
-		St string
-		B  bool
-		By []byte
-		L  []int
-		M  map[string]bool
-		P  *string
-		T  time.Time
-	}
-	nm := &NativeMinimal{
+	nm := &nativeMinimal{
 		N:  nil,
 		I:  1,
 		F:  2.5,
@@ -459,9 +554,11 @@ func testCodec(t *testing.T, ct CodecTester) {
 		By: []byte{6, 7, 8},
 		P:  &s,
 		T:  milliTime,
+		LF: []float64{18.8, -19.9, 20},
+		LS: []string{"foo", "bar"},
 	}
-	check(nm, &NativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
-	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
+	check(nm, &nativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
+	check(nm, &nativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
 
 	// Test various other types, unless they are unsupported.
 	unsupported := map[UnsupportedType]bool{}
@@ -502,6 +599,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 	type NT struct {
 		T time.Time
 	}
+
 	nt := &NT{nanoTime}
 	if unsupported[NanosecondTimes] {
 		// Expect rounding to the nearest millisecond.
@@ -526,10 +624,133 @@ func testCodec(t *testing.T, ct CodecTester) {
 		check(nt, &NT{}, ct.DocstoreEncode, ct.NativeDecode)
 		check(nt, &NT{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
+
+	// Binary sets.
+	if !unsupported[BinarySet] {
+		type BinarySet struct {
+			B [][]byte
+		}
+		b := &BinarySet{[][]byte{{15}, {16}, {17}}}
+		check(b, &BinarySet{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(b, &BinarySet{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
 }
 
+// Test decoding into an interface{}, where the decoder doesn't know the type of the
+// result and must return some Go type that accurately represents the value.
+// This is implemented by the AsInterface method of driver.Decoder.
+// Since it's fine for different providers to return different types in this case,
+// each test case compares against a list of possible values.
+func testBlindDecode(t *testing.T, ct CodecTester) {
+	if ct == nil {
+		t.Skip("no CodecTester")
+	}
+	t.Run("DocstoreEncode", func(t *testing.T) { testBlindDecode1(t, ct.DocstoreEncode, ct.DocstoreDecode) })
+	t.Run("NativeEncode", func(t *testing.T) { testBlindDecode1(t, ct.NativeEncode, ct.DocstoreDecode) })
+}
+
+func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error), decode func(_, _ interface{}) error) {
+	// Encode and decode expect a document, so use this struct to hold the values.
+	type S struct{ X interface{} }
+
+	for _, test := range []struct {
+		in    interface{} // the value to be encoded
+		want  interface{} // one possibility
+		want2 interface{} // a second possibility
+	}{
+		{in: nil, want: nil},
+		{in: true, want: true},
+		{in: "foo", want: "foo"},
+		{in: 'c', want: 'c', want2: int64('c')},
+		{in: int(3), want: int32(3), want2: int64(3)},
+		{in: int8(3), want: int32(3), want2: int64(3)},
+		{in: int(-3), want: int32(-3), want2: int64(-3)},
+		{in: int64(math.MaxInt32 + 1), want: int64(math.MaxInt32 + 1)},
+		{in: float32(1.5), want: float64(1.5)},
+		{in: float64(1.5), want: float64(1.5)},
+		{in: []byte{1, 2}, want: []byte{1, 2}},
+		{in: []int{1, 2},
+			want:  []interface{}{int32(1), int32(2)},
+			want2: []interface{}{int64(1), int64(2)}},
+		{in: []float32{1.5, 2.5}, want: []interface{}{float64(1.5), float64(2.5)}},
+		{in: []float64{1.5, 2.5}, want: []interface{}{float64(1.5), float64(2.5)}},
+		{in: milliTime, want: milliTime, want2: "2019-03-27T00:00:00.005Z"},
+		{in: []time.Time{milliTime},
+			want:  []interface{}{milliTime},
+			want2: []interface{}{"2019-03-27T00:00:00.005Z"},
+		},
+		{in: map[string]int{"a": 1},
+			want:  map[string]interface{}{"a": int64(1)},
+			want2: map[string]interface{}{"a": int32(1)},
+		},
+		{in: map[string][]byte{"a": {1, 2}}, want: map[string]interface{}{"a": []byte{1, 2}}},
+	} {
+		enc, err := encode(&S{test.in})
+		if err != nil {
+			t.Fatalf("encoding %T: %v", test.in, err)
+		}
+		var got S
+		if err := decode(enc, &got); err != nil {
+			t.Fatalf("decoding %T: %v", test.in, err)
+		}
+		matched := false
+		wants := []interface{}{test.want}
+		if test.want2 != nil {
+			wants = append(wants, test.want2)
+		}
+		for _, w := range wants {
+			if cmp.Equal(got.X, w) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			t.Errorf("%T: got %#v (%T), not equal to %#v or %#v", test.in, got.X, got.X, test.want, test.want2)
+		}
+	}
+}
+
+// A round trip with the docstore codec should work for all docstore-supported types,
+// regardless of native driver support.
+type docstoreRoundTrip struct {
+	N  *int
+	I  int
+	U  uint
+	F  float64
+	C  complex128
+	St string
+	B  bool
+	By []byte
+	L  []int
+	A  [2]int
+	M  map[string]bool
+	P  *string
+	T  time.Time
+}
+
+// TODO(jba): add more fields: structs; embedding.
+
+// All native codecs should support these types. If one doesn't, remove it from this
+// struct and make a new single-field struct for it.
+type nativeMinimal struct {
+	N  *int
+	I  int
+	F  float64
+	St string
+	B  bool
+	By []byte
+	L  []int
+	M  map[string]bool
+	P  *string
+	T  time.Time
+	LF []float64
+	LS []string
+}
+
+// MakeUniqueStringDeterministicForTesting uses a specified seed value to
+// produce the same sequence of values in driver.UniqueString for testing.
+//
 // Call when running tests that will be replayed.
-// Each seed value will result in UniqueString producing the same sequence of values.
 func MakeUniqueStringDeterministicForTesting(seed int64) {
 	r := &randReader{r: rand.New(rand.NewSource(seed))}
 	uuid.SetRand(r)
@@ -544,4 +765,310 @@ func (r *randReader) Read(buf []byte) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.r.Read(buf)
+}
+
+// The following is the schema for the collection used for query testing.
+// It is loosely borrowed from the DynamoDB documentation.
+// It is rich enough to require indexes for some providers.
+
+// A HighScore records one user's high score in a particular game.
+// The primary key fields are Game and Player.
+type HighScore struct {
+	Game             string
+	Player           string
+	Score            int
+	Time             time.Time
+	DocstoreRevision interface{}
+}
+
+func newHighScore() interface{} { return &HighScore{} }
+
+// HighScoreKey constructs a single primary key from a HighScore struct
+// by concatenating the Game and Player fields.
+func HighScoreKey(doc docstore.Document) interface{} {
+	h := doc.(*HighScore)
+	return h.Game + "|" + h.Player
+}
+
+func (h *HighScore) String() string {
+	return fmt.Sprintf("%s|%s=%d@%s", h.Game, h.Player, h.Score, h.Time.Format("01/02"))
+}
+
+func date(month, day int) time.Time {
+	return time.Date(2019, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+}
+
+const (
+	game1 = "Praise All Monsters"
+	game2 = "Zombie DMV"
+	game3 = "Days Gone"
+)
+
+var queryDocuments = []*HighScore{
+	{game1, "pat", 49, date(3, 13), nil},
+	{game1, "mel", 60, date(4, 10), nil},
+	{game1, "andy", 81, date(2, 1), nil},
+	{game1, "fran", 33, date(3, 19), nil},
+	{game2, "pat", 120, date(4, 1), nil},
+	{game2, "billie", 111, date(4, 10), nil},
+	{game2, "mel", 190, date(4, 18), nil},
+	{game2, "fran", 33, date(3, 20), nil},
+}
+
+func testQuery(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	// (Temporary) skip if the driver does not implement queries.
+	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Skip("queries not yet implemented")
+	}
+	defer cleanUpTable(t, newHighScore, coll)
+
+	// Add the query docs.
+	alist := coll.Actions()
+	for _, doc := range queryDocuments {
+		alist.Put(doc)
+	}
+	if err := alist.Do(ctx); err != nil {
+		t.Fatalf("%+v", err)
+	}
+
+	// Query filters should have the same behavior when doing string and number
+	// comparison.
+	tests := []struct {
+		name string
+		q    *ds.Query
+		want func(*HighScore) bool // filters queryDocuments
+	}{
+		{
+			name: "All",
+			q:    coll.Query(),
+			want: func(*HighScore) bool { return true },
+		},
+		{
+			name: "Game",
+			q:    coll.Query().Where("Game", "=", game2),
+			want: func(h *HighScore) bool { return h.Game == game2 },
+		},
+		{
+			name: "Score",
+			q:    coll.Query().Where("Score", ">", 100),
+			want: func(h *HighScore) bool { return h.Score > 100 },
+		},
+		{
+			name: "Player",
+			q:    coll.Query().Where("Player", "=", "billie"),
+			want: func(h *HighScore) bool { return h.Player == "billie" },
+		},
+		{
+			name: "GamePlayer",
+			q:    coll.Query().Where("Player", "=", "andy").Where("Game", "=", game1),
+			want: func(h *HighScore) bool { return h.Player == "andy" && h.Game == game1 },
+		},
+		{
+			name: "PlayerScore",
+			q:    coll.Query().Where("Player", "=", "pat").Where("Score", "<", 100),
+			want: func(h *HighScore) bool { return h.Player == "pat" && h.Score < 100 },
+		},
+		{
+			name: "GameScore",
+			q:    coll.Query().Where("Game", "=", game1).Where("Score", ">=", 50),
+			want: func(h *HighScore) bool { return h.Game == game1 && h.Score >= 50 },
+		},
+		// TODO(jba): add this test after adding support for times as filter values (#1906).
+		// {
+		// 	name: "PlayerTime",
+		// 	q:    coll.Query().Where("Player", "=", "mel").Where("Time", ">", date(4, 1)),
+		// 	want: func(h *HighScore) bool { return h.Player == "mel" && h.Time.After(date(4, 1)) },
+		// },
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mustCollectHighScores(ctx, t, tc.q.Get(ctx))
+			for _, g := range got {
+				g.DocstoreRevision = nil
+			}
+			var want []*HighScore
+			for _, d := range queryDocuments {
+				if tc.want(d) {
+					want = append(want, d)
+				}
+			}
+			_, err := tc.q.Plan()
+			if err != nil {
+				t.Fatal(err)
+			}
+			diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
+				return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
+			}))
+			if diff != "" {
+				t.Error(diff)
+			}
+			// We can't assume anything about the query plan. Just verify that Plan returns
+			// successfully.
+			if _, err := tc.q.Plan(KeyField); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	// For limit, we can't be sure which documents will be returned, only their count.
+	limitQ := coll.Query().Limit(2)
+	got := mustCollectHighScores(ctx, t, limitQ.Get(ctx))
+	if len(got) != 2 {
+		t.Errorf("got %v, wanted two documents", got)
+	}
+
+	// Errors are returned from the iterator's Next method.
+	iter := coll.Query().Where("Game", "!=", "").Get(ctx) // != is disallowed
+	var h HighScore
+	err := iter.Next(ctx, &h)
+	if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
+		t.Errorf("got %v, want InvalidArgument", err)
+	}
+}
+
+// cleanUpTable delete all documents from this collection after test.
+func cleanUpTable(t *testing.T, create func() interface{}, coll *docstore.Collection) {
+	ctx := context.Background()
+	dels := coll.Actions()
+	delFunc := func(doc interface{}) error {
+		dels.Delete(doc)
+		return nil
+	}
+	err := forEach(ctx, coll.Query().Get(ctx), create, delFunc)
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+	if err := dels.Do(ctx); err != nil {
+		t.Fatalf("%+v", err)
+	}
+}
+
+func forEach(ctx context.Context, iter *ds.DocumentIterator, create func() interface{}, handle func(interface{}) error) error {
+	for {
+		doc := create()
+		err := iter.Next(ctx, doc)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if err := handle(doc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func newDocmap() interface{} { return docmap{} }
+
+func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []docmap {
+	var ms []docmap
+	collect := func(m interface{}) error { ms = append(ms, m.(docmap)); return nil }
+	if err := forEach(ctx, iter, newDocmap, collect); err != nil {
+		t.Fatal(err)
+	}
+	return ms
+}
+
+func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []*HighScore {
+	var hs []*HighScore
+	collect := func(h interface{}) error { hs = append(hs, h.(*HighScore)); return nil }
+	if err := forEach(ctx, iter, newHighScore, collect); err != nil {
+		t.Fatal(err)
+	}
+	return hs
+}
+
+func testMultipleActions(t *testing.T, coll *ds.Collection) {
+	defer cleanUpTable(t, newDocmap, coll)
+	ctx := context.Background()
+
+	docs := []docmap{
+		{KeyField: "testMultipleActions1", "s": "a"},
+		{KeyField: "testMultipleActions2", "s": "b"},
+		{KeyField: "testMultipleActions3", "s": "c"},
+		{KeyField: "testMultipleActions4", "s": "d"},
+		{KeyField: "testMultipleActions5", "s": "e"},
+		{KeyField: "testMultipleActions6", "s": "f"},
+		{KeyField: "testMultipleActions7", "s": "g"},
+		{KeyField: "testMultipleActions8", "s": "h"},
+		{KeyField: "testMultipleActions9", "s": "i"},
+		{KeyField: "testMultipleActions10", "s": "j"},
+		{KeyField: "testMultipleActions11", "s": "k"},
+		{KeyField: "testMultipleActions12", "s": "l"},
+	}
+
+	actions := coll.Actions()
+	// Writes
+	for i := 0; i < 6; i++ {
+		actions.Create(docs[i])
+	}
+	for i := 6; i < len(docs); i++ {
+		actions.Put(docs[i])
+	}
+
+	// Reads
+	gots := make([]docmap, len(docs))
+	for i, doc := range docs {
+		gots[i] = docmap{KeyField: doc[KeyField]}
+		actions.Get(gots[i], docstore.FieldPath("s"))
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for i, got := range gots {
+		docs[i][docstore.RevisionField] = got[docstore.RevisionField] // copy the revision
+		if diff := cmp.Diff(got, docs[i]); diff != "" {
+			t.Error(diff)
+		}
+	}
+
+	// Deletes
+	dels := coll.Actions()
+	for _, got := range gots {
+		dels.Delete(docmap{KeyField: got[KeyField]})
+	}
+	if err := dels.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
+	docs := []*HighScore{
+		{game3, "steph", 24, date(4, 25), nil},
+		{game3, "mia", 99, date(4, 26), nil},
+	}
+
+	// Verify Collection.As
+	if err := st.CollectionCheck(coll); err != nil {
+		t.Error(err)
+	}
+
+	ctx := context.Background()
+	actions := coll.Actions()
+	// Create docs
+	for _, doc := range docs {
+		actions.Put(doc)
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer cleanUpTable(t, newHighScore, coll)
+
+	// Query
+	qs := []*docstore.Query{
+		coll.Query().Where("Game", "=", game3),
+		// Note: don't use filter on Player, the test table has Player as the
+		// partition key of a Global Secondary Index, which doesn't support
+		// ConsistentRead mode, which is what the As test does in its BeforeQuery
+		// function.
+		coll.Query().Where("Score", ">", 50),
+	}
+	for _, q := range qs {
+		if err := st.QueryCheck(q.BeforeQuery(st.BeforeQuery).Get(ctx)); err != nil {
+			t.Error(err)
+		}
+	}
 }

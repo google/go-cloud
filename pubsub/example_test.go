@@ -18,229 +18,102 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
-	"sync"
-	"time"
 
 	"gocloud.dev/pubsub"
-	"gocloud.dev/pubsub/mempubsub"
 
 	pbraw "cloud.google.com/go/pubsub/apiv1"
 	pbapi "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc/status"
 )
 
-func Example_sendReceive() {
-	// Open a topic and corresponding subscription.
+func ExampleTopic_Send() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	t := mempubsub.NewTopic()
-	defer t.Shutdown(ctx)
-	s := mempubsub.NewSubscription(t, time.Second)
-	defer s.Shutdown(ctx)
+	var topic *pubsub.Topic
 
-	// Send a message to the topic.
-	if err := t.Send(ctx, &pubsub.Message{Body: []byte("Hello, world!")}); err != nil {
-		log.Fatal(err)
-	}
-
-	// Receive a message from the subscription.
-	m, err := s.Receive(ctx)
+	err := topic.Send(ctx, &pubsub.Message{
+		Body: []byte("Hello, World!\n"),
+		Metadata: map[string]string{
+			// These are examples of metadata.
+			// There is nothing special about the key names.
+			"language":   "en",
+			"importance": "high",
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Print out the received message.
-	fmt.Printf("%s\n", m.Body)
-
-	// Acknowledge the message.
-	m.Ack()
-
-	// Output:
-	// Hello, world!
 }
 
-func Example_sendReceiveMultipleMessages() {
-	// Open a topic and corresponding subscription.
+func ExampleSubscription_Receive() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	t := mempubsub.NewTopic()
-	defer t.Shutdown(ctx)
-	s := mempubsub.NewSubscription(t, time.Second)
-	defer s.Shutdown(ctx)
+	var subscription *pubsub.Subscription
 
-	// Send messages to the topic.
-	ms := []*pubsub.Message{
-		{Body: []byte("a")},
-		{Body: []byte("b")},
-		{Body: []byte("c")},
-	}
-	for _, m := range ms {
-		if err := t.Send(ctx, m); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// Receive and acknowledge messages from the subscription.
-	ms2 := []string{}
-	for i := 0; i < len(ms); i++ {
-		m2, err := s.Receive(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ms2 = append(ms2, string(m2.Body))
-		m2.Ack()
-	}
-
-	// The messages may be received in a different order than they were
-	// sent.
-	sort.Strings(ms2)
-
-	// Print out the received messages.
-	for _, m2 := range ms2 {
-		fmt.Println(m2)
-	}
-
-	// Output:
-	// a
-	// b
-	// c
-}
-
-func Example_receiveWithInvertedWorkerPool() {
-	// Open a topic and corresponding subscription.
-	ctx := context.Background()
-	t := mempubsub.NewTopic()
-	defer t.Shutdown(ctx)
-	s := mempubsub.NewSubscription(t, time.Second)
-	defer s.Shutdown(ctx)
-
-	// Send a bunch of messages to the topic.
-	const nMessages = 100
-	for n := 0; n < nMessages; n++ {
-		m := &pubsub.Message{
-			Body: []byte(fmt.Sprintf("message %d", n)),
-		}
-		if err := t.Send(ctx, m); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// In order to make our test exit, we keep track of how many messages were
-	// processed with wg, and cancel the receiveCtx when we've processed them all.
-	// A more realistic application would not need this WaitGroup.
-	var wg sync.WaitGroup
-	wg.Add(nMessages)
-	receiveCtx, cancel := context.WithCancel(ctx)
-	go func() {
-		wg.Wait()
-		cancel()
-	}()
-
-	// Process messages using an inverted worker pool, as described here:
-	// https://www.youtube.com/watch?v=5zXAHh5tJqQ&t=26m58s
-	// It uses a buffered channel, sem, as a semaphore to manage the maximum
-	// number of workers.
-	const poolSize = 10
-	sem := make(chan struct{}, poolSize)
+	// Loop on received messages.
 	for {
-		// Read a message. Receive will block until a message is available.
-		msg, err := s.Receive(receiveCtx)
+		msg, err := subscription.Receive(ctx)
 		if err != nil {
-			// An error from Receive is fatal; Receive will never succeed again
-			// so the application should exit.
-			// In this example, we expect to get a error here when we've read all the
-			// messages and receiveCtx is canceled.
+			// Errors from Receive indicate that Receive will no longer succeed.
+			log.Printf("Receiving message: %v", err)
+			break
+		}
+		// Do work based on the message, for example:
+		fmt.Printf("Got message: %q\n", msg.Body)
+		// Messages must always be acknowledged with Ack.
+		msg.Ack()
+	}
+}
+
+func ExampleSubscription_Receive_concurrent() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var subscription *pubsub.Subscription
+
+	// Loop on received messages. We can use a channel as a semaphore to limit how
+	// many goroutines we have active at a time as well as wait on the goroutines
+	// to finish before exiting.
+	const maxHandlers = 10
+	sem := make(chan struct{}, maxHandlers)
+recvLoop:
+	for {
+		msg, err := subscription.Receive(ctx)
+		if err != nil {
+			// Errors from Receive indicate that Receive will no longer succeed.
+			log.Printf("Receiving message: %v", err)
 			break
 		}
 
-		// Write a token to the semaphore; if there are already poolSize workers
-		// active, this will block until one of them completes.
-		sem <- struct{}{}
-		// Process the message. For many applications, this can be expensive, so
-		// we do it in a goroutine, allowing this loop to continue and Receive more
-		// messages.
+		// Wait if there are too many active handle goroutines and acquire the
+		// semaphore. If the context is canceled, stop waiting and start shutting
+		// down.
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break recvLoop
+		}
+
+		// Handle the message in a new goroutine.
 		go func() {
-			// Record that we've processed this message, and Ack it.
-			msg.Ack()
-			wg.Done()
-			// Read a token from the semaphore before exiting this goroutine, freeing
-			// up the slot for another goroutine.
-			<-sem
+			defer func() { <-sem }() // Release the semaphore.
+			defer msg.Ack()          // Messages must always be acknowledged with Ack.
+
+			// Do work based on the message, for example:
+			fmt.Printf("Got message: %q\n", msg.Body)
 		}()
 	}
 
-	// Wait for all workers to finish.
-	for n := poolSize; n > 0; n-- {
+	// We're no longer receiving messages. Wait to finish handling any
+	// unacknowledged messages by totally acquiring the semaphore.
+	for n := 0; n < maxHandlers; n-- {
 		sem <- struct{}{}
 	}
-	fmt.Printf("Read %d messages", nMessages)
-
-	// Output:
-	// Read 100 messages
-}
-
-func Example_receiveWithTraditionalWorkerPool() {
-	// Open a topic and corresponding subscription.
-	ctx := context.Background()
-	t := mempubsub.NewTopic()
-	defer t.Shutdown(ctx)
-	s := mempubsub.NewSubscription(t, time.Second)
-	defer s.Shutdown(ctx)
-
-	// Send a bunch of messages to the topic.
-	const nMessages = 100
-	for n := 0; n < nMessages; n++ {
-		m := &pubsub.Message{
-			Body: []byte(fmt.Sprintf("message %d", n)),
-		}
-		if err := t.Send(ctx, m); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	// In order to make our test exit, we keep track of how many messages were
-	// processed with wg, and cancel the receiveCtx when we've processed them all.
-	// A more realistic application would not need this WaitGroup.
-	var wg sync.WaitGroup
-	wg.Add(nMessages)
-	receiveCtx, cancel := context.WithCancel(ctx)
-	go func() {
-		wg.Wait()
-		cancel()
-	}()
-
-	// Process messages using a traditional worker pool. Consider using an
-	// inverted pool instead (see the other example).
-	const poolSize = 10
-	var workerWg sync.WaitGroup
-	for n := 0; n < poolSize; n++ {
-		workerWg.Add(1)
-		go func() {
-			for {
-				// Read a message. Receive will block until a message is available.
-				// It's fine to call Receive from many goroutines.
-				msg, err := s.Receive(receiveCtx)
-				if err != nil {
-					// An error from Receive is fatal; Receive will never succeed again
-					// so the application should exit.
-					// In this example, we expect to get a error here when we've read all
-					// the messages and receiveCtx is canceled.
-					workerWg.Done()
-					return
-				}
-
-				// Process the message and Ack it.
-				msg.Ack()
-				wg.Done()
-			}
-		}()
-	}
-
-	// Wait for all workers to finish.
-	workerWg.Wait()
-	fmt.Printf("Read %d messages", nMessages)
-
-	// Output:
-	// Read 100 messages
 }
 
 func ExampleMessage_As() {
@@ -254,6 +127,7 @@ func ExampleMessage_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer sub.Shutdown(ctx)
 
 	msg, err := sub.Receive(ctx)
 	if err != nil {
@@ -277,6 +151,8 @@ func ExampleSubscription_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer sub.Shutdown(ctx)
+
 	var sc *pbraw.SubscriberClient
 	if sub.As(&sc) {
 		_ = sc.CallOptions
@@ -294,6 +170,7 @@ func ExampleSubscription_ErrorAs() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer sub.Shutdown(ctx)
 
 	msg, err := sub.Receive(ctx)
 	if err != nil {
@@ -317,6 +194,7 @@ func ExampleTopic_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer topic.Shutdown(ctx)
 
 	var pc *pbraw.PublisherClient
 	if topic.As(&pc) {
@@ -335,6 +213,7 @@ func ExampleTopic_ErrorAs() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer topic.Shutdown(ctx)
 
 	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello")})
 	if err != nil {

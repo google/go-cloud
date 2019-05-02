@@ -26,19 +26,19 @@ import (
 func Example() {
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	session, err := session.NewSession(nil)
+	sess, err := session.NewSession(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Get a client to use with the KMS API.
-	client, err := awskms.Dial(session)
+	client, err := awskms.Dial(sess)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := awskms.NewKeeper(
+	keeper := awskms.OpenKeeper(
 		client,
 		// Get the key ID. Here is an example of using an alias. See
 		// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
@@ -46,6 +46,7 @@ func Example() {
 		"alias/test-secrets",
 		nil,
 	)
+	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.
 	ctx := context.Background()
@@ -65,6 +66,9 @@ func Example_openKeeper() {
 	// The host + path are the key ID; this example uses an alias. See
 	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 	// for more details.
-	k, err := secrets.OpenKeeper(ctx, "awskms://alias/my-key")
-	_, _ = k, err
+	keeper, err := secrets.OpenKeeper(ctx, "awskms://alias/my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeper.Close()
 }

@@ -27,6 +27,13 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// Message Delivery Semantics
+//
+// mempubsub supports at-least-once semantics; applications must
+// call Message.Ack after processing a message, or it will be redelivered.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
+//
 // As
 //
 // mempubsub does not support any types for As.
@@ -144,6 +151,12 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	// but that would require copying all the messages.
 	for i, m := range ms {
 		m.AckID = t.nextAckID + i
+
+		if m.BeforeSend != nil {
+			if err := m.BeforeSend(func(interface{}) bool { return false }); err != nil {
+				return err
+			}
+		}
 	}
 	t.nextAckID += len(ms)
 	for _, s := range t.subs {
@@ -174,7 +187,15 @@ func (*topic) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Topic.ErrorCode
-func (*topic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}
+
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
 
 type subscription struct {
 	mu          sync.Mutex
@@ -187,24 +208,24 @@ type subscription struct {
 // It panics if the given topic did not come from mempubsub.
 // If a message is not acked within in the given ack deadline from when
 // it is received, then it will be redelivered.
-func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
+func NewSubscription(pstopic *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
 	var t *topic
-	if !top.As(&t) {
+	if !pstopic.As(&t) {
 		panic("mempubsub: NewSubscription passed a Topic not from mempubsub")
 	}
-	return pubsub.NewSubscription(newSubscription(t, ackDeadline), 0, nil)
+	return pubsub.NewSubscription(newSubscription(t, ackDeadline), nil, nil)
 }
 
-func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
+func newSubscription(topic *topic, ackDeadline time.Duration) *subscription {
 	s := &subscription{
-		topic:       t,
+		topic:       topic,
 		ackDeadline: ackDeadline,
 		msgs:        map[driver.AckID]*message{},
 	}
-	if t != nil {
-		t.mu.Lock()
-		defer t.mu.Unlock()
-		t.subs = append(t.subs, s)
+	if topic != nil {
+		topic.mu.Lock()
+		defer topic.mu.Unlock()
+		topic.subs = append(topic.subs, s)
 	}
 	return s
 }
@@ -297,6 +318,9 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 	return nil
 }
 
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
+
 // SendNacks implements driver.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
 	if s.topic == nil {
@@ -329,7 +353,15 @@ func (*subscription) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode
-func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

@@ -28,11 +28,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
@@ -63,13 +65,15 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 1. Calls BucketCheck.
 // 2. Creates a blob in a directory, using BeforeWrite as a WriterOption.
 // 3. Fetches the blob's attributes and calls AttributeCheck.
-// 4. Creates a Reader for the blob and calls ReaderCheck.
+// 4. Creates a Reader for the blob using BeforeReader as a ReaderOption,
+//    and calls ReaderCheck with the resulting Reader.
 // 5. Calls List using BeforeList as a ListOption, with Delimiter set so
 //    that only the directory is returned, and calls ListObjectCheck
 //    on the single directory list entry returned.
 // 6. Calls List using BeforeList as a ListOption, and calls ListObjectCheck
 //    on the single blob entry returned.
 // 7. Tries to read a non-existent blob, and calls ErrorCheck with the error.
+// 8. Makes a copy of the blob, using BeforeCopy as a CopyOption.
 //
 // For example, an AsTest might set a provider-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
@@ -81,9 +85,15 @@ type AsTest interface {
 	BucketCheck(b *blob.Bucket) error
 	// ErrorCheck will be called to allow verification of Bucket.ErrorAs.
 	ErrorCheck(b *blob.Bucket, err error) error
+	// BeforeRead will be passed directly to ReaderOptions as part of reading
+	// a test blob.
+	BeforeRead(as func(interface{}) bool) error
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
+	// BeforeCopy will be passed directly to CopyOptions as part of copying
+	// the test blob.
+	BeforeCopy(as func(interface{}) bool) error
 	// BeforeList will be passed directly to ListOptions as part of listing the
 	// test blob.
 	BeforeList(as func(interface{}) bool) error
@@ -121,16 +131,30 @@ func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) (ret error) {
 	return nil
 }
 
+func (verifyAsFailsOnNil) BeforeRead(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want BeforeReader's As to return false when passed nil")
+	}
+	return nil
+}
+
 func (verifyAsFailsOnNil) BeforeWrite(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want Writer.As to return false when passed nil")
+		return errors.New("want BeforeWrite's As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeCopy(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want BeforeCopy's As to return false when passed nil")
 	}
 	return nil
 }
 
 func (verifyAsFailsOnNil) BeforeList(as func(interface{}) bool) error {
 	if as(nil) {
-		return errors.New("want List.As to return false when passed nil")
+		return errors.New("want BeforeList's As to return false when passed nil")
 	}
 	return nil
 }
@@ -179,11 +203,17 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestCanceledWrite", func(t *testing.T) {
 		testCanceledWrite(t, newHarness)
 	})
+	t.Run("TestConcurrentWriteAndRead", func(t *testing.T) {
+		testConcurrentWriteAndRead(t, newHarness)
+	})
 	t.Run("TestMetadata", func(t *testing.T) {
 		testMetadata(t, newHarness)
 	})
 	t.Run("TestMD5", func(t *testing.T) {
 		testMD5(t, newHarness)
+	})
+	t.Run("TestCopy", func(t *testing.T) {
+		testCopy(t, newHarness)
 	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
@@ -1621,6 +1651,127 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
+// testCopy tests the functionality of Copy.
+func testCopy(t *testing.T, newHarness HarnessMaker) {
+	const (
+		srcKey             = "blob-for-copying-src"
+		dstKey             = "blob-for-copying-dest"
+		dstKeyExists       = "blob-for-copying-dest-exists"
+		contentType        = "text/plain"
+		cacheControl       = "no-cache"
+		contentDisposition = "inline"
+		contentEncoding    = "identity"
+		contentLanguage    = "en"
+	)
+	var contents = []byte("Hello World")
+
+	ctx := context.Background()
+	t.Run("NonExistentSourceFails", func(t *testing.T) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		defer b.Close()
+
+		err = b.Copy(ctx, dstKey, "does-not-exist", nil)
+		if err == nil {
+			t.Errorf("got nil want error")
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("got %v want NotFound error", err)
+		}
+	})
+
+	t.Run("Works", func(t *testing.T) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		defer b.Close()
+
+		// Create the source blob.
+		wopts := &blob.WriterOptions{
+			ContentType:        contentType,
+			CacheControl:       cacheControl,
+			ContentDisposition: contentDisposition,
+			ContentEncoding:    contentEncoding,
+			ContentLanguage:    contentLanguage,
+			Metadata:           map[string]string{"foo": "bar"},
+		}
+		if err := b.WriteAll(ctx, srcKey, contents, wopts); err != nil {
+			t.Fatal(err)
+		}
+
+		// Grab its attributes to compare to the copy's attributes later.
+		wantAttr, err := b.Attributes(ctx, srcKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantAttr.ModTime = time.Time{} // don't compare this field
+
+		// Create another blob that we're going to overwrite.
+		if err := b.WriteAll(ctx, dstKeyExists, []byte("clobber me"), nil); err != nil {
+			t.Fatal(err)
+		}
+
+		// Copy the source to the destination.
+		if err := b.Copy(ctx, dstKey, srcKey, nil); err != nil {
+			t.Errorf("got unexpected error copying blob: %v", err)
+		}
+		// Read the copy.
+		got, err := b.ReadAll(ctx, dstKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !cmp.Equal(got, contents) {
+			t.Errorf("got %q want %q", string(got), string(contents))
+		}
+		// Verify attributes of the copy.
+		gotAttr, err := b.Attributes(ctx, dstKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotAttr.ModTime = time.Time{} // don't compare this field
+		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
+			t.Errorf("got %v want %v diff %s", gotAttr, wantAttr, diff)
+		}
+
+		// Copy the source to the second destination, where there's an existing blob.
+		// It should be overwritten.
+		if err := b.Copy(ctx, dstKeyExists, srcKey, nil); err != nil {
+			t.Errorf("got unexpected error copying blob: %v", err)
+		}
+		// Read the copy.
+		got, err = b.ReadAll(ctx, dstKeyExists)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !cmp.Equal(got, contents) {
+			t.Errorf("got %q want %q", string(got), string(contents))
+		}
+		// Verify attributes of the copy.
+		gotAttr, err = b.Attributes(ctx, dstKeyExists)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotAttr.ModTime = time.Time{} // don't compare this field
+		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
+			t.Errorf("got %v want %v diff %s", gotAttr, wantAttr, diff)
+		}
+	})
+}
+
 // testDelete tests the functionality of Delete.
 func testDelete(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-deleting"
@@ -1683,6 +1834,72 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete got %v, want NotFound error", err)
 		}
 	})
+}
+
+// testConcurrentWriteAndRead tests that concurrent writing to multiple blob
+// keys and concurrent reading from multiple blob keys works.
+func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blob.NewBucket(drv)
+	defer b.Close()
+
+	// Prepare data. Each of the numKeys blobs has dataSize bytes, with each byte
+	// set to the numeric key index. For example, the blob at "key0" consists of
+	// all dataSize bytes set to 0.
+	const numKeys = 20
+	const dataSize = 4 * 1024
+	keyData := make(map[int][]byte)
+	for k := 0; k < numKeys; k++ {
+		data := make([]byte, dataSize)
+		for i := 0; i < dataSize; i++ {
+			data[i] = byte(k)
+		}
+		keyData[k] = data
+	}
+
+	blobName := func(k int) string {
+		return fmt.Sprintf("key%d", k)
+	}
+
+	var wg sync.WaitGroup
+
+	// Write all blobs concurrently.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			if err := b.WriteAll(ctx, blobName(key), keyData[key], nil); err != nil {
+				t.Fatal(err)
+			}
+			wg.Done()
+		}(k)
+		defer b.Delete(ctx, blobName(k))
+	}
+	wg.Wait()
+
+	// Read all blobs concurrently and verify that they contain the expected data.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			buf, err := b.ReadAll(ctx, blobName(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(buf, keyData[key]) {
+				t.Errorf("read data mismatch for key %d", key)
+			}
+			wg.Done()
+		}(k)
+	}
+	wg.Wait()
 }
 
 // testKeys tests a variety of weird keys.
@@ -1846,8 +2063,9 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 // testAs tests the various As functions, using AsTest.
 func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	const (
-		dir = "mydir"
-		key = dir + "/as-test"
+		dir     = "mydir"
+		key     = dir + "/as-test"
+		copyKey = dir + "/as-test-copy"
 	)
 	var content = []byte("hello world")
 	ctx := context.Background()
@@ -1881,12 +2099,12 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.AttributesCheck(&attrs); err != nil {
+	if err := st.AttributesCheck(attrs); err != nil {
 		t.Error(err)
 	}
 
 	// Verify Reader.As.
-	r, err := b.NewReader(ctx, key, nil)
+	r, err := b.NewReader(ctx, key, &blob.ReaderOptions{BeforeRead: st.BeforeRead})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1941,6 +2159,13 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	if err := st.ErrorCheck(b, gotErr); err != nil {
 		t.Error(err)
+	}
+
+	// Copy the blob, using the provided callback.
+	if err := b.Copy(ctx, copyKey, key, &blob.CopyOptions{BeforeCopy: st.BeforeCopy}); err != nil {
+		t.Error(err)
+	} else {
+		defer func() { _ = b.Delete(ctx, copyKey) }()
 	}
 }
 

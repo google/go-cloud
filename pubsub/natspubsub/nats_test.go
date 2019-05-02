@@ -26,6 +26,7 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/nats-io/gnatsd/server"
 	gnatsd "github.com/nats-io/gnatsd/test"
 	"github.com/nats-io/go-nats"
@@ -54,7 +55,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (driver.Topic, func(), error) {
 	cleanup := func() {}
-	dt, err := createTopic(h.nc, testName)
+	dt, err := openTopic(h.nc, testName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -67,7 +68,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := createSubscription(h.nc, testName, func() {})
+	ds, err := openSubscription(h.nc, testName, func() {})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -97,13 +98,13 @@ func (natsAsTest) Name() string {
 	return "nats test"
 }
 
-func (natsAsTest) TopicCheck(top *pubsub.Topic) error {
+func (natsAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var c2 nats.Conn
-	if top.As(&c2) {
+	if topic.As(&c2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
 	var c3 *nats.Conn
-	if !top.As(&c3) {
+	if !topic.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
 	}
 	return nil
@@ -137,7 +138,7 @@ func (natsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) erro
 	return nil
 }
 
-func (r natsAsTest) MessageCheck(m *pubsub.Message) error {
+func (natsAsTest) MessageCheck(m *pubsub.Message) error {
 	var pm nats.Msg
 	if m.As(&pm) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
@@ -146,6 +147,10 @@ func (r natsAsTest) MessageCheck(m *pubsub.Message) error {
 	if !m.As(&ppm) {
 		return fmt.Errorf("cast failed for %T", &ppm)
 	}
+	return nil
+}
+
+func (natsAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
@@ -170,7 +175,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	body := []byte("hello")
 
 	// Send a message using Go CDK and receive it using NATS directly.
-	pt, err := CreateTopic(conn, topic, nil)
+	pt, err := OpenTopic(conn, topic, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +192,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	}
 
 	// Send a message using NATS directly and receive it using Go CDK.
-	ps, err := CreateSubscription(conn, topic, func() { t.Fatal("ack called unexpectedly") }, nil)
+	ps, err := OpenSubscription(conn, topic, func() { t.Fatal("ack called unexpectedly") }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +215,7 @@ func TestErrorCode(t *testing.T) {
 	h := dh.(*harness)
 
 	// Topics
-	dt, err := createTopic(h.nc, "bar")
+	dt, err := openTopic(h.nc, "bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +240,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds, err := createSubscription(h.nc, "bar", func() { t.Fatal("ack called unexpectedly") })
+	ds, err := openSubscription(h.nc, "bar", func() { t.Fatal("ack called unexpectedly") })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,8 +253,8 @@ func TestErrorCode(t *testing.T) {
 	if gce := ds.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
 		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
 	}
-	if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.FailedPrecondition {
-		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.NotFound {
+		t.Fatalf("Expected %v, got %v", gcerrors.NotFound, gce)
 	}
 	if gce := ds.ErrorCode(nats.ErrTypeSubscription); gce != gcerrors.FailedPrecondition {
 		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
@@ -322,7 +327,13 @@ func BenchmarkNatsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, 0, nil))
+
+	topic := pubsub.NewTopic(dt, nil)
+	defer topic.Shutdown(ctx)
+	sub := pubsub.NewSubscription(ds, recvBatcherOpts, nil)
+	defer sub.Shutdown(ctx)
+
+	drivertest.RunBenchmarks(b, topic, sub)
 }
 
 func fakeConnectionStringInEnv() func() {
@@ -355,9 +366,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
@@ -392,9 +406,38 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
+		}
+	}
+}
+
+func TestCodec(t *testing.T) {
+	for _, dm := range []*driver.Message{
+		{Metadata: nil, Body: nil},
+		{Metadata: map[string]string{"a": "1"}, Body: nil},
+		{Metadata: nil, Body: []byte("hello")},
+		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello")},
+		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello"),
+			AckID: "foo", AsFunc: func(interface{}) bool { return true }},
+	} {
+		bytes, err := encodeMessage(dm)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got driver.Message
+		if err := decodeMessage(bytes, &got); err != nil {
+			t.Fatal(err)
+		}
+		want := *dm
+		want.AckID = nil
+		want.AsFunc = nil
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("%+v:\n%s", want, diff)
 		}
 	}
 }

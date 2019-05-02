@@ -27,11 +27,19 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// Message Delivery Semantics
+//
+// GCP Pub/Sub supports at-least-once semantics; applications must
+// call Message.Ack after processing a message, or it will be redelivered.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
+//
 // As
 //
 // gcppubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
+//  - Message.BeforeSend: *pb.PubsubMessage
 //  - Message: *pb.PubsubMessage
 //  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
@@ -53,7 +61,6 @@ import (
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
@@ -67,6 +74,12 @@ const endPoint = "pubsub.googleapis.com:443"
 var sendBatcherOpts = &batcher.Options{
 	MaxBatchSize: 1000, // The PubSub service limits the number of messages in a single Publish RPC
 	MaxHandlers:  2,
+}
+
+var recvBatcherOpts = &batcher.Options{
+	// GCP Pub/Sub returns at most 1000 messages per RPC.
+	MaxBatchSize: 1000,
+	MaxHandlers:  10,
 }
 
 var ackBatcherOpts = &batcher.Options{
@@ -232,7 +245,20 @@ func openTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	var ms []*pb.PubsubMessage
 	for _, dm := range dms {
-		ms = append(ms, &pb.PubsubMessage{Data: dm.Body, Attributes: dm.Metadata})
+		psm := &pb.PubsubMessage{Data: dm.Body, Attributes: dm.Metadata}
+		if dm.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**pb.PubsubMessage); ok {
+					*p = psm
+					return true
+				}
+				return false
+			}
+			if err := dm.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		ms = append(ms, psm)
 	}
 	req := &pb.PublishRequest{Topic: t.path, Messages: ms}
 	if _, err := t.client.Publish(ctx, req); err != nil {
@@ -279,6 +305,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 type subscription struct {
 	client *raw.SubscriberClient
 	path   string
@@ -292,7 +321,7 @@ type SubscriptionOptions struct{}
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds, 0, ackBatcherOpts)
+	return pubsub.NewSubscription(ds, nil, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
@@ -303,51 +332,13 @@ func openSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, sub
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// GCP Pub/Sub returns at most 1000 messages per RPC.
-	// If maxMessages is larger than 1000, we make up to maxReceiveConcurrency RPCs
-	// in parallel to try to get more.
-	const maxMessagesPerRPC = 1000
-	const maxReceiveConcurrency = 10
-
-	var mu sync.Mutex
-	var ms []*driver.Message
-
 	// Whether to ask Pull to return immediately, or wait for some messages to
 	// arrive. If we're making multiple RPCs, we don't want any of them to wait;
 	// we might have gotten messages from one of the other RPCs.
 	// maxMessages will only be high enough to set this to true in high-throughput
 	// situations, so the likelihood of getting 0 messages is small anyway.
-	returnImmediately := maxMessages >= maxMessagesPerRPC
+	returnImmediately := maxMessages == recvBatcherOpts.MaxBatchSize
 
-	g, ctx := errgroup.WithContext(ctx)
-	for n := 0; n < maxReceiveConcurrency && maxMessages > 0; n++ {
-		maxThisRPC := maxMessages
-		if maxThisRPC > maxMessagesPerRPC {
-			maxThisRPC = maxMessagesPerRPC
-		}
-		maxMessages -= maxThisRPC
-		g.Go(func() error {
-			msgs, err := s.pull(ctx, maxThisRPC, returnImmediately)
-			if err != nil {
-				return err
-			}
-			mu.Lock()
-			defer mu.Unlock()
-			ms = append(ms, msgs...)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-	// If we did happen to get 0 messages, wait a bit to avoid spinning.
-	if len(ms) == 0 && returnImmediately {
-		time.Sleep(100 * time.Millisecond)
-	}
-	return ms, nil
-}
-
-func (s *subscription) pull(ctx context.Context, maxMessages int, returnImmediately bool) ([]*driver.Message, error) {
 	req := &pb.PullRequest{
 		Subscription:      s.path,
 		ReturnImmediately: returnImmediately,
@@ -357,7 +348,16 @@ func (s *subscription) pull(ctx context.Context, maxMessages int, returnImmediat
 	if err != nil {
 		return nil, err
 	}
-	var ms []*driver.Message
+	if len(resp.ReceivedMessages) == 0 {
+		// If we did happen to get 0 messages, and we didn't ask the server to wait
+		// for messages, sleep a bit to avoid spinning.
+		if returnImmediately {
+			time.Sleep(100 * time.Millisecond)
+		}
+		return nil, nil
+	}
+
+	ms := make([]*driver.Message, 0, len(resp.ReceivedMessages))
 	for _, rm := range resp.ReceivedMessages {
 		rmm := rm.Message
 		m := &driver.Message{
@@ -390,6 +390,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	}
 	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{Subscription: s.path, AckIds: ids2})
 }
+
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
@@ -431,3 +434,6 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

@@ -38,7 +38,7 @@ import (
 
 // setupLocal is a Wire injector function that sets up the application using
 // local implementations.
-func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(
@@ -76,7 +76,7 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 // localRuntimeVar is a Wire provider function that returns the Message of the
 // Day variable based on a local file.
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
+	v, err := filevar.OpenVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {

@@ -14,54 +14,40 @@
 
 package mongodocstore
 
-// To run these tests against a real MongoDB server, first run:
-//     docker run -d --name my-mongo  -p 27017:27017 mongo:4
+// To run these tests against a real MongoDB server, first run ./localmongo.sh.
 // Then wait a few seconds for the server to be ready.
 
 import (
 	"context"
+	"errors"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
 )
 
 const (
-	serverURI      = "mongodb://localhost"
-	dbName         = "docstore-test"
-	collectionName = "docstore-test"
+	serverURI       = "mongodb://localhost"
+	dbName          = "docstore-test"
+	collectionName1 = "docstore-test-1"
+	collectionName2 = "docstore-test-2"
 )
 
 type harness struct {
 	db *mongo.Database
 }
 
-// Return a new mongoDB client that is connected to the server URI.
-func newClient(ctx context.Context, uri string) (*mongo.Client, error) {
-	opts := options.Client().ApplyURI(uri)
-	if err := opts.Validate(); err != nil {
-		return nil, err
-	}
-	client, err := mongo.NewClient(opts)
+func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
+	coll, err := newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	if err := client.Connect(ctx); err != nil {
-		return nil, err
-	}
-	// Connect doesn't seem to actually make a connection, so do an RPC.
-	if err := client.Ping(ctx, nil); err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
-func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName))
 	// It seems that the client doesn't actually connect until the first RPC, which will
 	// be this one. So time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -70,6 +56,10 @@ func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error)
 		return nil, err
 	}
 	return coll, nil
+}
+
+func (h *harness) MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error) {
+	return newCollection(h.db.Collection(collectionName2), "", drivertest.HighScoreKey, nil)
 }
 
 func (h *harness) Close() {}
@@ -86,7 +76,7 @@ func (codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := encodeDoc(doc)
+	m, err := encodeDoc(doc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +92,7 @@ func (codecTester) DocstoreDecode(value, dest interface{}) error {
 	if err := bson.Unmarshal(value.([]byte), &m); err != nil {
 		return err
 	}
-	return decodeDoc(m, doc)
+	return decodeDoc(m, doc, mongoIDField)
 }
 
 func (codecTester) NativeEncode(x interface{}) (interface{}, error) {
@@ -113,20 +103,175 @@ func (codecTester) NativeDecode(value, dest interface{}) error {
 	return bson.Unmarshal(value.([]byte), dest)
 }
 
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
+	var mc *mongo.Collection
+	if !coll.As(&mc) {
+		return errors.New("Collection.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	return nil
+}
+
+func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
+	var c *mongo.Cursor
+	if !it.As(&c) {
+		return errors.New("DocumentIterator.As failed")
+	}
+	return nil
+}
+
 func TestConformance(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	client, err := newClient(ctx, serverURI)
-	if err == context.DeadlineExceeded {
-		t.Skip("could not connect to local mongoDB server (connection timed out)")
-	}
-	if err != nil {
-		t.Fatalf("connecting to %s: %v", serverURI, err)
-	}
+	client := newTestClient(t)
 	defer func() { client.Disconnect(context.Background()) }()
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{client.Database(dbName)}, nil
 	}
-	drivertest.RunConformanceTests(t, newHarness, codecTester{})
+	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
+}
+
+func newTestClient(t *testing.T) *mongo.Client {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	client, err := Dial(ctx, serverURI)
+	if err != nil {
+		t.Fatalf("dialing to %s: %v", serverURI, err)
+	}
+	if err := client.Ping(ctx, nil); err != nil {
+		if err == context.DeadlineExceeded {
+			t.Skip("could not connect to local mongoDB server (connection timed out)")
+		}
+		t.Fatalf("connecting to %s: %v", serverURI, err)
+	}
+	return client
+}
+
+// Mongo-specific tests.
+
+func fakeConnectionStringInEnv() func() {
+	oldURLVal := os.Getenv("MONGO_SERVER_URL")
+	os.Setenv("MONGO_SERVER_URL", "mongodb://localhost")
+	return func() {
+		os.Setenv("MONGO_SERVER_URL", oldURLVal)
+	}
+}
+
+func TestOpenCollectionURL(t *testing.T) {
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"mongo://mydb/mycollection", false},
+		// Missing database name.
+		{"mongo:///mycollection", true},
+		// Missing collection name.
+		{"mongo://mydb/", true},
+		// Passing id_field parameter.
+		{"mongo://mydb/mycollection?id_field=foo", false},
+		// Invalid parameter.
+		{"mongo://mydb/mycollection?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := docstore.OpenCollection(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestLowercaseFields(t *testing.T) {
+	// Verify that the LowercaseFields option works in all cases.
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ctx := context.Background()
+	client := newTestClient(t)
+	defer func() { client.Disconnect(ctx) }()
+	db := client.Database(dbName)
+	dc, err := newCollection(db.Collection("lowercase-fields"), "id", nil, &Options{LowercaseFields: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+
+	type S struct {
+		ID, F, G         int
+		DocstoreRevision interface{}
+	}
+
+	// driver.Document.GetField is case-insensitive on structs.
+	doc, err := driver.NewDocument(&S{ID: 1, DocstoreRevision: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"ID", "Id", "id", "DocstoreRevision", "docstorerevision"} {
+		got, err := doc.GetField(f)
+		if err != nil {
+			t.Errorf("%s: %v", f, err)
+		}
+		if got != 1 {
+			t.Errorf("got %q, want 1", got)
+		}
+	}
+
+	check := func(got, want interface{}) {
+		t.Helper()
+		switch w := want.(type) {
+		case S:
+			w.DocstoreRevision = got.(S).DocstoreRevision
+			want = w
+		case map[string]interface{}:
+			w["docstorerevision"] = got.(map[string]interface{})["docstorerevision"]
+			want = w
+		}
+		if !cmp.Equal(got, want) {
+			t.Errorf("\ngot  %+v\nwant %+v", got, want)
+		}
+	}
+
+	must(coll.Put(ctx, &S{ID: 1, F: 2, G: 3}))
+
+	// Get with a struct.
+	got := S{ID: 1}
+	must(coll.Get(ctx, &got))
+	check(got, S{ID: 1, F: 2, G: 3})
+
+	// Get with map.
+	got2 := map[string]interface{}{"id": 1}
+	must(coll.Get(ctx, got2))
+	check(got2, map[string]interface{}{"id": int32(1), "f": int64(2), "g": int64(3)})
+
+	// Field paths in Get.
+	got3 := S{ID: 1}
+	must(coll.Get(ctx, &got3, "G"))
+	check(got3, S{ID: 1, F: 0, G: 3})
+
+	// Field paths in Update.
+	got4 := map[string]interface{}{"id": 1}
+	must(coll.Actions().Update(&S{ID: 1}, docstore.Mods{"F": 4}).Get(got4).Do(ctx))
+	check(got4, map[string]interface{}{"id": int32(1), "f": int64(4), "g": int64(3)})
+
+	// // Query filters.
+	var got5 S
+	must(coll.Query().Where("ID", "=", 1).Where("G", ">", 2).Get(ctx).Next(ctx, &got5))
+	check(got5, S{ID: 1, F: 4, G: 3})
 }

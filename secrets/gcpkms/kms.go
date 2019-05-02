@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package gcpkms provides a secrets implementation backed by Google Cloud KMS.
-// Use NewKeeper to construct a *secrets.Keeper.
+// Use OpenKeeper to construct a *secrets.Keeper.
 //
 // URLs
 //
@@ -107,14 +107,14 @@ const Scheme = "gcpkms"
 // "gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]".
 //
 // The URL host+path are used as the key resource ID; see
-// https://cloud.gogle.com/kms/docs/object-hierarchy#key for more details.
+// https://cloud.google.com/kms/docs/object-hierarchy#key for more details.
 //
 // No query parameters are supported.
 type URLOpener struct {
 	// Client must be non-nil and be authenticated with "cloudkms" scope or equivalent.
 	Client *cloudkms.KeyManagementClient
 
-	// Options specifies the default options to pass to NewKeeper.
+	// Options specifies the default options to pass to OpenKeeper.
 	Options KeeperOptions
 }
 
@@ -123,13 +123,13 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
-	return NewKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
+	return OpenKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
 }
 
-// NewKeeper returns a *secrets.Keeper that uses Google Cloud KMS.
+// OpenKeeper returns a *secrets.Keeper that uses Google Cloud KMS.
 // See https://cloud.google.com/kms/docs/object-hierarchy#key for more details.
 // See the package documentation for an example.
-func NewKeeper(client *cloudkms.KeyManagementClient, keyID string, opts *KeeperOptions) *secrets.Keeper {
+func OpenKeeper(client *cloudkms.KeyManagementClient, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
 		keyID:  keyID,
 		client: client,
@@ -174,6 +174,9 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 	}
 	return resp.GetCiphertext(), nil
 }
+
+// Close implements driver.Keeper.Close.
+func (k *keeper) Close() error { return nil }
 
 // ErrorAs implements driver.Keeper.ErrorAs.
 func (k *keeper) ErrorAs(err error, i interface{}) bool {

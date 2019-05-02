@@ -430,6 +430,40 @@ Portable types should:
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
 
+## Escape Hatches using As
+
+The Go CDK allows users to escape the abstraction as needed using `As`
+functions, described in more detail in the
+[top-level godoc](https://godoc.org/gocloud.dev#hdr-As). `As` functions take an
+`interface{}` and return a `bool`; they return `true` if the underlying concrete
+type could be converted into the type provided as the `interface{}`.
+
+An alternative approach would have been something like
+[`os.ProcessState.Sys`](https://golang.org/pkg/os/#ProcessState.Sys), which
+returns an `interface{}` that the user can then type cast/assert to
+provider-specific types.
+
+We ended up going with `As` because:
+
+1.  Most portable types have an `As` function for errors; choosing `As` results
+    in an easy and natural implementation for chained errors once the
+    [Go 2 proposal for errors](https://go.googlesource.com/proposal/+/master/design/29934-error-values.md)
+    arrives. It is currently implemented in
+    [xerrors](https://godoc.org/golang.org/x/xerrors#As), and we're already
+    using that in some drivers.
+2.  `As` adds more flexibility for drivers to support conversions to multiple
+    types. Specifically, not the case where there are multiple possible
+    underlying types, but rather that a single underlying type can be converted
+    to multiple types.
+    *   Chained errors is one example of this, where the top-level error may
+        always be the same type, but may also represent a chain of other errors
+        with different types.
+    *   Another example is that a driver might choose to support `As`-level
+        compatibility with another driver; e.g., driver `foo` could support all
+        of the `As` types defined by `s3blob`, converting them internally, and
+        then any code that runs with driver `s3blob` would also work with driver
+        `foo` (even if it uses the `As` escape hatches).
+
 ## Enforcing Portability
 
 The Go CDK APIs will end up exposing functionality that is not supported by all
@@ -732,9 +766,7 @@ To use `-record`:
 
     -   TODO(issue #300): The test will read the Terraform output to find its
         inputs.
-    -   For now, pass the required resources via test-specific flags. In some
-        cases, tests are
-        [hardcoded to specific resource names](https://github.com/google/go-cloud/issues/286).
+    -   For now, pass the required resources via test-specific flags.
 
 3.  The test will save the network interactions for subsequent replays.
 
@@ -771,20 +803,3 @@ not to do this, for several reasons:
 Overall, massive diffs in the replay files are expected and fine. As part of a
 code change, you may want to check for things like the number of RPCs made to
 identify performance regressions.
-
-## Module Boundaries
-
-With the advent of [Go modules], there are mechanisms to release different parts
-of a repository on different schedules. This permits one API to be in alpha/beta
-(pre-1.0), whereas another API can be stable (1.0 or later).
-
-As of 2018-09-13, the Go CDK as a whole still is not stable enough to call any
-part 1.0 yet. Until this milestone is reached, all of the Go CDK libraries will
-be placed under a single module. The exceptions are standalone tools like
-[Contribute Bot][] that are part of the project, but not part of the library.
-After 1.0 is released, it is expected that each interface in the Go CDK will be
-released as one module. Provider implementations will live in separate modules.
-The exact details remain to be determined.
-
-[Go modules]: https://github.com/golang/go/wiki/Modules
-[Contribute Bot]: https://github.com/google/go-cloud/tree/master/internal/contributebot

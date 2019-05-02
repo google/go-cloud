@@ -24,21 +24,24 @@ import (
 )
 
 func ExampleOpenTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#gcp-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Get the ProjectID from the credentials (it's required by OpenTopic).
-	projID, err := gcp.DefaultProjectID(creds)
+	// Get the project ID from the credentials (required by OpenTopic).
+	projectID, err := gcp.DefaultProjectID(creds)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Open a gRPC connection to the GCP Pub Sub API.
+	// Open a gRPC connection to the GCP Pub/Sub API.
 	conn, cleanup, err := gcppubsub.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
@@ -53,29 +56,45 @@ func ExampleOpenTopic() {
 	defer pubClient.Close()
 
 	// Construct a *pubsub.Topic.
-	t := gcppubsub.OpenTopic(pubClient, projID, "example-topic", nil)
-	defer t.Shutdown(ctx)
+	topic := gcppubsub.OpenTopic(pubClient, projectID, "example-topic", nil)
+	defer topic.Shutdown(ctx)
+}
 
-	// Now we can use t to send messages.
-	err = t.Send(ctx, &pubsub.Message{Body: []byte("example message")})
+func Example_openTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#gcp
+
+	// import _ "gocloud.dev/pubsub/gcppubsub"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	topic, err := pubsub.OpenTopic(ctx, "gcppubsub://myproject/mytopic")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
 }
 
 func ExampleOpenSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#gcp-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Get the ProjectID from the credentials (it's required by OpenTopic).
-	projID, err := gcp.DefaultProjectID(creds)
+	// Get the project ID from the credentials (required by OpenSubscription).
+	projectID, err := gcp.DefaultProjectID(creds)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Open a gRPC connection to the GCP Pub Sub API.
+	// Open a gRPC connection to the GCP Pub/Sub API.
 	conn, cleanup, err := gcppubsub.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
@@ -90,29 +109,23 @@ func ExampleOpenSubscription() {
 	defer subClient.Close()
 
 	// Construct a *pubsub.Subscription.
-	s := gcppubsub.OpenSubscription(subClient, projID, "example-subscription", nil)
-	defer s.Shutdown(ctx)
-
-	// Now we can use s to receive messages.
-	msg, err := s.Receive(ctx)
-	if err != nil {
-		// Handle error....
-	}
-	// Handle message....
-	msg.Ack()
+	subscription := gcppubsub.OpenSubscription(
+		subClient, projectID, "example-subscription", nil)
+	defer subscription.Shutdown(ctx)
 }
 
-func Example_openFromURL() {
+func Example_openSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#gcp
+
+	// import _ "gocloud.dev/pubsub/gcppubsub"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenTopic creates a *pubsub.Topic from a URL.
-	// This URL will open the topic "mytopic" in the project "myproject"
-	// using default credentials.
-	t, err := pubsub.OpenTopic(ctx, "gcppubsub://myproject/mytopic")
-
-	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
-	// This URL will open the subscription "mysubscription" in the project
-	// "myproject" using default credentials.
-	s, err := pubsub.OpenSubscription(ctx, "gcppubsub://myproject/mysubscription")
-	_, _, _ = t, s, err
+	subscription, err := pubsub.OpenSubscription(ctx,
+		"gcppubsub://my-project/my-subscription")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
 }

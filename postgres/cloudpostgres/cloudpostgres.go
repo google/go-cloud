@@ -14,6 +14,17 @@
 
 // Package cloudpostgres provides connections to managed PostgreSQL Cloud SQL instances.
 // See https://cloud.google.com/sql/docs/postgres/ for more information.
+//
+// URLs
+//
+// For postgres.Open, cloudpostgres registers for the scheme "cloudpostgres".
+// The default URL opener will create a connection using the default
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+//
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 package cloudpostgres // import "gocloud.dev/postgres/cloudpostgres"
 
 import (
@@ -24,12 +35,102 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
+	"sync"
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/lib/pq"
+	"gocloud.dev/gcp"
+	"gocloud.dev/gcp/cloudsql"
+	"gocloud.dev/postgres"
 )
+
+// Scheme is the URL scheme cloudpostgres registers its URLOpener under on
+// postgres.DefaultMux.
+const Scheme = "cloudpostgres"
+
+func init() {
+	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
+}
+
+// lazyCredsOpener obtains Application Default Credentials on the first call
+// to OpenPostgresURL.
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyCredsOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	o.init.Do(func() {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			o.err = err
+			return
+		}
+		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		if err != nil {
+			o.err = err
+			return
+		}
+		certSource := cloudsql.NewCertSource(client)
+		o.opener = &URLOpener{CertSource: certSource}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("cloudpostgres open %v: %v", u, o.err)
+	}
+	return o.opener.OpenPostgresURL(ctx, u)
+}
+
+// URLOpener opens GCP PostgreSQL URLs
+// like "cloudpostgres://user:password@myproject/us-central1/instanceId/mydb".
+type URLOpener struct {
+	// CertSource specifies how the opener will obtain authentication information.
+	// CertSource must not be nil.
+	CertSource proxy.CertSource
+
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
+}
+
+// OpenPostgresURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
+func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	if uo.CertSource == nil {
+		return nil, fmt.Errorf("cloudpostgres: URLOpener CertSource is nil")
+	}
+	params, err := paramsFromURL(u)
+	if err != nil {
+		return nil, fmt.Errorf("cloudpostgres: open %v: %v", u, err)
+	}
+	params.TraceOpts = uo.TraceOpts
+	db, _, err := Open(ctx, uo.CertSource, params)
+	return db, err
+}
+
+func paramsFromURL(u *url.URL) (*Params, error) {
+	path := u.Host + u.Path // everything after scheme but before query or fragment
+	parts := strings.SplitN(path, "/", 4)
+	if len(parts) < 4 {
+		return nil, fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+	}
+	for _, part := range parts {
+		if part == "" {
+			return nil, fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+		}
+	}
+	password, _ := u.User.Password()
+	return &Params{
+		ProjectID: parts[0],
+		Region:    parts[1],
+		Instance:  parts[2],
+		Database:  parts[3],
+		User:      u.User.Username(),
+		Password:  password,
+		Values:    u.Query(),
+	}, nil
+}
 
 // Params specifies how to connect to a Cloud SQL database.
 type Params struct {
@@ -55,13 +156,14 @@ type Params struct {
 	TraceOpts []ocsql.TraceOption
 }
 
-// Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+// Open opens a Cloud SQL database. The second return value is a cleanup
+// function that calls Close on the returned database.
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, func(), error) {
 	vals := make(url.Values)
 	for k, v := range params.Values {
 		// Only permit parameters that do not conflict with other behavior.
 		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
+			return nil, nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
 		}
 		vals[k] = v
 	}
@@ -82,7 +184,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		Path:     "/" + params.Database,
 		RawQuery: vals.Encode(),
 	}
-	return sql.OpenDB(connector{
+	db := sql.OpenDB(connector{
 		client: &proxy.Client{
 			Port:  3307,
 			Certs: certSource,
@@ -90,7 +192,8 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		instance:  params.ProjectID + ":" + params.Region + ":" + params.Instance,
 		pqConn:    u.String(),
 		traceOpts: append([]ocsql.TraceOption(nil), params.TraceOpts...),
-	}), nil
+	})
+	return db, func() { db.Close() }, nil
 }
 
 type pqDriver struct {

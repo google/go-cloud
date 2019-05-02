@@ -427,6 +427,16 @@ func TestURLMux(t *testing.T) {
 	mux.RegisterVariable("foo", fake)
 	mux.RegisterVariable("err", fake)
 
+	if diff := cmp.Diff(mux.VariableSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidVariableScheme("foo") || !mux.ValidVariableScheme("err") {
+		t.Errorf("ValidVariableScheme didn't return true for valid scheme")
+	}
+	if mux.ValidVariableScheme("foo2") || mux.ValidVariableScheme("http") {
+		t.Errorf("ValidVariableScheme didn't return false for invalid scheme")
+	}
+
 	for _, tc := range []struct {
 		name    string
 		url     string
@@ -583,7 +593,7 @@ func TestDecoder(t *testing.T) {
 				if err != nil {
 					t.Fatalf("marshal error %v", err)
 				}
-				got, err := decoder.Decode(b)
+				got, err := decoder.Decode(context.Background(), b)
 				if err != nil {
 					t.Fatalf("parse input\n%s\nerror: %v", string(b), err)
 				}
@@ -608,7 +618,7 @@ func gobMarshal(v interface{}) ([]byte, error) {
 
 func TestStringDecoder(t *testing.T) {
 	input := "hello world"
-	got, err := StringDecoder.Decode([]byte(input))
+	got, err := StringDecoder.Decode(context.Background(), []byte(input))
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -619,7 +629,7 @@ func TestStringDecoder(t *testing.T) {
 
 func TestBytesDecoder(t *testing.T) {
 	input := []byte("hello world")
-	got, err := BytesDecoder.Decode(input)
+	got, err := BytesDecoder.Decode(context.Background(), input)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -661,7 +671,7 @@ func TestDecryptDecoder(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			decoder := NewDecoder(tc.in, DecryptDecode(ctx, keeper, tc.postDecFn))
+			decoder := NewDecoder(tc.in, DecryptDecode(keeper, tc.postDecFn))
 
 			b, err := tc.encodeFn(tc.in)
 			if err != nil {
@@ -672,7 +682,7 @@ func TestDecryptDecoder(t *testing.T) {
 				t.Fatalf("encrypt error: %v", err)
 			}
 
-			got, err := decoder.Decode(encrypted)
+			got, err := decoder.Decode(ctx, encrypted)
 			if err != nil {
 				t.Fatalf("parse input\n%s\nerror: %v", string(b), err)
 			}

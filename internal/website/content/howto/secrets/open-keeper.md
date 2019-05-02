@@ -16,12 +16,14 @@ lets you interact with all of them using the [`*secrets.Keeper` type][].
 If you know that your program is always going to use a particular secret
 keeper provider or you need fine-grained control over the connection
 settings, you should call the constructor function in the driver package
-directly (like `awskms.NewKeeper`). However, if you want to change providers
+directly (like `awskms.OpenKeeper`). However, if you want to change providers
 based on configuration, you can use `secrets.OpenKeeper`, making sure you
-["blank import"][] the driver package to link it in. This guide will show how
-to use both forms for each secret keeper provider.
+["blank import"][] the driver package to link it in. See the
+[documentation on URLs][] for more details. This guide will show how to use
+both forms for each secret keeper provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
+[documentation on URLs]: https://godoc.org/gocloud.dev#hdr-URLs
 
 ## AWS Key Management Service
 
@@ -49,6 +51,7 @@ keeperByID, err := secrets.OpenKeeper(ctx,
 if err != nil {
     return err
 }
+defer keeperByID.Close()
 
 // 2. By alias.
 keeperByAlias, err := secrets.OpenKeeper(ctx,
@@ -56,6 +59,7 @@ keeperByAlias, err := secrets.OpenKeeper(ctx,
 if err != nil {
     return err
 }
+defer keeperByAlias.Close()
 
 // 2. By ARN.
 const arn = "arn:aws:kms:us-east-1:111122223333:key/" +
@@ -65,13 +69,14 @@ keeperByARN, err := secrets.OpenKeeper(ctx,
 if err != nil {
     return err
 }
+defer keeperByARN.Close()
 ```
 
 [AWS KMS]: https://aws.amazon.com/kms/
 
 ## AWS Key Management Service Constructor
 
-The [`awskms.NewKeeper`][] constructor opens a customer master key. You must
+The [`awskms.OpenKeeper`][] constructor opens a customer master key. You must
 first create an [AWS session][] with the same region as your key and then
 connect to KMS:
 
@@ -100,13 +105,14 @@ if err != nil {
 }
 
 // Create a *secrets.Keeper.
-bucket, err := awskms.NewKeeper(kmsClient, "alias/master-key-test", nil)
+keeper, err := awskms.OpenKeeper(kmsClient, "alias/master-key-test", nil)
 if err != nil {
     return err
 }
+defer keeper.Close()
 ```
 
-[`awskms.NewKeeper`]: https://godoc.org/gocloud.dev/secrets/awskms#NewKeeper
+[`awskms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/awskms#OpenKeeper
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 ## Google Cloud Key Management Service
@@ -132,6 +138,7 @@ keeper, err := secrets.OpenKeeper(ctx,
 if err != nil {
     return err
 }
+defer keeper.Close()
 ```
 
 [GCP KMS]: https://cloud.google.com/kms/
@@ -139,7 +146,7 @@ if err != nil {
 
 ### Google Cloud Key Management Service Constructor
 
-The [`gcpkms.NewKeeper`][] constructor opens a GCP KMS key. You must first
+The [`gcpkms.OpenKeeper`][] constructor opens a GCP KMS key. You must first
 obtain [GCP credentials][] and then create a gRPC connection to GCP KMS.
 
 ```go
@@ -167,14 +174,15 @@ if err != nil {
 // Create a *secrets.Keeper.
 const keyID = gcpkms.KeyResourceID(
     "MYPROJECT", "MYLOCATION", "MYKEYRING", "MYKEY")
-keeper, err := gcpkms.NewKeeper(client, keyID, nil)
+keeper, err := gcpkms.OpenKeeper(client, keyID, nil)
 if err != nil {
     return err
 }
+defer keeper.Close()
 ```
 
 [GCP credentials]: https://cloud.google.com/docs/authentication/production
-[`gcpkms.NewKeeper`]: https://godoc.org/gocloud.dev/secrets/gcpkms#NewKeeper
+[`gcpkms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/gcpkms#OpenKeeper
 
 ## HashiCorp Vault
 
@@ -195,6 +203,7 @@ keeper, err := secrets.OpenKeeper(ctx, "vault://my-key")
 if err != nil {
     return err
 }
+defer keeper.Close()
 ```
 
 [Vault]: https://www.vaultproject.io/
@@ -202,7 +211,7 @@ if err != nil {
 
 ### HashiCorp Vault Constructor
 
-The [`vault.NewKeeper`][] constructor opens a transit secrets engine key. You
+The [`vault.OpenKeeper`][] constructor opens a transit secrets engine key. You
 must first connect to your Vault instance.
 
 ```go
@@ -222,10 +231,11 @@ vaultClient, err := vault.Dial(ctx, &vault.Config{
 if err != nil {
     return err
 }
-keeper := vault.NewKeeper(vaultClient, "my-key", nil)
+keeper := vault.OpenKeeper(vaultClient, "my-key", nil)
+defer keeper.Close()
 ```
 
-[`vault.NewKeeper`]: https://godoc.org/gocloud.dev/secrets/vault#NewKeeper
+[`vault.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/vault#OpenKeeper
 
 ## Local Secrets
 

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package pubsub provides an easy and portable way to interact with publish/
-// subscribe systems.
+// subscribe systems. See https://gocloud.dev/howto/pubsub/ for how-to guides.
 //
 // Subpackages contain distinct implementations of pubsub for various providers,
 // including Cloud and on-prem solutions. For example, "gcppubsub" supports
@@ -36,28 +36,48 @@
 // OpenTopic/OpenSubscription.
 // See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
-//
 // At-most-once and At-least-once Delivery
 //
 // Some PubSub systems guarantee that messages received by subscribers but not
 // acknowledged are delivered again. These at-least-once systems require that
-// subscribers call an ack function to indicate that they have fully processed a
+// subscribers call an Ack function to indicate that they have fully processed a
 // message.
 //
-// In other PubSub systems, a message will be delivered only once, if it is delivered
-// at all. These at-most-once systems do not need an Ack method.
+// In other PubSub systems, a message will be delivered only once, if it is
+// delivered at all. These at-most-once systems do not need subscribers to Ack;
+// the message is essentially auto-acked when it is delivered.
 //
-// This package accommodates both kinds of systems. If your application uses
-// at-least-once providers, it should always call Message.Ack. If your application
-// only uses at-most-once providers, it may call Message.Ack, but does not need to.
-// The constructor for at-most-once-providers will require you to supply a function
-// to be called whenever the application calls Message.Ack. Common implementations
-// are: do nothing, on the grounds that you may want to test your at-least-once
-// system with an at-most-once provider; or panic, so that a system that assumes
-// at-least-once delivery isn't accidentally paired with an at-most-once provider.
-// Providers that support both at-most-once and at-least-once semantics will include
-// an optional ack function in their Options struct.
+// This package accommodates both kinds of systems. See the provider-specific
+// package documentation to see whether it is at-most-once or at-least-once.
+// Some providers support both modes.
 //
+// Application developers should think carefully about which kind of semantics
+// the application needs. Even though the application code may look similar, the
+// system-level characteristics are quite different.
+//
+// After receiving a Message via Subscription.Receive:
+//  - If your application ever uses an at-least-once provider, it should always
+//    call Message.Ack/Nack after processing a message.
+//  - If your application only uses at-most-once providers, you can omit the
+//    call to Message.Ack. It should never call Message.Nack, as that operation
+//    doesn't make sense for an at-most-once system.
+//
+// The Subscription constructor for at-most-once-providers will require a
+// function that will be called whenever the application calls Message.Ack.
+// This forces the application developer to be explicit about what happens when
+// Ack is called, since the provider has no meaningful implementation. Common
+// function to supply are:
+//  - func() {}: Do nothing. Use this if your application does call Message.Ack;
+//    it makes explicit that Ack for the provider is a no-op.
+//  - func() { panic("ack called!") }: panic. This is appropriate if your
+//    application only uses at-most-once providers and you don't expect it to
+//    ever call Message.Ack.
+//  - func() { log.Info("ack called!") }: log. Softer than panicking.
+//
+// Since Message.Nack never makes sense for some providers (for example, for
+// at-most-once providers, the provider can't redeliver the message), Nack will
+// panic if called for some providers. You can call Message.CanNack to see if
+// it is available.
 //
 // OpenCensus Integration
 //
@@ -87,9 +107,11 @@ package pubsub // import "gocloud.dev/pubsub"
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 	"reflect"
+	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -114,11 +136,23 @@ type Message struct {
 	// message has no associated metadata.
 	Metadata map[string]string
 
+	// BeforeSend is a callback used when sending a message. It will always be
+	// set to nil for received messages.
+	//
+	// The callback will be called exactly once, before the message is sent.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeSend func(asFunc func(interface{}) bool) error
+
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
 
 	// ack is a closure that queues this message for the action (ack or nack).
 	ack func(isAck bool)
+
+	// nackable is true iff Nack can be called without panicking.
+	nackable bool
 
 	// mu guards isAcked in case Ack/Nack is called concurrently.
 	mu sync.Mutex
@@ -141,17 +175,37 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
-// Nack tells the server that this Message was not processed and should be
-// redelivered. It returns immediately, but the actual nack is sent in the
-// background, and is not guaranteed to succeed.
+/*
+// TODO(rvangent): Decide whether to expose this.
+// Nackable returns true iff Nack can be called without panicking.
 //
-// Nack panics for at-most-once providers, as Nack is meaningless when
-// messages can't be redelivered.
+// Some providers do not support Nack; for example, at-most-once providers
+// can't redeliver a message.
+func (m *Message) Nackable() bool {
+	return m.nackable
+}
+*/
+
+// Nack (short for negative acknowledgment) tells the server that this Message
+// was not processed and should be redelivered. It returns immediately, but the
+// actual nack is sent in the background, and is not guaranteed to succeed.
+//
+// Nack is a performance optimization for retrying transient failures. Nack
+// must not be used for message parse errors or other messages that the
+// application will never be able to process: calling Nack will cause them to
+// be redelivered and overload the server. Instead, an application should call
+// Ack and log the failure in some monitored way.
+//
+// Nack panics for some providers, as Nack is meaningless when messages can't be
+// redelivered.
 func (m *Message) Nack() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.isAcked {
 		panic(fmt.Sprintf("Ack/Nack called twice on message: %+v", m))
+	}
+	if !m.nackable {
+		panic("Message.Nack is not supported for this provider")
 	}
 	m.ack(false)
 	m.isAcked = true
@@ -205,18 +259,21 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 	}
 	for k, v := range m.Metadata {
 		if !utf8.ValidString(k) {
-			return fmt.Errorf("pubsub.Send: Message.Metadata keys must be valid UTF-8 strings: %q", k)
+			return gcerr.Newf(gcerr.InvalidArgument, nil, "pubsub: Message.Metadata keys must be valid UTF-8 strings: %q", k)
 		}
 		if !utf8.ValidString(v) {
-			return fmt.Errorf("pubsub.Send: Message.Metadata values must be valid UTF-8 strings: %q", v)
+			return gcerr.Newf(gcerr.InvalidArgument, nil, "pubsub: Message.Metadata values must be valid UTF-8 strings: %q", v)
 		}
 	}
 	dm := &driver.Message{
-		Body:     m.Body,
-		Metadata: m.Metadata,
+		Body:       m.Body,
+		Metadata:   m.Metadata,
+		BeforeSend: m.BeforeSend,
 	}
 	return t.batcher.Add(ctx, dm)
 }
+
+var errTopicShutdown = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic has been Shutdown")
 
 // Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
@@ -225,7 +282,11 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	defer func() { t.tracer.End(ctx, err) }()
 
 	t.mu.Lock()
-	t.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic closed")
+	if t.err == errTopicShutdown {
+		t.mu.Unlock()
+		return t.err
+	}
+	t.err = errTopicShutdown
 	t.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -237,6 +298,9 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	case <-c:
 	}
 	t.cancel()
+	if err := t.driver.Close(); err != nil {
+		return wrapError(t.driver, err)
+	}
 	return ctx.Err()
 }
 
@@ -317,19 +381,21 @@ type Subscription struct {
 	// ackBatcher makes batches of acks and nacks and sends them to the server.
 	ackBatcher    *batcher.Batcher
 	ackFunc       func()          // if non-nil, used for Ack
+	canNack       bool            // true iff the driver supports Nack
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
 	cancel        func()          // for canceling backgroundCtx
 
-	fixedReceiveSize int // if 0, batch size is computed dynamically via updateBatchSize
+	recvBatchOpts *batcher.Options
 
-	mu               sync.Mutex    // protects everything below
-	q                []*Message    // local queue of messages downloaded from server
-	err              error         // permanent error
-	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
-	runningBatchSize float64       // running number of messages to request via ReceiveBatch
-	throughputStart  time.Time     // start time for throughput measurement, or the zero Time if queue is empty
-	throughputEnd    time.Time     // end time for throughput measurement, or the zero Time if queue is not empty
-	throughputCount  int           // number of msgs given out via Receive since throughputStart
+	mu               sync.Mutex        // protects everything below
+	q                []*driver.Message // local queue of messages downloaded from server
+	err              error             // permanent error
+	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
+	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
+	runningBatchSize float64           // running number of messages to request via ReceiveBatch
+	throughputStart  time.Time         // start time for throughput measurement, or the zero Time if queue is empty
+	throughputEnd    time.Time         // end time for throughput measurement, or the zero Time if queue is not empty
+	throughputCount  int               // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
 	preReceiveBatchHook func(maxMessages int)
@@ -402,8 +468,9 @@ const (
 //
 // s.mu must be held.
 func (s *Subscription) updateBatchSize() int {
-	if s.fixedReceiveSize != 0 {
-		return s.fixedReceiveSize
+	// If we're always only doing one at a time, there's no point in this.
+	if s.recvBatchOpts != nil && s.recvBatchOpts.MaxBatchSize == 1 && s.recvBatchOpts.MaxHandlers == 1 {
+		return 1
 	}
 	now := time.Now()
 	if s.throughputStart.IsZero() {
@@ -487,6 +554,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
 			// The Subscription is in a permanent error state. Return the error.
+			s.unreportedAckErr = nil
 			return nil, s.err // s.err wrapped when set
 		}
 
@@ -532,7 +600,47 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			m := s.q[0]
 			s.q = s.q[1:]
 			s.throughputCount++
-			return m, nil
+
+			// Convert driver.Message to Message.
+			id := m.AckID
+			md := m.Metadata
+			if len(md) == 0 {
+				md = nil
+			}
+			m2 := &Message{
+				Body:     m.Body,
+				Metadata: md,
+				asFunc:   m.AsFunc,
+				nackable: s.canNack,
+			}
+			if s.ackFunc == nil {
+				m2.ack = func(isAck bool) {
+					// Ignore the error channel. Errors are dealt with
+					// in the ackBatcher handler.
+					_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
+				}
+			} else {
+				// Note: isAck will be false, as m2.nackable is false and
+				// so Message.Nack will panic.
+				m2.ack = func(isAck bool) { s.ackFunc() }
+			}
+			if s.ackFunc == nil {
+				// Add a finalizer that complains if the Message we return isn't
+				// acked or nacked.
+				_, file, lineno, ok := runtime.Caller(1) // the caller of Receive
+				runtime.SetFinalizer(m2, func(m *Message) {
+					m.mu.Lock()
+					defer m.mu.Unlock()
+					if !m.isAcked {
+						var caller string
+						if ok {
+							caller = fmt.Sprintf(" (%s:%d)", file, lineno)
+						}
+						log.Printf("A pubsub.Message was never Acked or Nacked%s", caller)
+					}
+				})
+			}
+			return m2, nil
 		}
 		// No messages are available.
 		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() {
@@ -553,49 +661,42 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
-	var msgs []*driver.Message
-	err := retry.Call(s.backgroundCtx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-		var err error
-		ctx2 := s.tracer.Start(s.backgroundCtx, "driver.Subscription.ReceiveBatch")
-		defer func() { s.tracer.End(ctx2, err) }()
-		msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
-		return err
-	})
-	if err != nil {
-		return nil, wrapError(s.driver, err)
+func (s *Subscription) getNextBatch(nMessages int) ([]*driver.Message, error) {
+	var mu sync.Mutex
+	var q []*driver.Message
+
+	// Split nMessages into batches based on recvBatchOpts; we'll make a
+	// separate ReceiveBatch call for each batch, and aggregate the results in
+	// msgs.
+	batches := batcher.Split(nMessages, s.recvBatchOpts)
+
+	g, ctx := errgroup.WithContext(s.backgroundCtx)
+	for _, maxMessagesInBatch := range batches {
+		g.Go(func() error {
+			var msgs []*driver.Message
+			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+				var err error
+				ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+				defer func() { s.tracer.End(ctx2, err) }()
+				msgs, err = s.driver.ReceiveBatch(ctx2, maxMessagesInBatch)
+				return err
+			})
+			if err != nil {
+				return wrapError(s.driver, err)
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			q = append(q, msgs...)
+			return nil
+		})
 	}
-	var q []*Message
-	for _, m := range msgs {
-		id := m.AckID
-		md := m.Metadata
-		if len(md) == 0 {
-			md = nil
-		}
-		m2 := &Message{
-			Body:     m.Body,
-			Metadata: md,
-			asFunc:   m.AsFunc,
-		}
-		if s.ackFunc == nil {
-			m2.ack = func(isAck bool) {
-				// Ignore the error channel. Errors are dealt with
-				// in the ackBatcher handler.
-				_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
-			}
-		} else {
-			m2.ack = func(isAck bool) {
-				if isAck {
-					s.ackFunc()
-					return
-				}
-				panic("Message.Nack is not supported for this provider")
-			}
-		}
-		q = append(q, m2)
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	return q, nil
 }
+
+var errSubscriptionShutdown = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription has been Shutdown")
 
 // Shutdown flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Shutdown(ctx context.Context) (err error) {
@@ -603,7 +704,12 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
-	s.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription closed")
+	if s.err == errSubscriptionShutdown {
+		// Already Shutdown.
+		s.mu.Unlock()
+		return s.err
+	}
+	s.err = errSubscriptionShutdown
 	s.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -617,6 +723,15 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	case <-c:
 	}
 	s.cancel()
+	if err := s.driver.Close(); err != nil {
+		return wrapError(s.driver, err)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.unreportedAckErr; err != nil {
+		s.unreportedAckErr = nil
+		return err
+	}
 	return ctx.Err()
 }
 
@@ -641,24 +756,28 @@ var NewSubscription = newSubscription
 
 // newSubscription creates a Subscription from a driver.Subscription.
 //
-// fixedReceiveSize should be 0 except in tests where stability is necessary for
-// record/replay. If non-zero, the maxMessages passed to driver.ReceiveBatch
-// will always be fixedReceiveSize. If 0, maxMessages is determined
-// dynamically based on message throughput.
+// recvBatchOpts sets options for Receive batching. May be nil to accept
+// defaults. The ideal number of messages to receive at a time is determined
+// dynamically, then split into multiple possibly concurrent calls to
+// driver.ReceiveBatch based on recvBatchOptions.
 //
 // ackBatcherOpts sets options for ack+nack batching. May be nil to accept
 // defaults.
-func newSubscription(ds driver.Subscription, fixedReceiveSize int, ackBatcherOpts *batcher.Options) *Subscription {
+func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batcher.Options) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver:           ds,
 		tracer:           newTracer(ds),
 		cancel:           cancel,
 		backgroundCtx:    ctx,
-		fixedReceiveSize: fixedReceiveSize,
+		recvBatchOpts:    recvBatchOpts,
 		runningBatchSize: initialBatchSize,
+		ackFunc:          ds.AckFunc(),
+		canNack:          ds.CanNack(),
 	}
-	s.ackFunc = ds.AckFunc()
+	if s.ackFunc != nil && s.canNack {
+		panic("invalid to have CanNack() true but AckFunc() non-nil")
+	}
 	if s.ackFunc == nil {
 		s.ackBatcher = newAckBatcher(ctx, s, ds, ackBatcherOpts)
 	}
@@ -702,6 +821,7 @@ func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription,
 			err = wrapError(s.driver, err)
 			s.mu.Lock()
 			s.err = err
+			s.unreportedAckErr = err
 			s.mu.Unlock()
 		}
 		return err
@@ -714,6 +834,9 @@ type errorCoder interface {
 }
 
 func wrapError(ec errorCoder, err error) error {
+	if err == nil {
+		return nil
+	}
 	if gcerr.DoNotWrap(err) {
 		return err
 	}
@@ -747,6 +870,20 @@ type SubscriptionURLOpener interface {
 type URLMux struct {
 	subscriptionSchemes openurl.SchemeMap
 	topicSchemes        openurl.SchemeMap
+}
+
+// TopicSchemes returns a sorted slice of the registered Topic schemes.
+func (mux *URLMux) TopicSchemes() []string { return mux.topicSchemes.Schemes() }
+
+// ValidTopicScheme returns true iff scheme has been registered for Topics.
+func (mux *URLMux) ValidTopicScheme(scheme string) bool { return mux.topicSchemes.ValidScheme(scheme) }
+
+// SubscriptionSchemes returns a sorted slice of the registered Subscription schemes.
+func (mux *URLMux) SubscriptionSchemes() []string { return mux.subscriptionSchemes.Schemes() }
+
+// ValidSubscriptionScheme returns true iff scheme has been registered for Subscriptions.
+func (mux *URLMux) ValidSubscriptionScheme(scheme string) bool {
+	return mux.subscriptionSchemes.ValidScheme(scheme)
 }
 
 // RegisterTopic registers the opener with the given scheme. If an opener

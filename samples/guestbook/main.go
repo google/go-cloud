@@ -26,13 +26,13 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/wire"
 	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/health"
 	"gocloud.dev/health/sqlhealth"
 	"gocloud.dev/runtimevar"
@@ -72,14 +72,14 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	var app *application
+	var srv *server.Server
 	var cleanup func()
 	var err error
 	switch envFlag {
 	case "gcp":
-		app, cleanup, err = setupGCP(ctx, cf)
+		srv, cleanup, err = setupGCP(ctx, cf)
 	case "aws":
-		app, cleanup, err = setupAWS(ctx, cf)
+		srv, cleanup, err = setupAWS(ctx, cf)
 	case "azure":
 		if cf.dbHost == "" {
 			cf.dbHost = "localhost"
@@ -87,7 +87,7 @@ func main() {
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"
 		}
-		app, cleanup, err = setupAzure(ctx, cf)
+		srv, cleanup, err = setupAzure(ctx, cf)
 	case "local":
 		// The default MySQL instance is running on localhost
 		// with this root password.
@@ -97,7 +97,7 @@ func main() {
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"
 		}
-		app, cleanup, err = setupLocal(ctx, cf)
+		srv, cleanup, err = setupLocal(ctx, cf)
 	default:
 		log.Fatalf("unknown -env=%s", envFlag)
 	}
@@ -106,15 +106,9 @@ func main() {
 	}
 	defer cleanup()
 
-	// Set up URL routes.
-	r := mux.NewRouter()
-	r.HandleFunc("/", app.index)
-	r.HandleFunc("/sign", app.sign)
-	r.HandleFunc("/blob/{key:.+}", app.serveBlob)
-
 	// Listen and serve HTTP.
 	log.Printf("Running, connected to %q cloud", envFlag)
-	log.Fatal(app.srv.ListenAndServe(*addr, r))
+	log.Fatal(srv.ListenAndServe(*addr))
 }
 
 // applicationSet is the Wire provider set for the Guestbook application that
@@ -123,12 +117,21 @@ var applicationSet = wire.NewSet(
 	newApplication,
 	appHealthChecks,
 	trace.AlwaysSample,
+	newRouter,
+	wire.Bind((*http.Handler)(nil), (*mux.Router)(nil)),
 )
+
+func newRouter(app *application) *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc("/", app.index)
+	r.HandleFunc("/sign", app.sign)
+	r.HandleFunc("/blob/{key:.+}", app.serveBlob)
+	return r
+}
 
 // application is the main server struct for Guestbook. It contains the state of
 // the most recently read message of the day.
 type application struct {
-	srv     *server.Server
 	db      *sql.DB
 	bucket  *blob.Bucket
 	motdVar *runtimevar.Variable
@@ -136,9 +139,8 @@ type application struct {
 
 // newApplication creates a new application struct based on the backends and the message
 // of the day variable.
-func newApplication(srv *server.Server, db *sql.DB, bucket *blob.Bucket, motdVar *runtimevar.Variable) *application {
+func newApplication(db *sql.DB, bucket *blob.Bucket, motdVar *runtimevar.Variable) *application {
 	return &application{
-		srv:     srv,
 		db:      db,
 		bucket:  bucket,
 		motdVar: motdVar,
@@ -277,26 +279,20 @@ func (app *application) sign(w http.ResponseWriter, r *http.Request) {
 // serveBlob handles a request for a static asset by retrieving it from a bucket.
 func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 	key := mux.Vars(r)["key"]
-	blobRead, err := app.bucket.NewReader(r.Context(), key, nil)
+	blobReader, err := app.bucket.NewReader(r.Context(), key, nil)
 	if err != nil {
-		// TODO(light): Distinguish 404.
-		// https://github.com/google/go-cloud/issues/2
 		log.Println("serve blob:", err)
-		http.Error(w, "blob read error", http.StatusInternalServerError)
+		if gcerrors.Code(err) == gcerrors.NotFound {
+			http.Error(w, "blob not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "blob read error", http.StatusInternalServerError)
+		}
 		return
 	}
-	// TODO(light): Get content type from blob storage.
-	// https://github.com/google/go-cloud/issues/9
-	switch {
-	case strings.HasSuffix(key, ".png"):
-		w.Header().Set("Content-Type", "image/png")
-	case strings.HasSuffix(key, ".jpg"):
-		w.Header().Set("Content-Type", "image/jpeg")
-	default:
-		w.Header().Set("Content-Type", "application/octet-stream")
-	}
-	w.Header().Set("Content-Length", strconv.FormatInt(blobRead.Size(), 10))
-	if _, err = io.Copy(w, blobRead); err != nil {
+	defer blobReader.Close()
+	w.Header().Set("Content-Type", blobReader.ContentType())
+	w.Header().Set("Content-Length", strconv.FormatInt(blobReader.Size(), 10))
+	if _, err = io.Copy(w, blobReader); err != nil {
 		log.Println("Copying blob:", err)
 	}
 }

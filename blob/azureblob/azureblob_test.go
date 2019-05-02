@@ -148,12 +148,42 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
+	var u *azblob.BlockBlobURL
+	if !as(&u) {
+		return fmt.Errorf("BeforeRead As failed to get %T", u)
+	}
+	var ac *azblob.BlobAccessConditions
+	if !as(&ac) {
+		return fmt.Errorf("BeforeRead As failed to get %T", ac)
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var azOpts *azblob.UploadStreamToBlockBlobOptions
 	if !as(&azOpts) {
 		return errors.New("Writer.As failed")
 	}
 	azOpts.BlobHTTPHeaders.ContentLanguage = language
+	return nil
+}
+
+func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+	var md azblob.Metadata
+	if !as(&md) {
+		return errors.New("BeforeCopy.As failed for Metadata")
+	}
+
+	var mac *azblob.ModifiedAccessConditions
+	if !as(&mac) {
+		return errors.New("BeforeCopy.As failed for ModifiedAccessConditions")
+	}
+
+	var bac *azblob.BlobAccessConditions
+	if !as(&bac) {
+		return errors.New("BeforeCopy.As failed for BlobAccessConditions")
+	}
 	return nil
 }
 

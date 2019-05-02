@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package blob provides an easy and portable way to interact with blobs
-// within a storage location, hereafter called a "bucket".
+// within a storage location, hereafter called a "bucket". See
+// https://gocloud.dev/howto/blob/ for how-to guides.
 //
 // It supports operations like reading and writing blobs (using standard
 // interfaces from the io package), deleting blobs, and listing blobs in a
@@ -60,6 +61,7 @@
 //
 // This API collects OpenCensus traces and metrics for the following methods:
 //  - Attributes
+//  - Copy
 //  - Delete
 //  - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
 //    are included because they call NewRangeReader.)
@@ -86,7 +88,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -288,7 +289,7 @@ func (w *Writer) Close() (err error) {
 			if w.w != nil {
 				_ = w.w.Close()
 			}
-			return fmt.Errorf("blob: the ContentMD5 you specified (%X) did not match what was written (%X)", w.contentMD5, md5sum)
+			return gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: the WriterOptions.ContentMD5 you specified (%X) did not match what was written (%X)", w.contentMD5, md5sum)
 		}
 	}
 
@@ -438,7 +439,8 @@ type Bucket struct {
 	tracer *oc.Tracer
 
 	// mu protects the closed variable.
-	// Read locks are kept to prevent closing until a call finishes.
+	// Read locks are kept to allow holding a read lock for long-running calls,
+	// and thereby prevent closing until a call finishes.
 	mu     sync.RWMutex
 	closed bool
 }
@@ -563,22 +565,22 @@ func (b *Bucket) Exists(ctx context.Context, key string) (bool, error) {
 //
 // If the blob does not exist, Attributes returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
-func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
+func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err error) {
 	if !utf8.ValidString(key) {
-		return Attributes{}, fmt.Errorf("blob.Attributes: key must be a valid UTF-8 string: %q", key)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Attributes key must be a valid UTF-8 string: %q", key)
 	}
 
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
-		return Attributes{}, errClosed
+		return nil, errClosed
 	}
 	ctx = b.tracer.Start(ctx, "Attributes")
 	defer func() { b.tracer.End(ctx, err) }()
 
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
-		return Attributes{}, wrapError(b.b, err)
+		return nil, wrapError(b.b, err)
 	}
 	var md map[string]string
 	if len(a.Metadata) > 0 {
@@ -590,7 +592,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err 
 			md[strings.ToLower(k)] = v
 		}
 	}
-	return Attributes{
+	return &Attributes{
 		CacheControl:       a.CacheControl,
 		ContentDisposition: a.ContentDisposition,
 		ContentEncoding:    a.ContentEncoding,
@@ -631,15 +633,17 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 		return nil, errClosed
 	}
 	if offset < 0 {
-		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewRangeReader offset must be non-negative (%d)", offset)
 	}
 	if !utf8.ValidString(key) {
-		return nil, fmt.Errorf("blob.NewRangeReader: key must be a valid UTF-8 string: %q", key)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewRangeReader key must be a valid UTF-8 string: %q", key)
 	}
 	if opts == nil {
 		opts = &ReaderOptions{}
 	}
-	dopts := &driver.ReaderOptions{}
+	dopts := &driver.ReaderOptions{
+		BeforeRead: opts.BeforeRead,
+	}
 	tctx := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
 		// If err == nil, we handed the end closure off to the returned *Writer; it
@@ -668,8 +672,19 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
+//
+// If opts.ContentMD5 is not set, WriteAll will compute the MD5 of p and use it
+// as the ContentMD5 option for the Writer it creates.
 func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) (err error) {
-	w, err := b.NewWriter(ctx, key, opts)
+	realOpts := new(WriterOptions)
+	if opts != nil {
+		*realOpts = *opts
+	}
+	if len(realOpts.ContentMD5) == 0 {
+		sum := md5.Sum(p)
+		realOpts.ContentMD5 = sum[:]
+	}
+	w, err := b.NewWriter(ctx, key, realOpts)
 	if err != nil {
 		return err
 	}
@@ -696,9 +711,8 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
-
 	if !utf8.ValidString(key) {
-		return nil, fmt.Errorf("blob.NewWriter: key must be a valid UTF-8 string: %q", key)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewWriter key must be a valid UTF-8 string: %q", key)
 	}
 	if opts == nil {
 		opts = &WriterOptions{}
@@ -719,17 +733,17 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		md := make(map[string]string, len(opts.Metadata))
 		for k, v := range opts.Metadata {
 			if k == "" {
-				return nil, errors.New("blob.NewWriter: WriterOptions.Metadata keys may not be empty strings")
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys may not be empty strings")
 			}
 			if !utf8.ValidString(k) {
-				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
 			}
 			if !utf8.ValidString(v) {
-				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
 			}
 			lowerK := strings.ToLower(k)
 			if _, found := md[lowerK]; found {
-				return nil, fmt.Errorf("blob.NewWriter: duplicate case-insensitive metadata key %q", lowerK)
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata has a duplicate case-insensitive metadata key: %q", lowerK)
 			}
 			md[lowerK] = v
 		}
@@ -794,13 +808,43 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	return w, nil
 }
 
+// Copy the blob stored at srcKey to dstKey.
+// A nil CopyOptions is treated the same as the zero value.
+//
+// If the source blob does not exist, Copy returns an error for which
+// gcerrors.Code will return gcerrors.NotFound.
+//
+// If the destination blob already exists, it is overwritten.
+func (b *Bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOptions) (err error) {
+	if !utf8.ValidString(srcKey) {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Copy srcKey must be a valid UTF-8 string: %q", srcKey)
+	}
+	if !utf8.ValidString(dstKey) {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Copy dstKey must be a valid UTF-8 string: %q", dstKey)
+	}
+	if opts == nil {
+		opts = &CopyOptions{}
+	}
+	dopts := &driver.CopyOptions{
+		BeforeCopy: opts.BeforeCopy,
+	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return errClosed
+	}
+	ctx = b.tracer.Start(ctx, "Copy")
+	defer func() { b.tracer.End(ctx, err) }()
+	return wrapError(b.b, b.b.Copy(ctx, dstKey, srcKey, dopts))
+}
+
 // Delete deletes the blob stored at key.
 //
 // If the blob does not exist, Delete returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	if !utf8.ValidString(key) {
-		return fmt.Errorf("blob.Delete: key must be a valid UTF-8 string: %q", key)
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Delete key must be a valid UTF-8 string: %q", key)
 	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -823,13 +867,13 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 // will return an error for which gcerrors.Code will return gcerrors.Unimplemented.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	if !utf8.ValidString(key) {
-		return "", fmt.Errorf("blob.SignedURL: key must be a valid UTF-8 string: %q", key)
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SignedURL key must be a valid UTF-8 string: %q", key)
 	}
 	if opts == nil {
 		opts = &SignedURLOptions{}
 	}
 	if opts.Expiry < 0 {
-		return "", errors.New("blob.SignedURL: SignedURLOptions.Expiry must be >= 0")
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SignedURLOptions.Expiry must be >= 0 (%v)", opts.Expiry)
 	}
 	if opts.Expiry == 0 {
 		opts.Expiry = DefaultSignedURLExpiry
@@ -855,7 +899,7 @@ func (b *Bucket) Close() error {
 	if prev {
 		return errClosed
 	}
-	return b.b.Close()
+	return wrapError(b.b, b.b.Close())
 }
 
 // DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.
@@ -869,8 +913,15 @@ type SignedURLOptions struct {
 }
 
 // ReaderOptions sets options for NewReader and NewRangedReader.
-// It is provided for future extensibility.
-type ReaderOptions struct{}
+type ReaderOptions struct {
+	// BeforeRead is a callback that will be called exactly once, before
+	// any data is read (unless NewReader returns an error before then, in which
+	// case it may not be called at all).
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeRead func(asFunc func(interface{}) bool) error
+}
 
 // WriterOptions sets options for NewWriter.
 type WriterOptions struct {
@@ -933,6 +984,16 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
+// CopyOptions sets options for Copy.
+type CopyOptions struct {
+	// BeforeCopy is a callback that will be called before the copy is
+	// initiated.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeCopy func(asFunc func(interface{}) bool) error
+}
+
 // BucketURLOpener represents types that can open buckets based on a URL.
 // The opener must not modify the URL argument. OpenBucketURL must be safe to
 // call from multiple goroutines.
@@ -951,6 +1012,12 @@ type BucketURLOpener interface {
 type URLMux struct {
 	schemes openurl.SchemeMap
 }
+
+// BucketSchemes returns a sorted slice of the registered Bucket schemes.
+func (mux *URLMux) BucketSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidBucketScheme returns true iff scheme has been registered for Buckets.
+func (mux *URLMux) ValidBucketScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
 
 // RegisterBucket registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterBucket panics.
@@ -1005,4 +1072,4 @@ func wrapError(b driver.Bucket, err error) error {
 	return gcerr.New(b.ErrorCode(err), err, 2, "blob")
 }
 
-var errClosed = errors.New("blob: operation on closed bucket")
+var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been closed")

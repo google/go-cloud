@@ -84,8 +84,11 @@ type fakeAttributes struct {
 	attributesErr error
 }
 
-func (b *fakeAttributes) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
-	return driver.Attributes{}, b.attributesErr
+func (b *fakeAttributes) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
+	if b.attributesErr != nil {
+		return nil, b.attributesErr
+	}
+	return &driver.Attributes{}, nil
 }
 
 func (b *fakeAttributes) ErrorCode(err error) gcerrors.ErrorCode {
@@ -178,8 +181,8 @@ func (r *erroringWriter) Close() error {
 	return errFake
 }
 
-func (b *erroringBucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
-	return driver.Attributes{}, errFake
+func (b *erroringBucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
+	return nil, errFake
 }
 
 func (b *erroringBucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
@@ -200,12 +203,20 @@ func (b *erroringBucket) NewTypedWriter(ctx context.Context, key string, content
 	return nil, errFake
 }
 
+func (b *erroringBucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	return errFake
+}
+
 func (b *erroringBucket) Delete(ctx context.Context, key string) error {
 	return errFake
 }
 
 func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	return "", errFake
+}
+
+func (b *erroringBucket) Close() error {
+	return errFake
 }
 
 func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
@@ -276,17 +287,69 @@ func TestErrorsAreWrapped(t *testing.T) {
 	err = w.Close()
 	verifyWrap("Writer.Close", err)
 
+	err = b.Copy(ctx, "", "", nil)
+	verifyWrap("Copy", err)
+
 	err = b.Delete(ctx, "")
 	verifyWrap("Delete", err)
 
 	_, err = b.SignedURL(ctx, "", nil)
 	verifyWrap("SignedURL", err)
+
+	err = b.Close()
+	verifyWrap("Close", err)
 }
 
 var (
 	testOpenOnce sync.Once
 	testOpenGot  *url.URL
 )
+
+// TestBucketIsClosed verifies that all Bucket functions return an error
+// if the Bucket is closed.
+func TestBucketIsClosed(t *testing.T) {
+	ctx := context.Background()
+	buf := bytes.Repeat([]byte{'A'}, sniffLen)
+
+	bucket := NewBucket(&erroringBucket{})
+	bucket.Close()
+
+	if _, err := bucket.Attributes(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	iter := bucket.List(nil)
+	if _, err := iter.Next(ctx); err != errClosed {
+		t.Error(err)
+	}
+
+	if _, err := bucket.NewRangeReader(ctx, "", 0, 1, nil); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.ReadAll(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.NewWriter(ctx, "", nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.WriteAll(ctx, "", buf, nil); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.NewRangeReader(ctx, "work", 0, 1, nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.Copy(ctx, "", "", nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.Delete(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.SignedURL(ctx, "", nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.Close(); err != errClosed {
+		t.Error(err)
+	}
+}
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
@@ -295,6 +358,16 @@ func TestURLMux(t *testing.T) {
 	fake := &fakeOpener{}
 	mux.RegisterBucket("foo", fake)
 	mux.RegisterBucket("err", fake)
+
+	if diff := cmp.Diff(mux.BucketSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidBucketScheme("foo") || !mux.ValidBucketScheme("err") {
+		t.Errorf("ValidBucketScheme didn't return true for valid scheme")
+	}
+	if mux.ValidBucketScheme("foo2") || mux.ValidBucketScheme("http") {
+		t.Errorf("ValidBucketScheme didn't return false for invalid scheme")
+	}
 
 	for _, tc := range []struct {
 		name    string

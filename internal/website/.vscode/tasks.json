@@ -1,0 +1,67 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "hugo",
+            "group": {
+              "kind": "build",
+              "isDefault": true
+            },
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "message": 5
+                },
+                "fileLocation": "absolute"
+            }
+        },
+        {
+            "label": "Serve",
+            "type": "shell",
+            "command": "hugo serve --disableFastRender --port=8080",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "message": 5
+                },
+                "fileLocation": "absolute",
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Change detected, rebuilding site$",
+                    "endsPattern": "^Total in [0-9]+ ms$"
+                }
+            }
+        },
+        {
+            "label": "Serve with Drafts",
+            "type": "shell",
+            "command": "hugo serve --disableFastRender -D --port=8080",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "(ERROR|Error:) .*\"([^\"]+):(\\d+):(\\d+)\": (.*)$",
+                    "file": 2,
+                    "line": 3,
+                    "column": 4,
+                    "message": 5
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Change detected, rebuilding site$",
+                    "endsPattern": "^Total in [0-9]+ ms$"
+                }
+            }
+        },
+    ]
+}

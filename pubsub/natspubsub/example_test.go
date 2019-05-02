@@ -23,76 +23,81 @@ import (
 	"gocloud.dev/pubsub/natspubsub"
 )
 
-func ExampleCreateTopic() {
+func ExampleOpenTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#nats-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// Create a connection to NATS
-	// For use with NGS and credentials.
-	// nc, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file")
-	nc, err := nats.Connect("nats://demo.nats.io")
+	natsConn, err := nats.Connect("nats://nats.example.com")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer nc.Close()
+	defer natsConn.Close()
 
-	pt, err := natspubsub.CreateTopic(nc, "go-cloud.example.send", nil)
-	if err != nil {
-		// Handle error....
-	}
-
-	err = pt.Send(ctx, &pubsub.Message{Body: []byte("example message")})
-}
-
-func ExampleCreateSubscription() {
-	ctx := context.Background()
-
-	// Create a connection to NATS
-	// For use with NGS and credentials.
-	// nc, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file")
-	nc, err := nats.Connect("nats://demo.nats.io")
+	topic, err := natspubsub.OpenTopic(natsConn, "example.mysubject", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer nc.Close()
-
-	ackFunc := func() {
-		// This function will be called when the application calls "Ack" on a
-		// received message.
-		// Since Ack is a meaningless no-op for NATS, you can provide an empty
-		// function to do nothing, or panic/log a warning if your application
-		// is built for at-most-once semantics and should never call Ack.
-	}
-	sub, err := natspubsub.CreateSubscription(nc, "go-cloud.example.receive", ackFunc, nil)
-	if err != nil {
-		// Handle error....
-	}
-
-	// Now we can use sub to receive messages.
-	msg, err := sub.Receive(ctx)
-	if err != nil {
-		// Handle error....
-	}
-	// Handle Message
-
-	// Ack will call ackFunc above. If you're only going to use at-most-once
-	// providers, you can omit it.
-	msg.Ack()
+	defer topic.Shutdown(ctx)
 }
 
-func Example_openFromURL() {
+func ExampleOpenSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#nats-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	natsConn, err := nats.Connect("nats://nats.example.com")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer natsConn.Close()
+
+	subscription, err := natspubsub.OpenSubscription(
+		natsConn,
+		"example.mysubject",
+		func() { panic("nats does not have ack") },
+		nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
+}
+
+func Example_openTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#nats
+
+	// import _ "gocloud.dev/pubsub/natspubsub"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// OpenTopic creates a *pubsub.Topic from a URL.
-	// This URL will Dial the NATS server at the URL in the environment
-	// variable NATS_SERVER_URL and send messages with subject "mytopic".
-	t, err := pubsub.OpenTopic(ctx, "nats://mytopic")
+	// This URL will Dial the NATS server at the URL in the environment variable
+	// NATS_SERVER_URL and send messages with subject "example.mysubject".
+	topic, err := pubsub.OpenTopic(ctx, "nats://example.mysubject")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
+}
 
-	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
-	// This URL will use the same connection and receive messages with subject
-	// "mytopic".
-	// Note that by default, s.Ack will result in a panic, as Ack is a meaningless
-	// no-op for NATS. You can disable the panic using "?ackfunc=log" or
-	// "?ackfunc=noop".
-	s, err := pubsub.OpenSubscription(ctx, "nats://mytopic")
-	_, _, _ = t, s, err
+func Example_openSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#nats
+
+	// import _ "gocloud.dev/pubsub/natspubsub"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	// OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will Dial the NATS server at the URL in the environment variable
+	// NATS_SERVER_URL and receive messages with subject "example.mysubject".
+	subscription, err := pubsub.OpenSubscription(ctx,
+		"nats://example.mysubject?ackfunc=panic")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
 }

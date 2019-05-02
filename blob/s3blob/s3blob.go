@@ -47,7 +47,9 @@
 //  - ListOptions.BeforeList: *s3.ListObjectsV2Input, or *s3.ListObjectsInput
 //      when Options.UseLegacyList == true.
 //  - Reader: s3.GetObjectOutput
+//  - ReaderOptions.BeforeRead: *s3.GetObjectInput
 //  - Attributes: s3.HeadObjectOutput
+//  - CopyOptions.BeforeCopy: *s3.CopyObjectInput
 //  - WriterOptions.BeforeWrite: *s3manager.UploadInput
 package s3blob // import "gocloud.dev/blob/s3blob"
 
@@ -210,8 +212,8 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
@@ -305,7 +307,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.Unknown
 	}
 	switch {
-	case e.Code() == "NoSuchKey" || e.Code() == "NotFound":
+	case e.Code() == "NoSuchKey" || e.Code() == "NotFound" || e.Code() == s3.ErrCodeObjectNotInActiveTierError:
 		return gcerrors.NotFound
 	default:
 		return gcerrors.Unknown
@@ -331,7 +333,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if opts.Delimiter != "" {
 		in.Delimiter = aws.String(escapeKey(opts.Delimiter))
 	}
-	resp, err := b.listObjects(in, opts)
+	resp, err := b.listObjects(ctx, in, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +383,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return &page, nil
 }
 
-func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions) (*s3.ListObjectsV2Output, error) {
+func (b *bucket) listObjects(ctx context.Context, in *s3.ListObjectsV2Input, opts *driver.ListOptions) (*s3.ListObjectsV2Output, error) {
 	if !b.useLegacyList {
 		if opts.BeforeList != nil {
 			asFunc := func(i interface{}) bool {
@@ -396,11 +398,7 @@ func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions
 				return nil, err
 			}
 		}
-		req, resp := b.client.ListObjectsV2Request(in)
-		if err := req.Send(); err != nil {
-			return nil, err
-		}
-		return resp, nil
+		return b.client.ListObjectsV2WithContext(ctx, in)
 	}
 
 	// Use the legacy ListObjects request.
@@ -426,8 +424,8 @@ func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions
 			return nil, err
 		}
 	}
-	req, legacyResp := b.client.ListObjectsRequest(legacyIn)
-	if err := req.Send(); err != nil {
+	legacyResp, err := b.client.ListObjectsWithContext(ctx, legacyIn)
+	if err != nil {
 		return nil, err
 	}
 
@@ -467,15 +465,15 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key)
 	in := &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-	req, resp := b.client.HeadObjectRequest(in)
-	if err := req.Send(); err != nil {
-		return driver.Attributes{}, err
+	resp, err := b.client.HeadObjectWithContext(ctx, in)
+	if err != nil {
+		return nil, err
 	}
 
 	md := make(map[string]string, len(resp.Metadata))
@@ -484,7 +482,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		// keys & values.
 		md[escape.HexUnescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       aws.StringValue(resp.CacheControl),
 		ContentDisposition: aws.StringValue(resp.ContentDisposition),
 		ContentEncoding:    aws.StringValue(resp.ContentEncoding),
@@ -521,8 +519,20 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	}
-	req, resp := b.client.GetObjectRequest(in)
-	if err := req.Send(); err != nil {
+	if opts.BeforeRead != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**s3.GetObjectInput); ok {
+				*p = in
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeRead(asFunc); err != nil {
+			return nil, err
+		}
+	}
+	resp, err := b.client.GetObjectWithContext(ctx, in)
+	if err != nil {
 		return nil, err
 	}
 	body := resp.Body
@@ -562,7 +572,10 @@ func eTagToMD5(etag *string) []byte {
 	// Un-hex; we return nil on error. In particular, we'll get an error here
 	// for multi-part uploaded blobs, whose ETag will contain a "-" and so will
 	// never be a legal hex encoding.
-	md5, _ := hex.DecodeString(unquoted)
+	md5, err := hex.DecodeString(unquoted)
+	if err != nil {
+		return nil
+	}
 	return md5
 }
 
@@ -667,6 +680,32 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}, nil
 }
 
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	dstKey = escapeKey(dstKey)
+	srcKey = escapeKey(srcKey)
+	input := &s3.CopyObjectInput{
+		Bucket:     aws.String(b.name),
+		CopySource: aws.String(b.name + "/" + srcKey),
+		Key:        aws.String(dstKey),
+	}
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case **s3.CopyObjectInput:
+				*v = input
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
+	_, err := b.client.CopyObjectWithContext(ctx, input)
+	return err
+}
+
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	if _, err := b.Attributes(ctx, key); err != nil {
@@ -677,8 +716,8 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-	req, _ := b.client.DeleteObjectRequest(input)
-	return req.Send()
+	_, err := b.client.DeleteObjectWithContext(ctx, input)
+	return err
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {

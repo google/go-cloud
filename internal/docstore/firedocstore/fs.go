@@ -12,32 +12,154 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package firedocstore provides a docstore implementation backed by GCP
+// Firestore.
+// Use OpenCollection to construct a *docstore.Collection.
+//
+// URLs
+//
+// For docstore.OpenCollection, firedocstore registers for the scheme
+// "firestore".
+// The default URL opener will create a connection using default credentials
+// from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// As
+//
+// firedocstore exposes the following types for As:
+// - Collection.As: *firestore.Client
+// - Query.BeforeQuery: *firestore.RunQueryRequest
+// - DocumentIterator: firestore.Firestore_RunQueryClient
 package firedocstore
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
 	ts "github.com/golang/protobuf/ptypes/timestamp"
+	"gocloud.dev/gcp"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/useragent"
+	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/grpc/metadata"
 )
 
+func init() {
+	docstore.DefaultURLMux().RegisterCollection(Scheme, &lazyCredsOpener{})
+}
+
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyCredsOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	o.init.Do(func() {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			o.err = err
+			return
+		}
+		client, _, err := Dial(ctx, creds.TokenSource)
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{Client: client}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+	}
+	return o.opener.OpenCollectionURL(ctx, u)
+}
+
+// Dial returns a client to use with Firestore and a clean-up function to close
+// the client after used.
+func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error) {
+	c, err := vkit.NewClient(ctx, option.WithTokenSource(ts), useragent.ClientOption("docstore"))
+	return c, func() { c.Close() }, err
+}
+
+// Scheme is the URL scheme firestore registers its URLOpener under on
+// docstore.DefaultMux.
+const Scheme = "firestore"
+
+// URLOpener opens firestore URLs like
+// "firestore://myproject/mycollection?name_field=myID".
+//
+//   - The URL's host holds the GCP projectID.
+//   - The only element of the URL's path holds the path to a Firestore collection.
+// See https://firebase.google.com/docs/firestore/data-model for more details.
+//
+// The following query parameters are supported:
+//
+//   - name_field (required): firedocstore requires that a single string field,
+// name_field, be designated the primary key. Its values must be unique over all
+// documents in the collection, and the primary key must be provided to retrieve
+// a document.
+type URLOpener struct {
+	// Client must be set to a non-nil client authenticated with Cloud Firestore
+	// scope or equivalent.
+	Client *vkit.Client
+}
+
+// OpenCollectionURL opens a docstore.Collection based on u.
+func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	q := u.Query()
+
+	nameField := q.Get("name_field")
+	if nameField == "" {
+		return nil, errors.New("open collection %s: name_field is required to open a collection")
+	}
+	q.Del("name_field")
+	for param := range q {
+		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
+	}
+	project, collPath, err := collectionNameFromURL(u)
+	if err != nil {
+		return nil, fmt.Errorf("open collection %s: %v", u, err)
+	}
+	return OpenCollection(o.Client, project, collPath, nameField, nil)
+}
+
+func collectionNameFromURL(u *url.URL) (string, string, error) {
+	var project, collPath string
+	if project = u.Host; project == "" {
+		return "", "", errors.New("URL must have a non-empty Host (the project ID)")
+	}
+	if collPath = strings.TrimPrefix(u.Path, "/"); collPath == "" {
+		return "", "", errors.New("URL must have a non-empty Path (the collection path)")
+	}
+	return project, collPath, nil
+}
+
 type collection struct {
+	nameField string
+	nameFunc  func(docstore.Document) string
 	client    *vkit.Client
 	dbPath    string // e.g. "projects/P/databases/(default)"
-	collPath  string // e.g. "projects/P/databases/(default)/documents/MyCollection"
-	nameField string
+	collPath  string // e.g. "projects/P/databases/(default)/documents/States/Wisconsin/cities"
+
 }
+
+// Options contains optional arguments to the OpenCollection functions.
+type Options struct{}
 
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
 //
@@ -48,22 +170,55 @@ type collection struct {
 // firedocstore requires that a single string field, nameField, be designated the
 // primary key. Its values must be unique over all documents in the collection, and
 // the primary key must be provided to retrieve a document.
-func OpenCollection(client *vkit.Client, projectID, collPath, nameField string) *docstore.Collection {
-	return docstore.NewCollection(newCollection(client, projectID, collPath, nameField))
+func OpenCollection(client *vkit.Client, projectID, collPath, nameField string, _ *Options) (*docstore.Collection, error) {
+	c, err := newCollection(client, projectID, collPath, nameField, nil)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
 }
 
-func newCollection(client *vkit.Client, projectID, collPath, nameField string) *collection {
+// OpenCollectionWithNameFunc creates a *docstore.Collection representing a Firestore collection.
+//
+// collPath is the path to the collection, starting from a root collection. It may
+// refer to a top-level collection, like "States", or it may be a path to a nested
+// collection, like "States/Wisconsin/Cities".
+//
+// The nameFunc argument is function that accepts a document and returns the value to
+// be used for the document's primary key. It should return the empty string if the
+// document is missing the information to construct a name. This will cause all
+// actions, even Create, to fail.
+func OpenCollectionWithNameFunc(client *vkit.Client, projectID, collPath string, nameFunc func(docstore.Document) string, _ *Options) (*docstore.Collection, error) {
+	c, err := newCollection(client, projectID, collPath, "", nameFunc)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
+}
+
+func newCollection(client *vkit.Client, projectID, collPath, nameField string, nameFunc func(docstore.Document) string) (*collection, error) {
+	if nameField == "" && nameFunc == nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "one of nameField or nameFunc must be provided")
+	}
 	dbPath := fmt.Sprintf("projects/%s/databases/(default)", projectID)
 	return &collection{
 		client:    client,
+		nameField: nameField,
+		nameFunc:  nameFunc,
 		dbPath:    dbPath,
 		collPath:  fmt.Sprintf("%s/documents/%s", dbPath, collPath),
-		nameField: nameField,
-	}
+	}, nil
 }
 
 // RunActions implements driver.RunActions.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		return c.runActionsUnordered(ctx, actions)
+	}
+	return c.runActionsOrdered(ctx, actions)
+}
+
+func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Action) driver.ActionListError {
 	// Split the actions into groups, each of which can be done with a single RPC.
 	// - Consecutive writes are grouped together.
 	// - Consecutive gets with the same field paths are grouped together.
@@ -75,7 +230,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (
 	var err error
 	for _, g := range groups {
 		if g[0].Kind == driver.Get {
-			n, err = c.runGets(ctx, g)
+			n, err = c.runGetsOrdered(ctx, g)
 			nRun += n
 		} else {
 			err = c.runWrites(ctx, g)
@@ -85,10 +240,10 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (
 			}
 		}
 		if err != nil {
-			return nRun, err
+			return driver.ActionListError{{nRun, err}}
 		}
 	}
-	return nRun, nil
+	return nil
 }
 
 // Reports whether two consecutive actions in a list should be split into different groups.
@@ -104,59 +259,73 @@ func shouldSplit(cur, new *driver.Action) bool {
 }
 
 // Run a sequence of Get actions by calling the BatchGetDocuments RPC.
-func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, error) {
+// It returns the number of initial successful gets, as well as an error.
+func (c *collection) runGetsOrdered(ctx context.Context, gets []*driver.Action) (int, error) {
+	errs := c.runGets(ctx, gets)
+	for i, err := range errs {
+		if err != nil {
+			return i, err
+		}
+	}
+	return len(gets), nil
+}
+
+// runGets executes a group of Get actions by calling the BatchGetDocuments RPC.
+// It returns the error for each Get action in order.
+func (c *collection) runGets(ctx context.Context, gets []*driver.Action) []error {
+	errs := make([]error, len(gets))
+	setErr := func(err error) {
+		for i := range errs {
+			errs[i] = err
+		}
+	}
+
 	req, err := c.newGetRequest(gets)
 	if err != nil {
-		return 0, err
+		setErr(err)
+		return errs
+	}
+
+	indexByPath := map[string]int{} // from document path to index in gets slice
+	for i, path := range req.Documents {
+		indexByPath[path] = i
 	}
 	streamClient, err := c.client.BatchGetDocuments(withResourceHeader(ctx, req.Database), req)
 	if err != nil {
-		return 0, err
+		setErr(err)
+		return errs
 	}
-	// BatchGetDocuments is a streaming RPC.
-	// Read the stream and organize by path, since results may arrive out of order.
-	resps := map[string]*pb.BatchGetDocumentsResponse{}
 	for {
 		resp, err := streamClient.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return 0, err
+			setErr(err)
+			return errs
 		}
 		switch r := resp.Result.(type) {
 		case *pb.BatchGetDocumentsResponse_Found:
-			resps[r.Found.Name] = resp
+			pdoc := r.Found
+			i := indexByPath[pdoc.Name]
+			errs[i] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
 		case *pb.BatchGetDocumentsResponse_Missing:
-			resps[r.Missing] = nil
+			i := indexByPath[r.Missing]
+			errs[i] = gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", r.Missing)
 		default:
-			return 0, gcerr.Newf(gcerr.Internal, nil, "unknown BatchGetDocumentsResponse result type")
+			setErr(gcerr.Newf(gcerr.Internal, nil, "unknown BatchGetDocumentsResponse result type"))
+			return errs
 		}
 	}
-	// Now process the result for each input document.
-	for i, path := range req.Documents {
-		resp, ok := resps[path]
-		if !ok {
-			return i, gcerr.Newf(gcerr.Internal, nil, "no BatchGetDocumentsResponse for %q", path)
-		}
-		if resp == nil {
-			return i, gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", path)
-		}
-		pdoc := resp.Result.(*pb.BatchGetDocumentsResponse_Found).Found
-		// TODO(jba): support field paths in decoding.
-		if err := decodeDoc(pdoc, gets[i].Doc /*,  gets[i].FieldPaths */); err != nil {
-			return i, err
-		}
-		// Set the revision field in the document, if it exists, to the update time.
-		_ = gets[i].Doc.SetField(docstore.RevisionField, pdoc.UpdateTime)
-	}
-	return len(gets), nil
+	return errs
 }
 
 func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocumentsRequest, error) {
+	// TODO(jba): fail if two documents have the same name. The only way to
+	// distinguish BatchGet responses is by name.
 	req := &pb.BatchGetDocumentsRequest{Database: c.dbPath}
 	for _, a := range gets {
-		docName, err := c.docName(a.Doc)
+		docName, _, err := c.docName(a.Doc)
 		if err != nil {
 			return nil, err
 		}
@@ -215,8 +384,9 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 
 // Convert an action to one or more Firestore Write protos.
 func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, error) {
-	docName, err := c.docName(a.Doc)
-	if err != nil {
+	docName, missingField, err := c.docName(a.Doc)
+	// Return the error unless the field is missing and this is a Create action.
+	if err != nil && !(missingField && a.Kind == driver.Create) {
 		return nil, "", err
 	}
 	var (
@@ -227,7 +397,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 	switch a.Kind {
 	case driver.Create:
 		// Make a name for this document if it doesn't have one.
-		if docName == "" {
+		if missingField {
 			docName = driver.UniqueString()
 			newName = docName
 		}
@@ -271,7 +441,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 }
 
 func (c *collection) putWrite(doc driver.Document, docName string, pc *pb.Precondition) (*pb.Write, error) {
-	pdoc, err := encodeDoc(doc)
+	pdoc, err := encodeDoc(doc, c.nameField)
 	if err != nil {
 		return nil, err
 	}
@@ -334,6 +504,38 @@ func (c *collection) updateWrites(doc driver.Document, docName string, mods []dr
 	}
 	// For now, we don't have any transforms.
 	return []*pb.Write{w}, nil
+}
+
+func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action) driver.ActionListError {
+	// Split into groups the same way, but run them concurrently.
+	// TODO(jba): group without considering order.
+	groups := driver.SplitActions(actions, shouldSplit)
+	errs := make([]error, len(actions))
+	var wg sync.WaitGroup
+	groupBaseIndex := 0 // index in actions of first action in group
+	for _, g := range groups {
+		g := g
+		base := groupBaseIndex
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if g[0].Kind == driver.Get {
+				errs := c.runGets(ctx, g)
+				for i, err := range errs {
+					errs[base+i] = err
+				}
+			} else {
+				err := c.runWrites(ctx, g)
+				// Writes run in a transaction, so there is a single error for the group.
+				for i := 0; i < len(g); i++ {
+					errs[base+i] = err
+				}
+			}
+		}()
+		groupBaseIndex += len(g)
+	}
+	wg.Wait()
+	return driver.NewActionListError(errs)
 }
 
 ////////////////
@@ -415,6 +617,9 @@ func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
 	if err != nil { // revision field not present
 		return nil, nil
 	}
+	if v == nil { // revision field is present, but nil
+		return nil, nil
+	}
 	rev, ok := v.(*ts.Timestamp)
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
@@ -446,24 +651,35 @@ func (c *collection) commit(ctx context.Context, ws []*pb.Write) ([]*pb.WriteRes
 	return res.WriteResults, nil
 }
 
-// docName returns the name of the document. This is the value of
-// the field called c.nameField, and it must be a string.
-// If the field doesn't exist, docName returns the empty string, rather
-// than an error. This is to support the Create action, which can
-// create new document names.
-func (c *collection) docName(doc driver.Document) (string, error) {
-	n, err := doc.GetField(c.nameField)
-	if err != nil {
-		// Return missing field as empty string.
-		return "", nil
+// docName returns the name of the document. This is either the value of the field
+// called c.nameField, or the result of calling c.nameFunc. It must be a
+// string.
+// docName returns an error if:
+// 1. c.nameField is not empty, but the field isn't present in the doc, or
+// 2. c.nameFunc is non-nil, but returns "".
+// The second return value reports whether c.nameField is not-empty and the field is
+// missing. This is to support the Create action, which can create new document
+// names.
+func (c *collection) docName(doc driver.Document) (string, bool, error) {
+	if c.nameField != "" {
+		name, err := doc.GetField(c.nameField)
+		if err != nil {
+			return "", true, gcerr.Newf(gcerr.InvalidArgument, nil, "missing name field %s", c.nameField)
+		}
+		// Check that the reflect kind is String so we can support any type whose underlying type
+		// is string. E.g. "type DocName string".
+		vn := reflect.ValueOf(name)
+		if vn.Kind() != reflect.String {
+			return "", false, gcerr.Newf(gcerr.InvalidArgument, nil, "key field %q with value %v is not a string",
+				c.nameField, name)
+		}
+		return vn.String(), false, nil
 	}
-	// Check that the reflect kind is String so we can support any type whose underlying type
-	// is string. E.g. "type DocName string".
-	vn := reflect.ValueOf(n)
-	if vn.Kind() != reflect.String {
-		return "", fmt.Errorf("key field %q with value %v is not a string", c.nameField, n)
+	name := c.nameFunc(doc.Origin)
+	if name == "" {
+		return "", false, gcerr.Newf(gcerr.InvalidArgument, nil, "missing name")
 	}
-	return vn.String(), nil
+	return name, false, nil
 }
 
 // Report whether two lists of field paths are equal.
@@ -508,4 +724,13 @@ func withResourceHeader(ctx context.Context, resource string) context.Context {
 	md = md.Copy()
 	md[resourcePrefixHeader] = []string{resource}
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+func (c *collection) As(i interface{}) bool {
+	p, ok := i.(**vkit.Client)
+	if !ok {
+		return false
+	}
+	*p = c.client
+	return true
 }

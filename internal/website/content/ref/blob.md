@@ -15,7 +15,8 @@ listing blobs in a bucket.
 
 <!--more-->
 
-Top-level package documentation: https://godoc.org/gocloud.dev/blob
+[Top-level package documentation](https://godoc.org/gocloud.dev/blob)<br>
+[How-to guides]({{< ref "/howto/blob/_index.md" >}})
 
 ## Supported Providers
 
@@ -30,6 +31,7 @@ Top-level package documentation: https://godoc.org/gocloud.dev/blob
 ## Usage Samples
 
 * [CLI Tutorial]({{< ref "/tutorials/cli-uploader.md" >}})
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-blob)
 * [Guestbook
   sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
 * [blob package examples](https://godoc.org/gocloud.dev/blob#pkg-examples)

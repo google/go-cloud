@@ -32,7 +32,7 @@ type MyConfig struct {
 func Example() {
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	session, err := session.NewSession(nil)
+	sess, err := session.NewSession(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func Example() {
 	// Construct a *runtimevar.Variable that watches the variable.
 	// For this example, the Parameter Store variable being referenced
 	// should have a JSON string that decodes into MyConfig.
-	v, err := awsparamstore.NewVariable(session, "cfg-variable-name", decoder, nil)
+	v, err := awsparamstore.OpenVariable(sess, "cfg-variable-name", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

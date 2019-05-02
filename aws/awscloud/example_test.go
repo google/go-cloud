@@ -43,7 +43,7 @@ func Example() {
 
 	// Run the server. This behaves much like http.ListenAndServe,
 	// including that passing a nil handler will use http.DefaultServeMux.
-	log.Fatal(srv.ListenAndServe(":8080", nil))
+	log.Fatal(srv.ListenAndServe(":8080"))
 }
 
 // setup is a Wire injector function that creates an HTTP server
@@ -54,7 +54,7 @@ func Example() {
 // The body of this function will be filled in by running Wire. While
 // the name of the function does not matter, the signature signals to
 // Wire what provider functions to call. See
-// https://github.com/google/wire/blob/master/README.md#injectors
+// https://github.com/google/wire/blob/master/docs/guide.md#injectors
 // for more details.
 func setup(ctx context.Context) (*server.Server, func(), error) {
 	wire.Build(

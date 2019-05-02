@@ -52,9 +52,20 @@ type Message struct {
 	// see Topic.As for more details.
 	// AsFunc must be populated on messages returned from ReceiveBatch.
 	AsFunc func(interface{}) bool
+
+	// BeforeSend is a callback used when sending a message. It should remain
+	// nil on messages returned from ReceiveBatch.
+	//
+	// The callback must be called exactly once, before the message is sent.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeSend func(asFunc func(interface{}) bool) error
 }
 
 // Topic publishes messages.
+// Drivers may optionally also implement io.Closer; Close will be called
+// when the pubsub.Topic is Shutdown.
 type Topic interface {
 	// SendBatch should publish all the messages in ms. It should
 	// return only after all the messages are sent, an error occurs, or the
@@ -74,6 +85,10 @@ type Topic interface {
 	// SendBatch.
 	//
 	// SendBatch may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the number of messages sent in a single batch
+	// and the concurrency of calls to SendBatch via a batcher.Options
+	// passed to pubsub.NewTopic.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// IsRetryable should report whether err can be retried.
@@ -91,9 +106,16 @@ type Topic interface {
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
+
+	// Close cleans up any resources used by the Topic. Once Close is called,
+	// there will be no method calls to the Topic other than As, ErrorAs, and
+	// ErrorCode.
+	Close() error
 }
 
 // Subscription receives published messages.
+// Drivers may optionally also implement io.Closer; Close will be called
+// when the pubsub.Subscription is Shutdown.
 type Subscription interface {
 	// ReceiveBatch should return a batch of messages that have queued up
 	// for the subscription on the server, up to maxMessages.
@@ -109,6 +131,10 @@ type Subscription interface {
 	// service doesn't support waiting, then a time.Sleep can be used.
 	//
 	// ReceiveBatch may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum value of maxMessages and the concurrency
+	// of calls to ReceiveBatch via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
 	// For at-most-once systems, AckFunc should return a function to be called
@@ -125,7 +151,17 @@ type Subscription interface {
 	// If AckFunc returns a non-nil func, SendAcks will never be called.
 	//
 	// SendAcks may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum size of ackIDs and the concurrency
+	// of calls to SendAcks/SendNacks via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
+
+	// CanNack must return true iff the driver supports Nacking messages.
+	//
+	// If CanNack returns false, SendNacks will never be called, and Nack will
+	// panic if called.
+	CanNack() bool
 
 	// SendNacks should notify the server that the messages with the given ackIDs
 	// are not being processed by this client, so that they will be received
@@ -136,6 +172,10 @@ type Subscription interface {
 	// If AckFunc returns a non-nil func, SendNacks will never be called.
 	//
 	// SendNacks may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum size of ackIDs and the concurrency
+	// of calls to SendAcks/Nacks via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	SendNacks(ctx context.Context, ackIDs []AckID) error
 
 	// IsRetryable should report whether err can be retried.
@@ -153,4 +193,9 @@ type Subscription interface {
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
+
+	// Close cleans up any resources used by the Topic. Once Close is called,
+	// there will be no method calls to the Topic other than As, ErrorAs, and
+	// ErrorCode.
+	Close() error
 }

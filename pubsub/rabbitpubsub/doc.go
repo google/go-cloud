@@ -35,11 +35,19 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// Message Delivery Semantics
+//
+// RabbitMQ supports at-least-once semantics; applications must
+// call Message.Ack after processing a message, or it will be redelivered.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
+//
 // As
 //
 // rabbitpubsub exposes the following types for As:
 //  - Topic: *amqp.Connection
 //  - Subscription: *amqp.Connection
+//  - Message.BeforeSend: *amqp.Publishing
 //  - Message: amqp.Delivery
 //  - Error: *amqp.Error and MultiError
 package rabbitpubsub // import "gocloud.dev/pubsub/rabbitpubsub"
