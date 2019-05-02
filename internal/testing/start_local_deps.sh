@@ -23,6 +23,6 @@ set -euo pipefail
 
 ./pubsub/kafkapubsub/localkafka.sh
 ./pubsub/rabbitpubsub/localrabbit.sh
-./runtimevar/etcd/localetcd.sh
+./runtimevar/etcdvar/localetcd.sh
 ./internal/docstore/mongodocstore/localmongo.sh
 
