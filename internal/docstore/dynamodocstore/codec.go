@@ -59,7 +59,7 @@ func (e *encoder) EncodeList(n int) driver.Encoder {
 	return &listEncoder{s: s}
 }
 
-func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
+func (e *encoder) EncodeMap(n int) driver.Encoder {
 	m := make(map[string]*dyn.AttributeValue, n)
 	e.av = new(dyn.AttributeValue).SetM(m)
 	return &mapEncoder{m: m}

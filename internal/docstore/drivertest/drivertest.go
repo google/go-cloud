@@ -22,14 +22,11 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/uuid"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	ds "gocloud.dev/internal/docstore"
@@ -747,26 +744,6 @@ type nativeMinimal struct {
 	LS []string
 }
 
-// MakeUniqueStringDeterministicForTesting uses a specified seed value to
-// produce the same sequence of values in driver.UniqueString for testing.
-//
-// Call when running tests that will be replayed.
-func MakeUniqueStringDeterministicForTesting(seed int64) {
-	r := &randReader{r: rand.New(rand.NewSource(seed))}
-	uuid.SetRand(r)
-}
-
-type randReader struct {
-	mu sync.Mutex
-	r  *rand.Rand
-}
-
-func (r *randReader) Read(buf []byte) (int, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.r.Read(buf)
-}
-
 // The following is the schema for the collection used for query testing.
 // It is loosely borrowed from the DynamoDB documentation.
 // It is rich enough to require indexes for some providers.
@@ -816,12 +793,12 @@ var queryDocuments = []*HighScore{
 }
 
 func testQuery(t *testing.T, coll *ds.Collection) {
+	cleanUpTable(t, newHighScore, coll)
 	ctx := context.Background()
 	// (Temporary) skip if the driver does not implement queries.
 	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
 		t.Skip("queries not yet implemented")
 	}
-	defer cleanUpTable(t, newHighScore, coll)
 
 	// Add the query docs.
 	alist := coll.Actions()
@@ -982,7 +959,7 @@ func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentI
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
-	defer cleanUpTable(t, newDocmap, coll)
+	cleanUpTable(t, newDocmap, coll)
 	ctx := context.Background()
 
 	docs := []docmap{
@@ -1036,6 +1013,7 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 }
 
 func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
+	cleanUpTable(t, newHighScore, coll)
 	docs := []*HighScore{
 		{game3, "steph", 24, date(4, 25), nil},
 		{game3, "mia", 99, date(4, 26), nil},
@@ -1055,7 +1033,6 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 	if err := actions.Do(ctx); err != nil {
 		t.Fatal(err)
 	}
-	defer cleanUpTable(t, newHighScore, coll)
 
 	// Query
 	qs := []*docstore.Query{

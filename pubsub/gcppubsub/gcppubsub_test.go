@@ -58,15 +58,27 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
-	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
-	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	return createTopic(ctx, h.pubClient, topicName, topicPath)
+	// We may encounter topics that were created by a previous test run and were
+	// not properly cleaned up. In such a case delete the existing topic and create
+	// a new topic with a higher topic number (to avoid cool-off issues between
+	// deletion and re-creation).
+	for {
+		topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
+		topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+		dt, cleanup, err := createTopic(ctx, h.pubClient, topicName, topicPath)
+		if err != nil && status.Code(err) == codes.AlreadyExists {
+			// Delete the topic and retry.
+			h.pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
+			continue
+		}
+		return dt, cleanup, err
+	}
 }
 
 func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName, topicPath string) (dt driver.Topic, cleanup func(), err error) {
 	_, err = pubClient.CreateTopic(ctx, &pubsubpb.Topic{Name: topicPath})
 	if err != nil {
-		return nil, nil, fmt.Errorf("creating topic: %v", err)
+		return nil, nil, err
 	}
 	dt = openTopic(pubClient, projectID, topicName)
 	cleanup = func() {
@@ -80,9 +92,21 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
-	subPath := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subName)
-	return createSubscription(ctx, h.subClient, dt, subName, subPath)
+	// We may encounter subscriptions that were created by a previous test run
+	// and were not properly cleaned up. In such a case delete the existing
+	// subscription and create a new subscription with a higher subscription
+	// number (to avoid cool-off issues between deletion and re-creation).
+	for {
+		subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
+		subPath := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subName)
+		ds, cleanup, err := createSubscription(ctx, h.subClient, dt, subName, subPath)
+		if err != nil && status.Code(err) == codes.AlreadyExists {
+			// Delete the subscription and retry.
+			h.subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{Subscription: subPath})
+			continue
+		}
+		return ds, cleanup, err
+	}
 }
 
 func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt driver.Topic, subName, subPath string) (ds driver.Subscription, cleanup func(), err error) {
@@ -92,7 +116,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 		Topic: t.path,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("creating subscription: %v", err)
+		return nil, nil, err
 	}
 	ds = openSubscription(subClient, projectID, subName)
 	cleanup = func() {
