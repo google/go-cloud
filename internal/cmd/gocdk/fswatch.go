@@ -16,17 +16,16 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
 )
 
 // waitForDirChange blocks until the directory changes or the context's Done
-// channel is closed.
+// channel is closed. waitForDirChange returns nil only if it detected a change.
 func waitForDirChange(ctx context.Context, path string, pollInterval time.Duration) error {
 	tick := time.NewTicker(pollInterval)
 	defer tick.Stop()
@@ -53,68 +52,32 @@ func waitForDirChange(ctx context.Context, path string, pollInterval time.Durati
 
 // dirSnapshot is a snapshot of metadata for a directory.
 type dirSnapshot struct {
-	entries []*dirSnapshotEntry // sorted by name
-}
-
-// newDirSnapshot converts a list of os.FileInfo into a directory snapshot.
-// It does not fill in any of the entries' snapshot fields.
-func newDirSnapshot(contents []os.FileInfo) *dirSnapshot {
-	snap := &dirSnapshot{
-		entries: make([]*dirSnapshotEntry, 0, len(contents)),
-	}
-	for _, info := range contents {
-		name := info.Name()
-		if isIgnoredForWatch(name) {
-			continue
-		}
-		snap.entries = append(snap.entries, &dirSnapshotEntry{
-			name:    name,
-			mode:    info.Mode(),
-			modTime: info.ModTime(),
-		})
-	}
-	sort.Slice(snap.entries, func(i, j int) bool {
-		return snap.entries[i].name < snap.entries[j].name
-	})
-	return snap
+	entries map[string]*dirSnapshotEntry
 }
 
 // snapshotTree recursively snapshots a directory.
 func snapshotTree(path string) (*dirSnapshot, error) {
-	// Unfortunately filepath.Walk does not work well for this because
-	// we need to keep track of the parent snapshot variable to write to.
-
-	type walkNode struct {
-		dst  **dirSnapshot
-		path string
-	}
-
-	// Depth-first search over the directory structure.
-	var root *dirSnapshot
-	stack := []walkNode{{&root, path}}
-	for len(stack) > 0 {
-		// Pop next node off stack.
-		curr := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-
-		// Read directory and create snapshot.
-		contents, err := ioutil.ReadDir(curr.path)
-		if err != nil {
-			return nil, xerrors.Errorf("snapshot tree %s: %w", path, err)
-		}
-		snap := newDirSnapshot(contents)
-		// Save snapshot in requested variable.
-		*curr.dst = snap
-
-		// Push subdirectories onto stack in reverse order, so they are popped in
-		// ascending order.
-		for i := len(snap.entries) - 1; i >= 0; i-- {
-			ent := snap.entries[i]
-			if !ent.mode.IsDir() {
-				continue
+	root := &dirSnapshot{entries: make(map[string]*dirSnapshotEntry)}
+	err := filepath.Walk(path, func(curr string, info os.FileInfo, err error) error {
+		if isIgnoredForWatch(curr) {
+			if info != nil && info.IsDir() {
+				return filepath.SkipDir
 			}
-			stack = append(stack, walkNode{&ent.snapshot, filepath.Join(curr.path, ent.name)})
+			return nil
 		}
+		if err != nil {
+			// Only return error for files that aren't ignored.
+			return err
+		}
+		rel := strings.TrimPrefix(curr, path+string(filepath.Separator))
+		root.entries[rel] = &dirSnapshotEntry{
+			mode:    info.Mode(),
+			modTime: info.ModTime(),
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, xerrors.Errorf("snapshot tree %s: %w", path, err)
 	}
 	return root, nil
 }
@@ -127,10 +90,10 @@ func (snap *dirSnapshot) sameAs(path string) (bool, error) {
 	if err != nil {
 		return false, xerrors.Errorf("compare directory %s to snapshot: %w", path, err)
 	}
-	return snap.recursiveEqual(currSnap), nil
+	return snap.equal(currSnap), nil
 }
 
-// equal compares two directory snapshots for equality non-recursively.
+// equal compares two directory snapshots for equality.
 func (snap *dirSnapshot) equal(snap2 *dirSnapshot) bool {
 	if snap == nil && snap2 == nil {
 		return true
@@ -141,51 +104,20 @@ func (snap *dirSnapshot) equal(snap2 *dirSnapshot) bool {
 	if len(snap.entries) != len(snap2.entries) {
 		return false
 	}
-	for i := range snap.entries {
-		if !snap.entries[i].equal(snap2.entries[i]) {
+	for k, ent := range snap.entries {
+		if !ent.equal(snap2.entries[k]) {
 			return false
-		}
-	}
-	return true
-}
-
-// recursiveEqual compares two directory snapshots for equality recursively.
-func (snap *dirSnapshot) recursiveEqual(snap2 *dirSnapshot) bool {
-	type walkNode struct {
-		snap1, snap2 *dirSnapshot
-	}
-
-	// Depth-first traversal.
-	stack := []walkNode{{snap, snap2}}
-	for len(stack) > 0 {
-		curr := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		if !curr.snap1.equal(curr.snap2) {
-			return false
-		}
-		for i := range curr.snap1.entries {
-			if curr.snap1.entries[i].snapshot == nil {
-				continue
-			}
-			stack = append(stack, walkNode{
-				curr.snap1.entries[i].snapshot,
-				curr.snap2.entries[i].snapshot,
-			})
 		}
 	}
 	return true
 }
 
 type dirSnapshotEntry struct {
-	name    string
 	mode    os.FileMode
 	modTime time.Time
-
-	// snapshot is filled in by snapshotTree if the entry is a directory.
-	snapshot *dirSnapshot
 }
 
-// equal compares two entries for equality non-recursively.
+// equal compares two entries for equality.
 func (ent *dirSnapshotEntry) equal(ent2 *dirSnapshotEntry) bool {
 	if ent == nil && ent2 == nil {
 		return true
@@ -193,12 +125,13 @@ func (ent *dirSnapshotEntry) equal(ent2 *dirSnapshotEntry) bool {
 	if ent == nil || ent2 == nil {
 		return false
 	}
-	return ent.name == ent2.name && ent.mode == ent2.mode && ent.modTime.Equal(ent2.modTime)
+	return ent.mode == ent2.mode && ent.modTime.Equal(ent2.modTime)
 }
 
 // isIgnoredForWatch reports whether a given filename is ignored for the
 // purposes of snapshotting a directory.
-func isIgnoredForWatch(basename string) bool {
+func isIgnoredForWatch(path string) bool {
+	basename := filepath.Base(path)
 	return basename == ".git" ||
 		basename == ".hg" ||
 		basename == ".svn" ||
