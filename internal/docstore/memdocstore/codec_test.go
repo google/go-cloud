@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"gocloud.dev/internal/docstore/driver"
+	"gocloud.dev/internal/docstore/drivertest"
 )
 
 type aStruct struct {
@@ -71,10 +71,7 @@ func TestEncodeDoc(t *testing.T) {
 			},
 		},
 	} {
-		doc, err := driver.NewDocument(test.in)
-		if err != nil {
-			t.Fatal(err)
-		}
+		doc := drivertest.MustDocument(test.in)
 		got, err := encodeDoc(doc)
 		if err != nil {
 			t.Fatal(err)
@@ -128,10 +125,7 @@ func TestDecodeDoc(t *testing.T) {
 		},
 	} {
 		got := test.val
-		doc, err := driver.NewDocument(test.val)
-		if err != nil {
-			t.Fatal(err)
-		}
+		doc := drivertest.MustDocument(test.val)
 		if err := decodeDoc(test.in, doc, nil); err != nil {
 			t.Fatal(err)
 		}

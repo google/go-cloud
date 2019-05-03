@@ -211,8 +211,8 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string, n
 }
 
 // RunActions implements driver.RunActions.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
-	if unordered {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
+	if opts.Unordered {
 		return c.runActionsUnordered(ctx, actions)
 	}
 	return c.runActionsOrdered(ctx, actions)

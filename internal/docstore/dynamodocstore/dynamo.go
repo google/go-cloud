@@ -195,8 +195,8 @@ func (c *collection) KeyFields() []string {
 	return []string{c.partitionKey, c.sortKey}
 }
 
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
-	if unordered {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
+	if opts.Unordered {
 		panic("unordered unimplemented")
 	}
 	groups := c.splitActions(actions)

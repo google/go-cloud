@@ -22,14 +22,11 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/uuid"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	ds "gocloud.dev/internal/docstore"
@@ -745,26 +742,6 @@ type nativeMinimal struct {
 	T  time.Time
 	LF []float64
 	LS []string
-}
-
-// MakeUniqueStringDeterministicForTesting uses a specified seed value to
-// produce the same sequence of values in driver.UniqueString for testing.
-//
-// Call when running tests that will be replayed.
-func MakeUniqueStringDeterministicForTesting(seed int64) {
-	r := &randReader{r: rand.New(rand.NewSource(seed))}
-	uuid.SetRand(r)
-}
-
-type randReader struct {
-	mu sync.Mutex
-	r  *rand.Rand
-}
-
-func (r *randReader) Read(buf []byte) (int, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.r.Read(buf)
 }
 
 // The following is the schema for the collection used for query testing.
