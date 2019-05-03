@@ -43,7 +43,7 @@ var portableTypes = []*portableTypeInfo{
 	},
 }
 
-// TODO(rvangent): Add tests for add(), including for each supported portableType.
+// TODO(rvangent): Add tests for addPortableType(), including for each supported portableType.
 // TODO(rvangent): Rename this file to addportabletype.go.
 
 func addPortableType(ctx context.Context, pctx *processContext, args []string) error {
@@ -53,9 +53,9 @@ func addPortableType(ctx context.Context, pctx *processContext, args []string) e
 		avail = append(avail, pt.name)
 	}
 	sort.Strings(avail)
-	usageMsg := fmt.Sprintf("gocdk add <%s>", strings.Join(avail, "|"))
+	usageMsg := fmt.Sprintf("gocdk add-ptype <%s>", strings.Join(avail, "|"))
 
-	f := newFlagSet(pctx, "add")
+	f := newFlagSet(pctx, "add-ptype")
 	force := f.Bool("force", false, "re-add even the portable type even if it has already been added, overwriting previous files")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
