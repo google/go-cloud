@@ -1054,9 +1054,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		}
 	}
 
-	// Make separately named docs for each test. Otherwise the concurrency confuses the replayer.
-	//	makeDocs := func(prefix string) []docmap {
-
 	var docs []docmap
 	for i := 0; i < 9; i++ {
 		docs = append(docs, docmap{KeyField: fmt.Sprintf("testUnorderedActions%d", i), "s": fmt.Sprint(i)})
