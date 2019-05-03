@@ -22,14 +22,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/dnaeon/go-vcr/recorder"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/replay"
 	"gocloud.dev/internal/useragent"
@@ -51,35 +49,6 @@ var Record = flag.Bool("record", false, "whether to run tests against cloud reso
 // FakeGCPCredentials gets fake GCP credentials.
 func FakeGCPCredentials(ctx context.Context) (*google.Credentials, error) {
 	return google.CredentialsFromJSON(ctx, []byte(`{"type": "service_account", "project_id": "my-project-id"}`))
-}
-
-// NewAWSSession creates a new session for testing against AWS.
-// If the test is in --record mode, the test will call out to AWS, and the
-// results are recorded in a replay file.
-// Otherwise, the session reads a replay file and runs the test as a replay,
-// which never makes an outgoing HTTP call and uses fake credentials.
-func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
-	mode := recorder.ModeReplaying
-	if *Record {
-		mode = recorder.ModeRecording
-	}
-	awsMatcher := &replay.ProviderMatcher{
-		URLScrubbers: []*regexp.Regexp{
-			regexp.MustCompile(`X-Amz-(Credential|Signature)=[^?]*`),
-		},
-		Headers: []string{"X-Amz-Target"},
-	}
-	r, cleanup, err := replay.NewRecorder(t, mode, awsMatcher, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
-
-	client := &http.Client{Transport: r}
-	sess, err = awsSession(region, client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return sess, r, cleanup
 }
 
 func awsSession(region string, client *http.Client) (*session.Session, error) {
@@ -147,10 +116,14 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 	return c, func() { rep.Close() }, recState.UnixNano()
 }
 
-// NewAWSSession2 is like NewAWSSession, but it uses a different record/replay proxy.
+// NewAWSSession creates a new session for testing against AWS.
+// If the test is in --record mode, the test will call out to AWS, and the
+// results are recorded in a replay file.
+// Otherwise, the session reads a replay file and runs the test as a replay,
+// which never makes an outgoing HTTP call and uses fake credentials.
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
-func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session,
+func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *session.Session,
 	rt http.RoundTripper, cleanup func(), initState int64) {
 	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature", "X-Amz-Security-Token")

@@ -52,7 +52,7 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, _, done, state := setup.NewAWSSession2(ctx, t, region)
+	sess, _, done, state := setup.NewAWSSession(ctx, t, region)
 	drivertest.MakeUniqueStringDeterministicForTesting(state)
 	return &harness{sess: sess, closer: done}, nil
 }
