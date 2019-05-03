@@ -115,8 +115,8 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 
 func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
 	var get *pb.BatchGetDocumentsRequest
-	var ws []*pb.Write
-	if !as(&get) && !as(&ws) {
+	var write *pb.CommitRequest
+	if !as(&get) && !as(&write) {
 		return errors.New("ActionList.BeforeDo failed")
 	}
 	return nil

@@ -31,8 +31,7 @@
 //
 // firedocstore exposes the following types for As:
 // - Collection.As: *firestore.Client
-// - ActionList.BeforeDo: *pb.BatchGetDocumentRequest or []*pb.Write, which
-//   contains one *pb.Write element (Update or Delete).
+// - ActionList.BeforeDo: *pb.BatchGetDocumentRequest or *pb.CommitRequest.
 // - Query.BeforeQuery: *firestore.RunQueryRequest
 // - DocumentIterator: firestore.Firestore_RunQueryClient
 package firedocstore
@@ -373,22 +372,9 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, op
 		}
 		newNames[i] = nn
 		pws = append(pws, ws...)
-		if opts.BeforeDo != nil {
-			asFunc := func(i interface{}) bool {
-				p, ok := i.(*[]*pb.Write)
-				if !ok {
-					return false
-				}
-				*p = ws
-				return true
-			}
-			if err := opts.BeforeDo(asFunc); err != nil {
-				return err
-			}
-		}
 	}
 	// Call the Commit RPC with the list of writes.
-	wrs, err := c.commit(ctx, pws)
+	wrs, err := c.commit(ctx, pws, opts)
 	if err != nil {
 		return err
 	}
@@ -665,10 +651,23 @@ func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
 // - At most one `transform` per document is allowed in a given request.
 // - An `update` cannot follow a `transform` on the same document in a given request.
 // These should actually happen in groupActions.
-func (c *collection) commit(ctx context.Context, ws []*pb.Write) ([]*pb.WriteResult, error) {
+func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.RunActionsOptions) ([]*pb.WriteResult, error) {
 	req := &pb.CommitRequest{
 		Database: c.dbPath,
 		Writes:   ws,
+	}
+	if opts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**pb.CommitRequest)
+			if !ok {
+				return false
+			}
+			*p = req
+			return true
+		}
+		if err := opts.BeforeDo(asFunc); err != nil {
+			return nil, err
+		}
 	}
 	res, err := c.client.Commit(withResourceHeader(ctx, req.Database), req)
 	if err != nil {
