@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
+	"github.com/golang/protobuf/proto"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
@@ -85,26 +87,18 @@ func (c *codecTester) NativeDecode(value, dest interface{}) error {
 }
 
 func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
-	doc, err := driver.NewDocument(x)
-	if err != nil {
-		return nil, err
-	}
 	var e encoder
-	if err := doc.Encode(&e); err != nil {
+	if err := drivertest.MustDocument(x).Encode(&e); err != nil {
 		return nil, err
 	}
 	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
 }
 
 func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
-	doc, err := driver.NewDocument(dest)
-	if err != nil {
-		return err
-	}
 	mv := &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{
 		Fields: value.(*pb.Document).Fields,
 	}}}
-	return doc.Decode(decoder{mv})
+	return drivertest.MustDocument(dest).Decode(decoder{mv})
 }
 
 type verifyAs struct{}
@@ -206,5 +200,35 @@ func TestOpenCollection(t *testing.T) {
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+func TestNewGetRequest(t *testing.T) {
+	c := &collection{dbPath: "dbPath", collPath: "collPath", nameField: "name"}
+	actions := []*driver.Action{
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "a"})},
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "b"})},
+	}
+	got, err := c.newGetRequest(actions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := &pb.BatchGetDocumentsRequest{
+		Database:  "dbPath",
+		Documents: []string{"collPath/a", "collPath/b"},
+	}
+	if !proto.Equal(got, want) {
+		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+
+	// Duplicate names should return an error.
+	actions = []*driver.Action{
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "a"})},
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "b"})},
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "a"})},
+	}
+	_, err = c.newGetRequest(actions)
+	if gcerrors.Code(err) != gcerrors.InvalidArgument {
+		t.Errorf("got %v, want InvalidArgument", err)
 	}
 }
