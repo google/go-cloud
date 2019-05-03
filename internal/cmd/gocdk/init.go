@@ -15,11 +15,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"gocloud.dev/internal/cmd/gocdk/internal/templates"
 	"golang.org/x/xerrors"
@@ -37,7 +39,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		return usagef("gocdk init PATH")
 	}
 	// TODO(light): allow an existing empty directory, for some definition of empty
-	path := f.Arg(0)
+	path := pctx.resolve(f.Arg(0))
 	if _, err := os.Stat(path); err == nil {
 		return xerrors.Errorf("gocdk init: %s already exists", path)
 	} else if !os.IsNotExist(err) {
@@ -48,12 +50,25 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
 
-	for name, content := range templates.InitTemplates {
+	tmplValues := struct {
+		ProjectName string
+		ImportPath  string
+	}{
+		ProjectName: filepath.Base(path),
+		ImportPath:  filepath.Base(path), // DO NOT SUBMIT TODO(light): Actually figure this out.
+	}
+	for name, templateSource := range templates.InitTemplates {
+		tmpl := template.Must(template.New("").Parse(templateSource))
+		buf := new(bytes.Buffer)
+		if err := tmpl.Execute(buf, tmplValues); err != nil {
+			return xerrors.Errorf("gocdk init: %w", err)
+		}
+
 		fullPath := filepath.Join(path, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0777); err != nil {
 			return xerrors.Errorf("gocdk init: %w", err)
 		}
-		if err := ioutil.WriteFile(fullPath, []byte(content), 0666); err != nil {
+		if err := ioutil.WriteFile(fullPath, buf.Bytes(), 0666); err != nil {
 			return xerrors.Errorf("gocdk init: %w", err)
 		}
 	}

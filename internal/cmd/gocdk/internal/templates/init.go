@@ -21,16 +21,38 @@ var InitTemplates = map[string]string{
 	"README.md": `I'm a readme about using the cli`,
 
 	"Dockerfile": `
-# gocdk-image: 
+# gocdk-image: {{.ProjectName}}
 `,
 
-	"go.mod": `
+	"go.mod": `module {{.ImportPath}}
 `,
 
-	"main.go": `
+	"main.go": `package main
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+)
+
+func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	http.HandleFunc("/", greet)
+	if err := http.ListenAndServe(":" + port, nil); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func greet(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Hello, World!")
+}
 `,
 
-	"biomes/dev/biome.json": `{,
+	"biomes/dev/biome.json": `{
 		"serve_enabled" : true,
 		"launcher" : "local"
 	}
@@ -51,7 +73,7 @@ var InitTemplates = map[string]string{
 	"biomes/dev/secrets.auto.tfvars": `
 `,
 
-	".dockerignore": `
+	".dockerignore": `*.tfvars
 `,
 
 	".gitignore": `*.tfvars
