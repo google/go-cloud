@@ -24,7 +24,7 @@ import (
 	"gocloud.dev/requestlog"
 )
 
-func TestDriver(t *testing.T) {
+func TestListenAndServe(t *testing.T) {
 	td := new(testDriver)
 	s := New(http.NotFoundHandler(), &Options{Driver: td})
 	err := s.ListenAndServe(":8080")
@@ -34,11 +34,17 @@ func TestDriver(t *testing.T) {
 	if !td.listenAndServeCalled {
 		t.Error("ListenAndServe was not called from the supplied driver")
 	}
+	if td.handler == nil {
+		t.Error("testDriver must set handler, got nil")
+	}
 }
 
 func TestMiddleware(t *testing.T) {
+	onLogCalled := false
+
 	tl := &testLogger{
 		onLog: func(ent *requestlog.Entry) {
+			onLogCalled = true
 			if ent.TraceID.String() == "" {
 				t.Error("TraceID is empty")
 			}
@@ -62,6 +68,9 @@ func TestMiddleware(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	td.handler.ServeHTTP(rr, req)
+	if !onLogCalled {
+		t.Fatal("logging middleware was not called")
+	}
 }
 
 type testDriver struct {
