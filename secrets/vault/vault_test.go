@@ -19,6 +19,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"gocloud.dev/secrets"
@@ -57,6 +58,8 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.SetClientTimeout(3 * time.Second)
+	c.SetMaxRetries(3)
 	// Enable the Transit Secrets Engine to use Vault as an Encryption as a Service.
 	if _, err := c.Logical().Write("sys/mounts/transit", map[string]interface{}{
 		"type": "transit",
