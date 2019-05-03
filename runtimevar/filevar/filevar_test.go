@@ -275,7 +275,7 @@ func TestOpenVariableURL(t *testing.T) {
 
 func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), error) {
 	const keeperEnv = "RUNTIMEVAR_KEEPER_URL"
-	const keeperURL = "stringkey://my-key"
+	const keeperURL = "stringkey://my-special-very-secret-secretkey"
 	oldURL := os.Getenv(keeperEnv)
 	os.Setenv(keeperEnv, keeperURL)
 	cleanup := func() { os.Setenv(keeperEnv, oldURL) }

@@ -128,8 +128,8 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 }
 
 // RunActions implements driver.RunActions.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
-	if unordered {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
+	if opts.Unordered {
 		errs := make([]error, len(actions))
 		var wg sync.WaitGroup
 		for i, a := range actions {
