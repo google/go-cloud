@@ -52,7 +52,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, _, done := setup.NewAWSSession(t, region)
+	sess, _, done, state := setup.NewAWSSession(ctx, t, region)
+	drivertest.MakeUniqueStringDeterministicForTesting(state)
 	return &harness{sess: sess, closer: done}, nil
 }
 
@@ -106,9 +107,6 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 }
 
 func TestConformance(t *testing.T) {
-	// Note: when running -record repeatedly in a short time period, change the argument
-	// in the call below to generate unique transaction tokens.
-	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	drivertest.RunConformanceTests(t, newHarness, &codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 

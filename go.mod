@@ -31,7 +31,8 @@ require (
 	github.com/aws/aws-sdk-go v1.19.16
 	github.com/coreos/etcd v3.3.13+incompatible // indirect
 	github.com/dimchansky/utfbom v1.1.0 // indirect
-	github.com/dnaeon/go-vcr v1.0.1
+	github.com/elazarl/go-bindata-assetfs v1.0.0 // indirect
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
