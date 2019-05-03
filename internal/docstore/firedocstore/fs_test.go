@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
+	"github.com/golang/protobuf/proto"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
@@ -198,5 +200,35 @@ func TestOpenCollection(t *testing.T) {
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+func TestNewGetRequest(t *testing.T) {
+	c := &collection{dbPath: "dbPath", collPath: "collPath", nameField: "name"}
+	actions := []*driver.Action{
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "a"})},
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "b"})},
+	}
+	got, err := c.newGetRequest(actions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := &pb.BatchGetDocumentsRequest{
+		Database:  "dbPath",
+		Documents: []string{"collPath/a", "collPath/b"},
+	}
+	if !proto.Equal(got, want) {
+		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+
+	// Duplicate names should return an error.
+	actions = []*driver.Action{
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "a"})},
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "b"})},
+		{Kind: driver.Get, Doc: drivertest.MustDocument(map[string]interface{}{"name": "a"})},
+	}
+	_, err = c.newGetRequest(actions)
+	if gcerrors.Code(err) != gcerrors.InvalidArgument {
+		t.Errorf("got %v, want InvalidArgument", err)
 	}
 }

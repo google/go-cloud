@@ -321,15 +321,18 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) []error
 }
 
 func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocumentsRequest, error) {
-	// TODO(jba): fail if two documents have the same name. The only way to
-	// distinguish BatchGet responses is by name.
 	req := &pb.BatchGetDocumentsRequest{Database: c.dbPath}
+	seen := map[string]bool{}
 	for _, a := range gets {
 		docName, _, err := c.docName(a.Doc)
 		if err != nil {
 			return nil, err
 		}
+		if seen[docName] {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "duplicate document name in Get: %q", docName)
+		}
 		req.Documents = append(req.Documents, c.collPath+"/"+docName)
+		seen[docName] = true
 	}
 	// groupActions has already made sure that all the actions have the same field paths,
 	// so just use the first one.
