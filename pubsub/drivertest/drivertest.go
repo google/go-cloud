@@ -48,10 +48,10 @@ type Harness interface {
 	// does not exist.
 	MakeNonexistentTopic(ctx context.Context) (driver.Topic, error)
 
-	// CreateSubscription creates a new subscription in the provider, subscribed to the given topic, and returns
-	// a driver.Subscription for testing.
-	// The subscription may have to be cleaned up manually if the test is abruptly terminated or the network connection
-	// fails.
+	// CreateSubscription creates a new subscription in the provider, subscribed
+	// to the given topic, and returns a driver.Subscription for testing. The
+	// subscription may have to be cleaned up manually if the test is abruptly
+	// terminated or the network connection fails.
 	CreateSubscription(ctx context.Context, t driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error)
 
 	// MakeNonexistentSubscription makes a driver.Subscription referencing a
