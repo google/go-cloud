@@ -1083,7 +1083,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		actions.Put(docs[i])
 	}
 	must(actions.Do(ctx))
-	fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
 	// Get the first three and put three more.
 	actions = coll.Actions().Unordered()
@@ -1097,7 +1096,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		actions.Put(docs[i])
 	}
 	must(actions.Do(ctx))
-	fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 	compare(gdocs, docs[:3])
 
 	// Delete the first three, get the second three, and put three more.
@@ -1117,7 +1115,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	actions.Get(gdocs[2])
 	actions.Put(docs[8])
 	must(actions.Do(ctx))
-	fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 	compare(gdocs, docs[3:6])
 
 	// Get the first four. The first three should fail.
