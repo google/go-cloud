@@ -36,7 +36,7 @@ func TestDriver(t *testing.T) {
 	}
 }
 
-func TestLogging(t *testing.T) {
+func TestMiddleware(t *testing.T) {
 	tl := &testLogger{
 		onLog: func(ent *requestlog.Entry) {
 			if ent.TraceID.String() == "" {
