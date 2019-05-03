@@ -108,17 +108,9 @@ func (ct *codecTester) NativeDecode(value, dest interface{}) error {
 }
 
 func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
-	doc, err := driver.NewDocument(obj)
-	if err != nil {
-		return nil, err
-	}
-	return encodeDoc(doc)
+	return encodeDoc(drivertest.MustDocument(obj))
 }
 
 func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
-	doc, err := driver.NewDocument(dest)
-	if err != nil {
-		return err
-	}
-	return decodeDoc(value.(*dyn.AttributeValue), doc)
+	return decodeDoc(value.(*dyn.AttributeValue), drivertest.MustDocument(dest))
 }

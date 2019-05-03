@@ -21,7 +21,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	ts "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
-	"gocloud.dev/internal/docstore/driver"
+	"gocloud.dev/internal/docstore/drivertest"
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
@@ -29,14 +29,6 @@ import (
 // These aren't tested in the docstore-wide conformance tests.
 func TestCodecSpecial(t *testing.T) {
 	const nameField = "Name"
-	mustdoc := func(x interface{}) driver.Document {
-		t.Helper()
-		doc, err := driver.NewDocument(x)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return doc
-	}
 
 	type S struct {
 		Name    string
@@ -59,12 +51,12 @@ func TestCodecSpecial(t *testing.T) {
 	}
 	var got S
 
-	enc, err := encodeDoc(mustdoc(in), nameField)
+	enc, err := encodeDoc(drivertest.MustDocument(in), nameField)
 	if err != nil {
 		t.Fatal(err)
 	}
 	enc.Name = "collPath/" + in.Name
-	gotdoc := mustdoc(&got)
+	gotdoc := drivertest.MustDocument(&got)
 	// Test type-driven decoding (where the types of the struct fields are available).
 	if err := decodeDoc(enc, gotdoc, nameField); err != nil {
 		t.Fatal(err)
@@ -75,7 +67,7 @@ func TestCodecSpecial(t *testing.T) {
 
 	// Test type-blind decoding.
 	gotmap := map[string]interface{}{}
-	gotmapdoc := mustdoc(gotmap)
+	gotmapdoc := drivertest.MustDocument(gotmap)
 	if err := decodeDoc(enc, gotmapdoc, nameField); err != nil {
 		t.Fatal(err)
 	}

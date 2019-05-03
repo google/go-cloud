@@ -66,7 +66,7 @@ type mapEncoder struct {
 	encoder
 }
 
-func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
+func (e *encoder) EncodeMap(n int) driver.Encoder {
 	m := make(map[string]interface{}, n)
 	e.val = m
 	return &mapEncoder{m: m}

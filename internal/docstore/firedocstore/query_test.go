@@ -22,6 +22,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/internal/docstore/driver"
+	"gocloud.dev/internal/docstore/drivertest"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 )
 
@@ -140,10 +141,7 @@ func TestEvaluateFilter(t *testing.T) {
 		"b":  true,
 		"mi": math.MaxInt64,
 	}
-	doc, err := driver.NewDocument(m)
-	if err != nil {
-		t.Fatal(err)
-	}
+	doc := drivertest.MustDocument(m)
 	for _, test := range []struct {
 		field, op string
 		value     interface{}
