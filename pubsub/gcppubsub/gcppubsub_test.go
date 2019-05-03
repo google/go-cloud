@@ -66,9 +66,8 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 		topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
 		topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
 		dt, cleanup, err := createTopic(ctx, h.pubClient, topicName, topicPath)
-		// TODO: not for submit; how to test this error correctly?
-		if err != nil && strings.Contains(err.Error(), "AlreadyExists") {
-			// Delete the token and retry
+		if err != nil && status.Code(err) == codes.AlreadyExists {
+			// Delete the topic and retry.
 			h.pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
 			continue
 		}
@@ -79,7 +78,7 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName, topicPath string) (dt driver.Topic, cleanup func(), err error) {
 	_, err = pubClient.CreateTopic(ctx, &pubsubpb.Topic{Name: topicPath})
 	if err != nil {
-		return nil, nil, fmt.Errorf("creating topic: %v", err)
+		return nil, nil, err
 	}
 	dt = openTopic(pubClient, projectID, topicName)
 	cleanup = func() {
