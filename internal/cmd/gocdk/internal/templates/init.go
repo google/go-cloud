@@ -24,7 +24,7 @@ var InitTemplates = map[string]string{
 # gocdk-image: {{.ProjectName}}
 `,
 
-	"go.mod": `module {{.ImportPath}}
+	"go.mod": `module {{.ModulePath}}
 `,
 
 	"main.go": `package main

@@ -57,6 +57,7 @@ require (
 	github.com/kr/pty v1.1.3 // indirect
 	github.com/lib/pq v1.1.0
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/nats-io/gnatsd v1.4.1
 	github.com/nats-io/go-nats v1.7.2
 	github.com/nats-io/nuid v1.0.1 // indirect
@@ -67,6 +68,7 @@ require (
 	go.etcd.io/etcd v3.3.12+incompatible
 	go.mongodb.org/mongo-driver v1.0.1
 	go.opencensus.io v0.20.2
+	go.uber.org/zap v1.10.0 // indirect
 	gocloud.dev/internal/cmd/gocdk v0.0.0-20190502174614-c48606479c83 // indirect
 	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
 	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6

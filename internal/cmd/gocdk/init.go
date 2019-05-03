@@ -20,7 +20,9 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"gocloud.dev/internal/cmd/gocdk/internal/templates"
@@ -29,6 +31,10 @@ import (
 
 func init_(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "init")
+	var modpath string
+	f.StringVar(&modpath, "module-path", "", "the module path for your project's go.mod file")
+	f.StringVar(&modpath, "m", "", "alias for --module-path")
+
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
@@ -36,10 +42,21 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 	}
 
 	if f.NArg() != 1 {
-		return usagef("gocdk init PATH")
+		return usagef("gocdk init [options] PATH")
 	}
-	// TODO(light): allow an existing empty directory, for some definition of empty
+
 	path := pctx.resolve(f.Arg(0))
+	if modpath == "" {
+		var err error
+		modpath, err = inferModulePath(ctx, pctx, path)
+		if err != nil {
+			// TODO(clausti): return information about how to mitigate this error
+			// e.g. tell them to use --module-path to specify it
+			return xerrors.Errorf("gocdk init: %w", err)
+		}
+	}
+
+	// TODO(light): allow an existing empty directory, for some definition of empty
 	if _, err := os.Stat(path); err == nil {
 		return xerrors.Errorf("gocdk init: %s already exists", path)
 	} else if !os.IsNotExist(err) {
@@ -52,10 +69,10 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 
 	tmplValues := struct {
 		ProjectName string
-		ImportPath  string
+		ModulePath  string
 	}{
 		ProjectName: filepath.Base(path),
-		ImportPath:  filepath.Base(path), // DO NOT SUBMIT TODO(light): Actually figure this out.
+		ModulePath:  modpath,
 	}
 	for name, templateSource := range templates.InitTemplates {
 		tmpl := template.Must(template.New("").Parse(templateSource))
@@ -73,4 +90,26 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		}
 	}
 	return nil
+}
+
+// inferModulePath will check the default GOPATH to attempt to infer the module
+// import path for the project.
+func inferModulePath(ctx context.Context, pctx *processContext, path string) (string, error) {
+	cmd := exec.CommandContext(ctx, "go", "env", "GOPATH")
+	cmd.Dir = pctx.workdir
+	cmd.Env = pctx.env
+	gopath, err := cmd.Output()
+	if err != nil {
+		return "", xerrors.Errorf("infer module path: %w", err)
+	}
+	//check if path is relative to gopath
+	rel, err := filepath.Rel(strings.TrimSuffix(string(gopath), "\n"), path)
+	if err != nil {
+		return "", xerrors.Errorf("infer module path: %w", err)
+	}
+	inGOPATH := !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	if !inGOPATH {
+		return "", xerrors.Errorf("infer module path: %s not in GOPATH", path)
+	}
+	return filepath.ToSlash(rel), nil
 }
