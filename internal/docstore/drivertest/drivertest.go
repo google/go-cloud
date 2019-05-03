@@ -793,12 +793,12 @@ var queryDocuments = []*HighScore{
 }
 
 func testQuery(t *testing.T, coll *ds.Collection) {
+	cleanUpTable(t, newHighScore, coll)
 	ctx := context.Background()
 	// (Temporary) skip if the driver does not implement queries.
 	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
 		t.Skip("queries not yet implemented")
 	}
-	defer cleanUpTable(t, newHighScore, coll)
 
 	// Add the query docs.
 	alist := coll.Actions()
@@ -959,7 +959,7 @@ func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentI
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
-	defer cleanUpTable(t, newDocmap, coll)
+	cleanUpTable(t, newDocmap, coll)
 	ctx := context.Background()
 
 	docs := []docmap{
@@ -1013,6 +1013,7 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 }
 
 func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
+	cleanUpTable(t, newHighScore, coll)
 	docs := []*HighScore{
 		{game3, "steph", 24, date(4, 25), nil},
 		{game3, "mia", 99, date(4, 26), nil},
@@ -1032,7 +1033,6 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 	if err := actions.Do(ctx); err != nil {
 		t.Fatal(err)
 	}
-	defer cleanUpTable(t, newHighScore, coll)
 
 	// Query
 	qs := []*docstore.Query{

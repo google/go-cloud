@@ -50,7 +50,7 @@ func (h *harness) Close() {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, _, done := setup.NewAWSSession2(ctx, t, region)
+	sess, _, done, _ := setup.NewAWSSession2(ctx, t, region)
 	return &harness{
 		client: kms.New(sess),
 		close:  done,
