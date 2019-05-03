@@ -83,6 +83,10 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	return nil
 }
 
+func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
+	return nil
+}
+
 func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
 	var si *dyn.ScanInput
 	var qi *dyn.QueryInput
