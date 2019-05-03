@@ -44,8 +44,9 @@ var portableTypes = []*portableTypeInfo{
 }
 
 // TODO(rvangent): Add tests for add(), including for each supported portableType.
+// TODO(rvangent): Rename this file to addportabletype.go.
 
-func add(ctx context.Context, pctx *processContext, args []string) error {
+func addPortableType(ctx context.Context, pctx *processContext, args []string) error {
 	// Compute a sorted slice of available portable types for usage.
 	var avail []string
 	for _, pt := range portableTypes {
