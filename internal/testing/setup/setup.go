@@ -29,7 +29,6 @@ import (
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/gcp"
-	"gocloud.dev/internal/testing/replay"
 	"gocloud.dev/internal/useragent"
 
 	"cloud.google.com/go/httpreplay"
@@ -171,7 +170,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing RPC and uses fake credentials.
 func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*grpc.ClientConn, func()) {
-	opts, done := replay.NewGCPDialOptions(t, *Record, t.Name()+".replay")
+	opts, done := NewGCPDialOptions(t, *Record, t.Name()+".replay")
 	opts = append(opts, useragent.GRPCDialOption(api))
 	if *Record {
 		// Add credentials for real RPCs.
