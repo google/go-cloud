@@ -18,8 +18,7 @@
 //
 // URLs
 //
-// For secrets.OpenKeeper, localsecrets registers for the schemes "stringkey"
-// and "base64key".
+// For secrets.OpenKeeper, localsecrets registers for the scheme "base64key".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
@@ -44,46 +43,38 @@ import (
 )
 
 func init() {
-	secrets.DefaultURLMux().RegisterKeeper(SchemeString, &URLOpener{})
-	secrets.DefaultURLMux().RegisterKeeper(SchemeBase64, &URLOpener{base64: true})
+	secrets.DefaultURLMux().RegisterKeeper(Scheme, &URLOpener{})
 }
 
-// SchemeString/SchemeBase64 are the URL schemes localsecrets registers its URLOpener under on secrets.DefaultMux.
+// Scheme is the URL scheme localsecrets registers its URLOpener under on
+// secrets.DefaultMux.
 // See the package documentation and/or URLOpener for details.
 const (
-	SchemeString = "stringkey"
-	SchemeBase64 = "base64key"
+	Scheme = "base64key"
 )
 
-// URLOpener opens localsecrets URLs like "stringkey://mykey" and "base64key://c2VjcmV0IGtleQ==".
+// URLOpener opens localsecrets URLs like "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=".
 //
-// For stringkey, the first 32 bytes of the URL host are used as the symmetric
-// key for encryption/decryption.
-//
-// For base64key, the URL host must be a base64 encoded string; the first 32
-// bytes of the decoded bytes are used as the symmetric key for
-// encryption/decryption.
+// The URL host must be base64 encoded, and must decode to exactly 32 bytes.
+// If the URL host is empty (e.g., "base64key://"), a new random key is generated.
 //
 // No query parameters are supported.
-type URLOpener struct {
-	base64 bool
-}
+type URLOpener struct{}
 
 // OpenKeeperURL opens Keeper URLs.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
-	if o.base64 {
-		sk, err := Base64Key(u.Host)
-		if err != nil {
-			return nil, fmt.Errorf("open keeper %v: base64 decode failed: %v", u, err)
-		}
-		return NewKeeper(sk), nil
+	var sk [32]byte
+	var err error
+	if u.Host == "" {
+		sk, err = NewRandomKey()
+	} else {
+		sk, err = Base64Key(u.Host)
 	}
-	sk, err := ByteKey(u.Host)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open keeper %v: failed to get key: %v", u, err)
 	}
 	return NewKeeper(sk), nil
 }
@@ -115,19 +106,6 @@ func Base64Key(base64str string) ([32]byte, error) {
 		return sk32, fmt.Errorf("Base64Key: secret key material is %v bytes, want 32 bytes", keySize)
 	}
 	copy(sk32[:], key)
-	return sk32, nil
-}
-
-// ByteKey takes a secret key as a string and converts it
-// to a [32]byte, erroring if the string is not 32 bytes of data.
-func ByteKey(sk string) ([32]byte, error) {
-	var sk32 [32]byte
-	skb := []byte(sk)
-	keySize := len(skb)
-	if keySize != 32 {
-		return sk32, fmt.Errorf("ByteKey: secret key material is %v bytes, want 32 bytes", keySize)
-	}
-	copy(sk32[:], skb)
 	return sk32, nil
 }
 
