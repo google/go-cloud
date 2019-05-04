@@ -98,15 +98,17 @@ func TestOpenKeeper(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"stringkey://my-special-very-secret-secretkey", false},
-		// Invalid parameter.
-		{"stringkey://my-special-very-secret-secretkey?param=value", true},
+		{"base64key://", false},
 		// OK.
 		{"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=", false},
-		// Invalid parameter.
-		{"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=?param=value", true},
+		// Valid base64, but < 32 bytes.
+		{"base64key://c2VjcmV0", true},
+		// Valid base64, but > 32 bytes.
+		{"base64key://c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c3NlY3JldHNlY3JldHNlY3JldHNlY3JldHNlY3JldHM=", true},
 		// Invalid base64 key.
 		{"base64key://not-valid-base64", true},
+		// Invalid parameter.
+		{"base64key://?param=value", true},
 	}
 
 	ctx := context.Background()

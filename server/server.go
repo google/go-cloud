@@ -120,10 +120,11 @@ func (srv *Server) ListenAndServe(addr string) error {
 
 	mux := http.NewServeMux()
 	mux.Handle(hr, hcMux)
-	h := http.Handler(handler{srv.handler})
+	h := srv.handler
 	if srv.reqlog != nil {
 		h = requestlog.NewHandler(srv.reqlog, h)
 	}
+	h = http.Handler(handler{h})
 	mux.Handle("/", h)
 
 	return srv.driver.ListenAndServe(addr, mux)
