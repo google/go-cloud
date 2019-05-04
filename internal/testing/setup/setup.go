@@ -29,10 +29,10 @@ import (
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/gcp"
-	"gocloud.dev/internal/testing/replay"
 	"gocloud.dev/internal/useragent"
 
 	"cloud.google.com/go/httpreplay"
+	"cloud.google.com/go/rpcreplay"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -170,7 +170,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing RPC and uses fake credentials.
 func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*grpc.ClientConn, func()) {
-	opts, done := replay.NewGCPDialOptions(t, *Record, t.Name()+".replay")
+	opts, done := NewGCPDialOptions(t, *Record, t.Name()+".replay")
 	opts = append(opts, useragent.GRPCDialOption(api))
 	if *Record {
 		// Add credentials for real RPCs.
@@ -296,4 +296,41 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 		os.Remove(f.Name())
 		os.Setenv(envVar, oldEnvVal)
 	}
+}
+
+// NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC
+// dial request. These options allow a recorder/replayer to intercept RPCs and
+// save RPCs to the file at filename, or read the RPCs from the file and return
+// them. When recording is set to true, we're in recording mode; otherwise we're
+// in replaying mode.
+func NewGCPDialOptions(t *testing.T, recording bool, filename string) (opts []grpc.DialOption, done func()) {
+	path := filepath.Join("testdata", filename)
+	if recording {
+		t.Logf("Recording into golden file %s", path)
+		r, err := rpcreplay.NewRecorder(path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		opts = r.DialOptions()
+		done = func() {
+			if err := r.Close(); err != nil {
+				t.Errorf("unable to close recorder: %v", err)
+			}
+		}
+		return opts, done
+	}
+	t.Logf("Replaying from golden file %s", path)
+	r, err := rpcreplay.NewReplayer(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Uncomment for more verbose logging from the replayer.
+	// r.SetLogFunc(t.Logf)
+	opts = r.DialOptions()
+	done = func() {
+		if err := r.Close(); err != nil {
+			t.Errorf("unable to close recorder: %v", err)
+		}
+	}
+	return opts, done
 }

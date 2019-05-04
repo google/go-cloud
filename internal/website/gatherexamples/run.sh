@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2019 The Go Cloud Authors
+# Copyright 2019 The Go Cloud Development Kit Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
