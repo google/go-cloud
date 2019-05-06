@@ -104,6 +104,9 @@ type AsTest interface {
 	Name() string
 	// CollectionCheck will be called to allow verification of Collection.As.
 	CollectionCheck(coll *docstore.Collection) error
+	// BeforeDo will be passed directly to ActionList.BeforeDo as part of running
+	// the test actions.
+	BeforeDo(as func(interface{}) bool) error
 	// BeforeQuery will be passed directly to Query.BeforeQuery as part of doing
 	// the test query.
 	BeforeQuery(as func(interface{}) bool) error
@@ -121,6 +124,13 @@ func (verifyAsFailsOnNil) Name() string {
 func (verifyAsFailsOnNil) CollectionCheck(coll *docstore.Collection) error {
 	if coll.As(nil) {
 		return errors.New("want Collection.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeDo(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want ActionList.As to return false when passed nil")
 	}
 	return nil
 }
@@ -1030,8 +1040,21 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 	for _, doc := range docs {
 		actions.Put(doc)
 	}
-	if err := actions.Do(ctx); err != nil {
+	if err := actions.BeforeDo(st.BeforeDo).Do(ctx); err != nil {
 		t.Fatal(err)
+	}
+
+	// Get docs
+	gets := coll.Actions()
+	want := docs[0]
+	got := &HighScore{Game: want.Game, Player: want.Player}
+	gets.Get(got)
+	if err := gets.BeforeDo(st.BeforeDo).Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	want.DocstoreRevision = got.DocstoreRevision
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error(diff)
 	}
 
 	// Query

@@ -24,12 +24,13 @@
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more details.
 // To customize the URL opener, or for more details on the URL format, see
 // URLOpener.
-// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+// See https://gocloud.dev/concepts/urls/ for background information.
 //
 // As
 //
 // dynamodocstore exposes the following types for As:
 //  - Collection.As: *dynamodb.DynamoDB
+//  - ActionList.BeforeDo: *dynamodb.TransactGetItemsInput or *dynamodb.TransactWriteItemsInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 package dynamodocstore
@@ -46,7 +47,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	gcaws "gocloud.dev/aws"
@@ -175,7 +175,7 @@ func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (
 }
 
 func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*collection, error) {
-	out, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &tableName})
+	out, err := db.DescribeTable(&dyn.DescribeTableInput{TableName: &tableName})
 	if err != nil {
 		return nil, err
 	}
@@ -204,9 +204,9 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 	var err error
 	for _, g := range groups {
 		if g[0].Kind == driver.Get {
-			err = c.runGets(ctx, g)
+			err = c.runGets(ctx, g, opts)
 		} else {
-			err = c.runWrites(ctx, g)
+			err = c.runWrites(ctx, g, opts)
 		}
 		if err != nil {
 			return driver.ActionListError{{nRun, err}}
@@ -279,7 +279,7 @@ func (c *collection) primaryKey(a *driver.Action) [2]interface{} {
 	return keys
 }
 
-func (c *collection) runGets(ctx context.Context, actions []*driver.Action) error {
+func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
 	// Assume all actions Kinds are Get's.
 	tgs := make([]*dyn.TransactGetItem, len(actions))
 	for i, a := range actions {
@@ -290,7 +290,21 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action) erro
 		tgs[i] = tg
 	}
 
-	out, err := c.db.TransactGetItemsWithContext(ctx, &dyn.TransactGetItemsInput{TransactItems: tgs})
+	in := &dyn.TransactGetItemsInput{TransactItems: tgs}
+	if opts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**dyn.TransactGetItemsInput)
+			if !ok {
+				return false
+			}
+			*p = in
+			return true
+		}
+		if err := opts.BeforeDo(asFunc); err != nil {
+			return err
+		}
+	}
+	out, err := c.db.TransactGetItemsWithContext(ctx, in)
 	if err != nil {
 		return err
 	}
@@ -303,7 +317,7 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action) erro
 	return nil
 }
 
-func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) error {
+func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
 	tws := make([]*dyn.TransactWriteItem, len(actions))
 	for i, a := range actions {
 		var pc *expression.ConditionBuilder
@@ -345,11 +359,24 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 		tws[i] = tw
 	}
 
-	_, err := c.db.TransactWriteItemsWithContext(ctx, &dyn.TransactWriteItemsInput{
+	in := &dyn.TransactWriteItemsInput{
 		ClientRequestToken: aws.String(driver.UniqueString()),
 		TransactItems:      tws,
-	})
-	if err != nil {
+	}
+	if opts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**dyn.TransactWriteItemsInput)
+			if !ok {
+				return false
+			}
+			*p = in
+			return true
+		}
+		if err := opts.BeforeDo(asFunc); err != nil {
+			return err
+		}
+	}
+	if _, err := c.db.TransactWriteItemsWithContext(ctx, in); err != nil {
 		return err
 	}
 	for i, a := range actions {

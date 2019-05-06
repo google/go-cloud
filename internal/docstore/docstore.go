@@ -243,13 +243,17 @@ func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *Acti
 //
 // If Do returns a non-nil error, it will be of type ActionListError. If any action
 // fails, the returned error will contain the position in the ActionList of each
-// failed action. As a special case, none of the actions will be executed if any is
-// invalid (for example, a Put whose document is missing its key field).
+// failed action (but see the discussion of unordered mode, below). As a special
+// case, none of the actions will be executed if any is invalid (for example, a Put
+// whose document is missing its key field).
 //
 // In ordered mode (when the Unordered method was not called on the list), execution
 // will stop after the first action that fails.
 //
-// In unordered mode, all the actions will be executed.
+// In unordered mode, all the actions will be executed. Docstore tries to execute the
+// actions as efficiently as possible. Sometimes this makes it impossible to
+// attribute failures to specific actions; in such cases, the returned
+// ActionListError will have entries whose Index field is negative.
 func (l *ActionList) Do(ctx context.Context) error {
 	var das []*driver.Action
 	var alerr ActionListError
@@ -413,7 +417,7 @@ type CollectionURLOpener interface {
 
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs against
 // a set of registered schemes and calls the opener that matches the URL's
-// scheme. See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// scheme. See https://gocloud.dev/concepts/urls/ for more information.
 //
 // The zero value is a multiplexer with no registered scheme.
 type URLMux struct {
@@ -463,7 +467,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenCollection opens the collection identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for details
-// on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs for more
+// on supported URL formats, and https://gocloud.dev/concepts/urls/ for more
 // information.
 func OpenCollection(ctx context.Context, urlstr string) (*Collection, error) {
 	return defaultURLMux.OpenCollection(ctx, urlstr)
