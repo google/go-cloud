@@ -59,11 +59,8 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return nil, err
 	}
 	c.SetClientTimeout(3 * time.Second)
-	c.SetMaxRetries(3)
 	// Enable the Transit Secrets Engine to use Vault as an Encryption as a Service.
-	if _, err := c.Logical().Write("sys/mounts/transit", map[string]interface{}{
-		"type": "transit",
-	}); err != nil {
+	if _, err := c.Logical().Write("sys/mounts/transit", map[string]interface{}{"type": "transit"}); err != nil {
 		t.Skip(err, "run secrets/vault/localvault.sh to start a dev vault container")
 	}
 
