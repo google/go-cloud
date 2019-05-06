@@ -110,6 +110,21 @@ and Gopher logo.&lt;/p&gt;</description>
     </item>
     
     <item>
+      <title>URLs</title>
+      <link>https://gocloud.dev/concepts/urls/</link>
+      <pubDate>Mon, 06 May 2019 09:55:09 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/concepts/urls/</guid>
+      <description>&lt;p&gt;In addition to creating portable types via provider-specific constructors
+(e.g., creating a &lt;code&gt;*blob.Bucket&lt;/code&gt; using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&gt;&lt;code&gt;s3blob.OpenBucket&lt;/code&gt;&lt;/a&gt;), many portable types
+can also be created using a URL. The scheme of the URL specifies the provider,
+and each provider implementation has code to convert the URL into the data
+needed to call its constructor. For example, calling
+&lt;code&gt;blob.OpenBucket(&amp;quot;s3blob://my-bucket&amp;quot;)&lt;/code&gt; will return a &lt;code&gt;*blob.Bucket&lt;/code&gt; created
+using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&gt;&lt;code&gt;s3blob.OpenBucket&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
       <title>MySQL/Postgres</title>
       <link>https://gocloud.dev/ref/sql/</link>
       <pubDate>Mon, 11 Mar 2019 10:02:56 -0700</pubDate>

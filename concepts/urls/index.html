@@ -5,7 +5,7 @@
   <meta name="generator" content="Hugo 0.54.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Tutorials &middot; Go CDK</title>
+  <title>URLs &middot; Go CDK</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Source+Code+Pro|Work+Sans:400,700">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
@@ -30,45 +30,55 @@ if (!doNotTrack) {
       <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
     </header>
     <main class="MainContent">
-      <div class="MainContent-bounds"><h1>Tutorials</h1>
+      <div class="MainContent-bounds"><h1>URLs</h1>
+<p>In addition to creating portable types via provider-specific constructors
+(e.g., creating a <code>*blob.Bucket</code> using <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blob.OpenBucket</code></a>), many portable types
+can also be created using a URL. The scheme of the URL specifies the provider,
+and each provider implementation has code to convert the URL into the data
+needed to call its constructor. For example, calling
+<code>blob.OpenBucket(&quot;s3blob://my-bucket&quot;)</code> will return a <code>*blob.Bucket</code> created
+using <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blob.OpenBucket</code></a>.</p>
 
+<p>Each portable API package will document the types that it supports opening
+by URL. For example, the <code>blob</code> package supports <code>Bucket</code>s, while the <code>pubsub</code>
+package supports <code>Topic</code>s and <code>Subscription</code>s. Each provider implementation will
+document what scheme(s) it registers for, and what format of URL it expects.</p>
 
-<div class="PageList">
-  <article class="PageList-item">
-  <a href="/tutorials/cli-uploader/"><h2 class="PageList-itemTitle">Command-Line Uploader</h2></a>
-  <div class="PageList-summary"><p>This quickstart will build a command line application called <code>upload</code> that
-uploads files to blob storage on both AWS and GCP. Blob storage stores binary
-data under a string key, and is one of the most frequently used cloud
-services.</p></div>
-  <div class="PageList-readMore"><a href="/tutorials/cli-uploader/">Read more&hellip;</a></div>
-</article>
+<p>Each portable type URL opener will accept URL schemes with an <code>&lt;api&gt;+</code> prefix
+(e.g. <code>blob+file:///dir</code> instead of <code>file:///dir</code>, as well as schemes with an
+<code>&lt;api&gt;+&lt;type&gt;+</code> prefix (e.g. <code>blob+bucket+file:///dir</code>).</p>
 
-  <article class="PageList-item">
-  <a href="/tutorials/deploy-aws/"><h2 class="PageList-itemTitle">Deploy to AWS</h2></a>
-  <div class="PageList-summary"><p>In this tutorial, we will deploy an existing Go CDK application called
-Guestbook to Amazon Web Services (AWS).</p></div>
-  <div class="PageList-readMore"><a href="/tutorials/deploy-aws/">Read more&hellip;</a></div>
-</article>
+<p>Each portable API package should include an example using a URL, and
+many providers will include provider-specific examples as well.</p>
 
-  <article class="PageList-item">
-  <a href="/tutorials/deploy-gcp/"><h2 class="PageList-itemTitle">Deploy to GCP</h2></a>
-  <div class="PageList-summary"><p>In this tutorial, we will deploy an existing Go CDK application called
-Guestbook to Google Cloud Platform (GCP).</p></div>
-  <div class="PageList-readMore"><a href="/tutorials/deploy-gcp/">Read more&hellip;</a></div>
-</article>
+<h2 id="muxes"> Muxes<a class="anchor" href="#muxes" aria-label="Link to Section">🔗</a></h2>
 
-  <article class="PageList-item">
-  <a href="/tutorials/deploy-azure/"><h2 class="PageList-itemTitle">Connect to Azure</h2></a>
-  <div class="PageList-summary"><p>In this tutorial, we will run an existing Go CDK application called Guestbook
-backed by services running on Microsoft Azure. The Go CDK doesn&rsquo;t have
-support for SQL on Azure yet (<a href="https://github.com/google/go-cloud/issues/1305">#1305</a>), so we&rsquo;ll run MySQL and the
-binary locally. This tutorial will show how to use Azure storage for the MOTD
-and Gopher logo.</p></div>
-  <div class="PageList-readMore"><a href="/tutorials/deploy-azure/">Read more&hellip;</a></div>
-</article>
+<p>Each portable type that is openable via URL will have a top-level function
+you can call, like <a href="https://godoc.org/gocloud.dev/blob#OpenBucket"><code>blob.OpenBucket</code></a>. This top-level function uses a default
+instance of a <code>URLMux</code> multiplexer to map schemes to a provider-specific
+opener for the type. For example, <code>blob</code> has a <a href="https://godoc.org/gocloud.dev/blob#BucketURLOpener"><code>BucketURLOpener</code></a> interface
+that providers implement and then register using <a href="https://godoc.org/gocloud.dev/blob#URLMux.RegisterBucket"><code>RegisterBucket</code></a> on the
+result of <a href="https://godoc.org/gocloud.dev/blob#DefaultURLMux"><code>DefaultURLMux</code></a>.</p>
 
-</div>
-</div>
+<p>Many applications will work just fine using the default mux through the
+top-level <code>Open</code> functions. However, if you want more control, you can create
+your own <code>URLMux</code> and register the provider <code>URLOpener</code>s you need. Most
+providers will export URLOpeners that give you more fine grained control over
+the arguments needed by the constructor. In particular, portable types opened
+via URL will often use default credentials from the environment. For example,
+the AWS URL openers use the credentials saved by &ldquo;aws login&rdquo; (we don&rsquo;t want
+to include credentials in the URL itself, since they are likely to be
+sensitive).</p>
+
+<ol>
+<li>Instantiate the provider&rsquo;s <code>URLOpener</code> with the specific fields you need.
+For example, <code>s3blob.URLOpener{ConfigProvider: myAWSProvider}</code> using a
+<code>ConfigProvider</code> that holds explicit AWS credentials.</li>
+<li>Create your own instance of the <code>URLMux</code>. For example: <code>mymux := new(blob.URLMux)</code></li>
+<li>Register your custom URLOpener on your mux. For example:
+<code>mymux.RegisterBucket(s3blob.Scheme, myS3URLOpener)</code></li>
+<li>Now use your mux to open URLs: <code>mymux.OpenBucket(&quot;s3://my-bucket&quot;)</code></li>
+</ol></div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">
@@ -153,7 +163,7 @@ and Gopher logo.</p></div>
         Copyright © 2018–2019 The Go Cloud Development Kit Authors.
         All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
       </p>
-      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/tutorials/_index.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/concepts/urls.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
     </footer>
   </div>
 </body>
