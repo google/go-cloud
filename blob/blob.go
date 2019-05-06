@@ -1032,7 +1032,7 @@ func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
+	return applyPrefixParam(ctx, opener.(BucketURLOpener), u)
 }
 
 // OpenBucketURL dispatches the URL to the opener that is registered with the
@@ -1042,7 +1042,27 @@ func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
+	return applyPrefixParam(ctx, opener.(BucketURLOpener), u)
+}
+
+func applyPrefixParam(ctx context.Context, opener BucketURLOpener, u *url.URL) (*Bucket, error) {
+	prefix := u.Query().Get("prefix")
+	if prefix != "" {
+		// Make a copy of u with the "prefix" parameter removed.
+		urlCopy := *u
+		q := urlCopy.Query()
+		q.Del("prefix")
+		urlCopy.RawQuery = q.Encode()
+		u = &urlCopy
+	}
+	bucket, err := opener.OpenBucketURL(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	if prefix != "" {
+		bucket = PrefixedBucket(bucket, prefix)
+	}
+	return bucket, nil
 }
 
 var defaultURLMux = new(URLMux)
@@ -1073,3 +1093,9 @@ func wrapError(b driver.Bucket, err error) error {
 }
 
 var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been closed")
+
+// PrefixedBucket returns a *Bucket based on b with all keys modified to have
+// prefix.
+func PrefixedBucket(b *Bucket, prefix string) *Bucket {
+	return NewBucket(driver.NewPrefixedBucket(b.b, prefix))
+}

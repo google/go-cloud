@@ -18,7 +18,9 @@ package driver // import "gocloud.dev/blob/driver"
 
 import (
 	"context"
+	"errors"
 	"io"
+	"strings"
 	"time"
 
 	"gocloud.dev/gcerrors"
@@ -304,3 +306,56 @@ type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.
 	Expiry time.Duration
 }
+
+// prefixedBucket implements Bucket by prepending prefix to all keys.
+type prefixedBucket struct {
+	base   Bucket
+	prefix string
+}
+
+// NewPrefixedBucket returns a Bucket based on b with all keys modified to have
+// prefix.
+func NewPrefixedBucket(b Bucket, prefix string) Bucket {
+	return &prefixedBucket{base: b, prefix: prefix}
+}
+
+func (b *prefixedBucket) ErrorCode(err error) gcerrors.ErrorCode { return b.base.ErrorCode(err) }
+func (b *prefixedBucket) As(i interface{}) bool                  { return b.base.As(i) }
+func (b *prefixedBucket) ErrorAs(err error, i interface{}) bool  { return b.base.ErrorAs(err, i) }
+func (b *prefixedBucket) Attributes(ctx context.Context, key string) (*Attributes, error) {
+	return b.base.Attributes(ctx, b.prefix+key)
+}
+func (b *prefixedBucket) ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error) {
+	var myopts ListOptions
+	if opts != nil {
+		myopts = *opts
+	}
+	myopts.Prefix = b.prefix + myopts.Prefix
+	page, err := b.base.ListPaged(ctx, &myopts)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range page.Objects {
+		p.Key = strings.TrimPrefix(p.Key, b.prefix)
+	}
+	return page, nil
+}
+func (b *prefixedBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (Reader, error) {
+	return b.base.NewRangeReader(ctx, b.prefix+key, offset, length, opts)
+}
+func (b *prefixedBucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *WriterOptions) (Writer, error) {
+	if key == "" {
+		return nil, errors.New("invalid key (empty string)")
+	}
+	return b.base.NewTypedWriter(ctx, b.prefix+key, contentType, opts)
+}
+func (b *prefixedBucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOptions) error {
+	return b.base.Copy(ctx, b.prefix+dstKey, b.prefix+srcKey, opts)
+}
+func (b *prefixedBucket) Delete(ctx context.Context, key string) error {
+	return b.base.Delete(ctx, b.prefix+key)
+}
+func (b *prefixedBucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
+	return b.base.SignedURL(ctx, b.prefix+key, opts)
+}
+func (b *prefixedBucket) Close() error { return b.base.Close() }
