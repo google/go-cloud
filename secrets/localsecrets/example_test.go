@@ -52,15 +52,14 @@ func Example_openKeeper() {
 	ctx := context.Background()
 
 	// OpenKeeper creates a *secrets.Keeper from a URL.
-	// Using "stringkey://", the first 32 bytes of the URL hostname is used as the secret.
-	keeper, err := secrets.OpenKeeper(ctx, "stringkey://my-secret-key")
+	// Using "base64key://", a new random key will be generated.
+	keeper, err := secrets.OpenKeeper(ctx, "base64key://")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer keeper.Close()
 
-	// Using "base64key://", the URL hostname must be a base64-encoded key.
-	// The first 32 bytes of the decoding are used as the secret key.
+	// The URL hostname must be a base64-encoded key, of length 32 bytes when decoded.
 	keeper, err = secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=")
 	if err != nil {
 		log.Fatal(err)
