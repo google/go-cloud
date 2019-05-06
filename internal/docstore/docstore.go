@@ -417,7 +417,7 @@ type CollectionURLOpener interface {
 
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs against
 // a set of registered schemes and calls the opener that matches the URL's
-// scheme. See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// scheme. See https://gocloud.dev/concepts/urls/ for more information.
 //
 // The zero value is a multiplexer with no registered scheme.
 type URLMux struct {
@@ -467,7 +467,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenCollection opens the collection identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for details
-// on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs for more
+// on supported URL formats, and https://gocloud.dev/concepts/urls/ for more
 // information.
 func OpenCollection(ctx context.Context, urlstr string) (*Collection, error) {
 	return defaultURLMux.OpenCollection(ctx, urlstr)
