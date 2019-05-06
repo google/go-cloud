@@ -44,6 +44,9 @@ type Collection interface {
 	// multiple ones, depending on their service offerings.
 	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
+	// RunDeleteQuery deletes every document matched by the query.
+	RunDeleteQuery(context.Context, *Query) error
+
 	// QueryPlan returns the plan for the query.
 	QueryPlan(*Query) (string, error)
 

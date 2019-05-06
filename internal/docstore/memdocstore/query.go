@@ -25,6 +25,8 @@ import (
 )
 
 func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.DocumentIterator, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	var docs []map[string]interface{}
 	for _, doc := range c.docs {
 		if q.Limit > 0 && len(docs) == q.Limit {
@@ -136,4 +138,20 @@ func (it *docIterator) As(i interface{}) bool { return false }
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "", nil
+}
+
+func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	seen := 0
+	for key, doc := range c.docs {
+		if filtersMatch(q.Filters, doc) {
+			delete(c.docs, key)
+			seen++
+			if q.Limit > 0 && seen == q.Limit {
+				break
+			}
+		}
+	}
+	return nil
 }

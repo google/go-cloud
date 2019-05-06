@@ -126,6 +126,7 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 }
 
 func TestConformance(t *testing.T) {
+	maxWritesPerRPC = 2 // to test RPC batching behavior
 	client := newTestClient(t)
 	defer func() { client.Disconnect(context.Background()) }()
 

@@ -114,6 +114,14 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	return &DocumentIterator{iter: it, wrapError: wrapErr, err: wrapErr(err)}
 }
 
+// Delete deletes all the documents specified by the query.
+func (q *Query) Delete(ctx context.Context) error {
+	if err := q.init(nil); err != nil {
+		return err
+	}
+	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
+}
+
 func (q *Query) init(fps []FieldPath) error {
 	if q.err != nil {
 		return q.err
