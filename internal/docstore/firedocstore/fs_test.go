@@ -115,6 +115,15 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	return nil
 }
 
+func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
+	var get *pb.BatchGetDocumentsRequest
+	var write *pb.CommitRequest
+	if !as(&get) && !as(&write) {
+		return errors.New("ActionList.BeforeDo failed")
+	}
+	return nil
+}
+
 func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
 	var req *pb.RunQueryRequest
 	if !as(&req) {
@@ -139,7 +148,7 @@ func TestConformance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc}, nil)
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc}, []drivertest.AsTest{verifyAs{}})
 }
 
 // Firedocstore-specific tests.
