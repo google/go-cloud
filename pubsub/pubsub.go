@@ -76,8 +76,7 @@
 //
 // Since Message.Nack never makes sense for some providers (for example, for
 // at-most-once providers, the provider can't redeliver the message), Nack will
-// panic if called for some providers. You can call Message.CanNack to see if
-// it is available.
+// panic if called for some providers.
 //
 // OpenCensus Integration
 //
