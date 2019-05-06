@@ -37,51 +37,7 @@ For non-reference documentation, see https://gocloud.dev/
 
 URLs
 
-In addition to creating portable types via provider-specific constructors
-(e.g., creating a blob.Bucket using s3blob.OpenBucket), many portable types
-can also be created using a URL. The scheme of the URL specifies the provider,
-and each provider implementation has code to convert the URL into the data
-needed to call its constructor. For example, calling blob.OpenBucket with
-s3blob://my-bucket will return a blob.Bucket created using s3blob.OpenBucket.
-
-Each portable API package will document the types that it supports opening
-by URL; for example, the blob package supports Buckets, while the pubsub
-package supports Topics and Subscriptions. Each provider implementation will
-document what scheme(s) it registers for, and what format of URL it expects.
-
-Each portable type URL opener will accept URL schemes with an <api>+ prefix
-(e.g., blob+file:///dir" instead of "file:///dir", as well as schemes with an
-<api>+<type>+ prefix (e.g., blob+bucket+file:///dir).
-
-Each portable API package should include an example using a URL, and
-many providers will include provider-specific examples as well.
-
-
-URL Muxes
-
-Each portable type that's openable via URL will have a top-level function
-you can call, like blob.OpenBucket. This top-level function uses a default
-instance of an URLMux multiplexer to map schemes to a provider-specific
-opener for the type. For example, blob has a BucketURLOpener interface that
-providers implement and then register using RegisterBucket.
-
-Many applications will work just fine using the default mux through the
-top-level Open functions. However, if you want more control, you can create
-your own URLMux and register the provider URLOpeners you need. Most providers
-will export URLOpeners that give you more fine grained control over the
-arguments needed by the constructor. In particular, portable types opened via
-URL will often use default credentials from the environment. For example, the
-AWS URL openers use the credentials saved by "aws login" (we don't want to
-include credentials in the URL itself, since they are likely to be sensitive).
-
-  - Instantiate the provider's URLOpener with the specific fields you need.
-    For example, s3blob.URLOpener{ConfigProvider: myAWSProvider} using a
-    ConfigProvider that holds explicit AWS credentials.
-  - Create your own instance of the URLMux, e.g., mymux := new(blob.URLMux).
-  - Register your custom URLOpener on your mux, e.g.,
-    mymux.RegisterBucket(s3blob.Scheme, myS3URLOpener).
-  - Now use your mux to open URLs, e.g. mymux.OpenBucket('s3://my-bucket').
-
+See https://gocloud.dev/concepts/urls/ for a discussion of URLs in the Go CDK.
 
 Escaping the abstraction
 
