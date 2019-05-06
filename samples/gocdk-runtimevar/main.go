@@ -38,7 +38,7 @@ import (
 
 const helpSuffix = `
 
-  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
+  See https://gocloud.dev/concepts/urls/ for more background on
   Go CDK URLs, and sub-packages under gocloud.dev/runtimevar
   (https://godoc.org/gocloud.dev/runtimevar#pkg-subdirectories)
   for details on the runtimevar.Variable URL format.

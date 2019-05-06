@@ -20,7 +20,7 @@
 //
 // For runtimevar.OpenVariable, constantvar registers for the scheme "constant".
 // For more details on the URL format, see URLOpener.
-// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+// See https://gocloud.dev/concepts/urls/ for background information.
 //
 // As
 //

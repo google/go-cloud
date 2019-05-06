@@ -37,7 +37,7 @@ import (
 
 const helpSuffix = `
 
-  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
+  See https://gocloud.dev/concepts/urls/ for more background on
   Go CDK URLs, and sub-packages under gocloud.dev/secrets
   (https://godoc.org/gocloud.dev/secrets#pkg-subdirectories)
   for details on the secrets.Keeper URL format.
