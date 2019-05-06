@@ -15,10 +15,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"golang.org/x/xerrors"
@@ -61,6 +63,48 @@ func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
 		return nil, xerrors.Errorf("read biome %s configuration: %w", err)
 	}
 	return config, nil
+}
+
+// tfReadOutput runs `terraform output` on the given directory and returns
+// the parsed result.
+func tfReadOutput(ctx context.Context, dir string, env []string) (map[string]*tfOutput, error) {
+	c := exec.CommandContext(ctx, "terraform", "output", "-json")
+	c.Dir = dir
+	c.Env = env
+	data, err := c.Output()
+	if err != nil {
+		return nil, xerrors.Errorf("read terraform output: %w", err)
+	}
+	var parsed map[string]*tfOutput
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return nil, xerrors.Errorf("read terraform output: %w", err)
+	}
+	return parsed, nil
+}
+
+// tfOutput describes a single output value.
+type tfOutput struct {
+	Type      string      `json:"type"` // one of "string", "list", or "map"
+	Sensitive bool        `json:"sensitive"`
+	Value     interface{} `json:"value"`
+}
+
+// stringValue returns the output's value if it is a string.
+func (out *tfOutput) stringValue() string {
+	if out == nil {
+		return ""
+	}
+	v, _ := out.Value.(string)
+	return v
+}
+
+// mapValue returns the output's value if it is a map.
+func (out *tfOutput) mapValue() map[string]interface{} {
+	if out == nil {
+		return nil
+	}
+	v, _ := out.Value.(map[string]interface{})
+	return v
 }
 
 // biomeNotFoundError is an error returned when a biome cannot be found.
