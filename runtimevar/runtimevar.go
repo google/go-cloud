@@ -19,7 +19,7 @@
 // whenever a change is detected.
 //
 // Subpackages contain distinct implementations of runtimevar for various
-// providers, including Cloud and on-prem solutions. For example, "etcdvar"
+// providers, including Cloud and on-premise solutions. For example, "etcdvar"
 // supports variables stored in etcd. Your application should import one of
 // these provider-specific subpackages and use its exported function(s) to
 // create a *Variable; do not use the New function in this package. For example:
@@ -524,7 +524,7 @@ func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
 // It also supports using "decrypt+<decoderName>" (or "decrypt" for default
 // decoder) to decrypt the data before decoding. It uses the secrets package to
-// open a keeper by the URL string stored in a envrionment variable
+// open a keeper by the URL string stored in a environment variable
 // "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
 // for more details.
 func DecoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
