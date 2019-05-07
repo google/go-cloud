@@ -32,7 +32,8 @@ import (
 func init_(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "init")
 	var modpath string
-	f.StringVar(&modpath, "module-path", "", "the module path for your project's go.mod file")
+	f.StringVar(&modpath, "module-path", "", "the module import path for your "+
+		"project's go.mod file (required if project is outside of GOPATH)")
 	f.StringVar(&modpath, "m", "", "alias for --module-path")
 
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
@@ -42,13 +43,13 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 	}
 
 	if f.NArg() != 1 {
-		return usagef("gocdk init [options] PATH")
+		return usagef("gocdk init [--module-path=MODULE_IMPORT_PATH] PATH_TO_PROJECT_DIR")
 	}
 
-	path := pctx.resolve(f.Arg(0))
+	projectDir := pctx.resolve(f.Arg(0))
 	if modpath == "" {
 		var err error
-		modpath, err = inferModulePath(ctx, pctx, path)
+		modpath, err = inferModulePath(ctx, pctx, projectDir)
 		if err != nil {
 			// TODO(clausti): return information about how to mitigate this error
 			// e.g. tell them to use --module-path to specify it
@@ -57,13 +58,13 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 	}
 
 	// TODO(light): allow an existing empty directory, for some definition of empty
-	if _, err := os.Stat(path); err == nil {
-		return xerrors.Errorf("gocdk init: %s already exists", path)
+	if _, err := os.Stat(projectDir); err == nil {
+		return xerrors.Errorf("gocdk init: %s already exists", projectDir)
 	} else if !os.IsNotExist(err) {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
 
-	if err := os.MkdirAll(path, 0777); err != nil {
+	if err := os.MkdirAll(projectDir, 0777); err != nil {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
 
@@ -71,7 +72,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		ProjectName string
 		ModulePath  string
 	}{
-		ProjectName: filepath.Base(path),
+		ProjectName: filepath.Base(projectDir),
 		ModulePath:  modpath,
 	}
 	for fileName, templateSource := range templates.InitTemplates {
@@ -81,7 +82,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 			return xerrors.Errorf("gocdk init: %w", err)
 		}
 
-		fullPath := filepath.Join(path, filepath.FromSlash(fileName))
+		fullPath := filepath.Join(projectDir, filepath.FromSlash(fileName))
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0777); err != nil {
 			return xerrors.Errorf("gocdk init: %w", err)
 		}
