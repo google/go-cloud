@@ -95,7 +95,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 
 // inferModulePath will check the default GOPATH to attempt to infer the module
 // import path for the project.
-func inferModulePath(ctx context.Context, pctx *processContext, path string) (string, error) {
+func inferModulePath(ctx context.Context, pctx *processContext, projectDir string) (string, error) {
 	cmd := exec.CommandContext(ctx, "go", "env", "GOPATH")
 	cmd.Dir = pctx.workdir
 	cmd.Env = pctx.env
@@ -103,14 +103,15 @@ func inferModulePath(ctx context.Context, pctx *processContext, path string) (st
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
 	}
-	// Check if the path to the project is relative to GOPATH.
-	rel, err := filepath.Rel(strings.TrimSuffix(string(gopath), "\n"), path)
+	// Check if the projectDir is relative to GOPATH.
+	rel, err := filepath.Rel(strings.TrimSuffix(string(gopath), "\n"), projectDir)
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
 	}
 	inGOPATH := !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 	if !inGOPATH {
-		return "", xerrors.Errorf("infer module path: %s not in GOPATH", path)
+		// If the project dir is outside of GOPATH, we can't infer the module import path.
+		return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
 	}
 	return filepath.ToSlash(rel), nil
 }
