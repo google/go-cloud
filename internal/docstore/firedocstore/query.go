@@ -22,6 +22,7 @@ package firedocstore
 import (
 	"context"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"path"
@@ -86,12 +87,18 @@ type docIterator struct {
 }
 
 func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
-	var res *pb.RunQueryResponse
-	var err error
+	res, err := it.nextResponse(ctx)
+	if err != nil {
+		return err
+	}
+	return decodeDoc(res.Document, doc, it.nameField)
+}
+
+func (it *docIterator) nextResponse(ctx context.Context) (*pb.RunQueryResponse, error) {
 	for {
-		res, err = it.streamClient.Recv()
+		res, err := it.streamClient.Recv()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// No document => partial progress; keep receiving.
 		if res.Document == nil {
@@ -99,13 +106,12 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 		}
 		match, err := it.evaluateLocalFilters(res.Document)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if match {
-			break
+			return res, nil
 		}
 	}
-	return decodeDoc(res.Document, doc, it.nameField)
 }
 
 // Report whether the filters are true of the document.
@@ -223,6 +229,7 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []drive
 		p.Limit = &wrappers.Int32Value{Value: int32(q.Limit)}
 	}
 
+	// TODO(jba): make sure we retrieve the fields needed for local filters.
 	sendFilters, localFilters := splitFilters(q.Filters)
 	// If there is only one filter, use it directly. Otherwise, construct
 	// a CompositeFilter.
@@ -348,4 +355,45 @@ func fieldRef(fp []string) *pb.StructuredQuery_FieldReference {
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
+}
+
+// For delete and update queries, limit the number of write actions per RPC, to bound
+// client memory.
+// This is a variable so it can be modified for tests.
+var maxWritesPerRPC = 1000
+
+func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+	q.FieldPaths = [][]string{{"__name__"}}
+	iter, err := c.newDocIterator(ctx, q)
+	if err != nil {
+		return err
+	}
+	defer iter.Stop()
+
+	opts := &driver.RunActionsOptions{}
+	var pws []*pb.Write
+	for {
+		res, err := iter.nextResponse(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		pws = append(pws, &pb.Write{
+			Operation: &pb.Write_Delete{Delete: res.Document.Name},
+		})
+		if len(pws) >= maxWritesPerRPC {
+			_, err := c.commit(ctx, pws, opts)
+			if err != nil {
+				return err
+			}
+			pws = pws[:0]
+		}
+	}
+	if len(pws) > 0 {
+		_, err = c.commit(ctx, pws, opts)
+		return err
+	}
+	return nil
 }
