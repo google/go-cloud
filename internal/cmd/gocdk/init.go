@@ -96,6 +96,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 // inferModulePath will check the default GOPATH to attempt to infer the module
 // import path for the project.
 func inferModulePath(ctx context.Context, pctx *processContext, projectDir string) (string, error) {
+	// TODO(issue #2016): Add tests for init behavior when module-path is not given.
 	cmd := exec.CommandContext(ctx, "go", "env", "GOPATH")
 	cmd.Dir = pctx.workdir
 	cmd.Env = pctx.env
