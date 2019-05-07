@@ -42,7 +42,7 @@ on configuration, you can use `pubsub.OpenSubscription`, making sure you
 both forms for each pub/sub provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
-[documentation on URLs]: https://godoc.org/gocloud.dev#hdr-URLs
+[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
 
 ## Amazon Simple Queueing Service {#sqs}
 

@@ -25,7 +25,7 @@
 // environment variable "NATS_SERVER_URL".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
-// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+// See https://gocloud.dev/concepts/urls/ for background information.
 //
 // Message Delivery Semantics
 //

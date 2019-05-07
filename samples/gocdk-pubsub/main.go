@@ -38,7 +38,7 @@ import (
 
 const helpSuffix = `
 
-  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
+  See https://gocloud.dev/concepts/urls/ for more background on
   Go CDK URLs, and sub-packages under gocloud.dev/pubsub
   (https://godoc.org/gocloud.dev/pubsub#pkg-subdirectories)
   for details on the topic/subscription URL format.
