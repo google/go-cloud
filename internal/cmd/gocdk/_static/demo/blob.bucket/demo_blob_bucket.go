@@ -78,8 +78,7 @@ const blobBucketBaseTemplate = `
 
 func blobBucketBaseHandler(w http.ResponseWriter, req *http.Request) {
 	tmpl := template.Must(template.New("base").Parse(blobBucketBaseTemplate))
-	err := tmpl.Execute(w, bucketURL)
-	if err != nil {
+	if err := tmpl.Execute(w, bucketURL); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -136,8 +135,7 @@ func blobBucketListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	tmpl := template.Must(template.New("list").Parse(blobBucketListTemplate))
-	err := tmpl.Execute(w, items)
-	if err != nil {
+	if err := tmpl.Execute(w, items); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
