@@ -64,7 +64,7 @@ const blobBucketBaseTemplate = `
     can be configured via the environment variable "BLOB_BUCKET_URL".
   </p>
   <p>
-    See <a href="https://godoc.org/gocloud.dev#hdr-URLs">here</a> for more
+    See <a href="https://gocloud.dev/concepts/urls/">here</a> for more
     information about URLs in Go CDK APIs.
   </p>
   <ul>
