@@ -26,10 +26,11 @@ import (
 func Example() {
 	// localsecrets.Keeper untilizes the golang.org/x/crypto/nacl/secretbox package
 	// for the crypto implementation, and secretbox requires a secret key
-	// that is a [32]byte. Because most users will have keys which are strings,
-	// the localsecrets package supplies a helper function to convert your key
-	// and also crop it to size, if necessary.
-	secretKey := localsecrets.ByteKey("I'm a secret string!")
+	// that is a [32]byte. localsecrets
+	secretKey, err := localsecrets.NewRandomKey()
+	if err != nil {
+		log.Fatal(err)
+	}
 	keeper := localsecrets.NewKeeper(secretKey)
 	defer keeper.Close()
 
@@ -51,16 +52,15 @@ func Example_openKeeper() {
 	ctx := context.Background()
 
 	// OpenKeeper creates a *secrets.Keeper from a URL.
-	// Using "stringkey://", the first 32 bytes of the URL hostname is used as the secret.
-	keeper, err := secrets.OpenKeeper(ctx, "stringkey://my-secret-key")
+	// Using "base64key://", a new random key will be generated.
+	keeper, err := secrets.OpenKeeper(ctx, "base64key://")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer keeper.Close()
 
-	// Using "base64key://", the URL hostname must be a base64-encoded key.
-	// The first 32 bytes of the decoding are used as the secret key.
-	keeper, err = secrets.OpenKeeper(ctx, "base64key://bXktc2VjcmV0LWtleQ==")
+	// The URL hostname must be a base64-encoded key, of length 32 bytes when decoded.
+	keeper, err = secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=")
 	if err != nil {
 		log.Fatal(err)
 	}

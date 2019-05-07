@@ -27,22 +27,15 @@ require (
 	github.com/Azure/go-autorest v11.1.2+incompatible
 	github.com/Azure/go-autorest/tracing v0.1.0 // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190418212003-6ac0b49e7197
-	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/Shopify/sarama v1.19.0
-	github.com/armon/go-metrics v0.0.0-20190423201044-2801d9688273 // indirect
-	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/aws/aws-sdk-go v1.19.16
-	github.com/coreos/bbolt v1.3.2 // indirect
-	github.com/coreos/etcd v3.3.12+incompatible // indirect
-	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e // indirect
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
+	github.com/coreos/etcd v3.3.13+incompatible // indirect
 	github.com/dimchansky/utfbom v1.1.0 // indirect
-	github.com/dnaeon/go-vcr v1.0.1
 	github.com/elazarl/go-bindata-assetfs v1.0.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
+	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-cmp v0.3.0
 	github.com/google/subcommands v1.0.1
@@ -54,35 +47,30 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
-	github.com/hashicorp/go-hclog v0.8.0 // indirect
-	github.com/hashicorp/go-memdb v1.0.1 // indirect
-	github.com/hashicorp/go-plugin v1.0.0 // indirect
+	github.com/hashicorp/go-retryablehttp v0.5.3 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
-	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/vault v1.1.2
-	github.com/jefferai/jsonx v1.0.0 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
-	github.com/keybase/go-crypto v0.0.0-20190416182011-b785b22cc757 // indirect
 	github.com/lib/pq v1.1.0
-	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/nats-io/gnatsd v1.4.1
 	github.com/nats-io/go-nats v1.7.2
 	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
+	github.com/pkg/errors v0.8.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
+	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/ugorji/go v1.1.1 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
+	go.etcd.io/bbolt v1.3.2 // indirect
 	go.etcd.io/etcd v3.3.12+incompatible
 	go.mongodb.org/mongo-driver v1.0.1
 	go.opencensus.io v0.20.2
@@ -97,6 +85,5 @@ require (
 	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7
 	google.golang.org/grpc v1.20.1
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
-	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	pack.ag/amqp v0.11.0
 )

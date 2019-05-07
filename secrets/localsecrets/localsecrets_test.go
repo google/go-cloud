@@ -17,6 +17,7 @@ package localsecrets
 import (
 	"context"
 	"errors"
+	"log"
 	"testing"
 
 	"gocloud.dev/secrets"
@@ -27,7 +28,15 @@ import (
 type harness struct{}
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	return &keeper{secretKey: ByteKey("very secret secret")}, &keeper{secretKey: ByteKey("different secret")}, nil
+	secret1, err := NewRandomKey()
+	if err != nil {
+		log.Fatal(err)
+	}
+	secret2, err := NewRandomKey()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &keeper{secretKey: secret1}, &keeper{secretKey: secret2}, nil
 }
 
 func (h *harness) Close() {}
@@ -60,15 +69,17 @@ func TestOpenKeeper(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"stringkey://my-secret", false},
-		// Invalid parameter.
-		{"stringkey://my-secret?param=value", true},
+		{"base64key://", false},
 		// OK.
-		{"base64key://bXktc2VjcmV0LWtleQ==", false},
-		// Invalid parameter.
-		{"base64key://bXktc2VjcmV0LWtleQ==?param=value", true},
+		{"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=", false},
+		// Valid base64, but < 32 bytes.
+		{"base64key://c2VjcmV0", true},
+		// Valid base64, but > 32 bytes.
+		{"base64key://c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c3NlY3JldHNlY3JldHNlY3JldHNlY3JldHNlY3JldHM=", true},
 		// Invalid base64 key.
 		{"base64key://not-valid-base64", true},
+		// Invalid parameter.
+		{"base64key://?param=value", true},
 	}
 
 	ctx := context.Background()

@@ -767,6 +767,10 @@ To use `-record`:
     -   TODO(issue #300): The test will read the Terraform output to find its
         inputs.
     -   For now, pass the required resources via test-specific flags.
+    -   When changing or adding tests, please only record the tests that are
+        changed/affected by passing the `-run` flag to `go test` with the
+        name of the test(s). Re-recording all tests of a provider creates a lot
+        of noise and a large diff that's difficult to review.
 
 3.  The test will save the network interactions for subsequent replays.
 

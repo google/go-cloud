@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ func serve(ctx context.Context, pctx *processContext, args []string) error {
 	opts := new(serveOptions)
 	f.StringVar(&opts.address, "address", "localhost:8080", "`host:port` address to serve on")
 	f.StringVar(&opts.biome, "biome", "dev", "`name` of biome to apply and use configuration from")
+	f.DurationVar(&opts.pollInterval, "poll-interval", 500*time.Millisecond, "time between checking project directory for changes")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
@@ -97,9 +98,10 @@ func serve(ctx context.Context, pctx *processContext, args []string) error {
 }
 
 type serveOptions struct {
-	moduleRoot string
-	biome      string
-	address    string
+	moduleRoot   string
+	biome        string
+	address      string
+	pollInterval time.Duration
 
 	// actualAddress is the local address that the reverse proxy is
 	// listening on.
@@ -150,11 +152,24 @@ loop:
 		// After the first iteration of the loop, each iteration should wait for a
 		// change in the filesystem before proceeding.
 		if !first {
-			// TODO(#1881): Actually check filesystem instead of SIGUSR1.
+			watchCtx, cancelWatch := context.WithCancel(ctx)
+			watchDone := make(chan error)
+			go func() {
+				watchDone <- waitForDirChange(watchCtx, opts.moduleRoot, opts.pollInterval)
+			}()
 			select {
 			case <-reload:
-			case <-ctx.Done():
-				break loop
+				// Manual rebuild signal.
+				cancelWatch()
+				<-watchDone // Wait on watch goroutine.
+			case err := <-watchDone:
+				cancelWatch()
+				if err != nil {
+					if !xerrors.Is(err, context.DeadlineExceeded) && !xerrors.Is(err, context.Canceled) {
+						logger.Printf("Watch failed: %v", err)
+					}
+					break loop
+				}
 			}
 		}
 

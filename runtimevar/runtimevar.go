@@ -19,7 +19,7 @@
 // whenever a change is detected.
 //
 // Subpackages contain distinct implementations of runtimevar for various
-// providers, including Cloud and on-prem solutions. For example, "etcdvar"
+// providers, including Cloud and on-premise solutions. For example, "etcdvar"
 // supports variables stored in etcd. Your application should import one of
 // these provider-specific subpackages and use its exported function(s) to
 // create a *Variable; do not use the New function in this package. For example:
@@ -39,7 +39,7 @@
 // return a value without blocking.
 //
 // Alternatively, you can construct a *Variable via a URL and OpenVariable.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 //
 // OpenCensus Integration
@@ -365,7 +365,7 @@ type VariableURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -415,7 +415,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenVariable opens the variable identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
+// details on supported URL formats, and https://gocloud.dev/concepts/urls
 // for more information.
 func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
 	return defaultURLMux.OpenVariable(ctx, urlstr)
@@ -524,7 +524,7 @@ func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
 // It also supports using "decrypt+<decoderName>" (or "decrypt" for default
 // decoder) to decrypt the data before decoding. It uses the secrets package to
-// open a keeper by the URL string stored in a envrionment variable
+// open a keeper by the URL string stored in a environment variable
 // "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
 // for more details.
 func DecoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {

@@ -16,7 +16,7 @@
 // subscribe systems. See https://gocloud.dev/howto/pubsub/ for how-to guides.
 //
 // Subpackages contain distinct implementations of pubsub for various providers,
-// including Cloud and on-prem solutions. For example, "gcppubsub" supports
+// including Cloud and on-premise solutions. For example, "gcppubsub" supports
 // Google Cloud Pub/Sub. Your application should import one of these
 // provider-specific subpackages and use its exported functions to get a
 // *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
@@ -34,7 +34,7 @@
 //
 // Alternatively, you can construct a *Topic/*Subscription via a URL and
 // OpenTopic/OpenSubscription.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 // At-most-once and At-least-once Delivery
 //
@@ -76,8 +76,7 @@
 //
 // Since Message.Nack never makes sense for some providers (for example, for
 // at-most-once providers, the provider can't redeliver the message), Nack will
-// panic if called for some providers. You can call Message.CanNack to see if
-// it is available.
+// panic if called for some providers.
 //
 // OpenCensus Integration
 //
@@ -533,7 +532,7 @@ func (s *Subscription) updateBatchSize() int {
 //    application should log the error and either recreate the Subscription,
 //    or exit.
 // 2. The provided ctx is Done. Error() on the returned error will include both
-//    the ctx error and the underyling provider error, and ErrorAs on it
+//    the ctx error and the underlying provider error, and ErrorAs on it
 //    can access the underlying provider error type if needed. Receive may
 //    be called again with a fresh ctx.
 //
@@ -864,7 +863,7 @@ type SubscriptionURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -950,7 +949,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenTopic opens the Topic identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
+// details on supported URL formats, and https://gocloud.dev/concepts/urls
 // for more information.
 func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 	return defaultURLMux.OpenTopic(ctx, urlstr)
@@ -958,7 +957,7 @@ func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 
 // OpenSubscription opens the Subscription identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
+// details on supported URL formats, and https://gocloud.dev/concepts/urls
 // for more information.
 func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
 	return defaultURLMux.OpenSubscription(ctx, urlstr)

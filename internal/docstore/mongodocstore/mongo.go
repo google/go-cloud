@@ -21,7 +21,7 @@
 // variable "MONGO_SERVER_URL".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
-// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+// See https://gocloud.dev/concepts/urls/ for background information.
 //
 // As
 //
@@ -215,8 +215,8 @@ func newCollection(mcoll *mongo.Collection, idField string, idFunc func(docstore
 const mongoIDField = "_id"
 
 // TODO(jba): use bulk RPCs.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
-	if unordered {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
+	if opts.Unordered {
 		panic("unordered unimplemented")
 	}
 	for i, a := range actions {
