@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"testing"
 
 	"gocloud.dev/secrets"
@@ -61,6 +62,57 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 		return errors.New("Keeper.ErrorAs expected to fail")
 	}
 	return nil
+}
+
+func TestSmallData(t *testing.T) {
+	key, err := NewRandomKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := NewKeeper(key)
+	defer keeper.Close()
+
+	ctx := context.Background()
+	const plaintext = "hello world"
+	ciphertext, err := keeper.Encrypt(ctx, []byte(plaintext))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		Ciphertext           []byte
+		Want                 string
+		WantErr              bool
+		WantInvalidLengthErr bool // true if we want the error to be that the ciphertext length is invalid
+	}{
+		{nil, "", true, true},
+		{[]byte{}, "", true, true},
+		{[]byte{0}, "", true, true},
+		{ciphertext[:1], "", true, true},
+		{ciphertext[:nonceSize-1], "", true, true},
+		{ciphertext[:nonceSize], "", true, false}, // not invalid, but Decrypt will fail
+		{ciphertext, plaintext, false, false},     // works
+	}
+
+	for _, test := range tests {
+		got, err := keeper.Decrypt(ctx, test.Ciphertext)
+		if (err != nil) != test.WantErr {
+			t.Errorf("got err %v from Decrypt, want error? %v", err, test.WantErr)
+		}
+		if err == nil {
+			if gotStr := string(got); gotStr != test.Want {
+				t.Errorf("got %s want %s", gotStr, test.Want)
+			}
+		} else {
+			if gotInvalid := strings.Contains(err.Error(), "invalid message length"); gotInvalid != test.WantInvalidLengthErr {
+				t.Errorf("got invalid message length error? %v want %v", gotInvalid, test.WantInvalidLengthErr)
+			}
+		}
+		// Encrypt should always work.
+		if _, err := keeper.Encrypt(ctx, test.Ciphertext); err != nil {
+			t.Errorf("got error %v from Encrypt, want nil", err)
+		}
+	}
 }
 
 func TestOpenKeeper(t *testing.T) {
