@@ -74,14 +74,14 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		ProjectName: filepath.Base(path),
 		ModulePath:  modpath,
 	}
-	for name, templateSource := range templates.InitTemplates {
-		tmpl := template.Must(template.New("").Parse(templateSource))
+	for fileName, templateSource := range templates.InitTemplates {
+		tmpl := template.Must(template.New(fileName).Parse(templateSource))
 		buf := new(bytes.Buffer)
 		if err := tmpl.Execute(buf, tmplValues); err != nil {
 			return xerrors.Errorf("gocdk init: %w", err)
 		}
 
-		fullPath := filepath.Join(path, filepath.FromSlash(name))
+		fullPath := filepath.Join(path, filepath.FromSlash(fileName))
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0777); err != nil {
 			return xerrors.Errorf("gocdk init: %w", err)
 		}
@@ -102,7 +102,7 @@ func inferModulePath(ctx context.Context, pctx *processContext, path string) (st
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
 	}
-	//check if path is relative to gopath
+	// Check if the path to the project is relative to GOPATH.
 	rel, err := filepath.Rel(strings.TrimSuffix(string(gopath), "\n"), path)
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
