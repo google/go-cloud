@@ -975,47 +975,16 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 		})
 	}
 
-	// Test Limit. We can't be sure which documents get deleted, so we compare counts.
-	addQueryDocuments(t, coll)
-	t.Run("Limit", func(t *testing.T) {
-		if err := coll.Query().Where("Player", "=", "mel").Limit(1).Delete(ctx); err != nil {
-			t.Fatal(err)
-		}
-		// There are two mels, so only one should be missing.
-		hs := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
-		got := 0
-		for _, h := range hs {
-			if h.Player == "mel" {
-				got++
-			}
-		}
-		if got != 1 {
-			t.Fatalf("got %d mels, want 1", got)
-		}
-
-		if err := coll.Query().Limit(3).Delete(ctx); err != nil {
-			t.Fatal(err)
-		}
-		hs = mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
-		if got, want := len(hs), len(queryDocuments)-4; got != want {
-			t.Errorf("got %d documents, want %d", got, want)
-		}
-	})
+	// Using Limit with DeleteQuery should be an error.
+	err := coll.Query().Where("Player", "=", "mel").Limit(1).Delete(ctx)
+	if err == nil {
+		t.Fatal("want error for Limit, got nil")
+	}
 }
 
 // cleanUpTable delete all documents from this collection after test.
 func cleanUpTable(t *testing.T, create func() interface{}, coll *docstore.Collection) {
-	ctx := context.Background()
-	dels := coll.Actions()
-	delFunc := func(doc interface{}) error {
-		dels.Delete(doc)
-		return nil
-	}
-	err := forEach(ctx, coll.Query().Get(ctx), create, delFunc)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	if err := dels.Do(ctx); err != nil {
+	if err := coll.Query().Delete(context.Background()); err != nil {
 		t.Fatalf("%+v", err)
 	}
 }

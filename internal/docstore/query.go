@@ -115,9 +115,13 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 }
 
 // Delete deletes all the documents specified by the query.
+// It is an error if the query has a limit.
 func (q *Query) Delete(ctx context.Context) error {
 	if err := q.init(nil); err != nil {
 		return err
+	}
+	if q.dq.Limit > 0 {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "delete queries cannot have a limit")
 	}
 	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
 }

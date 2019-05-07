@@ -138,53 +138,11 @@ func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
 }
 
-// For delete and update queries, limit the number of write actions per RPC, to bound
-// client memory.
-// This is a variable so it can be modified for tests.
-var maxWritesPerRPC = 1000
-
 func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
-	// If there is no limit, use the DeleteMany call.
-	if q.Limit <= 0 {
-		filter, err := c.filtersToBSON(q.Filters)
-		if err != nil {
-			return err
-		}
-		_, err = c.coll.DeleteMany(ctx, filter, nil)
+	filter, err := c.filtersToBSON(q.Filters)
+	if err != nil {
 		return err
-	} else {
-		// If there is a limit, we have to run a query, because DeleteMany doesn't
-		// support a limit.
-		q.FieldPaths = [][]string{{"_id"}}
-		opts := options.BulkWrite().SetOrdered(false)
-		it, err := c.RunGetQuery(ctx, q)
-		if err != nil {
-			return err
-		}
-		defer it.Stop()
-		iter := it.(*docIterator)
-		var models []mongo.WriteModel
-		for {
-			m, err := iter.nextMap(ctx)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-			models = append(models, &mongo.DeleteOneModel{Filter: bson.D{{"_id", m["_id"]}}})
-			if len(models) >= maxWritesPerRPC {
-				_, err := c.coll.BulkWrite(ctx, models, opts)
-				if err != nil {
-					return err
-				}
-				models = models[:0]
-			}
-		}
-		if len(models) > 0 {
-			_, err = c.coll.BulkWrite(ctx, models, opts)
-			return err
-		}
-		return nil
 	}
+	_, err = c.coll.DeleteMany(ctx, filter, nil)
+	return err
 }
