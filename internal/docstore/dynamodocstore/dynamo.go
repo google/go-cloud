@@ -252,7 +252,7 @@ func (c *collection) shouldSplit(curr, next *driver.Action, wm map[[2]interface{
 	if (curr.Kind == driver.Get) != (next.Kind == driver.Get) { // different kind
 		return true
 	}
-	if curr.Kind == driver.Get { // both are Get's
+	if curr.Kind == driver.Get { // both are Gets
 		return false
 	}
 	keys := c.primaryKey(next)
@@ -280,7 +280,7 @@ func (c *collection) primaryKey(a *driver.Action) [2]interface{} {
 }
 
 func (c *collection) runGets(ctx context.Context, actions []*driver.Action) error {
-	// Assume all actions Kinds are Get's.
+	// Assume all actions Kinds are Gets.
 	tgs := make([]*dyn.TransactGetItem, len(actions))
 	for i, a := range actions {
 		tg, err := c.toTransactGet(a.Doc, a.FieldPaths)

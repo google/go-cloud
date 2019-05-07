@@ -16,7 +16,7 @@
 // messages.
 //
 // Subpackages contain distinct implementations of secrets for various
-// providers, including Cloud and on-prem solutions. For example, "localsecrets"
+// providers, including Cloud and on-premise solutions. For example, "localsecrets"
 // supports encryption/decryption using a locally provided key. Your application
 // should import one of these provider-specific subpackages and use its exported
 // function(s) to create a *Keeper; do not use the NewKeeper function in this

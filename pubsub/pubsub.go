@@ -16,7 +16,7 @@
 // subscribe systems. See https://gocloud.dev/howto/pubsub/ for how-to guides.
 //
 // Subpackages contain distinct implementations of pubsub for various providers,
-// including Cloud and on-prem solutions. For example, "gcppubsub" supports
+// including Cloud and on-premise solutions. For example, "gcppubsub" supports
 // Google Cloud Pub/Sub. Your application should import one of these
 // provider-specific subpackages and use its exported functions to get a
 // *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
@@ -533,7 +533,7 @@ func (s *Subscription) updateBatchSize() int {
 //    application should log the error and either recreate the Subscription,
 //    or exit.
 // 2. The provided ctx is Done. Error() on the returned error will include both
-//    the ctx error and the underyling provider error, and ErrorAs on it
+//    the ctx error and the underlying provider error, and ErrorAs on it
 //    can access the underlying provider error type if needed. Receive may
 //    be called again with a fresh ctx.
 //
