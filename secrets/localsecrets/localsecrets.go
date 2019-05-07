@@ -136,7 +136,7 @@ func (k *keeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	return secretbox.Seal(nonce[:], message, &nonce, &k.secretKey), nil
 }
 
-// Decrypt decryptes a message using a nonce that is read out of the first nonceSize bytes
+// Decrypt decrypts a message using a nonce that is read out of the first nonceSize bytes
 // of the message and a secret held in the Keeper.
 func (k *keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [nonceSize]byte
