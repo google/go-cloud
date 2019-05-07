@@ -109,6 +109,6 @@ func instantiatePortableType(pctx *processContext, pt *portableTypeInfo, force b
 		return err
 	}
 	logger.Printf("  added %s to your project.", filepath.Base(pt.goDemoPath))
-	logger.Printf("Run 'gocdk serve' and visit http://127.0.0.1:8080%s to see a demo of %s functionality.", pt.demoURL, pt.name)
+	logger.Printf("Run 'gocdk serve' and visit http://localhost:8080%s to see a demo of %s functionality.", pt.demoURL, pt.name)
 	return nil
 }
