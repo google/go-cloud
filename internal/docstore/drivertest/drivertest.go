@@ -163,7 +163,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 
-	t.Run("Query", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testQuery) })
+	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
+	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
 
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("As", func(t *testing.T) {
@@ -802,7 +803,18 @@ var queryDocuments = []*HighScore{
 	{game2, "fran", 33, date(3, 20), nil},
 }
 
-func testQuery(t *testing.T, coll *ds.Collection) {
+func addQueryDocuments(t *testing.T, coll *ds.Collection) {
+	// TODO(jba): use Unordered.
+	alist := coll.Actions()
+	for _, doc := range queryDocuments {
+		alist.Put(doc)
+	}
+	if err := alist.Do(context.Background()); err != nil {
+		t.Fatalf("%+v", err)
+	}
+}
+
+func testGetQuery(t *testing.T, coll *ds.Collection) {
 	cleanUpTable(t, newHighScore, coll)
 	ctx := context.Background()
 	// (Temporary) skip if the driver does not implement queries.
@@ -810,14 +822,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 		t.Skip("queries not yet implemented")
 	}
 
-	// Add the query docs.
-	alist := coll.Actions()
-	for _, doc := range queryDocuments {
-		alist.Put(doc)
-	}
-	if err := alist.Do(ctx); err != nil {
-		t.Fatalf("%+v", err)
-	}
+	addQueryDocuments(t, coll)
 
 	// Query filters should have the same behavior when doing string and number
 	// comparison.
@@ -914,19 +919,72 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}
 }
 
+func testDeleteQuery(t *testing.T, coll *ds.Collection) {
+	cleanUpTable(t, newHighScore, coll)
+	ctx := context.Background()
+
+	addQueryDocuments(t, coll)
+
+	// Note: these tests are cumulative. If the first test deletes a document, that
+	// change will persist for the second test.
+	tests := []struct {
+		name string
+		q    *ds.Query
+		want func(*HighScore) bool // filters queryDocuments
+	}{
+		{
+			name: "Player",
+			q:    coll.Query().Where("Player", "=", "andy"),
+			want: func(h *HighScore) bool { return h.Player != "andy" },
+		},
+		{
+			name: "Score",
+			q:    coll.Query().Where("Score", ">", 100),
+			want: func(h *HighScore) bool { return h.Score <= 100 },
+		},
+		{
+			name: "All",
+			q:    coll.Query(),
+			want: func(h *HighScore) bool { return false },
+		},
+		// TODO(jba): add a case that requires Firestore to evaluate filters on the client.
+	}
+	prevWant := queryDocuments
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := tc.q.Delete(ctx); err != nil {
+				t.Fatal(err)
+			}
+			got := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
+			for _, g := range got {
+				g.DocstoreRevision = nil
+			}
+			var want []*HighScore
+			for _, d := range prevWant {
+				if tc.want(d) {
+					want = append(want, d)
+				}
+			}
+			prevWant = want
+			diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
+				return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
+			}))
+			if diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+
+	// Using Limit with DeleteQuery should be an error.
+	err := coll.Query().Where("Player", "=", "mel").Limit(1).Delete(ctx)
+	if err == nil {
+		t.Fatal("want error for Limit, got nil")
+	}
+}
+
 // cleanUpTable delete all documents from this collection after test.
 func cleanUpTable(t *testing.T, create func() interface{}, coll *docstore.Collection) {
-	ctx := context.Background()
-	dels := coll.Actions()
-	delFunc := func(doc interface{}) error {
-		dels.Delete(doc)
-		return nil
-	}
-	err := forEach(ctx, coll.Query().Get(ctx), create, delFunc)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	if err := dels.Do(ctx); err != nil {
+	if err := coll.Query().Delete(context.Background()); err != nil {
 		t.Fatalf("%+v", err)
 	}
 }

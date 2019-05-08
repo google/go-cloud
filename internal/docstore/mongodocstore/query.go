@@ -57,6 +57,20 @@ var mongoQueryOps = map[string]string{
 	"<=":           "$lte",
 }
 
+// filtersToBSON converts a []driver.Filter to the MongoDB equivalent, expressed
+// as a bson.D (list of key-value pairs).
+func (c *collection) filtersToBSON(fs []driver.Filter) (bson.D, error) {
+	filter := bson.D{} // must be a zero-length slice, not nil
+	for _, f := range fs {
+		bf, err := c.filterToBSON(f)
+		if err != nil {
+			return nil, err
+		}
+		filter = append(filter, bf)
+	}
+	return filter, nil
+}
+
 // filterToBSON converts a driver.Filter to the MongoDB equivalent, expressed
 // as a bson.E (key-value pair).
 // The MongoDB document corresponding to "field op value" is
@@ -85,17 +99,25 @@ type docIterator struct {
 }
 
 func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
+	m, err := it.nextMap(ctx)
+	if err != nil {
+		return err
+	}
+	return decodeDoc(m, doc, it.idField)
+}
+
+func (it *docIterator) nextMap(ctx context.Context) (map[string]interface{}, error) {
 	if !it.cursor.Next(ctx) {
 		if it.cursor.Err() != nil {
-			return it.cursor.Err()
+			return nil, it.cursor.Err()
 		}
-		return io.EOF
+		return nil, io.EOF
 	}
 	var m map[string]interface{}
 	if err := it.cursor.Decode(&m); err != nil {
-		return fmt.Errorf("cursor.Decode: %v", err)
+		return nil, fmt.Errorf("cursor.Decode: %v", err)
 	}
-	return decodeDoc(m, doc, it.idField)
+	return m, nil
 }
 
 func (it *docIterator) Stop() {
@@ -114,4 +136,13 @@ func (it *docIterator) As(i interface{}) bool {
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
+}
+
+func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+	filter, err := c.filtersToBSON(q.Filters)
+	if err != nil {
+		return err
+	}
+	_, err = c.coll.DeleteMany(ctx, filter, nil)
+	return err
 }

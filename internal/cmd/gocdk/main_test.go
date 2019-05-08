@@ -77,11 +77,13 @@ func TestFindModuleRoot(t *testing.T) {
 	})
 }
 
+const testTempDirPrefix = "gocdk-test"
+
 // newTestModule creates a temporary directory with a go.mod at the root,
 // and returns the path. The returned cleanup function removes the
 // temporary directory and its contents.
 func newTestModule() (string, func(), error) {
-	dir, err := ioutil.TempDir("", "gocdk-test")
+	dir, err := ioutil.TempDir("", testTempDirPrefix)
 	if err != nil {
 		return "", nil, err
 	}
