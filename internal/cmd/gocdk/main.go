@@ -27,6 +27,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// generate_static converts the files in _static/ into constants in a new
+// file,
+//go:generate go run generate_static.go -- static.go
+
 func main() {
 	pctx, err := osProcessContext()
 	if err != nil {
@@ -70,8 +74,9 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 		return init_(ctx, pctx, cmdArgs)
 	case "serve":
 		return serve(ctx, pctx, cmdArgs)
-	case "add":
-		return add(ctx, pctx, cmdArgs)
+	case "add-ptype":
+		return addPortableType(ctx, pctx, cmdArgs)
+	// TODO(rvangent): Add "add-biome".
 	case "deploy":
 		return deploy(ctx, pctx, cmdArgs)
 	case "build":
