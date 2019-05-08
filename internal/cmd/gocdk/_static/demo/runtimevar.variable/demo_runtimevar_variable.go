@@ -53,16 +53,18 @@ const runtimevarVariableTemplate = `
     can be configured via the environment variable "RUNTIMEVAR_VARIABLE_URL".
   </p>
   <p>
-  See <a href="https://gocloud.dev/concepts/urls/">here</a> for more
-  information about URLs in Go CDK APIs.
+    See <a href="https://gocloud.dev/concepts/urls/">here</a> for more
+    information about URLs in Go CDK APIs.
   </p>
   {{if .Err}}
     <p><strong>{{ .Err }}</strong></p>
   {{end}}
   {{if .Snapshot}}
-    <div>The current value of the variable is:</div>
-    <textarea rows="5" cols="40" readonly="true">{{ .Snapshot.Value }}</textarea>
-    <div>It was last modified at: {{ .Snapshot.UpdateTime }}.</div>
+    <p>
+      The current value of the variable is:
+      <textarea rows="5" cols="40" readonly="true" label="Current variable value">{{ .Snapshot.Value }}</textarea>
+    </p>
+    <p>It was last modified at: {{ .Snapshot.UpdateTime }}.</p>
   {{end}}
 </body>
 </html>
