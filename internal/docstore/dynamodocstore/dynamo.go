@@ -197,8 +197,12 @@ func (c *collection) KeyFields() []string {
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	if opts.Unordered {
-		panic("unordered unimplemented")
+		return c.runActionsUnordered(ctx, actions, opts)
 	}
+	return c.runActionsOrdered(ctx, actions, opts)
+}
+
+func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	groups := c.splitActions(actions)
 	nRun := 0 // number of actions successfully run
 	var err error
@@ -277,6 +281,76 @@ func (c *collection) primaryKey(a *driver.Action) [2]interface{} {
 		keys[1], _ = a.Doc.GetField(c.sortKey) // ignore error since keys[1] would be nil in that case
 	}
 	return keys
+}
+
+func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
+	errs := make([]error, len(actions))
+	groups, i, err := c.splitActionsUnordered(actions)
+	if err != nil {
+		errs[i] = err
+		return driver.NewActionListError(errs)
+	}
+	var wg sync.WaitGroup
+	groupBaseIndex := 0 // index in actions of first action in group
+	for _, g := range groups {
+		g := g
+		base := groupBaseIndex
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var err error
+			if g[0].Kind == driver.Get {
+				err = c.runGets(ctx, g, opts)
+			} else {
+				err = c.runWrites(ctx, g, opts)
+			}
+			for i := 0; i < len(g); i++ {
+				errs[base+i] = err
+			}
+		}()
+		groupBaseIndex += len(g)
+	}
+	wg.Wait()
+	return driver.NewActionListError(errs)
+}
+
+// splitActionsUnordered divides the actions slice into sub-slices, which
+// maximizes the actions sent in each group and may change the order of the
+// action list, each of which can be passed to run a dynamo transaction
+// operation. If an error occurs, it returns the error and the index of the
+// action that cause the error.
+func (c *collection) splitActionsUnordered(actions []*driver.Action) ([][]*driver.Action, int, error) {
+	var (
+		groups [][]*driver.Action              // the actions, split; the return value
+		gets   []*driver.Action                // the gets group currently being constructed
+		writes []*driver.Action                // the writes group currently being constructed
+		km     = make(map[[2]interface{}]bool) // keys should be unique across all groups in unordered mode
+	)
+	collect := func(cur *[]*driver.Action) { // called when the current group is known to be finished
+		if len(*cur) > 0 {
+			groups = append(groups, *cur)
+			*cur = nil
+		}
+	}
+	for i, a := range actions {
+		if keys := c.primaryKey(a); keys[0] != nil {
+			if km[keys] {
+				return nil, i, fmt.Errorf("repeated key: %v, %v; item must be unique for unordered actions", keys[0], keys[1])
+			}
+			km[keys] = true
+		}
+		cur := &writes
+		if a.Kind == driver.Get {
+			cur = &gets
+		}
+		*cur = append(*cur, a)
+		if len(*cur) >= 10 {
+			collect(cur)
+		}
+	}
+	collect(&gets)
+	collect(&writes)
+	return groups, -1, nil
 }
 
 func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
