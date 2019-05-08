@@ -137,7 +137,7 @@ func TestConformance(t *testing.T) {
 }
 
 func newTestClient(t *testing.T) *mongo.Client {
-	if !setup.RunTestsDependingOnDocker() {
+	if !setup.HasDockerTestEnvironment() {
 		t.Skip("Skipping Mongo tests since the Mongo server is not available")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

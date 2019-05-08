@@ -39,7 +39,7 @@ var (
 )
 
 func init() {
-	if setup.RunTestsDependingOnDocker() {
+	if setup.HasDockerTestEnvironment() {
 		etcdClient, etcdError = clientv3.NewFromURL("http://localhost:2379")
 		if etcdError == nil {
 			// Check to see if the local etcd is actually running.
@@ -53,7 +53,7 @@ func init() {
 type harness struct{}
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	if !setup.RunTestsDependingOnDocker() {
+	if !setup.HasDockerTestEnvironment() {
 		t.Skip("Skipping etcd tests since the etcd server is not available")
 	}
 	if etcdError != nil {

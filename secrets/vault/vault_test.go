@@ -53,7 +53,7 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper,
 func (h *harness) Close() {}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	if !setup.RunTestsDependingOnDocker() {
+	if !setup.HasDockerTestEnvironment() {
 		t.Skip("Skipping Vault tests since the Vault server is not available")
 	}
 	c, err := Dial(ctx, &Config{

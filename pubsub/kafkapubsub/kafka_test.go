@@ -56,19 +56,19 @@ type harness struct {
 var checkOnce sync.Once
 var kafkaRunning bool
 
-func localKafkaRunning() bool {
+func localKafkaRunning() (err error) {
 	checkOnce.Do(func() {
-		_, err := sarama.NewClient(localBrokerAddrs, MinimalConfig())
-		if err == nil {
-			kafkaRunning = true
-		}
+		_, err = sarama.NewClient(localBrokerAddrs, MinimalConfig())
 	})
-	return kafkaRunning
+	return err
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	if !setup.RunTestsDependingOnDocker() || !localKafkaRunning() {
-		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
+	if !setup.HasDockerTestEnvironment() {
+		t.Skip("Skipping Kafka tests since the Kafka server is not available")
+	}
+	if err := localKafkaRunning(); err != nil {
+		t.Fatalf("No local Kafka running: %v, see pubsub/kafkapubsub/localkafka.sh", err)
 	}
 	return &harness{uniqueID: rand.Int()}, nil
 }
@@ -197,8 +197,11 @@ func (asTest) BeforeSend(as func(interface{}) bool) error {
 
 // TestKafkaKey tests sending/receiving a message with the Kafka message key set.
 func TestKafkaKey(t *testing.T) {
-	if !localKafkaRunning() {
-		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
+	if !setup.HasDockerTestEnvironment() {
+		t.Skip("Skipping Kafka tests since the Kafka server is not available")
+	}
+	if err := localKafkaRunning(); err != nil {
+		t.Fatalf("No local Kafka running: %v, see pubsub/kafkapubsub/localkafka.sh", err)
 	}
 	const (
 		keyName  = "kafkakey"

@@ -335,10 +335,10 @@ func NewGCPDialOptions(t *testing.T, recording bool, filename string) (opts []gr
 	return opts, done
 }
 
-// RunTestsDependingOnDocker returns true when either:
+// HasDockerTestEnvironment returns true when either:
 // 1) Not on Travis.
 // 2) On Travis Linux environment, where Docker is available.
-func RunTestsDependingOnDocker() bool {
+func HasDockerTestEnvironment() bool {
 	s := os.Getenv("TRAVIS_OS_NAME")
 	return s == "" || s == "linux"
 }

@@ -43,7 +43,7 @@ const rabbitURL = "amqp://guest:guest@localhost:5672/"
 var logOnce sync.Once
 
 func mustDialRabbit(t testing.TB) amqpConnection {
-	if !setup.RunTestsDependingOnDocker() {
+	if !setup.HasDockerTestEnvironment() {
 		logOnce.Do(func() {
 			t.Log("using the fake because the RabbitMQ server is not available")
 		})
