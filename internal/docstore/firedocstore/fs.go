@@ -538,8 +538,8 @@ func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.
 		go func() {
 			defer wg.Done()
 			if g[0].Kind == driver.Get {
-				errs := c.runGets(ctx, g, opts)
-				for i, err := range errs {
+				es := c.runGets(ctx, g, opts)
+				for i, err := range es {
 					errs[base+i] = err
 				}
 			} else {
