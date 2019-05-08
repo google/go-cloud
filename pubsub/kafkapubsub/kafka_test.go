@@ -33,6 +33,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
@@ -66,7 +67,7 @@ func localKafkaRunning() bool {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	if !localKafkaRunning() {
+	if !setup.RunTestsDependingOnDocker() || !localKafkaRunning() {
 		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
 	}
 	return &harness{uniqueID: rand.Int()}, nil

@@ -32,6 +32,7 @@ import (
 
 	"github.com/streadway/amqp"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
@@ -42,12 +43,15 @@ const rabbitURL = "amqp://guest:guest@localhost:5672/"
 var logOnce sync.Once
 
 func mustDialRabbit(t testing.TB) amqpConnection {
-	conn, err := amqp.Dial(rabbitURL)
-	if err != nil {
+	if !setup.RunTestsDependingOnDocker() {
 		logOnce.Do(func() {
-			t.Logf("using the fake because the RabbitMQ server is not up (dial error: %v)", err)
+			t.Log("using the fake because the RabbitMQ server is not available")
 		})
 		return newFakeConnection()
+	}
+	conn, err := amqp.Dial(rabbitURL)
+	if err != nil {
+		t.Fatal(err)
 	}
 	logOnce.Do(func() {
 		t.Logf("using the RabbitMQ server at %s", rabbitURL)

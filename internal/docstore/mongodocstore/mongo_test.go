@@ -30,6 +30,7 @@ import (
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
+	"gocloud.dev/internal/testing/setup"
 )
 
 const (
@@ -136,6 +137,9 @@ func TestConformance(t *testing.T) {
 }
 
 func newTestClient(t *testing.T) *mongo.Client {
+	if !setup.RunTestsDependingOnDocker() {
+		t.Skip("Skipping Mongo tests since the Mongo server is not available")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	client, err := Dial(ctx, serverURI)
@@ -143,9 +147,6 @@ func newTestClient(t *testing.T) *mongo.Client {
 		t.Fatalf("dialing to %s: %v", serverURI, err)
 	}
 	if err := client.Ping(ctx, nil); err != nil {
-		if err == context.DeadlineExceeded {
-			t.Skip("could not connect to local mongoDB server (connection timed out)")
-		}
 		t.Fatalf("connecting to %s: %v", serverURI, err)
 	}
 	return client

@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
@@ -38,20 +39,25 @@ var (
 )
 
 func init() {
-	etcdClient, etcdError = clientv3.NewFromURL("http://localhost:2379")
-	if etcdError == nil {
-		// Check to see if the local etcd is actually running.
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		_, etcdError = etcdClient.Put(ctx, "unused", "unused")
+	if setup.RunTestsDependingOnDocker() {
+		etcdClient, etcdError = clientv3.NewFromURL("http://localhost:2379")
+		if etcdError == nil {
+			// Check to see if the local etcd is actually running.
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			_, etcdError = etcdClient.Put(ctx, "unused", "unused")
+		}
 	}
 }
 
 type harness struct{}
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	if !setup.RunTestsDependingOnDocker() {
+		t.Skip("Skipping etcd tests since the etcd server is not available")
+	}
 	if etcdError != nil {
-		t.Skip("No local etcd server running, see runtimevar/etcdvar/localetcd.sh")
+		t.Fatal("No local etcd server running, see runtimevar/etcdvar/localetcd.sh", etcdError)
 	}
 	return &harness{}, nil
 }

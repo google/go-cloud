@@ -18,10 +18,12 @@ import (
 	"context"
 	"errors"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
@@ -37,6 +39,8 @@ const (
 	testToken  = "faketoken"
 )
 
+var enableTransit sync.Once
+
 type harness struct {
 	client *api.Client
 	close  func()
@@ -49,6 +53,9 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper,
 func (h *harness) Close() {}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	if !setup.RunTestsDependingOnDocker() {
+		t.Skip("Skipping Vault tests since the Vault server is not available")
+	}
 	c, err := Dial(ctx, &Config{
 		Token: testToken,
 		APIConfig: api.Config{
@@ -60,9 +67,17 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	}
 	c.SetClientTimeout(3 * time.Second)
 	// Enable the Transit Secrets Engine to use Vault as an Encryption as a Service.
-	if _, err := c.Logical().Write("sys/mounts/transit", map[string]interface{}{"type": "transit"}); err != nil {
-		t.Skip(err, "run secrets/vault/localvault.sh to start a dev vault container")
-	}
+	enableTransit.Do(func() {
+		s, err := c.Logical().Read("sys/mounts")
+		if err != nil {
+			t.Fatal(err, "; run secrets/vault/localvault.sh to start a dev vault container")
+		}
+		if _, ok := s.Data["transit/"]; !ok {
+			if _, err := c.Logical().Write("sys/mounts/transit", map[string]interface{}{"type": "transit"}); err != nil {
+				t.Fatal(err, "; run secrets/vault/localvault.sh to start a dev vault container")
+			}
+		}
+	})
 
 	return &harness{
 		client: c,
