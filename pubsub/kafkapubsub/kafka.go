@@ -585,7 +585,7 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	if p, ok := i.(*sarama.ConsumerGroupSession); ok {
 		s.mu.Lock()
-		s.mu.Unlock()
+		defer s.mu.Unlock()
 		*p = s.sess
 		return true
 	}
