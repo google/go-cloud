@@ -79,18 +79,22 @@ const (
 	// Input: *secretsKeeperData.
 	secretsKeeperEncryptTemplate = secretsKeeperTemplatePrefix + `
   <form>
-    Enter plaintext data to encrypt:
-    <br/>
-    <textarea rows="4" cols="50" name="plaintext">{{ .In }}</textarea>
-    <br/>
-    <input type="checkbox" name="base64" value="true" {{if .Base64}}checked{{end}}>
-    The data above is base64 encoded
+    <p>
+      Enter plaintext data to encrypt:
+      <br/>
+      <textarea rows="4" cols="50" name="plaintext" label="Plaintext to encrypt">{{ .In }}</textarea>
+    </p>
+    <input type="checkbox" id="base64" name="base64" value="true" {{if .Base64}}checked{{end}}>
+    <label for="base64">The data above is base64 encoded</label>
     <br/>
     <input type="submit" value="Encrypt!">
   </form>
   {{if .Out}}
-    <div>Encrypted result (base64 encoded):</div>
-    <textarea rows="4" cols="50" readonly="true">{{ .Out }}</textarea>
+    <p>
+      Encrypted result (base64 encoded):
+      <br/>
+      <textarea rows="4" cols="50" readonly="true" label="Encrypted result">{{ .Out }}</textarea>
+    </p>
     <div>
       <a href="./decrypt?ciphertext={{ .Out }}&base64={{ .Base64 }}">Decrypt it</a>
     </div>
@@ -100,18 +104,22 @@ const (
 	// Input: *secretsKeeperData.
 	secretsKeeperDecryptTemplate = secretsKeeperTemplatePrefix + `
   <form>
-    Enter base64-encoded data to decrypt:
-    <br/>
-    <textarea rows="4" cols="50" name="ciphertext">{{ .In }}</textarea>
-    <br/>
-    <input type="checkbox" name="base64" value="true" {{if .Base64}}checked{{end}}>
-    Show result base64-encoded
+    <p>
+      Enter base64-encoded data to decrypt:
+      <br/>
+      <textarea rows="4" cols="50" name="ciphertext" label="Ciphertext to decrypt">{{ .In }}</textarea>
+    </p>
+    <input type="checkbox" id="base64" name="base64" value="true" {{if .Base64}}checked{{end}}>
+    <label for="base64">Show result base64-encoded</label>
     <br/>
     <input type="submit" value="Decrypt!">
   </form>
   {{if .Out}}
-    <div>Decrypted result:</div>
-    <textarea rows="4" cols="50" readonly="true">{{ .Out }}</textarea>
+    <p>
+      Decrypted result:
+      <br/>
+      <textarea rows="4" cols="50" readonly="true" label="Decrypted result">{{ .Out }}</textarea>
+    </p>
     <div>
       <a href="./encrypt?plaintext={{ .Out }}&base64={{.Base64}}">Encrypt it</a>
     </div>
