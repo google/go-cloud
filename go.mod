@@ -15,23 +15,23 @@
 module gocloud.dev
 
 require (
-	cloud.google.com/go v0.38.0
+	cloud.google.com/go v0.37.4
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
-	contrib.go.opencensus.io/exporter/stackdriver v0.11.0
+	contrib.go.opencensus.io/exporter/stackdriver v0.10.2
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
 	github.com/Azure/azure-amqp-common-go v1.1.4
 	github.com/Azure/azure-pipeline-go v0.1.9
 	github.com/Azure/azure-sdk-for-go v27.3.0+incompatible
 	github.com/Azure/azure-service-bus-go v0.4.1
 	github.com/Azure/azure-storage-blob-go v0.6.0
-	github.com/Azure/go-autorest v12.0.0+incompatible
+	github.com/Azure/go-autorest v11.1.2+incompatible
+	github.com/Azure/go-autorest/tracing v0.1.0 // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190418212003-6ac0b49e7197
-	github.com/Shopify/sarama v1.22.0
+	github.com/Shopify/sarama v1.19.0
 	github.com/aws/aws-sdk-go v1.19.16
-	github.com/coreos/bbolt v1.3.2 // indirect
 	github.com/coreos/etcd v3.3.13+incompatible // indirect
-	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e // indirect
+	github.com/dimchansky/utfbom v1.1.0 // indirect
+	github.com/elazarl/go-bindata-assetfs v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
@@ -42,36 +42,41 @@ require (
 	github.com/google/wire v0.2.1
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/gorilla/mux v1.7.1
-	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
-	github.com/hashicorp/go-retryablehttp v0.5.3 // indirect
-	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
-	github.com/hashicorp/vault v1.1.2
-	github.com/json-iterator/go v1.1.6 // indirect
+	github.com/gorilla/websocket v1.4.0 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
+	github.com/hashicorp/vault/api v1.0.1
+	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/lib/pq v1.1.0
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/nats-io/gnatsd v1.4.1
 	github.com/nats-io/go-nats v1.7.2
+	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829 // indirect
-	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
+	github.com/shurcooL/httpfs v0.0.0-20181222201310-74dc9339e414 // indirect
+	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd // indirect
+	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
+	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
+	github.com/ugorji/go v1.1.1 // indirect
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
+	github.com/xdg/stringprep v1.0.0 // indirect
+	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.2 // indirect
 	go.etcd.io/etcd v3.3.12+incompatible
 	go.mongodb.org/mongo-driver v1.0.1
-	go.opencensus.io v0.21.0
-	go.uber.org/zap v1.10.0 // indirect
-	gocloud.dev/internal/cmd/gocdk v0.0.0-20190508160025-9b1aed62fdb1 // indirect
-	gocloud.dev/internal/contributebot v0.0.0-20190508160025-9b1aed62fdb1 // indirect
-	golang.org/x/crypto v0.0.0-20190506204251-e1dfcc566284
-	golang.org/x/net v0.0.0-20190503192946-f4e77d36d62c
+	go.opencensus.io v0.20.2
+	go.uber.org/multierr v1.1.0 // indirect
+	go.uber.org/zap v1.9.1 // indirect
+	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
+	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/sys v0.0.0-20190508100423-12bbe5a7a520 // indirect
-	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373
-	google.golang.org/api v0.4.0
-	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8
+	google.golang.org/api v0.3.2
+	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7
 	google.golang.org/grpc v1.20.1
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 	pack.ag/amqp v0.11.0
