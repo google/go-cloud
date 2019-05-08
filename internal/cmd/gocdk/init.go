@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	"strings"
 	"text/template"
 
-	"gocloud.dev/internal/cmd/gocdk/internal/templates"
 	"golang.org/x/xerrors"
 )
 
@@ -75,7 +74,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		ProjectName: filepath.Base(projectDir),
 		ModulePath:  modpath,
 	}
-	for fileName, templateSource := range templates.InitTemplates {
+	for fileName, templateSource := range InitTemplates {
 		tmpl := template.Must(template.New(fileName).Parse(templateSource))
 		buf := new(bytes.Buffer)
 		if err := tmpl.Execute(buf, tmplValues); err != nil {
@@ -115,4 +114,68 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 		return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
 	}
 	return filepath.ToSlash(rel), nil
+}
+
+var InitTemplates = map[string]string{
+
+	"README.md": `I'm a readme about using the cli`,
+
+	"Dockerfile": `
+# gocdk-image: {{.ProjectName}}
+`,
+
+	"go.mod": `module {{.ModulePath}}
+`,
+
+	"main.go": `package main
+
+import (
+	"fmt"
+	"net/http"
+	"os"
+)
+
+func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	http.HandleFunc("/", greet)
+	if err := http.ListenAndServe(":" + port, nil); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func greet(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Hello, World!")
+}
+`,
+
+	"biomes/dev/biome.json": `{
+		"serve_enabled" : true,
+		"launcher" : "local"
+	}
+`,
+
+	"biomes/README.md": `I'm a readme about biomes
+`,
+
+	"biomes/dev/main.tf": `
+`,
+
+	"biomes/dev/outputs.tf": `
+`,
+
+	"biomes/dev/variables.tf": `
+`,
+
+	"biomes/dev/secrets.auto.tfvars": `
+`,
+
+	".dockerignore": `*.tfvars
+`,
+
+	".gitignore": `*.tfvars
+`,
 }
