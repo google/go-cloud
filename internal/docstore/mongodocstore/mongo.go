@@ -52,6 +52,7 @@ import (
 	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gocloud.dev/gcerrors"
@@ -217,7 +218,7 @@ const mongoIDField = "_id"
 // TODO(jba): use bulk RPCs.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	if opts.Unordered {
-		panic("unordered unimplemented")
+		return c.runActionsUnordered(ctx, actions)
 	}
 	for i, a := range actions {
 		if err := c.runAction(ctx, a); err != nil {
@@ -289,48 +290,58 @@ func (c *collection) toMongoFieldPath(fp []string) string {
 	return strings.Join(fp, ".")
 }
 
+func sliceToLower(s []string) {
+	for i, e := range s {
+		s[i] = strings.ToLower(e)
+	}
+}
+
 func (c *collection) create(ctx context.Context, a *driver.Action) error {
-	// See https://docs.mongodb.com/manual/reference/method/db.collection.insertOne
+	// See https://docs.mongodb.com/manual/reference/method/db.collection.insertOne.
+	mdoc, createdID, err := c.prepareCreate(a)
+	if err != nil {
+		return err
+	}
+	if _, err = c.coll.InsertOne(ctx, mdoc); err != nil {
+		return err
+	}
+	if createdID != nil {
+		// We can only be here if c.idField is non-empty. See prepareCreate.
+		return a.Doc.SetField(c.idField, createdID)
+	}
+	return nil
+}
+
+func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{}, err error) {
 	id, err := c.docID(a.Doc)
-	// If the user provides a function to get the ID rather than a field, then Create
-	// can't make a unique ID for a document that's missing one, because it doesn't
-	// know how to create it or where to store it in the original document.
-	if err != nil && c.idField == "" {
-		return err
+	if id == "" {
+		if c.idField == "" {
+			// If the user provides a function to get the ID rather than a field, then Create
+			// can't make a unique ID for a document that's missing one, because it doesn't
+			// know how to create it or where to store it in the original document.
+			return nil, nil, err
+		}
+		// Create a unique ID here. (The MongoDB Go client does this for us when calling InsertOne,
+		// but not for BulkWrite.)
+		id = primitive.NewObjectID()
+		createdID = id
 	}
-	mdoc, err := c.encodeDoc(a.Doc, id)
+	mdoc, err = c.encodeDoc(a.Doc, id)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	result, err := c.coll.InsertOne(ctx, mdoc)
-	if err != nil {
-		return err
-	}
-	if result.InsertedID == nil {
-		return nil
-	}
-	// Here, c.idField must be non-empty. If it were empty, then the ID returned by
-	// c.idFunc would be set in mdoc, so result.InsertedID would be nil.
-	return a.Doc.SetField(c.idField, result.InsertedID)
+	return mdoc, createdID, nil
 }
 
 func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool) error {
 	// See https://docs.mongodb.com/manual/reference/method/db.collection.replaceOne
-	id, err := c.docID(a.Doc)
-	if err != nil {
-		return err
-	}
-	mdoc, err := c.encodeDoc(a.Doc, id)
+	filter, mdoc, id, err := c.prepareReplace(a)
 	if err != nil {
 		return err
 	}
 	opts := options.Replace()
 	if upsert {
 		opts.SetUpsert(true) // Document will be created if it doesn't exist.
-	}
-	filter, id, _, err := c.makeFilter(a.Doc)
-	if err != nil {
-		return err
 	}
 	result, err := c.coll.ReplaceOne(ctx, filter, mdoc, opts)
 	if err != nil {
@@ -340,6 +351,18 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", id)
 	}
 	return nil
+}
+
+func (c *collection) prepareReplace(a *driver.Action) (filter bson.D, mdoc map[string]interface{}, id interface{}, err error) {
+	filter, id, _, err = c.makeFilter(a.Doc)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	mdoc, err = c.encodeDoc(a.Doc, id)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return filter, mdoc, id, nil
 }
 
 func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]interface{}, error) {
@@ -381,6 +404,24 @@ func (c *collection) delete(ctx context.Context, a *driver.Action) error {
 }
 
 func (c *collection) update(ctx context.Context, a *driver.Action) error {
+	filter, updateDoc, id, err := c.prepareUpdate(a)
+	if err != nil {
+		return err
+	}
+	if filter == nil { // no-op
+		return nil
+	}
+	result, err := c.coll.UpdateOne(ctx, filter, updateDoc)
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 {
+		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", id)
+	}
+	return nil
+}
+
+func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc map[string]bson.D, id interface{}, err error) {
 	var (
 		sets   bson.D
 		unsets bson.D
@@ -392,7 +433,7 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 		} else {
 			val, err := encodeValue(m.Value)
 			if err != nil {
-				return err
+				return nil, nil, nil, err
 			}
 			sets = append(sets, bson.E{Key: key, Value: val})
 		}
@@ -400,25 +441,18 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 	if len(sets) == 0 && len(unsets) == 0 {
 		// MongoDB returns an error if there are no updates, but docstore treats it
 		// as a no-op.
-		return nil
+		return nil, nil, nil, nil
 	}
-	updateDoc := map[string]bson.D{}
+	updateDoc = map[string]bson.D{}
 	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: driver.UniqueString()})
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}
-	filter, id, _, err := c.makeFilter(a.Doc)
+	filter, id, _, err = c.makeFilter(a.Doc)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
-	result, err := c.coll.UpdateOne(ctx, filter, updateDoc)
-	if err != nil {
-		return err
-	}
-	if result.MatchedCount == 0 {
-		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", id)
-	}
-	return nil
+	return filter, updateDoc, id, nil
 }
 
 func (c *collection) makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err error) {
@@ -454,6 +488,166 @@ func (c *collection) docID(doc driver.Document) (interface{}, error) {
 	return id, nil
 }
 
+type indexedAction struct {
+	index  int
+	action *driver.Action
+}
+
+type indexedError = struct {
+	Index int
+	Err   error
+}
+
+func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action) driver.ActionListError {
+	// MongoDB has a bulk write RPC, but no easy way to do a bulk get.
+	// We run the Gets in parallel.
+	// TODO(jba): consider doing a bulk get by using Find with an "or" filter.
+	var alerr driver.ActionListError
+
+	var gets, writes []indexedAction
+	for i, a := range actions {
+		if a.Kind == driver.Get {
+			gets = append(gets, indexedAction{i, a})
+		} else {
+			writes = append(writes, indexedAction{i, a})
+		}
+	}
+
+	// Run each Get action concurrently.
+	getc := make(chan indexedError)
+	for _, g := range gets {
+		g := g
+		go func() {
+			err := c.get(ctx, g.action)
+			getc <- indexedError{g.index, err}
+		}()
+	}
+
+	// Run all writes in a single BulkWrite RPC.
+	alerrBulk := c.unorderedBulkWrite(ctx, writes)
+	if alerrBulk != nil {
+		alerr = append(alerr, alerrBulk...)
+	}
+
+	// Collect the Get results.
+	for range gets {
+		ie := <-getc
+		if ie.Err != nil {
+			alerr = append(alerr, ie)
+		}
+	}
+	return alerr
+}
+
+func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedAction) driver.ActionListError {
+	var (
+		alerr              driver.ActionListError
+		models             []mongo.WriteModel
+		newIDs             = map[int]interface{}{} // new IDs for Create, keyed by position in iactions
+		nDeletes, nMatches int64
+	)
+	for i, ia := range iactions {
+		a := ia.action
+		var m mongo.WriteModel
+		var err error
+		var newID interface{}
+		switch a.Kind {
+		case driver.Create:
+			m, newID, err = c.newCreateModel(ia.action)
+			if newID != nil {
+				newIDs[i] = newID
+			}
+		case driver.Delete:
+			m, err = c.newDeleteModel(a)
+			if err != nil {
+				nDeletes++
+			}
+		case driver.Replace, driver.Put:
+			m, err = c.newReplaceModel(a, a.Kind == driver.Put)
+			if err != nil && a.Kind != driver.Put {
+				nMatches++
+			}
+		case driver.Update:
+			m, err = c.newUpdateModel(a)
+			if err != nil && m != nil {
+				nMatches++
+			}
+
+		default:
+			err = gcerr.Newf(gcerr.Internal, nil, "bad action %+v", a)
+		}
+		if err != nil {
+			alerr = append(alerr, indexedError{ia.index, err})
+		} else if m != nil { // m can be nil for a no-op update
+			models = append(models, m)
+		}
+	}
+	res, err := c.coll.BulkWrite(ctx, models, options.BulkWrite().SetOrdered(false))
+	if err != nil {
+		bwe, ok := err.(*mongo.BulkWriteException)
+		if !ok { // assume everything failed with this error
+			return append(alerr, indexedError{-1, err})
+		}
+		// The returned indexes of the WriteErrors are wrong. See https://jira.mongodb.org/browse/GODRIVER-1028.
+		// Until it's fixed, use negative values for the indexes in the errors we return.
+		for i, w := range bwe.WriteErrors {
+			alerr = append(alerr, indexedError{-i - 1, gcerr.Newf(translateMongoCode(w.Code), nil, "%s", w.Message)})
+		}
+		return alerr
+	}
+	if res.DeletedCount != nDeletes {
+		alerr = append(alerr, indexedError{-1, gcerr.Newf(gcerr.NotFound, nil, "some delete failed")})
+	}
+	if res.MatchedCount != nMatches {
+		alerr = append(alerr, indexedError{-2, gcerr.Newf(gcerr.NotFound, nil, "some replace failed")})
+	}
+	for i, newID := range newIDs {
+		if err := iactions[i].action.Doc.SetField(c.idField, newID); err != nil {
+			alerr = append(alerr, indexedError{iactions[i].index, err})
+		}
+	}
+	return alerr
+}
+
+func (c *collection) newCreateModel(a *driver.Action) (*mongo.InsertOneModel, interface{}, error) {
+	mdoc, createdID, err := c.prepareCreate(a)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &mongo.InsertOneModel{Document: mdoc}, createdID, nil
+}
+
+func (c *collection) newDeleteModel(a *driver.Action) (*mongo.DeleteOneModel, error) {
+	filter, _, _, err := c.makeFilter(a.Doc)
+	if err != nil {
+		return nil, err
+	}
+	return &mongo.DeleteOneModel{Filter: filter}, nil
+}
+
+func (c *collection) newReplaceModel(a *driver.Action, upsert bool) (*mongo.ReplaceOneModel, error) {
+	filter, mdoc, _, err := c.prepareReplace(a)
+	if err != nil {
+		return nil, err
+	}
+	return &mongo.ReplaceOneModel{
+		Filter:      filter,
+		Replacement: mdoc,
+		Upsert:      &upsert,
+	}, nil
+}
+
+func (c *collection) newUpdateModel(a *driver.Action) (*mongo.UpdateOneModel, error) {
+	filter, updateDoc, _, err := c.prepareUpdate(a)
+	if err != nil {
+		return nil, err
+	}
+	if filter == nil { // no-op
+		return nil, nil
+	}
+	return &mongo.UpdateOneModel{Filter: filter, Update: updateDoc}, nil
+}
+
 // As implements driver.As.
 func (c *collection) As(i interface{}) bool {
 	p, ok := i.(**mongo.Collection)
@@ -463,10 +657,6 @@ func (c *collection) As(i interface{}) bool {
 	*p = c.coll
 	return true
 }
-
-// Error code for a write error when no documents match a filter.
-// (The Go mongo driver doesn't define an exported constant for this.)
-const mongoNotFoundCode = 11000
 
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	if g, ok := err.(*gcerr.Error); ok {
@@ -480,8 +670,15 @@ func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerrors.Unknown
 }
 
-func sliceToLower(s []string) {
-	for i, e := range s {
-		s[i] = strings.ToLower(e)
+// Error code for a write error when no documents match a filter.
+// (The Go mongo driver doesn't define an exported constant for this.)
+const mongoNotFoundCode = 11000
+
+func translateMongoCode(code int) gcerrors.ErrorCode {
+	switch code {
+	case mongoNotFoundCode:
+		return gcerrors.NotFound
+	default:
+		return gcerrors.Unknown
 	}
 }
