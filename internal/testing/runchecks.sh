@@ -102,6 +102,21 @@ fi;
 
 
 echo
+echo "Ensuring that gocdk static content is up to date..."
+tmpstaticgo=$(mktemp)
+function cleanupstaticgo() {
+  rm -rf "$tmpstaticgo"
+}
+trap cleanupstaticgo EXIT
+pushd internal/cmd/gocdk/
+go run generate_static.go -- "$tmpstaticgo"
+cat "$tmpstaticgo" | diff ./static.go - || {
+  echo "FAIL: gocdk static files are out of date; run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
+}
+popd
+
+
+echo
 echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
 if [[ $(go version) == *1\.12* ]]; then
   ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {

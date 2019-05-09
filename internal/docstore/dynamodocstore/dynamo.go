@@ -46,7 +46,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	gcaws "gocloud.dev/aws"
@@ -68,7 +67,7 @@ type lazySessionOpener struct {
 
 func (o *lazySessionOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
 	o.init.Do(func() {
-		sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+		sess, err := gcaws.NewDefaultSession()
 		if err != nil {
 			o.err = err
 			return
@@ -197,7 +196,7 @@ func (c *collection) KeyFields() []string {
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	if opts.Unordered {
-		panic("unordered unimplemented")
+		return driver.ActionListError{{0, gcerr.Newf(gcerr.Unimplemented, nil, "unordered actions")}}
 	}
 	groups := c.splitActions(actions)
 	nRun := 0 // number of actions successfully run

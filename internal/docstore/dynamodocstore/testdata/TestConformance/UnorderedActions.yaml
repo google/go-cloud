@@ -1,0 +1,41 @@
+---
+version: 1
+interactions:
+- request:
+    body: '{"TableName":"docstore-test-1"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "31"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125305Z
+      X-Amz-Target:
+      - DynamoDB_20120810.DescribeTable
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Table":{"AttributeDefinitions":[{"AttributeName":"name","AttributeType":"S"}],"CreationDateTime":1.556147129209E9,"ItemCount":0,"KeySchema":[{"AttributeName":"name","KeyType":"HASH"}],"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5},"TableArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-1","TableId":"92dd3571-35a9-4cf0-894f-f1c1672c4772","TableName":"docstore-test-1","TableSizeBytes":0,"TableStatus":"ACTIVE"}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "481"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:05 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "3620240070"
+      X-Amzn-Requestid:
+      - CQKF80NO5GV6THNQB62J05UKVRVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""

@@ -23,9 +23,14 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 
 	"golang.org/x/xerrors"
 )
+
+// generate_static converts the files in _static/ into constants in a new
+// file,
+//go:generate go run generate_static.go -- static.go
 
 func main() {
 	pctx, err := osProcessContext()
@@ -70,8 +75,9 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 		return init_(ctx, pctx, cmdArgs)
 	case "serve":
 		return serve(ctx, pctx, cmdArgs)
-	case "add":
-		return add(ctx, pctx, cmdArgs)
+	case "add-ptype":
+		return addPortableType(ctx, pctx, cmdArgs)
+	// TODO(rvangent): Add "add-biome".
 	case "deploy":
 		return deploy(ctx, pctx, cmdArgs)
 	case "build":
@@ -117,6 +123,15 @@ func (pctx *processContext) overrideEnv(vars ...string) []string {
 	// Setting the slice's capacity to length ensures that a new backing array
 	// is allocated if len(vars) > 0.
 	return append(pctx.env[:len(pctx.env):len(pctx.env)], vars...)
+}
+
+// resolve joins path with pctx.workdir if path is relative. Otherwise,
+// it returns path.
+func (pctx *processContext) resolve(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(pctx.workdir, path)
 }
 
 // findModuleRoot searches the given directory and those above it for the Go
