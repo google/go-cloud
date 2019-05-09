@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7UXdwDB0GW+P5c",
+  "Initial": "AQAAAA7UZkqVH/oqVP8Q",
   "Version": "0.2",
   "Converter": {
     "ClearHeaders": [
@@ -35,7 +35,7 @@
   },
   "Entries": [
     {
-      "ID": "9ab372966a568af5",
+      "ID": "6db08a1979abca5a",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src",
@@ -98,19 +98,19 @@
             "sQqNsWTgdUEFt6mb5y4/5Q=="
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D01397F4\""
+            "\"0x8D6D49A6BC3CD6B\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Request-Id": [
-            "97039574-901e-0025-1e7c-010d07000000"
+            "5d6e90fe-901e-00ad-3d83-06b5de000000"
           ],
           "X-Ms-Request-Server-Encrypted": [
             "true"
@@ -123,7 +123,7 @@
       }
     },
     {
-      "ID": "9cd712f9987e0275",
+      "ID": "ed977ab6403f79fb",
       "Request": {
         "Method": "HEAD",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src",
@@ -139,7 +139,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -172,13 +174,13 @@
             "text/plain"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D01397F4\""
+            "\"0x8D6D49A6BC3CD6B\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -205,7 +207,7 @@
             "bar"
           ],
           "X-Ms-Request-Id": [
-            "9703958a-901e-0025-337c-010d07000000"
+            "5d6e9112-901e-00ad-4e83-06b5de000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -221,7 +223,7 @@
       }
     },
     {
-      "ID": "8a252bd310861e87",
+      "ID": "8adf4b94c7032753",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists",
@@ -281,19 +283,19 @@
             "oPqafXJA1cXuvXCJlDDFlw=="
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D02A59CE\""
+            "\"0x8D6D49A6BD3D6F1\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Request-Id": [
-            "970395a7-901e-0025-4e7c-010d07000000"
+            "5d6e911c-901e-00ad-5583-06b5de000000"
           ],
           "X-Ms-Request-Server-Encrypted": [
             "true"
@@ -306,7 +308,7 @@
       }
     },
     {
-      "ID": "34c4ecbfd114a0b0",
+      "ID": "89646c50c987be10",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest",
@@ -331,7 +333,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 202,
@@ -343,25 +347,25 @@
             "0"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D03D4A1B\""
+            "\"0x8D6D49A6BDCB2C7\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Copy-Id": [
-            "a7e2eaf1-1f8d-4b91-83cc-b98a8b8c65b7"
+            "91c968d4-8278-40a2-a23c-29b6edee3b18"
           ],
           "X-Ms-Copy-Status": [
             "success"
           ],
           "X-Ms-Request-Id": [
-            "970395b9-901e-0025-5e7c-010d07000000"
+            "5d6e9128-901e-00ad-5f83-06b5de000000"
           ],
           "X-Ms-Version": [
             "2018-11-09"
@@ -371,7 +375,7 @@
       }
     },
     {
-      "ID": "74d773036420612d",
+      "ID": "dac55030d401c0b4",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest",
@@ -390,7 +394,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -423,13 +429,13 @@
             "text/plain"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D03D4A1B\""
+            "\"0x8D6D49A6BDCB2C7\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -438,10 +444,10 @@
             "BlockBlob"
           ],
           "X-Ms-Copy-Completion-Time": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "X-Ms-Copy-Id": [
-            "a7e2eaf1-1f8d-4b91-83cc-b98a8b8c65b7"
+            "91c968d4-8278-40a2-a23c-29b6edee3b18"
           ],
           "X-Ms-Copy-Progress": [
             "11/11"
@@ -465,7 +471,7 @@
             "bar"
           ],
           "X-Ms-Request-Id": [
-            "970395ff-901e-0025-1c7c-010d07000000"
+            "5d6e9131-901e-00ad-6783-06b5de000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -481,7 +487,7 @@
       }
     },
     {
-      "ID": "272d891413c4a6f0",
+      "ID": "199c49d021e23e3f",
       "Request": {
         "Method": "HEAD",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest",
@@ -497,7 +503,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -530,13 +538,13 @@
             "text/plain"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D03D4A1B\""
+            "\"0x8D6D49A6BDCB2C7\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -551,10 +559,10 @@
             "BlockBlob"
           ],
           "X-Ms-Copy-Completion-Time": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "X-Ms-Copy-Id": [
-            "a7e2eaf1-1f8d-4b91-83cc-b98a8b8c65b7"
+            "91c968d4-8278-40a2-a23c-29b6edee3b18"
           ],
           "X-Ms-Copy-Progress": [
             "11/11"
@@ -578,7 +586,7 @@
             "bar"
           ],
           "X-Ms-Request-Id": [
-            "9703961c-901e-0025-347c-010d07000000"
+            "5d6e9138-901e-00ad-6b83-06b5de000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -594,7 +602,7 @@
       }
     },
     {
-      "ID": "1d2523f4d304cdfe",
+      "ID": "d4dff8f8dadf8f58",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists",
@@ -619,7 +627,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 202,
@@ -631,25 +641,25 @@
             "0"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D065C377\""
+            "\"0x8D6D49A6BF5E656\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:42 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Copy-Id": [
-            "7f361394-9204-414c-a3e4-3f9e6ec552c0"
+            "947fbf84-cf79-4cbe-a220-8c8d9f61e3bf"
           ],
           "X-Ms-Copy-Status": [
             "success"
           ],
           "X-Ms-Request-Id": [
-            "9703963b-901e-0025-4e7c-010d07000000"
+            "5d6e9146-901e-00ad-7783-06b5de000000"
           ],
           "X-Ms-Version": [
             "2018-11-09"
@@ -659,7 +669,7 @@
       }
     },
     {
-      "ID": "3618f64600542928",
+      "ID": "2336c09db32f3d92",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists",
@@ -678,7 +688,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -711,13 +723,13 @@
             "text/plain"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:47 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D065C377\""
+            "\"0x8D6D49A6BF5E656\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:42 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -726,10 +738,10 @@
             "BlockBlob"
           ],
           "X-Ms-Copy-Completion-Time": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:42 GMT"
           ],
           "X-Ms-Copy-Id": [
-            "7f361394-9204-414c-a3e4-3f9e6ec552c0"
+            "947fbf84-cf79-4cbe-a220-8c8d9f61e3bf"
           ],
           "X-Ms-Copy-Progress": [
             "11/11"
@@ -753,7 +765,7 @@
             "bar"
           ],
           "X-Ms-Request-Id": [
-            "9703964d-901e-0025-5e7c-010d07000000"
+            "5d6e9154-901e-00ad-0183-06b5de000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -769,7 +781,7 @@
       }
     },
     {
-      "ID": "082e96550623ccbb",
+      "ID": "73635565ba4a50b0",
       "Request": {
         "Method": "HEAD",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists",
@@ -785,7 +797,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -818,13 +832,13 @@
             "text/plain"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:41 GMT"
           ],
           "Etag": [
-            "\"0x8D6CF93D065C377\""
+            "\"0x8D6D49A6BF5E656\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:42 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -839,10 +853,10 @@
             "BlockBlob"
           ],
           "X-Ms-Copy-Completion-Time": [
-            "Fri, 03 May 2019 06:51:48 GMT"
+            "Thu, 09 May 2019 16:21:42 GMT"
           ],
           "X-Ms-Copy-Id": [
-            "7f361394-9204-414c-a3e4-3f9e6ec552c0"
+            "947fbf84-cf79-4cbe-a220-8c8d9f61e3bf"
           ],
           "X-Ms-Copy-Progress": [
             "11/11"
@@ -866,7 +880,7 @@
             "bar"
           ],
           "X-Ms-Request-Id": [
-            "97039660-901e-0025-717c-010d07000000"
+            "5d6e9162-901e-00ad-0d83-06b5de000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"

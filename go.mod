@@ -15,7 +15,7 @@
 module gocloud.dev
 
 require (
-	cloud.google.com/go v0.38.0
+	cloud.google.com/go v0.38.1-0.20190508215133-24f9f82cf8c5
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
 	contrib.go.opencensus.io/exporter/stackdriver v0.11.0
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
@@ -42,8 +42,11 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
+	github.com/golang/mock v1.3.0 // indirect
 	github.com/golang/protobuf v1.3.1
+	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.3.0
+	github.com/google/pprof v0.0.0-20190502144155-8358a9778bd1 // indirect
 	github.com/google/subcommands v1.0.1
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.2.1
@@ -81,14 +84,22 @@ require (
 	go.opencensus.io v0.21.0
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1 // indirect
-	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
-	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
+	golang.org/x/crypto v0.0.0-20190506204251-e1dfcc566284
+	golang.org/x/exp v0.0.0-20190509005604-ec0fef3eb65a // indirect
+	golang.org/x/image v0.0.0-20190507092727-e4e5bf290fec // indirect
+	golang.org/x/lint v0.0.0-20190409202823-959b441ac422 // indirect
+	golang.org/x/mobile v0.0.0-20190415191353-3e0bab5405d6 // indirect
+	golang.org/x/net v0.0.0-20190503192946-f4e77d36d62c
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sys v0.0.0-20190508220229-2d0786266e9c // indirect
+	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/tools v0.0.0-20190509014725-d996b19ee77c // indirect
 	golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373
 	google.golang.org/api v0.4.0
-	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7
+	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8
 	google.golang.org/grpc v1.20.1
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
+	honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a // indirect
 	pack.ag/amqp v0.11.0
 )
