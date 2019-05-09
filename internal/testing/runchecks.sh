@@ -77,7 +77,7 @@ result=0
 echo
 echo "Running Go tests..."
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-  go test -v -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+  go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out
@@ -85,7 +85,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     bash <(curl -s https://codecov.io/bash)
   fi
 else
-  go test -v -mod=readonly -race ./... || result=1
+  go test -mod=readonly -race ./... || result=1
   # No need to run other checks on OSs other than linux.
   exit $result
 fi
