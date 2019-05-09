@@ -12,9 +12,9 @@ import (
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-sql-driver/mysql"
 	"go.opencensus.io/trace"
+	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
@@ -50,18 +50,17 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	if err != nil {
 		return nil, nil, err
 	}
-	options := _wireOptionsValue
-	sessionSession, err := session.NewSessionWithOptions(options)
+	session, err := aws.NewDefaultSession()
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	bucket, cleanup2, err := awsBucket(ctx, sessionSession, flags)
+	bucket, cleanup2, err := awsBucket(ctx, session, flags)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	variable, err := awsMOTDVar(ctx, sessionSession, flags)
+	variable, err := awsMOTDVar(ctx, session, flags)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -71,7 +70,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	router := newRouter(mainApplication)
 	ncsaLogger := xrayserver.NewRequestLogger()
 	v, cleanup3 := appHealthChecks(db)
-	xRay := xrayserver.NewXRayClient(sessionSession)
+	xRay := xrayserver.NewXRayClient(session)
 	exporter, cleanup4, err := xrayserver.NewExporter(xRay)
 	if err != nil {
 		cleanup3()
@@ -81,14 +80,14 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	}
 	sampler := trace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
-	serverOptions := &server.Options{
+	options := &server.Options{
 		RequestLogger:         ncsaLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(router, serverOptions)
+	serverServer := server.New(router, options)
 	return serverServer, func() {
 		cleanup4()
 		cleanup3()
@@ -99,7 +98,6 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 
 var (
 	_wireClientValue        = http.DefaultClient
-	_wireOptionsValue       = session.Options{SharedConfigState: session.SharedConfigEnable}
 	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 

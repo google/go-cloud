@@ -41,6 +41,11 @@ var portableTypes = []*portableTypeInfo{
 		goDemoPath: "/demo/blob.bucket/demo_blob_bucket.go",
 		demoURL:    "/demo/blob.bucket/",
 	},
+	{
+		name:       "secrets.Keeper",
+		goDemoPath: "/demo/secrets.keeper/demo_secrets_keeper.go",
+		demoURL:    "/demo/secrets.keeper/",
+	},
 }
 
 // TODO(rvangent): Rename this file to addportabletype.go.
