@@ -28,9 +28,8 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-source allmodules.sh
-for path in "${ALLMODULES[@]}"
-do
+
+sed -e '/^#/d' -e '/^$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
   ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
 done
 
