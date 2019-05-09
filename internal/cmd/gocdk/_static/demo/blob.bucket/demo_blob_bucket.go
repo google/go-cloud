@@ -118,13 +118,14 @@ const (
 	blobBucketViewTemplate = blobBucketTemplatePrefix + `
   {{if .ListObjects}}
     <form>
-    Choose a blob to view:
-    <select name="key" label="choose a blob to view">
-      {{range .ListObjects}}
-        <option value="{{.Key}}">{{.Key}}</option>
-      {{end}}
-    </select>
-    <br/>
+    <p><label>
+      Choose a blob to view:
+      <select name="key">
+        {{range .ListObjects}}
+          <option value="{{.Key}}">{{.Key}}</option>
+        {{end}}
+      </select>
+    </label></p>
     <input type="submit">
     </form>
   {{end}}` + blobBucketTemplateSuffix
@@ -135,14 +136,16 @@ const (
     Wrote it!
   {{else}}
     <form>
-    Blob key to write to (any previous blob will be overwritten):
-    <br/>
-    <input type="text" name="key" label="blob key to write to" value="{{ .Key }}">
-    <br/>
-    Data to write:
-    <br/>
-    <textarea name="contents" rows="4" cols="40" label="contents to write">{{ .WriteContents }}</textarea>
-    <br/>
+    <p><label>
+      Blob key to write to (any previous blob will be overwritten):
+      <br/>
+      <input type="text" name="key" value="{{ .Key }}">
+    </label></p>
+    <p><label>
+      Data to write:
+      <br/>
+      <textarea name="contents" rows="4" cols="40">{{ .WriteContents }}</textarea>
+    </label></p>
     <input type="submit" value="Write It!">
     </form>
   {{end}}` + blobBucketTemplateSuffix
