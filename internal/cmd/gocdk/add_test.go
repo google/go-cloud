@@ -96,6 +96,7 @@ func TestPortableTypeDemos(t *testing.T) {
 		description   string
 		urlPaths      []string
 		op            string
+		urlQuery      string
 		urlValues     url.Values // only used if op=POST
 		stringsToFind []string
 	}{
@@ -204,28 +205,58 @@ func TestPortableTypeDemos(t *testing.T) {
 				`<a href="./list?prefix=subdir%2f">subdir/</a>`,
 			},
 		},
-		/*
-			TODO(rvangent): Enable listing of a subdir; broken right now because
-			serverAlloc.url doesn't handle query parameters correctly.
-			{
-				pt:          "blob.Bucket",
-				description: "list: subdir",
-				urlPaths:    []string{"/demo/blob.bucket/list?prefix=subdir%2f"},
-				op:          "GET",
-				stringsToFind: []string{
-					"<title>blob.Bucket demo</title>",
-					`<a href="./view?key=subdir%2fkey2">key2</a>`,
-				},
+		{
+			pt:          "blob.Bucket",
+			description: "list: subdir",
+			urlPaths:    []string{"/demo/blob.bucket/list"},
+			urlQuery:    "prefix=subdir%2f",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				`<a href="./view?key=subdir%2fkey2">subdir/key2</a>`,
 			},
-		*/
-		// TODO(rvangent): Add tests for the view page.
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "view: none selected",
+			urlPaths:    []string{"/demo/blob.bucket/view"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				"Choose a blob",
+				`<option value="key1">key1</option>`,
+				`<option value="subdir/key2">subdir/key2</option>`,
+			},
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "view: key1 selected",
+			urlPaths:    []string{"/demo/blob.bucket/view"},
+			urlQuery:    "key=key1",
+			op:          "GET",
+			stringsToFind: []string{
+				"key1 contents",
+			},
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "view: key2 selected",
+			urlPaths:    []string{"/demo/blob.bucket/view"},
+			urlQuery:    "key=subdir%2fkey2",
+			op:          "GET",
+			stringsToFind: []string{
+				"key2 contents",
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.pt+":"+test.description, func(t *testing.T) {
 			for _, urlPath := range test.urlPaths {
-				u := alloc.url(urlPath).String()
-				t.Logf("URL: %v", u)
+				queryURL := alloc.url(urlPath)
+				queryURL.RawQuery = test.urlQuery
+				u := queryURL.String()
+				t.Logf("URL: %s", u)
 				var resp *http.Response
 				var err error
 				switch test.op {
