@@ -357,12 +357,32 @@ func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
 }
 
+func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+	return c.runActionQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
+		return []*pb.Write{{
+			Operation:       &pb.Write_Delete{Delete: doc.Name},
+			CurrentDocument: preconditionFromTimestamp(doc.UpdateTime),
+		}}, nil
+	})
+}
+
+func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
+	fields, paths, err := processMods(mods)
+	if err != nil {
+		return err
+	}
+	return c.runActionQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
+		return newUpdateWrites(doc.Name, doc.UpdateTime, fields, paths)
+	})
+}
+
 // For delete and update queries, limit the number of write actions per RPC, to bound
 // client memory.
 // This is a variable so it can be modified for tests.
 var maxWritesPerRPC = 500
 
-func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+// runActionQuery runs the query, calls writes for each returned document, and then commits those writes.
+func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, writes func(*pb.Document) ([]*pb.Write, error)) error {
 	q.FieldPaths = [][]string{{"__name__"}}
 	iter, err := c.newDocIterator(ctx, q)
 	if err != nil {
@@ -380,9 +400,11 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 		if err != nil {
 			return err
 		}
-		pws = append(pws, &pb.Write{
-			Operation: &pb.Write_Delete{Delete: res.Document.Name},
-		})
+		ws, err := writes(res.Document)
+		if err != nil {
+			return err
+		}
+		pws = append(pws, ws...)
 		if len(pws) >= maxWritesPerRPC {
 			_, err := c.commit(ctx, pws, opts)
 			if err != nil {

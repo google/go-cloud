@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
+	"gocloud.dev/internal/gcerr"
 )
 
 // TODO: support parallel scans (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.ParallelScan)
@@ -487,4 +488,8 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 		return nil
 	}
 	return docstore.ActionListError(alerr)
+}
+
+func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
+	return gcerr.Newf(gcerr.Unimplemented, nil, "not implemented")
 }
