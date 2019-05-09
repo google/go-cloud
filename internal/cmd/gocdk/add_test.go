@@ -106,7 +106,7 @@ func TestPortableTypeDemos(t *testing.T) {
 				"/demo/blob.bucket",
 				"/demo/blob.bucket/",
 			},
-			op:         "GET",
+			op: "GET",
 			stringsToFind: []string{
 				"<title>blob.Bucket demo</title>",
 				"This page demonstrates the use of a Go CDK blob.Bucket",
@@ -150,7 +150,7 @@ func TestPortableTypeDemos(t *testing.T) {
 			description: "write: missing key",
 			urlPaths:    []string{"/demo/blob.bucket/write"},
 			op:          "POST",
-			urlValues: map[string][]string{"contents": []string{"foo"}},
+			urlValues:   map[string][]string{"contents": {"foo"}},
 			stringsToFind: []string{
 				"<title>blob.Bucket demo</title>",
 				"<strong>enter a non-empty key to write to</strong>",
@@ -163,7 +163,7 @@ func TestPortableTypeDemos(t *testing.T) {
 			description: "write: missing contents",
 			urlPaths:    []string{"/demo/blob.bucket/write"},
 			op:          "POST",
-			urlValues: map[string][]string{"key": []string{"key1"}},
+			urlValues:   map[string][]string{"key": {"key1"}},
 			stringsToFind: []string{
 				"<title>blob.Bucket demo</title>",
 				"<strong>enter some content to write</strong>",
@@ -176,7 +176,7 @@ func TestPortableTypeDemos(t *testing.T) {
 			description: "write: top level key",
 			urlPaths:    []string{"/demo/blob.bucket/write"},
 			op:          "POST",
-			urlValues: map[string][]string{"key": []string{"key1"}, "contents": []string{"key1 contents"}},
+			urlValues:   map[string][]string{"key": {"key1"}, "contents": {"key1 contents"}},
 			stringsToFind: []string{
 				"<title>blob.Bucket demo</title>",
 				"Wrote it!",
@@ -187,7 +187,7 @@ func TestPortableTypeDemos(t *testing.T) {
 			description: "write: subdirectory key",
 			urlPaths:    []string{"/demo/blob.bucket/write"},
 			op:          "POST",
-			urlValues: map[string][]string{"key": []string{"subdir/key2"}, "contents": []string{"key2 contents"}},
+			urlValues:   map[string][]string{"key": {"subdir/key2"}, "contents": {"key2 contents"}},
 			stringsToFind: []string{
 				"<title>blob.Bucket demo</title>",
 				"Wrote it!",
@@ -205,18 +205,18 @@ func TestPortableTypeDemos(t *testing.T) {
 			},
 		},
 		/*
-		TODO(rvangent): Enable listing of a subdir; broken right now because
-		serverAlloc.url doesn't handle query parameters correctly.
-		{
-			pt:          "blob.Bucket",
-			description: "list: subdir",
-			urlPaths:    []string{"/demo/blob.bucket/list?prefix=subdir%2f"},
-			op:          "GET",
-			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
-				`<a href="./view?key=subdir%2fkey2">key2</a>`,
+			TODO(rvangent): Enable listing of a subdir; broken right now because
+			serverAlloc.url doesn't handle query parameters correctly.
+			{
+				pt:          "blob.Bucket",
+				description: "list: subdir",
+				urlPaths:    []string{"/demo/blob.bucket/list?prefix=subdir%2f"},
+				op:          "GET",
+				stringsToFind: []string{
+					"<title>blob.Bucket demo</title>",
+					`<a href="./view?key=subdir%2fkey2">key2</a>`,
+				},
 			},
-		},
 		*/
 		// TODO(rvangent): Add tests for the view page.
 	}
