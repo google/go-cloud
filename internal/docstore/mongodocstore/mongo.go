@@ -296,8 +296,8 @@ func sliceToLower(s []string) {
 	}
 }
 
+// See https://docs.mongodb.com/manual/reference/method/db.collection.insertOne.
 func (c *collection) create(ctx context.Context, a *driver.Action) error {
-	// See https://docs.mongodb.com/manual/reference/method/db.collection.insertOne.
 	mdoc, createdID, err := c.prepareCreate(a)
 	if err != nil {
 		return err
@@ -319,7 +319,7 @@ func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{
 			// If the user provides a function to get the ID rather than a field, then Create
 			// can't make a unique ID for a document that's missing one, because it doesn't
 			// know how to create it or where to store it in the original document.
-			return nil, nil, err
+			return nil, nil, gcerr.Newf(gcerr.InvalidArgument, err, "missing ID field for document with ID function")
 		}
 		// Create a unique ID here. (The MongoDB Go client does this for us when calling InsertOne,
 		// but not for BulkWrite.)
