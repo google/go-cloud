@@ -46,6 +46,10 @@ var portableTypes = []*portableTypeInfo{
 		goDemoPath: "/demo/runtimevar.variable/demo_runtimevar_variable.go",
 		demoURL:    "/demo/runtimevar.variable/",
 	},
+		name:       "secrets.Keeper",
+		goDemoPath: "/demo/secrets.keeper/demo_secrets_keeper.go",
+		demoURL:    "/demo/secrets.keeper/",
+	},
 }
 
 // TODO(rvangent): Add tests for addPortableType(), including for each supported portableType.
