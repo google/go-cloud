@@ -70,7 +70,7 @@ func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
 func tfReadOutput(ctx context.Context, dir string, env []string) (map[string]*tfOutput, error) {
 	c := exec.CommandContext(ctx, "terraform", "output", "-json")
 	c.Dir = dir
-	c.Env = env
+	c.Env = overrideEnv(env, "TF_IN_AUTOMATION=1")
 	data, err := c.Output()
 	if err != nil {
 		return nil, xerrors.Errorf("read terraform output: %w", err)
