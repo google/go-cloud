@@ -53,7 +53,6 @@ var portableTypes = []*portableTypeInfo{
 	},
 }
 
-// TODO(rvangent): Add tests for addPortableType(), including for each supported portableType.
 // TODO(rvangent): Rename this file to addportabletype.go.
 
 func addPortableType(ctx context.Context, pctx *processContext, args []string) error {
