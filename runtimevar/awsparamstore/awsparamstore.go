@@ -45,7 +45,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
@@ -94,7 +93,7 @@ type lazySessionOpener struct {
 
 func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	o.init.Do(func() {
-		sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+		sess, err := gcaws.NewDefaultSession()
 		if err != nil {
 			o.err = err
 			return
