@@ -360,7 +360,7 @@ func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 // For delete and update queries, limit the number of write actions per RPC, to bound
 // client memory.
 // This is a variable so it can be modified for tests.
-var maxWritesPerRPC = 1000
+var maxWritesPerRPC = 500
 
 func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
 	q.FieldPaths = [][]string{{"__name__"}}
