@@ -42,7 +42,7 @@ func TestPortableTypeDemos(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	if err := run(ctx, pctx, []string{"init", "-m", "test", "--allow-existing", dir}, new(bool)); err != nil {
+	if err := run(ctx, pctx, []string{"init", "-m", "test", "--allow-existing-dir", dir}, new(bool)); err != nil {
 		t.Fatalf("run init error: %+v", err)
 	}
 
