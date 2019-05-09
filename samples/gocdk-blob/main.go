@@ -36,7 +36,7 @@ import (
 
 const helpSuffix = `
 
-  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
+  See https://gocloud.dev/concepts/urls/ for more background on
   Go CDK URLs, and sub-packages under gocloud.dev/blob
   (https://godoc.org/gocloud.dev/blob#pkg-subdirectories)
   for details on the blob.Bucket URL format.

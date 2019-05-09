@@ -30,7 +30,11 @@ func Example() {
 
 	// Construct a *secrets.Keeper from one of the secrets subpackages.
 	// This example uses localsecrets.
-	keeper := localsecrets.NewKeeper(localsecrets.ByteKey("secret key"))
+	sk, err := localsecrets.NewRandomKey()
+	if err != nil {
+		log.Fatal(err)
+	}
+	keeper := localsecrets.NewKeeper(sk)
 	defer keeper.Close()
 
 	// Now we can use keeper to Encrypt.

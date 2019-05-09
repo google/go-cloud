@@ -23,7 +23,7 @@ based on configuration, you can use `secrets.OpenKeeper`, making sure you
 both forms for each secret keeper provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
-[documentation on URLs]: https://godoc.org/gocloud.dev#hdr-URLs
+[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
 
 ## AWS Key Management Service
 

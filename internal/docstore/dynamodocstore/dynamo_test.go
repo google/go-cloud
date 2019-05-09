@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
@@ -52,7 +53,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, _, done := setup.NewAWSSession(t, region)
+	sess, _, done, state := setup.NewAWSSession(ctx, t, region)
+	drivertest.MakeUniqueStringDeterministicForTesting(state)
 	return &harness{sess: sess, closer: done}, nil
 }
 
@@ -82,6 +84,10 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	return nil
 }
 
+func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
+	return nil
+}
+
 func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
 	var si *dyn.ScanInput
 	var qi *dyn.QueryInput
@@ -108,7 +114,7 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 func TestConformance(t *testing.T) {
 	// Note: when running -record repeatedly in a short time period, change the argument
 	// in the call below to generate unique transaction tokens.
-	drivertest.MakeUniqueStringDeterministicForTesting(2)
+	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	drivertest.RunConformanceTests(t, newHarness, &codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 
@@ -158,7 +164,7 @@ func TestProcessURL(t *testing.T) {
 		{"dynamodb://docstore-test?sort_key=_id", true},
 	}
 
-	sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+	sess, err := gcaws.NewDefaultSession()
 	if err != nil {
 		t.Fatal(err)
 	}

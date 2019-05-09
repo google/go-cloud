@@ -148,6 +148,18 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
+	var u *azblob.BlockBlobURL
+	if !as(&u) {
+		return fmt.Errorf("BeforeRead As failed to get %T", u)
+	}
+	var ac *azblob.BlobAccessConditions
+	if !as(&ac) {
+		return fmt.Errorf("BeforeRead As failed to get %T", ac)
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var azOpts *azblob.UploadStreamToBlockBlobOptions
 	if !as(&azOpts) {

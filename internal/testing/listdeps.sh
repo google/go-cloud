@@ -23,15 +23,14 @@ set -euo pipefail
 # and go 1.12; please make sure to use the same version of Go as used by Travis
 # (see .travis.yml) when updating the alldeps file.
 tmpfile=$(mktemp)
-
-for path in "." "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
-  ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
-done
-
 function cleanup() {
   rm -rf "$tmpfile"
 }
 trap cleanup EXIT
+
+for path in "." "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
+  ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
+done
 
 # Sort using the native byte values to keep results from different environment consistent.
 LC_ALL=C sort "$tmpfile" | uniq

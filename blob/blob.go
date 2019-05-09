@@ -40,7 +40,7 @@
 // for managing your initialization code.
 //
 // Alternatively, you can construct a *Bucket via a URL and OpenBucket.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 //
 // Errors
@@ -641,7 +641,9 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	if opts == nil {
 		opts = &ReaderOptions{}
 	}
-	dopts := &driver.ReaderOptions{}
+	dopts := &driver.ReaderOptions{
+		BeforeRead: opts.BeforeRead,
+	}
 	tctx := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
 		// If err == nil, we handed the end closure off to the returned *Writer; it
@@ -911,8 +913,15 @@ type SignedURLOptions struct {
 }
 
 // ReaderOptions sets options for NewReader and NewRangedReader.
-// It is provided for future extensibility.
-type ReaderOptions struct{}
+type ReaderOptions struct {
+	// BeforeRead is a callback that will be called exactly once, before
+	// any data is read (unless NewReader returns an error before then, in which
+	// case it may not be called at all).
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeRead func(asFunc func(interface{}) bool) error
+}
 
 // WriterOptions sets options for NewWriter.
 type WriterOptions struct {
@@ -997,7 +1006,7 @@ type BucketURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -1047,7 +1056,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenBucket opens the bucket identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
+// details on supported URL formats, and https://gocloud.dev/concepts/urls/
 // for more information.
 func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	return defaultURLMux.OpenBucket(ctx, urlstr)

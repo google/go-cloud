@@ -262,7 +262,7 @@ func (e *testEncoder) EncodeList(n int) Encoder {
 	return &listEncoder{s: s}
 }
 
-func (e *testEncoder) EncodeMap(n int, _ bool) Encoder {
+func (e *testEncoder) EncodeMap(n int) Encoder {
 	m := make(map[string]interface{}, n)
 	e.val = m
 	return &mapEncoder{m: m}

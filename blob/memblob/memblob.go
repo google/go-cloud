@@ -20,7 +20,7 @@
 // For blob.OpenBucket memblob registers for the scheme "mem".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
-// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+// See https://gocloud.dev/concepts/urls/ for background information.
 //
 // As
 //
@@ -222,6 +222,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, errNotFound
 	}
 
+	if opts.BeforeRead != nil {
+		if err := opts.BeforeRead(func(interface{}) bool { return false }); err != nil {
+			return nil, err
+		}
+	}
 	r := bytes.NewReader(entry.Content)
 	if offset > 0 {
 		if _, err := r.Seek(offset, io.SeekStart); err != nil {

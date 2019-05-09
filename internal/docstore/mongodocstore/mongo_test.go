@@ -72,11 +72,7 @@ func (codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
 }
 
 func (codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
-	doc, err := driver.NewDocument(x)
-	if err != nil {
-		return nil, err
-	}
-	m, err := encodeDoc(doc, true)
+	m, err := encodeDoc(drivertest.MustDocument(x), true)
 	if err != nil {
 		return nil, err
 	}
@@ -84,15 +80,11 @@ func (codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
 }
 
 func (codecTester) DocstoreDecode(value, dest interface{}) error {
-	doc, err := driver.NewDocument(dest)
-	if err != nil {
-		return err
-	}
 	var m map[string]interface{}
 	if err := bson.Unmarshal(value.([]byte), &m); err != nil {
 		return err
 	}
-	return decodeDoc(m, doc, mongoIDField)
+	return decodeDoc(m, drivertest.MustDocument(dest), mongoIDField)
 }
 
 func (codecTester) NativeEncode(x interface{}) (interface{}, error) {
@@ -114,6 +106,10 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	if !coll.As(&mc) {
 		return errors.New("Collection.As failed")
 	}
+	return nil
+}
+
+func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
 	return nil
 }
 
@@ -219,10 +215,7 @@ func TestLowercaseFields(t *testing.T) {
 	}
 
 	// driver.Document.GetField is case-insensitive on structs.
-	doc, err := driver.NewDocument(&S{ID: 1, DocstoreRevision: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
+	doc := drivertest.MustDocument(&S{ID: 1, DocstoreRevision: 1})
 	for _, f := range []string{"ID", "Id", "id", "DocstoreRevision", "docstorerevision"} {
 		got, err := doc.GetField(f)
 		if err != nil {

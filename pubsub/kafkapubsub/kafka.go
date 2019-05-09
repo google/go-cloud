@@ -32,7 +32,7 @@
 // set of server addresses.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
-// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+// See https://gocloud.dev/concepts/urls/ for background information.
 //
 // Escaping
 //
@@ -585,7 +585,7 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	if p, ok := i.(*sarama.ConsumerGroupSession); ok {
 		s.mu.Lock()
-		s.mu.Unlock()
+		defer s.mu.Unlock()
 		*p = s.sess
 		return true
 	}

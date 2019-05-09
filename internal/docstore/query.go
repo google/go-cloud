@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -112,6 +112,18 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, wrapError: wrapErr, err: wrapErr(err)}
+}
+
+// Delete deletes all the documents specified by the query.
+// It is an error if the query has a limit.
+func (q *Query) Delete(ctx context.Context) error {
+	if err := q.init(nil); err != nil {
+		return err
+	}
+	if q.dq.Limit > 0 {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "delete queries cannot have a limit")
+	}
+	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
 }
 
 func (q *Query) init(fps []FieldPath) error {

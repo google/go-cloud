@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,11 +77,13 @@ func TestFindModuleRoot(t *testing.T) {
 	})
 }
 
+const testTempDirPrefix = "gocdk-test"
+
 // newTestModule creates a temporary directory with a go.mod at the root,
 // and returns the path. The returned cleanup function removes the
 // temporary directory and its contents.
 func newTestModule() (string, func(), error) {
-	dir, err := ioutil.TempDir("", "gocdk-test")
+	dir, err := ioutil.TempDir("", testTempDirPrefix)
 	if err != nil {
 		return "", nil, err
 	}

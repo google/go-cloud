@@ -455,3 +455,36 @@ func (qr *queryRunner) queryPlan() string {
 	}
 	return "Table"
 }
+
+// TODO(shantuo): use BatchWrite.
+func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+	q.FieldPaths = [][]string{{c.partitionKey}}
+	if c.sortKey != "" {
+		q.FieldPaths = append(q.FieldPaths, []string{c.sortKey})
+	}
+	iter, err := c.RunGetQuery(ctx, q)
+	if err != nil {
+		return err
+	}
+	defer iter.Stop()
+	var actions []*driver.Action
+	for {
+		doc, err := driver.NewDocument(map[string]interface{}{})
+		if err != nil {
+			return err
+		}
+		err = iter.Next(ctx, doc)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+	}
+	alerr := c.RunActions(ctx, actions, &driver.RunActionsOptions{})
+	if len(alerr) == 0 {
+		return nil
+	}
+	return docstore.ActionListError(alerr)
+}

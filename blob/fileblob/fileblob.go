@@ -20,7 +20,7 @@
 // For blob.OpenBucket, fileblob registers for the scheme "file".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
-// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+// See https://gocloud.dev/concepts/urls/ for background information.
 //
 // Escaping
 //
@@ -389,6 +389,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
+	}
+	if opts.BeforeRead != nil {
+		if err := opts.BeforeRead(func(interface{}) bool { return false }); err != nil {
+			return nil, err
+		}
 	}
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {

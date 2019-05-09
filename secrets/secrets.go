@@ -16,7 +16,7 @@
 // messages.
 //
 // Subpackages contain distinct implementations of secrets for various
-// providers, including Cloud and on-prem solutions. For example, "localsecrets"
+// providers, including Cloud and on-premise solutions. For example, "localsecrets"
 // supports encryption/decryption using a locally provided key. Your application
 // should import one of these provider-specific subpackages and use its exported
 // function(s) to create a *Keeper; do not use the NewKeeper function in this
@@ -33,7 +33,7 @@
 // for managing your initialization code.
 //
 // Alternatively, you can construct a *Keeper via a URL and OpenKeeper.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 //
 // OpenCensus Integration
@@ -191,7 +191,7 @@ type KeeperURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
-// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+// See https://gocloud.dev/concepts/urls/ for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -241,7 +241,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenKeeper opens the Keeper identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
+// details on supported URL formats, and https://gocloud.dev/concepts/urls
 // for more information.
 func OpenKeeper(ctx context.Context, urlstr string) (*Keeper, error) {
 	return defaultURLMux.OpenKeeper(ctx, urlstr)
