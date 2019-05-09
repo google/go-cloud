@@ -28,7 +28,9 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-for path in "." "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
+source allmodules.sh
+for path in "${ALLMODULES[@]}"
+do
   ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
 done
 
