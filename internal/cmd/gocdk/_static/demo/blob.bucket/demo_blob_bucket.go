@@ -119,7 +119,7 @@ const (
   {{if .ListObjects}}
     <form>
     Choose a blob to view:
-    <select name="key">
+    <select name="key" label="choose a blob to view">
       {{range .ListObjects}}
         <option value="{{.Key}}">{{.Key}}</option>
       {{end}}
@@ -137,11 +137,11 @@ const (
     <form>
     Blob key to write to (any previous blob will be overwritten):
     <br/>
-    <input type="text" name="key" value="{{ .Key }}">
+    <input type="text" name="key" label="blob key to write to" value="{{ .Key }}">
     <br/>
     Data to write:
     <br/>
-    <textarea name="contents" rows="4" cols="40">{{ .WriteContents }}</textarea>
+    <textarea name="contents" rows="4" cols="40" label="contents to write">{{ .WriteContents }}</textarea>
     <br/>
     <input type="submit" value="Write It!">
     </form>
