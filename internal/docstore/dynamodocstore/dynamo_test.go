@@ -112,6 +112,9 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 }
 
 func TestConformance(t *testing.T) {
+	// Note: when running -record repeatedly in a short time period, change the argument
+	// in the call below to generate unique transaction tokens.
+	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	drivertest.RunConformanceTests(t, newHarness, &codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 

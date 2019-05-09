@@ -1,0 +1,357 @@
+---
+version: 1
+interactions:
+- request:
+    body: '{"TableName":"docstore-test-1"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "31"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125303Z
+      X-Amz-Target:
+      - DynamoDB_20120810.DescribeTable
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Table":{"AttributeDefinitions":[{"AttributeName":"name","AttributeType":"S"}],"CreationDateTime":1.556147129209E9,"ItemCount":0,"KeySchema":[{"AttributeName":"name","KeyType":"HASH"}],"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5},"TableArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-1","TableId":"92dd3571-35a9-4cf0-894f-f1c1672c4772","TableName":"docstore-test-1","TableSizeBytes":0,"TableStatus":"ACTIVE"}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "481"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:03 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "3620240070"
+      X-Amzn-Requestid:
+      - 4JAAAULMQO33SR84UB5DVJ93AJVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"ClientRequestToken":"30bb107a-1e31-4d4f-9f20-ae45df584ae6","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"9f072d45-0a41-458d-8289-0c07c03b46f2"},"a":{"S":"A"},"b":{"S":"B"},"name":{"S":"testUpdate"}},"TableName":"docstore-test-1"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "246"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125303Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactWriteItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "2"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:03 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2745614147"
+      X-Amzn-Requestid:
+      - 318VDBPG50SAPU9CCJU1OPL1MVVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"ClientRequestToken":"26ab1c91-81a0-4f9b-8704-da99cd3af501","TransactItems":[{"Update":{"ConditionExpression":"attribute_exists
+      (#0)","ExpressionAttributeNames":{"#0":"name","#1":"b","#2":"a","#3":"c","#4":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"X"},":1":{"S":"C"},":2":{"S":"009f049e-c8c1-48b9-a4a4-f90cf42481a8"}},"Key":{"name":{"S":"testUpdate"}},"TableName":"docstore-test-1","UpdateExpression":"REMOVE
+      #1\nSET #2 = :0, #3 = :1, #4 = :2\n"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "468"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125303Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactWriteItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "2"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:03 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2745614147"
+      X-Amzn-Requestid:
+      - QAP41I5T3L69BSF3EV3UOM2Q8FVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"TransactItems":[{"Get":{"Key":{"name":{"S":"testUpdate"}},"TableName":"docstore-test-1"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "93"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125303Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactGetItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Responses":[{"Item":{"a":{"S":"X"},"c":{"S":"C"},"DocstoreRevision":{"S":"009f049e-c8c1-48b9-a4a4-f90cf42481a8"},"name":{"S":"testUpdate"}}}]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "144"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:03 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2898309178"
+      X-Amzn-Requestid:
+      - AMIEPILVJC6GG91RHB3VPR7C8VVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"ClientRequestToken":"f870fe4d-29de-49ba-add1-f21dc130ea11","TransactItems":[{"Update":{"ConditionExpression":"attribute_exists
+      (#0)","ExpressionAttributeNames":{"#0":"name","#1":"x","#2":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"y"},":1":{"S":"33a7ab6f-d85c-420f-9dff-2317a2818c9e"}},"Key":{"name":{"S":"doesNotExist"}},"TableName":"docstore-test-1","UpdateExpression":"SET
+      #1 = :0, #2 = :1\n"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "417"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125303Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactWriteItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"__type":"com.amazonaws.dynamodb.v20120810#TransactionCanceledException","CancellationReasons":[{"Code":"ConditionalCheckFailed","Message":"The
+      conditional request failed"}],"Message":"Transaction cancelled, please refer
+      cancellation reasons for specific reasons [ConditionalCheckFailed]"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "290"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:03 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "3141789222"
+      X-Amzn-Requestid:
+      - T1KJ8VRMFVQ5PSC9VGRAHSAPLJVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: '{"ClientRequestToken":"661903c2-bed8-482f-b2dd-1fe55dd5230e","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"70aa92cd-7e5b-48fc-9944-aaf72b429cb2"},"name":{"S":"testRevisionField"},"s":{"S":"a"}},"TableName":"docstore-test-1"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "239"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125303Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactWriteItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "2"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:04 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2745614147"
+      X-Amzn-Requestid:
+      - J2GM5JT5U9DQN4UDVB04OA6FMBVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"TransactItems":[{"Get":{"Key":{"name":{"S":"testRevisionField"}},"TableName":"docstore-test-1"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "100"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125304Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactGetItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Responses":[{"Item":{"name":{"S":"testRevisionField"},"DocstoreRevision":{"S":"70aa92cd-7e5b-48fc-9944-aaf72b429cb2"},"s":{"S":"a"}}}]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "137"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:04 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "1560246598"
+      X-Amzn-Requestid:
+      - KBP881ORCDO00BR7FFPDKPCUM7VV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"ClientRequestToken":"2cb8df1b-321a-4ab5-8c2e-1be22e180ec0","TransactItems":[{"Update":{"ConditionExpression":"(attribute_exists
+      (#0)) AND (#1 = :0)","ExpressionAttributeNames":{"#0":"name","#1":"DocstoreRevision","#2":"s"},"ExpressionAttributeValues":{":0":{"S":"70aa92cd-7e5b-48fc-9944-aaf72b429cb2"},":1":{"S":"c"},":2":{"S":"23d12e97-9d93-4f38-8f66-3c14375c4e81"}},"Key":{"name":{"S":"testRevisionField"}},"TableName":"docstore-test-1","UpdateExpression":"SET
+      #2 = :1, #1 = :2\n"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "488"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125304Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactWriteItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "2"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:04 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2745614147"
+      X-Amzn-Requestid:
+      - ML382E0M3SF7H8NP9BQ08H4NF7VV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"ClientRequestToken":"12d1b54e-454d-4b53-9778-00674cf07538","TransactItems":[{"Update":{"ConditionExpression":"(attribute_exists
+      (#0)) AND (#1 = :0)","ExpressionAttributeNames":{"#0":"name","#1":"DocstoreRevision","#2":"s"},"ExpressionAttributeValues":{":0":{"S":"70aa92cd-7e5b-48fc-9944-aaf72b429cb2"},":1":{"S":"c"},":2":{"S":"e2af6a24-c423-4c84-8781-4ff0d3f14150"}},"Key":{"name":{"S":"testRevisionField"}},"TableName":"docstore-test-1","UpdateExpression":"SET
+      #2 = :1, #1 = :2\n"}}]}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "488"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190502T125304Z
+      X-Amz-Target:
+      - DynamoDB_20120810.TransactWriteItems
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"__type":"com.amazonaws.dynamodb.v20120810#TransactionCanceledException","CancellationReasons":[{"Code":"ConditionalCheckFailed","Message":"The
+      conditional request failed"}],"Message":"Transaction cancelled, please refer
+      cancellation reasons for specific reasons [ConditionalCheckFailed]"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "290"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Thu, 02 May 2019 12:53:04 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "3141789222"
+      X-Amzn-Requestid:
+      - JBCJC6POP699GOT1QOBVDNADTFVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 400 Bad Request
+    code: 400
+    duration: ""
