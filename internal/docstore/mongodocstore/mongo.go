@@ -590,8 +590,8 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 		}
 		// The returned indexes of the WriteErrors are wrong. See https://jira.mongodb.org/browse/GODRIVER-1028.
 		// Until it's fixed, use negative values for the indexes in the errors we return.
-		for i, w := range bwe.WriteErrors {
-			alerr = append(alerr, indexedError{-i - 1, gcerr.Newf(translateMongoCode(w.Code), nil, "%s", w.Message)})
+		for _, w := range bwe.WriteErrors {
+			alerr = append(alerr, indexedError{-1, gcerr.Newf(translateMongoCode(w.Code), nil, "%s", w.Message)})
 		}
 		return alerr
 	}
@@ -599,7 +599,7 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 		alerr = append(alerr, indexedError{-1, gcerr.Newf(gcerr.NotFound, nil, "some delete failed")})
 	}
 	if res.MatchedCount != nMatches {
-		alerr = append(alerr, indexedError{-2, gcerr.Newf(gcerr.NotFound, nil, "some replace failed")})
+		alerr = append(alerr, indexedError{-1, gcerr.Newf(gcerr.NotFound, nil, "some replace failed")})
 	}
 	for i, newID := range newIDs {
 		if err := iactions[i].action.Doc.SetField(c.idField, newID); err != nil {
@@ -663,9 +663,7 @@ func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 		return g.Code
 	}
 	if wexc, ok := err.(mongo.WriteException); ok && len(wexc.WriteErrors) > 0 {
-		if wexc.WriteErrors[0].Code == mongoNotFoundCode {
-			return gcerrors.NotFound
-		}
+		return translateMongoCode(wexc.WriteErrors[0].Code)
 	}
 	return gcerrors.Unknown
 }
