@@ -322,8 +322,12 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action, opts *d
 		switch r := resp.Result.(type) {
 		case *pb.BatchGetDocumentsResponse_Found:
 			pdoc := r.Found
-			i := indexByPath[pdoc.Name]
-			errs[i] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
+			i, ok := indexByPath[pdoc.Name]
+			if !ok {
+				errs[i] = gcerr.Newf(gcerr.Internal, nil, "no index for path %s", pdoc.Name)
+			} else {
+				errs[i] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
+			}
 		case *pb.BatchGetDocumentsResponse_Missing:
 			i := indexByPath[r.Missing]
 			errs[i] = gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", r.Missing)
@@ -538,8 +542,8 @@ func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.
 		go func() {
 			defer wg.Done()
 			if g[0].Kind == driver.Get {
-				errs := c.runGets(ctx, g, opts)
-				for i, err := range errs {
+				gerrs := c.runGets(ctx, g, opts)
+				for i, err := range gerrs {
 					errs[base+i] = err
 				}
 			} else {
