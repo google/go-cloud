@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
@@ -32,36 +33,27 @@ import (
 // To run these tests against a local etcd server, first run ./localetcd.sh.
 // Then wait a few seconds for the server to be ready.
 
-var (
-	etcdClient *clientv3.Client
-	etcdError  error
-)
-
-func init() {
-	etcdClient, etcdError = clientv3.NewFromURL("http://localhost:2379")
-	if etcdError == nil {
-		// Check to see if the local etcd is actually running.
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		_, etcdError = etcdClient.Put(ctx, "unused", "unused")
-	}
+type harness struct {
+	client *clientv3.Client
 }
 
-type harness struct{}
-
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	if etcdError != nil {
-		t.Skip("No local etcd server running, see runtimevar/etcdvar/localetcd.sh")
+	if !setup.HasDockerTestEnvironment() {
+		t.Skip("Skipping etcd tests since the etcd server is not available")
 	}
-	return &harness{}, nil
+	c, err := clientv3.NewFromURL("http://localhost:2379")
+	if err != nil {
+		t.Fatalf("No local etcd server running: %v; see runtimevar/etcdvar/localetcd.sh", err)
+	}
+	return &harness{client: c}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(etcdClient, name, decoder, nil), nil
+	return newWatcher(h.client, name, decoder, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	_, err := etcdClient.Put(ctx, name, string(val))
+	_, err := h.client.Put(ctx, name, string(val))
 	return err
 }
 
@@ -70,7 +62,7 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
-	_, err := etcdClient.Delete(ctx, name)
+	_, err := h.client.Delete(ctx, name)
 	return err
 }
 
