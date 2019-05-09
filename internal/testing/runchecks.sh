@@ -77,7 +77,7 @@ result=0
 echo
 echo "Running Go tests..."
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-  go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+  go test -v -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out

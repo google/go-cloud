@@ -25,7 +25,6 @@ import (
 	"math/rand"
 	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -53,22 +52,9 @@ type harness struct {
 	numTopics uint32
 }
 
-var checkOnce sync.Once
-var kafkaError error
-
-func localKafkaRunning() error {
-	checkOnce.Do(func() {
-		_, kafkaError = sarama.NewClient(localBrokerAddrs, MinimalConfig())
-	})
-	return kafkaError
-}
-
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if !setup.HasDockerTestEnvironment() {
 		t.Skip("Skipping Kafka tests since the Kafka server is not available")
-	}
-	if err := localKafkaRunning(); err != nil {
-		t.Fatalf("No local Kafka running: %v, see pubsub/kafkapubsub/localkafka.sh", err)
 	}
 	return &harness{uniqueID: rand.Int()}, nil
 }
@@ -199,9 +185,6 @@ func (asTest) BeforeSend(as func(interface{}) bool) error {
 func TestKafkaKey(t *testing.T) {
 	if !setup.HasDockerTestEnvironment() {
 		t.Skip("Skipping Kafka tests since the Kafka server is not available")
-	}
-	if err := localKafkaRunning(); err != nil {
-		t.Fatalf("No local Kafka running: %v, see pubsub/kafkapubsub/localkafka.sh", err)
 	}
 	const (
 		keyName  = "kafkakey"

@@ -39,7 +39,7 @@ const (
 	testToken  = "faketoken"
 )
 
-// enableTransit cheks and makes sure the Transit API is enable only once.
+// enableTransit checks and makes sure the Transit API is enabled only once.
 var enableTransit sync.Once
 
 type harness struct {
