@@ -97,7 +97,6 @@ func TestPortableTypeDemos(t *testing.T) {
 		urlPaths      []string
 		op            string
 		urlValues     url.Values // only used if op=POST
-		wantStatus    int
 		stringsToFind []string
 	}{
 		{
@@ -108,7 +107,6 @@ func TestPortableTypeDemos(t *testing.T) {
 				"/demo/blob.bucket/",
 			},
 			op:         "GET",
-			wantStatus: http.StatusOK,
 			stringsToFind: []string{
 				"<title>blob.Bucket demo</title>",
 				"This page demonstrates the use of a Go CDK blob.Bucket",
@@ -122,7 +120,6 @@ func TestPortableTypeDemos(t *testing.T) {
 			description: "list: empty",
 			urlPaths:    []string{"/demo/blob.bucket/list"},
 			op:          "GET",
-			wantStatus:  http.StatusOK,
 			stringsToFind: []string{
 				"<title>blob.Bucket demo</title>",
 				"no blobs in bucket",
@@ -130,24 +127,105 @@ func TestPortableTypeDemos(t *testing.T) {
 		},
 		{
 			pt:          "blob.Bucket",
-			description: "view: missing key param",
-			urlPaths:    []string{"/demo/blob.bucket/view"},
+			description: "view: empty",
+			urlPaths:    []string{"/demo/blob.bucket/list"},
 			op:          "GET",
-			wantStatus:  http.StatusBadRequest,
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				"no blobs in bucket",
+			},
 		},
-		// TODO(rvangent): Add tests as functionality is added, including:
-		// -- /write shows a form
-		// -- /write POST creates a blob (top level, plus one in subdir)
-		// -- /list at the top level shows the subdirectory, with links
-		// -- /list of the subdirectory shows the blob
-		// -- /view missing key param shows a form with a dropdown
-		// -- /view of the blob works
+		{
+			pt:          "blob.Bucket",
+			description: "write: empty form",
+			urlPaths:    []string{"/demo/blob.bucket/write"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				`<input type="submit" value="Write It!">`, // form is shown
+			},
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "write: missing key",
+			urlPaths:    []string{"/demo/blob.bucket/write"},
+			op:          "POST",
+			urlValues: map[string][]string{"contents": []string{"foo"}},
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				"<strong>enter a non-empty key to write to</strong>",
+				"foo", // previous entry for contents field is carried over
+				`<input type="submit" value="Write It!">`, // form is shown
+			},
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "write: missing contents",
+			urlPaths:    []string{"/demo/blob.bucket/write"},
+			op:          "POST",
+			urlValues: map[string][]string{"key": []string{"key1"}},
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				"<strong>enter some content to write</strong>",
+				"key1", // previous entry for key field is carried over
+				`<input type="submit" value="Write It!">`, // form is shown
+			},
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "write: top level key",
+			urlPaths:    []string{"/demo/blob.bucket/write"},
+			op:          "POST",
+			urlValues: map[string][]string{"key": []string{"key1"}, "contents": []string{"key1 contents"}},
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				"Wrote it!",
+			},
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "write: subdirectory key",
+			urlPaths:    []string{"/demo/blob.bucket/write"},
+			op:          "POST",
+			urlValues: map[string][]string{"key": []string{"subdir/key2"}, "contents": []string{"key2 contents"}},
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				"Wrote it!",
+			},
+		},
+		{
+			pt:          "blob.Bucket",
+			description: "list: no longer empty",
+			urlPaths:    []string{"/demo/blob.bucket/list"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				`<a href="./view?key=key1">key1</a>`,
+				`<a href="./list?prefix=subdir%2f">subdir/</a>`,
+			},
+		},
+		/*
+		TODO(rvangent): Enable listing of a subdir; broken right now because
+		serverAlloc.url doesn't handle query parameters correctly.
+		{
+			pt:          "blob.Bucket",
+			description: "list: subdir",
+			urlPaths:    []string{"/demo/blob.bucket/list?prefix=subdir%2f"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>blob.Bucket demo</title>",
+				`<a href="./view?key=subdir%2fkey2">key2</a>`,
+			},
+		},
+		*/
+		// TODO(rvangent): Add tests for the view page.
 	}
 
 	for _, test := range tests {
 		t.Run(test.pt+":"+test.description, func(t *testing.T) {
 			for _, urlPath := range test.urlPaths {
 				u := alloc.url(urlPath).String()
+				t.Logf("URL: %v", u)
 				var resp *http.Response
 				var err error
 				switch test.op {
@@ -162,8 +240,8 @@ func TestPortableTypeDemos(t *testing.T) {
 					t.Fatalf("HTTP %q request failed: %v", test.op, err)
 				}
 				defer resp.Body.Close()
-				if resp.StatusCode != test.wantStatus {
-					t.Fatalf("HTTP request returned status code %v, want %v", resp.StatusCode, test.wantStatus)
+				if resp.StatusCode != http.StatusOK {
+					t.Fatalf("HTTP request returned status code %v, want %v", resp.StatusCode, http.StatusOK)
 				}
 				bodyBytes, err := ioutil.ReadAll(resp.Body)
 				if err != nil {

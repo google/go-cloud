@@ -271,7 +271,7 @@ func blobBucketWriteHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if input.WriteContents == "" {
-		input.Err = errors.New("enter some non-empty contents to write")
+		input.Err = errors.New("enter some content to write")
 		return
 	}
 	if err := bucket.WriteAll(req.Context(), input.Key, []byte(input.WriteContents), nil); err != nil {
