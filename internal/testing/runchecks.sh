@@ -85,7 +85,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     bash <(curl -s https://codecov.io/bash)
   fi
 else
-  go test -mod=readonly -race ./... || result=1
+  go test -v -mod=readonly -race ./... || result=1
   # No need to run other checks on OSs other than linux.
   exit $result
 fi
