@@ -38,7 +38,7 @@ import (
 
 func main() {
 	port := os.Getenv("PORT")
-  log.Fatal(http.ListenAndServe(":" + port, nil))
+	log.Fatal(http.ListenAndServe(":" + port, nil))
 }
 `
 
@@ -55,9 +55,6 @@ func TestPortableTypeDemos(t *testing.T) {
 		stdout:  ioutil.Discard,
 		stderr:  ioutil.Discard,
 	}
-	// Uncomment when debugging.
-	// pctx.stdout = os.Stdout
-	// pctx.stderr = os.Stderr
 	ctx := context.Background()
 
 	// TODO(rvangent): Run gocdk init instead of this.
@@ -87,7 +84,7 @@ func TestPortableTypeDemos(t *testing.T) {
 
 	// Run the program, listening on a free port.
 	logger := log.New(pctx.stderr, "gocdk demo server under test: ", log.Ldate|log.Ltime)
-	alloc := &serverAlloc{exePath: exePath, port: freePort()}
+	alloc := &serverAlloc{exePath: exePath, port: findFreePort()}
 	cmd, err := alloc.start(ctx, pctx, logger, pctx.workdir)
 	if err != nil {
 		t.Fatalf("failed to start server: %v", err)
@@ -188,8 +185,11 @@ func TestPortableTypeDemos(t *testing.T) {
 	}
 }
 
-func freePort() int {
-	l, _ := net.Listen("tcp", ":0")
+func findFreePort() int {
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		log.Fatalf("failed to Listen to localhost:0; no free ports?: %v", err)
+	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port
 }
