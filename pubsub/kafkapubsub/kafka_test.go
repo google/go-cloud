@@ -54,13 +54,13 @@ type harness struct {
 }
 
 var checkOnce sync.Once
-var kafkaRunning bool
+var kafkaError error
 
-func localKafkaRunning() (err error) {
+func localKafkaRunning() error {
 	checkOnce.Do(func() {
-		_, err = sarama.NewClient(localBrokerAddrs, MinimalConfig())
+		_, kafkaError = sarama.NewClient(localBrokerAddrs, MinimalConfig())
 	})
-	return err
+	return kafkaError
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
