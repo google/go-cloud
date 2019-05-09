@@ -207,7 +207,7 @@ func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Ac
 	var err error
 	for _, g := range groups {
 		if g[0].Kind == driver.Get {
-			err = c.runGets(ctx, g, opts)
+			err = c.runGets(ctx, g, opts)[0]
 		} else {
 			err = c.runWrites(ctx, g, opts)
 		}
@@ -297,14 +297,15 @@ func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var err error
 			if g[0].Kind == driver.Get {
-				err = c.runGets(ctx, g, opts)
+				for i, err := range c.runGets(ctx, g, opts) {
+					errs[base+i] = err
+				}
 			} else {
-				err = c.runWrites(ctx, g, opts)
-			}
-			for i := 0; i < len(g); i++ {
-				errs[base+i] = err
+				err := c.runWrites(ctx, g, opts)
+				for i := 0; i < len(g); i++ {
+					errs[base+i] = err
+				}
 			}
 		}()
 		groupBaseIndex += len(g)
@@ -352,13 +353,29 @@ func (c *collection) splitActionsUnordered(actions []*driver.Action) ([][]*drive
 	return groups, -1, nil
 }
 
-func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
+// runGets runs a list of gets in a transaction call. When running in ordered
+// mode, it returns the first error encountered, if any; when running in
+// unordered mode, it returns a list of errors with indices matched with these
+// in the action list.
+func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) (errs []error) {
+	if opts.Unordered {
+		errs = make([]error, len(actions))
+	} else {
+		errs = make([]error, 1)
+	}
+	setErr := func(err error) {
+		for i := range errs {
+			errs[i] = err
+		}
+	}
+
 	// Assume all actions Kinds are Gets.
 	tgs := make([]*dyn.TransactGetItem, len(actions))
 	for i, a := range actions {
 		tg, err := c.toTransactGet(a.Doc, a.FieldPaths)
 		if err != nil {
-			return err
+			setErr(err)
+			return errs
 		}
 		tgs[i] = tg
 	}
@@ -374,20 +391,35 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts
 			return true
 		}
 		if err := opts.BeforeDo(asFunc); err != nil {
-			return err
+			setErr(err)
+			return errs
 		}
 	}
 	out, err := c.db.TransactGetItemsWithContext(ctx, in)
 	if err != nil {
-		return err
+		setErr(err)
+		return errs
 	}
 
 	for i, res := range out.Responses {
-		if err := decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc); err != nil {
-			return err
+		item := res.Item
+		if opts.Unordered {
+			if item == nil {
+				errs[i] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", actions[i].Doc)
+			} else {
+				errs[i] = decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc)
+			}
+		} else {
+			if item == nil {
+				setErr(gcerr.Newf(gcerr.NotFound, nil, "item %v not found", actions[i].Doc))
+				return errs
+			} else if err := decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc); err != nil {
+				setErr(err)
+				return errs
+			}
 		}
 	}
-	return nil
+	return errs
 }
 
 func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
