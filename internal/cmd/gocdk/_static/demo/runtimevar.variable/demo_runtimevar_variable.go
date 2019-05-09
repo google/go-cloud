@@ -60,15 +60,16 @@ const runtimevarVariableTemplate = `
     <p><strong>{{ .Err }}</strong></p>
   {{end}}
   {{if .Snapshot}}
-    <p>
+    <p><label>
       The current value of the variable is:
-      <textarea rows="5" cols="40" readonly="true" label="Current variable value">{{ .Snapshot.Value }}</textarea>
-    </p>
-    <p>It was last modified at: {{ .Snapshot.UpdateTime }}.</p>
+      <textarea rows="5" cols="40" readonly="true">{{ .Snapshot.Value }}</textarea>
+    </label></p>
+    <p><label>
+      It was last modified at: {{ .Snapshot.UpdateTime }}.
+    </label></p>
   {{end}}
 </body>
-</html>
-`
+</html>`
 
 var runtimeVariableTmpl = template.Must(template.New("runtimevar.Variable").Parse(runtimevarVariableTemplate))
 
