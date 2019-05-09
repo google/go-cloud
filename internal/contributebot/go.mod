@@ -3,7 +3,7 @@ module gocloud.dev/internal/contributebot
 replace gocloud.dev => ../..
 
 require (
-	cloud.google.com/go v0.37.4
+	cloud.google.com/go v0.38.0
 	github.com/Azure/go-autorest v12.0.0+incompatible // indirect
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Jeffail/gabs v1.2.0 // indirect
