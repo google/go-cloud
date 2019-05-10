@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -27,7 +28,7 @@ import (
 	"testing"
 )
 
-func TestPortableTypeDemos(t *testing.T) {
+func TestPortableAPIDemos(t *testing.T) {
 	dir, cleanup, err := newTestModule()
 	if err != nil {
 		t.Fatal(err)
@@ -46,22 +47,22 @@ func TestPortableTypeDemos(t *testing.T) {
 		t.Fatalf("run init error: %+v", err)
 	}
 
-	// Call the main package run function as if 'add-ptype' were being called
-	// from the command line for each of the portable types.
-	for _, pt := range portableTypes {
-		if err := run(ctx, pctx, []string{"add-ptype", pt.name}, new(bool)); err != nil {
-			t.Fatalf("run add-ptype error: %+v", err)
+	// Call the main package run function as if 'add-api' were being called
+	// from the command line for each of the portable APIs.
+	for _, api := range portableAPIs {
+		if err := run(ctx, pctx, []string{"add-api", api.name}, new(bool)); err != nil {
+			t.Fatalf("run add-api error: %+v", err)
 		}
 	}
 
 	// Build the binary.
-	exePath := filepath.Join(dir, "ptypedemotest")
+	exePath := filepath.Join(dir, "add-api-test")
 	if err := buildForServe(ctx, pctx, dir, exePath); err != nil {
 		t.Fatal("buildForServe(...):", err)
 	}
 
 	// Update the environment with to use local implementations for each
-	// portable type.
+	// portable API.
 	pctx.env = pctx.overrideEnv(
 		"BLOB_BUCKET_URL=mem://",
 	)
@@ -76,114 +77,126 @@ func TestPortableTypeDemos(t *testing.T) {
 	defer endServerProcess(cmd)
 
 	tests := []struct {
-		pt            string
+		api           string
 		description   string
-		urlPaths      []string
+		urlPath       string
 		op            string
 		urlValues     url.Values // only used if op=POST
 		stringsToFind []string
 	}{
 		{
-			pt:          "blob.Bucket",
-			description: "base",
-			urlPaths: []string{
-				"/demo/blob.bucket",
-				"/demo/blob.bucket/",
-			},
-			op: "GET",
+			api:         "blob",
+			description: "base no slash",
+			urlPath:     "/demo/blob",
+			op:          "GET",
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
-				"This page demonstrates the use of a Go CDK blob.Bucket",
+				"<title>gocloud.dev/blob demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/blob",
 				`<a href="./list">List</a>`,
 				`<a href="./view">View</a>`,
 				`<a href="./write">Write</a>`,
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
+			description: "base with slash",
+			urlPath:     "/demo/blob/",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/blob demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/blob",
+				`<a href="./list">List</a>`,
+				`<a href="./view">View</a>`,
+				`<a href="./write">Write</a>`,
+			},
+		},
+		{
+			api:         "blob",
 			description: "list: empty",
-			urlPaths:    []string{"/demo/blob.bucket/list"},
+			urlPath:     "/demo/blob/list",
 			op:          "GET",
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				"no blobs in bucket",
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
 			description: "view: empty",
-			urlPaths:    []string{"/demo/blob.bucket/list"},
+			urlPath:     "/demo/blob/list",
 			op:          "GET",
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				"no blobs in bucket",
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
 			description: "write: empty form",
-			urlPaths:    []string{"/demo/blob.bucket/write"},
+			urlPath:     "/demo/blob/write",
 			op:          "GET",
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				`<input type="submit" value="Write It!">`, // form is shown
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
 			description: "write: missing key",
-			urlPaths:    []string{"/demo/blob.bucket/write"},
+			urlPath:     "/demo/blob/write",
 			op:          "POST",
 			urlValues:   map[string][]string{"contents": {"foo"}},
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				"<strong>enter a non-empty key to write to</strong>",
 				"foo", // previous entry for contents field is carried over
 				`<input type="submit" value="Write It!">`, // form is shown
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
 			description: "write: missing contents",
-			urlPaths:    []string{"/demo/blob.bucket/write"},
+			urlPath:     "/demo/blob/write",
 			op:          "POST",
 			urlValues:   map[string][]string{"key": {"key1"}},
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				"<strong>enter some content to write</strong>",
 				"key1", // previous entry for key field is carried over
 				`<input type="submit" value="Write It!">`, // form is shown
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
 			description: "write: top level key",
-			urlPaths:    []string{"/demo/blob.bucket/write"},
+			urlPath:     "/demo/blob/write",
 			op:          "POST",
 			urlValues:   map[string][]string{"key": {"key1"}, "contents": {"key1 contents"}},
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				"Wrote it!",
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
 			description: "write: subdirectory key",
-			urlPaths:    []string{"/demo/blob.bucket/write"},
+			urlPath:     "/demo/blob/write",
 			op:          "POST",
 			urlValues:   map[string][]string{"key": {"subdir/key2"}, "contents": {"key2 contents"}},
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				"Wrote it!",
 			},
 		},
 		{
-			pt:          "blob.Bucket",
+			api:         "blob",
 			description: "list: no longer empty",
-			urlPaths:    []string{"/demo/blob.bucket/list"},
+			urlPath:     "/demo/blob/list",
 			op:          "GET",
 			stringsToFind: []string{
-				"<title>blob.Bucket demo</title>",
+				"<title>gocloud.dev/blob demo</title>",
 				`<a href="./view?key=key1">key1</a>`,
 				`<a href="./list?prefix=subdir%2f">subdir/</a>`,
 			},
@@ -192,12 +205,12 @@ func TestPortableTypeDemos(t *testing.T) {
 			TODO(rvangent): Enable listing of a subdir; broken right now because
 			serverAlloc.url doesn't handle query parameters correctly.
 			{
-				pt:          "blob.Bucket",
+				api:          "blob",
 				description: "list: subdir",
-				urlPaths:    []string{"/demo/blob.bucket/list?prefix=subdir%2f"},
+				urlPath:    "/demo/blob/list?prefix=subdir%2f",
 				op:          "GET",
 				stringsToFind: []string{
-					"<title>blob.Bucket demo</title>",
+					"<title>gocloud.dev/blob demo</title>",
 					`<a href="./view?key=subdir%2fkey2">key2</a>`,
 				},
 			},
@@ -206,42 +219,39 @@ func TestPortableTypeDemos(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.pt+":"+test.description, func(t *testing.T) {
-			for _, urlPath := range test.urlPaths {
-				u := alloc.url(urlPath).String()
-				t.Logf("URL: %v", u)
-				var resp *http.Response
-				var err error
-				switch test.op {
-				case "GET":
-					resp, err = http.DefaultClient.Get(u)
-				case "POST":
-					resp, err = http.DefaultClient.PostForm(u, test.urlValues)
-				default:
-					t.Fatalf("invalid test.op: %q", test.op)
+		t.Run(fmt.Sprintf("%s (%s, %s)", test.api, test.description, test.urlPath), func(t *testing.T) {
+			u := alloc.url(test.urlPath).String()
+			var resp *http.Response
+			var err error
+			switch test.op {
+			case "GET":
+				resp, err = http.DefaultClient.Get(u)
+			case "POST":
+				resp, err = http.DefaultClient.PostForm(u, test.urlValues)
+			default:
+				t.Fatalf("invalid test.op: %q", test.op)
+			}
+			if err != nil {
+				t.Fatalf("HTTP %q request failed: %v", test.op, err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("HTTP request returned status code %v, want %v", resp.StatusCode, http.StatusOK)
+			}
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Errorf("failed to read HTTP response body: %v", err)
+			}
+			body := string(bodyBytes)
+			logBody := false // only log the body on failure, and only once per test
+			for _, s := range test.stringsToFind {
+				if !strings.Contains(body, s) {
+					t.Errorf("didn't find %q in HTTP response body", s)
+					logBody = true
 				}
-				if err != nil {
-					t.Fatalf("HTTP %q request failed: %v", test.op, err)
-				}
-				defer resp.Body.Close()
-				if resp.StatusCode != http.StatusOK {
-					t.Fatalf("HTTP request returned status code %v, want %v", resp.StatusCode, http.StatusOK)
-				}
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
-				if err != nil {
-					t.Errorf("failed to read HTTP response body: %v", err)
-				}
-				body := string(bodyBytes)
-				logBody := false // only log the body on failure, and only once per test
-				for _, s := range test.stringsToFind {
-					if !strings.Contains(body, s) {
-						t.Errorf("didn't find %q in HTTP response body", s)
-						logBody = true
-					}
-				}
-				if logBody {
-					t.Error("Full HTTP response body:\n\n", body)
-				}
+			}
+			if logBody {
+				t.Error("Full HTTP response body:\n\n", body)
 			}
 		})
 	}
