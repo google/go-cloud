@@ -47,9 +47,8 @@ func main() {
 
 func run(r io.Reader) (string, error) {
 	counts := map[string]int{}
-
-	scanner := bufio.NewScanner(bufio.NewReader(r))
 	line := 0
+	scanner := bufio.NewScanner(bufio.NewReader(r))
 	for scanner.Scan() {
 		line++
 		var event TestEvent
