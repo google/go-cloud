@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
@@ -456,33 +457,39 @@ func (qr *queryRunner) queryPlan() string {
 	return "Table"
 }
 
-// TODO(shantuo): use BatchWrite.
 func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
 	q.FieldPaths = [][]string{{c.partitionKey}}
 	if c.sortKey != "" {
 		q.FieldPaths = append(q.FieldPaths, []string{c.sortKey})
 	}
-	iter, err := c.RunGetQuery(ctx, q)
+	qr, err := c.planQuery(q)
 	if err != nil {
 		return err
 	}
-	defer iter.Stop()
+
 	var actions []*driver.Action
+	var startAfter map[string]*dyn.AttributeValue
 	for {
-		doc, err := driver.NewDocument(map[string]interface{}{})
+		items, last, _, err := qr.run(ctx, startAfter)
 		if err != nil {
 			return err
 		}
-		err = iter.Next(ctx, doc)
-		if err == io.EOF {
+		for _, item := range items {
+			doc, err := driver.NewDocument(map[string]interface{}{})
+			if err != nil {
+				return err
+			}
+			if err := decodeDoc(&dynamodb.AttributeValue{M: item}, doc); err != nil {
+				return err
+			}
+			actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+		}
+		if last == nil {
 			break
 		}
-		if err != nil {
-			return err
-		}
-		actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+		startAfter = last
 	}
-	alerr := c.RunActions(ctx, actions, &driver.RunActionsOptions{})
+	alerr := c.runActionsUnordered(ctx, actions, &driver.RunActionsOptions{})
 	if len(alerr) == 0 {
 		return nil
 	}
