@@ -63,10 +63,10 @@ func TestMain(m *testing.M) {
 	if hostIP == "" || gcpProjectID == "" {
 		log.Println("Test environments need to be setup to run server tests.")
 		flag.PrintDefaults()
-		return
-	}
-	if err := startApp(); err != nil {
-		log.Fatal("startApp: ", err)
+	} else {
+		if err := startApp(); err != nil {
+			log.Fatal("startApp: ", err)
+		}
 	}
 	os.Exit(m.Run())
 }
@@ -116,6 +116,9 @@ func signerFromFile(path string) (ssh.Signer, error) {
 
 func TestRequestLog(t *testing.T) {
 	t.Parallel()
+	if hostIP == "" || gcpProjectID == "" {
+		t.Skip("environment not set up")
+	}
 	suf, err := testutil.URLSuffix()
 	if err != nil {
 		t.Fatal("cannot generate URL suffix:", err)
@@ -155,6 +158,9 @@ func readLogEntries(ctx context.Context, c *logadmin.Client, u string) error {
 
 func TestTrace(t *testing.T) {
 	t.Parallel()
+	if hostIP == "" || gcpProjectID == "" {
+		t.Skip("environment not set up")
+	}
 	suf, err := testutil.URLSuffix()
 	if err != nil {
 		t.Fatal("cannot generate URL suffix:", err)
