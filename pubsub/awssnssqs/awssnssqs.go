@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package awssnssqs provides an implementation of pubsub that uses AWS
-// SNS (Simple Notification Service) and SQS (Simple Queueing Service).
+// Package awssnssqs provides two implementations of pubsub.Topic, one that
+// sends messages to AWS SNS (Simple Notification Service), and one that sends
+// messages to SQS (Simple Queuing Service). It also provides an implementation
+// of pubsub.Subscription that receives messages from SQS.
 //
 // URLs
 //
-// For pubsub.OpenTopic and pubsub.OpenSubscription, awssnssqs registers
-// for the schemes "awssns" and "awssqs" respectively.
+// For pubsub.OpenTopic, awssnssqs registers for the scheme "awssns" for
+// an SNS topic, and "awssqs" for an SQS topic. For pubsub.OpenSubscription,
+// it registers for the scheme "awssqs".
+//
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 // for more details.
@@ -28,8 +32,8 @@
 //
 // Message Delivery Semantics
 //
-// AWS SNS and SQS combine to support at-least-once semantics; applications must
-// call Message.Ack after processing a message, or it will be redelivered.
+// AWS SQS supports at-least-once semantics; applications must call Message.Ack
+// after processing a message, or it will be redelivered.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
@@ -51,10 +55,10 @@
 // As
 //
 // awssnssqs exposes the following types for As:
-//  - Topic: *sns.SNS
+//  - Topic: *sns.SNS (for OpenSNSTopic) or *sqs.SQS (for OpenSQSTopic)
 //  - Subscription: *sqs.SQS
 //  - Message: *sqs.Message
-//  - Message.BeforeSend: *sns.PublishInput
+//  - Message.BeforeSend: *sns.PublishInput (for OpenSNSTopic) or *sqs.SendMessageInput (for OpenSQSTopic)
 //  - Error: awserror.Error
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
@@ -95,7 +99,7 @@ const (
 )
 
 var sendBatcherOpts = &batcher.Options{
-	MaxBatchSize: 1,   // SendBatch only supports one message at a time
+	MaxBatchSize: 1,   // Both SNS and SQS SendBatch only support one message at a time
 	MaxHandlers:  100, // max concurrency for sends
 }
 
@@ -117,6 +121,7 @@ var ackBatcherOpts = &batcher.Options{
 func init() {
 	lazy := new(lazySessionOpener)
 	pubsub.DefaultURLMux().RegisterTopic(SNSScheme, lazy)
+	pubsub.DefaultURLMux().RegisterTopic(SQSScheme, lazy)
 	pubsub.DefaultURLMux().RegisterSubscription(SQSScheme, lazy)
 }
 
@@ -165,20 +170,23 @@ func (o *lazySessionOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL)
 	return opener.OpenSubscriptionURL(ctx, u)
 }
 
-// SNSScheme is the URL scheme for pubsub.OpenTopic awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
+// SNSScheme is the URL scheme for pubsub.OpenTopic (for an SNS topic) that
+// awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
 const SNSScheme = "awssns"
 
-// SQSScheme is the URL scheme for pubsub.OpenSubscription awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
+// SQSScheme is the URL scheme for pubsub.OpenTopic (for an SQS topic) and for
+// pubsub.OpenSubscription that awssnssqs registers its URLOpeners under on
+// pubsub.DefaultMux.
 const SQSScheme = "awssqs"
 
 // URLOpener opens AWS SNS/SQS URLs like "awssns://sns-topic-arn" for
-// topics or "awssqs://sqs-queue-url" for subscriptions.
+// SNS topics or "awssqs://sqs-queue-url" for SQS topics and subscriptions.
 //
-// For topics, the URL's host+path is used as the topic Amazon Resource Name
+// For SNS topics, the URL's host+path is used as the topic Amazon Resource Name
 // (ARN).
 //
-// For subscriptions, the URL's host+path is prefixed with "https://" to create
-// the queue URL.
+// For SQS topics and subscriptions, the URL's host+path is prefixed with
+// "https://" to create the queue URL.
 //
 // See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // that affect the default AWS session.
@@ -202,8 +210,16 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 		return nil, fmt.Errorf("open topic %v: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	topicARN := path.Join(u.Host, u.Path)
-	return OpenTopic(ctx, configProvider, topicARN, &o.TopicOptions), nil
+	switch u.Scheme {
+	case SNSScheme:
+		topicARN := path.Join(u.Host, u.Path)
+		return OpenSNSTopic(ctx, configProvider, topicARN, &o.TopicOptions), nil
+	case SQSScheme:
+		qURL := "https://" + path.Join(u.Host, u.Path)
+		return OpenSQSTopic(ctx, configProvider, qURL, &o.TopicOptions), nil
+	default:
+		return nil, fmt.Errorf("open topic %v: unsupported scheme", u)
+	}
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
@@ -220,7 +236,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	return OpenSubscription(ctx, configProvider, qURL, &o.SubscriptionOptions), nil
 }
 
-type topic struct {
+type snsTopic struct {
 	client *sns.SNS
 	arn    string
 	opts   *TopicOptions
@@ -266,20 +282,24 @@ type TopicOptions struct {
 	BodyBase64Encoding BodyBase64Encoding
 }
 
-// OpenTopic opens a topic that sends to the SNS topic with the given Amazon
-// Resource Name (ARN).
+// OpenTopic is a shortcut for OpenSNSTopic, provided for backwards compatibility.
 func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(ctx, sess, topicARN, opts), sendBatcherOpts)
+	return OpenSNSTopic(ctx, sess, topicARN, opts)
 }
 
-// openTopic returns the driver for OpenTopic. This function exists so the test
+// OpenSNSTopic opens a topic that sends to the SNS topic with the given Amazon
+// Resource Name (ARN).
+func OpenSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
+	return pubsub.NewTopic(openSNSTopic(ctx, sess, topicARN, opts), sendBatcherOpts)
+}
+
+// openSNSTopic returns the driver for OpenSNSTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) driver.Topic {
+func openSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) driver.Topic {
 	if opts == nil {
 		opts = &TopicOptions{}
 	}
-
-	return &topic{
+	return &snsTopic{
 		client: sns.New(sess),
 		arn:    topicARN,
 		opts:   opts,
@@ -288,14 +308,10 @@ func openTopic(ctx context.Context, sess client.ConfigProvider, topicARN string,
 
 var stringDataType = aws.String("String")
 
-// SendBatch implements driver.Topic.SendBatch.
-func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	if len(dms) != 1 {
-		panic("awssnssqs.SendBatch should only get one message at a time")
-	}
-	dm := dms[0]
-	attrs := map[string]*sns.MessageAttributeValue{}
-	for k, v := range dm.Metadata {
+// encodeMetadata encodes the keys and values of md as needed.
+func encodeMetadata(md map[string]string) map[string]string {
+	retval := map[string]string{}
+	for k, v := range md {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
 		k = escape.HexEscape(k, func(runes []rune, i int) bool {
@@ -310,20 +326,44 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			}
 			return true
 		})
+		retval[k] = escape.URLEscape(v)
+	}
+	return retval
+}
+
+// maybeEncodeBody decides whether body should base64-encoded based on opt, and
+// returns the (possibly encoded) body as a string, along with a boolean
+// indicating whether encoding occurred.
+func maybeEncodeBody(body []byte, opt BodyBase64Encoding) (string, bool) {
+	if opt.wantEncode(body) {
+		return base64.StdEncoding.EncodeToString(body), true
+	}
+	return string(body), false
+}
+
+// SendBatch implements driver.Topic.SendBatch.
+func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+	if len(dms) != 1 {
+		panic("snsTopic.SendBatch should only get one message at a time")
+	}
+	dm := dms[0]
+
+	attrs := map[string]*sns.MessageAttributeValue{}
+	for k, v := range encodeMetadata(dm.Metadata) {
 		attrs[k] = &sns.MessageAttributeValue{
 			DataType:    stringDataType,
-			StringValue: aws.String(escape.URLEscape(v)),
+			StringValue: aws.String(v),
 		}
 	}
-	var body string
-	if t.opts.BodyBase64Encoding.wantEncode(dm.Body) {
-		body = base64.StdEncoding.EncodeToString(dm.Body)
+	body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
+	if didEncode {
 		attrs[base64EncodedKey] = &sns.MessageAttributeValue{
 			DataType:    stringDataType,
 			StringValue: aws.String("true"),
 		}
-	} else {
-		body = string(dm.Body)
+	}
+	if len(attrs) == 0 {
+		attrs = nil
 	}
 	input := &sns.PublishInput{
 		Message:           aws.String(body),
@@ -347,13 +387,13 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
-func (t *topic) IsRetryable(error) bool {
+func (t *snsTopic) IsRetryable(error) bool {
 	// The client handles retries.
 	return false
 }
 
 // As implements driver.Topic.As.
-func (t *topic) As(i interface{}) bool {
+func (t *snsTopic) As(i interface{}) bool {
 	c, ok := i.(**sns.SNS)
 	if !ok {
 		return false
@@ -363,17 +403,111 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs.
-func (t *topic) ErrorAs(err error, i interface{}) bool {
+func (t *snsTopic) ErrorAs(err error, i interface{}) bool {
 	return errorAs(err, i)
 }
 
 // ErrorCode implements driver.Topic.ErrorCode.
-func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
+func (t *snsTopic) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
 // Close implements driver.Topic.Close.
-func (*topic) Close() error { return nil }
+func (*snsTopic) Close() error { return nil }
+
+type sqsTopic struct {
+	client *sqs.SQS
+	qURL   string
+	opts   *TopicOptions
+}
+
+// OpenSQSTopic opens a topic that sends to the SQS topic with the given SQS
+// queue URL.
+func OpenSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) *pubsub.Topic {
+	return pubsub.NewTopic(openSQSTopic(ctx, sess, qURL, opts), sendBatcherOpts)
+}
+
+// openSQSTopic returns the driver for OpenSQSTopic. This function exists so the test
+// harness can get the driver interface implementation if it needs to.
+func openSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) driver.Topic {
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	return &sqsTopic{client: sqs.New(sess), qURL: qURL, opts: opts}
+}
+
+// SendBatch implements driver.Topic.SendBatch.
+func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+	if len(dms) != 1 {
+		panic("sqsTopic.SendBatch should only get one message at a time")
+	}
+	dm := dms[0]
+	attrs := map[string]*sqs.MessageAttributeValue{}
+	for k, v := range encodeMetadata(dm.Metadata) {
+		attrs[k] = &sqs.MessageAttributeValue{
+			DataType:    stringDataType,
+			StringValue: aws.String(v),
+		}
+	}
+	body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
+	if didEncode {
+		attrs[base64EncodedKey] = &sqs.MessageAttributeValue{
+			DataType:    stringDataType,
+			StringValue: aws.String("true"),
+		}
+	}
+	if len(attrs) == 0 {
+		attrs = nil
+	}
+	req := &sqs.SendMessageInput{
+		QueueUrl:          aws.String(t.qURL),
+		MessageAttributes: attrs,
+		MessageBody:       aws.String(body),
+	}
+	if dm.BeforeSend != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**sqs.SendMessageInput); ok {
+				*p = req
+				return true
+			}
+			return false
+		}
+		if err := dm.BeforeSend(asFunc); err != nil {
+			return err
+		}
+	}
+	_, err := t.client.SendMessageWithContext(ctx, req)
+	return err
+}
+
+// IsRetryable implements driver.Topic.IsRetryable.
+func (t *sqsTopic) IsRetryable(error) bool {
+	// The client handles retries.
+	return false
+}
+
+// As implements driver.Topic.As.
+func (t *sqsTopic) As(i interface{}) bool {
+	c, ok := i.(**sqs.SQS)
+	if !ok {
+		return false
+	}
+	*c = t.client
+	return true
+}
+
+// ErrorAs implements driver.Topic.ErrorAs.
+func (t *sqsTopic) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
+}
+
+// ErrorCode implements driver.Topic.ErrorCode.
+func (t *sqsTopic) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
+// Close implements driver.Topic.Close.
+func (*sqsTopic) Close() error { return nil }
 
 func errorCode(err error) gcerrors.ErrorCode {
 	ae, ok := err.(awserr.Error)
@@ -448,45 +582,74 @@ func openSubscription(ctx context.Context, sess client.ConfigProvider, qURL stri
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
-		QueueUrl:            aws.String(s.qURL),
-		MaxNumberOfMessages: aws.Int64(int64(maxMessages)),
+		QueueUrl:              aws.String(s.qURL),
+		MaxNumberOfMessages:   aws.Int64(int64(maxMessages)),
+		MessageAttributeNames: []*string{aws.String("All")},
 	})
 	if err != nil {
 		return nil, err
 	}
 	var ms []*driver.Message
 	for _, m := range output.Messages {
-		type MsgBody struct {
-			Message           string
-			MessageAttributes map[string]struct{ Value string }
+		// By default, messages from SNS come with everything in a JSON-encoded Body.
+		// For example, message attributes are not in m.MessageAttributes, but
+		// are rather in a MessageAttributes field in the JSON-encoded body.
+		// If RawMessageDelivery is enabled as part of the SQS queue subscription
+		// to the SNS topic, then body is in Body and attributes are in
+		// MessageAttributes. Same deal if you send directly to the SQS queue.
+		//
+		// If it looks like the body might be JSON, we try decoding it. If it
+		// doesn't look like JSON, or if the JSON decode fails, we use the raw
+		// data from m.
+		bodyStr := aws.StringValue(m.Body)
+		rawAttrs := map[string]string{}
+		useJSON := len(m.MessageAttributes) == 0 // if we got attributes, it's raw
+		if useJSON {
+			type MsgBody struct {
+				Message           string
+				MessageAttributes map[string]struct{ Value string }
+			}
+			var bodyJSON MsgBody
+			if err := json.Unmarshal([]byte(bodyStr), &bodyJSON); err == nil {
+				// JSON decode succeeded; get attributes from the decoded struct,
+				// and update the body to be the JSON Message field.
+				for k, v := range bodyJSON.MessageAttributes {
+					rawAttrs[k] = v.Value
+				}
+				bodyStr = bodyJSON.Message
+			} else {
+				// JSON decode failed; leave bodyStr alone. There can't be any
+				// attributes.
+			}
+		} else {
+			for k, v := range m.MessageAttributes {
+				rawAttrs[k] = aws.StringValue(v.StringValue)
+			}
 		}
-		var body MsgBody
-		if err := json.Unmarshal([]byte(*m.Body), &body); err != nil {
-			return nil, err
-		}
-		// See BodyBase64Encoding for details on when we base64 decode message bodies.
+
 		decodeIt := false
 		attrs := map[string]string{}
-		for k, v := range body.MessageAttributes {
+		for k, v := range rawAttrs {
+			// See BodyBase64Encoding for details on when we base64 decode message bodies.
 			if k == base64EncodedKey {
 				decodeIt = true
 				continue
 			}
 			// See the package comments for more details on escaping of metadata
 			// keys & values.
-			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v.Value)
+			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v)
 		}
 
 		var b []byte
 		if decodeIt {
 			var err error
-			b, err = base64.StdEncoding.DecodeString(body.Message)
+			b, err = base64.StdEncoding.DecodeString(bodyStr)
 			if err != nil {
 				// Fall back to using the raw message.
-				b = []byte(body.Message)
+				b = []byte(bodyStr)
 			}
 		} else {
-			b = []byte(body.Message)
+			b = []byte(bodyStr)
 		}
 
 		m2 := &driver.Message{
