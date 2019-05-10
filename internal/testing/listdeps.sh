@@ -28,7 +28,8 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-for path in "." "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
+
+sed -e '/^#/d' -e '/^$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
   ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
 done
 
