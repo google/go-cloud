@@ -357,25 +357,12 @@ func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
 }
 
-func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
-	return c.runActionQuery(ctx, q, func(res *pb.RunQueryResponse) ([]*pb.Write, error) {
-		return []*pb.Write{{
-			Operation: &pb.Write_Delete{Delete: res.Document.Name},
-			// TODO(jba): add a precondition with res.Document.UpdateTime.
-		}}, nil
-	})
-}
-
-func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
-
-}
-
 // For delete and update queries, limit the number of write actions per RPC, to bound
 // client memory.
 // This is a variable so it can be modified for tests.
 var maxWritesPerRPC = 1000
 
-func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, writes func(*pb.RunQueryResponse) ([]*pb.Write, error)) {
+func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
 	q.FieldPaths = [][]string{{"__name__"}}
 	iter, err := c.newDocIterator(ctx, q)
 	if err != nil {
@@ -395,7 +382,6 @@ func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, writes
 		}
 		pws = append(pws, &pb.Write{
 			Operation: &pb.Write_Delete{Delete: res.Document.Name},
-			// TODO(jba): add a precondition with res.Document.UpdateTime.
 		})
 		if len(pws) >= maxWritesPerRPC {
 			_, err := c.commit(ctx, pws, opts)
