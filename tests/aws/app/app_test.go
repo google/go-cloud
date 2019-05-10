@@ -68,6 +68,9 @@ func TestMain(m *testing.M) {
 			log.Fatal("startApp: ", err)
 		}
 	}
+	// Per https://golang.org/pkg/testing/#hdr-Main, TestMain should call os.Exit
+	// with the result of m.Run in any case.
+	// See also https://github.com/golang/go/issues/31969
 	os.Exit(m.Run())
 }
 
