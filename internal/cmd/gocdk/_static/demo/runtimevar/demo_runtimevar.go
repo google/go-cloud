@@ -15,7 +15,7 @@ import (
 // how it works.
 
 func init() {
-	http.HandleFunc("/demo/runtimevar.variable/", runtimevarVariableHandler)
+	http.HandleFunc("/demo/runtimevar/", runtimevarHandler)
 }
 
 var variableURL string
@@ -30,23 +30,23 @@ func init() {
 	variable, variableErr = runtimevar.OpenVariable(context.Background(), variableURL)
 }
 
-type runtimevarVariableData struct {
+type runtimevarData struct {
 	URL      string
 	Err      error
 	Snapshot *runtimevar.Snapshot
 }
 
-// Input: *runtimevarVariableData.
-const runtimevarVariableTemplate = `
+// Input: *runtimevarData.
+const runtimevarTemplate = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>runtimevar.Variable demo</title>
+  <title>gocloud.dev/runtimevar demo</title>
 </head>
 <body>
   <p>
-    This page demonstrates the use of a Go CDK runtimevar.Variable.
+    This page demonstrates the use of Go CDK's <a href="https://godoc.org/gocloud.dev/runtimevar">runtimevar</a> package.
   </p>
   <p>
     It is currently using a runtimevar.Variable based on the URL "{{ .URL }}", which
@@ -61,7 +61,8 @@ const runtimevarVariableTemplate = `
   {{end}}
   {{if .Snapshot}}
     <p><label>
-      The current value of the variable is:
+			The current value of the variable is:
+      <br/>
       <textarea rows="5" cols="40" readonly="true">{{ .Snapshot.Value }}</textarea>
     </label></p>
     <p><label>
@@ -71,14 +72,14 @@ const runtimevarVariableTemplate = `
 </body>
 </html>`
 
-var runtimeVariableTmpl = template.Must(template.New("runtimevar.Variable").Parse(runtimevarVariableTemplate))
+var runtimevarTmpl = template.Must(template.New("runtimevar.Variable").Parse(runtimevarTemplate))
 
-func runtimevarVariableHandler(w http.ResponseWriter, req *http.Request) {
-	input := &runtimevarVariableData{
+func runtimevarHandler(w http.ResponseWriter, req *http.Request) {
+	input := &runtimevarData{
 		URL: variableURL,
 	}
 	defer func() {
-		if err := runtimeVariableTmpl.Execute(w, input); err != nil {
+		if err := runtimevarTmpl.Execute(w, input); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
