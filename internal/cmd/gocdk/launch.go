@@ -166,7 +166,8 @@ func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*ur
 		return nil, xerrors.Errorf("local launch: docker run:\n%s", out)
 	}
 
-	local.logger.Printf("Docker container %s started, waiting for healthy...", bytes.TrimSuffix(out, []byte("\n")))
+	containerID := string(bytes.TrimSuffix(out, []byte("\n")))
+	local.logger.Printf("Docker container %s started, waiting for healthy...", containerID)
 	serveURL := &url.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("localhost:%d", hostPort),
@@ -178,8 +179,10 @@ func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*ur
 		Path:   "/healthz/readiness",
 	}
 	if err := waitForHealthy(ctx, healthCheckURL); err != nil {
+		// TODO(light): Run `docker stop`.
 		return nil, xerrors.Errorf("local launch: %w", err)
 	}
+	local.logger.Printf("Container healthy! To shut down, run: docker stop %s", containerID)
 	return serveURL, nil
 }
 
