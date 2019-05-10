@@ -25,13 +25,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"golang.org/x/xerrors"
 )
 
 func launch(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "launch")
-	dockerImage := f.String("image", "", "Docker image to launch in the form `name[:tag]` (defaults to project latest)")
+	dockerImage := f.String("image", ":latest", "Docker image to launch in the form `name[:tag] OR :tag`")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
@@ -48,12 +49,12 @@ func launch(ctx context.Context, pctx *processContext, args []string) error {
 	}
 
 	// Get the image name from the Dockerfile if not specified.
-	if *dockerImage == "" {
-		var err error
-		*dockerImage, err = moduleDockerImageName(moduleRoot)
+	if *dockerImage == "" || strings.HasPrefix(*dockerImage, ":") {
+		name, err := moduleDockerImageName(moduleRoot)
 		if err != nil {
 			return xerrors.Errorf("gocdk launch: %w", err)
 		}
+		*dockerImage = name + *dockerImage
 	}
 
 	// Prepare the launcher.
