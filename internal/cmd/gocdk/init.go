@@ -31,9 +31,14 @@ import (
 func init_(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "init")
 	var modpath string
+	var allowExistingDir bool
 	f.StringVar(&modpath, "module-path", "", "the module import path for your "+
 		"project's go.mod file (required if project is outside of GOPATH)")
 	f.StringVar(&modpath, "m", "", "alias for --module-path")
+	// TODO(#1918): Remove this flag when empty directories are allowed; it is
+	// currently used to enabled tests to create an empty tempdir and then run
+	// "init" on it.
+	f.BoolVar(&allowExistingDir, "allow-existing-dir", false, "true to allow initializing an existing directory (contents may be overwritten!)")
 
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
@@ -56,9 +61,11 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		}
 	}
 
-	// TODO(light): allow an existing empty directory, for some definition of empty
+	// TODO(#1918): allow an existing empty directory, for some definition of empty.
 	if _, err := os.Stat(projectDir); err == nil {
-		return xerrors.Errorf("gocdk init: %s already exists", projectDir)
+		if !allowExistingDir {
+			return xerrors.Errorf("gocdk init: %s already exists", projectDir)
+		}
 	} else if !os.IsNotExist(err) {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}

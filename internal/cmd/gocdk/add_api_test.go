@@ -28,21 +28,6 @@ import (
 	"testing"
 )
 
-const mainContent = `
-package main
-
-import (
-  "log"
-	"net/http"
-  "os"
-)
-
-func main() {
-	port := os.Getenv("PORT")
-	log.Fatal(http.ListenAndServe(":" + port, nil))
-}
-`
-
 func TestPortableAPIDemos(t *testing.T) {
 	dir, cleanup, err := newTestModule()
 	if err != nil {
@@ -58,9 +43,8 @@ func TestPortableAPIDemos(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	// TODO(rvangent): Run gocdk init instead of this.
-	if err := ioutil.WriteFile(filepath.Join(dir, "main.go"), []byte(mainContent), 0666); err != nil {
-		t.Fatalf("failed to init: %v", err)
+	if err := run(ctx, pctx, []string{"init", "-m", "test", "--allow-existing-dir", dir}, new(bool)); err != nil {
+		t.Fatalf("run init error: %+v", err)
 	}
 
 	// Call the main package run function as if 'add-api' were being called
