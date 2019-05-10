@@ -31,7 +31,7 @@ import (
 
 func launch(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "launch")
-	dockerImage := f.String("image", "", "Docker image to launch in the form `image[:tag]` (defaults to project latest)")
+	dockerImage := f.String("image", "", "Docker image to launch in the form `name[:tag]` (defaults to project latest)")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
