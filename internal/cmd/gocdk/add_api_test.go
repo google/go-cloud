@@ -248,10 +248,10 @@ func TestPortableAPIDemos(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(fmt.Sprintf("%s (%s, %s)", test.api, test.description, test.urlPath), func(t *testing.T) {
-			queryURL := alloc.url(test.urlPath)
-			queryURL.RawQuery = test.urlQuery
-			u := queryURL.String()
+		queryURL := alloc.url(test.urlPath)
+		queryURL.RawQuery = test.urlQuery
+		u := queryURL.String()
+		t.Run(fmt.Sprintf("%s %s: %s", test.api, test.description, u), func(t *testing.T) {
 			var resp *http.Response
 			var err error
 			switch test.op {
