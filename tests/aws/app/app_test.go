@@ -63,11 +63,14 @@ func TestMain(m *testing.M) {
 	if hostIP == "" || gcpProjectID == "" {
 		log.Println("Test environments need to be setup to run server tests.")
 		flag.PrintDefaults()
-		return
+	} else {
+		if err := startApp(); err != nil {
+			log.Fatal("startApp: ", err)
+		}
 	}
-	if err := startApp(); err != nil {
-		log.Fatal("startApp: ", err)
-	}
+	// Per https://golang.org/pkg/testing/#hdr-Main, TestMain should call os.Exit
+	// with the result of m.Run in any case.
+	// See also https://github.com/golang/go/issues/31969
 	os.Exit(m.Run())
 }
 
@@ -116,6 +119,9 @@ func signerFromFile(path string) (ssh.Signer, error) {
 
 func TestRequestLog(t *testing.T) {
 	t.Parallel()
+	if hostIP == "" || gcpProjectID == "" {
+		t.Skip("environment not set up")
+	}
 	suf, err := testutil.URLSuffix()
 	if err != nil {
 		t.Fatal("cannot generate URL suffix:", err)
@@ -155,6 +161,9 @@ func readLogEntries(ctx context.Context, c *logadmin.Client, u string) error {
 
 func TestTrace(t *testing.T) {
 	t.Parallel()
+	if hostIP == "" || gcpProjectID == "" {
+		t.Skip("environment not set up")
+	}
 	suf, err := testutil.URLSuffix()
 	if err != nil {
 		t.Fatal("cannot generate URL suffix:", err)
