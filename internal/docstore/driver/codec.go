@@ -704,7 +704,7 @@ func fieldByIndexCreate(v reflect.Value, index []int) (reflect.Value, bool) {
 }
 
 func decodingError(v reflect.Value, d Decoder) error {
-	return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot set type %s to %s", v.Type(), d)
+	return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot set type %s to %v", v.Type(), d)
 }
 
 func overflowError(x interface{}, t reflect.Type) error {
