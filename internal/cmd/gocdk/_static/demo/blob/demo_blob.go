@@ -18,10 +18,10 @@ import (
 // how it works.
 
 func init() {
-	http.HandleFunc("/demo/blob.bucket/", blobBucketBaseHandler)
-	http.HandleFunc("/demo/blob.bucket/list", blobBucketListHandler)
-	http.HandleFunc("/demo/blob.bucket/view", blobBucketViewHandler)
-	http.HandleFunc("/demo/blob.bucket/write", blobBucketWriteHandler)
+	http.HandleFunc("/demo/blob/", blobBaseHandler)
+	http.HandleFunc("/demo/blob/list", blobListHandler)
+	http.HandleFunc("/demo/blob/view", blobViewHandler)
+	http.HandleFunc("/demo/blob/write", blobWriteHandler)
 }
 
 var bucketURL string
@@ -40,25 +40,25 @@ func init() {
 
 // TODO(rvangent): This is pretty raw HTML. Should we have a common style sheet/etc. for demos?
 
-type blobBucketBaseData struct {
+type blobBaseData struct {
 	URL string
 	Err error
 }
 
-type blobBucketListData struct {
+type blobListData struct {
 	URL         string
 	Err         error
 	ListObjects []*blob.ListObject
 }
 
-type blobBucketViewData struct {
+type blobViewData struct {
 	URL         string
 	Err         error
 	Key         string
 	ListObjects []*blob.ListObject
 }
 
-type blobBucketWriteData struct {
+type blobWriteData struct {
 	URL           string
 	Err           error
 	Key           string
@@ -67,16 +67,16 @@ type blobBucketWriteData struct {
 }
 
 const (
-	blobBucketTemplatePrefix = `
+	blobTemplatePrefix = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>blob.Bucket demo</title>
+  <title>gocloud.dev/blob demo</title>
 </head>
 <body>
   <p>
-    This page demonstrates the use of a Go CDK blob.Bucket.
+    This page demonstrates the use of Go CDK's <a href="https://godoc.org/gocloud.dev/blob">blob</a> package.
   </p>
   <p>
     It is currently using a blob.Bucket based on the URL "{{ .URL }}", which
@@ -95,15 +95,15 @@ const (
   <p><strong>{{.Err}}</strong></p>
 {{end}}`
 
-	blobBucketTemplateSuffix = `
+	blobTemplateSuffix = `
 </body>
 </html>`
 
-	// Input: *blobBucketBaseData.
-	blobBucketBaseTemplate = blobBucketTemplatePrefix + blobBucketTemplateSuffix
+	// Input: *blobBaseData.
+	blobBaseTemplate = blobTemplatePrefix + blobTemplateSuffix
 
-	// Input: *blobBucketListData.
-	blobBucketListTemplate = blobBucketTemplatePrefix + `
+	// Input: *blobListData.
+	blobListTemplate = blobTemplatePrefix + `
   {{range .ListObjects}}
     <div>
       {{if .IsDir}}
@@ -112,10 +112,10 @@ const (
         <a href="./view?key={{ .Key }}">{{ .Key }}</a>
       {{end}}
     </div>
-  {{end}}` + blobBucketTemplateSuffix
+  {{end}}` + blobTemplateSuffix
 
-	// Input: *blobBucketViewData.
-	blobBucketViewTemplate = blobBucketTemplatePrefix + `
+	// Input: *blobViewData.
+	blobViewTemplate = blobTemplatePrefix + `
   {{if .ListObjects}}
     <form>
     <p><label>
@@ -128,10 +128,10 @@ const (
     </label></p>
     <input type="submit">
     </form>
-  {{end}}` + blobBucketTemplateSuffix
+  {{end}}` + blobTemplateSuffix
 
-	// Input: *blobBucketWriteData.
-	blobBucketWriteTemplate = blobBucketTemplatePrefix + `
+	// Input: *blobWriteData.
+	blobWriteTemplate = blobTemplatePrefix + `
   {{if .WriteSuccess}}
     Wrote it!
   {{else}}
@@ -148,30 +148,30 @@ const (
     </label></p>
     <input type="submit" value="Write It!">
     </form>
-  {{end}}` + blobBucketTemplateSuffix
+  {{end}}` + blobTemplateSuffix
 )
 
 var (
-	blobBucketBaseTmpl  = template.Must(template.New("blob.Bucket base").Parse(blobBucketBaseTemplate))
-	blobBucketListTmpl  = template.Must(template.New("blob.Bucket list").Parse(blobBucketListTemplate))
-	blobBucketViewTmpl  = template.Must(template.New("blob.Bucket view").Parse(blobBucketViewTemplate))
-	blobBucketWriteTmpl = template.Must(template.New("blob.Bucket write").Parse(blobBucketWriteTemplate))
+	blobBaseTmpl  = template.Must(template.New("blob base").Parse(blobBaseTemplate))
+	blobListTmpl  = template.Must(template.New("blob list").Parse(blobListTemplate))
+	blobViewTmpl  = template.Must(template.New("blob view").Parse(blobViewTemplate))
+	blobWriteTmpl = template.Must(template.New("blob write").Parse(blobWriteTemplate))
 )
 
-func blobBucketBaseHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobBucketBaseData{URL: bucketURL}
-	if err := blobBucketBaseTmpl.Execute(w, input); err != nil {
+func blobBaseHandler(w http.ResponseWriter, req *http.Request) {
+	input := &blobBaseData{URL: bucketURL}
+	if err := blobBaseTmpl.Execute(w, input); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-// blobBucketListHandler lists the items in a bucket, possibly under a "prefix"
+// blobListHandler lists the items in a bucket, possibly under a "prefix"
 // query parameter. Each listed directory is a link to list that directory,
 // and each non-directory is a link to view that file.
-func blobBucketListHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobBucketListData{URL: bucketURL}
+func blobListHandler(w http.ResponseWriter, req *http.Request) {
+	input := &blobListData{URL: bucketURL}
 	defer func() {
-		if err := blobBucketListTmpl.Execute(w, input); err != nil {
+		if err := blobListTmpl.Execute(w, input); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
@@ -201,15 +201,15 @@ func blobBucketListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func blobBucketViewHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobBucketViewData{
+func blobViewHandler(w http.ResponseWriter, req *http.Request) {
+	input := &blobViewData{
 		URL: bucketURL,
 		Key: req.FormValue("key"),
 	}
 	skipTemplate := false
 	defer func() {
 		if !skipTemplate {
-			if err := blobBucketViewTmpl.Execute(w, input); err != nil {
+			if err := blobViewTmpl.Execute(w, input); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		}
@@ -250,14 +250,14 @@ func blobBucketViewHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func blobBucketWriteHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobBucketWriteData{
+func blobWriteHandler(w http.ResponseWriter, req *http.Request) {
+	input := &blobWriteData{
 		URL:           bucketURL,
 		Key:           req.FormValue("key"),
 		WriteContents: req.FormValue("contents"),
 	}
 	defer func() {
-		if err := blobBucketWriteTmpl.Execute(w, input); err != nil {
+		if err := blobWriteTmpl.Execute(w, input); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
