@@ -25,7 +25,6 @@ import (
 	"math/rand"
 	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -33,6 +32,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
@@ -52,22 +52,9 @@ type harness struct {
 	numTopics uint32
 }
 
-var checkOnce sync.Once
-var kafkaRunning bool
-
-func localKafkaRunning() bool {
-	checkOnce.Do(func() {
-		_, err := sarama.NewClient(localBrokerAddrs, MinimalConfig())
-		if err == nil {
-			kafkaRunning = true
-		}
-	})
-	return kafkaRunning
-}
-
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	if !localKafkaRunning() {
-		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
+	if !setup.HasDockerTestEnvironment() {
+		t.Skip("Skipping Kafka tests since the Kafka server is not available")
 	}
 	return &harness{uniqueID: rand.Int()}, nil
 }
@@ -196,8 +183,8 @@ func (asTest) BeforeSend(as func(interface{}) bool) error {
 
 // TestKafkaKey tests sending/receiving a message with the Kafka message key set.
 func TestKafkaKey(t *testing.T) {
-	if !localKafkaRunning() {
-		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
+	if !setup.HasDockerTestEnvironment() {
+		t.Skip("Skipping Kafka tests since the Kafka server is not available")
 	}
 	const (
 		keyName  = "kafkakey"

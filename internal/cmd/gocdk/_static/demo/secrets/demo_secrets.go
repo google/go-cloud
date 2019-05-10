@@ -16,9 +16,9 @@ import (
 // how it works.
 
 func init() {
-	http.HandleFunc("/demo/secrets.keeper/", secretsKeeperEncryptHandler)
-	http.HandleFunc("/demo/secrets.keeper/encrypt", secretsKeeperEncryptHandler)
-	http.HandleFunc("/demo/secrets.keeper/decrypt", secretsKeeperDecryptHandler)
+	http.HandleFunc("/demo/secrets/", secretsEncryptHandler)
+	http.HandleFunc("/demo/secrets/encrypt", secretsEncryptHandler)
+	http.HandleFunc("/demo/secrets/decrypt", secretsDecryptHandler)
 }
 
 var keeperURL string
@@ -34,7 +34,7 @@ func init() {
 	keeper, keeperErr = secrets.OpenKeeper(context.Background(), keeperURL)
 }
 
-type secretsKeeperData struct {
+type secretsData struct {
 	URL string
 	Err error
 
@@ -44,16 +44,16 @@ type secretsKeeperData struct {
 }
 
 const (
-	secretsKeeperTemplatePrefix = `
+	secretsTemplatePrefix = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>secrets.Keeper demo</title>
+  <title>gocloud.dev/secrets demo</title>
 </head>
 <body>
   <p>
-    This page demonstrates the use of a Go CDK secrets.Keeper.
+    This page demonstrates the use of Go CDK's <a href="https://godoc.org/gocloud.dev/secrets">secrets</a> package.
   </p>
   <p>
     It is currently using a secrets.Keeper based on the URL "{{ .URL }}", which
@@ -64,83 +64,84 @@ const (
     information about URLs in Go CDK APIs.
   </p>
   <ul>
-    <li><a href="./encrypt">Encrypt</a> using the Keeper</li>
-    <li><a href="./decrypt">Decrypt</a> using the Keeper</li>
+    <li><a href="./encrypt">Encrypt</a> using the secrets.Keeper</li>
+    <li><a href="./decrypt">Decrypt</a> using the secrets.Keeper</li>
   </ul>
   {{if .Err}}
     <p><strong>{{ .Err }}</strong></p>
-  {{end}}
-`
-	secretsKeeperTemplateSuffix = `
-</body>
-</html>
-`
+  {{end}}`
 
-	// Input: *secretsKeeperData.
-	secretsKeeperEncryptTemplate = secretsKeeperTemplatePrefix + `
+	secretsTemplateSuffix = `
+</body>
+</html>`
+
+	// Input: *secretsData.
+	secretsEncryptTemplate = secretsTemplatePrefix + `
   <form>
-    <p>
+    <p><label>
       Enter plaintext data to encrypt:
       <br/>
-      <textarea rows="4" cols="50" name="plaintext" label="Plaintext to encrypt">{{ .In }}</textarea>
-    </p>
-    <input type="checkbox" id="base64" name="base64" value="true" {{if .Base64}}checked{{end}}>
-    <label for="base64">The data above is base64 encoded</label>
-    <br/>
+      <textarea rows="4" cols="50" name="plaintext">{{ .In }}</textarea>
+    </label></p>
+    <label><p>
+      <input type="checkbox" name="base64" value="true" {{if .Base64}}checked{{end}}>
+      The data above is base64 encoded
+    </label></p>
     <input type="submit" value="Encrypt!">
   </form>
+
   {{if .Out}}
-    <p>
+    <p><label>
       Encrypted result (base64 encoded):
       <br/>
-      <textarea rows="4" cols="50" readonly="true" label="Encrypted result">{{ .Out }}</textarea>
-    </p>
+      <textarea rows="4" cols="50" readonly="true">{{ .Out }}</textarea>
+    </label></p>
     <div>
       <a href="./decrypt?ciphertext={{ .Out }}&base64={{ .Base64 }}">Decrypt it</a>
     </div>
-  {{end}}
-` + secretsKeeperTemplateSuffix
+  {{end}}` + secretsTemplateSuffix
 
-	// Input: *secretsKeeperData.
-	secretsKeeperDecryptTemplate = secretsKeeperTemplatePrefix + `
+	// Input: *secretsData.
+	secretsDecryptTemplate = secretsTemplatePrefix + `
   <form>
-    <p>
+    <p><label>
       Enter base64-encoded data to decrypt:
       <br/>
-      <textarea rows="4" cols="50" name="ciphertext" label="Ciphertext to decrypt">{{ .In }}</textarea>
-    </p>
-    <input type="checkbox" id="base64" name="base64" value="true" {{if .Base64}}checked{{end}}>
-    <label for="base64">Show result base64-encoded</label>
-    <br/>
+      <textarea rows="4" cols="50" name="ciphertext">{{ .In }}</textarea>
+    </label></p>
+    <p><label>
+      <input type="checkbox" name="base64" value="true" {{if .Base64}}checked{{end}}>
+      Show result base64-encoded
+    </label></p>
     <input type="submit" value="Decrypt!">
   </form>
+
   {{if .Out}}
-    <p>
+    <p><label>
       Decrypted result:
       <br/>
-      <textarea rows="4" cols="50" readonly="true" label="Decrypted result">{{ .Out }}</textarea>
-    </p>
+      <textarea rows="4" cols="50" readonly="true">{{ .Out }}</textarea>
+    </label></p>
     <div>
       <a href="./encrypt?plaintext={{ .Out }}&base64={{.Base64}}">Encrypt it</a>
     </div>
-  {{end}}
-` + secretsKeeperTemplateSuffix
+  {{end}}` + secretsTemplateSuffix
 )
 
 var (
-	secretsKeeperEncryptTmpl = template.Must(template.New("secrets.Keeper encrypt").Parse(secretsKeeperEncryptTemplate))
-	secretsKeeperDecryptTmpl = template.Must(template.New("secrets.Keeper decrypt").Parse(secretsKeeperDecryptTemplate))
+	secretsEncryptTmpl = template.Must(template.New("secrets encrypt").Parse(secretsEncryptTemplate))
+	secretsDecryptTmpl = template.Must(template.New("secrets decrypt").Parse(secretsDecryptTemplate))
 )
 
-// secretsKeeperEncryptHandler allows the user to enter some data to be encrypted.
-func secretsKeeperEncryptHandler(w http.ResponseWriter, req *http.Request) {
-	input := &secretsKeeperData{
+// secretsEncryptHandler allows the user to enter some data to be encrypted.
+func secretsEncryptHandler(w http.ResponseWriter, req *http.Request) {
+	input := &secretsData{
 		URL:    keeperURL,
 		In:     req.FormValue("plaintext"),
 		Base64: req.FormValue("base64") == "true",
 	}
 	defer func() {
-		if err := secretsKeeperEncryptTmpl.Execute(w, input); err != nil {
+		if err := secretsEncryptTmpl.Execute(w, input); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
@@ -170,15 +171,15 @@ func secretsKeeperEncryptHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// secretsKeeperDecryptHandler allows the user to enter some data to be decrypted.
-func secretsKeeperDecryptHandler(w http.ResponseWriter, req *http.Request) {
-	input := &secretsKeeperData{
+// secretsDecryptHandler allows the user to enter some data to be decrypted.
+func secretsDecryptHandler(w http.ResponseWriter, req *http.Request) {
+	input := &secretsData{
 		URL:    keeperURL,
 		In:     req.FormValue("ciphertext"),
 		Base64: req.FormValue("base64") == "true",
 	}
 	defer func() {
-		if err := secretsKeeperDecryptTmpl.Execute(w, input); err != nil {
+		if err := secretsDecryptTmpl.Execute(w, input); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()

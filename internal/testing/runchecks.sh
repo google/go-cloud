@@ -63,7 +63,7 @@ fi
 
 # start_local_deps.sh requires that Docker is installed, via Travis services,
 # which are only supported on Linux.
-# Without the dependencies running, tests that depend on them are skipped.
+# Tests that depend on them should check the Travis environment before running.
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   echo
   echo "Starting local dependencies..."
