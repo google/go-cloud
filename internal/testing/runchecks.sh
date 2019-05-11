@@ -164,7 +164,7 @@ wire diff ./... || {
 
 echo
 echo "Running Go tests for sub-modules..."
-sed -e '/^#/d' -e '/^$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
+sed -e '/^#/d' -e '/^$/d' -e '/^\.$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
   echo "Running tests in '$path'..."
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   echo "Running wire checks in '$path'..."
