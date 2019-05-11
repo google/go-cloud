@@ -42,6 +42,11 @@ var portableAPIs = []*portableAPIInfo{
 		demoURL:    "/demo/blob/",
 	},
 	{
+		name:       "runtimevar",
+		goDemoPath: "/demo/runtimevar/demo_runtimevar.go",
+		demoURL:    "/demo/runtimevar/",
+	},
+	{
 		name:       "secrets",
 		goDemoPath: "/demo/secrets/demo_secrets.go",
 		demoURL:    "/demo/secrets/",

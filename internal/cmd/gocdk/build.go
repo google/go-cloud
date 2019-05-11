@@ -29,15 +29,37 @@ import (
 func build(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "build")
 	list := f.Bool("list", false, "display Docker images of this project")
+	ref := f.String("t", ":latest", "name and/or tag in the form `name[:tag] OR :tag`")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
 		return usagef("gocdk build: %w", err)
 	}
 	if *list {
-		return listBuilds(ctx, pctx, f.Args())
+		if err := listBuilds(ctx, pctx, f.Args()); err != nil {
+			return xerrors.Errorf("gocdk build: %w", err)
+		}
+		return nil
 	}
-	return xerrors.New("not implemented")
+	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	if err != nil {
+		return xerrors.Errorf("gocdk build: %w", err)
+	}
+	if strings.HasPrefix(*ref, ":") {
+		imageName, err := moduleDockerImageName(moduleRoot)
+		if err != nil {
+			return xerrors.Errorf("gocdk build: %w", err)
+		}
+		*ref = imageName + *ref
+	}
+	c := exec.CommandContext(ctx, "docker", "build", "--tag", *ref, ".")
+	c.Dir = moduleRoot
+	c.Stdout = pctx.stdout
+	c.Stderr = pctx.stderr
+	if err := c.Run(); err != nil {
+		return xerrors.Errorf("gocdk build: %w", err)
+	}
+	return nil
 }
 
 func listBuilds(ctx context.Context, pctx *processContext, args []string) error {
