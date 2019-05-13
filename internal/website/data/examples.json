@@ -63,21 +63,29 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n)",
 		"code": "err := topic.Send(ctx, \u0026pubsub.Message{\n\tBody: []byte(\"Hello, World!\\n\"),\n\tMetadata: map[string]string{\n\t\t// These are examples of metadata.\n\t\t// There is nothing special about the key names.\n\t\t\"language\":   \"en\",\n\t\t\"importance\": \"high\",\n\t},\n})\nif err != nil {\n\treturn err\n}"
 	},
+	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSNSTopic": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws\"\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\n// The region must match the region for the SNS topic \"mytopic\".\nsess, err := session.NewSession(\u0026aws.Config{\n\tRegion: aws.String(\"us-east-2\"),\n})\nif err != nil {\n\treturn err\n}\n\n// Create a *pubsub.Topic.\nconst topicARN = \"arn:aws:sns:us-east-2:123456789012:mytopic\"\ntopic := awssnssqs.OpenSNSTopic(ctx, sess, topicARN, nil)\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSQSTopic": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws\"\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\n// The region must match the region for the SQS queue \"myqueue\".\nsess, err := session.NewSession(\u0026aws.Config{\n\tRegion: aws.String(\"us-east-2\"),\n})\nif err != nil {\n\treturn err\n}\n\n// Create a *pubsub.Topic.\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/myqueue\"\ntopic := awssnssqs.OpenSQSTopic(ctx, sess, queueURL, nil)\ndefer topic.Shutdown(ctx)"
+	},
 	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws\"\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
 		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\n// The region must match the region for \"MyQueue\".\nsess, err := session.NewSession(\u0026aws.Config{\n\tRegion: aws.String(\"us-east-2\"),\n})\nif err != nil {\n\treturn err\n}\n\n// Construct a *pubsub.Subscription.\n// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue\"\nsubscription := awssnssqs.OpenSubscription(ctx, sess, queueURL, nil)\ndefer subscription.Shutdown(ctx)"
 	},
-	"gocloud.dev/pubsub/awssnssqs.ExampleOpenTopic": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws\"\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
-		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\n// The region must match the region for \"MyTopic\".\nsess, err := session.NewSession(\u0026aws.Config{\n\tRegion: aws.String(\"us-east-2\"),\n})\nif err != nil {\n\treturn err\n}\n\n// Create a *pubsub.Topic.\nconst topicARN = \"arn:aws:sns:us-east-2:123456789012:MyTopic\"\ntopic := awssnssqs.OpenTopic(ctx, sess, topicARN, nil)\ndefer topic.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/awssnssqs.Example_openSubscription": {
+	"gocloud.dev/pubsub/awssnssqs.Example_openSNSTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/awssnssqs\"\n)",
-		"code": "// OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will open the subscription with the URL\n// \"https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue\".\nsubscription, err := pubsub.OpenSubscription(ctx,\n\t\"awssqs://sqs.us-east-2.amazonaws.com/123456789012/\"+\n\t\t\"MyQueue?region=us-east-2\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+		"code": "const topicARN = \"arn:aws:sns:us-east-2:123456789012:mytopic\"\ntopic, err := pubsub.OpenTopic(ctx, \"awssns://\"+topicARN+\"?region=us-east-2\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
-	"gocloud.dev/pubsub/awssnssqs.Example_openTopic": {
+	"gocloud.dev/pubsub/awssnssqs.Example_openSQSTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/awssnssqs\"\n)",
-		"code": "const topicARN = \"arn:aws:sns:us-east-2:123456789012:MyTopic\"\ntopic, err := pubsub.OpenTopic(ctx, \"awssns://\"+topicARN+\"?region=us-east-2\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+		"code": "// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/myqueue\"\ntopic, err := pubsub.OpenTopic(ctx, \"awssqs://\"+queueURL+\"?region=us-east-2\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/awssnssqs.Example_openSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/awssnssqs\"\n)",
+		"code": "// OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will open the subscription with the URL\n// \"https://sqs.us-east-2.amazonaws.com/123456789012/myqueue\".\nsubscription, err := pubsub.OpenSubscription(ctx,\n\t\"awssqs://sqs.us-east-2.amazonaws.com/123456789012/\"+\n\t\t\"myqueue?region=us-east-2\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/azuresb.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\t\"os\"\n\n\t\"gocloud.dev/pubsub/azuresb\"\n)",
