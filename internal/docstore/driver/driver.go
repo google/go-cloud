@@ -88,6 +88,11 @@ type Mod struct {
 	Value     interface{}
 }
 
+// A value representing an increment modification.
+type IncOp struct {
+	Amount interface{}
+}
+
 // An ActionListError contains all the errors encountered from a call to RunActions,
 // and the positions of the corresponding actions.
 type ActionListError []struct {

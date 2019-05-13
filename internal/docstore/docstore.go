@@ -195,10 +195,20 @@ func (l *ActionList) Unordered() *ActionList {
 // Mods is a map from field paths to modifications.
 // At present, a modification is one of:
 // - nil, to delete the field
+// - an Increment value, to add a number to the field
 // - any other value, to set the field to that value
-// TODO(jba): add other kinds of modification
 // See ActionList.Update.
 type Mods map[FieldPath]interface{}
+
+// Increment returns a modification that results in a field being incremented. It
+// should only be used as a value in a Mods map, like so:
+//
+//    docstore.Mods{"count", docstore.Increment(1)}
+//
+// The amount must be an integer or floating-point value.
+func Increment(amount interface{}) interface{} {
+	return driver.IncOp{amount}
+}
 
 // An ActionListError is returned by ActionList.Do. It contains all the errors
 // encountered while executing the ActionList, and the positions of the corresponding
