@@ -65,6 +65,10 @@ type Harness interface {
 	// MaxBatchSizes returns the maximum size of SendBatch/Send(Na|A)cks, or 0
 	// if there's no max.
 	MaxBatchSizes() (int, int)
+
+	// SupportsMultipleSubscriptions reports whether the provider supports
+	// multiple subscriptions for the same topic.
+	SupportsMultipleSubscriptions() bool
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
@@ -291,6 +295,9 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
+	if !h.SupportsMultipleSubscriptions() {
+		t.Skip("multiple subscriptions to a topic not supported")
+	}
 
 	dt, cleanup, err := h.CreateTopic(ctx, t.Name())
 	if err != nil {
@@ -705,9 +712,24 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	weirdMetadata := map[string]string{}
-	for _, k := range escape.WeirdStrings {
-		weirdMetadata[k] = k
+	// Some providers limit the number of metadata per message.
+	// Sort the escape.WeirdStrings values for record/replay consistency,
+	// then break the weird strings up into groups of at most maxMetadataKeys.
+	const maxMetadataKeys = 10
+	var weirdStrings []string
+	for _, v := range escape.WeirdStrings {
+		weirdStrings = append(weirdStrings, v)
+	}
+	sort.Slice(weirdStrings, func(i, j int) bool { return weirdStrings[i] < weirdStrings[j] })
+
+	weirdMetaDataGroups := []map[string]string{{}}
+	i := 0
+	for _, k := range weirdStrings {
+		weirdMetaDataGroups[i][k] = k
+		if len(weirdMetaDataGroups[i]) == maxMetadataKeys {
+			weirdMetaDataGroups = append(weirdMetaDataGroups, map[string]string{})
+			i++
+		}
 	}
 
 	topic, sub, cleanup, err := makePair(ctx, t, h)
@@ -716,26 +738,28 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer cleanup()
 
-	m := &pubsub.Message{
-		Body:     []byte("hello world"),
-		Metadata: weirdMetadata,
-	}
-	if err := topic.Send(ctx, m); err != nil {
-		t.Fatal(err)
-	}
+	for _, wm := range weirdMetaDataGroups {
+		m := &pubsub.Message{
+			Body:     []byte("hello world"),
+			Metadata: wm,
+		}
+		if err := topic.Send(ctx, m); err != nil {
+			t.Fatal(err)
+		}
 
-	m, err = sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	m.Ack()
+		m, err = sub.Receive(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m.Ack()
 
-	if diff := cmp.Diff(m.Metadata, weirdMetadata); diff != "" {
-		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, weirdMetadata, diff)
+		if diff := cmp.Diff(m.Metadata, wm); diff != "" {
+			t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, wm, diff)
+		}
 	}
 
 	// Verify that non-UTF8 strings in metadata key or value fail.
-	m = &pubsub.Message{
+	m := &pubsub.Message{
 		Body:     []byte("hello world"),
 		Metadata: map[string]string{escape.NonUTF8String: "bar"},
 	}
@@ -815,14 +839,14 @@ func makePair(ctx context.Context, t *testing.T, h Harness) (*pubsub.Topic, *pub
 	topic := pubsub.NewTopic(dt, batchSizeOne)
 	sub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	cleanup := func() {
-		topicCleanup()
-		subCleanup()
 		if err := topic.Shutdown(ctx); err != nil {
 			t.Error(err)
 		}
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)
 		}
+		subCleanup()
+		topicCleanup()
 	}
 	return topic, sub, cleanup, nil
 }

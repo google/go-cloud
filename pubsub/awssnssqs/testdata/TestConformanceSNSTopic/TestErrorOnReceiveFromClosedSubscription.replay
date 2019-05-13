@@ -1,0 +1,319 @@
+{
+  "Initial": "AQAAAA7UaBWQMGTAnP5c",
+  "Version": "0.2",
+  "Converter": {
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Amz-Date$"
+    ],
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$",
+      "^X-Amz-Security-Token$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "f7e15e3b5d7679e4",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sns.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "93"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPUNyZWF0ZVRvcGljJk5hbWU9U05TVG9waWNFcnJvck9uUmVjZWl2ZUZyb21DbG9zZWRTdWJzY3JpcHRpb24tdG9wLTEmVmVyc2lvbj0yMDEwLTAzLTMx"
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "357"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Sat, 11 May 2019 01:00:00 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "614297fe-5525-5153-8acb-c2ae75f4eda0"
+          ]
+        },
+        "Body": "PENyZWF0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxDcmVhdGVUb3BpY1Jlc3VsdD4KICAgIDxUb3BpY0Fybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDYyMzgwMjI1NzIyOlNOU1RvcGljRXJyb3JPblJlY2VpdmVGcm9tQ2xvc2VkU3Vic2NyaXB0aW9uLXRvcC0xPC9Ub3BpY0Fybj4KICA8L0NyZWF0ZVRvcGljUmVzdWx0PgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD42MTQyOTdmZS01NTI1LTUxNTMtOGFjYi1jMmFlNzVmNGVkYTA8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvQ3JlYXRlVG9waWNSZXNwb25zZT4K"
+      }
+    },
+    {
+      "ID": "2d7fd271d8716dfd",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sqs.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "98"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPUNyZWF0ZVF1ZXVlJlF1ZXVlTmFtZT1TTlNUb3BpY0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi1zdWItMSZWZXJzaW9uPTIwMTItMTEtMDU="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "370"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Sat, 11 May 2019 01:00:01 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "3f3c4bb4-6196-5ffd-bb70-1ee44147aee0"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PENyZWF0ZVF1ZXVlUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9xdWV1ZS5hbWF6b25hd3MuY29tL2RvYy8yMDEyLTExLTA1LyI+PENyZWF0ZVF1ZXVlUmVzdWx0PjxRdWV1ZVVybD5odHRwczovL3Nxcy51cy1lYXN0LTIuYW1hem9uYXdzLmNvbS80NjIzODAyMjU3MjIvU05TVG9waWNFcnJvck9uUmVjZWl2ZUZyb21DbG9zZWRTdWJzY3JpcHRpb24tc3ViLTE8L1F1ZXVlVXJsPjwvQ3JlYXRlUXVldWVSZXN1bHQ+PFJlc3BvbnNlTWV0YWRhdGE+PFJlcXVlc3RJZD4zZjNjNGJiNC02MTk2LTVmZmQtYmI3MC0xZWU0NDE0N2FlZTA8L1JlcXVlc3RJZD48L1Jlc3BvbnNlTWV0YWRhdGE+PC9DcmVhdGVRdWV1ZVJlc3BvbnNlPg=="
+      }
+    },
+    {
+      "ID": "4ac52243d3b153a2",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sqs.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "188"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPUdldFF1ZXVlQXR0cmlidXRlcyZBdHRyaWJ1dGVOYW1lLjE9UXVldWVBcm4mUXVldWVVcmw9aHR0cHMlM0ElMkYlMkZzcXMudXMtZWFzdC0yLmFtYXpvbmF3cy5jb20lMkY0NjIzODAyMjU3MjIlMkZTTlNUb3BpY0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi1zdWItMSZWZXJzaW9uPTIwMTItMTEtMDU="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "422"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Sat, 11 May 2019 01:00:01 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "6916e5d5-3fe5-5332-8a49-b0851f34122f"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PEdldFF1ZXVlQXR0cmlidXRlc1Jlc3BvbnNlIHhtbG5zPSJodHRwOi8vcXVldWUuYW1hem9uYXdzLmNvbS9kb2MvMjAxMi0xMS0wNS8iPjxHZXRRdWV1ZUF0dHJpYnV0ZXNSZXN1bHQ+PEF0dHJpYnV0ZT48TmFtZT5RdWV1ZUFybjwvTmFtZT48VmFsdWU+YXJuOmF3czpzcXM6dXMtZWFzdC0yOjQ2MjM4MDIyNTcyMjpTTlNUb3BpY0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi1zdWItMTwvVmFsdWU+PC9BdHRyaWJ1dGU+PC9HZXRRdWV1ZUF0dHJpYnV0ZXNSZXN1bHQ+PFJlc3BvbnNlTWV0YWRhdGE+PFJlcXVlc3RJZD42OTE2ZTVkNS0zZmU1LTUzMzItOGE0OS1iMDg1MWYzNDEyMmY8L1JlcXVlc3RJZD48L1Jlc3BvbnNlTWV0YWRhdGE+PC9HZXRRdWV1ZUF0dHJpYnV0ZXNSZXNwb25zZT4="
+      }
+    },
+    {
+      "ID": "ba8b33497f6ada3d",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sqs.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "713"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPVNldFF1ZXVlQXR0cmlidXRlcyZBdHRyaWJ1dGUuMS5OYW1lPVBvbGljeSZBdHRyaWJ1dGUuMS5WYWx1ZT0lN0IlMEElMDklMDklMjJWZXJzaW9uJTIyJTNBKyUyMjIwMTItMTAtMTclMjIlMkMlMEElMDklMDklMjJJZCUyMiUzQSslMjJBbGxvd1F1ZXVlJTIyJTJDJTBBJTA5JTA5JTIyU3RhdGVtZW50JTIyJTNBKyU1QiUwQSUwOSUwOSU3QiUwQSUwOSUwOSUyMlNpZCUyMiUzQSslMjJNeVNRU1BvbGljeTAwMSUyMiUyQyUwQSUwOSUwOSUyMkVmZmVjdCUyMiUzQSslMjJBbGxvdyUyMiUyQyUwQSUwOSUwOSUyMlByaW5jaXBhbCUyMiUzQSslN0IlMEElMDklMDklMjJBV1MlMjIlM0ErJTIyJTJBJTIyJTBBJTA5JTA5JTdEJTJDJTBBJTA5JTA5JTIyQWN0aW9uJTIyJTNBKyUyMnNxcyUzQVNlbmRNZXNzYWdlJTIyJTJDJTBBJTA5JTA5JTIyUmVzb3VyY2UlMjIlM0ErJTIyYXJuJTNBYXdzJTNBc3FzJTNBdXMtZWFzdC0yJTNBNDYyMzgwMjI1NzIyJTNBU05TVG9waWNFcnJvck9uUmVjZWl2ZUZyb21DbG9zZWRTdWJzY3JpcHRpb24tc3ViLTElMjIlMEElMDklMDklN0QlMEElMDklMDklNUQlMEElMDklMDklN0QmUXVldWVVcmw9aHR0cHMlM0ElMkYlMkZzcXMudXMtZWFzdC0yLmFtYXpvbmF3cy5jb20lMkY0NjIzODAyMjU3MjIlMkZTTlNUb3BpY0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi1zdWItMSZWZXJzaW9uPTIwMTItMTEtMDU="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "225"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Sat, 11 May 2019 01:00:02 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "c804b9d6-b892-5b42-be70-ec8698401a5f"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PFNldFF1ZXVlQXR0cmlidXRlc1Jlc3BvbnNlIHhtbG5zPSJodHRwOi8vcXVldWUuYW1hem9uYXdzLmNvbS9kb2MvMjAxMi0xMS0wNS8iPjxSZXNwb25zZU1ldGFkYXRhPjxSZXF1ZXN0SWQ+YzgwNGI5ZDYtYjg5Mi01YjQyLWJlNzAtZWM4Njk4NDAxYTVmPC9SZXF1ZXN0SWQ+PC9SZXNwb25zZU1ldGFkYXRhPjwvU2V0UXVldWVBdHRyaWJ1dGVzUmVzcG9uc2U+"
+      }
+    },
+    {
+      "ID": "9bfbac63af84e4c5",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sns.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "258"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPVN1YnNjcmliZSZFbmRwb2ludD1hcm4lM0Fhd3MlM0FzcXMlM0F1cy1lYXN0LTIlM0E0NjIzODAyMjU3MjIlM0FTTlNUb3BpY0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi1zdWItMSZQcm90b2NvbD1zcXMmVG9waWNBcm49YXJuJTNBYXdzJTNBc25zJTNBdXMtZWFzdC0yJTNBNDYyMzgwMjI1NzIyJTNBU05TVG9waWNFcnJvck9uUmVjZWl2ZUZyb21DbG9zZWRTdWJzY3JpcHRpb24tdG9wLTEmVmVyc2lvbj0yMDEwLTAzLTMx"
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "400"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Sat, 11 May 2019 01:00:01 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "d8e10445-9f93-5fa8-acd6-5115bf41e35b"
+          ]
+        },
+        "Body": "PFN1YnNjcmliZVJlc3BvbnNlIHhtbG5zPSJodHRwOi8vc25zLmFtYXpvbmF3cy5jb20vZG9jLzIwMTAtMDMtMzEvIj4KICA8U3Vic2NyaWJlUmVzdWx0PgogICAgPFN1YnNjcmlwdGlvbkFybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDYyMzgwMjI1NzIyOlNOU1RvcGljRXJyb3JPblJlY2VpdmVGcm9tQ2xvc2VkU3Vic2NyaXB0aW9uLXRvcC0xOmYyNDY5MzQxLTZkMTMtNDY5Yy05ZGM5LWEyYjI1NDNiYjNhYzwvU3Vic2NyaXB0aW9uQXJuPgogIDwvU3Vic2NyaWJlUmVzdWx0PgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD5kOGUxMDQ0NS05ZjkzLTVmYTgtYWNkNi01MTE1YmY0MWUzNWI8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvU3Vic2NyaWJlUmVzcG9uc2U+Cg=="
+      }
+    },
+    {
+      "ID": "4c9f62d24529a87a",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sns.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "142"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPURlbGV0ZVRvcGljJlRvcGljQXJuPWFybiUzQWF3cyUzQXNucyUzQXVzLWVhc3QtMiUzQTQ2MjM4MDIyNTcyMiUzQVNOU1RvcGljRXJyb3JPblJlY2VpdmVGcm9tQ2xvc2VkU3Vic2NyaXB0aW9uLXRvcC0xJlZlcnNpb249MjAxMC0wMy0zMQ=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "201"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Sat, 11 May 2019 01:00:01 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "db5b3d04-1a23-515c-ac84-68543af1adaf"
+          ]
+        },
+        "Body": "PERlbGV0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD5kYjViM2QwNC0xYTIzLTUxNWMtYWM4NC02ODU0M2FmMWFkYWY8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvRGVsZXRlVG9waWNSZXNwb25zZT4K"
+      }
+    }
+  ]
+}
