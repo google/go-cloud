@@ -20,7 +20,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
@@ -33,7 +33,7 @@ import (
 // return an empty result set and a LastEvaluatedKey if all the items read for the
 // page of results are filtered out."
 
-type avmap = map[string]*dynamodb.AttributeValue
+type avmap = map[string]*dyn.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
 	qr, err := c.planQuery(q)
@@ -81,7 +81,7 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
 			cbUsed = true
 		}
-		in := &dynamodb.ScanInput{TableName: &c.table}
+		in := &dyn.ScanInput{TableName: &c.table}
 		if cbUsed {
 			ce, err := cb.Build()
 			if err != nil {
@@ -103,7 +103,7 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 	}
 	return &queryRunner{
 		c: c,
-		queryIn: &dynamodb.QueryInput{
+		queryIn: &dyn.QueryInput{
 			TableName:                 &c.table,
 			IndexName:                 indexName,
 			ExpressionAttributeNames:  ce.Names(),
@@ -174,7 +174,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 // they are not projected into the index, the only case where a local index cannot
 // be used is when the query wants all the fields, and the index projection is not ALL.
 // See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html#LSI.Projections.
-func localFieldsIncluded(q *driver.Query, li *dynamodb.LocalSecondaryIndexDescription) bool {
+func localFieldsIncluded(q *driver.Query, li *dyn.LocalSecondaryIndexDescription) bool {
 	return len(q.FieldPaths) > 0 || *li.Projection.ProjectionType == "ALL"
 }
 
@@ -183,7 +183,7 @@ func localFieldsIncluded(q *driver.Query, li *dynamodb.LocalSecondaryIndexDescri
 // check before using the index, because if a global index doesn't have all the
 // desired fields, then a separate RPC for each returned item would be necessary to
 // retrieve those fields, and we'd rather scan than do that.
-func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dynamodb.GlobalSecondaryIndexDescription) bool {
+func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dyn.GlobalSecondaryIndexDescription) bool {
 	proj := gi.Projection
 	if *proj.ProjectionType == "ALL" {
 		// The index has all the fields of the table: we're good.
@@ -217,7 +217,7 @@ func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dynamodb.GlobalSe
 
 // Extract the names of the partition and sort key attributes from the schema of a
 // table or index.
-func keyAttributes(ks []*dynamodb.KeySchemaElement) (pkey, skey string) {
+func keyAttributes(ks []*dyn.KeySchemaElement) (pkey, skey string) {
 	for _, k := range ks {
 		switch *k.KeyType {
 		case "HASH":
@@ -260,8 +260,8 @@ func fpEqual(fp []string, s string) bool {
 
 type queryRunner struct {
 	c         *collection
-	scanIn    *dynamodb.ScanInput
-	queryIn   *dynamodb.QueryInput
+	scanIn    *dyn.ScanInput
+	queryIn   *dyn.QueryInput
 	beforeRun func(asFunc func(i interface{}) bool) error
 }
 
@@ -270,7 +270,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 		qr.scanIn.ExclusiveStartKey = startAfter
 		if qr.beforeRun != nil {
 			asFunc := func(i interface{}) bool {
-				p, ok := i.(**dynamodb.ScanInput)
+				p, ok := i.(**dyn.ScanInput)
 				if !ok {
 					return false
 				}
@@ -287,7 +287,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 		}
 		return out.Items, out.LastEvaluatedKey,
 			func(i interface{}) bool {
-				p, ok := i.(**dynamodb.ScanOutput)
+				p, ok := i.(**dyn.ScanOutput)
 				if !ok {
 					return false
 				}
@@ -298,7 +298,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 	qr.queryIn.ExclusiveStartKey = startAfter
 	if qr.beforeRun != nil {
 		asFunc := func(i interface{}) bool {
-			p, ok := i.(**dynamodb.QueryInput)
+			p, ok := i.(**dyn.QueryInput)
 			if !ok {
 				return false
 			}
@@ -315,7 +315,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 	}
 	return out.Items, out.LastEvaluatedKey,
 		func(i interface{}) bool {
-			p, ok := i.(**dynamodb.QueryOutput)
+			p, ok := i.(**dyn.QueryOutput)
 			if !ok {
 				return false
 			}
@@ -401,11 +401,11 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 
 type documentIterator struct {
 	qr     *queryRunner
-	items  []map[string]*dynamodb.AttributeValue
+	items  []map[string]*dyn.AttributeValue
 	curr   int
 	limit  int
 	count  int // number of items returned
-	last   map[string]*dynamodb.AttributeValue
+	last   map[string]*dyn.AttributeValue
 	asFunc func(i interface{}) bool
 }
 
@@ -422,7 +422,7 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 		}
 		it.curr = 0
 	}
-	if err := decodeDoc(&dynamodb.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
+	if err := decodeDoc(&dyn.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
 		return err
 	}
 	it.curr++
@@ -457,33 +457,39 @@ func (qr *queryRunner) queryPlan() string {
 	return "Table"
 }
 
-// TODO(shantuo): use BatchWrite.
 func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
 	q.FieldPaths = [][]string{{c.partitionKey}}
 	if c.sortKey != "" {
 		q.FieldPaths = append(q.FieldPaths, []string{c.sortKey})
 	}
-	iter, err := c.RunGetQuery(ctx, q)
+	qr, err := c.planQuery(q)
 	if err != nil {
 		return err
 	}
-	defer iter.Stop()
+
 	var actions []*driver.Action
+	var startAfter map[string]*dyn.AttributeValue
 	for {
-		doc, err := driver.NewDocument(map[string]interface{}{})
+		items, last, _, err := qr.run(ctx, startAfter)
 		if err != nil {
 			return err
 		}
-		err = iter.Next(ctx, doc)
-		if err == io.EOF {
+		for _, item := range items {
+			doc, err := driver.NewDocument(map[string]interface{}{})
+			if err != nil {
+				return err
+			}
+			if err := decodeDoc(&dyn.AttributeValue{M: item}, doc); err != nil {
+				return err
+			}
+			actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+		}
+		if last == nil {
 			break
 		}
-		if err != nil {
-			return err
-		}
-		actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+		startAfter = last
 	}
-	alerr := c.RunActions(ctx, actions, &driver.RunActionsOptions{})
+	alerr := c.runActionsUnordered(ctx, actions, &driver.RunActionsOptions{})
 	if len(alerr) == 0 {
 		return nil
 	}

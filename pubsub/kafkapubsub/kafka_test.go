@@ -118,6 +118,8 @@ func (h *harness) Close() {}
 
 func (h *harness) MaxBatchSizes() (int, int) { return sendBatcherOpts.MaxBatchSize, 0 }
 
+func (*harness) SupportsMultipleSubscriptions() bool { return true }
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{asTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)

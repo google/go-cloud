@@ -92,6 +92,8 @@ func (h *harness) Close() {
 
 func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
 
+func (*harness) SupportsMultipleSubscriptions() bool { return true }
+
 type natsAsTest struct{}
 
 func (natsAsTest) Name() string {

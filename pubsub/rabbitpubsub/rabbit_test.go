@@ -152,6 +152,8 @@ func (h *harness) Close() {
 
 func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
 
+func (*harness) SupportsMultipleSubscriptions() bool { return true }
+
 func TestUnroutable(t *testing.T) {
 	// Expect that we get an error on publish if the exchange has no queue bound to it.
 	// The error should be a MultiError containing one error per message.
