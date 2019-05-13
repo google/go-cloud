@@ -61,7 +61,7 @@ const runtimevarTemplate = `
   {{end}}
   {{if .Snapshot}}
     <p><label>
-			The current value of the variable is:
+      The current value of the variable is:
       <br/>
       <textarea rows="5" cols="40" readonly="true">{{ .Snapshot.Value }}</textarea>
     </label></p>

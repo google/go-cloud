@@ -65,6 +65,7 @@ func TestPortableAPIDemos(t *testing.T) {
 	// portable API.
 	pctx.env = pctx.overrideEnv(
 		"BLOB_BUCKET_URL=mem://",
+		"RUNTIMEVAR_VARIABLE_URL=constant://?val=test-variable-value&decoder=string",
 	)
 
 	// Run the program, listening on a free port.
@@ -219,6 +220,21 @@ func TestPortableAPIDemos(t *testing.T) {
 			op:          "GET",
 			stringsToFind: []string{
 				"key2 contents",
+			},
+		},
+		// RUNTIMEVAR TESTS.
+		{
+			api:         "runtimevar",
+			description: "base",
+			urlPaths:    []string{"/demo/runtimevar", "/demo/runtimevar/"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/runtimevar demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/runtimevar",
+				"The current value of the variable",
+				"test-variable-value",
+				"It was last modified",
 			},
 		},
 	}
