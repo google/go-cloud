@@ -186,6 +186,9 @@ func (it *DocumentIterator) As(i interface{}) bool {
 	if i == nil {
 		return false
 	}
+	if it.iter == nil {
+		return false
+	}
 	return it.iter.As(i)
 }
 
