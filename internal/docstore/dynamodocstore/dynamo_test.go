@@ -176,6 +176,7 @@ func TestProcessURL(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		_, _, _, _, _, err = o.processURL(u)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
