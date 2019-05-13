@@ -1,4 +1,4 @@
-module gocloud.dev/samples/appengine/helloworld
+module gocloud.dev/samples
 
 require (
 	git.apache.org/thrift.git v0.12.0 // indirect
