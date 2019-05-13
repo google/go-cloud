@@ -434,7 +434,7 @@ https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
 
 The Go CDK allows users to escape the abstraction as needed using `As`
 functions, described in more detail in the
-[top-level godoc](https://godoc.org/gocloud.dev#hdr-As). `As` functions take an
+[concept guide](https://gocloud.dev/concepts/as/). `As` functions take an
 `interface{}` and return a `bool`; they return `true` if the underlying concrete
 type could be converted into the type provided as the `interface{}`.
 

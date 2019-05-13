@@ -59,7 +59,7 @@ type Message struct {
 	// The callback must be called exactly once, before the message is sent.
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeSend func(asFunc func(interface{}) bool) error
 }
 
@@ -96,11 +96,11 @@ type Topic interface {
 	IsRetryable(err error) bool
 
 	// As allows providers to expose provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for errors.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	ErrorAs(error, interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
@@ -183,11 +183,11 @@ type Subscription interface {
 	IsRetryable(err error) bool
 
 	// As converts i to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for errors.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	ErrorAs(error, interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
