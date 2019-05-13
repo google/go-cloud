@@ -148,6 +148,8 @@ func (h *harness) Close() {
 
 func (h *harness) MaxBatchSizes() (int, int) { return sendBatcherOpts.MaxBatchSize, 0 }
 
+func (h *harness) SupportsMultipleSubscriptions() bool { return true }
+
 // Please run the TestConformance with an extended timeout since each test needs to perform CRUD for ServiceBus Topics and Subscriptions.
 // Example: C:\Go\bin\go.exe test -timeout 60s gocloud.dev/pubsub/azuresb -run ^TestConformance$
 func TestConformance(t *testing.T) {

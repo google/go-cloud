@@ -79,15 +79,16 @@ func TestPortableAPIDemos(t *testing.T) {
 	tests := []struct {
 		api           string
 		description   string
-		urlPath       string
+		urlPaths      []string
 		op            string
+		urlQuery      string
 		urlValues     url.Values // only used if op=POST
 		stringsToFind []string
 	}{
 		{
 			api:         "blob",
-			description: "base no slash",
-			urlPath:     "/demo/blob",
+			description: "base",
+			urlPaths:    []string{"/demo/blob", "/demo/blob/"},
 			op:          "GET",
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
@@ -100,32 +101,8 @@ func TestPortableAPIDemos(t *testing.T) {
 		},
 		{
 			api:         "blob",
-			description: "base with slash",
-			urlPath:     "/demo/blob/",
-			op:          "GET",
-			stringsToFind: []string{
-				"<title>gocloud.dev/blob demo</title>",
-				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/blob",
-				`<a href="./list">List</a>`,
-				`<a href="./view">View</a>`,
-				`<a href="./write">Write</a>`,
-			},
-		},
-		{
-			api:         "blob",
-			description: "list: empty",
-			urlPath:     "/demo/blob/list",
-			op:          "GET",
-			stringsToFind: []string{
-				"<title>gocloud.dev/blob demo</title>",
-				"no blobs in bucket",
-			},
-		},
-		{
-			api:         "blob",
-			description: "view: empty",
-			urlPath:     "/demo/blob/list",
+			description: "list+view: empty bucket",
+			urlPaths:    []string{"/demo/blob/list", "/demo/blob/view"},
 			op:          "GET",
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
@@ -135,7 +112,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		{
 			api:         "blob",
 			description: "write: empty form",
-			urlPath:     "/demo/blob/write",
+			urlPaths:    []string{"/demo/blob/write"},
 			op:          "GET",
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
@@ -145,7 +122,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		{
 			api:         "blob",
 			description: "write: missing key",
-			urlPath:     "/demo/blob/write",
+			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
 			urlValues:   map[string][]string{"contents": {"foo"}},
 			stringsToFind: []string{
@@ -158,7 +135,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		{
 			api:         "blob",
 			description: "write: missing contents",
-			urlPath:     "/demo/blob/write",
+			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
 			urlValues:   map[string][]string{"key": {"key1"}},
 			stringsToFind: []string{
@@ -171,7 +148,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		{
 			api:         "blob",
 			description: "write: top level key",
-			urlPath:     "/demo/blob/write",
+			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
 			urlValues:   map[string][]string{"key": {"key1"}, "contents": {"key1 contents"}},
 			stringsToFind: []string{
@@ -182,7 +159,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		{
 			api:         "blob",
 			description: "write: subdirectory key",
-			urlPath:     "/demo/blob/write",
+			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
 			urlValues:   map[string][]string{"key": {"subdir/key2"}, "contents": {"key2 contents"}},
 			stringsToFind: []string{
@@ -193,7 +170,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		{
 			api:         "blob",
 			description: "list: no longer empty",
-			urlPath:     "/demo/blob/list",
+			urlPaths:    []string{"/demo/blob/list"},
 			op:          "GET",
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
@@ -201,59 +178,91 @@ func TestPortableAPIDemos(t *testing.T) {
 				`<a href="./list?prefix=subdir%2f">subdir/</a>`,
 			},
 		},
-		/*
-			TODO(rvangent): Enable listing of a subdir; broken right now because
-			serverAlloc.url doesn't handle query parameters correctly.
-			{
-				api:          "blob",
-				description: "list: subdir",
-				urlPath:    "/demo/blob/list?prefix=subdir%2f",
-				op:          "GET",
-				stringsToFind: []string{
-					"<title>gocloud.dev/blob demo</title>",
-					`<a href="./view?key=subdir%2fkey2">key2</a>`,
-				},
+		{
+			api:         "blob",
+			description: "list: subdir",
+			urlPaths:    []string{"/demo/blob/list"},
+			urlQuery:    "prefix=subdir%2f",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/blob demo</title>",
+				`<a href="./view?key=subdir%2fkey2">subdir/key2</a>`,
 			},
-		*/
-		// TODO(rvangent): Add tests for the view page.
+		},
+		{
+			api:         "blob",
+			description: "view: none selected",
+			urlPaths:    []string{"/demo/blob/view"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/blob demo</title>",
+				"Choose a blob",
+				`<option value="key1">key1</option>`,
+				`<option value="subdir/key2">subdir/key2</option>`,
+			},
+		},
+		{
+			api:         "blob",
+			description: "view: key1 selected",
+			urlPaths:    []string{"/demo/blob/view"},
+			urlQuery:    "key=key1",
+			op:          "GET",
+			stringsToFind: []string{
+				"key1 contents",
+			},
+		},
+		{
+			api:         "blob",
+			description: "view: key2 selected",
+			urlPaths:    []string{"/demo/blob/view"},
+			urlQuery:    "key=subdir%2fkey2",
+			op:          "GET",
+			stringsToFind: []string{
+				"key2 contents",
+			},
+		},
 	}
 
 	for _, test := range tests {
-		t.Run(fmt.Sprintf("%s (%s, %s)", test.api, test.description, test.urlPath), func(t *testing.T) {
-			u := alloc.url(test.urlPath).String()
-			var resp *http.Response
-			var err error
-			switch test.op {
-			case "GET":
-				resp, err = http.DefaultClient.Get(u)
-			case "POST":
-				resp, err = http.DefaultClient.PostForm(u, test.urlValues)
-			default:
-				t.Fatalf("invalid test.op: %q", test.op)
-			}
-			if err != nil {
-				t.Fatalf("HTTP %q request failed: %v", test.op, err)
-			}
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				t.Fatalf("HTTP request returned status code %v, want %v", resp.StatusCode, http.StatusOK)
-			}
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				t.Errorf("failed to read HTTP response body: %v", err)
-			}
-			body := string(bodyBytes)
-			logBody := false // only log the body on failure, and only once per test
-			for _, s := range test.stringsToFind {
-				if !strings.Contains(body, s) {
-					t.Errorf("didn't find %q in HTTP response body", s)
-					logBody = true
+		for _, urlPath := range test.urlPaths {
+			queryURL := alloc.url(urlPath)
+			queryURL.RawQuery = test.urlQuery
+			u := queryURL.String()
+			t.Run(fmt.Sprintf("%s %s: %s", test.api, test.description, u), func(t *testing.T) {
+				var resp *http.Response
+				var err error
+				switch test.op {
+				case "GET":
+					resp, err = http.DefaultClient.Get(u)
+				case "POST":
+					resp, err = http.DefaultClient.PostForm(u, test.urlValues)
+				default:
+					t.Fatalf("invalid test.op: %q", test.op)
 				}
-			}
-			if logBody {
-				t.Error("Full HTTP response body:\n\n", body)
-			}
-		})
+				if err != nil {
+					t.Fatalf("HTTP %q request failed: %v", test.op, err)
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode != http.StatusOK {
+					t.Fatalf("HTTP request returned status code %v, want %v", resp.StatusCode, http.StatusOK)
+				}
+				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					t.Errorf("failed to read HTTP response body: %v", err)
+				}
+				body := string(bodyBytes)
+				logBody := false // only log the body on failure, and only once per test
+				for _, s := range test.stringsToFind {
+					if !strings.Contains(body, s) {
+						t.Errorf("didn't find %q in HTTP response body", s)
+						logBody = true
+					}
+				}
+				if logBody {
+					t.Error("Full HTTP response body:\n\n", body)
+				}
+			})
+		}
 	}
 }
 

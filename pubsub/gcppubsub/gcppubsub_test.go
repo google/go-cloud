@@ -139,6 +139,8 @@ func (h *harness) MaxBatchSizes() (int, int) {
 	return sendBatcherOpts.MaxBatchSize, ackBatcherOpts.MaxBatchSize
 }
 
+func (*harness) SupportsMultipleSubscriptions() bool { return true }
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
