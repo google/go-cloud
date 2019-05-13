@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7UXdMHIRwuWP5c",
+  "Initial": "AQAAAA7Ua6qnIlHW5f8Q",
   "Version": "0.2",
   "Converter": {
     "ClearHeaders": [
@@ -40,7 +40,7 @@
   },
   "Entries": [
     {
-      "ID": "aec30169526717f5",
+      "ID": "6bc23b4ff7ad02ac",
       "Request": {
         "Method": "PUT",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo%20bar%20baz",
@@ -79,7 +79,7 @@
             "0"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:13:28 GMT"
+            "Mon, 13 May 2019 18:12:56 GMT"
           ],
           "Etag": [
             "\"5d41402abc4b2a76b9719d911017c592\""
@@ -88,17 +88,17 @@
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "n3T3pQU/YHvGUOl08nTfpSG5my67vM27HeIIiOw2wfkYhqrtwU7E4SDwfVkZDRFsMkSa59+GDgs="
+            "cAb4MmV5OE7d+g+px7T9FEpu8fEpkzr3DGo1noVUtom7nnX2ErGuyMBg9bHHdRMjKhSlMKmkBDY="
           ],
           "X-Amz-Request-Id": [
-            "C40C246768552697"
+            "13838232AFA3DFD1"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "e990fa5804ed3fad",
+      "ID": "e215dfb7bc3de30a",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo%20bar%20baz",
@@ -117,7 +117,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -135,29 +137,29 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:13:28 GMT"
+            "Mon, 13 May 2019 18:12:56 GMT"
           ],
           "Etag": [
             "\"5d41402abc4b2a76b9719d911017c592\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:13:28 GMT"
+            "Mon, 13 May 2019 18:12:56 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "B6WwZ1LDDHUq4tMd8W1JF7clKqEIh06tUMEjvvYfuxQyoFNv+HnAHFWE677nJyoSKPpqBWQe0IA="
+            "IboI+1Ysr3mPorhqXaaZcOlhNrCsUntYZisLn8zu/gpme7HKFH5MjwlAsiN9oQt9MX2daPwWP3w="
           ],
           "X-Amz-Request-Id": [
-            "881E49753750344A"
+            "C8EEF66D5DE53BAB"
           ]
         },
         "Body": "aGVsbG8="
       }
     },
     {
-      "ID": "01ad425814303dd7",
+      "ID": "b01d2c42eb49c1b6",
       "Request": {
         "Method": "HEAD",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo%20bar%20baz",
@@ -173,7 +175,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -191,29 +195,29 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:13:29 GMT"
+            "Mon, 13 May 2019 18:12:57 GMT"
           ],
           "Etag": [
             "\"5d41402abc4b2a76b9719d911017c592\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:13:28 GMT"
+            "Mon, 13 May 2019 18:12:56 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "zZfw7027q9gy/89pVbWHEZgAWEnFvvVQ7nScbaVoFkr/IUROiHi/64f36+oZgQENzHUwKOtPDsE="
+            "UPF/OOqJrWjxiAeI4J+TB3WqqoZxmoSrlUD4JlGowC8yXCidSKJQNkivthsDPVdSnFupt2rZmh0="
           ],
           "X-Amz-Request-Id": [
-            "7A9E4BEC3C09CF14"
+            "B5957C820F2993E1"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "1a65f1998dd7e27d",
+      "ID": "2a17e27785967953",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo%20bar%20baz?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
@@ -226,7 +230,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -244,29 +250,29 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:13:29 GMT"
+            "Mon, 13 May 2019 18:12:57 GMT"
           ],
           "Etag": [
             "\"5d41402abc4b2a76b9719d911017c592\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:13:28 GMT"
+            "Mon, 13 May 2019 18:12:56 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "5gyTwqnzPkkPL35EkrD/ZwkOs1mUCqVStrbCOxWLX7ttOuyDC98jHxorVHOOil4hx+qRt2pbyzI="
+            "t25WjOmnUkPaLc2i5oSr363PSTlbHvIdmbO2MmkrRQug+VZVb7KrVp4HHU12qDMXIQEHnf2nDr8="
           ],
           "X-Amz-Request-Id": [
-            "E9ECDD6A3BE4345D"
+            "02688B00E798AC68"
           ]
         },
         "Body": "aGVsbG8="
       }
     },
     {
-      "ID": "032d6ce9b82de0d4",
+      "ID": "0096cf2522f8a649",
       "Request": {
         "Method": "HEAD",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo%20bar%20baz",
@@ -282,7 +288,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 200,
@@ -300,29 +308,29 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 03 May 2019 06:13:29 GMT"
+            "Mon, 13 May 2019 18:12:57 GMT"
           ],
           "Etag": [
             "\"5d41402abc4b2a76b9719d911017c592\""
           ],
           "Last-Modified": [
-            "Fri, 03 May 2019 06:13:28 GMT"
+            "Mon, 13 May 2019 18:12:56 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "kpsu5ctFN4gIBjWXU0J9JfIrKeCE6Kg+qsnEQCq0oCcK2w7h7wjlY9Ypj47kfAoI0UZNy7/baOw="
+            "310T4gRmB6fM+tWBYYCrUA1JNo3Z/tbJnRNbZ1DraUxuyC0svR9AzHN898h4OuS24+VOl+t2gDA="
           ],
           "X-Amz-Request-Id": [
-            "CC514B3E4F6ABE40"
+            "7603BED19ADEDD62"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "db0f1e8a5aac20d5",
+      "ID": "681a28a63c4c7ba6",
       "Request": {
         "Method": "DELETE",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo%20bar%20baz",
@@ -341,7 +349,9 @@
           ]
         },
         "MediaType": "",
-        "BodyParts": null
+        "BodyParts": [
+          ""
+        ]
       },
       "Response": {
         "StatusCode": 204,
@@ -350,16 +360,16 @@
         "ProtoMinor": 1,
         "Header": {
           "Date": [
-            "Fri, 03 May 2019 06:13:29 GMT"
+            "Mon, 13 May 2019 18:12:57 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "72CExIx6/yC6CpTgana6iU2BN7hHps395dv70Gy3w5x79lYkDdgQscLsjtOGKIYOwsFTEX9SR8g="
+            "5T9BUxLScBycfADZLZ9IbRAqzQt7OJH3V04aT4XB4Tb//6fUU1XFjRcdhLadKjmgAR0jH6LIUVU="
           ],
           "X-Amz-Request-Id": [
-            "DB1E728BF257C60A"
+            "E6A69272687FF8EA"
           ]
         },
         "Body": ""
