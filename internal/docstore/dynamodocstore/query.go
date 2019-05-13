@@ -488,7 +488,7 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 		}
 		startAfter = last
 	}
-	alerr := c.runActionsUnordered(ctx, actions, &driver.RunActionsOptions{Unordered: true})
+	alerr := c.runActionsUnordered(ctx, actions, &driver.RunActionsOptions{})
 	if len(alerr) == 0 {
 		return nil
 	}
