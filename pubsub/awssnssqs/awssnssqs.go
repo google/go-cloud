@@ -605,11 +605,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		rawAttrs := map[string]string{}
 		useJSON := len(m.MessageAttributes) == 0 // if we got attributes, it's raw
 		if useJSON {
-			type MsgBody struct {
+			var bodyJSON struct {
 				Message           string
 				MessageAttributes map[string]struct{ Value string }
 			}
-			var bodyJSON MsgBody
 			if err := json.Unmarshal([]byte(bodyStr), &bodyJSON); err == nil {
 				// JSON decode succeeded; get attributes from the decoded struct,
 				// and update the body to be the JSON Message field.

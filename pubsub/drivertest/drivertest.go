@@ -66,7 +66,7 @@ type Harness interface {
 	// if there's no max.
 	MaxBatchSizes() (int, int)
 
-	// SupportsMultipleSubscriptions returns true iff the provider supports
+	// SupportsMultipleSubscriptions reports whether the provider supports
 	// multiple subscriptions for the same topic.
 	SupportsMultipleSubscriptions() bool
 }
@@ -712,7 +712,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	// Some provider limit the number of metadata per message.
+	// Some providers limit the number of metadata per message.
 	// Sort the escape.WeirdStrings values for record/replay consistency,
 	// then break the weird strings up into groups of at most maxMetadataKeys.
 	const maxMetadataKeys = 10
