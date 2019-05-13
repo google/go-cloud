@@ -61,12 +61,12 @@ func TestPortableAPIDemos(t *testing.T) {
 		t.Fatal("buildForServe(...):", err)
 	}
 
-	// Update the environment with to use local implementations for each
-	// portable API.
+	// Update the environment to use local implementations for each portable API.
 	pctx.env = pctx.overrideEnv(
 		"BLOB_BUCKET_URL=mem://",
 		"PUBSUB_TOPIC_URL=mem://testtopic",
 		"PUBSUB_SUBSCRIPTION_URL=mem://testtopic",
+		"SECRETS_KEEPER_URL=base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=",
 	)
 
 	// Run the program, listening on a free port.
@@ -87,6 +87,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		urlValues     url.Values // only used if op=POST
 		stringsToFind []string
 	}{
+		// BLOB TESTS.
 		{
 			api:         "blob",
 			description: "base",
@@ -270,23 +271,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		},
 		{
 			api:         "pubsub",
-			description: "send2",
-			urlPaths:    []string{"/demo/pubsub/send"},
-			urlQuery:    "msg=another+test+message",
-			op:          "GET",
-			stringsToFind: []string{
-				"<title>gocloud.dev/pubsub demo</title>",
-				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
-				`<a href="./send">Send</a>`,
-				`<a href="./receive">Receive</a>`,
-				"Message sent!",
-				"another test message", // message carries over
-			},
-		},
-		{
-			api:         "pubsub",
-			description: "receive1",
+			description: "receive",
 			urlPaths:    []string{"/demo/pubsub/receive"},
 			op:          "GET",
 			stringsToFind: []string{
@@ -299,19 +284,112 @@ func TestPortableAPIDemos(t *testing.T) {
 				"hello world",
 			},
 		},
+		// SECRETS TESTS.
 		{
-			api:         "pubsub",
-			description: "receive2",
-			urlPaths:    []string{"/demo/pubsub/receive"},
+			api:         "secrets",
+			description: "base page shows encrypt form",
+			urlPaths:    []string{"/demo/secrets", "/demo/secrets/", "/demo/secrets/encrypt"},
 			op:          "GET",
 			stringsToFind: []string{
-				"<title>gocloud.dev/pubsub demo</title>",
+				"<title>gocloud.dev/secrets demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
-				`<a href="./send">Send</a>`,
-				`<a href="./receive">Receive</a>`,
-				"Received message:",
-				"another test message",
+				"https://godoc.org/gocloud.dev/secrets",
+				`<a href="./encrypt">Encrypt</a>`,
+				`<a href="./decrypt">Decrypt</a>`,
+				"Enter plaintext data to encrypt",
+			},
+		},
+		{
+			api:         "secrets",
+			description: "encrypt works",
+			urlPaths:    []string{"/demo/secrets/encrypt"},
+			op:          "GET",
+			urlQuery:    "plaintext=my-sample-plaintext",
+			stringsToFind: []string{
+				"<title>gocloud.dev/secrets demo</title>",
+				`<a href="./encrypt">Encrypt</a>`,
+				`<a href="./decrypt">Decrypt</a>`,
+				"Enter plaintext data to encrypt",
+				"my-sample-plaintext", // input carries over
+				"Encrypted result",
+				"Decrypt it</a>", // link to decrypt it
+			},
+		},
+		{
+			api:         "secrets",
+			description: "encrypt fails on invalid base64 input",
+			urlPaths:    []string{"/demo/secrets/encrypt"},
+			urlQuery:    "plaintext=this-is-not-base64&base64=true",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/secrets demo</title>",
+				`<a href="./encrypt">Encrypt</a>`,
+				`<a href="./decrypt">Decrypt</a>`,
+				"Enter plaintext data to encrypt",
+				"this-is-not-base64", // input carries over
+				"checked",            // base64 checkbox stays checked
+				"Plaintext data was not valid Base64",
+			},
+		},
+		{
+			api:         "secrets",
+			description: "decrypt empty form",
+			urlPaths:    []string{"/demo/secrets/decrypt"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/secrets demo</title>",
+				`<a href="./encrypt">Encrypt</a>`,
+				`<a href="./decrypt">Decrypt</a>`,
+				"Enter base64-encoded data to decrypt",
+			},
+		},
+		{
+			api:         "secrets",
+			description: "decrypt works",
+			urlPaths:    []string{"/demo/secrets/decrypt"},
+			urlQuery:    "ciphertext=6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH%2fRQM6JCc0nnWc0V1Zz1ty%2fWmX8UlJy", // "hello world" encrypted, base64, then url-encoded
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/secrets demo</title>",
+				`<a href="./encrypt">Encrypt</a>`,
+				`<a href="./decrypt">Decrypt</a>`,
+				"Enter base64-encoded data to decrypt",
+				"6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH/RQM6JCc0nnWc0V1Zz1ty/WmX8UlJy", // input carries over; "hello world" encrypted, base64
+				"Decrypted result",
+				"hello world",
+				"Encrypt it</a>", // link to re-encrypt it
+			},
+		},
+		{
+			api:         "secrets",
+			description: "decrypt works with base64 output",
+			urlPaths:    []string{"/demo/secrets/decrypt"},
+			urlQuery:    "base64=true&ciphertext=6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH%2fRQM6JCc0nnWc0V1Zz1ty%2fWmX8UlJy", // "hello world" encrypted, base64, then url-encoded
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/secrets demo</title>",
+				`<a href="./encrypt">Encrypt</a>`,
+				`<a href="./decrypt">Decrypt</a>`,
+				"Enter base64-encoded data to decrypt",
+				"6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH/RQM6JCc0nnWc0V1Zz1ty/WmX8UlJy", // input carries over; "hello world" encrypted, base64
+				"checked", // base64 checkbox stays checked
+				"Decrypted result",
+				"aGVsbG8gd29ybGQ=", // "hello world" base64 encoded
+				"Encrypt it</a>",   // link to re-encrypt it
+			},
+		},
+		{
+			api:         "secrets",
+			description: "decrypt fails on invalid base64 input",
+			urlPaths:    []string{"/demo/secrets/decrypt"},
+			urlQuery:    "ciphertext=this-is-not-base64",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/secrets demo</title>",
+				`<a href="./encrypt">Encrypt</a>`,
+				`<a href="./decrypt">Decrypt</a>`,
+				"Enter base64-encoded data to decrypt",
+				"this-is-not-base64", // input carries over
 			},
 		},
 	}
