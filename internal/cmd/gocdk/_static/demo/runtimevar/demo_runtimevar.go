@@ -72,7 +72,7 @@ const runtimevarTemplate = `
 </body>
 </html>`
 
-var runtimevarTmpl = template.Must(template.New("runtimevar.Variable").Parse(runtimevarTemplate))
+var runtimevarTmpl = template.Must(template.New("runtimevar").Parse(runtimevarTemplate))
 
 func runtimevarHandler(w http.ResponseWriter, req *http.Request) {
 	input := &runtimevarData{
