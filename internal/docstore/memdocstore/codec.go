@@ -31,6 +31,14 @@ func encodeDoc(doc driver.Document) (map[string]interface{}, error) {
 	return e.val.(map[string]interface{}), nil
 }
 
+func encodeValue(v interface{}) (interface{}, error) {
+	var e encoder
+	if err := driver.Encode(reflect.ValueOf(v), &e); err != nil {
+		return nil, err
+	}
+	return e.val, nil
+}
+
 type encoder struct {
 	val interface{}
 }

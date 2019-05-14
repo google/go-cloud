@@ -233,24 +233,40 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 
 // Must be called with the lock held.
 func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error {
-	// Apply each modification. Fail if any mod would fail.
 	// Sort mods by first field path element so tests are deterministic.
 	sort.Slice(mods, func(i, j int) bool { return mods[i].FieldPath[0] < mods[j].FieldPath[0] })
 
-	// Check first that every field path is valid. That is, whether every component
-	// of the path but the last refers to a map, and no component along the way is
-	// nil. If that check succeeds, all actions will succeed, making update atomic.
-	for _, m := range mods {
-		if _, err := getParentMap(doc, m.FieldPath, false); err != nil {
+	// To make update atomic, we first convert the actions into a form that can't
+	// fail.
+	type guaranteedMod struct {
+		parentMap    map[string]interface{} // the map holding the key to be modified
+		key          string
+		encodedValue interface{} // the value after encoding
+	}
+
+	gmods := make([]guaranteedMod, len(mods))
+	var err error
+	for i, mod := range mods {
+		// Check that the field path is valid. That is, whether every component
+		// of the path but the last refers to a map, and no component along the way is
+		// nil.
+		if gmods[i].parentMap, err = getParentMap(doc, mod.FieldPath, false); err != nil {
 			return err
 		}
+		gmods[i].key = mod.FieldPath[len(mod.FieldPath)-1]
+		// Make sure the value encodes sucessfully.
+		if mod.Value != nil {
+			if gmods[i].encodedValue, err = encodeValue(mod.Value); err != nil {
+				return err
+			}
+		}
 	}
-	for _, m := range mods {
-		if m.Value == nil {
-			deleteAtFieldPath(doc, m.FieldPath)
+	// Now execute the guaranteed mods.
+	for _, m := range gmods {
+		if m.encodedValue == nil {
+			delete(m.parentMap, m.key)
 		} else {
-			// This can't fail because we checked it above.
-			_ = setAtFieldPath(doc, m.FieldPath, m.Value)
+			m.parentMap[m.key] = m.encodedValue
 		}
 	}
 	if len(mods) > 0 {

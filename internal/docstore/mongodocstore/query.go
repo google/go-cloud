@@ -143,6 +143,19 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 	if err != nil {
 		return err
 	}
-	_, err = c.coll.DeleteMany(ctx, filter, nil)
+	_, err = c.coll.DeleteMany(ctx, filter)
+	return err
+}
+
+func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
+	filter, err := c.filtersToBSON(q.Filters)
+	if err != nil {
+		return err
+	}
+	updateDoc, err := c.newUpdateDoc(mods)
+	if err != nil {
+		return err
+	}
+	_, err = c.coll.UpdateMany(ctx, filter, updateDoc)
 	return err
 }
