@@ -1104,6 +1104,11 @@ var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been
 // PrefixedBucket returns a *Bucket based on b with all keys modified to have
 // prefix, which will usually end with a "/" to target a subdirectory in the
 // bucket.
-func PrefixedBucket(b *Bucket, prefix string) *Bucket {
-	return NewBucket(driver.NewPrefixedBucket(b.b, prefix))
+//
+// bucket will be closed and no longer usable after this function returns.
+func PrefixedBucket(bucket *Bucket, prefix string) *Bucket {
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+	bucket.closed = true
+	return NewBucket(driver.NewPrefixedBucket(bucket.b, prefix))
 }
