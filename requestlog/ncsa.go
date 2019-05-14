@@ -33,6 +33,7 @@ type NCSALogger struct {
 }
 
 // NewNCSALogger returns a new logger that writes to w.
+// A nil onErr is treated the same as func(error) {}.
 func NewNCSALogger(w io.Writer, onErr func(error)) *NCSALogger {
 	return &NCSALogger{
 		w:     w,
@@ -43,7 +44,7 @@ func NewNCSALogger(w io.Writer, onErr func(error)) *NCSALogger {
 // Log writes an entry line to its writer.  Multiple concurrent calls
 // will produce sequential writes to its writer.
 func (l *NCSALogger) Log(ent *Entry) {
-	if err := l.log(ent); err != nil {
+	if err := l.log(ent); err != nil && l.onErr != nil {
 		l.onErr(err)
 	}
 }
