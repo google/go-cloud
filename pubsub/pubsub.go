@@ -131,8 +131,14 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Metadata has key/value metadata for the message. It will be nil if the
-	// message has no associated metadata.
+	// Metadata has key/value metadata for the message.
+	//
+	// When sending a message, set any key/value pairs you want associated with
+	// the message. It is acceptable for Metadata to be nil.
+	// Note that some providers limit the number of key/value pairs per message.
+	//
+	// When receiving a message, Metadata will be nil if the message has no
+	// associated metadata.
 	Metadata map[string]string
 
 	// BeforeSend is a callback used when sending a message. It will always be

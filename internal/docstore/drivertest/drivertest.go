@@ -166,6 +166,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 
 	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
+	t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
 
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("As", func(t *testing.T) {
@@ -401,7 +402,6 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
-
 	got := docmap{KeyField: doc[KeyField]}
 	errs := coll.Actions().Update(doc, ds.Mods{
 		"a": "X",
@@ -880,12 +880,7 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			for _, g := range got {
 				g.DocstoreRevision = nil
 			}
-			var want []*HighScore
-			for _, d := range queryDocuments {
-				if tc.want(d) {
-					want = append(want, d)
-				}
-			}
+			want := filterHighScores(queryDocuments, tc.want)
 			_, err := tc.q.Plan()
 			if err != nil {
 				t.Fatal(err)
@@ -960,12 +955,7 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 			for _, g := range got {
 				g.DocstoreRevision = nil
 			}
-			var want []*HighScore
-			for _, d := range prevWant {
-				if tc.want(d) {
-					want = append(want, d)
-				}
-			}
+			want := filterHighScores(prevWant, tc.want)
 			prevWant = want
 			diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
 				return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
@@ -981,6 +971,51 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 	if err == nil {
 		t.Fatal("want error for Limit, got nil")
 	}
+}
+
+func testUpdateQuery(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	if err := coll.Query().Update(ctx, nil); gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Skip("update queries not yet implemented")
+	}
+
+	cleanUpTable(t, newHighScore, coll)
+
+	addQueryDocuments(t, coll)
+
+	err := coll.Query().Where("Player", "=", "fran").Update(ctx, docstore.Mods{"Score": 13, "Time": nil})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
+	for _, g := range got {
+		g.DocstoreRevision = nil
+	}
+
+	want := filterHighScores(queryDocuments, func(h *HighScore) bool {
+		if h.Player == "fran" {
+			h.Score = 13
+			h.Time = time.Time{}
+		}
+		return true
+	})
+	diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
+		return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
+	}))
+	if diff != "" {
+		t.Error(diff)
+	}
+}
+
+func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
+	var res []*HighScore
+	for _, h := range hs {
+		c := *h // Copy in case f modifies its argument.
+		if f(&c) {
+			res = append(res, &c)
+		}
+	}
+	return res
 }
 
 // cleanUpTable delete all documents from this collection after test.

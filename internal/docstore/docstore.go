@@ -312,27 +312,38 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 		}
 	}
 	if a.mods != nil {
-		// Convert mods from a map to a slice of (fieldPath, value) pairs.
-		// The map is easier for users to write, but the slice is easier
-		// to process.
-		// TODO(jba): check for prefix
-		// Sort keys so tests are deterministic.
-		var keys []string
-		for k := range a.mods {
-			keys = append(keys, string(k))
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			k := FieldPath(k)
-			v := a.mods[k]
-			fp, err := parseFieldPath(k)
-			if err != nil {
-				return nil, err
-			}
-			d.Mods = append(d.Mods, driver.Mod{FieldPath: fp, Value: v})
+		d.Mods, err = toDriverMods(a.mods)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return d, nil
+}
+
+func toDriverMods(mods Mods) ([]driver.Mod, error) {
+	// Convert mods from a map to a slice of (fieldPath, value) pairs.
+	// The map is easier for users to write, but the slice is easier
+	// to process.
+	// TODO(jba): check for prefix
+
+	// Sort keys so tests are deterministic.
+	var keys []string
+	for k := range mods {
+		keys = append(keys, string(k))
+	}
+	sort.Strings(keys)
+
+	dmods := make([]driver.Mod, len(keys))
+	for i, k := range keys {
+		k := FieldPath(k)
+		v := mods[k]
+		fp, err := parseFieldPath(k)
+		if err != nil {
+			return nil, err
+		}
+		dmods[i] = driver.Mod{FieldPath: fp, Value: v}
+	}
+	return dmods, nil
 }
 
 // Create is a convenience for building and running a single-element action list.

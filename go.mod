@@ -15,7 +15,7 @@
 module gocloud.dev
 
 require (
-	cloud.google.com/go v0.38.0
+	cloud.google.com/go v0.39.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
 	contrib.go.opencensus.io/exporter/stackdriver v0.11.0
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
@@ -46,7 +46,7 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/google/subcommands v1.0.1
 	github.com/google/uuid v1.1.1
-	github.com/google/wire v0.2.1
+	github.com/google/wire v0.2.2
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/gorilla/mux v1.7.1
 	github.com/gorilla/websocket v1.4.0 // indirect
@@ -86,8 +86,8 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373
-	google.golang.org/api v0.4.0
-	google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7
+	google.golang.org/api v0.5.0
+	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8
 	google.golang.org/grpc v1.20.1
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 	pack.ag/amqp v0.11.0
