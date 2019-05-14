@@ -358,7 +358,7 @@ func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 }
 
 func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
-	return c.runActionQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
+	return c.runWriteQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
 		return []*pb.Write{{
 			Operation:       &pb.Write_Delete{Delete: doc.Name},
 			CurrentDocument: preconditionFromTimestamp(doc.UpdateTime),
@@ -371,7 +371,7 @@ func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods [
 	if err != nil {
 		return err
 	}
-	return c.runActionQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
+	return c.runWriteQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
 		return newUpdateWrites(doc.Name, doc.UpdateTime, fields, paths)
 	})
 }
@@ -381,8 +381,8 @@ func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods [
 // This is a variable so it can be modified for tests.
 var maxWritesPerRPC = 500
 
-// runActionQuery runs the query, calls writes for each returned document, and then commits those writes.
-func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, writes func(*pb.Document) ([]*pb.Write, error)) error {
+// runWriteQuery runs the query, calls writes for each returned document, and then commits those writes.
+func (c *collection) runWriteQuery(ctx context.Context, q *driver.Query, writes func(*pb.Document) ([]*pb.Write, error)) error {
 	q.FieldPaths = [][]string{{"__name__"}}
 	iter, err := c.newDocIterator(ctx, q)
 	if err != nil {
