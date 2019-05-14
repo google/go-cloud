@@ -26,7 +26,7 @@ both forms for each storage provider.
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [documentation on URLs]: {{< ref "/concepts/urls.md" >}}
 
-## Prefixed Buckets {#prefix}
+### Prefixed Buckets {#prefix}
 
 You can wrap a `*blob.Bucket` to always operate on a subfolder of the bucket
 using `blob.PrefixedBucket`:
