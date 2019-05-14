@@ -214,7 +214,7 @@ loop:
 
 // buildForServe runs Wire and `go build` at moduleRoot to create exePath.
 func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string, exePath string) error {
-	moduleEnv := pctx.overrideEnv("GO111MODULE=on")
+	moduleEnv := overrideEnv(pctx.env, "GO111MODULE=on")
 
 	if wireExe, err := exec.LookPath("wire"); err == nil {
 		// TODO(light): Only run Wire if needed, but that requires source analysis.
@@ -268,7 +268,7 @@ func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logge
 	logger.Print("Starting server...")
 	process := exec.Command(alloc.exePath)
 	process.Dir = workdir
-	process.Env = pctx.overrideEnv("PORT=" + strconv.Itoa(alloc.port))
+	process.Env = overrideEnv(pctx.env, "PORT="+strconv.Itoa(alloc.port))
 	process.Stdout = pctx.stdout
 	process.Stderr = pctx.stderr
 	if err := process.Start(); err != nil {

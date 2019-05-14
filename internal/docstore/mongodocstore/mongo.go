@@ -533,9 +533,11 @@ func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.
 	}
 
 	// Run all writes in a single BulkWrite RPC.
-	alerrBulk := c.unorderedBulkWrite(ctx, writes)
-	if alerrBulk != nil {
-		alerr = append(alerr, alerrBulk...)
+	if len(writes) > 0 {
+		alerrBulk := c.unorderedBulkWrite(ctx, writes)
+		if alerrBulk != nil {
+			alerr = append(alerr, alerrBulk...)
+		}
 	}
 
 	// Collect the Get results.
@@ -568,7 +570,7 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			}
 		case driver.Delete:
 			m, err = c.newDeleteModel(a)
-			if err != nil {
+			if err == nil {
 				nDeletes++
 			}
 		case driver.Replace, driver.Put:
@@ -578,7 +580,7 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			}
 		case driver.Update:
 			m, err = c.newUpdateModel(a)
-			if err != nil && m != nil {
+			if err == nil && m != nil {
 				nMatches++
 			}
 
@@ -605,10 +607,12 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 		return alerr
 	}
 	if res.DeletedCount != nDeletes {
-		alerr = append(alerr, indexedError{-1, gcerr.Newf(gcerr.NotFound, nil, "some delete failed")})
+		alerr = append(alerr, indexedError{-1,
+			gcerr.Newf(gcerr.NotFound, nil, "some delete failed (deleted %d out of %d)", res.DeletedCount, nDeletes)})
 	}
 	if res.MatchedCount != nMatches {
-		alerr = append(alerr, indexedError{-1, gcerr.Newf(gcerr.NotFound, nil, "some replace failed")})
+		alerr = append(alerr, indexedError{-1,
+			gcerr.Newf(gcerr.NotFound, nil, "some replace failed (replaced %d out of %d)", res.MatchedCount, nMatches)})
 	}
 	for i, newID := range newIDs {
 		if err := iactions[i].action.Doc.SetField(c.idField, newID); err != nil {
@@ -670,6 +674,9 @@ func (c *collection) As(i interface{}) bool {
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	if g, ok := err.(*gcerr.Error); ok {
 		return g.Code
+	}
+	if err == mongo.ErrNoDocuments {
+		return gcerrors.NotFound
 	}
 	if wexc, ok := err.(mongo.WriteException); ok && len(wexc.WriteErrors) > 0 {
 		return translateMongoCode(wexc.WriteErrors[0].Code)

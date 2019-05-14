@@ -365,6 +365,8 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Error("Get with field paths:\n", diff)
 	}
+
+	// TODO(jba): add a NotFound test for nonexistent documents
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -1125,8 +1127,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		t.Skip("unordered actions not yet implemented")
 	}
 
-	t.Skip("waiting for fix to rpcreplay")
-
 	defer cleanUpTable(t, newDocmap, coll)
 
 	must := func(err error) {
@@ -1271,7 +1271,8 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 		coll.Query().Where("Score", ">", 50),
 	}
 	for _, q := range qs {
-		if err := st.QueryCheck(q.BeforeQuery(st.BeforeQuery).Get(ctx)); err != nil {
+		iter := q.BeforeQuery(st.BeforeQuery).Get(ctx)
+		if err := st.QueryCheck(iter); err != nil {
 			t.Error(err)
 		}
 	}
