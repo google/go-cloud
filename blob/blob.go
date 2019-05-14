@@ -1075,9 +1075,16 @@ func DefaultURLMux() *URLMux {
 }
 
 // OpenBucket opens the bucket identified by the URL given.
+//
 // See the URLOpener documentation in provider-specific subpackages for
 // details on supported URL formats, and https://gocloud.dev/concepts/urls/
 // for more information.
+//
+// In addition to provider-specific query parameters, OpenBucket supports
+// the following query parameters:
+//
+//   - prefix: wraps the resulting Bucket using PrefixedBucket with the
+//             given prefix.
 func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	return defaultURLMux.OpenBucket(ctx, urlstr)
 }
@@ -1095,7 +1102,8 @@ func wrapError(b driver.Bucket, err error) error {
 var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been closed")
 
 // PrefixedBucket returns a *Bucket based on b with all keys modified to have
-// prefix.
+// prefix, which will usually end with a "/" to target a subdirectory in the
+// bucket.
 func PrefixedBucket(b *Bucket, prefix string) *Bucket {
 	return NewBucket(driver.NewPrefixedBucket(b.b, prefix))
 }
