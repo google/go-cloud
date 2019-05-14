@@ -53,14 +53,15 @@ query parameter to ensure your application connects to the correct region, but
 otherwise `pubsub.OpenSubscription` will use the region found in the environment
 variables or your AWS CLI configuration.
 
-{{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSubscription" >}}
+{{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSubscriptionFromURL" >}}
 
 Messages with a `base64encoded` message attribute will be automatically
 [Base64][] decoded before being returned. See the [SNS publishing guide][]
-for more details.
+or the [SQS publshing guide][] for more details.
 
 [Base64]: https://en.wikipedia.org/wiki/Base64
 [SNS publishing guide]: {{< ref "./publish.md#sns" >}}
+[SQS publishing guide]: {{< ref "./publish.md#sqs" >}}
 [SQS]: https://aws.amazon.com/sqs/
 
 ### Amazon Simple Queueing Service Constructor {#sqs-ctor}

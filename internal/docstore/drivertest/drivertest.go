@@ -365,6 +365,8 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Error("Get with field paths:\n", diff)
 	}
+
+	// TODO(jba): add a NotFound test for nonexistent documents
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -397,8 +399,9 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
+	t.Skip("wait for dynamodocstore implementation of increment")
 	ctx := context.Background()
-	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B"}
+	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B", "n": 3.5, "i": 1}
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
@@ -407,6 +410,9 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		"a": "X",
 		"b": nil,
 		"c": "C",
+		"n": docstore.Increment(-1),
+		"i": docstore.Increment(2.5), // incrementing an integer with a float works
+		"m": docstore.Increment(3),   // increment of a nonexistent field is like set
 	}).Get(got).Do(ctx)
 	if errs != nil {
 		t.Fatal(errs)
@@ -416,6 +422,9 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		ds.RevisionField: got[ds.RevisionField],
 		"a":              "X",
 		"c":              "C",
+		"n":              2.5,
+		"i":              3.5,
+		"m":              int64(3),
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
@@ -426,6 +435,12 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	// Can't update a nonexistent doc.
 	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{"x": "y"}); err == nil {
 		t.Error("nonexistent document: got nil, want error")
+	}
+
+	// Bad increment value.
+	err := coll.Update(ctx, doc, ds.Mods{"x": ds.Increment("3")})
+	if gcerrors.Code(err) != gcerrors.InvalidArgument {
+		t.Errorf("bad increment: got %v, want InvalidArgument", err)
 	}
 
 	t.Run("revision", func(t *testing.T) {
@@ -1125,8 +1140,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		t.Skip("unordered actions not yet implemented")
 	}
 
-	t.Skip("waiting for fix to rpcreplay")
-
 	defer cleanUpTable(t, newDocmap, coll)
 
 	must := func(err error) {
@@ -1271,7 +1284,8 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 		coll.Query().Where("Score", ">", 50),
 	}
 	for _, q := range qs {
-		if err := st.QueryCheck(q.BeforeQuery(st.BeforeQuery).Get(ctx)); err != nil {
+		iter := q.BeforeQuery(st.BeforeQuery).Get(ctx)
+		if err := st.QueryCheck(iter); err != nil {
 			t.Error(err)
 		}
 	}

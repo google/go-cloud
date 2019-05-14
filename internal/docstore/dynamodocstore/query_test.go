@@ -31,6 +31,7 @@ func TestPlanQuery(t *testing.T) {
 		table:        "T",
 		partitionKey: "tableP",
 		description:  &dynamodb.TableDescription{},
+		opts:         &Options{AllowScans: true},
 	}
 
 	// Build an ExpressionAttributeNames map with the given names.
@@ -390,6 +391,36 @@ func TestPlanQuery(t *testing.T) {
 				t.Error("plan:\n", diff)
 			}
 		})
+	}
+}
+
+func TestQueryNoScans(t *testing.T) {
+	c := &collection{
+		table:        "T",
+		partitionKey: "tableP",
+		description:  &dynamodb.TableDescription{},
+		opts:         &Options{AllowScans: false},
+	}
+
+	for _, test := range []struct {
+		q       *driver.Query
+		wantErr bool
+	}{
+		{&driver.Query{}, false},
+		{&driver.Query{Filters: []driver.Filter{{[]string{"other"}, "=", 1}}}, true},
+	} {
+		qr, err := c.planQuery(test.q)
+		if err != nil {
+			t.Fatalf("%v: %v", test.q, err)
+		}
+		err = c.checkPlan(qr)
+		if test.wantErr {
+			if err == nil || !strings.Contains(err.Error(), "AllowScans") {
+				t.Errorf("%v: got %v, want an error that mentions the AllowScans option", test.q, err)
+			}
+		} else if err != nil {
+			t.Errorf("%v: got %v, want nil", test.q, err)
+		}
 	}
 }
 

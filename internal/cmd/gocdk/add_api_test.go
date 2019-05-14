@@ -62,7 +62,7 @@ func TestPortableAPIDemos(t *testing.T) {
 	}
 
 	// Update the environment to use local implementations for each portable API.
-	pctx.env = pctx.overrideEnv(
+	pctx.env = overrideEnv(pctx.env,
 		"BLOB_BUCKET_URL=mem://",
 		"PUBSUB_TOPIC_URL=mem://testtopic",
 		"PUBSUB_SUBSCRIPTION_URL=mem://testtopic",

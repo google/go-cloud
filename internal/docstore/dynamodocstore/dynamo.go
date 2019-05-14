@@ -97,6 +97,7 @@ const Scheme = "dynamodb"
 //
 //   - partition_key (required): the path to the partition key of a table or an index.
 //   - sort_key: the path to the sort key of a table or an index.
+//   - allow_scans: if "true", allow table scans to be used for queries
 //
 // See https://godoc.org/gocloud.dev/aws#ConfigFromURLParams for supported query
 // parameters for overriding the aws.Session from the URL.
@@ -107,30 +108,33 @@ type URLOpener struct {
 
 // OpenCollectionURL opens the collection at the URL's path. See the package doc for more details.
 func (o *URLOpener) OpenCollectionURL(_ context.Context, u *url.URL) (*docstore.Collection, error) {
-	db, tableName, partitionKey, sortKey, err := o.processURL(u)
+	db, tableName, partitionKey, sortKey, opts, err := o.processURL(u)
 	if err != nil {
 		return nil, err
 	}
-	return OpenCollection(db, tableName, partitionKey, sortKey)
+	return OpenCollection(db, tableName, partitionKey, sortKey, opts)
 }
 
-func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partitionKey, sortKey string, err error) {
+func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options, err error) {
 	q := u.Query()
 
 	partitionKey = q.Get("partition_key")
 	if partitionKey == "" {
-		return nil, "", "", "", fmt.Errorf("open collection %s: partition_key is required to open a table", u)
+		return nil, "", "", "", nil, fmt.Errorf("open collection %s: partition_key is required to open a table", u)
 	}
 	q.Del("partition_key")
 	sortKey = q.Get("sort_key")
 	q.Del("sort_key")
+	allowScans := q.Get("allow_scans")
+	q.Del("allow_scans")
+	opts = &Options{AllowScans: allowScans == "true"}
 
 	tableName = u.Host
 	if tableName == "" {
-		return nil, "", "", "", fmt.Errorf("open collection %s: URL's host cannot be empty (the table name)", u)
+		return nil, "", "", "", nil, fmt.Errorf("open collection %s: URL's host cannot be empty (the table name)", u)
 	}
 	if u.Path != "" {
-		return nil, "", "", "", fmt.Errorf("open collection %s: URL path must be empty, only the host is needed", u)
+		return nil, "", "", "", nil, fmt.Errorf("open collection %s: URL path must be empty, only the host is needed", u)
 	}
 
 	configProvider := &gcaws.ConfigOverrider{
@@ -138,14 +142,14 @@ func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partiti
 	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(q)
 	if err != nil {
-		return nil, "", "", "", fmt.Errorf("open collection %s: %v", u, err)
+		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	db, err = Dial(configProvider)
 	if err != nil {
-		return nil, "", "", "", fmt.Errorf("open collection %s: %v", u, err)
+		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
 	}
-	return db, tableName, partitionKey, sortKey, nil
+	return db, tableName, partitionKey, sortKey, opts, nil
 }
 
 // Dial gets an AWS DynamoDB service client.
@@ -162,21 +166,31 @@ type collection struct {
 	partitionKey string
 	sortKey      string
 	description  *dyn.TableDescription
+	opts         *Options
+}
+
+type Options struct {
+	// If false, queries that can only be executed by scanning the entire table
+	// return an error instead (with the exception of a query with no filters).
+	AllowScans bool
 }
 
 // OpenCollection creates a *docstore.Collection representing a DynamoDB collection.
-func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*docstore.Collection, error) {
-	c, err := newCollection(db, tableName, partitionKey, sortKey)
+func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options) (*docstore.Collection, error) {
+	c, err := newCollection(db, tableName, partitionKey, sortKey, opts)
 	if err != nil {
 		return nil, err
 	}
 	return docstore.NewCollection(c), nil
 }
 
-func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*collection, error) {
+func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options) (*collection, error) {
 	out, err := db.DescribeTable(&dyn.DescribeTableInput{TableName: &tableName})
 	if err != nil {
 		return nil, err
+	}
+	if opts == nil {
+		opts = &Options{}
 	}
 	return &collection{
 		db:           db,
@@ -184,6 +198,7 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*
 		partitionKey: partitionKey,
 		sortKey:      sortKey,
 		description:  out.Table,
+		opts:         opts,
 	}, nil
 }
 
