@@ -20,13 +20,16 @@ import (
 )
 
 func Test(t *testing.T) {
-	got, err := run(strings.NewReader(testOutput))
+	got, fails, err := run(strings.NewReader(testOutput))
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := "ran 6; passed 3; failed 1; skipped 2"
 	if got != want {
 		t.Errorf("\ngot  %s\nwant %s", got, want)
+	}
+	if !fails {
+		t.Error("wanted fails true, got false")
 	}
 }
 

@@ -38,30 +38,31 @@ type TestEvent struct {
 }
 
 func main() {
-	s, err := run(os.Stdin)
+	s, fails, err := run(os.Stdin)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(s)
+	if fails {
+		os.Exit(1)
+	}
 }
 
-func run(r io.Reader) (string, error) {
+func run(r io.Reader) (msg string, failures bool, err error) {
 	counts := map[string]int{}
-	line := 0
 	scanner := bufio.NewScanner(bufio.NewReader(r))
 	for scanner.Scan() {
-		line++
 		var event TestEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
-			return "", fmt.Errorf("line %d: %v", line, err)
+			return "", false, fmt.Errorf("%q: %v", scanner.Text(), err)
 		}
 		counts[event.Action]++
 	}
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return "", false, err
 	}
 	p := counts["pass"]
 	f := counts["fail"]
 	s := counts["skip"]
-	return fmt.Sprintf("ran %d; passed %d; failed %d; skipped %d", p+f+s, p, f, s), nil
+	return fmt.Sprintf("ran %d; passed %d; failed %d; skipped %d", p+f+s, p, f, s), f > 0, nil
 }
