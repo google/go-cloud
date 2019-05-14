@@ -120,7 +120,7 @@ cat "$tmpstaticgo" | diff ./static.go - && echo "OK" || {
 popd &> /dev/null
 
 
-if [[ $(go version) == *1\.12* ]]; then
+if [[ $(go version) == *go1\.12* ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
   ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - && echo "OK" || {
