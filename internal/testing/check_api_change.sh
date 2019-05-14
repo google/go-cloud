@@ -30,7 +30,6 @@ set -euo pipefail
 
 UPSTREAM_BRANCH="${TRAVIS_BRANCH:-master}"
 echo "Checking for incompatible API changes relative to ${UPSTREAM_BRANCH}..."
-echo
 
 go install -mod=readonly golang.org/x/exp/cmd/apidiff
 
@@ -45,13 +44,12 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR"
-echo
+git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 
 incompatible_change_pkgs=()
 PKGS=$(cd "$MASTER_CLONE_DIR"; go list ./... | grep -v internal | grep -v test | grep -v samples)
 for pkg in $PKGS; do
-  echo "Testing ${pkg}..."
+  echo "  Testing ${pkg}..."
 
   # Compute export data for the current branch.
   package_deleted=0
@@ -74,7 +72,6 @@ for pkg in $PKGS; do
     incompatible_change_pkgs+=("$pkg");
   fi
 done
-echo
 
 if [ ${#incompatible_change_pkgs[@]} -eq 0 ]; then
   # No incompatible changes, we are good.
