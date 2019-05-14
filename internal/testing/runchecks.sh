@@ -25,11 +25,10 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
-
 # The following logic lets us skip the (lengthy) installation process and tests
 # in some cases where the PR carries trivial changes that don't affect the code
 # (such as documentation-only).
-if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+if [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]]; then
   tmpfile=$(mktemp)
   function cleanup() {
     rm -rf "$tmpfile"
@@ -64,7 +63,7 @@ fi
 # start_local_deps.sh requires that Docker is installed, via Travis services,
 # which are only supported on Linux.
 # Tests that depend on them should check the Travis environment before running.
-if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   echo
   echo "Starting local dependencies..."
   ./internal/testing/start_local_deps.sh
@@ -74,9 +73,8 @@ fi
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 result=0
-echo
-echo "Running Go tests..."
-if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
+  echo "Running Go tests for root module (with coverage)..."
   go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
@@ -85,11 +83,15 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     bash <(curl -s https://codecov.io/bash)
   fi
 else
+  echo "Running Go tests for root module..."
   go test -mod=readonly -race ./... || result=1
-  # No need to run other checks on OSs other than linux.
-  exit $result
 fi
 
+# No need to run other checks on OSs other than linux.
+# We default TRAVIS_OS_NAME to "linux" so that we don't abort here when run locally.
+if [[ "${TRAVIS_OS_NAME:-linux}" != "linux" ]]; then
+  exit $result
+fi
 
 echo
 echo "Ensuring .go files are formatted with gofmt -s..."
@@ -98,6 +100,8 @@ if [ -n "$DIFF" ]; then
   echo "FAIL: please run gofmt -s and commit the result"
   echo "$DIFF";
   exit 1;
+else
+  echo "OK"
 fi;
 
 
@@ -108,18 +112,18 @@ function cleanupstaticgo() {
   rm -rf "$tmpstaticgo"
 }
 trap cleanupstaticgo EXIT
-pushd internal/cmd/gocdk/
-go run generate_static.go -- "$tmpstaticgo"
-cat "$tmpstaticgo" | diff ./static.go - || {
+pushd internal/cmd/gocdk/ &> /dev/null
+go run generate_static.go -- "$tmpstaticgo" &> /dev/null
+cat "$tmpstaticgo" | diff ./static.go - && echo "OK" || {
   echo "FAIL: gocdk static files are out of date; run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
 }
-popd
+popd &> /dev/null
 
 
-echo
-echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
 if [[ $(go version) == *1\.12* ]]; then
-  ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
+  echo
+  echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
+  ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - && echo "OK" || {
     echo "FAIL: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
     # Module behavior may differ across versions.
     echo "using go version 1.12."
@@ -134,30 +138,35 @@ if ! [[ -z "$missing_packages" ]]; then
   echo "FAIL: missing package meta tags for:" 1>&2
   echo "$missing_packages" 1>&2
   result=1
+else
+  echo "OK"
 fi
 
 
 echo
 echo "Ensuring that all examples used in Hugo match what's in source..."
-internal/website/gatherexamples/run.sh | diff internal/website/data/examples.json - > /dev/null || {
+internal/website/gatherexamples/run.sh | diff internal/website/data/examples.json - > /dev/null && echo "OK" || {
   echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
   result=1
 }
 
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.
-if [[ ${result} -eq 0 ]] && [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+if [[ ${result} -eq 0 ]] && [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]]; then
   echo
   ./internal/testing/check_api_change.sh || result=1;
 fi
 
 
 echo
-echo "Checking for wire problems or diffs..."
+echo "Running wire check..."
 go install -mod=readonly github.com/google/wire/cmd/wire
-wire check ./... || result=1
+wire check ./... && echo "OK" || result=1
+
+echo
+echo "Running wire diff..."
 # "wire diff" fails with exit code 1 if any diffs are detected.
-wire diff ./... || {
+wire diff ./... && echo "OK" || {
   echo "FAIL: wire diff found diffs!";
   result=1;
 }
@@ -165,10 +174,14 @@ wire diff ./... || {
 echo
 echo "Running Go tests for sub-modules..."
 sed -e '/^#/d' -e '/^$/d' -e '/^\.$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
-  echo "Running tests in '$path'..."
+  echo
+  echo "Testing sub-module at '$path'..."
+  echo "  Go tests:"
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
-  echo "Running wire checks in '$path'..."
-  ( cd "$path" && exec wire check ./... ) || result=1
-  ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)
+  echo "  wire check:"
+  ( cd "$path" && exec wire check ./... ) && echo "  OK" || result=1
+  echo "  wire diff:"
+  ( cd "$path" && exec wire diff ./... ) && echo "  OK " || (echo "FAIL: wire diff found diffs!" && result=1)
 done
+
 exit $result

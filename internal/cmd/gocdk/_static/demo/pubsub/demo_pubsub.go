@@ -92,26 +92,26 @@ const (
   {{if .Success }}
     <p>Message sent!</p>
   {{end}}
-  <p>
   <form>
-    Enter a message to send to the topic:
-    <br/>
-    <textarea rows="4" cols="50" name="msg">{{ .Msg }}</textarea>
+      <p><label>
+        Enter a message to send to the topic:
+        <br/>
+        <textarea rows="4" cols="50" name="msg">{{ .Msg }}</textarea>
+    </label></p>
     <br/>
     <input type="submit" value="Send Message">
-    </form>
-    </p>` + pubsubTemplateSuffix
+  </form>` + pubsubTemplateSuffix
 
 	pubsubReceiveTemplate = pubsubTemplatePrefix + `
-  <p>
   {{if .Success }}
-    Received message:
-    <br/>
-    <textarea rows="4" cols="50" name="msg">{{ .Msg }}</textarea>
+    <p><label>
+      Received message:
+      <br/>
+      <textarea rows="4" cols="50" name="msg">{{ .Msg }}</textarea>
+    </label></p>
   {{else}}
-    No message available.
-  {{end}}
-  </p>` + pubsubTemplateSuffix
+    <p>No message available.</p>
+  {{end}}` + pubsubTemplateSuffix
 )
 
 var (

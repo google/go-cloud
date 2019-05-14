@@ -422,18 +422,30 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 }
 
 func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc map[string]bson.D, id interface{}, err error) {
+	filter, id, _, err = c.makeFilter(a.Doc)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	updateDoc, err = c.newUpdateDoc(a.Mods)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return filter, updateDoc, id, nil
+}
+
+func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) {
 	var (
 		sets   bson.D
 		unsets bson.D
 	)
-	for _, m := range a.Mods {
+	for _, m := range mods {
 		key := c.toMongoFieldPath(m.FieldPath)
 		if m.Value == nil {
 			unsets = append(unsets, bson.E{Key: key, Value: ""})
 		} else {
 			val, err := encodeValue(m.Value)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, err
 			}
 			sets = append(sets, bson.E{Key: key, Value: val})
 		}
@@ -441,18 +453,15 @@ func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc m
 	if len(sets) == 0 && len(unsets) == 0 {
 		// MongoDB returns an error if there are no updates, but docstore treats it
 		// as a no-op.
-		return nil, nil, nil, nil
+		// TODO(jba): remove this, check in docstore.ActionList.Update.
+		return nil, nil
 	}
-	updateDoc = map[string]bson.D{}
+	updateDoc := map[string]bson.D{}
 	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: driver.UniqueString()})
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}
-	filter, id, _, err = c.makeFilter(a.Doc)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return filter, updateDoc, id, nil
+	return updateDoc, nil
 }
 
 func (c *collection) makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err error) {

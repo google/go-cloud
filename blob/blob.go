@@ -1032,7 +1032,7 @@ func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
+	return applyPrefixParam(ctx, opener.(BucketURLOpener), u)
 }
 
 // OpenBucketURL dispatches the URL to the opener that is registered with the
@@ -1042,7 +1042,27 @@ func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
+	return applyPrefixParam(ctx, opener.(BucketURLOpener), u)
+}
+
+func applyPrefixParam(ctx context.Context, opener BucketURLOpener, u *url.URL) (*Bucket, error) {
+	prefix := u.Query().Get("prefix")
+	if prefix != "" {
+		// Make a copy of u with the "prefix" parameter removed.
+		urlCopy := *u
+		q := urlCopy.Query()
+		q.Del("prefix")
+		urlCopy.RawQuery = q.Encode()
+		u = &urlCopy
+	}
+	bucket, err := opener.OpenBucketURL(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	if prefix != "" {
+		bucket = PrefixedBucket(bucket, prefix)
+	}
+	return bucket, nil
 }
 
 var defaultURLMux = new(URLMux)
@@ -1055,9 +1075,16 @@ func DefaultURLMux() *URLMux {
 }
 
 // OpenBucket opens the bucket identified by the URL given.
+//
 // See the URLOpener documentation in provider-specific subpackages for
 // details on supported URL formats, and https://gocloud.dev/concepts/urls/
 // for more information.
+//
+// In addition to provider-specific query parameters, OpenBucket supports
+// the following query parameters:
+//
+//   - prefix: wraps the resulting Bucket using PrefixedBucket with the
+//             given prefix.
 func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	return defaultURLMux.OpenBucket(ctx, urlstr)
 }
@@ -1073,3 +1100,10 @@ func wrapError(b driver.Bucket, err error) error {
 }
 
 var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been closed")
+
+// PrefixedBucket returns a *Bucket based on b with all keys modified to have
+// prefix, which will usually end with a "/" to target a subdirectory in the
+// bucket.
+func PrefixedBucket(b *Bucket, prefix string) *Bucket {
+	return NewBucket(driver.NewPrefixedBucket(b.b, prefix))
+}

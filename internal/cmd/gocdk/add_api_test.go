@@ -66,6 +66,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		"BLOB_BUCKET_URL=mem://",
 		"PUBSUB_TOPIC_URL=mem://testtopic",
 		"PUBSUB_SUBSCRIPTION_URL=mem://testtopic",
+		"RUNTIMEVAR_VARIABLE_URL=constant://?val=test-variable-value&decoder=string",
 		"SECRETS_KEEPER_URL=base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=",
 	)
 
@@ -282,6 +283,21 @@ func TestPortableAPIDemos(t *testing.T) {
 				`<a href="./receive">Receive</a>`,
 				"Received message:",
 				"hello world",
+			},
+		},
+		// RUNTIMEVAR TESTS.
+		{
+			api:         "runtimevar",
+			description: "base",
+			urlPaths:    []string{"/demo/runtimevar", "/demo/runtimevar/"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/runtimevar demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/runtimevar",
+				"The current value of the variable",
+				"test-variable-value",
+				"It was last modified",
 			},
 		},
 		// SECRETS TESTS.
