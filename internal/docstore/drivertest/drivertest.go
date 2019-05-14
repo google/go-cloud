@@ -805,8 +805,7 @@ var queryDocuments = []*HighScore{
 }
 
 func addQueryDocuments(t *testing.T, coll *ds.Collection) {
-	// TODO(jba): use Unordered.
-	alist := coll.Actions()
+	alist := coll.Actions().Unordered()
 	for _, doc := range queryDocuments {
 		alist.Put(doc)
 	}
@@ -818,11 +817,6 @@ func addQueryDocuments(t *testing.T, coll *ds.Collection) {
 func testGetQuery(t *testing.T, coll *ds.Collection) {
 	cleanUpTable(t, newHighScore, coll)
 	ctx := context.Background()
-	// (Temporary) skip if the driver does not implement queries.
-	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
-		t.Skip("queries not yet implemented")
-	}
-
 	addQueryDocuments(t, coll)
 
 	// Query filters should have the same behavior when doing string and number
@@ -867,12 +861,11 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			q:    coll.Query().Where("Game", "=", game1).Where("Score", ">=", 50),
 			want: func(h *HighScore) bool { return h.Game == game1 && h.Score >= 50 },
 		},
-		// TODO(jba): add this test after adding support for times as filter values (#1906).
-		// {
-		// 	name: "PlayerTime",
-		// 	q:    coll.Query().Where("Player", "=", "mel").Where("Time", ">", date(4, 1)),
-		// 	want: func(h *HighScore) bool { return h.Player == "mel" && h.Time.After(date(4, 1)) },
-		// },
+		{
+			name: "PlayerTime",
+			q:    coll.Query().Where("Player", "=", "mel").Where("Time", ">", date(4, 1)),
+			want: func(h *HighScore) bool { return h.Player == "mel" && h.Time.After(date(4, 1)) },
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
