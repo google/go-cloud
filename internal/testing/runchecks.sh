@@ -40,7 +40,7 @@ if [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]];
     echo "merge-base empty. Please ensure that the PR is mergeable."
     exit 1
   fi
-  git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
+  git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > "$tmpfile"
 
   # Find out if the diff has any files that are neither:
   #
@@ -50,8 +50,8 @@ if [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]];
   # If there are no such files, grep returns 1 and we don't have to run the
   # tests.
   echo "The following files changed:"
-  cat $tmpfile
-  if grep -vP "(^internal/website|.md$)" $tmpfile; then
+  cat "$tmpfile"
+  if grep -vP "(^internal/website|.md$)" "$tmpfile"; then
     echo "--> Found some non-trivial changes, running tests"
   else
     echo "--> Diff doesn't affect tests; not running them"
@@ -95,7 +95,8 @@ fi
 
 echo
 echo "Ensuring .go files are formatted with gofmt -s..."
-DIFF=$(gofmt -s -d `find . -name '*.go' -type f`)
+mapfile -t go_files < <(find . -name '*.go' -type f)
+DIFF="$(gofmt -s -d "${go_files[@]}")"
 if [ -n "$DIFF" ]; then
   echo "FAIL: please run gofmt -s and commit the result"
   echo "$DIFF";
@@ -114,7 +115,7 @@ function cleanupstaticgo() {
 trap cleanupstaticgo EXIT
 pushd internal/cmd/gocdk/ &> /dev/null
 go run generate_static.go -- "$tmpstaticgo" &> /dev/null
-cat "$tmpstaticgo" | diff ./static.go - && echo "OK" || {
+( diff ./static.go - < "$tmpstaticgo" && echo "OK" ) || {
   echo "FAIL: gocdk static files are out of date; run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
 }
 popd &> /dev/null
@@ -123,7 +124,7 @@ popd &> /dev/null
 if [[ $(go version) == *go1\.12* ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
-  ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - && echo "OK" || {
+  ( ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - && echo "OK" ) || {
     echo "FAIL: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
     # Module behavior may differ across versions.
     echo "using go version 1.12."
@@ -145,7 +146,7 @@ fi
 
 echo
 echo "Ensuring that all examples used in Hugo match what's in source..."
-internal/website/gatherexamples/run.sh | diff internal/website/data/examples.json - > /dev/null && echo "OK" || {
+(internal/website/gatherexamples/run.sh | diff internal/website/data/examples.json - > /dev/null && echo "OK") || {
   echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
   result=1
 }
@@ -166,22 +167,22 @@ wire check ./... && echo "OK" || result=1
 echo
 echo "Running wire diff..."
 # "wire diff" fails with exit code 1 if any diffs are detected.
-wire diff ./... && echo "OK" || {
+( wire diff ./... && echo "OK" ) || {
   echo "FAIL: wire diff found diffs!";
   result=1;
 }
 
 echo
 echo "Running Go tests for sub-modules..."
-sed -e '/^#/d' -e '/^$/d' -e '/^\.$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
+while read -r path || [[ -n "$path" ]]; do
   echo
   echo "Testing sub-module at '$path'..."
   echo "  Go tests:"
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   echo "  wire check:"
-  ( cd "$path" && exec wire check ./... ) && echo "  OK" || result=1
+  ( cd "$path" && exec wire check ./... && echo "  OK" ) || result=1
   echo "  wire diff:"
-  ( cd "$path" && exec wire diff ./... ) && echo "  OK " || (echo "FAIL: wire diff found diffs!" && result=1)
-done
+  ( cd "$path" && exec wire diff ./... && echo "  OK " ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+done < <( sed -e '/^#/d' -e '/^$/d' -e '/^\.$/d' allmodules )
 
 exit $result
