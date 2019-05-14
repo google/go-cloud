@@ -398,7 +398,7 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B", "n": 3}
+	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B", "n": 3.5, "i": 1}
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +408,8 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		"b": nil,
 		"c": "C",
 		"n": docstore.Increment(-1),
-		"m": docstore.Increment(3), // increment of a nonexistent field is like set
+		"i": docstore.Increment(2.5), // incrementing an integer with a float works
+		"m": docstore.Increment(3),   // increment of a nonexistent field is like set
 	}).Get(got).Do(ctx)
 	if errs != nil {
 		t.Fatal(errs)
@@ -418,7 +419,8 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		ds.RevisionField: got[ds.RevisionField],
 		"a":              "X",
 		"c":              "C",
-		"n":              int64(2),
+		"n":              2.5,
+		"i":              3.5,
 		"m":              int64(3),
 	}
 	if !cmp.Equal(got, want) {

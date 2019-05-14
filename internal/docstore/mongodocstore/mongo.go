@@ -437,11 +437,18 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 	var (
 		sets   bson.D
 		unsets bson.D
+		incs   bson.D
 	)
 	for _, m := range mods {
 		key := c.toMongoFieldPath(m.FieldPath)
 		if m.Value == nil {
 			unsets = append(unsets, bson.E{Key: key, Value: ""})
+		} else if inc, ok := m.Value.(driver.IncOp); ok {
+			val, err := encodeValue(inc.Amount)
+			if err != nil {
+				return nil, err
+			}
+			incs = append(incs, bson.E{Key: key, Value: val})
 		} else {
 			val, err := encodeValue(m.Value)
 			if err != nil {
@@ -450,7 +457,7 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 			sets = append(sets, bson.E{Key: key, Value: val})
 		}
 	}
-	if len(sets) == 0 && len(unsets) == 0 {
+	if len(sets) == 0 && len(unsets) == 0 && len(incs) == 0 {
 		// MongoDB returns an error if there are no updates, but docstore treats it
 		// as a no-op.
 		// TODO(jba): remove this, check in docstore.ActionList.Update.
@@ -460,6 +467,9 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: driver.UniqueString()})
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
+	}
+	if len(incs) > 0 {
+		updateDoc["$inc"] = incs
 	}
 	return updateDoc, nil
 }
