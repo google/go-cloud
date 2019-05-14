@@ -48,7 +48,7 @@ func ExampleNewTopic() {
 	defer topic.Shutdown(ctx)
 }
 
-func Example_openSubscription() {
+func Example_openSubscriptionFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#mem
 
 	// import _ "gocloud.dev/pubsub/mempubsub"
@@ -71,7 +71,7 @@ func Example_openSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
-func Example_openTopic() {
+func Example_openTopicFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/publish/#mem
 
 	// import _ "gocloud.dev/pubsub/mempubsub"

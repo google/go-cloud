@@ -36,7 +36,7 @@ using `blob.PrefixedBucket`:
 Alternatively, you can configure the prefix directly in the `blob.OpenBucket`
 URL:
 
-{{< goexample "gocloud.dev/blob/ExampleOpenBucketWithPrefix" >}}
+{{< goexample "gocloud.dev/blob/Example_openFromURLWithPrefix" >}}
 
 ## S3 {#s3}
 
@@ -45,7 +45,7 @@ You can specify the `region` query parameter to ensure your application connects
 to the correct region, but otherwise `blob.OpenBucket` will use the region found
 in the environment variables or your AWS CLI configuration.
 
-{{< goexample "gocloud.dev/blob/s3blob.Example_openBucket" >}}
+{{< goexample "gocloud.dev/blob/s3blob.Example_openBucketFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`s3blob.URLOpener`][].
@@ -57,7 +57,7 @@ Full details about acceptable URLs can be found under the API reference for
 The [`s3blob.OpenBucket`][] constructor opens an [S3][] bucket. You must first
 create an [AWS session][] with the same region as your bucket:
 
-{{< goexample "gocloud.dev/blob/s3blob.Example" >}}
+{{< goexample "gocloud.dev/blob/s3blob.ExampleOpenBucket" >}}
 
 [`s3blob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/s3blob
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
@@ -94,7 +94,7 @@ See [`aws.ConfigFromURLParams`][] for more details on supported URL options for 
 you would see in the `gsutil` CLI. `blob.OpenBucket` will use [Application
 Default Credentials][GCP creds].
 
-{{< goexample "gocloud.dev/blob/gcsblob.Example_openBucket" >}}
+{{< goexample "gocloud.dev/blob/gcsblob.Example_openBucketFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`gcsblob.URLOpener`][].
@@ -110,7 +110,7 @@ Platform credentials][GCP creds]. (You can reuse the same client for any
 other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
 [`gocloud.dev/gcp`][] package to set this up for you.
 
-{{< goexample "gocloud.dev/blob/gcsblob.Example" >}}
+{{< goexample "gocloud.dev/blob/gcsblob.ExampleOpenBucket" >}}
 
 [GCP creds]: https://cloud.google.com/docs/authentication/production
 [`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
@@ -124,7 +124,7 @@ variables `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, and
 `AZURE_STORAGE_SAS_TOKEN` to configure the credentials. `AZURE_STORAGE_ACCOUNT`
 is required, along with one of the other two.
 
-{{< goexample "gocloud.dev/blob/azureblob.Example_openBucket" >}}
+{{< goexample "gocloud.dev/blob/azureblob.Example_openBucketFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`azureblob.URLOpener`][].
@@ -139,7 +139,7 @@ The [`azureblob.OpenBucket`][] constructor opens an Azure Storage container.
 Azure Storage credentials and then create an Azure Storage pipeline before
 you can open a container.
 
-{{< goexample "gocloud.dev/blob/azureblob.Example" >}}
+{{< goexample "gocloud.dev/blob/azureblob.ExampleOpenBucket" >}}
 
 [Azure Storage Block Blobs]: https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs
 [`azureblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket
@@ -182,11 +182,11 @@ defer bucket2.Close()
 
 You can create an in-memory bucket with [`memblob.OpenBucket`][]:
 
-{{< goexample "gocloud.dev/blob/memblob.Example" >}}
+{{< goexample "gocloud.dev/blob/memblob.ExampleOpenBucket" >}}
 
 You can use a local filesystem directory with [`fileblob.OpenBucket`][]:
 
-{{< goexample "gocloud.dev/blob/fileblob.Example" >}}
+{{< goexample "gocloud.dev/blob/fileblob.ExampleOpenBucket" >}}
 
 [`fileblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/fileblob#OpenBucket
 [`memblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/memblob#OpenBucket

@@ -65,7 +65,7 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
-func Example_openTopic() {
+func Example_openTopicFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/publish/#nats
 
 	// import _ "gocloud.dev/pubsub/natspubsub"
@@ -73,7 +73,7 @@ func Example_openTopic() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenTopic creates a *pubsub.Topic from a URL.
+	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 	// This URL will Dial the NATS server at the URL in the environment variable
 	// NATS_SERVER_URL and send messages with subject "example.mysubject".
 	topic, err := pubsub.OpenTopic(ctx, "nats://example.mysubject")
@@ -83,7 +83,7 @@ func Example_openTopic() {
 	defer topic.Shutdown(ctx)
 }
 
-func Example_openSubscription() {
+func Example_openSubscriptionFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#nats
 
 	// import _ "gocloud.dev/pubsub/natspubsub"
@@ -91,7 +91,7 @@ func Example_openSubscription() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenSubscription creates a *pubsub.Subscription from a URL.
+	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will Dial the NATS server at the URL in the environment variable
 	// NATS_SERVER_URL and receive messages with subject "example.mysubject".
 	subscription, err := pubsub.OpenSubscription(ctx,

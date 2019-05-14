@@ -30,7 +30,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func Example() {
+func ExampleNew() {
 	// cfg is our sample config.
 	cfg := MyConfig{Server: "foo.com", Port: 80}
 
@@ -50,7 +50,7 @@ func Example() {
 	// foo.com running on port 80
 }
 
-func Example_bytes() {
+func ExampleNewBytes() {
 
 	// Create a decoder for decoding JSON strings into MyConfig.
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
@@ -71,7 +71,7 @@ func Example_bytes() {
 	// foo.com running on port 80
 }
 
-func Example_error() {
+func ExampleNewError() {
 	// Construct a runtimevar.Variable that always returns errFake.
 	var errFake = errors.New("my error")
 	v := constantvar.NewError(errFake)
@@ -90,8 +90,8 @@ func Example_error() {
 	// runtimevar (code=Unknown): my error
 }
 
-func Example_openVariable() {
-	// OpenVariable creates a *runtimevar.Variable from a URL.
+func Example_openVariableFromURL() {
+	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "constant://?val=hello+world&decoder=string")
 	if err != nil {

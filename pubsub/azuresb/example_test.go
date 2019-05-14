@@ -57,7 +57,7 @@ func ExampleOpenTopic() {
 	defer topic.Shutdown(ctx)
 }
 
-func Example_openTopic() {
+func Example_openTopicFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/publish/#azure
 
 	// import _ "gocloud.dev/pubsub/azuresb"
@@ -65,7 +65,7 @@ func Example_openTopic() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenTopic creates a *pubsub.Topic from a URL.
+	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 	// This URL will open the topic "mytopic" using a connection string
 	// from the environment variable SERVICEBUS_CONNECTION_STRING.
 	topic, err := pubsub.OpenTopic(ctx, "azuresb://mytopic")
@@ -111,7 +111,7 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
-func Example_openSubscription() {
+func Example_openSubscriptionFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#azure
 
 	// import _ "gocloud.dev/pubsub/azuresb"
@@ -119,6 +119,10 @@ func Example_openSubscription() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
+	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will open the subscription "mysubscription" for the topic
+	// "mytopic" using a connection string from the environment variable
+	// SERVICEBUS_CONNECTION_STRING.
 	subscription, err := pubsub.OpenSubscription(ctx,
 		"azuresb://mytopic?subscription=mysubscription")
 	if err != nil {
