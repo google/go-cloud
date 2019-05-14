@@ -2,7 +2,6 @@ module gocloud.dev/samples
 
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.11.0
-	git.apache.org/thrift.git v0.12.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.1.9
 	github.com/Azure/azure-storage-blob-go v0.6.0
 	github.com/aws/aws-sdk-go v1.19.16
