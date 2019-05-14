@@ -345,7 +345,7 @@ func toDriverMods(mods Mods) ([]driver.Mod, error) {
 
 		if inc, ok := v.(driver.IncOp); ok && !isIncNumber(inc.Amount) {
 			return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
-				"Increment amount %v must be an integer or floating-point number", inc.Amount)
+				"Increment amount %v of type %T must be an integer or floating-point number", inc.Amount, inc.Amount)
 		}
 
 		dmods[i] = driver.Mod{FieldPath: fp, Value: v}
