@@ -40,6 +40,9 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 	if err != nil {
 		return nil, err
 	}
+	if err := c.checkPlan(qr); err != nil {
+		return nil, err
+	}
 	it := &documentIterator{
 		qr:    qr,
 		limit: q.Limit,
@@ -50,6 +53,13 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 		return nil, err
 	}
 	return it, nil
+}
+
+func (c *collection) checkPlan(qr *queryRunner) error {
+	if qr.scanIn != nil && qr.scanIn.FilterExpression != nil && !c.opts.AllowScans {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "query requires a table scan; set Options.AllowScans to true to enable")
+	}
+	return nil
 }
 
 func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {

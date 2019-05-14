@@ -1271,7 +1271,8 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 		coll.Query().Where("Score", ">", 50),
 	}
 	for _, q := range qs {
-		if err := st.QueryCheck(q.BeforeQuery(st.BeforeQuery).Get(ctx)); err != nil {
+		iter := q.BeforeQuery(st.BeforeQuery).Get(ctx)
+		if err := st.QueryCheck(iter); err != nil {
 			t.Error(err)
 		}
 	}
