@@ -28,7 +28,7 @@ import (
 	"testing"
 )
 
-func TestPortableAPIDemos(t *testing.T) {
+func TestAddDemo(t *testing.T) {
 	dir, cleanup, err := newTestModule()
 	if err != nil {
 		t.Fatal(err)
@@ -49,20 +49,20 @@ func TestPortableAPIDemos(t *testing.T) {
 
 	// Call the main package run function as if 'add-api' were being called
 	// from the command line for each of the portable APIs.
-	for _, api := range portableAPIs {
-		if err := run(ctx, pctx, []string{"add-api", api.name}, new(bool)); err != nil {
-			t.Fatalf("run add-api error: %+v", err)
+	for _, demo := range allDemos {
+		if err := run(ctx, pctx, []string{"demo", demo.name}, new(bool)); err != nil {
+			t.Fatalf("run demo error: %+v", err)
 		}
 	}
 
 	// Build the binary.
-	exePath := filepath.Join(dir, "add-api-test")
+	exePath := filepath.Join(dir, "add-demo-test")
 	if err := buildForServe(ctx, pctx, dir, exePath); err != nil {
 		t.Fatal("buildForServe(...):", err)
 	}
 
 	// Update the environment to use local implementations for each portable API.
-	pctx.env = pctx.overrideEnv(
+	pctx.env = overrideEnv(pctx.env,
 		"BLOB_BUCKET_URL=mem://",
 		"RUNTIMEVAR_VARIABLE_URL=constant://?val=test-variable-value&decoder=string",
 		"SECRETS_KEEPER_URL=base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=",
@@ -78,7 +78,7 @@ func TestPortableAPIDemos(t *testing.T) {
 	defer endServerProcess(cmd)
 
 	tests := []struct {
-		api           string
+		demo          string
 		description   string
 		urlPaths      []string
 		op            string
@@ -88,7 +88,7 @@ func TestPortableAPIDemos(t *testing.T) {
 	}{
 		// BLOB TESTS.
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "base",
 			urlPaths:    []string{"/demo/blob", "/demo/blob/"},
 			op:          "GET",
@@ -102,7 +102,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "list+view: empty bucket",
 			urlPaths:    []string{"/demo/blob/list", "/demo/blob/view"},
 			op:          "GET",
@@ -112,7 +112,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "write: empty form",
 			urlPaths:    []string{"/demo/blob/write"},
 			op:          "GET",
@@ -122,7 +122,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "write: missing key",
 			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
@@ -135,7 +135,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "write: missing contents",
 			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
@@ -148,7 +148,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "write: top level key",
 			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
@@ -159,7 +159,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "write: subdirectory key",
 			urlPaths:    []string{"/demo/blob/write"},
 			op:          "POST",
@@ -170,7 +170,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "list: no longer empty",
 			urlPaths:    []string{"/demo/blob/list"},
 			op:          "GET",
@@ -181,7 +181,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "list: subdir",
 			urlPaths:    []string{"/demo/blob/list"},
 			urlQuery:    "prefix=subdir%2f",
@@ -192,7 +192,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "view: none selected",
 			urlPaths:    []string{"/demo/blob/view"},
 			op:          "GET",
@@ -204,7 +204,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "view: key1 selected",
 			urlPaths:    []string{"/demo/blob/view"},
 			urlQuery:    "key=key1",
@@ -214,7 +214,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "blob",
+			demo:        "blob",
 			description: "view: key2 selected",
 			urlPaths:    []string{"/demo/blob/view"},
 			urlQuery:    "key=subdir%2fkey2",
@@ -225,7 +225,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		},
 		// RUNTIMEVAR TESTS.
 		{
-			api:         "runtimevar",
+			demo:        "runtimevar",
 			description: "base",
 			urlPaths:    []string{"/demo/runtimevar", "/demo/runtimevar/"},
 			op:          "GET",
@@ -240,7 +240,7 @@ func TestPortableAPIDemos(t *testing.T) {
 		},
 		// SECRETS TESTS.
 		{
-			api:         "secrets",
+			demo:        "secrets",
 			description: "base page shows encrypt form",
 			urlPaths:    []string{"/demo/secrets", "/demo/secrets/", "/demo/secrets/encrypt"},
 			op:          "GET",
@@ -254,7 +254,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "secrets",
+			demo:        "secrets",
 			description: "encrypt works",
 			urlPaths:    []string{"/demo/secrets/encrypt"},
 			op:          "GET",
@@ -270,7 +270,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "secrets",
+			demo:        "secrets",
 			description: "encrypt fails on invalid base64 input",
 			urlPaths:    []string{"/demo/secrets/encrypt"},
 			urlQuery:    "plaintext=this-is-not-base64&base64=true",
@@ -286,7 +286,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "secrets",
+			demo:        "secrets",
 			description: "decrypt empty form",
 			urlPaths:    []string{"/demo/secrets/decrypt"},
 			op:          "GET",
@@ -298,7 +298,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "secrets",
+			demo:        "secrets",
 			description: "decrypt works",
 			urlPaths:    []string{"/demo/secrets/decrypt"},
 			urlQuery:    "ciphertext=6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH%2fRQM6JCc0nnWc0V1Zz1ty%2fWmX8UlJy", // "hello world" encrypted, base64, then url-encoded
@@ -315,7 +315,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "secrets",
+			demo:        "secrets",
 			description: "decrypt works with base64 output",
 			urlPaths:    []string{"/demo/secrets/decrypt"},
 			urlQuery:    "base64=true&ciphertext=6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH%2fRQM6JCc0nnWc0V1Zz1ty%2fWmX8UlJy", // "hello world" encrypted, base64, then url-encoded
@@ -333,7 +333,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			},
 		},
 		{
-			api:         "secrets",
+			demo:        "secrets",
 			description: "decrypt fails on invalid base64 input",
 			urlPaths:    []string{"/demo/secrets/decrypt"},
 			urlQuery:    "ciphertext=this-is-not-base64",
@@ -353,7 +353,7 @@ func TestPortableAPIDemos(t *testing.T) {
 			queryURL := alloc.url(urlPath)
 			queryURL.RawQuery = test.urlQuery
 			u := queryURL.String()
-			t.Run(fmt.Sprintf("%s %s: %s", test.api, test.description, u), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s %s: %s", test.demo, test.description, u), func(t *testing.T) {
 				var resp *http.Response
 				var err error
 				switch test.op {
