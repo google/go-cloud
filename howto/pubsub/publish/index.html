@@ -86,7 +86,7 @@ configuration.</p>
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
 <span class="p">)</span>
 
-<span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:MyTopic&#34;</span>
+<span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:mytopic&#34;</span>
 <span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssns://&#34;</span><span class="o">+</span><span class="nx">topicARN</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
@@ -104,7 +104,7 @@ you may need to manually Base64 decode the message payload.</p>
 
 <h3 id="sns-ctor"> Amazon Simple Notification Service Constructor<a class="anchor" href="#sns-ctor" aria-label="Link to Section">🔗</a></h3>
 
-<p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenTopic"><code>awssnssqs.OpenTopic</code></a> constructor opens an SNS topic. You must first
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSNSTopic"><code>awssnssqs.OpenSNSTopic</code></a> constructor opens an SNS topic. You must first
 create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
@@ -117,7 +117,7 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 
 <span class="c1">// Establish an AWS session.
 </span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-</span><span class="c1">// The region must match the region for &#34;MyTopic&#34;.
+</span><span class="c1">// The region must match the region for the SNS topic &#34;mytopic&#34;.
 </span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
 	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
 <span class="p">})</span>
@@ -126,8 +126,70 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 <span class="p">}</span>
 
 <span class="c1">// Create a *pubsub.Topic.
-</span><span class="c1"></span><span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:MyTopic&#34;</span>
-<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">topicARN</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:mytopic&#34;</span>
+<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSNSTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">topicARN</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="sqs"> Amazon Simple Notification Service<a class="anchor" href="#sqs" aria-label="Link to Section">🔗</a></h2>
+
+<p>The Go CDK can publish to an Amazon <a href="https://aws.amazon.com/sqs/">Simple Queue Service</a> (SQS)
+topic. SQS URLs closely resemble the the queue URL, except the leading
+<code>https://</code> is replaced with <code>awssqs://</code>. You can specify the <code>region</code>
+query parameter to ensure your application connects to the correct region, but
+otherwise <code>pubsub.OpenTopic</code> will use the region found in the environment
+variables or your AWS CLI configuration.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
+<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssqs://&#34;</span><span class="o">+</span><span class="nx">queueURL</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
+<p>SQS messages are restricted to UTF-8 clean payloads. If your application
+sends a message that contains non-UTF-8 bytes, then the Go CDK will
+automatically <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> encode the message and add a <code>base64encoded</code> message
+attribute. When subscribing to messages on the topic through the Go CDK,
+these will be <a href="/howto/pubsub/subscribe/#sqs">automatically Base64 decoded</a>, but if you are
+receiving messages from a topic in a program that does not use the Go CDK,
+you may need to manually Base64 decode the message payload.</p>
+
+<h3 id="sqs-ctor"> Amazon Simple Queue Service Constructor<a class="anchor" href="#sqs-ctor" aria-label="Link to Section">🔗</a></h3>
+
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSQSTopic"><code>awssnssqs.OpenSQSTopic</code></a> constructor opens an SQS topic. You must first
+create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Establish an AWS session.
+</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+</span><span class="c1">// The region must match the region for the SQS queue &#34;myqueue&#34;.
+</span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
+<span class="p">})</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a *pubsub.Topic.
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
+<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSQSTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 

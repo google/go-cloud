@@ -135,10 +135,10 @@ variables or your AWS CLI configuration.</p>
 
 <span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
 </span><span class="c1">// This URL will open the subscription with the URL
-</span><span class="c1">// &#34;https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue&#34;.
+</span><span class="c1">// &#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;.
 </span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
 	<span class="s">&#34;awssqs://sqs.us-east-2.amazonaws.com/123456789012/&#34;</span><span class="o">+</span>
-		<span class="s">&#34;MyQueue?region=us-east-2&#34;</span><span class="p">)</span>
+		<span class="s">&#34;myqueue?region=us-east-2&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -147,7 +147,7 @@ variables or your AWS CLI configuration.</p>
 
 <p>Messages with a <code>base64encoded</code> message attribute will be automatically
 <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> decoded before being returned. See the <a href="https://gocloud.dev/howto/pubsub/publish/#sns">SNS publishing guide</a>
-for more details.</p>
+or the [SQS publshing guide][] for more details.</p>
 
 <h3 id="sqs-ctor"> Amazon Simple Queueing Service Constructor<a class="anchor" href="#sqs-ctor" aria-label="Link to Section">🔗</a></h3>
 
