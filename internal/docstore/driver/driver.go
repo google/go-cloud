@@ -47,6 +47,9 @@ type Collection interface {
 	// RunDeleteQuery deletes every document matched by the query.
 	RunDeleteQuery(context.Context, *Query) error
 
+	// RunUpdateQuery updates every document matched by the query.
+	RunUpdateQuery(context.Context, *Query, []Mod) error
+
 	// QueryPlan returns the plan for the query.
 	QueryPlan(*Query) (string, error)
 

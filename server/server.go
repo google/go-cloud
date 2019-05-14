@@ -76,6 +76,9 @@ type Options struct {
 // New creates a new server. New(nil) is the same as new(Server).
 func New(h http.Handler, opts *Options) *Server {
 	srv := new(Server)
+	if h == nil {
+		h = http.DefaultServeMux
+	}
 	srv.handler = h
 	if opts != nil {
 		srv.reqlog = opts.RequestLogger
@@ -149,10 +152,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	r = r.WithContext(ctx)
-
-	if h.handler == nil {
-		h.handler = http.DefaultServeMux
-	}
 	h.handler.ServeHTTP(w, r)
 }
 

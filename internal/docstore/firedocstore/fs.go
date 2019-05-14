@@ -49,7 +49,7 @@ import (
 	"sync"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
-	ts "github.com/golang/protobuf/ptypes/timestamp"
+	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
@@ -488,44 +488,58 @@ func (c *collection) deleteWrite(doc driver.Document, docName string) (*pb.Write
 // updateWrites returns a slice of writes because we may need two: one for setting
 // and deleting values, the other for transforms.
 func (c *collection) updateWrites(doc driver.Document, docName string, mods []driver.Mod) ([]*pb.Write, error) {
-	pc, err := revisionPrecondition(doc)
+	ts, err := revisionTimestamp(doc)
 	if err != nil {
 		return nil, err
 	}
+	fields, paths, err := processMods(mods)
+	if err != nil {
+		return nil, err
+	}
+	return newUpdateWrites(c.collPath+"/"+docName, ts, fields, paths)
+}
+
+func newUpdateWrites(docPath string, ts *tspb.Timestamp, fields map[string]*pb.Value, paths []string) ([]*pb.Write, error) {
+	pc := preconditionFromTimestamp(ts)
 	// If there is no revision in the document, add a precondition that the document exists.
 	if pc == nil {
 		pc = &pb.Precondition{ConditionType: &pb.Precondition_Exists{Exists: true}}
 	}
-	pdoc := &pb.Document{
-		Name:   c.collPath + "/" + docName,
-		Fields: map[string]*pb.Value{},
+	w := &pb.Write{
+		Operation: &pb.Write_Update{Update: &pb.Document{
+			Name:   docPath,
+			Fields: fields,
+		}},
+		UpdateMask:      &pb.DocumentMask{FieldPaths: paths},
+		CurrentDocument: pc,
 	}
-	// To update a document, we need to send:
-	// - A document with all the fields we want to add or change.
-	// - A mask with the field paths of all the fields we want to add, change or delete.
-	var fps []string // field paths that will go in the mask
+	// For now, we don't have any transforms.
+	return []*pb.Write{w}, nil
+}
+
+// To update a document, we need to send:
+// - A document with all the fields we want to add or change.
+// - A mask with the field paths of all the fields we want to add, change or delete.
+// processMods converts the mods into the fields for the document, and a list of
+// valid Firestore field paths for the mask.
+func processMods(mods []driver.Mod) (fields map[string]*pb.Value, maskPaths []string, err error) {
+	fields = map[string]*pb.Value{}
 	for _, m := range mods {
 		// The field path of every mod belongs in the mask.
-		fps = append(fps, toServiceFieldPath(m.FieldPath))
+		maskPaths = append(maskPaths, toServiceFieldPath(m.FieldPath))
 		// If m.Value is nil, we want to delete it. In that case, we put the field in
 		// the mask but not in the doc.
 		if m.Value != nil {
 			pv, err := encodeValue(m.Value)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			if err := setAtFieldPath(pdoc.Fields, m.FieldPath, pv); err != nil {
-				return nil, err
+			if err := setAtFieldPath(fields, m.FieldPath, pv); err != nil {
+				return nil, nil, err
 			}
 		}
 	}
-	w := &pb.Write{
-		Operation:       &pb.Write_Update{Update: pdoc},
-		UpdateMask:      &pb.DocumentMask{FieldPaths: fps},
-		CurrentDocument: pc,
-	}
-	// For now, we don't have any transforms.
-	return []*pb.Write{w}, nil
+	return fields, maskPaths, nil
 }
 
 func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
@@ -634,6 +648,16 @@ func toServiceFieldPathComponent(key string) string {
 // revisionPrecondition returns a Firestore precondition that asserts that the stored document's
 // revision matches the revision of doc.
 func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
+	rev, err := revisionTimestamp(doc)
+	if err != nil {
+		return nil, err
+	}
+	return preconditionFromTimestamp(rev), nil
+}
+
+// revisionTimestamp extracts the timestamp from the revision field of doc, if there is one.
+// It only returns an error if the revision field is present and does not contain the right type.
+func revisionTimestamp(doc driver.Document) (*tspb.Timestamp, error) {
 	v, err := doc.GetField(docstore.RevisionField)
 	if err != nil { // revision field not present
 		return nil, nil
@@ -641,16 +665,20 @@ func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
 	if v == nil { // revision field is present, but nil
 		return nil, nil
 	}
-	rev, ok := v.(*ts.Timestamp)
+	rev, ok := v.(*tspb.Timestamp)
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
 			"%s field contains wrong type: got %T, want proto Timestamp",
 			docstore.RevisionField, v)
 	}
-	if rev == nil || (rev.Seconds == 0 && rev.Nanos == 0) { // ignore a missing or zero revision
-		return nil, nil
+	return rev, nil
+}
+
+func preconditionFromTimestamp(ts *tspb.Timestamp) *pb.Precondition {
+	if ts == nil || (ts.Seconds == 0 && ts.Nanos == 0) { // ignore a missing or zero revision
+		return nil
 	}
-	return &pb.Precondition{ConditionType: &pb.Precondition_UpdateTime{rev}}, nil
+	return &pb.Precondition{ConditionType: &pb.Precondition_UpdateTime{ts}}
 }
 
 // TODO(jba): make sure we enforce these Firestore commit constraints:

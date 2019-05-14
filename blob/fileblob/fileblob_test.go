@@ -35,17 +35,23 @@ import (
 
 type harness struct {
 	dir       string
+	prefix    string
 	server    *httptest.Server
 	urlSigner URLSigner
 	closer    func()
 }
 
-func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+func newHarness(ctx context.Context, t *testing.T, prefix string) (drivertest.Harness, error) {
 	dir := filepath.Join(os.TempDir(), "go-cloud-fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
 	}
-	h := &harness{dir: dir}
+	if prefix != "" {
+		if err := os.MkdirAll(filepath.Join(dir, prefix), os.ModePerm); err != nil {
+			return nil, err
+		}
+	}
+	h := &harness{dir: dir, prefix: prefix}
 
 	localServer := httptest.NewServer(http.HandlerFunc(h.serveSignedURL))
 	h.server = localServer
@@ -90,7 +96,14 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 	opts := &Options{
 		URLSigner: h.urlSigner,
 	}
-	return openBucket(h.dir, opts)
+	drv, err := openBucket(h.dir, opts)
+	if err != nil {
+		return nil, err
+	}
+	if h.prefix == "" {
+		return drv, nil
+	}
+	return driver.NewPrefixedBucket(drv, h.prefix), nil
 }
 
 func (h *harness) Close() {
@@ -98,7 +111,18 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyPathError{}})
+	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarness(ctx, t, "")
+	}
+	drivertest.RunConformanceTests(t, newHarnessNoPrefix, []drivertest.AsTest{verifyPathError{}})
+}
+
+func TestConformanceWithPrefix(t *testing.T) {
+	const prefix = "some/prefix/dir/"
+	newHarnessWithPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarness(ctx, t, prefix)
+	}
+	drivertest.RunConformanceTests(t, newHarnessWithPrefix, []drivertest.AsTest{verifyPathError{prefix: prefix}})
 }
 
 func BenchmarkFileblob(b *testing.B) {
@@ -139,7 +163,9 @@ func TestNewBucket(t *testing.T) {
 	})
 }
 
-type verifyPathError struct{}
+type verifyPathError struct {
+	prefix string
+}
 
 func (verifyPathError) Name() string { return "verify ErrorAs handles os.PathError" }
 
@@ -152,12 +178,12 @@ func (verifyPathError) AttributesCheck(attrs *blob.Attributes) error { return ni
 func (verifyPathError) ReaderCheck(r *blob.Reader) error             { return nil }
 func (verifyPathError) ListObjectCheck(o *blob.ListObject) error     { return nil }
 
-func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
+func (v verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
 	var perr *os.PathError
 	if !b.ErrorAs(err, &perr) {
 		return errors.New("want ErrorAs to succeed for PathError")
 	}
-	wantSuffix := filepath.Join("go-cloud-fileblob", "key-does-not-exist")
+	wantSuffix := filepath.Join("go-cloud-fileblob", v.prefix, "key-does-not-exist")
 	if got := perr.Path; !strings.HasSuffix(got, wantSuffix) {
 		return fmt.Errorf("got path %q, want suffix %q", got, wantSuffix)
 	}
@@ -165,11 +191,18 @@ func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
+	const subdir = "mysubdir"
 	dir := filepath.Join(os.TempDir(), "fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.MkdirAll(filepath.Join(dir, subdir), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
 	if err := ioutil.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0666); err != nil {
 		t.Fatal(err)
 	}
 	// Convert dir to a URL path, adding a leading "/" if needed on Windows.
@@ -193,6 +226,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file://" + dirpath, "myfile.txt", false, false, "hello world"},
 		// OK, host is ignored.
 		{"file://localhost" + dirpath, "myfile.txt", false, false, "hello world"},
+		// OK, with prefix.
+		{"file://" + dirpath + "?prefix=" + subdir + "/", "myfileinsubdir.txt", false, false, "hello world in subdir"},
 		// Invalid query parameter.
 		{"file://" + dirpath + "?param=value", "myfile.txt", true, false, ""},
 	}
@@ -200,7 +235,6 @@ func TestOpenBucketFromURL(t *testing.T) {
 	ctx := context.Background()
 	for _, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
-		t.Logf("%s", test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}

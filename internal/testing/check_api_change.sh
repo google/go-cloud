@@ -30,28 +30,31 @@ set -euo pipefail
 
 UPSTREAM_BRANCH="${TRAVIS_BRANCH:-master}"
 echo "Checking for incompatible API changes relative to ${UPSTREAM_BRANCH}..."
-echo
 
-go install -mod=readonly golang.org/x/exp/cmd/apidiff
-
+INSTALL_DIR="$(mktemp -d)"
 MASTER_CLONE_DIR="$(mktemp -d)"
 PKGINFO_BRANCH=$(mktemp)
 PKGINFO_MASTER=$(mktemp)
 
 function cleanup() {
+  rm -rf "$INSTALL_DIR"
   rm -rf "$MASTER_CLONE_DIR"
   rm -f "$PKGINFO_BRANCH"
   rm -f "$PKGINFO_MASTER"
 }
 trap cleanup EXIT
 
-git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR"
-echo
+# Move to a temporary directory while installing apidiff to avoid changing
+# the local .mod file.
+( cd "$INSTALL_DIR" && exec go mod init unused )
+( cd "$INSTALL_DIR" && exec go install golang.org/x/exp/cmd/apidiff )
+
+git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 
 incompatible_change_pkgs=()
 PKGS=$(cd "$MASTER_CLONE_DIR"; go list ./... | grep -v internal | grep -v test | grep -v samples)
 for pkg in $PKGS; do
-  echo "Testing ${pkg}..."
+  echo "  Testing ${pkg}..."
 
   # Compute export data for the current branch.
   package_deleted=0
@@ -74,7 +77,6 @@ for pkg in $PKGS; do
     incompatible_change_pkgs+=("$pkg");
   fi
 done
-echo
 
 if [ ${#incompatible_change_pkgs[@]} -eq 0 ]; then
   # No incompatible changes, we are good.
