@@ -81,7 +81,7 @@ func launch(ctx context.Context, pctx *processContext, args []string) error {
 	// Launch the application.
 	launchURL, err := launcher.Launch(ctx, &LaunchInput{
 		DockerImage: *dockerImage,
-		Specifier:   LaunchSpecifier(tfOutput["launch_specifier"].mapValue()),
+		Specifier:   tfOutput["launch_specifier"].mapValue(),
 		// TODO(light): Pass environment variables from tfOutput into env.
 	})
 	if err != nil {
@@ -111,7 +111,7 @@ type LaunchInput struct {
 	Env []string
 
 	// specifier is the set of arguments passed from a biome's Terraform module.
-	Specifier LaunchSpecifier
+	Specifier map[string]interface{}
 }
 
 // newLauncher creates the launcher for the given name.
@@ -138,7 +138,7 @@ type localLauncher struct {
 
 // Launch implements Launcher.Launch.
 func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*url.URL, error) {
-	hostPort := input.Specifier.IntValue("host_port")
+	hostPort := specifierIntValue(input.Specifier, "host_port")
 	if hostPort == 0 {
 		hostPort = 8080
 	} else if hostPort < 0 || hostPort > 65535 {
@@ -187,18 +187,8 @@ func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*ur
 	return serveURL, nil
 }
 
-// LaunchSpecifier is the set of arguments passed from a biome's Terraform
-// module to the biome's launcher.
-type LaunchSpecifier map[string]interface{}
-
-// StringValue returns the specifier's value for a key if it is a string.
-func (spec LaunchSpecifier) StringValue(key string) string {
-	v, _ := spec[key].(string)
-	return v
-}
-
-// IntValue returns the specifier's value for a key if it is an integer.
-func (spec LaunchSpecifier) IntValue(key string) int {
+// specifierIntValue returns the specifier's value for a key if it is an integer.
+func specifierIntValue(spec map[string]interface{}, key string) int {
 	switch v := spec[key].(type) {
 	case float64:
 		return int(v)
