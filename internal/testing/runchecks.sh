@@ -74,7 +74,7 @@ fi
 # because it is slow, and codecov will only save the last one anyway.
 result=0
 if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
-  echo "Running Go tests (with coverage)..."
+  echo "Running Go tests for root module (with coverage)..."
   go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
@@ -83,7 +83,7 @@ if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
     bash <(curl -s https://codecov.io/bash)
   fi
 else
-  echo "Running Go tests..."
+  echo "Running Go tests for root module..."
   go test -mod=readonly -race ./... || result=1
 fi
 
