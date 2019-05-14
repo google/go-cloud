@@ -397,6 +397,7 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
+	t.Skip("wait for dynamodocstore implementation of increment")
 	ctx := context.Background()
 	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B", "n": 3.5, "i": 1}
 	if err := coll.Put(ctx, doc); err != nil {
