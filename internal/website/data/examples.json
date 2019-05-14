@@ -19,6 +19,14 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n)",
 		"code": "// Create a cancelable context from the existing context.\nwriteCtx, cancelWrite := context.WithCancel(ctx)\ndefer cancelWrite()\n\n// Open the key \"foo.txt\" for writing with the default options.\nw, err := bucket.NewWriter(writeCtx, \"foo.txt\", nil)\nif err != nil {\n\treturn err\n}\n\n// Assume some writes happened and we encountered an error.\n// Now we want to abort the write.\n\nif err != nil {\n\t// First cancel the context.\n\tcancelWrite()\n\t// You must still close the writer to avoid leaking resources.\n\tw.Close()\n}"
 	},
+	"gocloud.dev/blob.ExampleOpenBucketWithPrefix": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "// Connect to a bucket using a URL, using the \"prefix\" query parameter to\n// target a subfolder in the bucket.\n// The prefix should end with \"/\", so that the resulting bucket operates\n// in a subfolder.\nb, err := blob.OpenBucket(ctx, \"mem://?prefix=a/subfolder/\")\nif err != nil {\n\treturn err\n}\ndefer b.Close()\n\n// Bucket operations on \u003ckey\u003e will be translated to \"a/subfolder/\u003ckey\u003e\"."
+	},
+	"gocloud.dev/blob.ExamplePrefixedBucket": {
+		"imports": "import \"gocloud.dev/blob\"",
+		"code": "// Wrap the bucket using blob.PrefixedBucket.\n// The prefix should end with \"/\", so that the resulting bucket operates\n// in a subfolder.\nbucket = blob.PrefixedBucket(bucket, \"a/subfolder/\")\n\n// The original bucket is no longer usable; it has been closed.\n// The wrapped bucket should be closed when done.\ndefer bucket.Close()\n\n// Bucket operations on \u003ckey\u003e will be translated to \"a/subfolder/\u003ckey\u003e\"."
+	},
 	"gocloud.dev/blob/azureblob.Example": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/Azure/azure-storage-blob-go/azblob\"\n\t\"gocloud.dev/blob/azureblob\"\n)",
 		"code": "const (\n\t// Fill in with your Azure Storage Account and Access Key.\n\taccountName azureblob.AccountName = \"my-account\"\n\taccountKey  azureblob.AccountKey  = \"my-account-key\"\n\t// Fill in with the storage container to access.\n\tcontainerName = \"my-container\"\n)\n\n// Create a credentials object.\ncredential, err := azureblob.NewCredential(accountName, accountKey)\nif err != nil {\n\treturn err\n}\n\n// Create a Pipeline, using whatever PipelineOptions you need.\npipeline := azureblob.NewPipeline(credential, azblob.PipelineOptions{})\n\n// Create a *blob.Bucket.\n// The credential Option is required if you're going to use blob.SignedURL.\nbucket, err := azureblob.OpenBucket(ctx, pipeline, accountName, containerName,\n\t\u0026azureblob.Options{Credential: credential})\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"

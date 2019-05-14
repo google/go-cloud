@@ -416,6 +416,24 @@ func ExampleListOptions() {
 	}
 }
 
+func ExamplePrefixedBucket() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#prefix
+
+	// Variables set up elsewhere:
+	var bucket *blob.Bucket
+
+	// Wrap the bucket using blob.PrefixedBucket.
+	// The prefix should end with "/", so that the resulting bucket operates
+	// in a subfolder.
+	bucket = blob.PrefixedBucket(bucket, "a/subfolder/")
+
+	// The original bucket is no longer usable; it has been closed.
+	// The wrapped bucket should be closed when done.
+	defer bucket.Close()
+
+	// Bucket operations on <key> will be translated to "a/subfolder/<key>".
+}
+
 func ExampleReader_As() {
 	// This example is specific to the gcsblob implementation; it demonstrates
 	// access to the underlying cloud.google.com/go/storage.Reader type.
