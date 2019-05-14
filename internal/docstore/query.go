@@ -126,6 +126,22 @@ func (q *Query) Delete(ctx context.Context) error {
 	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
 }
 
+// Update updates all the documents specified by the query.
+// It is an error if the query has a limit.
+func (q *Query) Update(ctx context.Context, mods Mods) error {
+	if err := q.init(nil); err != nil {
+		return err
+	}
+	if q.dq.Limit > 0 {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "update queries cannot have a limit")
+	}
+	dmods, err := toDriverMods(mods)
+	if err != nil {
+		return err
+	}
+	return q.coll.driver.RunUpdateQuery(ctx, q.dq, dmods)
+}
+
 func (q *Query) init(fps []FieldPath) error {
 	if q.err != nil {
 		return q.err

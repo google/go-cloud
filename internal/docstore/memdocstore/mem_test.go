@@ -47,6 +47,33 @@ func TestConformance(t *testing.T) {
 
 type docmap = map[string]interface{}
 
+func TestUpdateEncodesValues(t *testing.T) {
+	// Check that update encodes the values in mods.
+	ctx := context.Background()
+	dc, err := newCollection(drivertest.KeyField, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	doc := docmap{drivertest.KeyField: "testUpdateEncodes", "a": 1}
+	if err := coll.Actions().Put(doc).Update(doc, docstore.Mods{"a": 2}).Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
+	// This Get will fail if the int value 2 in the above mod was not encoded to an int64.
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	want := docmap{
+		drivertest.KeyField:    doc[drivertest.KeyField],
+		"a":                    int64(2),
+		docstore.RevisionField: got[docstore.RevisionField],
+	}
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
 func TestUpdateAtomic(t *testing.T) {
 	// Check that update is atomic.
 	ctx := context.Background()
