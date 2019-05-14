@@ -46,6 +46,47 @@ import&rdquo;</a> the driver package to link it in. See the
 <a href="https://gocloud.dev/concepts/urls/">documentation on URLs</a> for more details. This guide will show how to use
 both forms for each storage provider.</p>
 
+<h3 id="prefix"> Prefixed Buckets<a class="anchor" href="#prefix" aria-label="Link to Section">🔗</a></h3>
+
+<p>You can wrap a <code>*blob.Bucket</code> to always operate on a subfolder of the bucket
+using <code>blob.PrefixedBucket</code>:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/blob&#34;</span>
+
+<span class="c1">// Wrap the bucket using blob.PrefixedBucket.
+</span><span class="c1">// The prefix should end with &#34;/&#34;, so that the resulting bucket operates
+</span><span class="c1">// in a subfolder.
+</span><span class="c1"></span><span class="nx">bucket</span> <span class="p">=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">PrefixedBucket</span><span class="p">(</span><span class="nx">bucket</span><span class="p">,</span> <span class="s">&#34;a/subfolder/&#34;</span><span class="p">)</span>
+
+<span class="c1">// The original bucket is no longer usable; it has been closed.
+</span><span class="c1">// The wrapped bucket should be closed when done.
+</span><span class="c1"></span><span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Bucket operations on &lt;key&gt; will be translated to &#34;a/subfolder/&lt;key&gt;&#34;.
+</span></code></pre></div>
+
+<p>Alternatively, you can configure the prefix directly in the <code>blob.OpenBucket</code>
+URL:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Connect to a bucket using a URL, using the &#34;prefix&#34; query parameter to
+</span><span class="c1">// target a subfolder in the bucket.
+</span><span class="c1">// The prefix should end with &#34;/&#34;, so that the resulting bucket operates
+</span><span class="c1">// in a subfolder.
+</span><span class="c1"></span><span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://?prefix=a/subfolder/&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Bucket operations on &lt;key&gt; will be translated to &#34;a/subfolder/&lt;key&gt;&#34;.
+</span></code></pre></div>
+
 <h2 id="s3"> S3<a class="anchor" href="#s3" aria-label="Link to Section">🔗</a></h2>
 
 <p>S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
