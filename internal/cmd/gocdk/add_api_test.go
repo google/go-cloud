@@ -64,6 +64,7 @@ func TestPortableAPIDemos(t *testing.T) {
 	// Update the environment to use local implementations for each portable API.
 	pctx.env = pctx.overrideEnv(
 		"BLOB_BUCKET_URL=mem://",
+		"RUNTIMEVAR_VARIABLE_URL=constant://?val=test-variable-value&decoder=string",
 		"SECRETS_KEEPER_URL=base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=",
 	)
 
@@ -220,6 +221,21 @@ func TestPortableAPIDemos(t *testing.T) {
 			op:          "GET",
 			stringsToFind: []string{
 				"key2 contents",
+			},
+		},
+		// RUNTIMEVAR TESTS.
+		{
+			api:         "runtimevar",
+			description: "base",
+			urlPaths:    []string{"/demo/runtimevar", "/demo/runtimevar/"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/runtimevar demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/runtimevar",
+				"The current value of the variable",
+				"test-variable-value",
+				"It was last modified",
 			},
 		},
 		// SECRETS TESTS.

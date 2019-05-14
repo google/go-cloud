@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -195,10 +196,20 @@ func (l *ActionList) Unordered() *ActionList {
 // Mods is a map from field paths to modifications.
 // At present, a modification is one of:
 // - nil, to delete the field
+// - an Increment value, to add a number to the field
 // - any other value, to set the field to that value
-// TODO(jba): add other kinds of modification
 // See ActionList.Update.
 type Mods map[FieldPath]interface{}
+
+// Increment returns a modification that results in a field being incremented. It
+// should only be used as a value in a Mods map, like so:
+//
+//    docstore.Mods{"count", docstore.Increment(1)}
+//
+// The amount must be an integer or floating-point value.
+func Increment(amount interface{}) interface{} {
+	return driver.IncOp{amount}
+}
 
 // An ActionListError is returned by ActionList.Do. It contains all the errors
 // encountered while executing the ActionList, and the positions of the corresponding
@@ -331,9 +342,28 @@ func toDriverMods(mods Mods) ([]driver.Mod, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if inc, ok := v.(driver.IncOp); ok && !isIncNumber(inc.Amount) {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
+				"Increment amount %v of type %T must be an integer or floating-point number", inc.Amount, inc.Amount)
+		}
+
 		dmods[i] = driver.Mod{FieldPath: fp, Value: v}
 	}
 	return dmods, nil
+}
+
+func isIncNumber(x interface{}) bool {
+	switch reflect.TypeOf(x).Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	case reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
 }
 
 // Create is a convenience for building and running a single-element action list.

@@ -24,10 +24,12 @@ import (
 	"gocloud.dev/blob/drivertest"
 )
 
-type harness struct{}
+type harness struct {
+	prefix string
+}
 
-func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return &harness{}, nil
+func newHarness(ctx context.Context, t *testing.T, prefix string) (drivertest.Harness, error) {
+	return &harness{prefix: prefix}, nil
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -35,13 +37,28 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(nil), nil
+	drv := openBucket(nil)
+	if h.prefix == "" {
+		return drv, nil
+	}
+	return driver.NewPrefixedBucket(drv, h.prefix), nil
 }
 
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarness(ctx, t, "")
+	}
+	drivertest.RunConformanceTests(t, newHarnessNoPrefix, nil)
+}
+
+func TestConformanceWithPrefix(t *testing.T) {
+	const prefix = "some/prefix/dir/"
+	newHarnessWithPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarness(ctx, t, prefix)
+	}
+	drivertest.RunConformanceTests(t, newHarnessWithPrefix, nil)
 }
 
 func BenchmarkMemblob(b *testing.B) {
@@ -55,6 +72,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"mem://", false},
+		// With prefix.
+		{"mem://?prefix=foo/bar", false},
 		// Invalid parameter.
 		{"mem://?param=value", true},
 	}

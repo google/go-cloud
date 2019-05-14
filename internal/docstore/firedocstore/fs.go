@@ -492,29 +492,44 @@ func (c *collection) updateWrites(doc driver.Document, docName string, mods []dr
 	if err != nil {
 		return nil, err
 	}
-	fields, paths, err := processMods(mods)
+	fields, paths, transforms, err := processMods(mods)
 	if err != nil {
 		return nil, err
 	}
-	return newUpdateWrites(c.collPath+"/"+docName, ts, fields, paths)
+	return newUpdateWrites(c.collPath+"/"+docName, ts, fields, paths, transforms)
 }
 
-func newUpdateWrites(docPath string, ts *tspb.Timestamp, fields map[string]*pb.Value, paths []string) ([]*pb.Write, error) {
+func newUpdateWrites(docPath string, ts *tspb.Timestamp, fields map[string]*pb.Value, paths []string, transforms []*pb.DocumentTransform_FieldTransform) ([]*pb.Write, error) {
 	pc := preconditionFromTimestamp(ts)
 	// If there is no revision in the document, add a precondition that the document exists.
 	if pc == nil {
 		pc = &pb.Precondition{ConditionType: &pb.Precondition_Exists{Exists: true}}
 	}
-	w := &pb.Write{
-		Operation: &pb.Write_Update{Update: &pb.Document{
-			Name:   docPath,
-			Fields: fields,
-		}},
-		UpdateMask:      &pb.DocumentMask{FieldPaths: paths},
-		CurrentDocument: pc,
+	var ws []*pb.Write
+	if len(fields) > 0 || len(paths) > 0 {
+		ws = []*pb.Write{{
+			Operation: &pb.Write_Update{Update: &pb.Document{
+				Name:   docPath,
+				Fields: fields,
+			}},
+			UpdateMask:      &pb.DocumentMask{FieldPaths: paths},
+			CurrentDocument: pc,
+		}}
+		pc = nil // If the precondition is in the write, we don't need it in the transform.
 	}
-	// For now, we don't have any transforms.
-	return []*pb.Write{w}, nil
+	// TODO(jba): test an increment-only update.
+	if len(transforms) > 0 {
+		ws = append(ws, &pb.Write{
+			Operation: &pb.Write_Transform{
+				Transform: &pb.DocumentTransform{
+					Document:        docPath,
+					FieldTransforms: transforms,
+				},
+			},
+			CurrentDocument: pc,
+		})
+	}
+	return ws, nil
 }
 
 // To update a document, we need to send:
@@ -522,24 +537,38 @@ func newUpdateWrites(docPath string, ts *tspb.Timestamp, fields map[string]*pb.V
 // - A mask with the field paths of all the fields we want to add, change or delete.
 // processMods converts the mods into the fields for the document, and a list of
 // valid Firestore field paths for the mask.
-func processMods(mods []driver.Mod) (fields map[string]*pb.Value, maskPaths []string, err error) {
+func processMods(mods []driver.Mod) (fields map[string]*pb.Value, maskPaths []string, transforms []*pb.DocumentTransform_FieldTransform, err error) {
 	fields = map[string]*pb.Value{}
 	for _, m := range mods {
-		// The field path of every mod belongs in the mask.
-		maskPaths = append(maskPaths, toServiceFieldPath(m.FieldPath))
+		sfp := toServiceFieldPath(m.FieldPath)
 		// If m.Value is nil, we want to delete it. In that case, we put the field in
 		// the mask but not in the doc.
-		if m.Value != nil {
-			pv, err := encodeValue(m.Value)
+		if inc, ok := m.Value.(driver.IncOp); ok {
+			pv, err := encodeValue(inc.Amount)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
-			if err := setAtFieldPath(fields, m.FieldPath, pv); err != nil {
-				return nil, nil, err
+			transforms = append(transforms, &pb.DocumentTransform_FieldTransform{
+				FieldPath: sfp,
+				TransformType: &pb.DocumentTransform_FieldTransform_Increment{
+					Increment: pv,
+				},
+			})
+		} else {
+			// The field path of every other mod belongs in the mask.
+			maskPaths = append(maskPaths, sfp)
+			if m.Value != nil {
+				pv, err := encodeValue(m.Value)
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				if err := setAtFieldPath(fields, m.FieldPath, pv); err != nil {
+					return nil, nil, nil, err
+				}
 			}
 		}
 	}
-	return fields, maskPaths, nil
+	return fields, maskPaths, transforms, nil
 }
 
 func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {

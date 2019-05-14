@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -68,11 +67,11 @@ func TestApply(t *testing.T) {
 		// we configured. Terraform output fails if 'terraform init' was not called.
 		// It also fails if 'terraform apply' has never been run, as there will be no
 		// terraform state file (terraform.tfstate).
-		outputs, err := tfReadOutput(findBiomeDir(dir, biomeName))
+		outputs, err := tfReadOutput(ctx, findBiomeDir(dir, biomeName), os.Environ())
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := outputs["greeting"].Value.(string); got != wantGreeting {
+		if got := outputs["greeting"].stringValue(); got != wantGreeting {
 			t.Errorf("greeting = %q; want %q", got, wantGreeting)
 		}
 	})
@@ -102,27 +101,4 @@ provider "random" {
 		return err
 	}
 	return nil
-}
-
-// tfReadOutput runs `terraform output` on the given directory and returns
-// the parsed result.
-func tfReadOutput(dir string) (map[string]tfOutput, error) {
-	c := exec.Command("terraform", "output", "-json")
-	c.Dir = dir
-	data, err := c.Output()
-	if err != nil {
-		return nil, fmt.Errorf("read terraform output: %v", err)
-	}
-	var parsed map[string]tfOutput
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return nil, fmt.Errorf("read terraform output: %v", err)
-	}
-	return parsed, nil
-}
-
-// tfOutput describes a single output value.
-type tfOutput struct {
-	Type      string      `json:"type"` // one of "string", "list", or "map"
-	Sensitive bool        `json:"sensitive"`
-	Value     interface{} `json:"value"`
 }
