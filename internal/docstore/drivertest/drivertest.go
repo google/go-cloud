@@ -365,6 +365,8 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Error("Get with field paths:\n", diff)
 	}
+
+	// TODO(jba): add a NotFound test for nonexistent documents
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -1124,8 +1126,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	if err != nil && gcerrors.Code(err.(docstore.ActionListError)[0].Err) == gcerrors.Unimplemented {
 		t.Skip("unordered actions not yet implemented")
 	}
-
-	t.Skip("waiting for fix to rpcreplay")
 
 	defer cleanUpTable(t, newDocmap, coll)
 
