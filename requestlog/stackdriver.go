@@ -36,6 +36,7 @@ type StackdriverLogger struct {
 }
 
 // NewStackdriverLogger returns a new logger that writes to w.
+// A nil onErr is treated the same as func(error) {}.
 func NewStackdriverLogger(w io.Writer, onErr func(error)) *StackdriverLogger {
 	l := &StackdriverLogger{
 		w:     w,
@@ -48,7 +49,7 @@ func NewStackdriverLogger(w io.Writer, onErr func(error)) *StackdriverLogger {
 // Log writes a record to its writer.  Multiple concurrent calls will
 // produce sequential writes to its writer.
 func (l *StackdriverLogger) Log(ent *Entry) {
-	if err := l.log(ent); err != nil {
+	if err := l.log(ent); err != nil && l.onErr != nil {
 		l.onErr(err)
 	}
 }
