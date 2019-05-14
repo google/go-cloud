@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/docstore/driver"
 )
 
 var (
@@ -130,4 +131,34 @@ func (o *fakeOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*Collec
 	}
 	o.u = u
 	return nil, nil
+}
+
+func TestToDriverMods(t *testing.T) {
+	for _, test := range []struct {
+		mods    Mods
+		want    []driver.Mod
+		wantErr bool
+	}{
+		{
+			Mods{"a": 1, "b": nil},
+			[]driver.Mod{{[]string{"a"}, 1}, {[]string{"b"}, nil}},
+			false,
+		},
+		{
+			Mods{"a.b": 1, "b.c": nil},
+			[]driver.Mod{{[]string{"a", "b"}, 1}, {[]string{"b", "c"}, nil}},
+			false,
+		},
+		// prefixes are not allowed
+		{Mods{"a.b.c": 1, "a.b": 2, "a.b+c": 3}, nil, true},
+	} {
+		got, gotErr := toDriverMods(test.mods)
+		if test.wantErr {
+			if gotErr == nil {
+				t.Errorf("%v: got nil, want error", test.mods)
+			}
+		} else if !cmp.Equal(got, test.want) {
+			t.Errorf("%v: got %v, want %v", test.mods, got, test.want)
+		}
+	}
 }
