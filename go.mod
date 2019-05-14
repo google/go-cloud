@@ -46,7 +46,7 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/google/subcommands v1.0.1
 	github.com/google/uuid v1.1.1
-	github.com/google/wire v0.2.1
+	github.com/google/wire v0.2.2
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/gorilla/mux v1.7.1
 	github.com/gorilla/websocket v1.4.0 // indirect
