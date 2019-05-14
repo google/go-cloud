@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -341,9 +342,28 @@ func toDriverMods(mods Mods) ([]driver.Mod, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if inc, ok := v.(driver.IncOp); ok && !isIncNumber(inc.Amount) {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
+				"Increment amount %v must be an integer or floating-point number", inc.Amount)
+		}
+
 		dmods[i] = driver.Mod{FieldPath: fp, Value: v}
 	}
 	return dmods, nil
+}
+
+func isIncNumber(x interface{}) bool {
+	switch reflect.TypeOf(x).Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	case reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
 }
 
 // Create is a convenience for building and running a single-element action list.

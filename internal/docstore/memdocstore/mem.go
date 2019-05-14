@@ -247,16 +247,24 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 	gmods := make([]guaranteedMod, len(mods))
 	var err error
 	for i, mod := range mods {
-		// Check that the field path is valid. That is, whether every component
-		// of the path but the last refers to a map, and no component along the way is
-		// nil.
-		if gmods[i].parentMap, err = getParentMap(doc, mod.FieldPath, false); err != nil {
+		gmod := &gmods[i]
+		// Check that the field path is valid. That is, every component of the path
+		// but the last refers to a map, and no component along the way is nil.
+		if gmod.parentMap, err = getParentMap(doc, mod.FieldPath, false); err != nil {
 			return err
 		}
-		gmods[i].key = mod.FieldPath[len(mod.FieldPath)-1]
-		// Make sure the value encodes sucessfully.
-		if mod.Value != nil {
-			if gmods[i].encodedValue, err = encodeValue(mod.Value); err != nil {
+		gmod.key = mod.FieldPath[len(mod.FieldPath)-1]
+		if inc, ok := mod.Value.(driver.IncOp); ok {
+			amt, err := encodeValue(inc.Amount)
+			if err != nil {
+				return err
+			}
+			if gmod.encodedValue, err = add(gmod.parentMap[gmod.key], amt); err != nil {
+				return err
+			}
+		} else if mod.Value != nil {
+			// Make sure the value encodes sucessfully.
+			if gmod.encodedValue, err = encodeValue(mod.Value); err != nil {
 				return err
 			}
 		}
@@ -273,6 +281,39 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 		c.changeRevision(doc)
 	}
 	return nil
+}
+
+// Add two encoded numbers.
+// Since they're encoded, they are either int64 or float64.
+// Allow adding a float to an int, producing a float.
+// TODO(jba): see how other providers handle that.
+func add(x, y interface{}) (interface{}, error) {
+	if x == nil {
+		return y, nil
+	}
+	switch x := x.(type) {
+	case int64:
+		switch y := y.(type) {
+		case int64:
+			return x + y, nil
+		case float64:
+			return float64(x) + y, nil
+		default:
+			// This shouldn't happen because it should be checked by docstore.
+			panic("bad increment amount")
+		}
+	case float64:
+		switch y := y.(type) {
+		case int64:
+			return x + float64(y), nil
+		case float64:
+			return x + y, nil
+		default:
+			panic("bad increment amount")
+		}
+	default:
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "value %v being incremented not int64 or float64", x)
+	}
 }
 
 func (c *collection) key(doc driver.Document) interface{} {
