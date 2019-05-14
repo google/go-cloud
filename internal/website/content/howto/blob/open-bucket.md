@@ -31,12 +31,12 @@ both forms for each storage provider.
 You can wrap a `*blob.Bucket` to always operate on a subfolder of the bucket
 using `blob.PrefixedBucket`:
 
-{{< goexample "gocloud.dev/blob/ExamplePrefixedBucket" >}}
+{{< goexample "gocloud.dev/blob.ExamplePrefixedBucket" >}}
 
 Alternatively, you can configure the prefix directly in the `blob.OpenBucket`
 URL:
 
-{{< goexample "gocloud.dev/blob/ExampleOpenBucketWithPrefix" >}}
+{{< goexample "gocloud.dev/blob.ExampleOpenBucketWithPrefix" >}}
 
 ## S3 {#s3}
 
