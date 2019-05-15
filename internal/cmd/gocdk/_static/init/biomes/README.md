@@ -1,2 +1,2 @@
-This directory contains the project's biomes, the unit of
-configuration and provisioning in the Go CDK.
+This directory contains the project's biomes, gocdk's unit of configuration and
+provisioning.

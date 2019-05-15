@@ -1,5 +1,4 @@
-# DO NOT REMOVE! The following line informs the Go CDK of the Docker image's
-# name without any version information.
+# DO NOT REMOVE! The following line informs gocdk of the Docker image's name.
 # gocdk-image: {{.ProjectName}}
 
 # Step 1: Build Go binary.
