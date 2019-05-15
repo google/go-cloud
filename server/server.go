@@ -73,10 +73,9 @@ type Options struct {
 	Driver driver.Server
 }
 
-// New creates a new server. New(nil) is the same as new(Server).
+// New creates a new server. New(nil, nil) is the same as new(Server).
 func New(h http.Handler, opts *Options) *Server {
-	srv := new(Server)
-	srv.handler = h
+	srv := &Server{handler: h}
 	if opts != nil {
 		srv.reqlog = opts.RequestLogger
 		srv.te = opts.TraceExporter
@@ -99,6 +98,9 @@ func (srv *Server) init() {
 		}
 		if srv.driver == nil {
 			srv.driver = NewDefaultDriver()
+		}
+		if srv.handler == nil {
+			srv.handler = http.DefaultServeMux
 		}
 	})
 }
@@ -149,10 +151,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	r = r.WithContext(ctx)
-
-	if h.handler == nil {
-		h.handler = http.DefaultServeMux
-	}
 	h.handler.ServeHTTP(w, r)
 }
 

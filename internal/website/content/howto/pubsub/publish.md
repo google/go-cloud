@@ -45,7 +45,7 @@ application connects to the correct region, but otherwise `pubsub.OpenTopic`
 will use the region found in the environment variables or your AWS CLI
 configuration.
 
-{{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openTopic" >}}
+{{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSNSTopicFromURL" >}}
 
 SNS messages are restricted to UTF-8 clean payloads. If your application
 sends a message that contains non-UTF-8 bytes, then the Go CDK will
@@ -61,12 +61,45 @@ you may need to manually Base64 decode the message payload.
 
 ### Amazon Simple Notification Service Constructor {#sns-ctor}
 
-The [`awssnssqs.OpenTopic`][] constructor opens an SNS topic. You must first
+The [`awssnssqs.OpenSNSTopic`][] constructor opens an SNS topic. You must first
 create an [AWS session][] with the same region as your topic:
 
-{{< goexample "gocloud.dev/pubsub/awssnssqs.ExampleOpenTopic" >}}
+{{< goexample "gocloud.dev/pubsub/awssnssqs.ExampleOpenSNSTopic" >}}
 
-[`awssnssqs.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenTopic
+[`awssnssqs.OpenSNSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSNSTopic
+[AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+
+## Amazon Simple Notification Service {#sqs}
+
+The Go CDK can publish to an Amazon [Simple Queue Service][SQS] (SQS)
+topic. SQS URLs closely resemble the the queue URL, except the leading
+`https://` is replaced with `awssqs://`. You can specify the `region`
+query parameter to ensure your application connects to the correct region, but
+otherwise `pubsub.OpenTopic` will use the region found in the environment
+variables or your AWS CLI configuration.
+
+{{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSQSTopicFromURL" >}}
+
+SQS messages are restricted to UTF-8 clean payloads. If your application
+sends a message that contains non-UTF-8 bytes, then the Go CDK will
+automatically [Base64][] encode the message and add a `base64encoded` message
+attribute. When subscribing to messages on the topic through the Go CDK,
+these will be [automatically Base64 decoded][SQS Subscribe], but if you are
+receiving messages from a topic in a program that does not use the Go CDK,
+you may need to manually Base64 decode the message payload.
+
+[Base64]: https://en.wikipedia.org/wiki/Base64
+[SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
+[SQS]: https://aws.amazon.com/sqs/
+
+### Amazon Simple Queue Service Constructor {#sqs-ctor}
+
+The [`awssnssqs.OpenSQSTopic`][] constructor opens an SQS topic. You must first
+create an [AWS session][] with the same region as your topic:
+
+{{< goexample "gocloud.dev/pubsub/awssnssqs.ExampleOpenSQSTopic" >}}
+
+[`awssnssqs.OpenSQSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSQSTopic
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 ## Google Cloud Pub/Sub {#gcp}

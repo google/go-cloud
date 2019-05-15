@@ -30,7 +30,7 @@ func Example() {
 		fmt.Println(err)
 		return
 	}
-	coll, err := dynamodocstore.OpenCollection(dynamodb.New(sess), "docstore-test", "_id", "")
+	coll, err := dynamodocstore.OpenCollection(dynamodb.New(sess), "docstore-test", "_id", "", nil)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -63,11 +63,11 @@ func (h *harness) Close() {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "")
+	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", nil)
 }
 
 func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player")
+	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{AllowScans: true})
 }
 
 type verifyAs struct{}
@@ -156,6 +156,8 @@ func TestProcessURL(t *testing.T) {
 		{"dynamodb://docstore-test?partition_key=_kind&sort_key=_id", false},
 		// OK, overriding region.
 		{"dynamodb://docstore-test?partition_key=_kind&region=" + region, false},
+		// OK, allow_scans.
+		{"dynamodb://docstore-test?partition_key=_kind&allow_scans=true" + region, false},
 		// Unknown parameter.
 		{"dynamodb://docstore-test?partition_key=_kind&param=value", true},
 		// With path.
@@ -174,7 +176,7 @@ func TestProcessURL(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, _, _, _, err = o.processURL(u)
+		_, _, _, _, _, err = o.processURL(u)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}

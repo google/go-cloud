@@ -199,7 +199,7 @@ func (it *DocumentIterator) Stop() {
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (it *DocumentIterator) As(i interface{}) bool {
-	if i == nil {
+	if i == nil || it.iter == nil {
 		return false
 	}
 	return it.iter.As(i)

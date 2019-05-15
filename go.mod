@@ -44,11 +44,9 @@ require (
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-cmp v0.3.0
-	github.com/google/subcommands v1.0.1
 	github.com/google/uuid v1.1.1
-	github.com/google/wire v0.2.1
+	github.com/google/wire v0.2.2
 	github.com/googleapis/gax-go v2.0.2+incompatible
-	github.com/gorilla/mux v1.7.1
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -89,6 +87,5 @@ require (
 	google.golang.org/api v0.5.0
 	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8
 	google.golang.org/grpc v1.20.1
-	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 	pack.ag/amqp v0.11.0
 )
