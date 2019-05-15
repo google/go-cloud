@@ -617,11 +617,15 @@ func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, 
 	var ub expression.UpdateBuilder
 	for _, m := range mods {
 		// TODO(shantuo): check for invalid field paths
-		fp := strings.Join(m.FieldPath, ".")
-		if m.Value == nil {
-			ub = ub.Remove(expression.Name(fp))
+		fp := expression.Name(strings.Join(m.FieldPath, "."))
+		if inc, ok := m.Value.(driver.IncOp); ok {
+			ub.Add(fp, expression.Value(inc.Amount))
 		} else {
-			ub = ub.Set(expression.Name(fp), expression.Value(m.Value))
+			if m.Value == nil {
+				ub = ub.Remove(fp)
+			} else {
+				ub = ub.Set(fp, expression.Value(m.Value))
+			}
 		}
 	}
 	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
