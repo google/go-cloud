@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+	"time"
 
 	"gocloud.dev/internal/docstore/driver"
 )
@@ -89,10 +90,23 @@ func compare(x1, x2 interface{}) (int, bool) {
 	}
 	bf1 := toBigFloat(v1)
 	bf2 := toBigFloat(v2)
-	if bf1 == nil || bf2 == nil {
-		return 0, false
+	if bf1 != nil && bf2 != nil {
+		return bf1.Cmp(bf2), true
 	}
-	return bf1.Cmp(bf2), true
+	if t1, ok := x1.(time.Time); ok {
+		if t2, ok := x2.(time.Time); ok {
+			s := t1.Sub(t2)
+			switch {
+			case s < 0:
+				return -1, true
+			case s > 0:
+				return 1, true
+			default:
+				return 0, true
+			}
+		}
+	}
+	return 0, false
 }
 
 func toBigFloat(x reflect.Value) *big.Float {

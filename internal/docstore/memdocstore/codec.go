@@ -17,6 +17,7 @@ package memdocstore
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
@@ -43,17 +44,26 @@ type encoder struct {
 	val interface{}
 }
 
-func (e *encoder) EncodeNil()                                { e.val = nil }
-func (e *encoder) EncodeBool(x bool)                         { e.val = x }
-func (e *encoder) EncodeInt(x int64)                         { e.val = x }
-func (e *encoder) EncodeUint(x uint64)                       { e.val = int64(x) }
-func (e *encoder) EncodeBytes(x []byte)                      { e.val = x }
-func (e *encoder) EncodeFloat(x float64)                     { e.val = x }
-func (e *encoder) EncodeComplex(x complex128)                { e.val = x }
-func (e *encoder) EncodeString(x string)                     { e.val = x }
-func (e *encoder) ListIndex(int)                             { panic("impossible") }
-func (e *encoder) MapKey(string)                             { panic("impossible") }
-func (e *encoder) EncodeSpecial(reflect.Value) (bool, error) { return false, nil } // no special handling
+func (e *encoder) EncodeNil()                 { e.val = nil }
+func (e *encoder) EncodeBool(x bool)          { e.val = x }
+func (e *encoder) EncodeInt(x int64)          { e.val = x }
+func (e *encoder) EncodeUint(x uint64)        { e.val = int64(x) }
+func (e *encoder) EncodeBytes(x []byte)       { e.val = x }
+func (e *encoder) EncodeFloat(x float64)      { e.val = x }
+func (e *encoder) EncodeComplex(x complex128) { e.val = x }
+func (e *encoder) EncodeString(x string)      { e.val = x }
+func (e *encoder) ListIndex(int)              { panic("impossible") }
+func (e *encoder) MapKey(string)              { panic("impossible") }
+
+var typeOfGoTime = reflect.TypeOf(time.Time{})
+
+func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
+	if v.Type() == typeOfGoTime {
+		e.val = v.Interface()
+		return true, nil
+	}
+	return false, nil
+}
 
 func (e *encoder) EncodeList(n int) driver.Encoder {
 	// All slices and arrays are encoded as []interface{}
@@ -187,6 +197,9 @@ func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder) bool) {
 	}
 }
 
-func (decoder) AsSpecial(reflect.Value) (bool, interface{}, error) {
+func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+	if v.Type() == typeOfGoTime {
+		return true, d.val, nil
+	}
 	return false, nil, nil
 }
