@@ -18,6 +18,7 @@ import (
 	"context"
 	"io"
 	"reflect"
+	"time"
 
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
@@ -37,6 +38,7 @@ func (c *Collection) Query() *Query {
 
 // Where expresses a condition on the query.
 // Valid ops are: "=", ">", "<", ">=", "<=".
+// Valid values are strings, integers, float-point numbers, and times.
 func (q *Query) Where(fieldpath, op string, value interface{}) *Query {
 	fp, err := parseFieldPath(FieldPath(fieldpath))
 	if err != nil {
@@ -70,6 +72,9 @@ var validOp = map[string]bool{
 func validFilterValue(v interface{}) bool {
 	if v == nil {
 		return false
+	}
+	if _, ok := v.(time.Time); ok {
+		return true
 	}
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.String:
