@@ -366,7 +366,10 @@ func testGet(t *testing.T, coll *ds.Collection) {
 		t.Error("Get with field paths:\n", diff)
 	}
 
-	// TODO(jba): add a NotFound test for nonexistent documents
+	err := coll.Get(ctx, nonexistentDoc)
+	if gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("Get of nonexistent doc: got %v, want NotFound", err)
+	}
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -983,7 +986,7 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 
 func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	if err := coll.Query().Update(ctx, nil); gcerrors.Code(err) == gcerrors.Unimplemented {
+	if err := coll.Query().Update(ctx, docstore.Mods{"a": 1}); gcerrors.Code(err) == gcerrors.Unimplemented {
 		t.Skip("update queries not yet implemented")
 	}
 

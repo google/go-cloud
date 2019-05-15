@@ -162,6 +162,7 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 
 // Update atomically applies Mods to doc, which must exist.
 // Only the key and revision fields of doc are used.
+// It is an error to pass an empty Mods to Update.
 //
 // A modification will create a field if it doesn't exist.
 //
@@ -312,7 +313,7 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 			d.FieldPaths[i] = fp
 		}
 	}
-	if a.mods != nil {
+	if a.kind == driver.Update {
 		d.Mods, err = toDriverMods(a.mods)
 		if err != nil {
 			return nil, err
@@ -325,6 +326,9 @@ func toDriverMods(mods Mods) ([]driver.Mod, error) {
 	// Convert mods from a map to a slice of (fieldPath, value) pairs.
 	// The map is easier for users to write, but the slice is easier
 	// to process.
+	if len(mods) == 0 {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "no mods passed to Update")
+	}
 
 	// Sort keys so tests are deterministic.
 	// After sorting, a key might not immediately follow its prefix. Consider the
@@ -360,7 +364,7 @@ func toDriverMods(mods Mods) ([]driver.Mod, error) {
 	return dmods, nil
 }
 
-// fphasPrefix reports whether the field path fp begins with prefix.
+// fpHasPrefix reports whether the field path fp begins with prefix.
 func fpHasPrefix(fp, prefix []string) bool {
 	if len(fp) < len(prefix) {
 		return false
