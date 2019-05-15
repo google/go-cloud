@@ -47,8 +47,8 @@ func TestAddDemo(t *testing.T) {
 		t.Fatalf("run init error: %+v", err)
 	}
 
-	// Call the main package run function as if 'add-api' were being called
-	// from the command line for each of the portable APIs.
+	// Call the main package run function as if 'add-demo' were being called
+	// from the command line for each of the demos.
 	for _, demo := range allDemos {
 		if err := run(ctx, pctx, []string{"demo", demo.name}, new(bool)); err != nil {
 			t.Fatalf("run demo error: %+v", err)
@@ -227,7 +227,7 @@ func TestAddDemo(t *testing.T) {
 		},
 		// PUBSUB TESTS.
 		{
-			api:         "pubsub",
+			demo:         "pubsub",
 			description: "base",
 			urlPaths:    []string{"/demo/pubsub", "/demo/pubsub/"},
 			op:          "GET",
@@ -241,7 +241,7 @@ func TestAddDemo(t *testing.T) {
 			},
 		},
 		{
-			api:         "pubsub",
+			demo:         "pubsub",
 			description: "empty receive",
 			urlPaths:    []string{"/demo/pubsub/receive"},
 			op:          "GET",
@@ -255,7 +255,7 @@ func TestAddDemo(t *testing.T) {
 			},
 		},
 		{
-			api:         "pubsub",
+			demo:         "pubsub",
 			description: "send1",
 			urlPaths:    []string{"/demo/pubsub/send"},
 			urlQuery:    "msg=hello+world",
@@ -271,7 +271,7 @@ func TestAddDemo(t *testing.T) {
 			},
 		},
 		{
-			api:         "pubsub",
+			demo:         "pubsub",
 			description: "receive",
 			urlPaths:    []string{"/demo/pubsub/receive"},
 			op:          "GET",
