@@ -107,6 +107,13 @@ fi;
 
 
 echo
+echo "Ensuring that go mod tidy has been run..."
+( ./internal/testing/check_mod_tidy.sh && echo "OK" ) || {
+  echo "FAIL: run go mod tidy on the root module" && result=1
+}
+
+
+echo
 echo "Ensuring that gocdk static content is up to date..."
 tmpstaticgo=$(mktemp)
 function cleanupstaticgo() {
@@ -174,15 +181,18 @@ echo "Running wire diff..."
 
 echo
 echo "Running Go tests for sub-modules..."
+PATH="$PATH":"${PWD}"/internal/testing
 while read -r path || [[ -n "$path" ]]; do
   echo
   echo "Testing sub-module at '$path'..."
-  echo "  Go tests:"
+  echo "  go test:"
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
+  echo "  go mod tidy:"
+  ( cd "$path" && check_mod_tidy.sh && echo "    OK" ) || { echo "FAIL: run go mod tidy on sub-module at '$path'" && result=1; }
   echo "  wire check:"
-  ( cd "$path" && exec wire check ./... && echo "  OK" ) || result=1
+  ( cd "$path" && wire check ./... && echo "    OK" ) || result=1
   echo "  wire diff:"
-  ( cd "$path" && exec wire diff ./... && echo "  OK " ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+  ( cd "$path" && wire diff ./... && echo "    OK " ) || { echo "FAIL: wire diff found diffs!" && result=1; }
 done < <( sed -e '/^#/d' -e '/^$/d' -e '/^\.$/d' allmodules )
 
 exit $result
