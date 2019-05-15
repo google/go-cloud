@@ -101,7 +101,7 @@ in the environment variables or your AWS CLI configuration.</p>
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenBucket creates a *blob.Bucket from a URL.
+<span class="c1">// blob.OpenBucket creates a *blob.Bucket from a URL.
 </span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;s3://my-bucket?region=us-west-1&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
@@ -170,7 +170,7 @@ Default Credentials</a>.</p>
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/gcsblob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenBucket creates a *blob.Bucket from a URL.
+<span class="c1">// blob.OpenBucket creates a *blob.Bucket from a URL.
 </span><span class="c1">// This URL will open the bucket &#34;my-bucket&#34; using default credentials.
 </span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;gs://my-bucket&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
@@ -238,7 +238,7 @@ is required, along with one of the other two.</p>
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenBucket creates a *blob.Bucket from a URL.
+<span class="c1">// blob.OpenBucket creates a *blob.Bucket from a URL.
 </span><span class="c1">// This URL will open the container &#34;my-container&#34; using default
 </span><span class="c1">// credentials found in the environment variables
 </span><span class="c1">// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY

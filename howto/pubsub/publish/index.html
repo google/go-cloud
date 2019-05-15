@@ -273,7 +273,7 @@ connection string. The connection string can be obtained
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/azuresb&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenTopic creates a *pubsub.Topic from a URL.
+<span class="c1">// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 </span><span class="c1">// This URL will open the topic &#34;mytopic&#34; using a connection string
 </span><span class="c1">// from the environment variable SERVICEBUS_CONNECTION_STRING.
 </span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;azuresb://mytopic&#34;</span><span class="p">)</span>
@@ -338,7 +338,7 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenTopic creates a *pubsub.Topic from a URL.
+<span class="c1">// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 </span><span class="c1">// This URL will Dial the RabbitMQ server at the URL in the environment
 </span><span class="c1">// variable RABBIT_SERVER_URL and open the exchange &#34;myexchange&#34;.
 </span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;rabbit://myexchange&#34;</span><span class="p">)</span>
@@ -382,7 +382,7 @@ environment variable (which is something like <code>nats://nats.example.com</cod
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/natspubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenTopic creates a *pubsub.Topic from a URL.
+<span class="c1">// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 </span><span class="c1">// This URL will Dial the NATS server at the URL in the environment variable
 </span><span class="c1">// NATS_SERVER_URL and send messages with subject &#34;example.mysubject&#34;.
 </span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;nats://example.mysubject&#34;</span><span class="p">)</span>
@@ -434,7 +434,7 @@ hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenTopic creates a *pubsub.Topic from a URL.
+<span class="c1">// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 </span><span class="c1">// The host + path are the topic name to send to.
 </span><span class="c1">// The set of brokers must be in an environment variable KAFKA_BROKERS.
 </span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;kafka://my-topic&#34;</span><span class="p">)</span>

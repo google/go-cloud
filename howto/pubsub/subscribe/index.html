@@ -133,7 +133,7 @@ variables or your AWS CLI configuration.</p>
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+<span class="c1">// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 </span><span class="c1">// This URL will open the subscription with the URL
 </span><span class="c1">// &#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;.
 </span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
@@ -263,7 +263,11 @@ you need to copy <a href="https://docs.microsoft.com/en-us/azure/service-bus-mes
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/azuresb&#34;</span>
 <span class="p">)</span>
 
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+<span class="c1">// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
+</span><span class="c1">// This URL will open the subscription &#34;mysubscription&#34; for the topic
+</span><span class="c1">// &#34;mytopic&#34; using a connection string from the environment variable
+</span><span class="c1">// SERVICEBUS_CONNECTION_STRING.
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
 	<span class="s">&#34;azuresb://mytopic?subscription=mysubscription&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
@@ -330,7 +334,7 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+<span class="c1">// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 </span><span class="c1">// This URL will Dial the RabbitMQ server at the URL in the environment
 </span><span class="c1">// variable RABBIT_SERVER_URL and open the queue &#34;myqueue&#34;.
 </span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;rabbit://myqueue&#34;</span><span class="p">)</span>
@@ -380,7 +384,7 @@ the URL you use to open a subscription. Otherwise, you should add
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/natspubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+<span class="c1">// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 </span><span class="c1">// This URL will Dial the NATS server at the URL in the environment variable
 </span><span class="c1">// NATS_SERVER_URL and receive messages with subject &#34;example.mysubject&#34;.
 </span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
@@ -441,7 +445,7 @@ hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+<span class="c1">// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 </span><span class="c1">// The host + path are used as the consumer group name.
 </span><span class="c1">// The &#34;topic&#34; query parameter sets one or more topics to subscribe to.
 </span><span class="c1">// The set of brokers must be in an environment variable KAFKA_BROKERS.
