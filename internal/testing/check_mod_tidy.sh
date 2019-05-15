@@ -13,13 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script checks to see if `go mod tidy` has been run on the module
-# rooted at the current directory. It exits with status 1 if "go mod tidy"
-# would make changes.
+# This script checks to see if `go mod tidy` has been run on a module.
+#
+# With no arguments, it checks the module in the current directory.
+# Alternatively, it accepts a single argument to check the module in the given
+# directory.
+#
+# It exits with status 1 if "go mod tidy" would make changes.
+#
 # TODO(rvangent): Replace this with `go mod tidy --check` when it exists:
 # https://github.com/golang/go/issues/27005.
 
 set -euo pipefail
+
+# If an argument is given, cd there.
+if [[ $# -eq 1 ]]; then
+  cd "$1"
+fi
 
 TMP_GOMOD=$(mktemp)
 TMP_GOSUM=$(mktemp)
@@ -43,5 +53,5 @@ cp ./go.sum "$TMP_GOSUM"
 go mod tidy
 
 # Check for diffs.
-diff "$TMP_GOMOD" ./go.mod
-diff "$TMP_GOSUM" ./go.sum
+diff -u "$TMP_GOMOD" ./go.mod
+diff -u "$TMP_GOSUM" ./go.sum
