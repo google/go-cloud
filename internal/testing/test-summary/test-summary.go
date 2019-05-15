@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-// From runing "go doc test2json".
+// From running "go doc test2json".
 type TestEvent struct {
 	Time    time.Time // encodes as an RFC3339-format string
 	Action  string
