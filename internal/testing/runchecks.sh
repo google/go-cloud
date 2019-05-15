@@ -196,4 +196,11 @@ while read -r path || [[ -n "$path" ]]; do
   ( cd "$path" && wire diff ./... && echo "    OK " ) || { echo "FAIL: wire diff found diffs!" && result=1; }
 done < <( sed -e '/^#/d' -e '/^$/d' -e '/^\.$/d' allmodules )
 
+echo
+if [[ ${result} -eq 0 ]]; then
+  echo "SUCCESS!"
+else
+  echo "FAILED; see above for more info."
+fi
+
 exit $result
