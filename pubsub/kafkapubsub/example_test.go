@@ -62,7 +62,7 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
-func Example_openTopic() {
+func Example_openTopicFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/publish/#kafka
 
 	// import _ "gocloud.dev/pubsub/kafkapubsub"
@@ -70,7 +70,7 @@ func Example_openTopic() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenTopic creates a *pubsub.Topic from a URL.
+	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 	// The host + path are the topic name to send to.
 	// The set of brokers must be in an environment variable KAFKA_BROKERS.
 	topic, err := pubsub.OpenTopic(ctx, "kafka://my-topic")
@@ -80,7 +80,7 @@ func Example_openTopic() {
 	defer topic.Shutdown(ctx)
 }
 
-func Example_openSubscription() {
+func Example_openSubscriptionFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#kafka
 
 	// import _ "gocloud.dev/pubsub/kafkapubsub"
@@ -88,7 +88,7 @@ func Example_openSubscription() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenSubscription creates a *pubsub.Subscription from a URL.
+	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 	// The host + path are used as the consumer group name.
 	// The "topic" query parameter sets one or more topics to subscribe to.
 	// The set of brokers must be in an environment variable KAFKA_BROKERS.

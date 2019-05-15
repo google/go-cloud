@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/gcp"
 )
 
-func Example() {
+func ExampleOpenBucket() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#gcs-ctor
 
 	// Variables set up elsewhere:
@@ -55,7 +55,7 @@ func Example() {
 	defer bucket.Close()
 }
 
-func Example_openBucket() {
+func Example_openBucketFromURL() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#gcs
 
 	// import _ "gocloud.dev/blob/gcsblob"
@@ -63,7 +63,7 @@ func Example_openBucket() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenBucket creates a *blob.Bucket from a URL.
+	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	// This URL will open the bucket "my-bucket" using default credentials.
 	bucket, err := blob.OpenBucket(ctx, "gs://my-bucket")
 	if err != nil {

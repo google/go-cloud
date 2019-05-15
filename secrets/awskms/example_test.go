@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/secrets/awskms"
 )
 
-func Example() {
+func ExampleOpenKeeper() {
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	sess, err := session.NewSession(nil)
@@ -59,10 +59,10 @@ func Example() {
 	_ = decrypted
 }
 
-func Example_openKeeper() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
-	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
 	// The host + path are the key ID; this example uses an alias. See
 	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 	// for more details.

@@ -29,7 +29,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func Example() {
+func ExampleOpenVariable() {
 	httpClient := http.DefaultClient
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
@@ -49,8 +49,8 @@ func Example() {
 	_ = cfg
 }
 
-func Example_openVariable() {
-	// OpenVariable creates a *runtimevar.Variable from a URL.
+func Example_openVariableFromURL() {
+	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The "decoder" query parameter is optional, and is removed before fetching
 	// the URL.
 	ctx := context.Background()

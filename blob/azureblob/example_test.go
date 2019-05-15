@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/blob/azureblob"
 )
 
-func Example() {
+func ExampleOpenBucket() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure-ctor
 
 	// Variables set up elsewhere:
@@ -56,7 +56,7 @@ func Example() {
 	defer bucket.Close()
 }
 
-func Example_sasToken() {
+func ExampleOpenBucket_usingSASToken() {
 	const (
 		// Your Azure Storage Account and SASToken.
 		accountName = azureblob.AccountName("my-account")
@@ -90,7 +90,7 @@ func Example_sasToken() {
 	_ = data
 }
 
-func Example_openBucket() {
+func Example_openBucketFromURL() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure
 
 	// import _ "gocloud.dev/blob/azureblob"
@@ -98,7 +98,7 @@ func Example_openBucket() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenBucket creates a *blob.Bucket from a URL.
+	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	// This URL will open the container "my-container" using default
 	// credentials found in the environment variables
 	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY

@@ -22,8 +22,7 @@ import (
 	"gocloud.dev/secrets/gcpkms"
 )
 
-func Example() {
-
+func ExampleOpenKeeper() {
 	// Get a client to use with the KMS API.
 	ctx := context.Background()
 	client, done, err := gcpkms.Dial(ctx, nil)
@@ -55,10 +54,10 @@ func Example() {
 	_ = decrypted
 }
 
-func Example_openKeeper() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
-	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
 	// The host + path are the key resourceID; see
 	// https://cloud.google.com/kms/docs/object-hierarchy#key
 	// for more information.

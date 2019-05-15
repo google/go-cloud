@@ -24,7 +24,7 @@ import (
 	"gocloud.dev/blob/s3blob"
 )
 
-func Example() {
+func ExampleOpenBucket() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#s3-ctor
 
 	// Variables set up elsewhere:
@@ -48,7 +48,7 @@ func Example() {
 	defer bucket.Close()
 }
 
-func Example_openBucket() {
+func Example_openBucketFromURL() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#s3
 
 	// import _ "gocloud.dev/blob/s3blob"
@@ -56,7 +56,7 @@ func Example_openBucket() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenBucket creates a *blob.Bucket from a URL.
+	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	bucket, err := blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1")
 	if err != nil {
 		log.Fatal(err)

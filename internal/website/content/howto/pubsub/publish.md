@@ -108,7 +108,7 @@ The Go CDK can publish to a Google [Cloud Pub/Sub][] topic. The URLs use the
 project ID and the topic ID. `pubsub.OpenTopic` will use [Application Default
 Credentials][GCP creds].
 
-{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopic" >}}
+{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
 
 [Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
 [GCP creds]: https://cloud.google.com/docs/authentication/production
@@ -132,7 +132,7 @@ environment variable `SERVICEBUS_CONNECTION_STRING` to obtain the Service Bus
 connection string. The connection string can be obtained
 [from the Azure portal][Azure connection string].
 
-{{< goexample "gocloud.dev/pubsub/azuresb.Example_openTopic" >}}
+{{< goexample "gocloud.dev/pubsub/azuresb.Example_openTopicFromURL" >}}
 
 [AMQP 1.0]: https://www.amqp.org/
 [Azure connection string]: https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-how-to-use-topics-subscriptions#get-the-connection-string
@@ -157,7 +157,7 @@ AMQP spoken by [RabbitMQ][]. A RabbitMQ URL only includes the exchange name.
 The RabbitMQ's server is discovered from the `RABBIT_SERVER_URL` environment
 variable (which is something like `amqp://guest:guest@localhost:5672/`).
 
-{{< goexample "gocloud.dev/pubsub/rabbitpubsub.Example_openTopic" >}}
+{{< goexample "gocloud.dev/pubsub/rabbitpubsub.Example_openTopicFromURL" >}}
 
 [AMQP 0.9.1]: https://www.rabbitmq.com/protocol.html
 [RabbitMQ]: https://www.rabbitmq.com
@@ -178,7 +178,7 @@ The Go CDK can publish to a [NATS][] subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the `NATS_SERVER_URL`
 environment variable (which is something like `nats://nats.example.com`).
 
-{{< goexample "gocloud.dev/pubsub/natspubsub.Example_openTopic" >}}
+{{< goexample "gocloud.dev/pubsub/natspubsub.Example_openTopicFromURL" >}}
 
 Because NATS does not natively support metadata, messages sent to NATS will
 be encoded with [gob][].
@@ -203,7 +203,7 @@ topic name. The brokers in the Kafka cluster are discovered from the
 `KAFKA_BROKERS` environment variable (which is a comma-delimited list of
 hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
 
-{{< goexample "gocloud.dev/pubsub/kafkapubsub.Example_openTopic" >}}
+{{< goexample "gocloud.dev/pubsub/kafkapubsub.Example_openTopicFromURL" >}}
 
 [Kafka]: https://kafka.apache.org/
 
@@ -231,7 +231,7 @@ The names in `mem://` URLs are a process-wide namespace, so subscriptions to
 the same name will receive messages posted to that topic. This is detailed
 more in the [subscription guide][subscribe-mem].
 
-{{< goexample "gocloud.dev/pubsub/mempubsub.Example_openTopic" >}}
+{{< goexample "gocloud.dev/pubsub/mempubsub.Example_openTopicFromURL" >}}
 
 [subscribe-mem]: {{< ref "./subscribe.md#mem" >}}
 
