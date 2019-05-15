@@ -23,8 +23,8 @@ import (
 	"gocloud.dev/secrets/localsecrets"
 )
 
-func Example() {
-	// localsecrets.Keeper untilizes the golang.org/x/crypto/nacl/secretbox package
+func ExampleNewKeeper() {
+	// localsecrets.Keeper utilizes the golang.org/x/crypto/nacl/secretbox package
 	// for the crypto implementation, and secretbox requires a secret key
 	// that is a [32]byte. localsecrets
 	secretKey, err := localsecrets.NewRandomKey()
@@ -48,10 +48,10 @@ func Example() {
 	// Hello, Secrets!
 }
 
-func Example_openKeeper() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
-	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
 	// Using "base64key://", a new random key will be generated.
 	keeper, err := secrets.OpenKeeper(ctx, "base64key://")
 	if err != nil {

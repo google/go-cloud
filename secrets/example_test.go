@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func Example() {
+func ExampleNewKeeper() {
 	ctx := context.Background()
 
 	// Construct a *secrets.Keeper from one of the secrets subpackages.

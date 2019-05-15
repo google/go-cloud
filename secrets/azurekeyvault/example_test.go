@@ -23,7 +23,7 @@ import (
 	akv "gocloud.dev/secrets/azurekeyvault"
 )
 
-func Example() {
+func ExampleOpenKeeper() {
 	// Get a client to use with the Azure KeyVault API.
 	// See API docs for Authentication options.
 	// https://github.com/Azure/azure-sdk-for-go
@@ -67,10 +67,10 @@ func Example() {
 	_ = decrypted
 }
 
-func Example_openKeeper() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
-	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
 	// The URL's host holds the KeyVault name.
 	// The first element of the URL's path holds the key name.
 	// The second element of the URL's path, if included, holds the key version.

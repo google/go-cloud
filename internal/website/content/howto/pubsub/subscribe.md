@@ -80,7 +80,7 @@ The Go CDK can receive messages from a Google [Cloud Pub/Sub][] subscription.
 The URLs use the project ID and the subscription ID.
 `pubsub.OpenSubscription` will use [Application Default Credentials][GCP creds].
 
-{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openSubscription" >}}
+{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openSubscriptionFromURL" >}}
 
 [Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
 [GCP creds]: https://cloud.google.com/docs/authentication/production
@@ -105,7 +105,7 @@ subscription name in the `subscription` query parameter.
 `SERVICEBUS_CONNECTION_STRING` to obtain the Service Bus Connection String
 you need to copy [from the Azure portal][Azure connection string].
 
-{{< goexample "gocloud.dev/pubsub/azuresb.Example_openSubscription" >}}
+{{< goexample "gocloud.dev/pubsub/azuresb.Example_openSubscriptionFromURL" >}}
 
 [AMQP 1.0]: https://www.amqp.org/
 [Azure connection string]: https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-how-to-use-topics-subscriptions#get-the-connection-string
@@ -131,7 +131,7 @@ AMQP spoken by [RabbitMQ][]. A RabbitMQ URL only includes the queue name.
 The RabbitMQ's server is discovered from the `RABBIT_SERVER_URL` environment
 variable (which is something like `amqp://guest:guest@localhost:5672/`).
 
-{{< goexample "gocloud.dev/pubsub/rabbitpubsub.Example_openSubscription" >}}
+{{< goexample "gocloud.dev/pubsub/rabbitpubsub.Example_openSubscriptionFromURL" >}}
 
 [AMQP 0.9.1]: https://www.rabbitmq.com/protocol.html
 [RabbitMQ]: https://www.rabbitmq.com
@@ -158,7 +158,7 @@ in-memory), you can skip calling `Ack` and add `?ackfunc=panic` to the end of
 the URL you use to open a subscription. Otherwise, you should add
 `?ackfunc=noop` to the end of your URL.
 
-{{< goexample "gocloud.dev/pubsub/natspubsub.Example_openSubscription" >}}
+{{< goexample "gocloud.dev/pubsub/natspubsub.Example_openSubscriptionFromURL" >}}
 
 To parse messages [published via the Go CDK][publish#nats], the NATS driver
 will first attempt to decode the payload using [gob][]. Failing that, it will
@@ -188,7 +188,7 @@ The brokers in the Kafka cluster are discovered from the
 `KAFKA_BROKERS` environment variable (which is a comma-delimited list of
 hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
 
-{{< goexample "gocloud.dev/pubsub/kafkapubsub.Example_openSubscription" >}}
+{{< goexample "gocloud.dev/pubsub/kafkapubsub.Example_openSubscriptionFromURL" >}}
 
 [Kafka]: https://kafka.apache.org/
 
@@ -216,7 +216,7 @@ the same name will receive messages posted to that topic. For instance, if
 you open a topic `mem://topicA` and open two subscriptions with
 `mem://topicA`, you will have two subscriptions to the same topic.
 
-{{< goexample "gocloud.dev/pubsub/mempubsub.Example_openSubscription" >}}
+{{< goexample "gocloud.dev/pubsub/mempubsub.Example_openSubscriptionFromURL" >}}
 
 ### In-Memory Constructor {#mem-ctor}
 

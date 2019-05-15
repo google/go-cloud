@@ -29,7 +29,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func Example() {
+func ExampleOpenVariable() {
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	sess, err := session.NewSession(nil)
@@ -58,8 +58,8 @@ func Example() {
 	_ = cfg
 }
 
-func Example_openVariable() {
-	// OpenVariable creates a *runtimevar.Variable from a URL.
+func Example_openVariableFromURL() {
+	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "awsparamstore://myvar?region=us-west-1")
 	if err != nil {

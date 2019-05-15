@@ -30,7 +30,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func Example() {
+func ExampleOpenVariable() {
 	// Create a temporary file to hold our config.
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
@@ -62,8 +62,8 @@ func Example() {
 	// foo.com running on port 80
 }
 
-func Example_openVariable() {
-	// OpenVariable creates a *runtimevar.Variable from a URL.
+func Example_openVariableFromURL() {
+	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "file:///path/to/config.json?decoder=json")
 	if err != nil {
