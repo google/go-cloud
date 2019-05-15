@@ -93,6 +93,7 @@ if [[ "${TRAVIS_OS_NAME:-linux}" != "linux" ]]; then
   exit $result
 fi
 
+
 echo
 echo "Ensuring .go files are formatted with gofmt -s..."
 mapfile -t go_files < <(find . -name '*.go' -type f)
@@ -107,7 +108,7 @@ fi;
 
 
 echo
-echo "Ensuring that go mod tidy has been run..."
+echo "Ensuring that go mod tidy has been run for the root module..."
 ( ./internal/testing/check_mod_tidy.sh && echo "OK" ) || {
   echo "FAIL: run go mod tidy on the root module" && result=1
 }
@@ -121,7 +122,7 @@ function cleanupstaticgo() {
 }
 trap cleanupstaticgo EXIT
 pushd internal/cmd/gocdk/ &> /dev/null
-go run generate_static.go -- "$tmpstaticgo" &> /dev/null
+go run -mod=readonly generate_static.go -- "$tmpstaticgo" &> /dev/null
 ( diff -u ./static.go - < "$tmpstaticgo" && echo "OK" ) || {
   echo "FAIL: gocdk static files are out of date; run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
 }
@@ -178,6 +179,7 @@ echo "Running wire diff..."
   echo "FAIL: wire diff found diffs!";
   result=1;
 }
+
 
 echo
 echo "Running Go tests for sub-modules..."

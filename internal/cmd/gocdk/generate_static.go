@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build ignore
+// +build tools
 
 // This script is called by "go generate". It converts the files in _static/
 // into constants in a new .go file.
