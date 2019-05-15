@@ -27,7 +27,7 @@ import (
 	"gocloud.dev/blob/fileblob"
 )
 
-func Example() {
+func ExampleOpenBucket() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#local-ctor
 
 	// The directory you pass to fileblob.OpenBucket must exist first.
@@ -44,7 +44,7 @@ func Example() {
 	defer bucket.Close()
 }
 
-func Example_openBucket() {
+func Example_openBucketFromURL() {
 	// Create a temporary directory.
 	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
@@ -59,7 +59,7 @@ func Example_openBucket() {
 		dirpath = "/" + dirpath
 	}
 
-	// OpenBucket creates a *blob.Bucket from a URL.
+	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	ctx := context.Background()
 	b, err := blob.OpenBucket(ctx, "file://"+dirpath)
 	if err != nil {

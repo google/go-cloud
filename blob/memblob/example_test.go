@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/blob/memblob"
 )
 
-func Example() {
+func ExampleOpenBucket() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#local-ctor
 
 	// Variables set up elsewhere:
@@ -48,8 +48,8 @@ func Example() {
 	// hello world
 }
 
-func Example_openBucket() {
-	// OpenBucket creates a *blob.Bucket from a URL.
+func Example_openBucketFromURL() {
+	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	b, err := blob.OpenBucket(context.Background(), "mem://")
 	if err != nil {
 		log.Fatal(err)

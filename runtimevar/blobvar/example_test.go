@@ -30,7 +30,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func Example() {
+func ExampleOpenVariable() {
 	// Create a *blob.Bucket.
 	// Here, we use an in-memory implementation and write a sample
 	// configuration value.
@@ -65,8 +65,8 @@ func Example() {
 	// foo.com running on port 80
 }
 
-func Example_openVariable() {
-	// OpenVariable creates a *runtimevar.Variable from a URL.
+func Example_openVariableFromURL() {
+	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The default opener opens a blob.Bucket via a URL, based on the environment
 	// variable BLOBVAR_BUCKET_URL.
 	// This example watches a JSON variable.

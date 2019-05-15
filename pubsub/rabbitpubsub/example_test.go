@@ -53,7 +53,7 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
-func Example_openTopic() {
+func Example_openTopicFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/publish/#rabbitmq
 
 	// import _ "gocloud.dev/pubsub/rabbitpubsub"
@@ -61,7 +61,7 @@ func Example_openTopic() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenTopic creates a *pubsub.Topic from a URL.
+	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 	// This URL will Dial the RabbitMQ server at the URL in the environment
 	// variable RABBIT_SERVER_URL and open the exchange "myexchange".
 	topic, err := pubsub.OpenTopic(ctx, "rabbit://myexchange")
@@ -71,7 +71,7 @@ func Example_openTopic() {
 	defer topic.Shutdown(ctx)
 }
 
-func Example_openSubscription() {
+func Example_openSubscriptionFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#rabbitmq
 
 	// import _ "gocloud.dev/pubsub/rabbitpubsub"
@@ -79,7 +79,7 @@ func Example_openSubscription() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenSubscription creates a *pubsub.Subscription from a URL.
+	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will Dial the RabbitMQ server at the URL in the environment
 	// variable RABBIT_SERVER_URL and open the queue "myqueue".
 	subscription, err := pubsub.OpenSubscription(ctx, "rabbit://myqueue")

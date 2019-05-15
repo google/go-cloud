@@ -23,7 +23,7 @@ import (
 	_ "gocloud.dev/blob/memblob"
 )
 
-func ExampleOpenBucket() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
 	// Connect to a bucket using a URL.
@@ -53,7 +53,7 @@ func ExampleOpenBucket() {
 	// hello world
 }
 
-func ExampleOpenBucketWithPrefix() {
+func Example_openFromURLWithPrefix() {
 	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#prefix
 
 	// Variables set up elsewhere:

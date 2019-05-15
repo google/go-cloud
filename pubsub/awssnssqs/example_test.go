@@ -132,7 +132,7 @@ func Example_openSubscriptionFromURL() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenSubscription creates a *pubsub.Subscription from a URL.
+	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will open the subscription with the URL
 	// "https://sqs.us-east-2.amazonaws.com/123456789012/myqueue".
 	subscription, err := pubsub.OpenSubscription(ctx,
