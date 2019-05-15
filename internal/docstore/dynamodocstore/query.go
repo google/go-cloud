@@ -468,6 +468,14 @@ func (qr *queryRunner) queryPlan() string {
 }
 
 func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+	return c.runActionQuery(ctx, q, nil)
+}
+
+func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
+	return c.runActionQuery(ctx, q, mods)
+}
+
+func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
 	q.FieldPaths = [][]string{{c.partitionKey}}
 	if c.sortKey != "" {
 		q.FieldPaths = append(q.FieldPaths, []string{c.sortKey})
@@ -492,7 +500,11 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 			if err := decodeDoc(&dyn.AttributeValue{M: item}, doc); err != nil {
 				return err
 			}
-			actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+			if mods == nil {
+				actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+			} else {
+				actions = append(actions, &driver.Action{Kind: driver.Update, Doc: doc, Mods: mods})
+			}
 		}
 		if last == nil {
 			break
@@ -504,8 +516,4 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 		return nil
 	}
 	return docstore.ActionListError(alerr)
-}
-
-func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
-	return gcerr.Newf(gcerr.Unimplemented, nil, "not implemented")
 }
