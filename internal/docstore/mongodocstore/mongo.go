@@ -457,12 +457,6 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 			sets = append(sets, bson.E{Key: key, Value: val})
 		}
 	}
-	if len(sets) == 0 && len(unsets) == 0 && len(incs) == 0 {
-		// MongoDB returns an error if there are no updates, but docstore treats it
-		// as a no-op.
-		// TODO(jba): remove this, check in docstore.ActionList.Update.
-		return nil, nil
-	}
 	updateDoc := map[string]bson.D{}
 	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: driver.UniqueString()})
 	if len(unsets) > 0 {
