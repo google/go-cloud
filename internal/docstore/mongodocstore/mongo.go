@@ -636,10 +636,8 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 		alerr           driver.ActionListError
 		models          []mongo.WriteModel
 		newIDs          = map[int]interface{}{} // new IDs for Create, keyed by position in iactions
-		nCreate         int64
 		nDeletes        int64
 		nNonCreateWrite int64 // total operations expected from Put, Replace and Update
-		nModified       int64 // total operations expected from Replace and Update
 	)
 	for i, ia := range iactions {
 		a := ia.action
@@ -652,22 +650,13 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			if newID != nil {
 				newIDs[i] = newID
 			}
-			if err == nil {
-				nCreate++
-			}
 		case driver.Delete:
 			m, err = c.newDeleteModel(a)
 			if err == nil {
 				nDeletes++
 			}
-		case driver.Replace:
-			m, err = c.newReplaceModel(a, false)
-			if err == nil {
-				nNonCreateWrite++
-				nModified++
-			}
-		case driver.Put:
-			m, err = c.newReplaceModel(a, true)
+		case driver.Replace, driver.Put:
+			m, err = c.newReplaceModel(a, a.Kind == driver.Put)
 			if err == nil {
 				nNonCreateWrite++
 			}
@@ -675,7 +664,6 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			m, err = c.newUpdateModel(a)
 			if err == nil && m != nil {
 				nNonCreateWrite++
-				nModified++
 			}
 		default:
 			err = gcerr.Newf(gcerr.Internal, nil, "bad action %+v", a)
@@ -688,7 +676,7 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 	}
 	res, err := c.coll.BulkWrite(ctx, models, options.BulkWrite().SetOrdered(false))
 	if err != nil {
-		bwe, ok := err.(*mongo.BulkWriteException)
+		bwe, ok := err.(mongo.BulkWriteException)
 		if !ok { // assume everything failed with this error
 			return append(alerr, indexedError{-1, err})
 		}
@@ -699,10 +687,6 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 		}
 		return alerr
 	}
-	if res.InsertedCount != nCreate {
-		alerr = append(alerr, indexedError{-1,
-			gcerr.Newf(gcerr.NotFound, nil, "some create failed (deleted %d out of %d)", res.InsertedCount, nCreate)})
-	}
 	if res.DeletedCount != nDeletes {
 		alerr = append(alerr, indexedError{-1,
 			gcerr.Newf(gcerr.NotFound, nil, "some delete failed (deleted %d out of %d)", res.DeletedCount, nDeletes)})
@@ -710,10 +694,6 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 	if res.MatchedCount+res.UpsertedCount != nNonCreateWrite {
 		alerr = append(alerr, indexedError{-1,
 			gcerr.Newf(gcerr.NotFound, nil, "some writes failed (replaced %d, upserted %d, out of total %d)", res.MatchedCount, res.UpsertedCount, nNonCreateWrite)})
-	}
-	if res.ModifiedCount != nModified {
-		alerr = append(alerr, indexedError{-1,
-			gcerr.Newf(gcerr.NotFound, nil, "some modification failed (modified %d, out of %d)", res.ModifiedCount, nModified)})
 	}
 	for i, newID := range newIDs {
 		if err := iactions[i].action.Doc.SetField(c.idField, newID); err != nil {
@@ -787,12 +767,12 @@ func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 
 // Error code for a write error when no documents match a filter.
 // (The Go mongo driver doesn't define an exported constant for this.)
-const mongoNotFoundCode = 11000
+const mongoDupKeyCode = 11000
 
 func translateMongoCode(code int) gcerrors.ErrorCode {
 	switch code {
-	case mongoNotFoundCode:
-		return gcerrors.NotFound
+	case mongoDupKeyCode:
+		return gcerrors.AlreadyExists
 	default:
 		return gcerrors.Unknown
 	}
