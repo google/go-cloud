@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
@@ -111,10 +112,22 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 }
 
 func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
+	var find *options.FindOneOptions
+	var insert *options.InsertOneOptions
+	var replace *options.ReplaceOptions
+	var update *options.UpdateOptions
+	var del *options.DeleteOptions
+	if !as(&find) && !as(&insert) && !as(&replace) && !as(&update) && !as(&del) {
+		return errors.New("ActionList.BeforeDo failed")
+	}
 	return nil
 }
 
 func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	var find *options.FindOptions
+	if !as(&find) {
+		return errors.New("Query.BeforeQuery failed")
+	}
 	return nil
 }
 

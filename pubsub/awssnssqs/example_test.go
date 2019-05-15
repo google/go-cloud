@@ -24,7 +24,7 @@ import (
 	"gocloud.dev/pubsub/awssnssqs"
 )
 
-func ExampleOpenTopic() {
+func ExampleOpenSNSTopic() {
 	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sns-ctor
 
 	// Variables set up elsewhere:
@@ -32,7 +32,7 @@ func ExampleOpenTopic() {
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	// The region must match the region for "MyTopic".
+	// The region must match the region for the SNS topic "mytopic".
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String("us-east-2"),
 	})
@@ -41,12 +41,34 @@ func ExampleOpenTopic() {
 	}
 
 	// Create a *pubsub.Topic.
-	const topicARN = "arn:aws:sns:us-east-2:123456789012:MyTopic"
-	topic := awssnssqs.OpenTopic(ctx, sess, topicARN, nil)
+	const topicARN = "arn:aws:sns:us-east-2:123456789012:mytopic"
+	topic := awssnssqs.OpenSNSTopic(ctx, sess, topicARN, nil)
 	defer topic.Shutdown(ctx)
 }
 
-func Example_openTopic() {
+func ExampleOpenSQSTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sqs-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	// Establish an AWS session.
+	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+	// The region must match the region for the SQS queue "myqueue".
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-2"),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a *pubsub.Topic.
+	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/myqueue"
+	topic := awssnssqs.OpenSQSTopic(ctx, sess, queueURL, nil)
+	defer topic.Shutdown(ctx)
+}
+
+func Example_openSNSTopicFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sns
 
 	// import _ "gocloud.dev/pubsub/awssnssqs"
@@ -54,8 +76,25 @@ func Example_openTopic() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	const topicARN = "arn:aws:sns:us-east-2:123456789012:MyTopic"
+	const topicARN = "arn:aws:sns:us-east-2:123456789012:mytopic"
 	topic, err := pubsub.OpenTopic(ctx, "awssns://"+topicARN+"?region=us-east-2")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
+}
+
+func Example_openSQSTopicFromURL() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sqs
+
+	// import _ "gocloud.dev/pubsub/awssnssqs"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
+	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/myqueue"
+	topic, err := pubsub.OpenTopic(ctx, "awssqs://"+queueURL+"?region=us-east-2")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,7 +124,7 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
-func Example_openSubscription() {
+func Example_openSubscriptionFromURL() {
 	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#sns
 
 	// import _ "gocloud.dev/pubsub/awssnssqs"
@@ -95,10 +134,10 @@ func Example_openSubscription() {
 
 	// OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will open the subscription with the URL
-	// "https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue".
+	// "https://sqs.us-east-2.amazonaws.com/123456789012/myqueue".
 	subscription, err := pubsub.OpenSubscription(ctx,
 		"awssqs://sqs.us-east-2.amazonaws.com/123456789012/"+
-			"MyQueue?region=us-east-2")
+			"myqueue?region=us-east-2")
 	if err != nil {
 		log.Fatal(err)
 	}

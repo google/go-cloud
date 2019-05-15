@@ -367,12 +367,12 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 }
 
 func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
-	fields, paths, err := processMods(mods)
+	fields, paths, transforms, err := processMods(mods)
 	if err != nil {
 		return err
 	}
 	return c.runWriteQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
-		return newUpdateWrites(doc.Name, doc.UpdateTime, fields, paths)
+		return newUpdateWrites(doc.Name, doc.UpdateTime, fields, paths, transforms)
 	})
 }
 

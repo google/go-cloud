@@ -43,4 +43,5 @@ set -x
 
 create_index Player ascending Score ascending
 create_index Game   ascending Score ascending
+create_index Player ascending Time  ascending
 

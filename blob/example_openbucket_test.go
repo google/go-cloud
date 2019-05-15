@@ -54,26 +54,20 @@ func ExampleOpenBucket() {
 }
 
 func ExampleOpenBucketWithPrefix() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#prefix
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// Connect to a bucket using a URL, using the "prefix" query parameter to
 	// target a subfolder in the bucket.
+	// The prefix should end with "/", so that the resulting bucket operates
+	// in a subfolder.
 	b, err := blob.OpenBucket(ctx, "mem://?prefix=a/subfolder/")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer b.Close()
 
-	// Now we can use b to read or write to blobs in the bucket.
-	// The actual key written to the blob would be "a/subfolder/my-key".
-	if err := b.WriteAll(ctx, "my-key", []byte("hello world"), nil); err != nil {
-		log.Fatal(err)
-	}
-	data, err := b.ReadAll(ctx, "my-key")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(data))
-	// Output:
-	// hello world
+	// Bucket operations on <key> will be translated to "a/subfolder/<key>".
 }

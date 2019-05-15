@@ -27,6 +27,9 @@
 //
 // mongodocstore exposes the following types for As:
 // - Collection: *mongo.Collection
+// - ActionList.BeforeDo: *options.FindOneOptions, *options.InsertOneOptions,
+//   *options.ReplaceOptions, *options.UpdateOptions or *options.DeleteOptions
+// - Query.BeforeQuery: *options.FindOptions
 // - DocumentIterator: *mongo.Cursor
 //
 // Docstore types not supported by the Go mongo client, go.mongodb.org/mongo-driver/mongo:
@@ -218,33 +221,33 @@ const mongoIDField = "_id"
 // TODO(jba): use bulk RPCs.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	if opts.Unordered {
-		return c.runActionsUnordered(ctx, actions)
+		return c.runActionsUnordered(ctx, actions, opts)
 	}
 	for i, a := range actions {
-		if err := c.runAction(ctx, a); err != nil {
+		if err := c.runAction(ctx, a, opts); err != nil {
 			return driver.ActionListError{{i, err}}
 		}
 	}
 	return nil
 }
 
-func (c *collection) runAction(ctx context.Context, action *driver.Action) error {
+func (c *collection) runAction(ctx context.Context, action *driver.Action, opts *driver.RunActionsOptions) error {
 	var err error
 	switch action.Kind {
 	case driver.Get:
-		err = c.get(ctx, action)
+		err = c.get(ctx, action, opts)
 
 	case driver.Create:
-		err = c.create(ctx, action)
+		err = c.create(ctx, action, opts)
 
 	case driver.Replace, driver.Put:
-		err = c.replace(ctx, action, action.Kind == driver.Put)
+		err = c.replace(ctx, action, action.Kind == driver.Put, opts)
 
 	case driver.Delete:
-		err = c.delete(ctx, action)
+		err = c.delete(ctx, action, opts)
 
 	case driver.Update:
-		err = c.update(ctx, action)
+		err = c.update(ctx, action, opts)
 
 	default:
 		err = gcerr.Newf(gcerr.Internal, nil, "bad action %+v", action)
@@ -252,7 +255,7 @@ func (c *collection) runAction(ctx context.Context, action *driver.Action) error
 	return err
 }
 
-func (c *collection) get(ctx context.Context, a *driver.Action) error {
+func (c *collection) get(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
 	id, err := c.docID(a.Doc)
 	if err != nil {
 		return err
@@ -260,6 +263,19 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 	opts := options.FindOne()
 	if len(a.FieldPaths) > 0 {
 		opts.Projection = c.projectionDoc(a.FieldPaths)
+	}
+	if dopts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**options.FindOneOptions)
+			if !ok {
+				return false
+			}
+			*p = opts
+			return true
+		}
+		if err := dopts.BeforeDo(asFunc); err != nil {
+			return err
+		}
 	}
 	res := c.coll.FindOne(ctx, bson.D{{"_id", id}}, opts)
 	if res.Err() != nil {
@@ -297,12 +313,26 @@ func sliceToLower(s []string) {
 }
 
 // See https://docs.mongodb.com/manual/reference/method/db.collection.insertOne.
-func (c *collection) create(ctx context.Context, a *driver.Action) error {
+func (c *collection) create(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
 	mdoc, createdID, err := c.prepareCreate(a)
 	if err != nil {
 		return err
 	}
-	if _, err = c.coll.InsertOne(ctx, mdoc); err != nil {
+	opts := &options.InsertOneOptions{}
+	if dopts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**options.InsertOneOptions)
+			if !ok {
+				return false
+			}
+			*p = opts
+			return true
+		}
+		if err := dopts.BeforeDo(asFunc); err != nil {
+			return err
+		}
+	}
+	if _, err = c.coll.InsertOne(ctx, mdoc, opts); err != nil {
 		return err
 	}
 	if createdID != nil {
@@ -333,7 +363,7 @@ func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{
 	return mdoc, createdID, nil
 }
 
-func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool) error {
+func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool, dopts *driver.RunActionsOptions) error {
 	// See https://docs.mongodb.com/manual/reference/method/db.collection.replaceOne
 	filter, mdoc, id, err := c.prepareReplace(a)
 	if err != nil {
@@ -342,6 +372,19 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 	opts := options.Replace()
 	if upsert {
 		opts.SetUpsert(true) // Document will be created if it doesn't exist.
+	}
+	if dopts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**options.ReplaceOptions)
+			if !ok {
+				return false
+			}
+			*p = opts
+			return true
+		}
+		if err := dopts.BeforeDo(asFunc); err != nil {
+			return err
+		}
 	}
 	result, err := c.coll.ReplaceOne(ctx, filter, mdoc, opts)
 	if err != nil {
@@ -380,12 +423,26 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 	return mdoc, nil
 }
 
-func (c *collection) delete(ctx context.Context, a *driver.Action) error {
+func (c *collection) delete(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
 	filter, id, rev, err := c.makeFilter(a.Doc)
 	if err != nil {
 		return err
 	}
-	result, err := c.coll.DeleteOne(ctx, filter)
+	opts := &options.DeleteOptions{}
+	if dopts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**options.DeleteOptions)
+			if !ok {
+				return false
+			}
+			*p = opts
+			return true
+		}
+		if err := dopts.BeforeDo(asFunc); err != nil {
+			return err
+		}
+	}
+	result, err := c.coll.DeleteOne(ctx, filter, opts)
 	if err != nil {
 		return err
 	}
@@ -403,7 +460,7 @@ func (c *collection) delete(ctx context.Context, a *driver.Action) error {
 	return err
 }
 
-func (c *collection) update(ctx context.Context, a *driver.Action) error {
+func (c *collection) update(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
 	filter, updateDoc, id, err := c.prepareUpdate(a)
 	if err != nil {
 		return err
@@ -411,7 +468,21 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 	if filter == nil { // no-op
 		return nil
 	}
-	result, err := c.coll.UpdateOne(ctx, filter, updateDoc)
+	opts := &options.UpdateOptions{}
+	if dopts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**options.UpdateOptions)
+			if !ok {
+				return false
+			}
+			*p = opts
+			return true
+		}
+		if err := dopts.BeforeDo(asFunc); err != nil {
+			return err
+		}
+	}
+	result, err := c.coll.UpdateOne(ctx, filter, updateDoc, opts)
 	if err != nil {
 		return err
 	}
@@ -437,11 +508,18 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 	var (
 		sets   bson.D
 		unsets bson.D
+		incs   bson.D
 	)
 	for _, m := range mods {
 		key := c.toMongoFieldPath(m.FieldPath)
 		if m.Value == nil {
 			unsets = append(unsets, bson.E{Key: key, Value: ""})
+		} else if inc, ok := m.Value.(driver.IncOp); ok {
+			val, err := encodeValue(inc.Amount)
+			if err != nil {
+				return nil, err
+			}
+			incs = append(incs, bson.E{Key: key, Value: val})
 		} else {
 			val, err := encodeValue(m.Value)
 			if err != nil {
@@ -450,7 +528,7 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 			sets = append(sets, bson.E{Key: key, Value: val})
 		}
 	}
-	if len(sets) == 0 && len(unsets) == 0 {
+	if len(sets) == 0 && len(unsets) == 0 && len(incs) == 0 {
 		// MongoDB returns an error if there are no updates, but docstore treats it
 		// as a no-op.
 		// TODO(jba): remove this, check in docstore.ActionList.Update.
@@ -460,6 +538,9 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: driver.UniqueString()})
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
+	}
+	if len(incs) > 0 {
+		updateDoc["$inc"] = incs
 	}
 	return updateDoc, nil
 }
@@ -507,7 +588,7 @@ type indexedError = struct {
 	Err   error
 }
 
-func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action) driver.ActionListError {
+func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	// MongoDB has a bulk write RPC, but no easy way to do a bulk get.
 	// We run the Gets in parallel.
 	// TODO(jba): consider doing a bulk get by using Find with an "or" filter.
@@ -527,15 +608,17 @@ func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.
 	for _, g := range gets {
 		g := g
 		go func() {
-			err := c.get(ctx, g.action)
+			err := c.get(ctx, g.action, opts)
 			getc <- indexedError{g.index, err}
 		}()
 	}
 
 	// Run all writes in a single BulkWrite RPC.
-	alerrBulk := c.unorderedBulkWrite(ctx, writes)
-	if alerrBulk != nil {
-		alerr = append(alerr, alerrBulk...)
+	if len(writes) > 0 {
+		alerrBulk := c.unorderedBulkWrite(ctx, writes)
+		if alerrBulk != nil {
+			alerr = append(alerr, alerrBulk...)
+		}
 	}
 
 	// Collect the Get results.
@@ -568,7 +651,7 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			}
 		case driver.Delete:
 			m, err = c.newDeleteModel(a)
-			if err != nil {
+			if err == nil {
 				nDeletes++
 			}
 		case driver.Replace, driver.Put:
@@ -578,7 +661,7 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			}
 		case driver.Update:
 			m, err = c.newUpdateModel(a)
-			if err != nil && m != nil {
+			if err == nil && m != nil {
 				nMatches++
 			}
 
@@ -605,10 +688,12 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 		return alerr
 	}
 	if res.DeletedCount != nDeletes {
-		alerr = append(alerr, indexedError{-1, gcerr.Newf(gcerr.NotFound, nil, "some delete failed")})
+		alerr = append(alerr, indexedError{-1,
+			gcerr.Newf(gcerr.NotFound, nil, "some delete failed (deleted %d out of %d)", res.DeletedCount, nDeletes)})
 	}
 	if res.MatchedCount != nMatches {
-		alerr = append(alerr, indexedError{-1, gcerr.Newf(gcerr.NotFound, nil, "some replace failed")})
+		alerr = append(alerr, indexedError{-1,
+			gcerr.Newf(gcerr.NotFound, nil, "some replace failed (replaced %d out of %d)", res.MatchedCount, nMatches)})
 	}
 	for i, newID := range newIDs {
 		if err := iactions[i].action.Doc.SetField(c.idField, newID); err != nil {
@@ -670,6 +755,9 @@ func (c *collection) As(i interface{}) bool {
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	if g, ok := err.(*gcerr.Error); ok {
 		return g.Code
+	}
+	if err == mongo.ErrNoDocuments {
+		return gcerrors.NotFound
 	}
 	if wexc, ok := err.(mongo.WriteException); ok && len(wexc.WriteErrors) > 0 {
 		return translateMongoCode(wexc.WriteErrors[0].Code)
