@@ -227,7 +227,7 @@ func TestAddDemo(t *testing.T) {
 		},
 		// PUBSUB TESTS.
 		{
-			demo:         "pubsub",
+			demo:        "pubsub",
 			description: "base",
 			urlPaths:    []string{"/demo/pubsub", "/demo/pubsub/"},
 			op:          "GET",
@@ -241,7 +241,7 @@ func TestAddDemo(t *testing.T) {
 			},
 		},
 		{
-			demo:         "pubsub",
+			demo:        "pubsub",
 			description: "empty receive",
 			urlPaths:    []string{"/demo/pubsub/receive"},
 			op:          "GET",
@@ -255,7 +255,7 @@ func TestAddDemo(t *testing.T) {
 			},
 		},
 		{
-			demo:         "pubsub",
+			demo:        "pubsub",
 			description: "send1",
 			urlPaths:    []string{"/demo/pubsub/send"},
 			urlQuery:    "msg=hello+world",
@@ -271,7 +271,7 @@ func TestAddDemo(t *testing.T) {
 			},
 		},
 		{
-			demo:         "pubsub",
+			demo:        "pubsub",
 			description: "receive",
 			urlPaths:    []string{"/demo/pubsub/receive"},
 			op:          "GET",
