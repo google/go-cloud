@@ -772,7 +772,7 @@ const mongoDupKeyCode = 11000
 func translateMongoCode(code int) gcerrors.ErrorCode {
 	switch code {
 	case mongoDupKeyCode:
-		return gcerrors.AlreadyExists
+		return gcerrors.FailedPrecondition
 	default:
 		return gcerrors.Unknown
 	}
