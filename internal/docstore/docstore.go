@@ -325,32 +325,52 @@ func toDriverMods(mods Mods) ([]driver.Mod, error) {
 	// Convert mods from a map to a slice of (fieldPath, value) pairs.
 	// The map is easier for users to write, but the slice is easier
 	// to process.
-	// TODO(jba): check for prefix
 
 	// Sort keys so tests are deterministic.
+	// After sorting, a key might not immediately follow its prefix. Consider the
+	// sorted list of keys "a", "a+b", "a.b". "a" is prefix of "a.b", but since '+'
+	// sorts before '.', it is not adjacent to it. All we can assume is that the
+	// prefix is before the key.
 	var keys []string
 	for k := range mods {
 		keys = append(keys, string(k))
 	}
 	sort.Strings(keys)
 
-	dmods := make([]driver.Mod, len(keys))
-	for i, k := range keys {
+	var dmods []driver.Mod
+	for _, k := range keys {
 		k := FieldPath(k)
 		v := mods[k]
 		fp, err := parseFieldPath(k)
 		if err != nil {
 			return nil, err
 		}
-
+		for _, d := range dmods {
+			if fpHasPrefix(fp, d.FieldPath) {
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
+					"field path %q is a prefix of %q", strings.Join(d.FieldPath, "."), k)
+			}
+		}
 		if inc, ok := v.(driver.IncOp); ok && !isIncNumber(inc.Amount) {
 			return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
-				"Increment amount %v of type %T must be an integer or floating-point number", inc.Amount, inc.Amount)
+				"Increment amount %v of type %[1]T must be an integer or floating-point number", inc.Amount)
 		}
-
-		dmods[i] = driver.Mod{FieldPath: fp, Value: v}
+		dmods = append(dmods, driver.Mod{FieldPath: fp, Value: v})
 	}
 	return dmods, nil
+}
+
+// fphasPrefix reports whether the field path fp begins with prefix.
+func fpHasPrefix(fp, prefix []string) bool {
+	if len(fp) < len(prefix) {
+		return false
+	}
+	for i, p := range prefix {
+		if fp[i] != p {
+			return false
+		}
+	}
+	return true
 }
 
 func isIncNumber(x interface{}) bool {
