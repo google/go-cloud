@@ -110,6 +110,9 @@ func BenchmarkGcsblob(b *testing.B) {
 		b.Fatal(err)
 	}
 	bkt, err := OpenBucket(context.Background(), client, bucketName, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
 	drivertest.RunBenchmarks(b, bkt)
 }
 

@@ -1989,6 +1989,9 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 					t.Errorf("got status code %d, want 200", resp.StatusCode)
 				}
 				got, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
 				if !bytes.Equal(got, content) {
 					t.Errorf("got body %q, want %q", string(got), string(content))
 				}
@@ -2055,6 +2058,9 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Errorf("got status code %d, want 200", resp.StatusCode)
 	}
 	got, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(got, contents) {
 		t.Errorf("got body %q, want %q", string(got), string(contents))
 	}

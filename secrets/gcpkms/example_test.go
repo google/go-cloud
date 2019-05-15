@@ -51,6 +51,9 @@ func ExampleOpenKeeper() {
 		log.Fatal(err)
 	}
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
+	if err != nil {
+		log.Fatal(err)
+	}
 	_ = decrypted
 }
 
