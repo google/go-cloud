@@ -47,8 +47,8 @@ func TestAddDemo(t *testing.T) {
 		t.Fatalf("run init error: %+v", err)
 	}
 
-	// Call the main package run function as if 'add-api' were being called
-	// from the command line for each of the portable APIs.
+	// Call the main package run function as if 'add-demo' were being called
+	// from the command line for each of the demos.
 	for _, demo := range allDemos {
 		if err := run(ctx, pctx, []string{"demo", demo.name}, new(bool)); err != nil {
 			t.Fatalf("run demo error: %+v", err)
@@ -64,6 +64,8 @@ func TestAddDemo(t *testing.T) {
 	// Update the environment to use local implementations for each portable API.
 	pctx.env = overrideEnv(pctx.env,
 		"BLOB_BUCKET_URL=mem://",
+		"PUBSUB_TOPIC_URL=mem://testtopic",
+		"PUBSUB_SUBSCRIPTION_URL=mem://testtopic",
 		"RUNTIMEVAR_VARIABLE_URL=constant://?val=test-variable-value&decoder=string",
 		"SECRETS_KEEPER_URL=base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=",
 	)
@@ -221,6 +223,66 @@ func TestAddDemo(t *testing.T) {
 			op:          "GET",
 			stringsToFind: []string{
 				"key2 contents",
+			},
+		},
+		// PUBSUB TESTS.
+		{
+			demo:        "pubsub",
+			description: "base",
+			urlPaths:    []string{"/demo/pubsub", "/demo/pubsub/"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/pubsub demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/pubsub",
+				`<a href="./send">Send</a>`,
+				`<a href="./receive">Receive</a>`,
+				"Enter a message to send to the topic",
+			},
+		},
+		{
+			demo:        "pubsub",
+			description: "empty receive",
+			urlPaths:    []string{"/demo/pubsub/receive"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/pubsub demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/pubsub",
+				`<a href="./send">Send</a>`,
+				`<a href="./receive">Receive</a>`,
+				"No message available",
+			},
+		},
+		{
+			demo:        "pubsub",
+			description: "send1",
+			urlPaths:    []string{"/demo/pubsub/send"},
+			urlQuery:    "msg=hello+world",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/pubsub demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/pubsub",
+				`<a href="./send">Send</a>`,
+				`<a href="./receive">Receive</a>`,
+				"Message sent!",
+				"hello world", // message carries over
+			},
+		},
+		{
+			demo:        "pubsub",
+			description: "receive",
+			urlPaths:    []string{"/demo/pubsub/receive"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/pubsub demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/pubsub",
+				`<a href="./send">Send</a>`,
+				`<a href="./receive">Receive</a>`,
+				"Received message:",
+				"hello world",
 			},
 		},
 		// RUNTIMEVAR TESTS.
