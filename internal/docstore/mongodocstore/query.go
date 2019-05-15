@@ -42,6 +42,19 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 		}
 		filter = append(filter, bf)
 	}
+	if q.BeforeQuery != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**options.FindOptions)
+			if !ok {
+				return false
+			}
+			*p = opts
+			return true
+		}
+		if err := q.BeforeQuery(asFunc); err != nil {
+			return nil, fmt.Errorf("Find: %v", err)
+		}
+	}
 	cursor, err := c.coll.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, fmt.Errorf("Find: %v", err)
