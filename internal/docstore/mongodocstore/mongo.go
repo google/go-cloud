@@ -633,10 +633,13 @@ func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.
 
 func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedAction) driver.ActionListError {
 	var (
-		alerr              driver.ActionListError
-		models             []mongo.WriteModel
-		newIDs             = map[int]interface{}{} // new IDs for Create, keyed by position in iactions
-		nDeletes, nMatches int64
+		alerr           driver.ActionListError
+		models          []mongo.WriteModel
+		newIDs          = map[int]interface{}{} // new IDs for Create, keyed by position in iactions
+		nCreate         int64
+		nDeletes        int64
+		nNonCreateWrite int64 // total operations expected from Put, Replace and Update
+		nModified       int64 // total operations expected from Replace and Update
 	)
 	for i, ia := range iactions {
 		a := ia.action
@@ -649,22 +652,31 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			if newID != nil {
 				newIDs[i] = newID
 			}
+			if err == nil {
+				nCreate++
+			}
 		case driver.Delete:
 			m, err = c.newDeleteModel(a)
 			if err == nil {
 				nDeletes++
 			}
-		case driver.Replace, driver.Put:
-			m, err = c.newReplaceModel(a, a.Kind == driver.Put)
-			if err != nil && a.Kind != driver.Put {
-				nMatches++
+		case driver.Replace:
+			m, err = c.newReplaceModel(a, false)
+			if err == nil {
+				nNonCreateWrite++
+				nModified++
+			}
+		case driver.Put:
+			m, err = c.newReplaceModel(a, true)
+			if err == nil {
+				nNonCreateWrite++
 			}
 		case driver.Update:
 			m, err = c.newUpdateModel(a)
 			if err == nil && m != nil {
-				nMatches++
+				nNonCreateWrite++
+				nModified++
 			}
-
 		default:
 			err = gcerr.Newf(gcerr.Internal, nil, "bad action %+v", a)
 		}
@@ -687,13 +699,21 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 		}
 		return alerr
 	}
+	if res.InsertedCount != nCreate {
+		alerr = append(alerr, indexedError{-1,
+			gcerr.Newf(gcerr.NotFound, nil, "some create failed (deleted %d out of %d)", res.InsertedCount, nCreate)})
+	}
 	if res.DeletedCount != nDeletes {
 		alerr = append(alerr, indexedError{-1,
 			gcerr.Newf(gcerr.NotFound, nil, "some delete failed (deleted %d out of %d)", res.DeletedCount, nDeletes)})
 	}
-	if res.MatchedCount != nMatches {
+	if res.MatchedCount+res.UpsertedCount != nNonCreateWrite {
 		alerr = append(alerr, indexedError{-1,
-			gcerr.Newf(gcerr.NotFound, nil, "some replace failed (replaced %d out of %d)", res.MatchedCount, nMatches)})
+			gcerr.Newf(gcerr.NotFound, nil, "some writes failed (replaced %d, upserted %d, out of total %d)", res.MatchedCount, res.UpsertedCount, nNonCreateWrite)})
+	}
+	if res.ModifiedCount != nModified {
+		alerr = append(alerr, indexedError{-1,
+			gcerr.Newf(gcerr.NotFound, nil, "some modification failed (modified %d, out of %d)", res.ModifiedCount, nModified)})
 	}
 	for i, newID := range newIDs {
 		if err := iactions[i].action.Doc.SetField(c.idField, newID); err != nil {

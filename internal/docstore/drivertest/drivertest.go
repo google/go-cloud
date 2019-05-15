@@ -1169,36 +1169,33 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	}
 	must(actions.Do(ctx))
 
-	// Get the first three and put three more.
+	// Replace the first three and put six more.
 	actions = coll.Actions().Unordered()
-	var gdocs []docmap
 	for i := 0; i < 3; i++ {
-		doc := docmap{KeyField: docs[i][KeyField]}
-		gdocs = append(gdocs, doc)
-		actions.Get(doc)
+		doc := docmap{KeyField: docs[i][KeyField], "s": fmt.Sprintf("%d'", i)}
+		actions.Replace(doc)
 	}
-	for i := 3; i < 6; i++ {
+	for i := 3; i < 9; i++ {
 		actions.Put(docs[i])
 	}
 	must(actions.Do(ctx))
-	compare(gdocs, docs[:3])
 
 	// Delete the first three, get the second three, and put three more.
 	actions = coll.Actions().Unordered()
-	gdocs = []docmap{
+	gdocs := []docmap{
 		{KeyField: docs[3][KeyField]},
 		{KeyField: docs[4][KeyField]},
 		{KeyField: docs[5][KeyField]},
 	}
-	actions.Put(docs[6])
+	actions.Update(docs[6], ds.Mods{"s": "6'"})
 	actions.Get(gdocs[0])
 	actions.Delete(docs[0])
 	actions.Delete(docs[1])
-	actions.Put(docs[7])
+	actions.Update(docs[7], ds.Mods{"s": "7'"})
 	actions.Get(gdocs[1])
 	actions.Delete(docs[2])
 	actions.Get(gdocs[2])
-	actions.Put(docs[8])
+	actions.Update(docs[8], ds.Mods{"s": "8'"})
 	must(actions.Do(ctx))
 	compare(gdocs, docs[3:6])
 
