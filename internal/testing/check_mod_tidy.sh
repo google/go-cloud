@@ -19,10 +19,14 @@
 # Alternatively, it accepts a single argument to check the module in the given
 # directory.
 #
-# It exits with status 1 if "go mod tidy" would make changes.
+# It exits with status 1 if "go mod tidy && go list -deps ./..." would
+# make changes.
 #
 # TODO(rvangent): Replace this with `go mod tidy --check` when it exists:
 # https://github.com/golang/go/issues/27005.
+#
+# TODO(rvangent): Drop the "go list" part here and in gomodcleanup.sh once
+# https://github.com/golang/go/issues/31248 is fixed.
 
 set -euo pipefail
 

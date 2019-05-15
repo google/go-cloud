@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script should be run from the root directory.
+# It runs "go mod tidy && go list -deps ./..." on all modules in
+# the repo, to ensure that go.mod and go.sum are in the canonical
+# form that Travis will verify (see check_mod_tidy.sh).
 set -euo pipefail
 
 sed -e '/^#/d' -e '/^$/d' allmodules | while read -r path || [[ -n "$path" ]]; do

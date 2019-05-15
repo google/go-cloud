@@ -110,7 +110,7 @@ fi;
 echo
 echo "Ensuring that go mod tidy has been run for the root module..."
 ( ./internal/testing/check_mod_tidy.sh && echo "OK" ) || {
-  echo "FAIL: run go mod tidy on the root module" && result=1
+  echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1
 }
 
 
@@ -124,7 +124,7 @@ trap cleanupstaticgo EXIT
 pushd internal/cmd/gocdk/ &> /dev/null
 go run -mod=readonly generate_static.go -- "$tmpstaticgo" &> /dev/null
 ( diff -u ./static.go - < "$tmpstaticgo" && echo "OK" ) || {
-  echo "FAIL: gocdk static files are out of date; run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
+  echo "FAIL: gocdk static files are out of date; please run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
 }
 popd &> /dev/null
 
@@ -189,7 +189,7 @@ while read -r path || [[ -n "$path" ]]; do
   echo "  go test:"
   ( cd "$path" && go test -mod=readonly ./... ) || result=1
   echo "  go mod tidy:"
-  ( ./internal/testing/check_mod_tidy.sh "$path" && echo "    OK" ) || { echo "FAIL: run go mod tidy on sub-module at '$path'" && result=1; }
+  ( ./internal/testing/check_mod_tidy.sh "$path" && echo "    OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
   echo "  wire check:"
   ( cd "$path" && wire check ./... && echo "    OK" ) || result=1
   echo "  wire diff:"
