@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/internal/docstore/driver"
@@ -159,6 +160,19 @@ func TestToDriverMods(t *testing.T) {
 			}
 		} else if !cmp.Equal(got, test.want) {
 			t.Errorf("%v: got %v, want %v", test.mods, got, test.want)
+		}
+	}
+}
+
+func TestIsIncNumber(t *testing.T) {
+	for _, x := range []interface{}{int(1), 'x', uint(1), byte(1), float32(1), float64(1), time.Duration(1)} {
+		if !isIncNumber(x) {
+			t.Errorf("%v: got false, want true", x)
+		}
+	}
+	for _, x := range []interface{}{1 + 1i, "3", time.Time{}} {
+		if isIncNumber(x) {
+			t.Errorf("%v: got true, want false", x)
 		}
 	}
 }
