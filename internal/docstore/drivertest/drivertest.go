@@ -831,7 +831,9 @@ func addQueryDocuments(t *testing.T, coll *ds.Collection) {
 }
 
 func testGetQuery(t *testing.T, coll *ds.Collection) {
-	cleanUpTable(t, newHighScore, coll)
+	if err := cleanUpTable(newHighScore, coll); err != nil {
+		t.Fatalf("%+v", err)
+	}
 	ctx := context.Background()
 	// (Temporary) skip if the driver does not implement queries.
 	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
@@ -931,7 +933,9 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 }
 
 func testDeleteQuery(t *testing.T, coll *ds.Collection) {
-	cleanUpTable(t, newHighScore, coll)
+	if err := cleanUpTable(newHighScore, coll); err != nil {
+		t.Fatalf("%+v", err)
+	}
 	ctx := context.Background()
 
 	addQueryDocuments(t, coll)
@@ -994,7 +998,9 @@ func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 		t.Skip("update queries not yet implemented")
 	}
 
-	cleanUpTable(t, newHighScore, coll)
+	if err := cleanUpTable(newHighScore, coll); err != nil {
+		t.Fatal(err)
+	}
 
 	addQueryDocuments(t, coll)
 
@@ -1034,10 +1040,8 @@ func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 }
 
 // cleanUpTable delete all documents from this collection after test.
-func cleanUpTable(t *testing.T, create func() interface{}, coll *docstore.Collection) {
-	if err := coll.Query().Delete(context.Background()); err != nil {
-		t.Fatalf("%+v", err)
-	}
+func cleanUpTable(create func() interface{}, coll *docstore.Collection) error {
+	return coll.Query().Delete(context.Background())
 }
 
 func forEach(ctx context.Context, iter *ds.DocumentIterator, create func() interface{}, handle func(interface{}) error) error {
@@ -1078,7 +1082,9 @@ func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentI
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
-	cleanUpTable(t, newDocmap, coll)
+	if err := cleanUpTable(newDocmap, coll); err != nil {
+		t.Fatalf("%+v", err)
+	}
 	ctx := context.Background()
 
 	docs := []docmap{
@@ -1140,7 +1146,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		t.Skip("unordered actions not yet implemented")
 	}
 
-	defer cleanUpTable(t, newDocmap, coll)
+	defer cleanUpTable(newDocmap, coll)
 
 	must := func(err error) {
 		t.Helper()
@@ -1240,7 +1246,9 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 }
 
 func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
-	cleanUpTable(t, newHighScore, coll)
+	if err := cleanUpTable(newHighScore, coll); err != nil {
+		t.Fatalf("%+v", err)
+	}
 	docs := []*HighScore{
 		{game3, "steph", 24, date(4, 25), nil},
 		{game3, "mia", 99, date(4, 26), nil},
