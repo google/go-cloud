@@ -187,7 +187,7 @@ while read -r path || [[ -n "$path" ]]; do
   echo "  go test:"
   ( cd "$path" && go test -mod=readonly ./... ) || result=1
   echo "  go mod tidy:"
-  ( check_mod_tidy.sh "$path" && echo "    OK" ) || { echo "FAIL: run go mod tidy on sub-module at '$path'" && result=1; }
+  ( ./internal/testing/check_mod_tidy.sh "$path" && echo "    OK" ) || { echo "FAIL: run go mod tidy on sub-module at '$path'" && result=1; }
   echo "  wire check:"
   ( cd "$path" && wire check ./... && echo "    OK" ) || result=1
   echo "  wire diff:"
