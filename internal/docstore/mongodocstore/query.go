@@ -52,12 +52,12 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 			return true
 		}
 		if err := q.BeforeQuery(asFunc); err != nil {
-			return nil, fmt.Errorf("Find: %v", err)
+			return nil, err
 		}
 	}
 	cursor, err := c.coll.Find(ctx, filter, opts)
 	if err != nil {
-		return nil, fmt.Errorf("Find: %v", err)
+		return nil, err
 	}
 	return &docIterator{cursor: cursor, idField: c.idField, ctx: ctx}, nil
 }
