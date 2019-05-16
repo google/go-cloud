@@ -16,6 +16,7 @@ package memdocstore
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/internal/docstore/drivertest"
@@ -26,6 +27,7 @@ type aStruct struct {
 	embed
 	Z *bool
 	W uint
+	T time.Time
 }
 
 type embed struct {
@@ -34,6 +36,7 @@ type embed struct {
 
 func TestEncodeDoc(t *testing.T) {
 	var b bool = true
+	tm := time.Now()
 	for _, test := range []struct {
 		in   interface{}
 		want map[string]interface{}
@@ -62,12 +65,14 @@ func TestEncodeDoc(t *testing.T) {
 				embed: embed{Y: "y"},
 				Z:     &b,
 				W:     33,
+				T:     tm,
 			},
 			want: map[string]interface{}{
 				"X": int64(3),
 				"Y": "y",
 				"Z": true,
 				"W": int64(33),
+				"T": tm,
 			},
 		},
 	} {
@@ -84,6 +89,7 @@ func TestEncodeDoc(t *testing.T) {
 
 func TestDecodeDoc(t *testing.T) {
 	var b bool = true
+	tm := time.Now()
 	for _, test := range []struct {
 		in   map[string]interface{}
 		val  interface{}
@@ -114,6 +120,7 @@ func TestDecodeDoc(t *testing.T) {
 				"Y": "y",
 				"Z": true,
 				"W": int64(33),
+				"T": tm,
 			},
 			&aStruct{},
 			&aStruct{
@@ -121,6 +128,7 @@ func TestDecodeDoc(t *testing.T) {
 				embed: embed{Y: "y"},
 				Z:     &b,
 				W:     33,
+				T:     tm,
 			},
 		},
 	} {

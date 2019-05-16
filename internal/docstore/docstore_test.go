@@ -20,8 +20,10 @@ import (
 	"net/url"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/docstore/driver"
 )
 
 var (
@@ -130,4 +132,49 @@ func (o *fakeOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*Collec
 	}
 	o.u = u
 	return nil, nil
+}
+
+func TestToDriverMods(t *testing.T) {
+	for _, test := range []struct {
+		mods    Mods
+		want    []driver.Mod
+		wantErr bool
+	}{
+		{
+			Mods{"a": 1, "b": nil},
+			[]driver.Mod{{[]string{"a"}, 1}, {[]string{"b"}, nil}},
+			false,
+		},
+		{
+			Mods{"a.b": 1, "b.c": nil},
+			[]driver.Mod{{[]string{"a", "b"}, 1}, {[]string{"b", "c"}, nil}},
+			false,
+		},
+		// empty mods are an error
+		{Mods{}, nil, true},
+		// prefixes are not allowed
+		{Mods{"a.b.c": 1, "a.b": 2, "a.b+c": 3}, nil, true},
+	} {
+		got, gotErr := toDriverMods(test.mods)
+		if test.wantErr {
+			if gotErr == nil {
+				t.Errorf("%v: got nil, want error", test.mods)
+			}
+		} else if !cmp.Equal(got, test.want) {
+			t.Errorf("%v: got %v, want %v", test.mods, got, test.want)
+		}
+	}
+}
+
+func TestIsIncNumber(t *testing.T) {
+	for _, x := range []interface{}{int(1), 'x', uint(1), byte(1), float32(1), float64(1), time.Duration(1)} {
+		if !isIncNumber(x) {
+			t.Errorf("%v: got false, want true", x)
+		}
+	}
+	for _, x := range []interface{}{1 + 1i, "3", time.Time{}} {
+		if isIncNumber(x) {
+			t.Errorf("%v: got true, want false", x)
+		}
+	}
 }

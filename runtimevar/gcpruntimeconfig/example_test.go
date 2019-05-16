@@ -29,7 +29,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func Example() {
+func ExampleOpenVariable() {
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
@@ -74,8 +74,8 @@ func Example() {
 	_ = cfg
 }
 
-func Example_openVariable() {
-	// OpenVariable creates a *runtimevar.Variable from a URL.
+func Example_openVariableFromURL() {
+	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://myproject/myconfigid/myvar?decoder=string")
 	if err != nil {

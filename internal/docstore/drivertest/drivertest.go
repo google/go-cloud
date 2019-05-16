@@ -366,7 +366,10 @@ func testGet(t *testing.T, coll *ds.Collection) {
 		t.Error("Get with field paths:\n", diff)
 	}
 
-	// TODO(jba): add a NotFound test for nonexistent documents
+	err := coll.Get(ctx, nonexistentDoc)
+	if gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("Get of nonexistent doc: got %v, want NotFound", err)
+	}
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -820,8 +823,7 @@ var queryDocuments = []*HighScore{
 }
 
 func addQueryDocuments(t *testing.T, coll *ds.Collection) {
-	// TODO(jba): use Unordered.
-	alist := coll.Actions()
+	alist := coll.Actions().Unordered()
 	for _, doc := range queryDocuments {
 		alist.Put(doc)
 	}
@@ -835,11 +837,6 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 		t.Fatalf("%+v", err)
 	}
 	ctx := context.Background()
-	// (Temporary) skip if the driver does not implement queries.
-	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
-		t.Skip("queries not yet implemented")
-	}
-
 	addQueryDocuments(t, coll)
 
 	// Query filters should have the same behavior when doing string and number
@@ -884,12 +881,11 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			q:    coll.Query().Where("Game", "=", game1).Where("Score", ">=", 50),
 			want: func(h *HighScore) bool { return h.Game == game1 && h.Score >= 50 },
 		},
-		// TODO(jba): add this test after adding support for times as filter values (#1906).
-		// {
-		// 	name: "PlayerTime",
-		// 	q:    coll.Query().Where("Player", "=", "mel").Where("Time", ">", date(4, 1)),
-		// 	want: func(h *HighScore) bool { return h.Player == "mel" && h.Time.After(date(4, 1)) },
-		// },
+		{
+			name: "PlayerTime",
+			q:    coll.Query().Where("Player", "=", "mel").Where("Time", ">", date(4, 1)),
+			want: func(h *HighScore) bool { return h.Player == "mel" && h.Time.After(date(4, 1)) },
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -994,7 +990,7 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 
 func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	if err := coll.Query().Update(ctx, nil); gcerrors.Code(err) == gcerrors.Unimplemented {
+	if err := coll.Query().Update(ctx, docstore.Mods{"a": 1}); gcerrors.Code(err) == gcerrors.Unimplemented {
 		t.Skip("update queries not yet implemented")
 	}
 
@@ -1177,45 +1173,43 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 
 	// Put the first three docs.
 	actions := coll.Actions().Unordered()
-	for i := 0; i < 3; i++ {
-		actions.Put(docs[i])
+	for i := 0; i < 6; i++ {
+		actions.Create(docs[i])
 	}
 	must(actions.Do(ctx))
 
-	// Get the first three and put three more.
+	// Replace the first three and put six more.
 	actions = coll.Actions().Unordered()
-	var gdocs []docmap
 	for i := 0; i < 3; i++ {
-		doc := docmap{KeyField: docs[i][KeyField]}
-		gdocs = append(gdocs, doc)
-		actions.Get(doc)
+		doc := docmap{KeyField: docs[i][KeyField], "s": fmt.Sprintf("%d'", i)}
+		actions.Replace(doc)
 	}
-	for i := 3; i < 6; i++ {
+	for i := 3; i < 9; i++ {
 		actions.Put(docs[i])
 	}
 	must(actions.Do(ctx))
-	compare(gdocs, docs[:3])
 
 	// Delete the first three, get the second three, and put three more.
 	actions = coll.Actions().Unordered()
-	gdocs = []docmap{
+	gdocs := []docmap{
 		{KeyField: docs[3][KeyField]},
 		{KeyField: docs[4][KeyField]},
 		{KeyField: docs[5][KeyField]},
 	}
-	actions.Put(docs[6])
+	actions.Update(docs[6], ds.Mods{"s": "6'"})
 	actions.Get(gdocs[0])
 	actions.Delete(docs[0])
 	actions.Delete(docs[1])
-	actions.Put(docs[7])
+	actions.Update(docs[7], ds.Mods{"s": "7'"})
 	actions.Get(gdocs[1])
 	actions.Delete(docs[2])
 	actions.Get(gdocs[2])
-	actions.Put(docs[8])
+	actions.Update(docs[8], ds.Mods{"s": "8'"})
 	must(actions.Do(ctx))
 	compare(gdocs, docs[3:6])
 
-	// Get the first four. The first three should fail.
+	// Get the first four, and try to create one that already exists. Only the
+	// fourth should succeed.
 	actions = coll.Actions().Unordered()
 	gdocs = []docmap{
 		{KeyField: docs[0][KeyField]},
@@ -1226,6 +1220,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	for i := 0; i < len(gdocs); i++ {
 		actions.Get(gdocs[i])
 	}
+	actions.Create(docs[4])
 	err = actions.Do(ctx)
 	if err == nil {
 		t.Fatal("want error, got nil")
@@ -1235,12 +1230,20 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		t.Fatalf("got %v (%T), want ActionListError", alerr, alerr)
 	}
 	for _, e := range alerr {
-		i := e.Index
-		if i == 3 && e.Err != nil {
-			t.Errorf("index 3: got %v, want nil", e.Err)
-		}
-		if i < 3 && gcerrors.Code(e.Err) != gcerrors.NotFound {
-			t.Errorf("index %d: got %v, want NotFound", i, e.Err)
+		switch i := e.Index; i {
+		case 3:
+			if e.Err != nil {
+				t.Errorf("index 3: got %v, want nil", e.Err)
+			}
+		case 4, -1: // -1 for mongodb issue, see https://jira.mongodb.org/browse/GODRIVER-1028
+			if ec := gcerrors.Code(e.Err); ec != gcerrors.AlreadyExists &&
+				ec != gcerrors.FailedPrecondition { // TODO(shantuo): distinguish this case for dyanmo
+				t.Errorf("index 4: create an existing document: got %v, want error", e.Err)
+			}
+		default:
+			if gcerrors.Code(e.Err) != gcerrors.NotFound {
+				t.Errorf("index %d: got %v, want NotFound", i, e.Err)
+			}
 		}
 	}
 }

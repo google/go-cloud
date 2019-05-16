@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/secrets/vault"
 )
 
-func Example_encrypt() {
+func ExampleOpenKeeper() {
 
 	// Get a client to use with the Vault API.
 	ctx := context.Background()
@@ -54,10 +54,10 @@ func Example_encrypt() {
 	_ = decrypted
 }
 
-func Example_openKeeper() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
-	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
 	// The default opener dials a default Vault server based on the environment
 	// variables VAULT_SERVER_URL and VAULT_SERVER_TOKEN.
 	keeper, err := secrets.OpenKeeper(ctx, "vault://mykey")

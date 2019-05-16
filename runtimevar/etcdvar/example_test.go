@@ -29,7 +29,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func Example() {
+func ExampleOpenVariable() {
 	// Connect to the etcd server.
 	client, err := clientv3.NewFromURL("http://your.etcd.server:9999")
 	if err != nil {
@@ -57,8 +57,8 @@ func Example() {
 	_ = cfg
 }
 
-func Example_openVariable() {
-	// OpenVariable creates a *runtimevar.Variable from a URL.
+func Example_openVariableFromURL() {
+	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The default opener connects to an etcd server based on the environment
 	// variable ETCD_SERVER_URL.
 	ctx := context.Background()

@@ -29,17 +29,22 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type portableAPIInfo struct {
+type demoInfo struct {
 	name       string // the portable API name
 	goDemoPath string // the path to the .go file to add to the project for static.Open
 	demoURL    string // the URL for the demo
 }
 
-var portableAPIs = []*portableAPIInfo{
+var allDemos = []*demoInfo{
 	{
 		name:       "blob",
 		goDemoPath: "/demo/blob/demo_blob.go",
 		demoURL:    "/demo/blob/",
+	},
+	{
+		name:       "pubsub",
+		goDemoPath: "/demo/pubsub/demo_pubsub.go",
+		demoURL:    "/demo/pubsub/",
 	},
 	{
 		name:       "runtimevar",
@@ -53,17 +58,17 @@ var portableAPIs = []*portableAPIInfo{
 	},
 }
 
-func addPortableAPI(ctx context.Context, pctx *processContext, args []string) error {
-	// Compute a sorted slice of available portable APIs for usage.
+func addDemo(ctx context.Context, pctx *processContext, args []string) error {
+	// Compute a sorted slice of available demos for usage.
 	var avail []string
-	for _, api := range portableAPIs {
-		avail = append(avail, api.name)
+	for _, demo := range allDemos {
+		avail = append(avail, demo.name)
 	}
 	sort.Strings(avail)
-	usageMsg := fmt.Sprintf("gocdk add-api <%s>", strings.Join(avail, "|"))
+	usageMsg := fmt.Sprintf("gocdk demo <%s>", strings.Join(avail, "|"))
 
-	f := newFlagSet(pctx, "add-api")
-	force := f.Bool("force", false, "re-add even the portable API even if it has already been added, overwriting previous files")
+	f := newFlagSet(pctx, "demo")
+	force := f.Bool("force", false, "re-add even the demo even if it has already been added, overwriting previous files")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
@@ -75,31 +80,31 @@ func addPortableAPI(ctx context.Context, pctx *processContext, args []string) er
 		return usagef("%s: expected 1 argument, got %d", usageMsg, len(args))
 	}
 
-	for _, api := range portableAPIs {
-		if api.name == args[0] {
-			return instantiatePortableAPI(pctx, api, *force)
+	for _, demo := range allDemos {
+		if demo.name == args[0] {
+			return instantiateDemo(pctx, demo, *force)
 		}
 	}
-	return xerrors.Errorf("%q is not a supported portable API. Available APIs include: %s.", args[0], strings.Join(avail, ", "))
+	return xerrors.Errorf("%q is not a supported demo. Available demos include: %s.", args[0], strings.Join(avail, ", "))
 }
 
-// instantiatePortableAPI does all of the work required to add a demo of a
+// instantiateDemo does all of the work required to add a demo of a
 // portable API to the user's project.
 // TODO(rvangent): It currently copies a single source code file. It should
 // additionally iterate over existing biomes, adding a config entry and possibly
 // Terraform files.
-func instantiatePortableAPI(pctx *processContext, api *portableAPIInfo, force bool) error {
+func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
-	logger.Printf("Adding %q...", api.name)
+	logger.Printf("Adding %q...", demo.name)
 
-	dstPath := path.Join(pctx.workdir, filepath.Base(api.goDemoPath))
+	dstPath := path.Join(pctx.workdir, filepath.Base(demo.goDemoPath))
 	if !force {
 		if _, err := os.Stat(dstPath); err == nil {
-			return xerrors.Errorf("%q has already been added to your project. Use --force if you want to re-add it, overwriting previous files", api.name)
+			return xerrors.Errorf("%q has already been added to your project. Use --force if you want to re-add it, overwriting previous files", demo.name)
 		}
 	}
 
-	srcFile, err := static.Open(api.goDemoPath)
+	srcFile, err := static.Open(demo.goDemoPath)
 	if err != nil {
 		return err
 	}
@@ -115,7 +120,7 @@ func instantiatePortableAPI(pctx *processContext, api *portableAPIInfo, force bo
 	if err != nil {
 		return err
 	}
-	logger.Printf("  added %s to your project.", filepath.Base(api.goDemoPath))
-	logger.Printf("Run 'gocdk serve' and visit http://localhost:8080%s to see a demo of %s functionality.", api.demoURL, api.name)
+	logger.Printf("  added a demo of %s to your project.", filepath.Base(demo.goDemoPath))
+	logger.Printf("Run 'gocdk serve' and visit http://localhost:8080%s to see a demo of %s functionality.", demo.demoURL, demo.name)
 	return nil
 }

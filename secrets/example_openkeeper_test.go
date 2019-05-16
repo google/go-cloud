@@ -23,7 +23,7 @@ import (
 	_ "gocloud.dev/secrets/localsecrets"
 )
 
-func Example_openKeeper() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
 	// Create a Keeper using a URL.

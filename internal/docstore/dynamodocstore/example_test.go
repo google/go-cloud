@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/internal/docstore/dynamodocstore"
 )
 
-func Example() {
+func ExampleOpenCollection() {
 	ctx := context.Background()
 	sess, err := session.NewSession()
 	if err != nil {

@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	slashpath "path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -70,10 +71,6 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
 
-	if err := os.MkdirAll(projectDir, 0777); err != nil {
-		return xerrors.Errorf("gocdk init: %w", err)
-	}
-
 	tmplValues := struct {
 		ProjectName string
 		ModulePath  string
@@ -81,19 +78,54 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		ProjectName: filepath.Base(projectDir),
 		ModulePath:  modpath,
 	}
-	for fileName, templateSource := range InitTemplates {
-		tmpl := template.Must(template.New(fileName).Parse(templateSource))
-		buf := new(bytes.Buffer)
-		if err := tmpl.Execute(buf, tmplValues); err != nil {
-			return xerrors.Errorf("gocdk init: %w", err)
-		}
+	if err := materializeTemplateDir(projectDir, "init", tmplValues); err != nil {
+		return xerrors.Errorf("gocdk init: %w", err)
+	}
+	return nil
+}
 
-		fullPath := filepath.Join(projectDir, filepath.FromSlash(fileName))
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0777); err != nil {
-			return xerrors.Errorf("gocdk init: %w", err)
+func materializeTemplateDir(dst string, srcRoot string, data interface{}) error {
+	dir, err := static.Open(srcRoot)
+	if err != nil {
+		return xerrors.Errorf("materialize %s at %s: %w", srcRoot, dst, err)
+	}
+	infos, err := dir.Readdir(-1)
+	dir.Close()
+	if err != nil {
+		return xerrors.Errorf("materialize %s at %s: %w", srcRoot, dst, err)
+	}
+	if err := os.MkdirAll(dst, 0777); err != nil {
+		return xerrors.Errorf("materialize %s at %s: %w", srcRoot, dst, err)
+	}
+	for _, info := range infos {
+		name := info.Name()
+		currDst := filepath.Join(dst, name)
+		currSrc := slashpath.Join(srcRoot, name)
+		if info.IsDir() {
+			if err := materializeTemplateDir(currDst, currSrc, data); err != nil {
+				return err
+			}
+			continue
 		}
-		if err := ioutil.WriteFile(fullPath, buf.Bytes(), 0666); err != nil {
-			return xerrors.Errorf("gocdk init: %w", err)
+		f, err := static.Open(currSrc)
+		if err != nil {
+			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
+		}
+		templateSource, err := ioutil.ReadAll(f)
+		f.Close()
+		if err != nil {
+			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
+		}
+		tmpl, err := template.New(name).Parse(string(templateSource))
+		if err != nil {
+			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
+		}
+		buf := new(bytes.Buffer)
+		if err := tmpl.Execute(buf, data); err != nil {
+			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
+		}
+		if err := ioutil.WriteFile(currDst, buf.Bytes(), 0666); err != nil {
+			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
 		}
 	}
 	return nil
@@ -121,68 +153,4 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 		return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
 	}
 	return filepath.ToSlash(rel), nil
-}
-
-var InitTemplates = map[string]string{
-
-	"README.md": `I'm a readme about using the cli`,
-
-	"Dockerfile": `
-# gocdk-image: {{.ProjectName}}
-`,
-
-	"go.mod": `module {{.ModulePath}}
-`,
-
-	"main.go": `package main
-
-import (
-	"fmt"
-	"net/http"
-	"os"
-)
-
-func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	http.HandleFunc("/", greet)
-	if err := http.ListenAndServe(":" + port, nil); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
-
-func greet(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello, World!")
-}
-`,
-
-	"biomes/dev/biome.json": `{
-		"serve_enabled" : true,
-		"launcher" : "local"
-	}
-`,
-
-	"biomes/README.md": `I'm a readme about biomes
-`,
-
-	"biomes/dev/main.tf": `
-`,
-
-	"biomes/dev/outputs.tf": `
-`,
-
-	"biomes/dev/variables.tf": `
-`,
-
-	"biomes/dev/secrets.auto.tfvars": `
-`,
-
-	".dockerignore": `*.tfvars
-`,
-
-	".gitignore": `*.tfvars
-`,
 }
