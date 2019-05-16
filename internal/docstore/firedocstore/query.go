@@ -278,17 +278,6 @@ func splitFilters(fs []driver.Filter) (sendToFirestore, evaluateLocally []driver
 	return sendToFirestore, evaluateLocally
 }
 
-// // Convert filters on the key field to filters on "__name__".
-// if c.nameField != "" {
-// 	namePath := []string{c.nameField}
-// 	for i := range q.Filters {
-// 		if fpEqual(q.Filters[i].FieldPath, namePath) {
-// 			q.Filters[i].FieldPath = []string{"__name__"}
-
-// 		}
-// 	}
-// }
-
 func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
 	// Treat filters on the name field specially.
 	if c.nameField != "" && len(f.FieldPath) == 1 && f.FieldPath[0] == c.nameField {
