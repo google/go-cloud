@@ -119,6 +119,9 @@ func BenchmarkAzureblob(b *testing.B) {
 	}
 	p := NewPipeline(credential, azblob.PipelineOptions{})
 	bkt, err := OpenBucket(context.Background(), p, name, bucketName, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
 	drivertest.RunBenchmarks(b, bkt)
 }
 

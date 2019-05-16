@@ -42,6 +42,9 @@ func ExampleNewKeeper() {
 		log.Fatal(err)
 	}
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Println(string(decrypted))
 
 	// Output:

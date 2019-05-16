@@ -41,11 +41,11 @@ type URLOpener struct{}
 
 // OpenMySQLURL opens a new database connection wrapped with OpenCensus instrumentation.
 func (*URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	db, err := openWithUrl(u)
+	db, err := openWithURL(u)
 	return db, err
 }
 
-func openWithUrl(url *url.URL) (*sql.DB, error) {
+func openWithURL(url *url.URL) (*sql.DB, error) {
 	return sql.OpenDB(connector{dsn: url.String()}), nil
 }
 

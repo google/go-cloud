@@ -656,10 +656,13 @@ func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMa
 		t.Fatal(err)
 	}
 	defer cleanup()
+
 	ds, cleanup, err := h.CreateSubscription(ctx, dt, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
+
 	sub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	if err := sub.Shutdown(ctx); err != nil {
 		t.Error(err)
