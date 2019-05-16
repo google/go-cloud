@@ -58,7 +58,7 @@ func main() {
 func run(r io.Reader) (msg string, failures bool, err error) {
 	counts := map[string]int{}
 	scanner := bufio.NewScanner(bufio.NewReader(r))
-	prevPkg := ""
+	prevPkg := "" // In verbose mode, the package we previously wrote, to avoid repeating it.
 	for scanner.Scan() {
 		var event TestEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
