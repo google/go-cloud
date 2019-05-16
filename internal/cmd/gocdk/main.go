@@ -79,6 +79,8 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 		return serve(ctx, pctx, cmdArgs)
 	case "demo":
 		return addDemo(ctx, pctx, cmdArgs)
+	case "biome":
+		return biomeAdd(ctx, pctx, cmdArgs)
 	// TODO(rvangent): Add "add-biome".
 	case "deploy":
 		return deploy(ctx, pctx, cmdArgs)
