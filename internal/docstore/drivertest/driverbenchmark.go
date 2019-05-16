@@ -30,16 +30,16 @@ func RunBenchmarks(b *testing.B, coll *docstore.Collection) {
 		b.Fatalf("%+v", err)
 	}
 	b.Run("BenchmarkSingleActionPut", func(b *testing.B) {
-		benchmarkSingleActionPut(25, b, coll)
+		benchmarkSingleActionPut(10, b, coll)
 	})
 	b.Run("BenchmarkSingleActionGet", func(b *testing.B) {
-		benchmarkSingleActionGet(25, b, coll)
+		benchmarkSingleActionGet(10, b, coll)
 	})
 	b.Run("BenchmarkActionListPut", func(b *testing.B) {
-		benchmarkActionListPut(100, b, coll)
+		benchmarkActionListPut(50, b, coll)
 	})
 	b.Run("BenchmarkActionListGet", func(b *testing.B) {
-		benchmarkActionListGet(100, b, coll)
+		benchmarkActionListGet(50, b, coll)
 	})
 	if err := cleanUpTable(newDocmap, coll); err != nil {
 		b.Fatalf("%+v", err)

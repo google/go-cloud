@@ -210,81 +210,10 @@ func (c *collection) KeyFields() []string {
 }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	// if len(actions) == 1 {
-	// 	return driver.ActionListError{{0, c.runSingleAction(ctx, actions[0], opts)}}
-	// }
 	if opts.Unordered {
 		return c.runActionsUnordered(ctx, actions, opts)
 	}
 	return c.runActionsOrdered(ctx, actions, opts)
-}
-
-func (c *collection) runSingleAction(ctx context.Context, action *driver.Action, opts *driver.RunActionsOptions) error {
-	switch action.Kind {
-	case driver.Get:
-		av, err := encodeDocKeyFields(action.Doc, c.partitionKey, c.sortKey)
-		if err != nil {
-			return err
-		}
-
-		get := &dyn.GetItemInput{
-			TableName: &c.table,
-			Key:       av.M,
-		}
-		fieldpaths := action.FieldPaths
-		if len(fieldpaths) > 0 {
-			// Construct a projection expression for the field paths.
-			// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html.
-			nbs := []expression.NameBuilder{expression.Name(docstore.RevisionField)}
-			for _, fp := range fieldpaths {
-				nbs = append(nbs, expression.Name(strings.Join(fp, ".")))
-			}
-			expr, err := expression.NewBuilder().
-				WithProjection(expression.AddNames(expression.ProjectionBuilder{}, nbs...)).
-				Build()
-			if err != nil {
-				return err
-			}
-			get.ProjectionExpression = expr.Projection()
-			get.ExpressionAttributeNames = expr.Names()
-		}
-		out, err := c.db.GetItemWithContext(ctx, get)
-		if err != nil {
-			return err
-		}
-		if out.Item == nil {
-			return gcerr.Newf(gcerr.NotFound, nil, "%v not found", action.Doc)
-		}
-		return decodeDoc(&dyn.AttributeValue{M: out.Item}, action.Doc)
-	case driver.Put:
-		av, err := encodeDoc(action.Doc)
-		if err != nil {
-			return err
-		}
-		mf := c.missingKeyField(av.M)
-		if mf != "" {
-			return fmt.Errorf("missing key field %q", mf)
-		}
-		if mf == c.partitionKey {
-			av.M[c.partitionKey] = new(dyn.AttributeValue).SetS(driver.UniqueString())
-		}
-		if c.sortKey != "" && mf == c.sortKey {
-			// It doesn't make sense to generate a random sort key.
-			return fmt.Errorf("missing sort key %q", c.sortKey)
-		}
-
-		if av.M[docstore.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
-			return err
-		}
-		put := &dyn.PutItemInput{
-			TableName: &c.table,
-			Item:      av.M,
-		}
-		_, err = c.db.PutItemWithContext(ctx, put)
-		return err
-	default:
-		panic("unimp")
-	}
 }
 
 func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {

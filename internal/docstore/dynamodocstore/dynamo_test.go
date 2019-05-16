@@ -134,7 +134,7 @@ func BenchmarkConformance(b *testing.B) {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))
-	coll, err := newCollection(dyn.New(sess), collectionName3, drivertest.KeyField, "")
+	coll, err := newCollection(dyn.New(sess), collectionName3, drivertest.KeyField, "", &Options{AllowScans: true})
 	if err != nil {
 		b.Fatal(err)
 	}
