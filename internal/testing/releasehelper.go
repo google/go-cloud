@@ -66,21 +66,32 @@ func parseModuleInfo(path string) GoMod {
 }
 
 func runOnGomod(path string) {
+	fmt.Println("Processing", path)
 	modInfo := parseModuleInfo(path)
 
 	for _, r := range modInfo.Require {
-		if r.Path == "gocloud.dev" {
-			// Find relative path needed for the replace directive.
-			// TODO(eliben): handle paths to submodules here too, not only root
-			fmt.Println("Found reference to gocloud.dev")
-			rel, err := filepath.Rel(filepath.Dir(path), ".")
+		// Find requirements on modules within the gocloud.dev tree.
+		if strings.HasPrefix(r.Path, "gocloud.dev") {
+			// Find the relative path from 'path' (the module file we're processing)
+			// and the module required here.
+			var reqPath string
+			if r.Path == "gocloud.dev" {
+				reqPath = "."
+			} else {
+				reqPath = r.Path[12:]
+			}
+			rel, err := filepath.Rel(filepath.Dir(path), reqPath)
 			if err != nil {
 				log.Fatal(err)
 			}
-			dir, _ := filepath.Split(rel)
+			if strings.HasSuffix(rel, "/.") {
+				rel, _ = filepath.Split(rel)
+			}
 
 			if *doReplace {
-				cmdCheck(fmt.Sprintf("go mod edit -replace=gocloud.dev=%s %s", dir, path))
+				cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", r.Path, rel, path))
+			} else if *doDropReplace {
+				cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", r.Path, path))
 			}
 		}
 	}
