@@ -304,13 +304,9 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 	}
 	d := &driver.Action{Kind: a.kind, Doc: ddoc}
 	if a.fieldpaths != nil {
-		d.FieldPaths = make([][]string, len(a.fieldpaths))
-		for i, s := range a.fieldpaths {
-			fp, err := parseFieldPath(s)
-			if err != nil {
-				return nil, err
-			}
-			d.FieldPaths[i] = fp
+		d.FieldPaths, err = parseFieldPaths(a.fieldpaths)
+		if err != nil {
+			return nil, err
 		}
 	}
 	if a.kind == driver.Update {
@@ -320,6 +316,18 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 		}
 	}
 	return d, nil
+}
+
+func parseFieldPaths(fps []FieldPath) ([][]string, error) {
+	res := make([][]string, len(fps))
+	for i, s := range fps {
+		fp, err := parseFieldPath(s)
+		if err != nil {
+			return nil, err
+		}
+		res[i] = fp
+	}
+	return res, nil
 }
 
 func toDriverMods(mods Mods) ([]driver.Mod, error) {
