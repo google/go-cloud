@@ -55,7 +55,7 @@ cp ./go.sum "$TMP_GOSUM"
 
 # Modifies the files in-place.
 go mod tidy
-go list -deps ./... &> /dev/null || :
+go list -deps ./... &> /dev/null
 
 # Check for diffs.
 diff -u "$TMP_GOMOD" ./go.mod
