@@ -156,11 +156,15 @@ type collection struct {
 	client    *vkit.Client
 	dbPath    string // e.g. "projects/P/databases/(default)"
 	collPath  string // e.g. "projects/P/databases/(default)/documents/States/Wisconsin/cities"
-
+	opts      *Options
 }
 
 // Options contains optional arguments to the OpenCollection functions.
-type Options struct{}
+type Options struct {
+	// If true, allow queries that require client-side evaluation of filters (Where clauses)
+	// to run.
+	AllowLocalFilters bool
+}
 
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
 //
@@ -171,8 +175,8 @@ type Options struct{}
 // firedocstore requires that a single string field, nameField, be designated the
 // primary key. Its values must be unique over all documents in the collection, and
 // the primary key must be provided to retrieve a document.
-func OpenCollection(client *vkit.Client, projectID, collPath, nameField string, _ *Options) (*docstore.Collection, error) {
-	c, err := newCollection(client, projectID, collPath, nameField, nil)
+func OpenCollection(client *vkit.Client, projectID, collPath, nameField string, opts *Options) (*docstore.Collection, error) {
+	c, err := newCollection(client, projectID, collPath, nameField, nil, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -189,25 +193,29 @@ func OpenCollection(client *vkit.Client, projectID, collPath, nameField string, 
 // be used for the document's primary key. It should return the empty string if the
 // document is missing the information to construct a name. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionWithNameFunc(client *vkit.Client, projectID, collPath string, nameFunc func(docstore.Document) string, _ *Options) (*docstore.Collection, error) {
-	c, err := newCollection(client, projectID, collPath, "", nameFunc)
+func OpenCollectionWithNameFunc(client *vkit.Client, projectID, collPath string, nameFunc func(docstore.Document) string, opts *Options) (*docstore.Collection, error) {
+	c, err := newCollection(client, projectID, collPath, "", nameFunc, opts)
 	if err != nil {
 		return nil, err
 	}
 	return docstore.NewCollection(c), nil
 }
 
-func newCollection(client *vkit.Client, projectID, collPath, nameField string, nameFunc func(docstore.Document) string) (*collection, error) {
+func newCollection(client *vkit.Client, projectID, collPath, nameField string, nameFunc func(docstore.Document) string, opts *Options) (*collection, error) {
 	if nameField == "" && nameFunc == nil {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "one of nameField or nameFunc must be provided")
 	}
 	dbPath := fmt.Sprintf("projects/%s/databases/(default)", projectID)
+	if opts == nil {
+		opts = &Options{}
+	}
 	return &collection{
 		client:    client,
 		nameField: nameField,
 		nameFunc:  nameFunc,
 		dbPath:    dbPath,
 		collPath:  fmt.Sprintf("%s/documents/%s", dbPath, collPath),
+		opts:      opts,
 	}, nil
 }
 

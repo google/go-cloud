@@ -176,6 +176,8 @@ func TestEvaluateFilter(t *testing.T) {
 		{"f", "=", "5.5", false},
 		{"f", ">", "5.5", false},
 		{"f", "<", "5.5", false},
+		// Firestore compares times to each other.
+		{"t", "<", time.Date(2014, 1, 1, 0, 0, 0, 0, time.UTC), true},
 		// Comparisons with other types fail.
 		{"b", "=", "true", false},
 		{"b", ">", "true", false},
