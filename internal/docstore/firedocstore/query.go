@@ -28,9 +28,11 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"gocloud.dev/internal/docstore/driver"
+	"gocloud.dev/internal/gcerr"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 )
 
@@ -142,6 +144,14 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 		// Treat a missing field as false.
 		return false
 	}
+	// Compare times.
+	if t1, ok := val.(time.Time); ok {
+		if t2, ok := f.Value.(time.Time); ok {
+			return applyComparison(f.Op, compareTimes(t1, t2))
+		} else {
+			return false
+		}
+	}
 	lhs := reflect.ValueOf(val)
 	rhs := reflect.ValueOf(f.Value)
 	if lhs.Kind() == reflect.String {
@@ -150,6 +160,7 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 		}
 		return applyComparison(f.Op, strings.Compare(lhs.String(), rhs.String()))
 	}
+
 	// Compare numbers by using big.Float. This is expensive
 	// but simpler to code and more clearly correct. In particular,
 	// it will get the right answer for some mixed-type comparisons
@@ -182,6 +193,17 @@ func applyComparison(op string, c int) bool {
 		return c <= 0
 	default:
 		panic("bad op")
+	}
+}
+
+func compareTimes(t1, t2 time.Time) int {
+	switch {
+	case t1.Before(t2):
+		return -1
+	case t1.After(t2):
+		return 1
+	default:
+		return 0
 	}
 }
 
@@ -231,6 +253,10 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []drive
 
 	// TODO(jba): make sure we retrieve the fields needed for local filters.
 	sendFilters, localFilters := splitFilters(q.Filters)
+	if len(localFilters) > 0 && !c.opts.AllowLocalFilters {
+		return nil, nil, gcerr.Newf(gcerr.InvalidArgument, nil, "query requires local filters; set Options.AllowLocalFilters to true to enable")
+	}
+
 	// If there is only one filter, use it directly. Otherwise, construct
 	// a CompositeFilter.
 	var pfs []*pb.StructuredQuery_Filter

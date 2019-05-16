@@ -55,13 +55,13 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName1, drivertest.KeyField, nil)
+	return newCollection(h.client, projectID, collectionName1, drivertest.KeyField, nil, nil)
 }
 
 func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
 	return newCollection(h.client, projectID, collectionName2, "", func(doc docstore.Document) string {
 		return drivertest.HighScoreKey(doc).(string)
-	})
+	}, &Options{AllowLocalFilters: true})
 }
 
 func (h *harness) Close() {

@@ -884,6 +884,11 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			q:    coll.Query().Where("Player", "=", "mel").Where("Time", ">", date(4, 1)),
 			want: func(h *HighScore) bool { return h.Player == "mel" && h.Time.After(date(4, 1)) },
 		},
+		{
+			name: "ScoreTime",
+			q:    coll.Query().Where("Score", ">=", 50).Where("Time", ">", date(4, 1)),
+			want: func(h *HighScore) bool { return h.Score >= 50 && h.Time.After(date(4, 1)) },
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
