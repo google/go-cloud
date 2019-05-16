@@ -63,6 +63,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 	ctx, cancel := context.WithCancel(ctx)
 	sc, err := c.client.RunQuery(ctx, req)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	return &docIterator{
