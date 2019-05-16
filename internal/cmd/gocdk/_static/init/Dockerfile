@@ -12,5 +12,6 @@ RUN go build -o {{.ProjectName}} && go clean -modcache
 # Step 2: Create image with built Go binary.
 FROM gcr.io/distroless/base
 COPY --from=build /src/{{.ProjectName}} /{{.ProjectName}}
+ENV PORT 8080
 EXPOSE 8080
 ENTRYPOINT ["/{{.ProjectName}}"]
