@@ -150,6 +150,8 @@ func TestToDriverMods(t *testing.T) {
 			[]driver.Mod{{[]string{"a", "b"}, 1}, {[]string{"b", "c"}, nil}},
 			false,
 		},
+		// empty mods are an error
+		{Mods{}, nil, true},
 		// prefixes are not allowed
 		{Mods{"a.b.c": 1, "a.b": 2, "a.b+c": 3}, nil, true},
 	} {

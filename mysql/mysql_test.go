@@ -23,14 +23,14 @@ func TestOpen(t *testing.T) {
 	t.Skip("Test not hermetic yet")
 
 	ctx := context.Background()
-	dbByUrl, err := Open(ctx, "mysql://root@localhost/mysql")
+	dbByURL, err := Open(ctx, "mysql://root@localhost/mysql")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := dbByUrl.Ping(); err != nil {
+	if err := dbByURL.Ping(); err != nil {
 		t.Error("Ping:", err)
 	}
-	if err := dbByUrl.Close(); err != nil {
+	if err := dbByURL.Close(); err != nil {
 		t.Error("Close:", err)
 	}
 }
