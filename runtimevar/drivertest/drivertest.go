@@ -554,9 +554,9 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 	if state == nil {
 		t.Fatal("got nil state, want a non-nil state with an error")
 	}
-	got, err = state.Value()
+	_, err = state.Value()
 	if err == nil {
-		t.Fatal("got nil want invalid JSON error")
+		t.Fatal("got nil err want invalid JSON error")
 	}
 
 	// Update the variable again, with different invalid JSON.

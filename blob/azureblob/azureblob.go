@@ -790,7 +790,7 @@ func (w *writer) open(pr *io.PipeReader) error {
 	return nil
 }
 
-// Close completes the writer and close it. Any error occuring during write will
+// Close completes the writer and closes it. Any error occurring during write will
 // be returned. If a writer is closed before any Write is called, Close will
 // create an empty file at the given key.
 func (w *writer) Close() error {

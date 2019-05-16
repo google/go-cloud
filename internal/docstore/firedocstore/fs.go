@@ -427,9 +427,9 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 
 	case driver.Replace:
 		// If the given document has a revision, use it as the precondition (it implies existence).
-		pc, err := revisionPrecondition(a.Doc)
-		if err != nil {
-			return nil, "", err
+		pc, perr := revisionPrecondition(a.Doc)
+		if perr != nil {
+			return nil, "", perr
 		}
 		// Otherwise, just require that the document exists.
 		if pc == nil {
@@ -438,9 +438,9 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 		w, err = c.putWrite(a.Doc, docName, pc)
 
 	case driver.Put:
-		pc, err := revisionPrecondition(a.Doc)
-		if err != nil {
-			return nil, "", err
+		pc, perr := revisionPrecondition(a.Doc)
+		if perr != nil {
+			return nil, "", perr
 		}
 		w, err = c.putWrite(a.Doc, docName, pc)
 
