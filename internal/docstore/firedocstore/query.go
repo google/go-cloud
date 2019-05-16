@@ -262,7 +262,7 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []drive
 	// a CompositeFilter.
 	var pfs []*pb.StructuredQuery_Filter
 	for _, f := range sendFilters {
-		pf, err := filterToProto(f)
+		pf, err := c.filterToProto(f)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -304,7 +304,17 @@ func splitFilters(fs []driver.Filter) (sendToFirestore, evaluateLocally []driver
 	return sendToFirestore, evaluateLocally
 }
 
-func filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
+func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
+	// Treat filters on the name field specially.
+	if c.nameField != "" && len(f.FieldPath) == 1 && f.FieldPath[0] == c.nameField {
+		v := reflect.ValueOf(f.Value)
+		if v.Kind() != reflect.String {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
+				"name field filter value %v of type %[1]T is not a string", f.Value)
+		}
+		return newFieldFilter([]string{"__name__"}, f.Op,
+			&pb.Value{ValueType: &pb.Value_ReferenceValue{c.collPath + "/" + v.String()}})
+	}
 	// "= nil" and "= NaN" are handled specially.
 	if uop, ok := unaryOpFor(f.Value); ok {
 		if f.Op != driver.EqualOp {
@@ -321,37 +331,11 @@ func filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
 			},
 		}, nil
 	}
-	var op pb.StructuredQuery_FieldFilter_Operator
-	switch f.Op {
-	case "<":
-		op = pb.StructuredQuery_FieldFilter_LESS_THAN
-	case "<=":
-		op = pb.StructuredQuery_FieldFilter_LESS_THAN_OR_EQUAL
-	case ">":
-		op = pb.StructuredQuery_FieldFilter_GREATER_THAN
-	case ">=":
-		op = pb.StructuredQuery_FieldFilter_GREATER_THAN_OR_EQUAL
-	case driver.EqualOp:
-		op = pb.StructuredQuery_FieldFilter_EQUAL
-	// TODO(jba): can we support array-contains portably?
-	// case "array-contains":
-	// 	op = pb.StructuredQuery_FieldFilter_ARRAY_CONTAINS
-	default:
-		return nil, fmt.Errorf("invalid operator %q", f.Op)
-	}
 	pv, err := encodeValue(f.Value)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.StructuredQuery_Filter{
-		FilterType: &pb.StructuredQuery_Filter_FieldFilter{
-			FieldFilter: &pb.StructuredQuery_FieldFilter{
-				Field: fieldRef(f.FieldPath),
-				Op:    op,
-				Value: pv,
-			},
-		},
-	}, nil
+	return newFieldFilter(f.FieldPath, f.Op, pv)
 }
 
 func unaryOpFor(value interface{}) (pb.StructuredQuery_UnaryFilter_Operator, bool) {
@@ -378,6 +362,36 @@ func isNaN(x interface{}) bool {
 
 func fieldRef(fp []string) *pb.StructuredQuery_FieldReference {
 	return &pb.StructuredQuery_FieldReference{FieldPath: toServiceFieldPath(fp)}
+}
+
+func newFieldFilter(fp []string, op string, val *pb.Value) (*pb.StructuredQuery_Filter, error) {
+	var fop pb.StructuredQuery_FieldFilter_Operator
+	switch op {
+	case "<":
+		fop = pb.StructuredQuery_FieldFilter_LESS_THAN
+	case "<=":
+		fop = pb.StructuredQuery_FieldFilter_LESS_THAN_OR_EQUAL
+	case ">":
+		fop = pb.StructuredQuery_FieldFilter_GREATER_THAN
+	case ">=":
+		fop = pb.StructuredQuery_FieldFilter_GREATER_THAN_OR_EQUAL
+	case driver.EqualOp:
+		fop = pb.StructuredQuery_FieldFilter_EQUAL
+	// TODO(jba): can we support array-contains portably?
+	// case "array-contains":
+	// 	fop = pb.StructuredQuery_FieldFilter_ARRAY_CONTAINS
+	default:
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "invalid operator: %q", op)
+	}
+	return &pb.StructuredQuery_Filter{
+		FilterType: &pb.StructuredQuery_Filter_FieldFilter{
+			FieldFilter: &pb.StructuredQuery_FieldFilter{
+				Field: fieldRef(fp),
+				Op:    fop,
+				Value: val,
+			},
+		},
+	}, nil
 }
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {

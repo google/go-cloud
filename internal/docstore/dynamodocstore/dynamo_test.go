@@ -63,7 +63,7 @@ func (h *harness) Close() {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", nil)
+	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", &Options{AllowScans: true})
 }
 
 func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
