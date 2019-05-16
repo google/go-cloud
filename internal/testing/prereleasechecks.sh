@@ -126,6 +126,7 @@ case "$op" in
     terraform init && terraform apply -var region="us-west-1" -auto-approve
     ;;
   run)
+    # TODO: The TestOpenBadValues test fails.
     go test -mod=readonly
     ;;
   cleanup)
