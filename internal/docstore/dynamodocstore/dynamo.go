@@ -620,12 +620,10 @@ func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, 
 		fp := expression.Name(strings.Join(m.FieldPath, "."))
 		if inc, ok := m.Value.(driver.IncOp); ok {
 			ub.Add(fp, expression.Value(inc.Amount))
+		} else if m.Value == nil {
+			ub = ub.Remove(fp)
 		} else {
-			if m.Value == nil {
-				ub = ub.Remove(fp)
-			} else {
-				ub = ub.Set(fp, expression.Value(m.Value))
-			}
+			ub = ub.Set(fp, expression.Value(m.Value))
 		}
 	}
 	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
