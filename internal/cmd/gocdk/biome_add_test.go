@@ -42,13 +42,34 @@ func TestBiomeAdd(t *testing.T) {
 			stderr:  ioutil.Discard,
 		}
 		const newBiome = "foo"
+		if err := biomeAdd(ctx, pctx, []string{"add", newBiome}); err != nil {
+			t.Fatal(err)
+		}
+
+		// Ensure at least one file exists in the new biome with extension .tf.
+		newBiomePath := filepath.Join(dir, "biomes", newBiome)
+		newBiomeContents, err := ioutil.ReadDir(newBiomePath)
+		if err != nil {
+			t.Error(err)
+		} else {
+			foundTF := false
+			var foundNames []string
+			for _, info := range newBiomeContents {
+				foundNames = append(foundNames, info.Name())
+				if filepath.Ext(info.Name()) == ".tf" {
+					foundTF = true
+				}
+			}
+			if !foundTF {
+				t.Errorf("%s contains %v; want to contain at least one \".tf\" file", newBiomePath, foundNames)
+			}
+		}
+
+		// Ensure that there is a biome.json file in teh correct directory and
+		// that it contains the correct settings for a non-dev biome.
 		want := &biomeConfig{
 			ServeEnabled: configBool(false),
 			Launcher:     configString("cloudrun"),
-		}
-
-		if err := biomeAdd(ctx, pctx, []string{"add", newBiome}); err != nil {
-			t.Fatal(err)
 		}
 		got, err := readBiomeConfig(dir, newBiome)
 		if err != nil {
