@@ -29,8 +29,8 @@ import (
 )
 
 var (
-	verbose   = flag.Bool("v", false, "verbose: display test progress")
-	allOutput = flag.Bool("vv", false, "very verbose: display all test output")
+	progress = flag.Bool("progress", false, "display test progress")
+	verbose  = flag.Bool("verbose", false, "display all test output")
 )
 
 // From running "go doc test2json".
@@ -58,13 +58,13 @@ func main() {
 func run(r io.Reader) (msg string, failures bool, err error) {
 	counts := map[string]int{}
 	scanner := bufio.NewScanner(bufio.NewReader(r))
-	prevPkg := "" // In verbose mode, the package we previously wrote, to avoid repeating it.
+	prevPkg := "" // In progress mode, the package we previously wrote, to avoid repeating it.
 	for scanner.Scan() {
 		var event TestEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			return "", false, fmt.Errorf("%q: %v", scanner.Text(), err)
 		}
-		if *allOutput && event.Action == "output" {
+		if *verbose && event.Action == "output" {
 			fmt.Print(event.Output)
 		}
 		// Ignore pass or fail events that don't have a Test; they refer to the
@@ -75,7 +75,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 			continue
 		}
 		counts[event.Action]++
-		if *verbose && (event.Action == "pass" || event.Action == "fail" || event.Action == "skip") {
+		if *progress && (event.Action == "pass" || event.Action == "fail" || event.Action == "skip") {
 			if event.Package == prevPkg {
 				fmt.Printf("%s     %s (%.2fs)\n", event.Action, event.Test, event.Elapsed)
 			} else {
