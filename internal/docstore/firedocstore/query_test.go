@@ -27,6 +27,7 @@ import (
 )
 
 func TestFilterToProto(t *testing.T) {
+	c := &collection{nameField: "name", collPath: "collPath"}
 	for _, test := range []struct {
 		in   driver.Filter
 		want *pb.StructuredQuery_Filter
@@ -63,8 +64,18 @@ func TestFilterToProto(t *testing.T) {
 				},
 			}},
 		},
+		{
+			driver.Filter{[]string{"name"}, "<", "foo"},
+			&pb.StructuredQuery_Filter{FilterType: &pb.StructuredQuery_Filter_FieldFilter{
+				FieldFilter: &pb.StructuredQuery_FieldFilter{
+					Field: &pb.StructuredQuery_FieldReference{FieldPath: "__name__"},
+					Op:    pb.StructuredQuery_FieldFilter_LESS_THAN,
+					Value: &pb.Value{ValueType: &pb.Value_ReferenceValue{"collPath/foo"}},
+				},
+			}},
+		},
 	} {
-		got, err := filterToProto(test.in)
+		got, err := c.filterToProto(test.in)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -176,6 +187,8 @@ func TestEvaluateFilter(t *testing.T) {
 		{"f", "=", "5.5", false},
 		{"f", ">", "5.5", false},
 		{"f", "<", "5.5", false},
+		// Firestore compares times to each other.
+		{"t", "<", time.Date(2014, 1, 1, 0, 0, 0, 0, time.UTC), true},
 		// Comparisons with other types fail.
 		{"b", "=", "true", false},
 		{"b", ">", "true", false},

@@ -13,25 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script should be run from the root directory.
+# It runs "go mod tidy && go list -deps ./..." on all modules in
+# the repo, to ensure that go.mod and go.sum are in the canonical
+# form that Travis will verify (see check_mod_tidy.sh).
 set -euo pipefail
 
-# To run this script manually to update alldeps:
-#
-# $ internal/testing/listdeps.sh > internal/testing/alldeps
-#
-# Important note: there are changes in module tooling behavior between go 1.11
-# and go 1.12; please make sure to use the same version of Go as used by Travis
-# (see .travis.yml) when updating the alldeps file.
-tmpfile=$(mktemp)
-function cleanup() {
-  rm -rf "$tmpfile"
-}
-trap cleanup EXIT
-
-
 sed -e '/^#/d' -e '/^$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
-  ( cd "$path" && go list -mod=readonly -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> "$tmpfile")
+  echo "cleaning up $path"
+  ( cd "$path" && go mod tidy && go list -deps ./... &> /dev/null )
 done
-
-# Sort using the native byte values to keep results from different environment consistent.
-LC_ALL=C sort "$tmpfile" | uniq

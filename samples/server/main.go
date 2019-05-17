@@ -37,11 +37,11 @@ import (
 // basic global resource based on the project ID. If you're running this sample
 // on GCE or EC2, you may prefer to use monitoredresource.Autodetect() instead.
 type GlobalMonitoredResource struct {
-	projectId string
+	projectID string
 }
 
 func (g GlobalMonitoredResource) MonitoredResource() (string, map[string]string) {
-	return "global", map[string]string{"project_id": g.projectId}
+	return "global", map[string]string{"project_id": g.projectID}
 }
 
 func helloHandler(w http.ResponseWriter, req *http.Request) {
@@ -81,7 +81,7 @@ func main() {
 		log.Fatal(err)
 	}
 	tokenSource := gcp.CredentialsTokenSource(credentials)
-	projectId, err := gcp.DefaultProjectID(credentials)
+	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -89,8 +89,8 @@ func main() {
 	var exporter trace.Exporter
 	if *doTrace {
 		fmt.Println("Exporting traces to Stackdriver")
-		mr := GlobalMonitoredResource{projectId: string(projectId)}
-		exporter, _, err = sdserver.NewExporter(projectId, tokenSource, mr)
+		mr := GlobalMonitoredResource{projectID: string(projectID)}
+		exporter, _, err = sdserver.NewExporter(projectID, tokenSource, mr)
 		if err != nil {
 			log.Fatal(err)
 		}

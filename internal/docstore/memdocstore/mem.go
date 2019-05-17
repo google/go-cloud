@@ -263,7 +263,7 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 				return err
 			}
 		} else if mod.Value != nil {
-			// Make sure the value encodes sucessfully.
+			// Make sure the value encodes successfully.
 			if gmod.encodedValue, err = encodeValue(mod.Value); err != nil {
 				return err
 			}
