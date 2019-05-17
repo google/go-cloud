@@ -44,6 +44,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-cmp v0.3.0
+	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.2.2
 	github.com/googleapis/gax-go v2.0.2+incompatible
