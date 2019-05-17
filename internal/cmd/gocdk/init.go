@@ -91,7 +91,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 	fmt.Fprintln(pctx.stdout, "- `gocdk serve` to run the server locally with live code reloading")
 	fmt.Fprintln(pctx.stdout, "- `gocdk demo` to test new APIs")
 	fmt.Fprintln(pctx.stdout, "- `gocdk build` to build a Docker container")
-	fmt.Fprintln(pctx.stdout, "- `gocdk biome` to create a biome for launch")
+	fmt.Fprintln(pctx.stdout, "- `gocdk biome add` to configure launch settings")
 	return nil
 }
 
