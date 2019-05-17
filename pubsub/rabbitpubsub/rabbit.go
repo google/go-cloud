@@ -611,7 +611,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 		case <-maxTime.C:
 			// Timed out. Return whatever we have. If we have nothing, we'll get
-			// called again soon, but returning allows us to give up the lock.
+			// called again soon, but returning allows us to give up the lock in
+			// case there are acks/nacks to be sent.
 			return ms, nil
 		}
 	}
