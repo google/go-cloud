@@ -18,10 +18,9 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
-	"path"
 	slashpath "path"
 	"path/filepath"
 	"text/template"
@@ -31,18 +30,26 @@ import (
 
 func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
 	// TODO(clausti) interpolate launcher from one supplied as a flag
-	f := newFlagSet(pctx, "demo")
-	usageMsg := "gocdk biome add BIOME_NAME"
+	f := newFlagSet(pctx, "biome")
+	const usageMsg = "gocdk biome add"
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
 		return usagef("%s: %w", usageMsg, err)
 	}
-	if f.Args()[0] != "add" {
+	if f.Arg(0) != "add" {
 		return usagef("%s: expected add, got %v", usageMsg, f.Args()[0])
 	}
-	newName := f.Args()[1]
-	dstPath := path.Join(pctx.workdir, "biomes", newName)
+	if f.NArg() != 2 {
+		return usagef("%s BIOME_NAME", usageMsg)
+	}
+	newName := f.Arg(1)
+
+	projectDir, err := findModuleRoot(ctx, pctx.workdir)
+	if err != nil {
+		xerrors.Errorf("biome add: %w", err)
+	}
+	dstPath := findBiomeDir(projectDir, newName)
 
 	tmplDir, err := static.Open("biome_add")
 	if err != nil {
@@ -57,18 +64,11 @@ func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
 		return xerrors.Errorf("biome add %v: %w", newName, err)
 	}
 
-	projectDir, err := findModuleRoot(ctx, pctx.workdir)
-	if err != nil {
-		xerrors.Errorf("biome add: %w", err)
-	}
 	data := struct {
 		ProjectName string
 	}{
 		ProjectName: filepath.Base(projectDir),
 	}
-
-	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
-	logger.Printf("Adding new biome '%v'...", newName)
 
 	for _, info := range infos {
 		name := info.Name()
@@ -96,6 +96,6 @@ func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
 			return xerrors.Errorf("biome add %s at %s: %w", currSrc, currDst, err)
 		}
 	}
-	logger.Printf("Successfully added new biome '%v'!", newName)
+	fmt.Printf("Successfully added new biome '%v'!", newName)
 	return nil
 }
