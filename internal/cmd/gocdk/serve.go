@@ -171,6 +171,32 @@ loop:
 					break loop
 				}
 			}
+
+			logger.Println("Refreshing biome...")
+			if err := refreshBiome(ctx, opts.moduleRoot, opts.biome, pctx.env); err != nil {
+				// The Terraform configuration succeeded at least once, so Terraform
+				// outputs will still be somewhat consistent. We don't want to stop the
+				// build in case communicating with the cloud is flaky.
+				logger.Printf("WARNING: %v", err)
+			}
+		}
+
+		// Read output from Terraform built during apply or refresh.
+		tfOutput, err := tfReadOutput(ctx, findBiomeDir(opts.moduleRoot, opts.biome), pctx.env)
+		if err != nil {
+			logger.Printf("Terraform: %v", err)
+			if process == nil {
+				myProxy.setBuildError(err)
+			}
+			continue
+		}
+		procEnv, err := launchEnv(tfOutput)
+		if err != nil {
+			logger.Printf("Terraform: %v", err)
+			if process == nil {
+				myProxy.setBuildError(err)
+			}
+			continue
 		}
 
 		// Build and run the server.
@@ -182,7 +208,7 @@ loop:
 			}
 			continue
 		}
-		newProcess, err := spareAlloc.start(ctx, pctx, logger, opts.moduleRoot)
+		newProcess, err := spareAlloc.start(ctx, pctx, logger, opts.moduleRoot, procEnv)
 		if err != nil {
 			logger.Printf("Starting server: %v", err)
 			if process == nil {
@@ -263,12 +289,13 @@ func (alloc *serverAlloc) url(path string) *url.URL {
 
 // start starts the server process specified by the alloc and waits for
 // it to become healthy.
-func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logger *log.Logger, workdir string) (*exec.Cmd, error) {
+func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logger *log.Logger, workdir string, envOverrides []string) (*exec.Cmd, error) {
 	// Run server.
 	logger.Print("Starting server...")
 	process := exec.Command(alloc.exePath)
 	process.Dir = workdir
-	process.Env = overrideEnv(pctx.env, "PORT="+strconv.Itoa(alloc.port))
+	process.Env = overrideEnv(pctx.env, envOverrides...)
+	process.Env = append(process.Env, "PORT="+strconv.Itoa(alloc.port))
 	process.Stdout = pctx.stdout
 	process.Stderr = pctx.stderr
 	if err := process.Start(); err != nil {
