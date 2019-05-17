@@ -54,6 +54,6 @@ func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
 	if err := materializeTemplateDir(dstPath, "biome_add", data); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
-	fmt.Println("Successfully added new biome '%v'!", newName)
+	fmt.Printf("Successfully added new biome '%v'!\n", newName)
 	return nil
 }
