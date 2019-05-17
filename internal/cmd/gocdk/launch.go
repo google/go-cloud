@@ -83,12 +83,16 @@ func launch(ctx context.Context, pctx *processContext, args []string) error {
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
+	env, err := launchEnv(tfOutput)
+	if err != nil {
+		return xerrors.Errorf("gocdk launch: %w", err)
+	}
 
 	// Launch the application.
 	launchURL, err := launcher.Launch(ctx, &LaunchInput{
 		DockerImage: *dockerImage,
+		Env:         env,
 		Specifier:   tfOutput["launch_specifier"].mapValue(),
-		// TODO(light): Pass environment variables from tfOutput into env.
 	})
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
