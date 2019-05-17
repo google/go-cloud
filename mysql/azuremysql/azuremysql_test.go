@@ -29,10 +29,12 @@ import (
 
 func TestOpen(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
-	// Before running go test, run in this directory:
+	// Before running go test:
 	//
-	// terraform init
-	// terraform apply
+	// 1. Install Azure CLI (az) (https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-linux)
+	// 2. Run "az login"
+	// 3. terraform init
+	// 4. terraform apply
 
 	tfOut, err := terraform.ReadOutput(".")
 	if err != nil {
