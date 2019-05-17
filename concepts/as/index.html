@@ -5,7 +5,7 @@
   <meta name="generator" content="Hugo 0.54.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Secrets &middot; Go CDK</title>
+  <title>Using provider-specific APIs &middot; Go CDK</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Source+Code+Pro|Work+Sans:400,700">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
@@ -30,36 +30,41 @@ if (!doNotTrack) {
       <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
     </header>
     <main class="MainContent">
-      <div class="MainContent-bounds"><h1>Secrets</h1>
-<p>Package <code>secrets</code> provides an easy and portable way to encrypt and decrypt
-messages.</p>
+      <div class="MainContent-bounds"><h1>Using provider-specific APIs</h1>
+<p>It is not feasible or desirable for APIs like <code>blob.Bucket</code> to encompass the
+full functionality of every provider. Rather, we intend to provide a subset
+of the most commonly used functionality. There will be cases where a
+developer wants to access provider-specific functionality, such as unexposed
+APIs or data fields, errors, or options. This can be accomplished using <code>As</code>
+functions.</p>
 
-<p>This package lets you do symmetric encryption and decryption within your
-application layer. You can then store the secret data anywhere safely, for
-example, using our blob, runtimevar packages etc. It is also integrated with
-OpenCensus to get metrics and traces for <code>Encrypt</code> and <code>Decrypt</code>, and some
-providers also have automatic audit logs for all key management related
-activites.</p>
+<h2 id="as"> <code>As</code><a class="anchor" href="#as" aria-label="Link to Section">🔗</a></h2>
 
-<p>Top-level package documentation: <a href="https://godoc.org/gocloud.dev/secrets">https://godoc.org/gocloud.dev/secrets</a></p>
+<p><code>As</code> functions in the APIs provide the user a way to escape the Go CDK
+abstraction to access provider-specific types. They might be used as an
+interim solution until a feature request to the Go CDK is implemented. Or,
+the Go CDK may choose not to support specific features, and the use of <code>As</code>
+will be permanent.</p>
 
-<h2 id="supported-providers"> Supported Providers<a class="anchor" href="#supported-providers" aria-label="Link to Section">🔗</a></h2>
+<p>Using <code>As</code> implies that the resulting code is no longer portable; the
+provider-specific code will need to be ported in order to switch providers.
+Therefore, it should be avoided if possible.</p>
 
-<ul>
-<li><a href="https://godoc.org/gocloud.dev/secrets/gcpkms">Google Cloud KMS</a></li>
-<li><a href="https://godoc.org/gocloud.dev/secrets/awskms">AWS KMS</a></li>
-<li><a href="https://godoc.org/gocloud.dev/secrets/vault">Vault by HashiCorp</a> - a
-platform-agnostic secrets engine</li>
-<li><a href="https://godoc.org/gocloud.dev/secrets/localsecrets">In-memory local secrets</a> -
-mainly useful for local testing</li>
-</ul>
+<p>Each API includes examples demonstrating how to use its various <code>As</code>
+functions, and each provider implementation documents what types it supports
+for each.</p>
 
-<h2 id="usage-samples"> Usage Samples<a class="anchor" href="#usage-samples" aria-label="Link to Section">🔗</a></h2>
+<p>Usage:</p>
 
-<ul>
-<li><a href="https://github.com/google/go-cloud/tree/master/samples/gocdk-secrets">CLI Sample</a></li>
-<li><a href="https://godoc.org/gocloud.dev/secrets#example-package">Secrets package examples</a></li>
-</ul></div>
+<ol>
+<li>Declare a variable of the provider-specific type you want to access.</li>
+<li>Pass a pointer to it to <code>As</code>.</li>
+<li>If the type is supported, <code>As</code> will return <code>true</code> and copy the
+provider-specific type into your variable. Otherwise, it will return <code>false</code>.</li>
+</ol>
+
+<p>Provider-specific types that are intended to be mutable will be exposed
+as a pointer to the underlying type.</p></div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">
@@ -147,7 +152,7 @@ mainly useful for local testing</li>
         Copyright © 2018–2019 The Go Cloud Development Kit Authors.
         All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
       </p>
-      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/ref/secrets.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/concepts/as.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
     </footer>
   </div>
 </body>

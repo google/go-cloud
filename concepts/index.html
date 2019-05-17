@@ -36,6 +36,17 @@ if (!doNotTrack) {
 
 <div class="PageList">
   <article class="PageList-item">
+  <a href="/concepts/as/"><h2 class="PageList-itemTitle">Using provider-specific APIs</h2></a>
+  <div class="PageList-summary"><p>It is not feasible or desirable for APIs like <code>blob.Bucket</code> to encompass the
+full functionality of every provider. Rather, we intend to provide a subset
+of the most commonly used functionality. There will be cases where a
+developer wants to access provider-specific functionality, such as unexposed
+APIs or data fields, errors, or options. This can be accomplished using <code>As</code>
+functions.</p></div>
+  <div class="PageList-readMore"><a href="/concepts/as/">Read more&hellip;</a></div>
+</article>
+
+  <article class="PageList-item">
   <a href="/concepts/urls/"><h2 class="PageList-itemTitle">URLs</h2></a>
   <div class="PageList-summary"><p>In addition to creating portable types via provider-specific constructors
 (e.g., creating a <code>*blob.Bucket</code> using <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blob.OpenBucket</code></a>), many portable types
@@ -114,6 +125,9 @@ using <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blo
             <ul class="Sidenav-pageList">
               <li class="Sidenav-page">
                 <a href="/concepts/urls/" class="Sidenav-pageLink">URLs</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/concepts/as/" class="Sidenav-pageLink">Using provider-specific APIs</a>
               </li>
               
             </ul>

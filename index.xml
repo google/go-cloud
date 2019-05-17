@@ -110,6 +110,20 @@ and Gopher logo.&lt;/p&gt;</description>
     </item>
     
     <item>
+      <title>Using provider-specific APIs</title>
+      <link>https://gocloud.dev/concepts/as/</link>
+      <pubDate>Fri, 10 May 2019 11:17:09 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/concepts/as/</guid>
+      <description>&lt;p&gt;It is not feasible or desirable for APIs like &lt;code&gt;blob.Bucket&lt;/code&gt; to encompass the
+full functionality of every provider. Rather, we intend to provide a subset
+of the most commonly used functionality. There will be cases where a
+developer wants to access provider-specific functionality, such as unexposed
+APIs or data fields, errors, or options. This can be accomplished using &lt;code&gt;As&lt;/code&gt;
+functions.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
       <title>URLs</title>
       <link>https://gocloud.dev/concepts/urls/</link>
       <pubDate>Mon, 06 May 2019 09:55:09 -0700</pubDate>
