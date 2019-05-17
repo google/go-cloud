@@ -159,7 +159,7 @@ func (k *Keeper) Close() error {
 }
 
 // ErrorAs converts i to provider-specific types. See
-// https://godoc.org/gocloud.dev#hdr-As for background information and the
+// https://gocloud.dev/concepts/as/ for background information and the
 // provider-specific package documentation for the specific types supported for
 // that provider.
 //

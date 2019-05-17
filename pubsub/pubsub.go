@@ -147,7 +147,7 @@ type Message struct {
 	// The callback will be called exactly once, before the message is sent.
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeSend func(asFunc func(interface{}) bool) error
 
 	// asFunc invokes driver.Message.AsFunc.
@@ -217,7 +217,7 @@ func (m *Message) Nack() {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 // As panics unless it is called on a message obtained from Subscription.Receive.
@@ -310,7 +310,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (t *Topic) As(i interface{}) bool {
@@ -320,7 +320,7 @@ func (t *Topic) As(i interface{}) bool {
 // ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See https://godoc.org/gocloud.dev#hdr-As for background information.
+// See https://gocloud.dev/concepts/as/ for background information.
 func (t *Topic) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
@@ -741,7 +741,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (s *Subscription) As(i interface{}) bool {

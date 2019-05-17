@@ -245,7 +245,7 @@ func (e ActionListError) Unwrap() error {
 // BeforeDo takes a callback function that will be called before the ActionList
 // is executed by the underlying provider's action functionality. The callback
 // takes a parameter, asFunc, that converts its argument to provider-specific
-// types. See https://godoc.org/gocloud.dev#hdr-As for background information.
+// types. See https://gocloud.dev/concepts/as/ for background information.
 func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *ActionList {
 	l.beforeDo = f
 	return l
@@ -461,7 +461,7 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (c *Collection) As(i interface{}) bool {
