@@ -20,10 +20,12 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
@@ -72,15 +74,17 @@ func init() {
 // OpenPostgresURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	cf := new(rds.CertFetcher)
-	vals := u.Query()
-	u.RawQuery = vals.Encode()
 
+	database := u.EscapedPath()
+	if strings.HasPrefix(database, "/") {
+		database = database[1:]
+	}
 	password, _ := u.User.Password()
 	params := Params{
 		Endpoint:  u.Host,
 		User:      u.User.Username(),
 		Password:  password,
-		Database:  u.RawPath,
+		Database:  database,
 		Values:    u.Query(),
 		TraceOpts: uo.TraceOpts,
 	}
@@ -97,8 +101,11 @@ func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*
 	vals := make(url.Values)
 	for k, v := range params.Values {
 		// Only permit parameters that do not conflict with other behavior.
-		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
+		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" {
 			return nil, nil, fmt.Errorf("rdspostgres: open: extra parameter %s not allowed; use Params fields instead", k)
+		}
+		if k == "sslmode" {
+			return nil, nil, errors.New("rdspostgres: open: parameter sslmode not allowed; sslmode must be disabled because the underlying dialer is already providing TLS")
 		}
 		vals[k] = v
 	}

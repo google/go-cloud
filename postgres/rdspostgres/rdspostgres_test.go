@@ -16,12 +16,14 @@ package rdspostgres
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
 
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/internal/testing/terraform"
+	"gocloud.dev/postgres"
 )
 
 func TestOpen(t *testing.T) {
@@ -59,6 +61,70 @@ func TestOpen(t *testing.T) {
 	}
 	if err := db.Close(); err != nil {
 		t.Error("Close:", err)
+	}
+}
+
+func TestOpenWithURL(t *testing.T) {
+	// This test will be skipped unless the project is set up with Terraform.
+	// Before running go test, run in this directory:
+	//
+	// terraform init
+	// terraform apply
+
+	tfOut, err := terraform.ReadOutput(".")
+	if err != nil {
+		t.Skipf("Could not obtain harness info: %v", err)
+	}
+	endpoint, _ := tfOut["endpoint"].Value.(string)
+	username, _ := tfOut["username"].Value.(string)
+	password, _ := tfOut["password"].Value.(string)
+	databaseName, _ := tfOut["database"].Value.(string)
+	if endpoint == "" || username == "" || databaseName == "" {
+		t.Fatalf("Missing one or more required Terraform outputs; got endpoint=%q username=%q database=%q", endpoint, username, databaseName)
+	}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		urlstr      string
+		wantErr     bool
+		wantPingErr bool
+	}{
+		// OK.
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s", username, password, endpoint, databaseName), false, false},
+		// Invalid URL parameters: db creation fails.
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?user=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?password=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?dbname=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?host=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?port=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslmode=require", username, password, endpoint, databaseName), true, false},
+		// Invalid connection info: db is created, but Ping fails.
+		{fmt.Sprintf("rdspostgres://%s:badpwd@%s/%s", username, endpoint, databaseName), false, true},
+		{fmt.Sprintf("rdspostgres://badusername:%s@%s/%s", password, endpoint, databaseName), false, true},
+		{fmt.Sprintf("rdspostgres://%s:%s@localhost:9999/%s", username, password, databaseName), false, true},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/wrongdbname", username, password, endpoint), false, true},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?foo=bar", username, password, endpoint, databaseName), false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.urlstr, func(t *testing.T) {
+			db, err := postgres.Open(ctx, test.urlstr)
+			if err != nil != test.wantErr {
+				t.Fatalf("got err %v, wanted error? %v", err, test.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			defer func() {
+				if err := db.Close(); err != nil {
+					t.Error("Close:", err)
+				}
+			}()
+			err = db.Ping()
+			if err != nil != test.wantPingErr {
+				t.Errorf("ping got err %v, wanted error? %v", err, test.wantPingErr)
+			}
+		})
 	}
 }
 
