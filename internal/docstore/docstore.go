@@ -103,7 +103,7 @@ func (l *ActionList) add(a *Action) *ActionList {
 	return l
 }
 
-// Create adds an action that creates a new document.
+// Create adds an action that creates a new document to the given ActionList, and returns the ActionList.
 // The document must not already exist; an error for which gcerrors.Code returns
 // AlreadyExists is returned if it does. If the document doesn't have key fields, it
 // will be given key fields with unique values.
@@ -112,7 +112,7 @@ func (l *ActionList) Create(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Create, doc: doc})
 }
 
-// Replace adds an action that replaces a document.
+// Replace adds an action that replaces a document to the given ActionList, and returns the ActionList.
 // The key fields must be set.
 // The document must already exist; an error for which gcerrors.Code returns NotFound
 // is returned if it does not.
@@ -122,7 +122,7 @@ func (l *ActionList) Replace(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Replace, doc: doc})
 }
 
-// Put adds an action that adds or replaces a document.
+// Put adds an action that adds or replaces a document to the given ActionList, and returns the ActionList.
 // The key fields must be set.
 // The document may or may not already exist.
 // See the Revisions section of the package documentation for how revisions are
@@ -131,7 +131,7 @@ func (l *ActionList) Put(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Put, doc: doc})
 }
 
-// Delete adds an action that deletes a document.
+// Delete adds an action that deletes a document to the given ActionList, and returns the ActionList.
 // Only the key fields and RevisionField of doc are used.
 // See the Revisions section of the package documentation for how revisions are
 // handled.
@@ -146,7 +146,8 @@ func (l *ActionList) Delete(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Delete, doc: doc})
 }
 
-// Get adds an action that retrieves a document. Only the key fields of doc are used.
+// Get adds an action that retrieves a document to the given ActionList, and returns the ActionList.
+// Only the key fields of doc are used.
 // If fps is omitted, doc will contain all the fields of the retrieved document. If
 // fps is present, only the given field paths are retrieved, in addition to the
 // revision field. It is undefined whether other fields of doc at the time of the
