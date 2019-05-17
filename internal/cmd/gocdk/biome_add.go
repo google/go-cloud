@@ -15,15 +15,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
-	slashpath "path"
 	"path/filepath"
-	"text/template"
 
 	"golang.org/x/xerrors"
 )
@@ -50,52 +45,15 @@ func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
 		xerrors.Errorf("biome add: %w", err)
 	}
 	dstPath := findBiomeDir(projectDir, newName)
-
-	tmplDir, err := static.Open("biome_add")
-	if err != nil {
-		return xerrors.Errorf("biome add: %w", err)
-	}
-	infos, err := tmplDir.Readdir(-1)
-	tmplDir.Close()
-	if err != nil {
-		return xerrors.Errorf("biome add %v: %w", newName, err)
-	}
-	if err := os.MkdirAll(dstPath, 0777); err != nil {
-		return xerrors.Errorf("biome add %v: %w", newName, err)
-	}
-
 	data := struct {
 		ProjectName string
 	}{
 		ProjectName: filepath.Base(projectDir),
 	}
 
-	for _, info := range infos {
-		name := info.Name()
-		currDst := filepath.Join(dstPath, name)
-		currSrc := slashpath.Join("biome_add", name)
-
-		f, err := static.Open(currSrc)
-		if err != nil {
-			return xerrors.Errorf("biome add %s at %s: %w", currSrc, currDst, err)
-		}
-		templateSource, err := ioutil.ReadAll(f)
-		f.Close()
-		if err != nil {
-			return xerrors.Errorf("biome add %s at %s: %w", currSrc, currDst, err)
-		}
-		tmpl, err := template.New(name).Parse(string(templateSource))
-		if err != nil {
-			return xerrors.Errorf("biome add %s at %s: %w", currSrc, currDst, err)
-		}
-		buf := new(bytes.Buffer)
-		if err := tmpl.Execute(buf, data); err != nil {
-			return xerrors.Errorf("biome add %s at %s: %w", currSrc, currDst, err)
-		}
-		if err := ioutil.WriteFile(currDst, buf.Bytes(), 0666); err != nil {
-			return xerrors.Errorf("biome add %s at %s: %w", currSrc, currDst, err)
-		}
+	if err := materializeTemplateDir(dstPath, "biome_add", data); err != nil {
+		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
-	fmt.Printf("Successfully added new biome '%v'!", newName)
+	fmt.Println("Successfully added new biome '%v'!", newName)
 	return nil
 }
