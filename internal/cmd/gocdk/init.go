@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,32 +26,32 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func init_(ctx context.Context, pctx *processContext, args []string) error {
-	f := newFlagSet(pctx, "init")
+func registerInitCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 	var modpath string
 	var allowExistingDir bool
-	f.StringVar(&modpath, "module-path", "", "the module import path for your "+
-		"project's go.mod file (required if project is outside of GOPATH)")
-	f.StringVar(&modpath, "m", "", "alias for --module-path")
+	initCmd := &cobra.Command{
+		Use:   "init PATH_TO_PROJECT_DIR",
+		Short: "TODO: Initialize a new project",
+		Long:  "TODO more about init",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return init_(ctx, pctx, args[0], modpath, allowExistingDir)
+		},
+	}
+	initCmd.Flags().StringVarP(&modpath, "module-path", "m", "", "the module import path for your project's go.mod file (required if project is outside of GOPATH)")
 	// TODO(#1918): Remove this flag when empty directories are allowed; it is
 	// currently used to enabled tests to create an empty tempdir and then run
 	// "init" on it.
-	f.BoolVar(&allowExistingDir, "allow-existing-dir", false, "true to allow initializing an existing directory (contents may be overwritten!)")
+	initCmd.Flags().BoolVar(&allowExistingDir, "allow-existing-dir", false, "true to allow initializing an existing directory (contents may be overwritten!)")
+	rootCmd.AddCommand(initCmd)
+}
 
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("gocdk init: %w", err)
-	}
-
-	if f.NArg() != 1 {
-		return usagef("gocdk init [--module-path=MODULE_IMPORT_PATH] PATH_TO_PROJECT_DIR")
-	}
-
-	projectDir := pctx.resolve(f.Arg(0))
+func init_(ctx context.Context, pctx *processContext, dir, modpath string, allowExistingDir bool) error {
+	projectDir := pctx.resolve(dir)
 	if modpath == "" {
 		var err error
 		modpath, err = inferModulePath(ctx, pctx, projectDir)
@@ -87,7 +86,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 	fmt.Fprintln(pctx.stdout, "- Dockerfile")
 	fmt.Fprintln(pctx.stdout, "- 'dev' biome for local development settings")
 	fmt.Fprintln(pctx.stdout)
-	fmt.Fprintf(pctx.stdout, "Run `cd %s`, then run:\n", f.Arg(0))
+	fmt.Fprintf(pctx.stdout, "Run `cd %s`, then run:\n", dir)
 	fmt.Fprintln(pctx.stdout, "- `gocdk serve` to run the server locally with live code reloading")
 	fmt.Fprintln(pctx.stdout, "- `gocdk demo` to test new APIs")
 	fmt.Fprintln(pctx.stdout, "- `gocdk build` to build a Docker container")

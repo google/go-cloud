@@ -43,14 +43,14 @@ func TestAddDemo(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	if err := run(ctx, pctx, []string{"init", "-m", "test", "--allow-existing-dir", dir}, new(bool)); err != nil {
+	if err := init_(ctx, pctx, dir, "testmodpath", true); err != nil {
 		t.Fatalf("run init error: %+v", err)
 	}
 
 	// Call the main package run function as if 'add-demo' were being called
 	// from the command line for each of the demos.
 	for _, demo := range allDemos {
-		if err := run(ctx, pctx, []string{"demo", demo.name}, new(bool)); err != nil {
+		if err := run(ctx, pctx, []string{"demo", "add", demo.name}, new(bool)); err != nil {
 			t.Fatalf("run demo error: %+v", err)
 		}
 	}

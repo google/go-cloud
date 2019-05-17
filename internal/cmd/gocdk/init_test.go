@@ -52,8 +52,7 @@ func TestInit(t *testing.T) {
 		}
 
 		const projectName = "myspecialproject"
-		err = run(ctx, pctx, []string{"init", "--module-path=example.com/foo/" + projectName, projectName}, new(bool))
-		if err != nil {
+		if err := run(ctx, pctx, []string{"init", "--module-path=example.com/foo/" + projectName, projectName}, new(bool)); err != nil {
 			t.Errorf("run returned error: %+v", err)
 		}
 

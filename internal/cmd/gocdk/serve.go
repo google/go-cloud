@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -31,25 +30,29 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 )
 
-func serve(ctx context.Context, pctx *processContext, args []string) error {
-	f := newFlagSet(pctx, "serve")
-	opts := new(serveOptions)
-	f.StringVar(&opts.address, "address", "localhost:8080", "`host:port` address to serve on")
-	f.StringVar(&opts.biome, "biome", "dev", "`name` of biome to apply and use configuration from")
-	f.DurationVar(&opts.pollInterval, "poll-interval", 500*time.Millisecond, "time between checking project directory for changes")
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("gocdk serve: %w", err)
+func registerServeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	var opts serveOptions
+	serveCmd := &cobra.Command{
+		Use:   "serve",
+		Short: "TODO Run an auto-reloading local server",
+		Long:  "TODO more about serve",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return serve(ctx, pctx, &opts)
+		},
 	}
-	if f.NArg() != 0 {
-		return usagef("gocdk serve [options]")
-	}
+	serveCmd.Flags().StringVar(&opts.address, "address", "localhost:8080", "`host:port` address to serve on")
+	serveCmd.Flags().StringVar(&opts.biome, "biome", "dev", "`name` of biome to apply and use configuration from")
+	serveCmd.Flags().DurationVar(&opts.pollInterval, "poll-interval", 500*time.Millisecond, "time between checking project directory for changes")
+	rootCmd.AddCommand(serveCmd)
+}
 
+func serve(ctx context.Context, pctx *processContext, opts *serveOptions) error {
 	// Check first that we're in a Go module.
 	var err error
 	opts.moduleRoot, err = findModuleRoot(ctx, pctx.workdir)
@@ -132,7 +135,7 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 	}()
 
 	// Apply Terraform configuration in biome.
-	if err := apply(ctx, pctx, []string{"-input=false", "--", opts.biome}); err != nil {
+	if err := apply(ctx, pctx, opts.biome, false); err != nil {
 		return err
 	}
 
