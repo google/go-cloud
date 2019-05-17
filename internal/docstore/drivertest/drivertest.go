@@ -197,6 +197,7 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
+	cleanUpTable(t, coll)
 	f(t, coll)
 }
 
@@ -213,6 +214,7 @@ func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
+	cleanUpTable(t, coll)
 	f(t, coll)
 }
 
@@ -836,8 +838,6 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 	// Query the key field of a collection that has one.
 	// (The collection used for testGetQuery uses a key function rather than a key field.)
 	ctx := context.Background()
-	cleanUpTable(t, coll)
-
 	docs := []docmap{
 		{KeyField: "qkf1"},
 		{KeyField: "qkf2"},
@@ -865,7 +865,6 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 }
 
 func testGetQuery(t *testing.T, coll *ds.Collection) {
-	cleanUpTable(t, coll)
 	ctx := context.Background()
 	addQueryDocuments(t, coll)
 
@@ -964,7 +963,6 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 }
 
 func testDeleteQuery(t *testing.T, coll *ds.Collection) {
-	cleanUpTable(t, coll)
 	ctx := context.Background()
 
 	addQueryDocuments(t, coll)
@@ -1027,8 +1025,6 @@ func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 		t.Skip("update queries not yet implemented")
 	}
 
-	cleanUpTable(t, coll)
-
 	addQueryDocuments(t, coll)
 
 	err := coll.Query().Where("Player", "=", "fran").Update(ctx, docstore.Mods{"Score": 13, "Time": nil})
@@ -1067,9 +1063,9 @@ func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 }
 
 // cleanUpTable delete all documents from this collection after test.
-func cleanUpTable(t *testing.T, coll *docstore.Collection) {
+func cleanUpTable(fataler interface{ Fatalf(string, ...interface{}) }, coll *docstore.Collection) {
 	if err := coll.Query().Delete(context.Background()); err != nil {
-		t.Fatalf("%+v", err)
+		fataler.Fatalf("%+v", err)
 	}
 }
 
@@ -1110,7 +1106,6 @@ func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentI
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
-	cleanUpTable(t, coll)
 	ctx := context.Background()
 
 	docs := []docmap{
@@ -1165,6 +1160,7 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 
 func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
+
 	defer cleanUpTable(t, coll)
 
 	must := func(err error) {
@@ -1272,7 +1268,6 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 }
 
 func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
-	cleanUpTable(t, coll)
 	docs := []*HighScore{
 		{game3, "steph", 24, date(4, 25), nil},
 		{game3, "mia", 99, date(4, 26), nil},

@@ -36,6 +36,7 @@ const (
 	projectID       = "go-cloud-test-216917"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
+	collectionName3 = "docstore-test-3"
 	endPoint        = "firestore.googleapis.com:443"
 )
 
@@ -150,6 +151,19 @@ func TestConformance(t *testing.T) {
 		t.Fatal(err)
 	}
 	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc}, []drivertest.AsTest{verifyAs{}})
+}
+
+func BenchmarkConformance(b *testing.B) {
+	ctx := context.Background()
+	client, err := vkit.NewClient(ctx)
+	if err != nil {
+		b.Fatal(err)
+	}
+	coll, err := newCollection(client, projectID, collectionName3, drivertest.KeyField, nil, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	drivertest.RunBenchmarks(b, docstore.NewCollection(coll))
 }
 
 // Firedocstore-specific tests.
