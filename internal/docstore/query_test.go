@@ -62,6 +62,7 @@ func TestInvalidQuery(t *testing.T) {
 		{"empty OrderBy field", true, c.Query().OrderBy("", Ascending), "empty field"},
 		{"bad OrderBy direction", true, c.Query().OrderBy("x", "y"), "direction"},
 		{"two OrderBys", true, c.Query().OrderBy("x", Ascending).OrderBy("y", Descending), "orderby"},
+		{"OrderBy not in Where", true, c.Query().OrderBy("x", Ascending).Where("y", ">", 1), "orderby"},
 
 		{"any Limit", false, c.Query().Limit(1), "limit"},
 		{"any OrderBy", false, c.Query().OrderBy("x", Descending), "orderby"},

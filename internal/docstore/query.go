@@ -172,6 +172,19 @@ func (q *Query) initGet(fps []FieldPath) error {
 		return err
 	}
 	q.dq.FieldPaths = pfps
+	if q.dq.OrderByField != "" && len(q.dq.Filters) > 0 {
+		found := false
+		for _, f := range q.dq.Filters {
+			if len(f.FieldPath) == 1 && f.FieldPath[0] == q.dq.OrderByField {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return gcerr.Newf(gcerr.InvalidArgument, nil, "OrderBy field %s must appear in a Where clause",
+				q.dq.OrderByField)
+		}
+	}
 	return nil
 }
 
