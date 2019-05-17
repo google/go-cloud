@@ -25,6 +25,8 @@ import (
 	"os/signal"
 	"path/filepath"
 
+	"gocloud.dev/gcp"
+	"golang.org/x/oauth2/google"
 	"golang.org/x/xerrors"
 )
 
@@ -77,7 +79,8 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 		return serve(ctx, pctx, cmdArgs)
 	case "demo":
 		return addDemo(ctx, pctx, cmdArgs)
-	// TODO(rvangent): Add "add-biome".
+	case "biome":
+		return biomeAdd(ctx, pctx, cmdArgs)
 	case "deploy":
 		return deploy(ctx, pctx, cmdArgs)
 	case "build":
@@ -132,6 +135,13 @@ func (pctx *processContext) resolve(path string) string {
 		return path
 	}
 	return filepath.Join(pctx.workdir, path)
+}
+
+// gcpCredentials returns the credentials to use for this process context.
+func (pctx *processContext) gcpCredentials(ctx context.Context) (*google.Credentials, error) {
+	// TODO(light): google.DefaultCredentials uses Getenv directly, so it is
+	// difficult to disentangle to use processContext.
+	return gcp.DefaultCredentials(ctx)
 }
 
 // findModuleRoot searches the given directory and those above it for the Go

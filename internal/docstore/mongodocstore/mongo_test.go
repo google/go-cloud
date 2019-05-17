@@ -39,6 +39,7 @@ const (
 	dbName          = "docstore-test"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
+	collectionName3 = "docstore-test-3"
 )
 
 type harness struct {
@@ -163,6 +164,26 @@ func newTestClient(t *testing.T) *mongo.Client {
 		t.Fatalf("connecting to %s: %v", serverURI, err)
 	}
 	return client
+}
+
+func BenchmarkConformance(b *testing.B) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	client, err := Dial(ctx, serverURI)
+	if err != nil {
+		b.Fatalf("dialing to %s: %v", serverURI, err)
+	}
+	if err := client.Ping(ctx, nil); err != nil {
+		b.Fatalf("connecting to %s: %v", serverURI, err)
+	}
+	defer func() { client.Disconnect(context.Background()) }()
+
+	db := client.Database(dbName)
+	coll, err := newCollection(db.Collection(collectionName3), drivertest.KeyField, nil, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	drivertest.RunBenchmarks(b, docstore.NewCollection(coll))
 }
 
 // Mongo-specific tests.
