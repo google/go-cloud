@@ -922,12 +922,26 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			q:    coll.Query().Where("Score", ">=", 50).Where("Time", ">", date(4, 1)),
 			want: func(h *HighScore) bool { return h.Score >= 50 && h.Time.After(date(4, 1)) },
 		},
-		{
-			name:   "AllByPlayer",
-			q:      coll.Query().OrderBy("Player", docstore.Ascending),
-			want:   func(h *HighScore) bool { return true },
-			before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
-		},
+		// {
+		// 	name:   "AllByPlayerAsc",
+		// 	q:      coll.Query().OrderBy("Player", docstore.Ascending),
+		// 	want:   func(h *HighScore) bool { return true },
+		// 	before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
+		// },
+		// {
+		// 	name:   "AllByPlayerDesc",
+		// 	q:      coll.Query().OrderBy("Player", docstore.Descending),
+		// 	want:   func(h *HighScore) bool { return true },
+		// 	before: func(h1, h2 *HighScore) bool { return h1.Player > h2.Player },
+		// },
+		// {
+		// 	name: "GameByPlayer",
+		// 	q: coll.Query().Where("Game", "=", game1).Where("Player", ">", "").
+		// 		OrderBy("Player", docstore.Ascending),
+		// 	want:   func(h *HighScore) bool { return h.Game == game1 },
+		// 	before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
+		// },
+		// TODO(jba): add more OrderBy tests.
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
