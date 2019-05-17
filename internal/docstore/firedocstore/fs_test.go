@@ -159,7 +159,7 @@ func BenchmarkConformance(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	coll, err := newCollection(client, projectID, collectionName3, drivertest.KeyField, nil)
+	coll, err := newCollection(client, projectID, collectionName3, drivertest.KeyField, nil, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
