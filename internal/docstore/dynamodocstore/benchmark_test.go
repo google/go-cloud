@@ -123,7 +123,7 @@ func batchGetTransactWrite(b *testing.B, db *dynamodb.DynamoDB, items []map[stri
 	}
 	_, err := db.BatchGetItem(&dynamodb.BatchGetItemInput{
 		RequestItems: map[string]*dynamodb.KeysAndAttributes{
-			benchmarkTableName: &dynamodb.KeysAndAttributes{Keys: keys},
+			benchmarkTableName: {Keys: keys},
 		},
 	})
 	if err != nil {
