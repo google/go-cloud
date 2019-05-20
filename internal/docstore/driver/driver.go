@@ -54,7 +54,7 @@ type Collection interface {
 	QueryPlan(*Query) (string, error)
 
 	// As converts i to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
@@ -184,7 +184,7 @@ type DocumentIterator interface {
 	Stop()
 
 	// As converts i to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 }
 

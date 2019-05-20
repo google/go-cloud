@@ -40,11 +40,18 @@ import (
 //   local index:  "Game" partition key, "Score" sort key
 //   global index: "Player" partition key, "Time" sort key
 // The conformance test queries should exercise all of these.
+//
+// The docstore-test-3 table is used for running benchmarks only. To eliminate
+// the effect of dynamo auto-scaling, run:
+// aws dynamodb update-table --table-name docstore-test-3 \
+//   --provisioned-throughput ReadCapacityUnits=1000,WriteCapacityUnits=1000
+// Don't forget to change it back when done benchmarking.
 
 const (
 	region          = "us-east-2"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
+	collectionName3 = "docstore-test-3" // for benchmark
 )
 
 type harness struct {
@@ -121,6 +128,17 @@ func TestConformance(t *testing.T) {
 	// in the call below to generate unique transaction tokens.
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	drivertest.RunConformanceTests(t, newHarness, &codecTester{}, []drivertest.AsTest{verifyAs{}})
+}
+
+func BenchmarkConformance(b *testing.B) {
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	}))
+	coll, err := newCollection(dyn.New(sess), collectionName3, drivertest.KeyField, "", &Options{AllowScans: true})
+	if err != nil {
+		b.Fatal(err)
+	}
+	drivertest.RunBenchmarks(b, docstore.NewCollection(coll))
 }
 
 // Dynamodocstore-specific tests.

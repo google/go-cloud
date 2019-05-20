@@ -73,7 +73,7 @@ func TestAddDemo(t *testing.T) {
 	// Run the program, listening on a free port.
 	logger := log.New(pctx.stderr, "gocdk demo server under test: ", log.Ldate|log.Ltime)
 	alloc := &serverAlloc{exePath: exePath, port: findFreePort()}
-	cmd, err := alloc.start(ctx, pctx, logger, pctx.workdir)
+	cmd, err := alloc.start(ctx, pctx, logger, pctx.workdir, nil)
 	if err != nil {
 		t.Fatalf("failed to start server: %v", err)
 	}

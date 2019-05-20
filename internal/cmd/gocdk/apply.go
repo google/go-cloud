@@ -20,12 +20,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"golang.org/x/xerrors"
 )
 
 func apply(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "apply")
+	input := f.Bool("input", true, "ask for input for Terraform variables if not directly set")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
@@ -41,15 +43,16 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
-	if err := ensureTerraformInit(ctx, pctx, moduleRoot, biome); err != nil {
+	if err := ensureTerraformInit(ctx, pctx, moduleRoot, biome, *input); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
 	// TODO(#1821): take over steps (plan, confirm, apply) so we can
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
-	c := exec.CommandContext(ctx, "terraform", "apply")
+	c := exec.CommandContext(ctx, "terraform", "apply", "-input="+strconv.FormatBool(*input))
 	c.Dir = findBiomeDir(moduleRoot, biome)
+	c.Env = pctx.env
 	c.Stdin = pctx.stdin
 	c.Stdout = pctx.stdout
 	c.Stderr = pctx.stderr
@@ -61,7 +64,7 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 
 // ensureTerraformInit checks for a .terraform directory at the biome root.
 // If one doesn't exist, ensureTerraformInit runs terraform init.
-func ensureTerraformInit(ctx context.Context, pctx *processContext, moduleRoot, biome string) error {
+func ensureTerraformInit(ctx context.Context, pctx *processContext, moduleRoot, biome string, input bool) error {
 	// Check for .terraform directory.
 	biomePath := findBiomeDir(moduleRoot, biome)
 	_, err := os.Stat(filepath.Join(biomePath, ".terraform"))
@@ -90,8 +93,10 @@ func ensureTerraformInit(ctx context.Context, pctx *processContext, moduleRoot, 
 	}
 
 	// Biome exists but not initialized. Need to run terraform init.
-	c := exec.CommandContext(ctx, "terraform", "init")
+	c := exec.CommandContext(ctx, "terraform", "init", "-input="+strconv.FormatBool(input))
 	c.Dir = biomePath
+	c.Env = pctx.env
+	c.Stdin = pctx.stdin
 	c.Stdout = pctx.stdout
 	c.Stderr = pctx.stderr
 	if err := c.Run(); err != nil {

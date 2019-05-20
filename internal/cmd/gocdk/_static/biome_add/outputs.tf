@@ -15,5 +15,8 @@ output "launch_environment" {
 output "launch_specifier" {
 	value {
 		host_port = 8080
+		project_id   = "" # fill this in
+		location     = "us-central1"
+		service_name = "" # fill this in
 	}
 }

@@ -63,37 +63,63 @@ fi
 # start_local_deps.sh requires that Docker is installed, via Travis services,
 # which are only supported on Linux.
 # Tests that depend on them should check the Travis environment before running.
+# Don't do this when running locally, as it's slow; user should do it.
 if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   echo
   echo "Starting local dependencies..."
   ./internal/testing/start_local_deps.sh
+  go install -mod=readonly github.com/google/wire/cmd/wire
 fi
 
-
-# Run Go tests for the root. Only do coverage for the Linux build
-# because it is slow, and codecov will only save the last one anyway.
 result=0
-if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
-  echo "Running Go tests for root module (with coverage)..."
-  go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
-  if [ -f coverage.out ] && [ $result -eq 0 ]; then
-    # Filter out test and sample packages.
-    grep -v test coverage.out | grep -v samples > coverage2.out
-    mv coverage2.out coverage.out
-    bash <(curl -s https://codecov.io/bash)
-  fi
-else
-  echo "Running Go tests for root module..."
-  go test -mod=readonly -race ./... || result=1
-fi
 
-# No need to run other checks on OSs other than linux.
-# We default TRAVIS_OS_NAME to "linux" so that we don't abort here when run locally.
+rootdir="$(pwd)"
+while read -r path || [[ -n "$path" ]]; do
+  echo
+  echo "******************************"
+  echo "* Checking module: $path"
+  echo "******************************"
+  echo
+  pushd "$path" &> /dev/null
+
+  # Run Go tests.
+  # Only do coverage for the Linux build on Travis because it is slow, and
+  # codecov will only save the last one anyway.
+  if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
+    echo "Running Go tests with coverage..."
+    go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+    if [ -f coverage.out ] && [ $result -eq 0 ]; then
+      # Filter out test packages.
+      grep -v test coverage.out > coverage2.out
+      mv coverage2.out coverage.out
+      bash <(curl -s https://codecov.io/bash)
+    fi
+  else
+    echo "Running Go tests..."
+    go test -mod=readonly -race ./... || result=1
+  fi
+  # Do these additional checks for the Linux build on Travis, or when running
+  # locally.
+  if [[ "${TRAVIS_OS_NAME:-linux}" == "linux" ]]; then
+    echo "Running go mod tidy:"
+    ( "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
+    echo "Running wire diff:"
+    ( wire diff ./... && echo "  OK " ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+  fi
+  popd &> /dev/null
+done < <( sed -e '/^#/d' -e '/^$/d' allmodules )
+# The above filters out comments and empty lines from allmodules.
+
+# The rest of these checks are not OS-specific, so we only run them for the
+# Linux build on Travis, or when running locally.
 if [[ "${TRAVIS_OS_NAME:-linux}" != "linux" ]]; then
   exit $result
 fi
 
-
+echo
+echo "******************************"
+echo "* Doing non-module checks"
+echo "******************************"
 echo
 echo "Ensuring .go files are formatted with gofmt -s..."
 mapfile -t go_files < <(find . -name '*.go' -type f)
@@ -103,13 +129,13 @@ if [ -n "$DIFF" ]; then
   echo "$DIFF";
   exit 1;
 else
-  echo "OK"
+  echo "  OK"
 fi;
 
 
 echo
 echo "Ensuring that go mod tidy has been run for the root module..."
-( ./internal/testing/check_mod_tidy.sh && echo "OK" ) || {
+( ./internal/testing/check_mod_tidy.sh && echo "  OK" ) || {
   echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1
 }
 
@@ -123,7 +149,7 @@ function cleanupstaticgo() {
 trap cleanupstaticgo EXIT
 pushd internal/cmd/gocdk/ &> /dev/null
 go run -mod=readonly generate_static.go -- "$tmpstaticgo" &> /dev/null
-( diff -u ./static.go - < "$tmpstaticgo" && echo "OK" ) || {
+( diff -u ./static.go - < "$tmpstaticgo" && echo "  OK" ) || {
   echo "FAIL: gocdk static files are out of date; please run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
 }
 popd &> /dev/null
@@ -132,7 +158,7 @@ popd &> /dev/null
 if [[ $(go version) == *go1\.12* ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
-  ( ./internal/testing/listdeps.sh | diff -u ./internal/testing/alldeps - && echo "OK" ) || {
+  ( ./internal/testing/listdeps.sh | diff -u ./internal/testing/alldeps - && echo "  OK" ) || {
     echo "FAIL: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
     # Module behavior may differ across versions.
     echo "using go version 1.12."
@@ -148,13 +174,13 @@ if ! [[ -z "$missing_packages" ]]; then
   echo "$missing_packages" 1>&2
   result=1
 else
-  echo "OK"
+  echo "  OK"
 fi
 
 
 echo
 echo "Ensuring that all examples used in Hugo match what's in source..."
-(internal/website/gatherexamples/run.sh | diff -u internal/website/data/examples.json - > /dev/null && echo "OK") || {
+(internal/website/gatherexamples/run.sh | diff -u internal/website/data/examples.json - > /dev/null && echo "  OK") || {
   echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
   result=1
 }
@@ -166,35 +192,6 @@ if [[ ${result} -eq 0 ]] && [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS
   ./internal/testing/check_api_change.sh || result=1;
 fi
 
-
-echo
-echo "Running wire check..."
-go install -mod=readonly github.com/google/wire/cmd/wire
-wire check ./... && echo "OK" || result=1
-
-echo
-echo "Running wire diff..."
-# "wire diff" fails with exit code 1 if any diffs are detected.
-( wire diff ./... && echo "OK" ) || {
-  echo "FAIL: wire diff found diffs!";
-  result=1;
-}
-
-
-echo
-echo "Running Go tests for sub-modules..."
-while read -r path || [[ -n "$path" ]]; do
-  echo
-  echo "Testing sub-module at '$path'..."
-  echo "  go test:"
-  ( cd "$path" && go test -mod=readonly ./... ) || result=1
-  echo "  go mod tidy:"
-  ( ./internal/testing/check_mod_tidy.sh "$path" && echo "    OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
-  echo "  wire check:"
-  ( cd "$path" && wire check ./... && echo "    OK" ) || result=1
-  echo "  wire diff:"
-  ( cd "$path" && wire diff ./... && echo "    OK " ) || { echo "FAIL: wire diff found diffs!" && result=1; }
-done < <( sed -e '/^#/d' -e '/^$/d' -e '/^\.$/d' allmodules )
 
 echo
 if [[ ${result} -eq 0 ]]; then
