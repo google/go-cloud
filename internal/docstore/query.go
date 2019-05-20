@@ -99,7 +99,7 @@ func (q *Query) Limit(n int) *Query {
 // BeforeQuery takes a callback function that will be called before the Query is
 // executed to the underlying provider's query functionality. The callback takes
 // a parameter, asFunc, that converts its argument to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information.
+// See https://gocloud.dev/concepts/as/ for background information.
 func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query {
 	q.dq.BeforeQuery = f
 	return q
@@ -200,7 +200,7 @@ func (it *DocumentIterator) Stop() {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (it *DocumentIterator) As(i interface{}) bool {

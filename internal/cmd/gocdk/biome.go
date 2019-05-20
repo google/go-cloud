@@ -22,6 +22,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"golang.org/x/xerrors"
 )
@@ -63,6 +65,47 @@ func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
 		return nil, xerrors.Errorf("read biome %s configuration: %w", err)
 	}
 	return config, nil
+}
+
+// refreshBiome refreshes the Terraform state for the biome. This updates
+// the outputs.
+func refreshBiome(ctx context.Context, moduleRoot, biome string, env []string) error {
+	c := exec.CommandContext(ctx, "terraform", "refresh", "-input=false")
+	c.Dir = findBiomeDir(moduleRoot, biome)
+	c.Env = overrideEnv(env, "TF_IN_AUTOMATION=1")
+	out, err := c.CombinedOutput()
+	if err != nil {
+		if len(out) > 0 {
+			return xerrors.Errorf("refresh biome %s:\n%s", biome, out)
+		}
+		return xerrors.Errorf("refresh biome %s: %w", biome, err)
+	}
+	return nil
+}
+
+// launchEnv returns the list of environment variables to pass to the launched
+// server based on a biome's "launch_environment" Terraform output. On success,
+// The returned slice will never be nil.
+func launchEnv(tfOutput map[string]*tfOutput) ([]string, error) {
+	envMap := tfOutput["launch_environment"].mapValue()
+	env := make([]string, 0, len(envMap))
+	for k, v := range envMap {
+		if k == "PORT" {
+			return nil, xerrors.Errorf("read launch environment: cannot set PORT manually (set by launcher)")
+		}
+		s, ok := v.(string)
+		if !ok {
+			return nil, xerrors.Errorf("read launch environment: variable %s is not a string (found %T)", k, v)
+		}
+		env = append(env, k+"="+s)
+	}
+	sort.Slice(env, func(i, j int) bool {
+		// Sort by key.
+		ki := env[i][:strings.IndexByte(env[i], '=')]
+		kj := env[j][:strings.IndexByte(env[j], '=')]
+		return ki < kj
+	})
+	return env, nil
 }
 
 // tfReadOutput runs `terraform output` on the given directory and returns

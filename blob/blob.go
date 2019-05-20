@@ -155,7 +155,7 @@ func (r *Reader) Size() int64 {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (r *Reader) As(i interface{}) bool {
@@ -199,7 +199,7 @@ type Attributes struct {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (a *Attributes) As(i interface{}) bool {
@@ -348,7 +348,7 @@ type ListOptions struct {
 	// BeforeList is a callback that will be called before each call to the
 	// the underlying provider's list functionality.
 	// asFunc converts its argument to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeList func(asFunc func(interface{}) bool) error
 }
 
@@ -420,7 +420,7 @@ type ListObject struct {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (o *ListObject) As(i interface{}) bool {
@@ -492,7 +492,7 @@ func newBucket(b driver.Bucket) *Bucket {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (b *Bucket) As(i interface{}) bool {
@@ -505,7 +505,7 @@ func (b *Bucket) As(i interface{}) bool {
 // ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See https://godoc.org/gocloud.dev#hdr-As for background information.
+// See https://gocloud.dev/concepts/as/ for background information.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, b.b.ErrorAs)
 }
@@ -919,7 +919,7 @@ type ReaderOptions struct {
 	// case it may not be called at all).
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeRead func(asFunc func(interface{}) bool) error
 }
 
@@ -980,7 +980,7 @@ type WriterOptions struct {
 	// sending an upload request.
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
@@ -990,7 +990,7 @@ type CopyOptions struct {
 	// initiated.
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeCopy func(asFunc func(interface{}) bool) error
 }
 

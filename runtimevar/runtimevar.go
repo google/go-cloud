@@ -93,7 +93,7 @@ type Snapshot struct {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (s *Snapshot) As(i interface{}) bool {
@@ -348,7 +348,7 @@ func wrapError(w driver.Watcher, err error) error {
 // ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See https://godoc.org/gocloud.dev#hdr-As for background information.
+// See https://gocloud.dev/concepts/as/ for background information.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, c.dw.ErrorAs)
 }

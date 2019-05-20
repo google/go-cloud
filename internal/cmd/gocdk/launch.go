@@ -21,13 +21,19 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
+	"gocloud.dev/gcp"
 	"golang.org/x/xerrors"
+	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
+	cloudrun "google.golang.org/api/run/v1alpha1"
 )
 
 func launch(ctx context.Context, pctx *processContext, args []string) error {
@@ -77,12 +83,16 @@ func launch(ctx context.Context, pctx *processContext, args []string) error {
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
+	env, err := launchEnv(tfOutput)
+	if err != nil {
+		return xerrors.Errorf("gocdk launch: %w", err)
+	}
 
 	// Launch the application.
 	launchURL, err := launcher.Launch(ctx, &LaunchInput{
 		DockerImage: *dockerImage,
+		Env:         env,
 		Specifier:   tfOutput["launch_specifier"].mapValue(),
-		// TODO(light): Pass environment variables from tfOutput into env.
 	})
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
@@ -121,6 +131,22 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 	case "local":
 		return &localLauncher{
 			logger:    logger,
+			dockerEnv: pctx.env,
+			dockerDir: pctx.workdir,
+		}, nil
+	case "cloudrun":
+		creds, err := pctx.gcpCredentials(ctx)
+		if err != nil {
+			return nil, xerrors.Errorf("prepare cloudrun launcher: %w", err)
+		}
+		httpClient, _ := gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
+		runService, err := cloudrun.NewService(ctx, option.WithHTTPClient(&httpClient.Client))
+		if err != nil {
+			return nil, xerrors.Errorf("prepare cloudrun launcher: %w", err)
+		}
+		return &cloudRunLauncher{
+			logger:    logger,
+			client:    runService,
 			dockerEnv: pctx.env,
 			dockerDir: pctx.workdir,
 		}, nil
@@ -187,6 +213,172 @@ func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*ur
 	return serveURL, nil
 }
 
+// cloudRunLauncher pushes Docker containers to Google Container Registry and
+// creates/updates a Cloud Run service.
+type cloudRunLauncher struct {
+	logger    *log.Logger
+	client    *cloudrun.APIService
+	dockerEnv []string
+	dockerDir string
+}
+
+// Launch implements Launcher.Launch.
+func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*url.URL, error) {
+	projectID := specifierStringValue(input.Specifier, "project_id")
+	location := specifierStringValue(input.Specifier, "location")
+	serviceName := specifierStringValue(input.Specifier, "service_name")
+	if projectID == "" || location == "" || serviceName == "" {
+		return nil, xerrors.New("cloud run launch: launch_specifier missing project_id, location, and/or service_name")
+	}
+
+	// Push to GCR if needed.
+	// TODO(light): Check for presence in Docker daemon and country-specific
+	// prefixes.
+	if strings.HasPrefix(input.DockerImage, "gcr.io/") {
+		if err := crl.dockerPush(ctx, input.DockerImage); err != nil {
+			return nil, xerrors.Errorf("cloud run launch: %w", err)
+		}
+	}
+
+	// Launch on Cloud Run.
+	var env []*cloudrun.EnvVar
+	for i, inputVar := range input.Env {
+		eqIdx := strings.IndexByte(inputVar, '=')
+		if eqIdx == -1 {
+			return nil, xerrors.Errorf("cloud run launch: environment variables should be in the form VARNAME=VALUE, but env[%d] = %q", i, inputVar)
+		}
+		env = append(env, &cloudrun.EnvVar{
+			Name:  inputVar[:eqIdx],
+			Value: inputVar[eqIdx+1:],
+		})
+	}
+	// Reference of Knative service specifications can be found at
+	// https://github.com/knative/serving/blob/master/docs/spec/spec.md#service
+	// or https://cloud.google.com/run/docs/reference/rest/v1alpha1/namespaces.services#Service
+	serviceMeta := &cloudrun.ObjectMeta{
+		Name:      serviceName,
+		Namespace: projectID,
+	}
+	serviceSpec := &cloudrun.ServiceSpec{
+		RunLatest: &cloudrun.ServiceSpecRunLatest{
+			Configuration: &cloudrun.ConfigurationSpec{
+				RevisionTemplate: &cloudrun.RevisionTemplate{
+					Spec: &cloudrun.RevisionSpec{
+						Container: &cloudrun.Container{
+							Image: input.DockerImage,
+							Env:   env,
+							// TODO(light): Add liveness and readiness probes.
+						},
+						ContainerConcurrency: 0, // thread-safe
+					},
+				},
+			},
+		},
+	}
+	locationString := "projects/" + projectID + "/locations/" + location
+	serviceString := locationString + "/services/" + serviceName
+	createCall := crl.client.Projects.Locations.Services.Create(locationString, &cloudrun.Service{
+		ApiVersion: "serving.knative.dev/v1alpha1",
+		Kind:       "Service",
+		Metadata:   serviceMeta,
+		Spec:       serviceSpec,
+	})
+	_, err := createCall.Context(ctx).Do()
+	if err == nil && !specifierBoolValue(input.Specifier, "internal_only") {
+		// Service created for first time. Make publicly accessible.
+		policyCall := crl.client.Projects.Locations.Services.SetIamPolicy(serviceString, &cloudrun.SetIamPolicyRequest{
+			Policy: &cloudrun.Policy{
+				Bindings: []*cloudrun.Binding{
+					{
+						Role:    "roles/run.invoker",
+						Members: []string{"allUsers"},
+					},
+				},
+			},
+		})
+		if _, err := policyCall.Context(ctx).Do(); err != nil {
+			return nil, xerrors.Errorf("cloud run launch: %w")
+		}
+	} else if apiError := (*googleapi.Error)(nil); xerrors.As(err, &apiError) && apiError.Code == http.StatusConflict {
+		// Already exists, add revision.
+		replaceCall := crl.client.Projects.Locations.Services.ReplaceService(serviceString, &cloudrun.Service{
+			ApiVersion: "serving.knative.dev/v1alpha1",
+			Kind:       "Service",
+			Metadata:   serviceMeta,
+			Spec:       serviceSpec,
+		})
+		// Handle error below in the same way a create call is handled.
+		_, err = replaceCall.Context(ctx).Do()
+	}
+	if err != nil {
+		return nil, xerrors.Errorf("cloud run launch: %w", err)
+	}
+	crl.logger.Printf("Created revision, waiting for service %s to make changes...", serviceName)
+
+	// Wait for it to become ready.
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
+	for {
+		select {
+		case <-tick.C:
+		case <-ctx.Done():
+			return nil, xerrors.Errorf("cloud run launch: wait for ready: %w", ctx.Err())
+		}
+
+		currService, err := crl.client.Projects.Locations.Services.Get(serviceString).Context(ctx).Do()
+		if err != nil {
+			return nil, xerrors.Errorf("cloud run launch: wait for ready: %w", err)
+		}
+		if currService.Status.ObservedGeneration == currService.Metadata.Generation && conditionStatus(currService.Status.Conditions, "RoutesReady") == "True" {
+			// TODO(light): According to docs, this should also check for Status
+			// containing a type="Ready" condition that equals "True" or "False".
+			// Instead, it seems to always be "Unknown".
+			if currService.Status.Address == nil {
+				return nil, xerrors.Errorf("cloud run launch: ready, but server did not return address")
+			}
+			// Weirdly, the hostname is a URL, not a domain name.
+			u, err := url.Parse(currService.Status.Address.Hostname)
+			if err != nil {
+				return nil, xerrors.Errorf("cloud run launch: parse service URL: %w", err)
+			}
+			return u, nil
+		}
+		crl.logger.Println("Not ready yet, will poll again...")
+	}
+}
+
+func (crl *cloudRunLauncher) dockerPush(ctx context.Context, imageName string) error {
+	c := exec.CommandContext(ctx, "docker", "push", imageName)
+	c.Env = crl.dockerEnv
+	c.Dir = crl.dockerDir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		if len(out) == 0 {
+			return xerrors.Errorf("docker push: %w", err)
+		}
+		return xerrors.Errorf("docker push:\n%s", out)
+	}
+	return nil
+}
+
+// conditionStatus finds the Cloud Run condition with the given name and returns
+// its status string (one of "True", "False", or "Unknown") or empty string if
+// the condition was not found.
+func conditionStatus(conds []*cloudrun.ServiceCondition, name string) string {
+	for _, c := range conds {
+		if c.Type == name {
+			return c.Status
+		}
+	}
+	return ""
+}
+
+// specifierStringValue returns the specifier's value for a key if it is a string.
+func specifierStringValue(spec map[string]interface{}, key string) string {
+	v, _ := spec[key].(string)
+	return v
+}
+
 // specifierIntValue returns the specifier's value for a key if it is an integer.
 func specifierIntValue(spec map[string]interface{}, key string) int {
 	switch v := spec[key].(type) {
@@ -202,5 +394,18 @@ func specifierIntValue(spec map[string]interface{}, key string) int {
 		return int(i)
 	default:
 		return 0
+	}
+}
+
+// specifierBoolValue returns the specifier's value for a key if it is a boolean.
+func specifierBoolValue(spec map[string]interface{}, key string) bool {
+	switch v := spec[key].(type) {
+	case bool:
+		return v
+	case string:
+		b, _ := strconv.ParseBool(v)
+		return b
+	default:
+		return false
 	}
 }

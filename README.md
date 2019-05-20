@@ -5,6 +5,7 @@ _Write once, run on any cloud ☁️_
 [![Build Status](https://travis-ci.com/google/go-cloud.svg?branch=master)][travis]
 [![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
+[![Go Report Card](https://goreportcard.com/badge/github.com/google/go-cloud)](https://goreportcard.com/report/github.com/google/go-cloud)
 
 <p align="center">
   <img width="509" height="276" src="internal/website/static/go-cdk-logo-gopherblue.png" alt="">

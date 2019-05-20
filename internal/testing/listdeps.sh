@@ -30,7 +30,7 @@ trap cleanup EXIT
 
 
 sed -e '/^#/d' -e '/^$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
-  ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
+  ( cd "$path" && go list -mod=readonly -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> "$tmpfile")
 done
 
 # Sort using the native byte values to keep results from different environment consistent.
