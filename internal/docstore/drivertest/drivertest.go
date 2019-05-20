@@ -922,35 +922,38 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			q:    coll.Query().Where("Score", ">=", 50).Where("Time", ">", date(4, 1)),
 			want: func(h *HighScore) bool { return h.Score >= 50 && h.Time.After(date(4, 1)) },
 		},
-		// {
-		// 	name:   "AllByPlayerAsc",
-		// 	q:      coll.Query().OrderBy("Player", docstore.Ascending),
-		// 	want:   func(h *HighScore) bool { return true },
-		// 	before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
-		// },
-		// {
-		// 	name:   "AllByPlayerDesc",
-		// 	q:      coll.Query().OrderBy("Player", docstore.Descending),
-		// 	want:   func(h *HighScore) bool { return true },
-		// 	before: func(h1, h2 *HighScore) bool { return h1.Player > h2.Player },
-		// },
-		// {
-		// 	name: "GameByPlayer",
-		// 	q: coll.Query().Where("Game", "=", game1).Where("Player", ">", "").
-		// 		OrderBy("Player", docstore.Ascending),
-		// 	want:   func(h *HighScore) bool { return h.Game == game1 },
-		// 	before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
-		// },
+		{
+			name:   "AllByPlayerAsc",
+			q:      coll.Query().OrderBy("Player", docstore.Ascending),
+			want:   func(h *HighScore) bool { return true },
+			before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
+		},
+		{
+			name:   "AllByPlayerDesc",
+			q:      coll.Query().OrderBy("Player", docstore.Descending),
+			want:   func(h *HighScore) bool { return true },
+			before: func(h1, h2 *HighScore) bool { return h1.Player > h2.Player },
+		},
+		{
+			name: "GameByPlayer",
+			q: coll.Query().Where("Game", "=", game1).Where("Player", ">", "").
+				OrderBy("Player", docstore.Ascending),
+			want:   func(h *HighScore) bool { return h.Game == game1 },
+			before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
+		},
 		// TODO(jba): add more OrderBy tests.
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := mustCollectHighScores(ctx, t, tc.q.Get(ctx))
+			got, err := collectHighScores(ctx, tc.q.Get(ctx))
+			if gcerrors.Code(err) == gcerrors.Unimplemented {
+				t.Skip("unimplemented")
+			}
 			for _, g := range got {
 				g.DocstoreRevision = nil
 			}
 			want := filterHighScores(queryDocuments, tc.want)
-			_, err := tc.q.Plan()
+			_, err = tc.q.Plan()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1131,12 +1134,20 @@ func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) [
 }
 
 func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []*HighScore {
-	var hs []*HighScore
-	collect := func(h interface{}) error { hs = append(hs, h.(*HighScore)); return nil }
-	if err := forEach(ctx, iter, newHighScore, collect); err != nil {
+	hs, err := collectHighScores(ctx, iter)
+	if err != nil {
 		t.Fatal(err)
 	}
 	return hs
+}
+
+func collectHighScores(ctx context.Context, iter *ds.DocumentIterator) ([]*HighScore, error) {
+	var hs []*HighScore
+	collect := func(h interface{}) error { hs = append(hs, h.(*HighScore)); return nil }
+	if err := forEach(ctx, iter, newHighScore, collect); err != nil {
+		return nil, err
+	}
+	return hs, nil
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
