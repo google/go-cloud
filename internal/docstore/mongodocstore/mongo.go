@@ -282,7 +282,6 @@ func (c *collection) get(ctx context.Context, a *driver.Action, dopts *driver.Ru
 		return res.Err()
 	}
 	var m map[string]interface{}
-	// TODO(jba): Benchmark the double decode to see if it's worth trying to avoid it.
 	if err := res.Decode(&m); err != nil {
 		return err
 	}

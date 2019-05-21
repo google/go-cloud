@@ -148,6 +148,12 @@ type Query struct {
 	// Limit <= 0, the driver implementation should return all possible results.
 	Limit int
 
+	// OrderByField is the field to use for sorting the results.
+	OrderByField string
+
+	// OrderAscending specifies the sort direction.
+	OrderAscending bool
+
 	// BeforeQuery is a callback that must be called exactly once before the
 	// underlying provider's query is executed. asFunc allows providers to expose
 	// provider-specific types.

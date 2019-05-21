@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,6 +35,20 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 		lim := int64(q.Limit)
 		opts.Limit = &lim
 	}
+	if q.OrderByField != "" {
+		f := q.OrderByField
+		if c.opts.LowercaseFields {
+			f = strings.ToLower(f)
+		}
+		var dir int
+		if q.OrderAscending {
+			dir = 1
+		} else {
+			dir = -1
+		}
+		opts.Sort = bson.D{{Key: f, Value: dir}}
+	}
+
 	filter := bson.D{} // must be a zero-length slice, not nil
 	for _, f := range q.Filters {
 		bf, err := c.filterToBSON(f)
