@@ -129,10 +129,9 @@ echo "* Doing non-module checks"
 echo "******************************"
 echo
 echo "Ensuring .go files are formatted with gofmt -s..."
-mapfile -t go_files < <(find . -name '*.go' -type f)
-DIFF="$(gofmt -s -d "${go_files[@]}")"
+DIFF="$(gofmt -s -d .)"
 if [ -n "$DIFF" ]; then
-  echo "FAIL: please run gofmt -s and commit the result"
+  echo "FAIL: please run 'gofmt -s -w .' and commit the result"
   echo "$DIFF";
   exit 1;
 else
