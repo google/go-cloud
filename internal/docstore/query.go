@@ -38,23 +38,24 @@ func (c *Collection) Query() *Query {
 
 // Where expresses a condition on the query.
 // Valid ops are: "=", ">", "<", ">=", "<=".
-// Valid values are strings, integers, float-point numbers, and times.
-func (q *Query) Where(fieldpath, op string, value interface{}) *Query {
-	fp, err := parseFieldPath(FieldPath(fieldpath))
-	if err != nil {
-		q.err = err
-	}
-	if !validOp[op] {
-		q.err = gcerr.Newf(gcerr.InvalidArgument, nil, "invalid filter operator: %q. Use one of: =, >, <, >=, <=", op)
-	}
-	if !validFilterValue(value) {
-		q.err = gcerr.Newf(gcerr.InvalidArgument, nil, "invalid filter value: %v", value)
-	}
+// Valid values are strings, integers, floating-point numbers, and time.Time values.
+func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 	if q.err != nil {
 		return q
 	}
+	pfp, err := parseFieldPath(fp)
+	if err != nil {
+		q.err = err
+		return q
+	}
+	if !validOp[op] {
+		return q.invalidf("invalid filter operator: %q. Use one of: =, >, <, >=, <=", op)
+	}
+	if !validFilterValue(value) {
+		return q.invalidf("invalid filter value: %v", value)
+	}
 	q.dq.Filters = append(q.dq.Filters, driver.Filter{
-		FieldPath: fp,
+		FieldPath: pfp,
 		Op:        op,
 		Value:     value,
 	})
@@ -91,8 +92,51 @@ func validFilterValue(v interface{}) bool {
 }
 
 // Limit will limit the results to at most n documents.
+// n must be positive.
+// It is an error to specify Limit more than once in a Get query, or
+// at all in a Delete or Update query.
 func (q *Query) Limit(n int) *Query {
+	if q.err != nil {
+		return q
+	}
+	if n <= 0 {
+		return q.invalidf("limit value of %d must be greater than zero", n)
+	}
+	if q.dq.Limit > 0 {
+		return q.invalidf("query can have at most one limit clause")
+	}
 	q.dq.Limit = n
+	return q
+}
+
+// Ascending and Descending are constants for use in the OrderBy method.
+const (
+	Ascending  = "asc"
+	Descending = "desc"
+)
+
+// OrderBy specifies that the returned documents appear sorted by the given field in
+// the given direction.
+// A query can have at most one OrderBy clause. If it has none, the order of returned
+// documents is unspecified.
+// If a query has a Where clause and an OrderBy clause, the OrderBy clause's field
+// must appear in a Where clause.
+// It is an error to specify OrderBy in a Delete or Update query.
+func (q *Query) OrderBy(field, direction string) *Query {
+	if q.err != nil {
+		return q
+	}
+	if field == "" {
+		return q.invalidf("OrderBy: empty field")
+	}
+	if direction != Ascending && direction != Descending {
+		return q.invalidf("OrderBy: direction must be one of %q or %q", Ascending, Descending)
+	}
+	if q.dq.OrderByField != "" {
+		return q.invalidf("a query can have at most one OrderBy")
+	}
+	q.dq.OrderByField = field
+	q.dq.OrderAscending = (direction == Ascending)
 	return q
 }
 
@@ -112,21 +156,43 @@ func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query 
 func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	dcoll := q.coll.driver
 	wrapErr := func(err error) error { return wrapError(dcoll, err) }
-	if err := q.init(fps); err != nil {
+	if err := q.initGet(fps); err != nil {
 		return &DocumentIterator{err: wrapErr(err)}
 	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, wrapError: wrapErr, err: wrapErr(err)}
 }
 
+func (q *Query) initGet(fps []FieldPath) error {
+	if q.err != nil {
+		return q.err
+	}
+	pfps, err := parseFieldPaths(fps)
+	if err != nil {
+		return err
+	}
+	q.dq.FieldPaths = pfps
+	if q.dq.OrderByField != "" && len(q.dq.Filters) > 0 {
+		found := false
+		for _, f := range q.dq.Filters {
+			if len(f.FieldPath) == 1 && f.FieldPath[0] == q.dq.OrderByField {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return gcerr.Newf(gcerr.InvalidArgument, nil, "OrderBy field %s must appear in a Where clause",
+				q.dq.OrderByField)
+		}
+	}
+	return nil
+}
+
 // Delete deletes all the documents specified by the query.
 // It is an error if the query has a limit.
 func (q *Query) Delete(ctx context.Context) error {
-	if err := q.init(nil); err != nil {
+	if err := q.validateWrite("delete"); err != nil {
 		return err
-	}
-	if q.dq.Limit > 0 {
-		return gcerr.Newf(gcerr.InvalidArgument, nil, "delete queries cannot have a limit")
 	}
 	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
 }
@@ -134,11 +200,8 @@ func (q *Query) Delete(ctx context.Context) error {
 // Update updates all the documents specified by the query.
 // It is an error if the query has a limit.
 func (q *Query) Update(ctx context.Context, mods Mods) error {
-	if err := q.init(nil); err != nil {
+	if err := q.validateWrite("update"); err != nil {
 		return err
-	}
-	if q.dq.Limit > 0 {
-		return gcerr.Newf(gcerr.InvalidArgument, nil, "update queries cannot have a limit")
 	}
 	dmods, err := toDriverMods(mods)
 	if err != nil {
@@ -147,21 +210,22 @@ func (q *Query) Update(ctx context.Context, mods Mods) error {
 	return q.coll.driver.RunUpdateQuery(ctx, q.dq, dmods)
 }
 
-func (q *Query) init(fps []FieldPath) error {
+func (q *Query) validateWrite(kind string) error {
 	if q.err != nil {
 		return q.err
 	}
-	if q.dq.FieldPaths == nil {
-		for _, fp := range fps {
-			fp, err := parseFieldPath(fp)
-			if err != nil {
-				q.err = err
-				return err
-			}
-			q.dq.FieldPaths = append(q.dq.FieldPaths, fp)
-		}
+	if q.dq.Limit > 0 {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "%s queries cannot have a limit", kind)
+	}
+	if q.dq.OrderByField != "" {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "%s queries cannot have an OrderBy clause", kind)
 	}
 	return nil
+}
+
+func (q *Query) invalidf(format string, args ...interface{}) *Query {
+	q.err = gcerr.Newf(gcerr.InvalidArgument, nil, format, args...)
+	return q
 }
 
 // DocumentIterator iterates over documents.
@@ -214,7 +278,7 @@ func (it *DocumentIterator) As(i interface{}) bool {
 // the given field paths. Plan uses only information available to the client, so it
 // cannot know whether a service uses indexes or scans internally.
 func (q *Query) Plan(fps ...FieldPath) (string, error) {
-	if err := q.init(fps); err != nil {
+	if err := q.initGet(fps); err != nil {
 		return "", err
 	}
 	return q.coll.driver.QueryPlan(q.dq)

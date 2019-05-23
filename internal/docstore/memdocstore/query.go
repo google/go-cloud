@@ -19,6 +19,7 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -36,6 +37,9 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 		if filtersMatch(q.Filters, doc) {
 			docs = append(docs, doc)
 		}
+	}
+	if q.OrderByField != "" {
+		sortDocs(docs, q.OrderByField, q.OrderAscending)
 	}
 	return &docIterator{docs: docs, fieldPaths: q.FieldPaths}, nil
 }
@@ -122,6 +126,20 @@ func toBigFloat(x reflect.Value) *big.Float {
 		return nil
 	}
 	return &f
+}
+
+func sortDocs(docs []map[string]interface{}, field string, asc bool) {
+	sort.Slice(docs, func(i, j int) bool {
+		c, ok := compare(docs[i][field], docs[j][field])
+		if !ok {
+			return false
+		}
+		if asc {
+			return c < 0
+		} else {
+			return c > 0
+		}
+	})
 }
 
 type docIterator struct {
