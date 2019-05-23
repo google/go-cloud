@@ -93,10 +93,18 @@ while read -r path || [[ -n "$path" ]]; do
       grep -v test coverage.out > coverage2.out
       mv coverage2.out coverage.out
       bash <(curl -s https://codecov.io/bash)
+      rm coverage.out
     fi
   else
     echo "Running Go tests..."
-    go test -mod=readonly -race ./... || result=1
+    # TODO(rvangent): Special case modules to skip for Windows. Perhaps
+    # this should be data-driven by allmodules?
+    # (https://github.com/google/go-cloud/issues/2111).
+    if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && ([[ "$path" == "internal/contributebot" ]] || [[ "$path" == "internal/website" ]]); then
+      echo "  Skipping tests on Window"
+    else
+      go test -mod=readonly -race ./... || result=1
+    fi
   fi
   # Do these additional checks for the Linux build on Travis, or when running
   # locally.
