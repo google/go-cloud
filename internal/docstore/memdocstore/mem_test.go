@@ -134,3 +134,38 @@ func TestMissingKeyCreateFailsWithKeyFunc(t *testing.T) {
 		t.Error("got nil, want error")
 	}
 }
+
+func TestSortDocs(t *testing.T) {
+	newDocs := func() []docmap {
+		return []docmap{
+			{"a": int64(1), "b": "1", "c": 3.0},
+			{"a": int64(2), "b": "2", "c": 4.0},
+			{"a": int64(3), "b": "3"}, // missing "c"
+		}
+	}
+	inorder := newDocs()
+	reversed := newDocs()
+	for i := 0; i < len(reversed)/2; i++ {
+		j := len(reversed) - i - 1
+		reversed[i], reversed[j] = reversed[j], reversed[i]
+	}
+
+	for _, test := range []struct {
+		field     string
+		ascending bool
+		want      []docmap
+	}{
+		{"a", true, inorder},
+		{"a", false, reversed},
+		{"b", true, inorder},
+		{"b", false, reversed},
+		{"c", true, inorder},
+		{"c", false, []docmap{inorder[1], inorder[0], inorder[2]}},
+	} {
+		got := newDocs()
+		sortDocs(got, test.field, test.ascending)
+		if diff := cmp.Diff(got, test.want); diff != "" {
+			t.Errorf("%q, asc=%t:\n%s", test.field, test.ascending, diff)
+		}
+	}
+}
