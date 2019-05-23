@@ -96,7 +96,14 @@ while read -r path || [[ -n "$path" ]]; do
     fi
   else
     echo "Running Go tests..."
-    go test -mod=readonly -race ./... || result=1
+    # TODO(rvangent): Special case modules to skip for Windows. Perhaps
+    # this should be data-driven by allmodules?
+    # (https://github.com/google/go-cloud/issues/2111).
+    if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && ([[ "$path" == "internal/contributebot" ]] || [[ "$path" == "internal/website" ]]); then
+      echo "  Skipping tests on Window"
+    else
+      go test -mod=readonly -race ./... || result=1
+    fi
   fi
   # Do these additional checks for the Linux build on Travis, or when running
   # locally.
