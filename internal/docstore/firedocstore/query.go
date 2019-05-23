@@ -278,7 +278,23 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []drive
 			}},
 		}
 	}
-	// TODO(jba): order
+
+	if q.OrderByField != "" {
+		// TODO(jba): reorder filters so order-by one is first of inequalities?
+		// TODO(jba): see if it's OK if filter inequality direction differs from sort direction.
+		fref := []string{q.OrderByField}
+		if q.OrderByField == c.nameField {
+			fref[0] = "__name__"
+		}
+		var dir pb.StructuredQuery_Direction
+		if q.OrderAscending {
+			dir = pb.StructuredQuery_ASCENDING
+		} else {
+			dir = pb.StructuredQuery_DESCENDING
+		}
+		p.OrderBy = []*pb.StructuredQuery_Order{{Field: fieldRef(fref), Direction: dir}}
+	}
+
 	// TODO(jba): cursors (start/end)
 	return p, localFilters, nil
 }
@@ -306,7 +322,7 @@ func splitFilters(fs []driver.Filter) (sendToFirestore, evaluateLocally []driver
 
 func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
 	// Treat filters on the name field specially.
-	if c.nameField != "" && len(f.FieldPath) == 1 && f.FieldPath[0] == c.nameField {
+	if c.nameField != "" && fpEqualString(f.FieldPath, c.nameField) {
 		v := reflect.ValueOf(f.Value)
 		if v.Kind() != reflect.String {
 			return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
@@ -459,4 +475,8 @@ func (c *collection) runWriteQuery(ctx context.Context, q *driver.Query, writes 
 		return err
 	}
 	return nil
+}
+
+func fpEqualString(fp []string, s string) bool {
+	return len(fp) == 1 && fp[0] == s
 }

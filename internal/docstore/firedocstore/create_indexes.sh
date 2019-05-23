@@ -23,7 +23,7 @@
 # Except we want to keep going if there is a failure, and x is too verbose.
 set -uo pipefail
 
-project_id="$1"
+project_id="${1:-}"
 if [[ -z "$project_id" ]]; then
   echo "usage: create_indexes.sh PROJECT" 1>&2
   exit 64
@@ -44,4 +44,4 @@ set -x
 create_index Player ascending Score ascending
 create_index Game   ascending Score ascending
 create_index Player ascending Time  ascending
-
+create_index Game   ascending Player ascending

@@ -36,6 +36,9 @@ import (
 type avmap = map[string]*dyn.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
+	if q.OrderByField != "" {
+		return nil, gcerr.Newf(gcerr.Unimplemented, nil, "OrderBy not implemented")
+	}
 	qr, err := c.planQuery(q)
 	if err != nil {
 		return nil, err
