@@ -93,6 +93,7 @@ while read -r path || [[ -n "$path" ]]; do
       grep -v test coverage.out > coverage2.out
       mv coverage2.out coverage.out
       bash <(curl -s https://codecov.io/bash)
+      rm coverage.out
     fi
   else
     echo "Running Go tests..."
