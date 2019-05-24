@@ -1,3 +1,20 @@
+// Copyright 2019 The Go Cloud Development Kit Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Helper tool for creating new releases of the Go CDK.
+// Run from the repository root:
+// $ go run internal/testing/releasehelper.go <flags>
 package main
 
 import (
@@ -13,9 +30,14 @@ import (
 	"strings"
 )
 
+// TODO(eliben): add bumpversion flag that bumps version by 1, or to a version
+// given on the command line
 var doReplace = flag.Bool("replace", false, "add replace directives to root")
 var doDropReplace = flag.Bool("dropreplace", false, "drop replace directives to root")
 
+// cmdCheck invokes the command given in s, echoing the invocation to stdout.
+// It checks that the command was successful and returns its standard output.
+// If the command returned a non-0 status, log.Fatal is invoked.
 func cmdCheck(s string) []byte {
 	fmt.Printf(" -> %s\n", s)
 	fields := strings.Fields(s)
@@ -55,6 +77,7 @@ type Replace struct {
 	New Module
 }
 
+// parseModuleInfo parses module information from a go.mod file at path.
 func parseModuleInfo(path string) GoMod {
 	rawJson := cmdCheck("go mod edit -json " + path)
 	var modInfo GoMod
@@ -99,7 +122,6 @@ func runOnGomod(path string) {
 
 func main() {
 	flag.Parse()
-	// TODO: make sure flags make sense with each other
 	f, err := os.Open("allmodules")
 	if err != nil {
 		log.Fatal(err)
