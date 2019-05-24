@@ -47,6 +47,8 @@ func cmdCheck(s string) []byte {
 	b, err := exec.Command(fields[0], fields[1:]...).Output()
 	if exiterr, ok := err.(*exec.ExitError); ok {
 		log.Fatalf("%s; stderr: %s\n", err, string(exiterr.Stderr))
+	} else if err != nil {
+		log.Fatal("exec.Command", err)
 	}
 	return b
 }
@@ -133,5 +135,9 @@ func main() {
 		if len(input.Text()) > 0 && !strings.HasPrefix(input.Text(), "#") {
 			runOnGomod(path.Join(input.Text(), "go.mod"))
 		}
+	}
+
+	if input.Err() != nil {
+		log.Fatal(input.Err())
 	}
 }
