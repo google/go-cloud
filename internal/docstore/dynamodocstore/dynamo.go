@@ -202,12 +202,26 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, op
 	}, nil
 }
 
-func (c *collection) KeyFields() []string {
-	if c.sortKey == "" {
-		return []string{c.partitionKey}
+// Key returns a two-element array with the partition key and sort key, if any.
+func (c *collection) Key(doc driver.Document) (interface{}, error) {
+	var keys [2]interface{}
+	var err error
+	keys[0], err = doc.GetField(c.partitionKey)
+	if err != nil {
+		return nil, nil // missing key is not an error
 	}
-	return []string{c.partitionKey, c.sortKey}
+	if c.sortKey != "" {
+		keys[1], _ = doc.GetField(c.sortKey) // ignore error since keys[1] is nil in that case
+	}
+	return keys, nil
 }
+
+// func (c *collection) KeyFields() []string {
+// 	if c.sortKey == "" {
+// 		return []string{c.partitionKey}
+// 	}
+// 	return []string{c.partitionKey, c.sortKey}
+// }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	if opts.Unordered {
@@ -239,62 +253,31 @@ func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Ac
 // splitActions doesn't change the order of the input slice.
 func (c *collection) splitActions(actions []*driver.Action) [][]*driver.Action {
 	var (
-		groups [][]*driver.Action              // the actions, split; the return value
-		cur    []*driver.Action                // the group currently being constructed
-		wm     = make(map[[2]interface{}]bool) // writes group cannot contain duplicate items
+		groups [][]*driver.Action // the actions, split; the return value
+		cur    []*driver.Action   // the group currently being constructed
 	)
 	collect := func() { // called when the current group is known to be finished
 		if len(cur) > 0 {
 			groups = append(groups, cur)
 			cur = nil
-			wm = make(map[[2]interface{}]bool)
 		}
 	}
 	for _, a := range actions {
-		if len(cur) > 0 && c.shouldSplit(cur[len(cur)-1], a, wm) ||
+		if len(cur) > 0 && c.shouldSplit(cur[len(cur)-1], a) ||
 			len(cur) >= 10 { // each transaction can run up to 10 operations.
 			collect()
 		}
 		cur = append(cur, a)
-		if a.Kind != driver.Get {
-			if keys := c.primaryKey(a); keys[0] != nil {
-				wm[keys] = true
-			}
-		}
 	}
 	collect()
 	return groups
 }
 
-func (c *collection) shouldSplit(curr, next *driver.Action, wm map[[2]interface{}]bool) bool {
+func (c *collection) shouldSplit(curr, next *driver.Action) bool {
 	if (curr.Kind == driver.Get) != (next.Kind == driver.Get) { // different kind
 		return true
 	}
-	if curr.Kind == driver.Get { // both are Gets
-		return false
-	}
-	keys := c.primaryKey(next)
-	if keys[0] == nil {
-		return false
-	}
-	_, ok := wm[keys]
-	return ok // different Write's in one transaction cannot target the same item
-}
-
-// primaryKey tries to get the primary key from the doc, which is the partition
-// key if there is no sort key, or the combination of both keys. If there is not
-// a key, it returns an array with two nil's.
-func (c *collection) primaryKey(a *driver.Action) [2]interface{} {
-	var keys [2]interface{}
-	var err error
-	keys[0], err = a.Doc.GetField(c.partitionKey)
-	if err != nil {
-		return keys
-	}
-	if c.sortKey != "" {
-		keys[1], _ = a.Doc.GetField(c.sortKey) // ignore error since keys[1] would be nil in that case
-	}
-	return keys
+	return false
 }
 
 func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
@@ -336,10 +319,9 @@ func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.
 // action that cause the error.
 func (c *collection) splitActionsUnordered(actions []*driver.Action) ([][]*driver.Action, int, error) {
 	var (
-		groups [][]*driver.Action              // the actions, split; the return value
-		gets   []*driver.Action                // the gets group currently being constructed
-		writes []*driver.Action                // the writes group currently being constructed
-		km     = make(map[[2]interface{}]bool) // keys should be unique across all groups in unordered mode
+		groups [][]*driver.Action // the actions, split; the return value
+		gets   []*driver.Action   // the gets group currently being constructed
+		writes []*driver.Action   // the writes group currently being constructed
 	)
 	collect := func(cur *[]*driver.Action) { // called when the current group is known to be finished
 		if len(*cur) > 0 {
@@ -347,13 +329,7 @@ func (c *collection) splitActionsUnordered(actions []*driver.Action) ([][]*drive
 			*cur = nil
 		}
 	}
-	for i, a := range actions {
-		if keys := c.primaryKey(a); keys[0] != nil {
-			if km[keys] {
-				return nil, i, fmt.Errorf("repeated key: %v, %v; item must be unique for unordered actions", keys[0], keys[1])
-			}
-			km[keys] = true
-		}
+	for _, a := range actions {
 		cur := &writes
 		if a.Kind == driver.Get {
 			cur = &gets

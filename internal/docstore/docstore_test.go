@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore/driver"
 )
 
@@ -177,4 +178,62 @@ func TestIsIncNumber(t *testing.T) {
 			t.Errorf("%v: got true, want false", x)
 		}
 	}
+}
+
+func TestToDriverActionsErrors(t *testing.T) {
+	c := &Collection{driver: fakeDriverCollection{}}
+	dn := map[string]interface{}{"key": nil}
+	d1 := map[string]interface{}{"key": 1}
+	d2 := map[string]interface{}{"key": 2}
+
+	for _, test := range []struct {
+		alist *ActionList
+		want  []int // error indexes; nil if no error
+	}{
+		// Missing keys.
+		{c.Actions().Put(dn), []int{0}},
+		{c.Actions().Get(dn).Replace(dn).Create(dn).Update(dn, Mods{"a": 1}), []int{0, 1, 3}},
+		// Duplicate documents.
+		{c.Actions().Get(d1).Get(d2), nil},
+		{c.Actions().Get(d1).Put(d1), nil},
+		{c.Actions().Get(d2).Replace(d1).Put(d2).Get(d1), nil},
+		{c.Actions().Get(d1).Get(d1), []int{1}},
+		{c.Actions().Put(d1).Get(d1).Get(d1), []int{2}},
+		{c.Actions().Get(d1).Put(d1).Get(d1).Put(d2).Put(d1), []int{2, 4}},
+		{c.Actions().Create(d2).Get(d2).Create(d2), []int{2}},
+		{c.Actions().Create(dn).Create(dn), nil}, // each Create without a key is a separate document
+		{c.Actions().Create(dn).Create(d1).Get(d1), nil},
+		{c.Actions().Put(d1).Create(dn).Create(d1).Get(d1), []int{2}},
+		{c.Actions().Put(d1).Create(dn).Create(d1).Get(d1), []int{2}},
+		{c.Actions().Update(d1, nil), []int{0}}, // empty mod
+		// Other errors with mods are tested in TestToDriverMods.
+		{c.Actions().Get(d1, "a.b", "c"), nil},
+		{c.Actions().Get(d1, ".c"), []int{0}}, // bad field path
+	} {
+		_, err := test.alist.toDriverActions()
+		if err == nil {
+			if len(test.want) > 0 {
+				t.Errorf("%s: got nil, want error", test.alist)
+			}
+			continue
+		}
+		var got []int
+		for _, e := range err.(ActionListError) {
+			if gcerrors.Code(e.Err) != gcerrors.InvalidArgument {
+				t.Errorf("%s: got %v, want InvalidArgument", test.alist, e.Err)
+			}
+			got = append(got, e.Index)
+		}
+		if !cmp.Equal(got, test.want) {
+			t.Errorf("%s: got %v, want %v", test.alist, got, test.want)
+		}
+	}
+}
+
+type fakeDriverCollection struct {
+	driver.Collection
+}
+
+func (fakeDriverCollection) Key(doc driver.Document) (interface{}, error) {
+	return doc.GetField("key")
 }

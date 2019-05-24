@@ -219,6 +219,35 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string, n
 	}, nil
 }
 
+// Key returns the document key, if present. This is either the value of the field
+// called c.nameField, or the result of calling c.nameFunc.
+func (c *collection) Key(doc driver.Document) (interface{}, error) {
+	if c.nameField != "" {
+		name, err := doc.GetField(c.nameField)
+		if err != nil {
+			// missing field is not an error
+			return nil, nil
+		}
+		// Check that the reflect kind is String so we can support any type whose underlying type
+		// is string. E.g. "type DocName string".
+		vn := reflect.ValueOf(name)
+		if vn.Kind() != reflect.String {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "key field %q with value %v is not a string",
+				c.nameField, name)
+		}
+		sname := vn.String()
+		if sname == "" { // empty string is the same as missing
+			return nil, nil
+		}
+		return sname, nil
+	}
+	sname := c.nameFunc(doc.Origin)
+	if sname == "" {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
+	}
+	return sname, nil
+}
+
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	if opts.Unordered {
@@ -349,17 +378,8 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action, opts *d
 
 func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocumentsRequest, error) {
 	req := &pb.BatchGetDocumentsRequest{Database: c.dbPath}
-	seen := map[string]bool{}
 	for _, a := range gets {
-		docName, _, err := c.docName(a.Doc)
-		if err != nil {
-			return nil, err
-		}
-		if seen[docName] {
-			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "duplicate document name in Get: %q", docName)
-		}
-		req.Documents = append(req.Documents, c.collPath+"/"+docName)
-		seen[docName] = true
+		req.Documents = append(req.Documents, c.collPath+"/"+a.Key.(string))
 	}
 	// groupActions has already made sure that all the actions have the same field paths,
 	// so just use the first one.
@@ -414,20 +434,20 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, op
 
 // Convert an action to one or more Firestore Write protos.
 func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, error) {
-	docName, missingField, err := c.docName(a.Doc)
-	// Return the error unless the field is missing and this is a Create action.
-	if err != nil && !(missingField && a.Kind == driver.Create) {
-		return nil, "", err
-	}
 	var (
 		w       *pb.Write
 		ws      []*pb.Write
+		err     error
+		docName string
 		newName string // for Create with no name
 	)
+	if a.Key != nil {
+		docName = a.Key.(string)
+	}
 	switch a.Kind {
 	case driver.Create:
 		// Make a name for this document if it doesn't have one.
-		if missingField {
+		if a.Key == nil {
 			docName = driver.UniqueString()
 			newName = docName
 		}
@@ -748,37 +768,6 @@ func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.Ru
 		return nil, gcerr.Newf(gcerr.Internal, nil, "wrong number of WriteResults from firestore commit")
 	}
 	return res.WriteResults, nil
-}
-
-// docName returns the name of the document. This is either the value of the field
-// called c.nameField, or the result of calling c.nameFunc. It must be a
-// string.
-// docName returns an error if:
-// 1. c.nameField is not empty, but the field isn't present in the doc, or
-// 2. c.nameFunc is non-nil, but returns "".
-// The second return value reports whether c.nameField is not-empty and the field is
-// missing. This is to support the Create action, which can create new document
-// names.
-func (c *collection) docName(doc driver.Document) (string, bool, error) {
-	if c.nameField != "" {
-		name, err := doc.GetField(c.nameField)
-		if err != nil {
-			return "", true, gcerr.Newf(gcerr.InvalidArgument, nil, "missing name field %s", c.nameField)
-		}
-		// Check that the reflect kind is String so we can support any type whose underlying type
-		// is string. E.g. "type DocName string".
-		vn := reflect.ValueOf(name)
-		if vn.Kind() != reflect.String {
-			return "", false, gcerr.Newf(gcerr.InvalidArgument, nil, "key field %q with value %v is not a string",
-				c.nameField, name)
-		}
-		return vn.String(), false, nil
-	}
-	name := c.nameFunc(doc.Origin)
-	if name == "" {
-		return "", false, gcerr.Newf(gcerr.InvalidArgument, nil, "missing name")
-	}
-	return name, false, nil
 }
 
 // Report whether two lists of field paths are equal.

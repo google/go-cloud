@@ -122,6 +122,18 @@ type collection struct {
 	nextRevision int64 // incremented on each write
 }
 
+func (c *collection) Key(doc driver.Document) (interface{}, error) {
+	if c.keyField != "" {
+		key, _ := doc.GetField(c.keyField) // no error on missing key, and it will be nil
+		return key, nil
+	}
+	key := c.keyFunc(doc.Origin)
+	if key == nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
+	}
+	return key, nil
+}
+
 // ErrorCode implements driver.ErrorCode.
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 	return gcerrors.Code(err)
@@ -160,10 +172,6 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		return ctx.Err()
 	}
 	// Get the key from the doc so we can look it up in the map.
-	key := c.key(a.Doc)
-	if key == nil && (a.Kind != driver.Create || c.keyField == "") {
-		return gcerr.Newf(gcerr.InvalidArgument, nil, "missing key field")
-	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	// If there is a key, get the current document with that key.
@@ -171,24 +179,24 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		current map[string]interface{}
 		exists  bool
 	)
-	if key != nil {
-		current, exists = c.docs[key]
+	if a.Key != nil {
+		current, exists = c.docs[a.Key]
 	}
 	// Check for a NotFound error.
 	if !exists && (a.Kind == driver.Replace || a.Kind == driver.Update || a.Kind == driver.Get) {
-		return gcerr.Newf(gcerr.NotFound, nil, "document with key %v does not exist", key)
+		return gcerr.Newf(gcerr.NotFound, nil, "document with key %v does not exist", a.Key)
 	}
 	switch a.Kind {
 	case driver.Create:
 		// It is an error to attempt to create an existing document.
 		if exists {
-			return gcerr.Newf(gcerr.AlreadyExists, nil, "Create: document with key %v exists", key)
+			return gcerr.Newf(gcerr.AlreadyExists, nil, "Create: document with key %v exists", a.Key)
 		}
 		// If the user didn't supply a value for the key field, create a new one.
-		if key == nil && c.keyField != "" {
-			key = driver.UniqueString()
+		if a.Key == nil {
+			a.Key = driver.UniqueString()
 			// Set the new key in the document.
-			if err := a.Doc.SetField(c.keyField, key); err != nil {
+			if err := a.Doc.SetField(c.keyField, a.Key); err != nil {
 				return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot set key field %q", c.keyField)
 			}
 		}
@@ -203,13 +211,13 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 			return err
 		}
 		c.changeRevision(doc)
-		c.docs[key] = doc
+		c.docs[a.Key] = doc
 
 	case driver.Delete:
 		if err := checkRevision(a.Doc, current); err != nil {
 			return err
 		}
-		delete(c.docs, key)
+		delete(c.docs, a.Key)
 
 	case driver.Update:
 		if err := checkRevision(a.Doc, current); err != nil {
@@ -314,14 +322,6 @@ func add(x, y interface{}) (interface{}, error) {
 	default:
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "value %v being incremented not int64 or float64", x)
 	}
-}
-
-func (c *collection) key(doc driver.Document) interface{} {
-	if c.keyField != "" {
-		key, _ := doc.GetField(c.keyField) // ignore error because key will be nil
-		return key
-	}
-	return c.keyFunc(doc.Origin)
 }
 
 // Must be called with the lock held.

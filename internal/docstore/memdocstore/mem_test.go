@@ -56,7 +56,10 @@ func TestUpdateEncodesValues(t *testing.T) {
 	}
 	coll := docstore.NewCollection(dc)
 	doc := docmap{drivertest.KeyField: "testUpdateEncodes", "a": 1}
-	if err := coll.Actions().Put(doc).Update(doc, docstore.Mods{"a": 2}).Do(ctx); err != nil {
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	if err := coll.Update(ctx, doc, docstore.Mods{"a": 2}); err != nil {
 		t.Fatal(err)
 	}
 	got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
@@ -85,7 +88,10 @@ func TestUpdateAtomic(t *testing.T) {
 	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B"}
 
 	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
-	if errs := coll.Actions().Put(doc).Update(doc, mods).Do(ctx); errs == nil {
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	if errs := coll.Actions().Update(doc, mods).Do(ctx); errs == nil {
 		t.Fatal("got nil, want errors")
 	}
 	got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
