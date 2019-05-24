@@ -230,41 +230,40 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 // immutable, and may be of any type other than an array."
 const mongoIDField = "_id"
 
-// TODO(jba): use bulk RPCs.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	if opts.Unordered {
-		return c.runActionsUnordered(ctx, actions, opts)
+	errs := make([]error, len(actions))
+	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	c.runGets(ctx, beforeGets, errs, opts)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() { defer wg.Done(); c.runGets(ctx, gets, errs, opts) }()
+	writeErrs := c.bulkWrite(ctx, writes, errs)
+	c.runGets(ctx, afterGets, errs, opts)
+	wg.Wait()
+	alerr := driver.NewActionListError(errs)
+	for _, werr := range writeErrs {
+		alerr = append(alerr, indexedError{-1, werr})
 	}
-	for i, a := range actions {
-		if err := c.runAction(ctx, a, opts); err != nil {
-			return driver.ActionListError{{i, err}}
-		}
-	}
-	return nil
+	return alerr
 }
 
-func (c *collection) runAction(ctx context.Context, action *driver.Action, opts *driver.RunActionsOptions) error {
-	var err error
-	switch action.Kind {
-	case driver.Get:
-		err = c.get(ctx, action, opts)
+type indexedError = struct {
+	Index int
+	Err   error
+}
 
-	case driver.Create:
-		err = c.create(ctx, action, opts)
-
-	case driver.Replace, driver.Put:
-		err = c.replace(ctx, action, action.Kind == driver.Put, opts)
-
-	case driver.Delete:
-		err = c.delete(ctx, action, opts)
-
-	case driver.Update:
-		err = c.update(ctx, action, opts)
-
-	default:
-		err = gcerr.Newf(gcerr.Internal, nil, "bad action %+v", action)
+// TODO(jba): consider doing a bulk get by using Find with an "or" filter.
+func (c *collection) runGets(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	var wg sync.WaitGroup
+	for _, g := range gets {
+		g := g
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[g.Index] = c.get(ctx, g, opts)
+		}()
 	}
-	return err
+	wg.Wait()
 }
 
 func (c *collection) get(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
@@ -319,36 +318,6 @@ func sliceToLower(s []string) {
 	}
 }
 
-// See https://docs.mongodb.com/manual/reference/method/db.collection.insertOne.
-func (c *collection) create(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
-	mdoc, createdID, err := c.prepareCreate(a)
-	if err != nil {
-		return err
-	}
-	opts := &options.InsertOneOptions{}
-	if dopts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.InsertOneOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := dopts.BeforeDo(asFunc); err != nil {
-			return err
-		}
-	}
-	if _, err = c.coll.InsertOne(ctx, mdoc, opts); err != nil {
-		return err
-	}
-	if createdID != nil {
-		// We can only be here if c.idField is non-empty. See prepareCreate.
-		return a.Doc.SetField(c.idField, createdID)
-	}
-	return nil
-}
-
 func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{}, err error) {
 	id := a.Key
 	if id == nil {
@@ -362,39 +331,6 @@ func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{
 		return nil, nil, err
 	}
 	return mdoc, createdID, nil
-}
-
-func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool, dopts *driver.RunActionsOptions) error {
-	// See https://docs.mongodb.com/manual/reference/method/db.collection.replaceOne
-	filter, mdoc, err := c.prepareReplace(a)
-	if err != nil {
-		return err
-	}
-	opts := options.Replace()
-	if upsert {
-		opts.SetUpsert(true) // Document will be created if it doesn't exist.
-	}
-	if dopts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.ReplaceOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := dopts.BeforeDo(asFunc); err != nil {
-			return err
-		}
-	}
-	result, err := c.coll.ReplaceOne(ctx, filter, mdoc, opts)
-	if err != nil {
-		return err
-	}
-	if !upsert && result.MatchedCount == 0 {
-		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", a.Key)
-	}
-	return nil
 }
 
 func (c *collection) prepareReplace(a *driver.Action) (filter bson.D, mdoc map[string]interface{}, err error) {
@@ -422,72 +358,6 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 	}
 	mdoc[c.revisionField] = driver.UniqueString()
 	return mdoc, nil
-}
-
-func (c *collection) delete(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
-	filter, rev, err := c.makeFilter(a.Key, a.Doc)
-	if err != nil {
-		return err
-	}
-	opts := &options.DeleteOptions{}
-	if dopts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.DeleteOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := dopts.BeforeDo(asFunc); err != nil {
-			return err
-		}
-	}
-	result, err := c.coll.DeleteOne(ctx, filter, opts)
-	if err != nil {
-		return err
-	}
-	if result.DeletedCount == 0 {
-		if rev == nil {
-			return nil
-		}
-		// Not sure if the document doesn't exist, or the revision is wrong. Distinguish the two.
-		res := c.coll.FindOne(ctx, bson.D{{"_id", a.Key}})
-		if res.Err() != nil { // TODO(jba): distinguish between not found and other errors.
-			return gcerr.Newf(gcerr.NotFound, res.Err(), "document with ID %v does not exist", a.Key)
-		}
-		return gcerr.Newf(gcerr.FailedPrecondition, nil, "document with ID %v does not have revision %v", a.Key, rev)
-	}
-	return err
-}
-
-func (c *collection) update(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
-	filter, updateDoc, err := c.prepareUpdate(a)
-	if err != nil {
-		return err
-	}
-	opts := &options.UpdateOptions{}
-	if dopts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.UpdateOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := dopts.BeforeDo(asFunc); err != nil {
-			return err
-		}
-	}
-	result, err := c.coll.UpdateOne(ctx, filter, updateDoc, opts)
-	if err != nil {
-		return err
-	}
-	if result.MatchedCount == 0 {
-		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", a.Key)
-	}
-	return nil
 }
 
 func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc map[string]bson.D, err error) {
@@ -551,78 +421,26 @@ func (c *collection) makeFilter(id interface{}, doc driver.Document) (filter bso
 	return filter, rev, nil
 }
 
-type indexedAction struct {
-	index  int
-	action *driver.Action
-}
-
-type indexedError = struct {
-	Index int
-	Err   error
-}
-
-func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	// MongoDB has a bulk write RPC, but no easy way to do a bulk get.
-	// We run the Gets in parallel.
-	// TODO(jba): consider doing a bulk get by using Find with an "or" filter.
-	var alerr driver.ActionListError
-
-	var gets, writes []indexedAction
-	for i, a := range actions {
-		if a.Kind == driver.Get {
-			gets = append(gets, indexedAction{i, a})
-		} else {
-			writes = append(writes, indexedAction{i, a})
-		}
-	}
-
-	// Run each Get action concurrently.
-	getc := make(chan indexedError)
-	for _, g := range gets {
-		g := g
-		go func() {
-			err := c.get(ctx, g.action, opts)
-			getc <- indexedError{g.index, err}
-		}()
-	}
-
-	// Run all writes in a single BulkWrite RPC.
-	if len(writes) > 0 {
-		alerrBulk := c.unorderedBulkWrite(ctx, writes)
-		if alerrBulk != nil {
-			alerr = append(alerr, alerrBulk...)
-		}
-	}
-
-	// Collect the Get results.
-	for range gets {
-		ie := <-getc
-		if ie.Err != nil {
-			alerr = append(alerr, ie)
-		}
-	}
-	return alerr
-}
-
-func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedAction) driver.ActionListError {
+// bulkWrite calls the Mongo driver's BulkWrite RPC in unordered mode with the actions, which must
+// be writes.
+// errs is the slice of errors indexed by the position of the action in the original
+// action list. bulkWrite populates this slice. In addition, bulkWrite's return value
+// contains errors that cannot be attributed to any single action.
+func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, errs []error) []error {
 	var (
-		alerr           driver.ActionListError
 		models          []mongo.WriteModel
-		newIDs          = map[int]interface{}{} // new IDs for Create, keyed by position in iactions
+		modelActions    []*driver.Action // corresponding action for each model
+		newIDs          []interface{}    // new IDs for Create actions, corresponding to models slice
 		nDeletes        int64
 		nNonCreateWrite int64 // total operations expected from Put, Replace and Update
 	)
-	for i, ia := range iactions {
-		a := ia.action
+	for _, a := range actions {
 		var m mongo.WriteModel
 		var err error
 		var newID interface{}
 		switch a.Kind {
 		case driver.Create:
-			m, newID, err = c.newCreateModel(ia.action)
-			if newID != nil {
-				newIDs[i] = newID
-			}
+			m, newID, err = c.newCreateModel(a)
 		case driver.Delete:
 			m, err = c.newDeleteModel(a)
 			if err == nil {
@@ -642,38 +460,74 @@ func (c *collection) unorderedBulkWrite(ctx context.Context, iactions []indexedA
 			err = gcerr.Newf(gcerr.Internal, nil, "bad action %+v", a)
 		}
 		if err != nil {
-			alerr = append(alerr, indexedError{ia.index, err})
+			errs[a.Index] = err
 		} else if m != nil { // m can be nil for a no-op update
 			models = append(models, m)
+			modelActions = append(modelActions, a)
+			newIDs = append(newIDs, newID)
 		}
 	}
+	if len(models) == 0 {
+		return nil
+	}
+	var reterrs []error
 	res, err := c.coll.BulkWrite(ctx, models, options.BulkWrite().SetOrdered(false))
 	if err != nil {
 		bwe, ok := err.(mongo.BulkWriteException)
 		if !ok { // assume everything failed with this error
-			return append(alerr, indexedError{-1, err})
+			return []error{err}
 		}
 		// The returned indexes of the WriteErrors are wrong. See https://jira.mongodb.org/browse/GODRIVER-1028.
 		// Until it's fixed, use negative values for the indexes in the errors we return.
 		for _, w := range bwe.WriteErrors {
-			alerr = append(alerr, indexedError{-1, gcerr.Newf(translateMongoCode(w.Code), nil, "%s", w.Message)})
+			reterrs = append(reterrs, gcerr.Newf(translateMongoCode(w.Code), nil, "%s", w.Message))
 		}
-		return alerr
-	}
-	if res.DeletedCount != nDeletes {
-		alerr = append(alerr, indexedError{-1,
-			gcerr.Newf(gcerr.NotFound, nil, "some delete failed (deleted %d out of %d)", res.DeletedCount, nDeletes)})
-	}
-	if res.MatchedCount+res.UpsertedCount != nNonCreateWrite {
-		alerr = append(alerr, indexedError{-1,
-			gcerr.Newf(gcerr.NotFound, nil, "some writes failed (replaced %d, upserted %d, out of total %d)", res.MatchedCount, res.UpsertedCount, nNonCreateWrite)})
+		return reterrs
 	}
 	for i, newID := range newIDs {
-		if err := iactions[i].action.Doc.SetField(c.idField, newID); err != nil {
-			alerr = append(alerr, indexedError{iactions[i].index, err})
+		if newID == nil {
+			continue
+		}
+		a := modelActions[i]
+		if err := a.Doc.SetField(c.idField, newID); err != nil {
+			errs[a.Index] = err
 		}
 	}
-	return alerr
+	if res.DeletedCount != nDeletes {
+		// Some Delete actions failed. It's not an error if a Delete failed because
+		// the document didn't exist, but it is an error if it failed because of a
+		// precondition mismatch. Find all the documents with revisions we tried to delete; if
+		// any are still present, that's an error.
+		c.determineDeleteErrors(ctx, models, modelActions, errs)
+	}
+	if res.MatchedCount+res.UpsertedCount != nNonCreateWrite {
+		reterrs = append(reterrs, gcerr.Newf(gcerr.NotFound, nil, "some writes failed (replaced %d, upserted %d, out of total %d)", res.MatchedCount, res.UpsertedCount, nNonCreateWrite))
+	}
+	return reterrs
+}
+
+func (c *collection) determineDeleteErrors(ctx context.Context, models []mongo.WriteModel, actions []*driver.Action, errs []error) {
+	// TODO(jba): do this concurrently.
+	for i, m := range models {
+		if dm, ok := m.(*mongo.DeleteOneModel); ok {
+			filter := dm.Filter.(bson.D)
+			if len(filter) > 1 {
+				// Delete with both ID and revision. See if the document is still there.
+				idOnlyFilter := filter[:1]
+				res := c.coll.FindOne(ctx, idOnlyFilter)
+				// Assume an error means the document wasn't found.
+				// That means either that it was deleted successfully, or that it never
+				// existed. Either way, it's not an error.
+				// TODO(jba): distinguish between not found and other errors.
+				if res.Err() == nil {
+					// The document exists, but we didn't delete it: assume we had the wrong
+					// revision.
+					errs[actions[i].Index] = gcerr.Newf(gcerr.FailedPrecondition, nil,
+						"wrong revision for document with ID %v", actions[i].Key)
+				}
+			}
+		}
+	}
 }
 
 func (c *collection) newCreateModel(a *driver.Action) (*mongo.InsertOneModel, interface{}, error) {

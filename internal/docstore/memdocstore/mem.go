@@ -19,10 +19,10 @@
 // key values need not be strings; they may be any comparable Go value.
 //
 //
-// Unordered Action Lists
+// Action Lists
 //
-// Unordered action lists are executed concurrently. Each action in an unordered
-// action list is executed in a separate goroutine.
+// Action lists are executed concurrently. Each action in an action list is executed
+// in a separate goroutine.
 //
 //
 // URLs
@@ -141,28 +141,28 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	if opts.Unordered {
-		errs := make([]error, len(actions))
+	errs := make([]error, len(actions))
+
+	// Run the actions concurrently with each other.
+	run := func(as []*driver.Action) {
 		var wg sync.WaitGroup
-		for i, a := range actions {
-			i := i
+		for _, a := range as {
 			a := a
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				errs[i] = c.runAction(ctx, a)
+				errs[a.Index] = c.runAction(ctx, a)
 			}()
 		}
 		wg.Wait()
-		return driver.NewActionListError(errs)
 	}
-	// Run each action in order, stopping at the first error.
-	for i, a := range actions {
-		if err := c.runAction(ctx, a); err != nil {
-			return driver.ActionListError{{i, err}}
-		}
-	}
-	return nil
+
+	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	run(beforeGets)
+	run(gets)
+	run(writes)
+	run(afterGets)
+	return driver.NewActionListError(errs)
 }
 
 // runAction executes a single action.
