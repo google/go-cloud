@@ -38,7 +38,7 @@
 //
 // At-most-once and At-least-once Delivery
 //
-// The semantics of message deliver vary across PubSub providers.
+// The semantics of message delivery vary across PubSub providers.
 // Some providers guarantee that messages received by subscribers but not
 // acknowledged are delivered again (at-least-once semantics). In others,
 // a message will be delivered only once, if it is delivered at all
@@ -152,7 +152,8 @@ type Message struct {
 // for more info.
 //
 // Ack returns immediately, but the actual ack is sent in the background, and
-// s not guaranteed to succeed.
+// is not guaranteed to succeed. If background acks persistently fail, the error
+// will be returned from a subsequent Receive.
 func (m *Message) Ack() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
