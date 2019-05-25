@@ -387,8 +387,7 @@ the URL you use to open a subscription. Otherwise, you should add
 <span class="c1">// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 </span><span class="c1">// This URL will Dial the NATS server at the URL in the environment variable
 </span><span class="c1">// NATS_SERVER_URL and receive messages with subject &#34;example.mysubject&#34;.
-</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-	<span class="s">&#34;nats://example.mysubject?ackfunc=panic&#34;</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;nats://example.mysubject&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -421,7 +420,6 @@ topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go
 <span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">natspubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span>
 	<span class="nx">natsConn</span><span class="p">,</span>
 	<span class="s">&#34;example.mysubject&#34;</span><span class="p">,</span>
-	<span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nats does not have ack&#34;</span><span class="p">)</span> <span class="p">},</span>
 	<span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
