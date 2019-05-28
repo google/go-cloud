@@ -29,11 +29,16 @@
 // Message Delivery Semantics
 //
 // Azure ServiceBus supports at-least-once semantics in the default Peek-Lock
-// mode; applications must call Message.Ack after processing a message, or
-// it will be redelivered. However, it also supports a Receive-Delete mode,
-// which essentially auto-acks a message when it is delivered, resulting in
-// at-most-once semantics. Use SubscriberOptions.AckFuncForReceiveAndDelete
-// to choose between the two.
+// mode; messages will be redelivered if they are not Acked, or if they are
+// explicitly Nacked.
+//
+// ServiceBus also supports a Receive-Delete mode, which essentially auto-acks a
+// message when it is delivered, resulting in at-most-once semantics. Set
+// SubscriberOptions.ReceiveAndDelete to true to tell azuresb.Subscription that
+// you've enabled Receive-Delete mode. When enabled, pubsub.Message.Ack is a
+// no-op, pubsub.Message.Nackable will return false, and pubsub.Message.Nack
+// will panic.
+//
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
@@ -337,12 +342,11 @@ type subscription struct {
 
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
-	// If nil, the subscription MUST be in Peek-Lock mode. The Ack method must be called on each message
-	// to complete it, otherwise you run the risk of deadlettering messages.
-	// If non-nil, the subscription MUST be in Receive-and-Delete mode, and this function will be called
-	// whenever Ack is called on a message.
-	// See the "At-most-once vs. At-least-once Delivery" section in the pubsub package documentation.
-	AckFuncForReceiveAndDelete func()
+	// If false, the serviceBus.Subscription MUST be in the default Peek-Lock mode.
+	// If true, the serviceBus.Subscription MUST be in Receive-and-Delete mode.
+	// When true: pubsub.Message.Ack will be a no-op, pubsub.Message.Nackable
+	// will return true, and pubsub.Message.Nack will panic.
+	ReceiveAndDelete bool
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
@@ -426,14 +430,6 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
-// AckFunc implements driver.Subscription.AckFunc.
-func (s *subscription) AckFunc() func() {
-	if s == nil {
-		return nil
-	}
-	return s.opts.AckFuncForReceiveAndDelete
-}
-
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	if s.linkErr != nil {
@@ -488,6 +484,10 @@ func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	if s.opts.ReceiveAndDelete {
+		// Ack is a no-op in Receive-and-Delete mode.
+		return nil
+	}
 	return s.updateMessageDispositions(ctx, ids, dispositionForAck)
 }
 
@@ -496,11 +496,14 @@ func (s *subscription) CanNack() bool {
 	if s == nil {
 		return false
 	}
-	return s.opts.AckFuncForReceiveAndDelete == nil
+	return !s.opts.ReceiveAndDelete
 }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	if !s.CanNack() {
+		panic("unreachable")
+	}
 	return s.updateMessageDispositions(ctx, ids, dispositionForNack)
 }
 
