@@ -42,7 +42,7 @@ func cmdCheck(s string) []byte {
 	fmt.Printf(" -> %s\n", s)
 	fields := strings.Fields(s)
 	if len(fields) < 1 {
-		log.Fatal("Expected \"command <arguments>\"")
+		log.Fatal(`Expected "command <arguments>"`)
 	}
 	b, err := exec.Command(fields[0], fields[1:]...).Output()
 	if exiterr, ok := err.(*exec.ExitError); ok {
