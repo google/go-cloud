@@ -17,7 +17,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
+	"log"
 	"path/filepath"
 
 	"golang.org/x/xerrors"
@@ -40,6 +40,9 @@ func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
 	}
 	newName := f.Arg(1)
 
+	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
+	logger.Printf("Adding biome %q...", newName)
+
 	projectDir, err := findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
 		xerrors.Errorf("biome add: %w", err)
@@ -54,6 +57,6 @@ func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
 	if err := materializeTemplateDir(dstPath, "biome_add", data); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
-	fmt.Printf("Successfully added new biome '%v'!\n", newName)
+	logger.Printf("Success!")
 	return nil
 }
