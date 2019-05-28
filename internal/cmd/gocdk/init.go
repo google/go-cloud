@@ -94,6 +94,7 @@ func init_(ctx context.Context, pctx *processContext, dir, modpath string, allow
 	return nil
 }
 
+// TODO(rvangent): Consider having this log all of the file(s) it adds?
 func materializeTemplateDir(dst string, srcRoot string, data interface{}) error {
 	dir, err := static.Open(srcRoot)
 	if err != nil {
