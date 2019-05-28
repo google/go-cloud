@@ -51,7 +51,7 @@
 // documentation for more information about message delivery semantics.
 //
 // After receiving a Message via Subscription.Receive:
-//  - Always call either Message.Ack/Nack after processing the message.
+//  - Always call Message.Ack or Message.Nack after processing the message.
 //  - For some providers, Ack will be a no-op.
 //  - For some providers, Nack is not supported and will panic; you can call
 //    Message.Nackable to see.
