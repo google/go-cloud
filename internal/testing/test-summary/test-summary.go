@@ -87,10 +87,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 			if event.Package == prevPkg {
 				fmt.Printf("%s     %s (%.2fs)\n", event.Action, event.Test, event.Elapsed)
 			} else {
-				path := event.Package
-				if event.Test != "" {
-					path += "/" + event.Test
-				}
+				path := filepath.Join(event.Package, event.Test)
 				fmt.Printf("%s %s (%.2fs)\n", event.Action, path, event.Elapsed)
 				prevPkg = event.Package
 			}
