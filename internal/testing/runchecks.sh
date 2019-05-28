@@ -87,7 +87,7 @@ while read -r path || [[ -n "$path" ]]; do
   # codecov will only save the last one anyway.
   if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
     echo "Running Go tests with coverage..."
-    go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+    go test -mod=readonly -json -race -coverpkg=./... -coverprofile=coverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
     if [ -f coverage.out ] && [ $result -eq 0 ]; then
       # Filter out test packages.
       grep -v test coverage.out > coverage2.out
@@ -103,7 +103,7 @@ while read -r path || [[ -n "$path" ]]; do
     if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && ([[ "$path" == "internal/contributebot" ]] || [[ "$path" == "internal/website" ]]); then
       echo "  Skipping tests on Window"
     else
-      go test -mod=readonly -race ./... || result=1
+      go test -mod=readonly -json -race ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
     fi
   fi
   # Do these additional checks for the Linux build on Travis, or when running
