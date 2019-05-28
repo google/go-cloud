@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Helper tool for creating new releases of the Go CDK.
-// Run from the repository root:
-// $ go run internal/testing/releasehelper.go <flags>
+// Helper tool for creating new releases of the Go CDK. See -help for details.
 package main
 
 import (
@@ -25,15 +23,32 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 )
 
 // TODO(eliben): add bumpversion flag that bumps version by 1, or to a version
 // given on the command line
-var doReplace = flag.Bool("replace", false, "add replace directives to root")
-var doDropReplace = flag.Bool("dropreplace", false, "drop replace directives to root")
+var helpText string = `
+Helper tool for creating new releases of the Go CDK.
+
+Automates the modifications required in the project's
+go.mod files to create an test new releases.
+
+The tool processes all modules listed in the 'allmodules'
+file. For each module it handles all dependencies on
+other gocloud.dev modules.
+
+-replace adds 'replace' directives to point to local versions
+for testing. -dropreplace removes these directives.
+
+Run it from the root directory of the project.
+
+Usage:
+`
+
+var doReplace = flag.Bool("replace", false, "add replace directives")
+var doDropReplace = flag.Bool("dropreplace", false, "drop replace directives")
 
 // cmdCheck invokes the command given in s, echoing the invocation to stdout.
 // It checks that the command was successful and returns its standard output.
@@ -91,39 +106,50 @@ func parseModuleInfo(path string) GoMod {
 }
 
 func runOnGomod(path string) {
-	fmt.Println("Processing", path)
-	modInfo := parseModuleInfo(path)
+	gomodPath := filepath.Join(path, "go.mod")
+	fmt.Println("Processing", gomodPath)
+	modInfo := parseModuleInfo(gomodPath)
 
 	for _, r := range modInfo.Require {
 		// Find requirements on modules within the gocloud.dev tree.
 		if strings.HasPrefix(r.Path, "gocloud.dev") {
-			// Find the relative path from 'path' (the module file we're processing)
-			// and the module required here.
+			// Find the relative path from 'path' and the module required here.
 			var reqPath string
 			if r.Path == "gocloud.dev" {
 				reqPath = "."
 			} else {
 				reqPath = r.Path[12:]
 			}
-			rel, err := filepath.Rel(filepath.Dir(path), reqPath)
+			rel, err := filepath.Rel(path, reqPath)
 			if err != nil {
 				log.Fatal(err)
 			}
+			// When path is '.', filepath.Rel will append a /. to the result and we
+			// may get paths like ../../.
 			if strings.HasSuffix(rel, "/.") {
 				rel, _ = filepath.Split(rel)
 			}
 
 			if *doReplace {
-				cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", r.Path, rel, path))
+				cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", r.Path, rel, gomodPath))
 			} else if *doDropReplace {
-				cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", r.Path, path))
+				cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", r.Path, gomodPath))
 			}
 		}
 	}
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), helpText)
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
+	if *doReplace && *doDropReplace {
+		log.Fatal("Expected only one of -replace/-dropreplace")
+	}
+
 	f, err := os.Open("allmodules")
 	if err != nil {
 		log.Fatal(err)
@@ -133,7 +159,7 @@ func main() {
 	input.Split(bufio.ScanLines)
 	for input.Scan() {
 		if len(input.Text()) > 0 && !strings.HasPrefix(input.Text(), "#") {
-			runOnGomod(path.Join(input.Text(), "go.mod"))
+			runOnGomod(input.Text())
 		}
 	}
 
