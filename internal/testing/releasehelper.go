@@ -110,15 +110,17 @@ func runOnGomod(path string) {
 	fmt.Println("Processing", gomodPath)
 	modInfo := parseModuleInfo(gomodPath)
 
+	base := "gocloud.dev"
+
 	for _, r := range modInfo.Require {
 		// Find requirements on modules within the gocloud.dev tree.
-		if strings.HasPrefix(r.Path, "gocloud.dev") {
+		if strings.HasPrefix(r.Path, base) {
 			// Find the relative path from 'path' and the module required here.
 			var reqPath string
-			if r.Path == "gocloud.dev" {
+			if r.Path == base {
 				reqPath = "."
 			} else {
-				reqPath = r.Path[12:]
+				reqPath = strings.TrimPrefix(r.Path, base)
 			}
 			rel, err := filepath.Rel(path, reqPath)
 			if err != nil {
