@@ -77,7 +77,7 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 		}
 		if !hasRevisionField {
 			pb = pb.AddNames(expression.Name(docstore.RevisionField))
-			q.FieldPaths = append(q.FieldPaths, []string{docstore.RevisionFieldo})
+			q.FieldPaths = append(q.FieldPaths, []string{docstore.RevisionField})
 		}
 		cb = cb.WithProjection(pb)
 		cbUsed = true

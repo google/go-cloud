@@ -271,20 +271,18 @@ func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) erro
 	for _, f := range fields {
 		fv, ok := fieldByIndex(v, f.Index)
 		if !ok {
+			// if !ok, then f is a field in an embedded pointer to struct, and that embedded pointer
+			// is nil in v. In other words, the field exists in the struct type, but not this particular
+			// struct value. So we just ignore it.
 			continue
 		}
 		if f.ParsedTag.(tagOptions).omitEmpty && isEmptyValue(fv) {
 			continue
 		}
-		if ok {
-			if err := encode(fv, e2); err != nil {
-				return err
-			}
-			e2.MapKey(f.Name)
+		if err := encode(fv, e2); err != nil {
+			return err
 		}
-		// if !ok, then f is a field in an embedded pointer to struct, and that embedded pointer
-		// is nil in v. In other words, the field exists in the struct type, but not this particular
-		// struct value. So we just ignore it.
+		e2.MapKey(f.Name)
 	}
 	return nil
 }
