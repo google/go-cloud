@@ -97,6 +97,12 @@ func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
 	logger.Printf("Adding %q...", demo.name)
 
+	// TODO(rvangent): Consider using materializeTemplateDir here. It can't
+	// be used right now because it treats the source files as templates;
+	// the demo .go files have embedded templates that shouldn't be
+	// processed at copy time.
+	// It would also need support for "force".
+
 	dstPath := path.Join(pctx.workdir, filepath.Base(demo.goDemoPath))
 	if !force {
 		if _, err := os.Stat(dstPath); err == nil {
