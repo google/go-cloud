@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -80,6 +81,9 @@ func testBuildForServe(t *testing.T, files map[string]string) {
 		stderr:  ioutil.Discard,
 	}
 	exePath := filepath.Join(dir, "hello")
+	if runtime.GOOS == "windows" {
+		exePath += ".EXE"
+	}
 
 	// Build program.
 	if err := buildForServe(context.Background(), pctx, dir, exePath); err != nil {

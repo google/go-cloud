@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,9 @@ func TestAddDemo(t *testing.T) {
 
 	// Build the binary.
 	exePath := filepath.Join(dir, "add-demo-test")
+	if runtime.GOOS == "windows" {
+		exePath += ".EXE"
+	}
 	if err := buildForServe(ctx, pctx, dir, exePath); err != nil {
 		t.Fatal("buildForServe(...):", err)
 	}

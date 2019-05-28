@@ -242,6 +242,7 @@ loop:
 }
 
 // buildForServe runs Wire and `go build` at moduleRoot to create exePath.
+// Note that on Windows, exePath must end with .EXE.
 func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string, exePath string) error {
 	moduleEnv := overrideEnv(pctx.env, "GO111MODULE=on")
 

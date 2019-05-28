@@ -68,7 +68,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := openSubscription(h.nc, testName, func() {})
+	ds, err := openSubscription(h.nc, testName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -194,7 +194,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	}
 
 	// Send a message using NATS directly and receive it using Go CDK.
-	ps, err := OpenSubscription(conn, topic, func() { t.Fatal("ack called unexpectedly") }, nil)
+	ps, err := OpenSubscription(conn, topic, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds, err := openSubscription(h.nc, "bar", func() { t.Fatal("ack called unexpectedly") })
+	ds, err := openSubscription(h.nc, "bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -395,14 +395,6 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"nats://mytopic", false},
-		// OK, setting ackfunc.
-		{"nats://mytopic?ackfunc=log", false},
-		// OK, setting ackfunc.
-		{"nats://mytopic?ackfunc=panic", false},
-		// OK, setting ackfunc.
-		{"nats://mytopic?ackfunc=noop", false},
-		// Invalid ackfunc.
-		{"nats://mytopic?ackfunc=fail", true},
 		// Invalid parameter.
 		{"nats://mytopic?param=value", true},
 	}

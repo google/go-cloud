@@ -161,7 +161,7 @@
 	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/go-nats\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscription(\n\tnatsConn,\n\t\"example.mysubject\",\n\tfunc() { panic(\"nats does not have ack\") },\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscription(\n\tnatsConn,\n\t\"example.mysubject\",\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenTopic": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/go-nats\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
@@ -169,7 +169,7 @@
 	},
 	"gocloud.dev/pubsub/natspubsub.Example_openSubscriptionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and receive messages with subject \"example.mysubject\".\nsubscription, err := pubsub.OpenSubscription(ctx,\n\t\"nats://example.mysubject?ackfunc=panic\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and receive messages with subject \"example.mysubject\".\nsubscription, err := pubsub.OpenSubscription(ctx, \"nats://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/natspubsub.Example_openTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
