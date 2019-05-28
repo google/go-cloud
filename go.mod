@@ -84,7 +84,6 @@ require (
 	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/tools v0.0.0-20190524210228-3d17549cdc6b // indirect
 	golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373
 	google.golang.org/api v0.5.0
 	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8
