@@ -75,10 +75,7 @@ func init() {
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	cf := new(rds.CertFetcher)
 
-	database := u.EscapedPath()
-	if strings.HasPrefix(database, "/") {
-		database = database[1:]
-	}
+	database := strings.TrimPrefix(u.EscapedPath(), "/")
 	password, _ := u.User.Password()
 	params := Params{
 		Endpoint:  u.Host,
