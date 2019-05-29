@@ -459,7 +459,7 @@ func dominantField(fs []Field) (Field, bool) {
 // ParseStandardTag extracts the sub-tag named by key, then parses it using the
 // de facto standard format introduced in encoding/json:
 //   "-" means "ignore this tag", unless it has options (that is, is followed by a comma),
-//       which which case it is treated a name.
+//       in which case it is treated a name.
 //   "<name>" provides an alternative name for the field
 //   "<name>,opt1,opt2,..." specifies options after the name.
 // The options are returned as a []string.

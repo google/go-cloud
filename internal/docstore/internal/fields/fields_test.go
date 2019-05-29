@@ -358,8 +358,6 @@ func TestIgnore(t *testing.T) {
 	if len(got) != 1 {
 		t.Errorf("got %d fields, want 1", len(got))
 	}
-
-	fmt.Println(got[0])
 }
 
 func TestParsedTag(t *testing.T) {
