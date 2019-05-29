@@ -105,7 +105,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 		var sb strings.Builder
 		sb.WriteString("Failures (reporting up to 10):\n")
 		for i := 0; i < len(failedTests) && i < 10; i++ {
-			sb.WriteString(fmt.Sprintf("  %s\n", failedTests[i]))
+			fmt.Fprintf(&sb, "  %s\n", failedTests[i])
 		}
 		if len(failedTests) > 10 {
 			sb.WriteString("  ...\n")
