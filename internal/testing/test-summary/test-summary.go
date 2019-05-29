@@ -84,19 +84,21 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 		// However, skips of an entire package are not duplicated with individual
 		// test skips.
 		if event.Test == "" && (event.Action == "pass" || event.Action == "fail") {
-			continue
+		} else {
+			counts[event.Action]++
 		}
-		counts[event.Action]++
 		if event.Action == "fail" {
 			failedTests = append(failedTests, filepath.Join(event.Package, event.Test))
 		}
 		if *progress && (event.Action == "pass" || event.Action == "fail" || event.Action == "skip") {
-			if event.Package == prevPkg {
-				fmt.Printf("%s     %s (%.2fs)\n", event.Action, event.Test, event.Elapsed)
-			} else {
-				path := filepath.Join(event.Package, event.Test)
-				fmt.Printf("%s %s (%.2fs)\n", event.Action, path, event.Elapsed)
-				prevPkg = event.Package
+			if event.Test == "" || (event.Action == "fail" || event.Action == "skip") {
+				if event.Package == prevPkg {
+					fmt.Printf("%s     %s (%.2fs)\n", event.Action, event.Test, event.Elapsed)
+				} else {
+					path := filepath.Join(event.Package, event.Test)
+					fmt.Printf("%s %s (%.2fs)\n", event.Action, path, event.Elapsed)
+					prevPkg = event.Package
+				}
 			}
 		}
 	}
