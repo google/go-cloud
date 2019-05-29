@@ -22,7 +22,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -30,23 +29,12 @@ import (
 )
 
 func TestAddDemo(t *testing.T) {
-	dir, cleanup, err := newTestModule()
+	ctx := context.Background()
+	pctx, cleanup, err := newTestProject(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
-
-	pctx := &processContext{
-		workdir: dir,
-		env:     os.Environ(),
-		stdout:  ioutil.Discard,
-		stderr:  ioutil.Discard,
-	}
-	ctx := context.Background()
-
-	if err := init_(ctx, pctx, dir, "testmodpath", true); err != nil {
-		t.Fatalf("run init error: %+v", err)
-	}
 
 	// Call the main package run function as if 'add-demo' were being called
 	// from the command line for each of the demos.
@@ -57,11 +45,11 @@ func TestAddDemo(t *testing.T) {
 	}
 
 	// Build the binary.
-	exePath := filepath.Join(dir, "add-demo-test")
+	exePath := filepath.Join(pctx.workdir, "add-demo-test")
 	if runtime.GOOS == "windows" {
 		exePath += ".EXE"
 	}
-	if err := buildForServe(ctx, pctx, dir, exePath); err != nil {
+	if err := buildForServe(ctx, pctx, pctx.workdir, exePath); err != nil {
 		t.Fatal("buildForServe(...):", err)
 	}
 
