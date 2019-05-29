@@ -60,7 +60,6 @@ func main() {
 func run(r io.Reader) (msg string, failures bool, err error) {
 	counts := map[string]int{}
 	scanner := bufio.NewScanner(bufio.NewReader(r))
-	prevPkg := "" // In progress mode, the package we previously wrote, to avoid repeating it.
 
 	var failedTests []string
 
@@ -76,27 +75,31 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			return "", false, fmt.Errorf("%q: %v", scanner.Text(), err)
 		}
-		if *verbose && event.Action == "output" {
-			fmt.Print(event.Output)
-		}
-		// Ignore pass or fail events that don't have a Test; they refer to the
-		// package as a whole, and we would be over-counting if we included them.
-		// However, skips of an entire package are not duplicated with individual
-		// test skips.
-		if event.Test == "" && (event.Action == "pass" || event.Action == "fail") {
-			continue
-		}
-		counts[event.Action]++
+
 		if event.Action == "fail" {
 			failedTests = append(failedTests, filepath.Join(event.Package, event.Test))
 		}
-		if *progress && (event.Action == "pass" || event.Action == "fail" || event.Action == "skip") {
-			if event.Package == prevPkg {
-				fmt.Printf("%s     %s (%.2fs)\n", event.Action, event.Test, event.Elapsed)
-			} else {
+
+		if *verbose && event.Action == "output" {
+			fmt.Print(event.Output)
+		}
+
+		// The Test field, if non-empty, specifies the test, example, or benchmark
+		// function that caused the event. Events for the overall package test do
+		// not set Test. We don't want to count package passes/fails because these
+		// don't represent specific tests being run. However, skips of an entire
+		// package are not duplicated with individual test skips.
+		if event.Test != "" || event.Action == "skip" {
+			counts[event.Action]++
+		}
+
+		if *progress {
+			// Only print progress for fail events for packages and tests, or
+			// pass events for packages only (not individual tests, since this is
+			// too noisy).
+			if event.Action == "fail" || (event.Test == "" && event.Action == "pass") {
 				path := filepath.Join(event.Package, event.Test)
 				fmt.Printf("%s %s (%.2fs)\n", event.Action, path, event.Elapsed)
-				prevPkg = event.Package
 			}
 		}
 	}
