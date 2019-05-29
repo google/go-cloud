@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -147,6 +148,10 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 	allocB := &serverAlloc{
 		exePath: filepath.Join(buildDir, "serverB"),
 		port:    opts.actualAddress.Port + 2,
+	}
+	if runtime.GOOS == "windows" {
+		allocA.exePath += ".EXE"
+		allocB.exePath += ".EXE"
 	}
 	spareAlloc, liveAlloc := allocA, allocB
 	var process *exec.Cmd
