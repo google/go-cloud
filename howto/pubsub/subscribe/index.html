@@ -103,8 +103,12 @@ you can start multiple goroutines:</p>
 <span class="p">}</span>
 </code></pre></div>
 
+<p>Note that the [semantics of message delivery][] can vary by provider.</p>
+
 <p>The rest of this guide will discuss how to accomplish the first step: opening
 a subscription for your chosen Pub/Sub provider.</p>
+
+<p>[semantics of message delivery][<a href="https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery">https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery</a>]</p>
 
 <h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
 
@@ -371,12 +375,6 @@ You must first create an <a href="https://godoc.org/github.com/streadway/amqp#Co
 subject name. The NATS server is discovered from the <code>NATS_SERVER_URL</code>
 environment variable (which is something like <code>nats://nats.example.com</code>).</p>
 
-<p>NATS guarantees at-most-once delivery, so there is no equivalent of <code>Ack</code>.
-If your application only uses NATS and no other implementations (including
-in-memory), you can skip calling <code>Ack</code> and add <code>?ackfunc=panic</code> to the end of
-the URL you use to open a subscription. Otherwise, you should add
-<code>?ackfunc=noop</code> to the end of your URL.</p>
-
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
@@ -393,6 +391,9 @@ the URL you use to open a subscription. Otherwise, you should add
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
+
+<p>NATS guarantees at-most-once delivery; it will never redeliver a message.
+Therefore, <code>Message.Ack</code> is a no-op.</p>
 
 <p>To parse messages <a href="https://gocloud.dev/howto/pubsub/publish/#nats">published via the Go CDK</a>, the NATS driver
 will first attempt to decode the payload using <a href="https://golang.org/pkg/encoding/gob/">gob</a>. Failing that, it will
@@ -462,8 +463,8 @@ consumer group, subscribed to one or more topics.</p>
 
 <p>In addition to the list of brokers, you&rsquo;ll need a <a href="https://godoc.org/github.com/Shopify/sarama#Config"><code>*sarama.Config</code></a>, which
 exposes many knobs that can affect performance and semantics; review and set
-them carefully. <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig"><code>kafkapubsub.MinimalConfig</code></a> provides a minimal config to get
-you started.</p>
+them carefully. <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig"><code>kafkapubsub.MinimalConfig</code></a> provides a minimal config to
+get you started.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
