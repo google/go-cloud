@@ -41,16 +41,15 @@ func main() {
 		os.Exit(1)
 
 	}
-	debug := false
 	ctx, done := withInterrupt(context.Background())
-	err = run(ctx, pctx, os.Args[1:], &debug)
+	err = run(ctx, pctx, os.Args[1:])
 	done()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, pctx *processContext, args []string, debug *bool) error {
+func run(ctx context.Context, pctx *processContext, args []string) error {
 	var rootCmd = &cobra.Command{
 		Use:   "gocdk",
 		Short: "TODO gocdk",
@@ -62,7 +61,6 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 			cmd.SilenceUsage = true
 		},
 	}
-	rootCmd.PersistentFlags().BoolVar(debug, "debug", false, "show verbose error messages")
 
 	registerInitCmd(ctx, pctx, rootCmd)
 	registerServeCmd(ctx, pctx, rootCmd)

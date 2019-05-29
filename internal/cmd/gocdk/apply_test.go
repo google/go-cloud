@@ -54,7 +54,7 @@ func TestApply(t *testing.T) {
 		// Call the main package run function as if 'apply' and biomeName were passed
 		// on the command line. As part of this, ensureTerraformInit is called to check
 		// that terraform has been properly initialized before running 'terraform apply'.
-		if err := run(ctx, pctx, []string{"apply", biomeName}, new(bool)); err != nil {
+		if err := run(ctx, pctx, []string{"apply", biomeName}); err != nil {
 			t.Errorf("run error: %+v", err)
 		}
 
