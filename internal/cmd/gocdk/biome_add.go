@@ -17,29 +17,40 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"path/filepath"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func biomeAdd(ctx context.Context, pctx *processContext, args []string) error {
-	// TODO(clausti) interpolate launcher from one supplied as a flag
-	f := newFlagSet(pctx, "biome")
-	const usageMsg = "gocdk biome add"
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("%s: %w", usageMsg, err)
-	}
-	if f.Arg(0) != "add" {
-		return usagef("%s: expected add, got %v", usageMsg, f.Args()[0])
-	}
-	if f.NArg() != 2 {
-		return usagef("%s BIOME_NAME", usageMsg)
-	}
-	newName := f.Arg(1)
+// TODO(rvangent): This should probably not be in biome_add.go anymore.
 
+func registerBiomeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	biomeCmd := &cobra.Command{
+		Use:   "biome",
+		Short: "TODO Manage biomes",
+		Long:  "TODO more about biomes",
+	}
+	biomeAddCmd := &cobra.Command{
+		Use:   "add BIOME_NAME",
+		Short: "TODO Add BIOME_NAME",
+		Long:  "TODO more about adding biomes",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return biomeAdd(ctx, pctx, args[0])
+		},
+	}
+	biomeCmd.AddCommand(biomeAddCmd)
+
+	// TODO(rvangent): More biome subcommands.
+
+	rootCmd.AddCommand(biomeCmd)
+}
+
+func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
+	// TODO(clausti) interpolate launcher from one supplied as a flag
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
 	logger.Printf("Adding biome %q...", newName)
 

@@ -52,8 +52,7 @@ func TestInit(t *testing.T) {
 		}
 
 		const projectName = "myspecialproject"
-		err = run(ctx, pctx, []string{"init", "--module-path=example.com/foo/" + projectName, projectName}, new(bool))
-		if err != nil {
+		if err := run(ctx, pctx, []string{"init", "--module-path=example.com/foo/" + projectName, projectName}); err != nil {
 			t.Errorf("run returned error: %+v", err)
 		}
 
@@ -169,4 +168,28 @@ func containsLine(data []byte, want string) bool {
 		}
 	}
 	return false
+}
+
+// newTestProject creates a temporary project using "gocdk init" and
+// returns a pctx with workdir set to the project directory, and a cleanup
+// function.
+func newTestProject(ctx context.Context) (*processContext, func(), error) {
+	dir, err := ioutil.TempDir("", testTempDirPrefix)
+	if err != nil {
+		return nil, nil, err
+	}
+	cleanup := func() {
+		os.RemoveAll(dir)
+	}
+	pctx := &processContext{
+		workdir: dir,
+		env:     os.Environ(),
+		stdout:  ioutil.Discard,
+		stderr:  ioutil.Discard,
+	}
+	if err := run(ctx, pctx, []string{"init", "-m", "example.com/test", "--allow-existing-dir", dir}); err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	return pctx, cleanup, nil
 }

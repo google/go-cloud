@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -26,6 +25,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
@@ -58,34 +58,58 @@ var allDemos = []*demoInfo{
 	},
 }
 
-func addDemo(ctx context.Context, pctx *processContext, args []string) error {
+func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+
+	demoCmd := &cobra.Command{
+		Use:   "demo",
+		Short: "TODO Manage demos",
+		Long:  "TODO more about demos",
+	}
+
+	demoListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "TODO List available demos",
+		Long:  "TODO more about listing demos",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return listDemos()
+		},
+	}
+	demoCmd.AddCommand(demoListCmd)
+
+	var force bool
+	demoAddCmd := &cobra.Command{
+		Use:   "add DEMO",
+		Short: "TODO Add a demo",
+		Long:  "TODO more about adding a demo",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return addDemo(ctx, pctx, args[0], force)
+		},
+	}
+	demoAddCmd.Flags().BoolVar(&force, "force", false, "re-add even the demo even if it has already been added, overwriting previous files")
+	demoCmd.AddCommand(demoAddCmd)
+	rootCmd.AddCommand(demoCmd)
+}
+
+func listDemos() error {
 	// Compute a sorted slice of available demos for usage.
 	var avail []string
 	for _, demo := range allDemos {
 		avail = append(avail, demo.name)
 	}
 	sort.Strings(avail)
-	usageMsg := fmt.Sprintf("gocdk demo <%s>", strings.Join(avail, "|"))
+	fmt.Println(strings.Join(avail, "\n"))
+	return nil
+}
 
-	f := newFlagSet(pctx, "demo")
-	force := f.Bool("force", false, "re-add even the demo even if it has already been added, overwriting previous files")
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("%s: %w", usageMsg, err)
-	}
-
-	args = f.Args()
-	if len(args) != 1 {
-		return usagef("%s: expected 1 argument, got %d", usageMsg, len(args))
-	}
-
+func addDemo(ctx context.Context, pctx *processContext, demoToAdd string, force bool) error {
 	for _, demo := range allDemos {
-		if demo.name == args[0] {
-			return instantiateDemo(pctx, demo, *force)
+		if demo.name == demoToAdd {
+			return instantiateDemo(pctx, demo, force)
 		}
 	}
-	return xerrors.Errorf("%q is not a supported demo. Available demos include: %s.", args[0], strings.Join(avail, ", "))
+	return xerrors.Errorf("%q is not a supported demo; try 'demo list' to see available demos")
 }
 
 // instantiateDemo does all of the work required to add a demo of a
@@ -96,6 +120,12 @@ func addDemo(ctx context.Context, pctx *processContext, args []string) error {
 func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
 	logger.Printf("Adding %q...", demo.name)
+
+	// TODO(rvangent): Consider using materializeTemplateDir here. It can't
+	// be used right now because it treats the source files as templates;
+	// the demo .go files have embedded templates that shouldn't be
+	// processed at copy time.
+	// It would also need support for "force".
 
 	dstPath := path.Join(pctx.workdir, filepath.Base(demo.goDemoPath))
 	if !force {
