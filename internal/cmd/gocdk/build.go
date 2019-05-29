@@ -51,7 +51,8 @@ func registerBuildCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 	rootCmd.AddCommand(buildCmd)
 }
 
-// TODO(rvangent): Rename ref -> dockerTag for consistency?
+// TODO(rvangent): Rename ref and/or dockerTag for consistency?
+// https://github.com/google/go-cloud/pull/2144#discussion_r288625539
 func build(ctx context.Context, pctx *processContext, ref string) error {
 	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
