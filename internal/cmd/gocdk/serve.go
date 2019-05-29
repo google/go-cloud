@@ -145,6 +145,10 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 		exePath: filepath.Join(buildDir, "serverB"),
 		port:    opts.actualAddress.Port + 2,
 	}
+	if runtime.GOOS == "windows" {
+		allocA.exePath += ".EXE"
+		allocB.exePath += ".EXE"
+	}
 	spareAlloc, liveAlloc := allocA, allocB
 	var process *exec.Cmd
 loop:
