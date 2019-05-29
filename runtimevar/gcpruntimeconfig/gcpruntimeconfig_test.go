@@ -17,7 +17,7 @@ package gcpruntimeconfig
 import (
 	"context"
 	"errors"
-	"net/url"
+	"fmt"
 	"testing"
 
 	"gocloud.dev/internal/testing/setup"
@@ -32,22 +32,22 @@ import (
 
 // This constant records the project used for the last --record.
 // If you want to use --record mode,
-// 1. Update this constant to your GCP project name (not number!).
+// 1. Update this constant to your GCP project ID.
 // 2. Ensure that the "Runtime Configuration API" is enabled for your project.
 // TODO(issue #300): Use Terraform to get this.
 const projectID = "google.com:rvangent-testing-prod"
 
 const (
-	// config is the runtimeconfig high-level config that variables sit under.
-	config = "go_cloud_runtimeconfigurator_test"
+	// configID is the runtimeconfig high-level config that variables sit under.
+	configID = "go_cloud_runtimeconfigurator_test"
 )
 
-func resourceName(name string) ResourceName {
-	return ResourceName{
-		ProjectID: projectID,
-		Config:    config,
-		Variable:  name,
-	}
+func configPath() string {
+	return fmt.Sprintf("projects/%s/configs/%s", projectID, configID)
+}
+
+func variableKey(variableName string) string {
+	return VariableKey(projectID, configID, variableName)
 }
 
 type harness struct {
@@ -59,34 +59,32 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	ctx := context.Background()
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "runtimevar")
 	client := pb.NewRuntimeConfigManagerClient(conn)
-	rn := resourceName("")
 	// Ignore errors if the config already exists.
 	_, _ = client.CreateConfig(ctx, &pb.CreateConfigRequest{
-		Parent: "projects/" + rn.ProjectID,
+		Parent: "projects/" + projectID,
 		Config: &pb.RuntimeConfig{
-			Name:        rn.configPath(),
+			Name:        configPath(),
 			Description: t.Name(),
 		},
 	})
 	return &harness{
 		client: client,
 		closer: func() {
-			_, _ = client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
+			_, _ = client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: configPath()})
 			done()
 		},
 	}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(h.client, resourceName(name), decoder, nil), nil
+	return newWatcher(h.client, variableKey(name), decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	rn := resourceName(name)
 	_, err := h.client.CreateVariable(ctx, &pb.CreateVariableRequest{
-		Parent: rn.configPath(),
+		Parent: configPath(),
 		Variable: &pb.Variable{
-			Name:     rn.String(),
+			Name:     variableKey(name),
 			Contents: &pb.Variable_Value{Value: val},
 		},
 	})
@@ -94,9 +92,8 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
-	rn := resourceName(name)
 	_, err := h.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
-		Name: rn.String(),
+		Name: variableKey(name),
 		Variable: &pb.Variable{
 			Contents: &pb.Variable_Value{Value: val},
 		},
@@ -105,8 +102,7 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
-	rn := resourceName(name)
-	_, err := h.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()})
+	_, err := h.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: variableKey(name)})
 	return err
 }
 
@@ -178,47 +174,14 @@ func TestNoConnectionError(t *testing.T) {
 	}
 	defer cleanup()
 
-	name := ResourceName{
-		ProjectID: "gcp-project-id",
-		Config:    "cfg-name",
-		Variable:  "cfg-variable-name",
-	}
-	v, err := OpenVariable(client, name, nil, nil)
+	variableKey := VariableKey("gcp-project-id", "cfg-name", "cfg-variable-name")
+	v, err := OpenVariable(client, variableKey, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = v.Watch(context.Background())
 	if err == nil {
 		t.Error("got nil want error")
-	}
-}
-
-func TestResourceNameFromURL(t *testing.T) {
-	tests := []struct {
-		URL     string
-		WantErr bool
-		Want    ResourceName
-	}{
-		{"gcpruntimeconfig://proj1/cfg1/var1", false, ResourceName{"proj1", "cfg1", "var1"}},
-		{"gcpruntimeconfig://proj2/cfg2/var2", false, ResourceName{"proj2", "cfg2", "var2"}},
-		{"gcpruntimeconfig://proj/cfg/var/morevar", false, ResourceName{"proj", "cfg", "var/morevar"}},
-		{"gcpruntimeconfig://proj/cfg", true, ResourceName{}},
-		{"gcpruntimeconfig://proj/cfg/", true, ResourceName{}},
-		{"gcpruntimeconfig:///cfg/var", true, ResourceName{}},
-		{"gcpruntimeconfig://proj//var", true, ResourceName{}},
-	}
-	for _, test := range tests {
-		u, err := url.Parse(test.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		got, gotErr := newResourceNameFromURL(u)
-		if (gotErr != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
-		}
-		if got != test.Want {
-			t.Errorf("%s: got %v want %v", test.URL, got, test.Want)
-		}
 	}
 }
 
@@ -231,19 +194,23 @@ func TestOpenVariable(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"gcpruntimeconfig://myproject/mycfg/myvar", false},
+		{"gcpruntimeconfig://projects/myproject/configs/mycfg/variables/myvar", false},
 		// OK, hierarchical key name.
-		{"gcpruntimeconfig://myproject/mycfg/myvar1/myvar2", false},
+		{"gcpruntimeconfig://projects/myproject/configs/mycfg/variables/myvar1/myvar2", false},
 		// OK, setting decoder.
-		{"gcpruntimeconfig://myproject/mycfg/myvar?decoder=string", false},
-		// Missing project ID.
-		{"gcpruntimeconfig:///mycfg/myvar", true},
-		// Empty config.
-		{"gcpruntimeconfig://myproject//myvar", true},
-		// Empty key name.
-		{"gcpruntimeconfig://myproject/mycfg/", true},
-		// Missing key name.
-		{"gcpruntimeconfig://myproject/mycfg", true},
+		{"gcpruntimeconfig://projects/myproject/configs/mycfg/variables/myvar?decoder=string", false},
+		// Missing projects prefix.
+		{"gcpruntimeconfig://project/myproject/configs/mycfg/variables/myvar", true},
+		// Missing project.
+		{"gcpruntimeconfig://projects//configs/mycfg/variables/myvar", true},
+		// Missing configs.
+		{"gcpruntimeconfig://projects/myproject/mycfg/variables/myvar", true},
+		// Missing configID.
+		{"gcpruntimeconfig://projects/myproject/configs//variables/myvar", true},
+		// Missing variables.
+		{"gcpruntimeconfig://projects/myproject/configs/mycfg//myvar", true},
+		// Missing variable name.
+		{"gcpruntimeconfig://projects/myproject/configs/mycfg/variables/", true},
 		// Invalid decoder.
 		{"gcpruntimeconfig://myproject/mycfg/myvar?decoder=notadecoder", true},
 		// Invalid param.
