@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -97,12 +96,9 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*sql.DB, func(), error) {
 	vals := make(url.Values)
 	for k, v := range params.Values {
-		// Only permit parameters that do not conflict with other behavior.
-		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" {
-			return nil, nil, fmt.Errorf("rdspostgres: open: extra parameter %s not allowed; use Params fields instead", k)
-		}
-		if k == "sslmode" {
-			return nil, nil, errors.New("rdspostgres: open: parameter sslmode not allowed; sslmode must be disabled because the underlying dialer is already providing TLS")
+		// Forbid SSL-related parameters.
+		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
+			return nil, nil, fmt.Errorf("rdspostgres: open: parameter %q not allowed; sslmode must be disabled because the underlying dialer is already providing TLS", k)
 		}
 		vals[k] = v
 	}

@@ -93,11 +93,9 @@ func TestOpenWithURL(t *testing.T) {
 		// OK.
 		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s", username, password, endpoint, databaseName), false, false},
 		// Invalid URL parameters: db creation fails.
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?user=foo", username, password, endpoint, databaseName), true, false},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?password=foo", username, password, endpoint, databaseName), true, false},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?dbname=foo", username, password, endpoint, databaseName), true, false},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?host=foo", username, password, endpoint, databaseName), true, false},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?port=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslcert=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslkey=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslrootcert=foo", username, password, endpoint, databaseName), true, false},
 		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslmode=require", username, password, endpoint, databaseName), true, false},
 		// Invalid connection info: db is created, but Ping fails.
 		{fmt.Sprintf("rdspostgres://%s:badpwd@%s/%s", username, endpoint, databaseName), false, true},
@@ -148,12 +146,10 @@ func TestOpenBadValues(t *testing.T) {
 	tests := []struct {
 		name, value string
 	}{
-		{"user", "foo"},
-		{"password", "foo"},
-		{"dbname", "foo"},
-		{"host", "localhost"},
-		{"port", "1234"},
 		{"sslmode", "require"},
+		{"sslcert", "foo"},
+		{"sslkey", "foo"},
+		{"sslrootcert", "foo"},
 	}
 	for _, test := range tests {
 		t.Run(test.name+"="+test.value, func(t *testing.T) {
