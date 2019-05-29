@@ -94,10 +94,10 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 		}
 
 		if *progress {
-			// Only print progress for fail/skip events for packages and tests, or
+			// Only print progress for fail events for packages and tests, or
 			// pass events for packages only (not individual tests, since this is
 			// too noisy).
-			if event.Action == "fail" || event.Action == "skip" || (event.Test == "" && event.Action == "pass") {
+			if event.Action == "fail" || (event.Test == "" && event.Action == "pass") {
 				path := filepath.Join(event.Package, event.Test)
 				fmt.Printf("%s %s (%.2fs)\n", event.Action, path, event.Elapsed)
 			}
