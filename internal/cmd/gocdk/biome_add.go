@@ -16,7 +16,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -49,6 +49,9 @@ func registerBiomeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 
 func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
 	// TODO(clausti) interpolate launcher from one supplied as a flag
+	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
+	logger.Printf("Adding biome %q...", newName)
+
 	projectDir, err := findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
 		xerrors.Errorf("biome add: %w", err)
@@ -63,6 +66,6 @@ func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
 	if err := materializeTemplateDir(dstPath, "biome_add", data); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
-	fmt.Printf("Successfully added new biome '%v'!\n", newName)
+	logger.Printf("Success!")
 	return nil
 }
