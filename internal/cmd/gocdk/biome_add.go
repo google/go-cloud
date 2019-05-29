@@ -16,8 +16,6 @@ package main
 
 import (
 	"context"
-	"flag"
-	"fmt"
 	"log"
 	"path/filepath"
 
