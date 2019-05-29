@@ -16,41 +16,44 @@ package main
 
 import (
 	"context"
-	"flag"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func apply(ctx context.Context, pctx *processContext, args []string) error {
-	f := newFlagSet(pctx, "apply")
-	input := f.Bool("input", true, "ask for input for Terraform variables if not directly set")
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("gocdk apply: %w", err)
+func registerApplyCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	var input bool
+	applyCmd := &cobra.Command{
+		Use:   "apply BIOME",
+		Short: "TODO Apply Terraform for BIOME",
+		Long:  "TODO more about apply",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return apply(ctx, pctx, args[0], input)
+		},
 	}
+	applyCmd.Flags().BoolVar(&input, "input", true, "ask for input for Terraform variables if not directly set")
+	rootCmd.AddCommand(applyCmd)
+}
 
-	if f.NArg() != 1 {
-		return usagef("gocdk apply BIOME")
-	}
-	biome := f.Arg(0)
+func apply(ctx context.Context, pctx *processContext, biome string, input bool) error {
 	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
-	if err := ensureTerraformInit(ctx, pctx, moduleRoot, biome, *input); err != nil {
+	if err := ensureTerraformInit(ctx, pctx, moduleRoot, biome, input); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
 	// TODO(#1821): take over steps (plan, confirm, apply) so we can
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
-	c := exec.CommandContext(ctx, "terraform", "apply", "-input="+strconv.FormatBool(*input))
+	c := exec.CommandContext(ctx, "terraform", "apply", "-input="+strconv.FormatBool(input))
 	c.Dir = findBiomeDir(moduleRoot, biome)
 	c.Env = pctx.env
 	c.Stdin = pctx.stdin

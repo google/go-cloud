@@ -52,8 +52,7 @@ func TestInit(t *testing.T) {
 		}
 
 		const projectName = "myspecialproject"
-		err = run(ctx, pctx, []string{"init", "--module-path=example.com/foo/" + projectName, projectName}, new(bool))
-		if err != nil {
+		if err := run(ctx, pctx, []string{"init", "--module-path=example.com/foo/" + projectName, projectName}); err != nil {
 			t.Errorf("run returned error: %+v", err)
 		}
 
@@ -188,7 +187,7 @@ func newTestProject(ctx context.Context) (*processContext, func(), error) {
 		stdout:  ioutil.Discard,
 		stderr:  ioutil.Discard,
 	}
-	if err := run(ctx, pctx, []string{"init", "-m", "example.com/test", "--allow-existing-dir", dir}, new(bool)); err != nil {
+	if err := run(ctx, pctx, []string{"init", "-m", "example.com/test", "--allow-existing-dir", dir}); err != nil {
 		cleanup()
 		return nil, nil, err
 	}

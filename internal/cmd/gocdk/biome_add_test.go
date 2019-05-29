@@ -32,7 +32,7 @@ func TestBiomeAdd(t *testing.T) {
 		}
 		defer cleanup()
 		const newBiome = "foo"
-		if err := biomeAdd(ctx, pctx, []string{"add", newBiome}); err != nil {
+		if err := biomeAdd(ctx, pctx, newBiome); err != nil {
 			t.Fatal(err)
 		}
 
