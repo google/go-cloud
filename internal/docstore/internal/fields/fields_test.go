@@ -207,7 +207,8 @@ type tEmbed2 struct {
 }
 
 func jsonTagParser(t reflect.StructTag) (name string, keep bool, other interface{}, err error) {
-	return ParseStandardTag("json", t)
+	n, k, o := ParseStandardTag("json", t)
+	return n, k, o, nil
 }
 
 func validateFunc(t reflect.Type) (err error) {
@@ -348,13 +349,14 @@ func TestDominantField(t *testing.T) {
 func TestIgnore(t *testing.T) {
 	type S struct {
 		X int `json:"-"`
+		Y int `json:"-,"` // field with name "-"
 	}
 	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S{}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 0 {
-		t.Errorf("got %d fields, want 0", len(got))
+	if len(got) != 1 {
+		t.Errorf("got %d fields, want 1", len(got))
 	}
 }
 
