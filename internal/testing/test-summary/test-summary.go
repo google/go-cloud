@@ -84,7 +84,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 			fmt.Print(event.Output)
 		}
 
-		// The Test field, if present, specifies the test, example, or benchmark
+		// The Test field, if non-empty, specifies the test, example, or benchmark
 		// function that caused the event. Events for the overall package test do
 		// not set Test. We don't want to count package passes/fails because these
 		// don't represent specific tests being run. However, skips of an entire
