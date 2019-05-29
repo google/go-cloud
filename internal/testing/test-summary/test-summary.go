@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -60,6 +61,9 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 	counts := map[string]int{}
 	scanner := bufio.NewScanner(bufio.NewReader(r))
 	prevPkg := "" // In progress mode, the package we previously wrote, to avoid repeating it.
+
+	var failedTests []string
+
 	for scanner.Scan() {
 		// When the build fails, go test -json doesn't emit a valid JSON value, only
 		// a line of output starting with FAIL. Report a more reasonable error in
@@ -83,14 +87,14 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 			continue
 		}
 		counts[event.Action]++
+		if event.Action == "fail" {
+			failedTests = append(failedTests, filepath.Join(event.Package, event.Test))
+		}
 		if *progress && (event.Action == "pass" || event.Action == "fail" || event.Action == "skip") {
 			if event.Package == prevPkg {
 				fmt.Printf("%s     %s (%.2fs)\n", event.Action, event.Test, event.Elapsed)
 			} else {
-				path := event.Package
-				if event.Test != "" {
-					path += "/" + event.Test
-				}
+				path := filepath.Join(event.Package, event.Test)
 				fmt.Printf("%s %s (%.2fs)\n", event.Action, path, event.Elapsed)
 				prevPkg = event.Package
 			}
@@ -102,5 +106,20 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 	p := counts["pass"]
 	f := counts["fail"]
 	s := counts["skip"]
-	return fmt.Sprintf("ran %d; passed %d; failed %d; skipped %d", p+f+s, p, f, s), f > 0, nil
+
+	summary := fmt.Sprintf("ran %d; passed %d; failed %d; skipped %d", p+f+s, p, f, s)
+	if len(failedTests) > 0 {
+		var sb strings.Builder
+		sb.WriteString("Failures (reporting up to 10):\n")
+		for i := 0; i < len(failedTests) && i < 10; i++ {
+			fmt.Fprintf(&sb, "  %s\n", failedTests[i])
+		}
+		if len(failedTests) > 10 {
+			sb.WriteString("  ...\n")
+		}
+		sb.WriteString(summary)
+		summary = sb.String()
+	}
+
+	return summary, f > 0, nil
 }
