@@ -432,8 +432,5 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
 
-// AckFunc implements driver.Subscription.AckFunc.
-func (*subscription) AckFunc() func() { return nil }
-
 // Close implements driver.Subscription.Close.
 func (*subscription) Close() error { return nil }

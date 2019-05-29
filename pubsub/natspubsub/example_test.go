@@ -57,7 +57,6 @@ func ExampleOpenSubscription() {
 	subscription, err := natspubsub.OpenSubscription(
 		natsConn,
 		"example.mysubject",
-		func() { panic("nats does not have ack") },
 		nil)
 	if err != nil {
 		log.Fatal(err)
@@ -94,8 +93,7 @@ func Example_openSubscriptionFromURL() {
 	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will Dial the NATS server at the URL in the environment variable
 	// NATS_SERVER_URL and receive messages with subject "example.mysubject".
-	subscription, err := pubsub.OpenSubscription(ctx,
-		"nats://example.mysubject?ackfunc=panic")
+	subscription, err := pubsub.OpenSubscription(ctx, "nats://example.mysubject")
 	if err != nil {
 		log.Fatal(err)
 	}

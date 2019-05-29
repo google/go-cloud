@@ -270,15 +270,19 @@ func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) erro
 	e2 := e.EncodeMap(len(fields))
 	for _, f := range fields {
 		fv, ok := fieldByIndex(v, f.Index)
-		if ok {
-			if err := encode(fv, e2); err != nil {
-				return err
-			}
-			e2.MapKey(f.Name)
+		if !ok {
+			// if !ok, then f is a field in an embedded pointer to struct, and that embedded pointer
+			// is nil in v. In other words, the field exists in the struct type, but not this particular
+			// struct value. So we just ignore it.
+			continue
 		}
-		// if !ok, then f is a field in an embedded pointer to struct, and that embedded pointer
-		// is nil in v. In other words, the field exists in the struct type, but not this particular
-		// struct value. So we just ignore it.
+		if f.ParsedTag.(tagOptions).omitEmpty && isEmptyValue(fv) {
+			continue
+		}
+		if err := encode(fv, e2); err != nil {
+			return err
+		}
+		e2.MapKey(f.Name)
 	}
 	return nil
 }
@@ -716,4 +720,45 @@ func wrap(err error, code gcerr.ErrorCode) error {
 		err = gcerr.New(code, err, 2, err.Error())
 	}
 	return err
+}
+
+var fieldCache = fields.NewCache(parseTag, nil, nil)
+
+// Copied from encoding/json, go 1.12.
+func isEmptyValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Ptr:
+		return v.IsNil()
+	}
+	return false
+}
+
+// Options for struct tags.
+type tagOptions struct {
+	omitEmpty bool // do not encode value if empty
+}
+
+// parseTag interprets docstore struct field tags.
+func parseTag(t reflect.StructTag) (name string, keep bool, other interface{}, err error) {
+	name, keep, opts := fields.ParseStandardTag("docstore", t)
+	tagOpts := tagOptions{}
+	for _, opt := range opts {
+		switch opt {
+		case "omitempty":
+			tagOpts.omitEmpty = true
+		default:
+			return "", false, nil, gcerr.Newf(gcerr.InvalidArgument, nil, "unknown tag option: %q", opt)
+		}
+	}
+	return name, keep, tagOpts, nil
 }

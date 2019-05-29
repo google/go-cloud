@@ -865,17 +865,22 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 	if diff != "" {
 		t.Error(diff)
 	}
+
+	// TODO(jba): test that queries with selected fields always return the key and revision fields.
 }
 
 func testGetQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	addQueryDocuments(t, coll)
 
+	// TODO(jba): test that queries with selected fields always return the revision field when there is one.
+
 	// Query filters should have the same behavior when doing string and number
 	// comparison.
 	tests := []struct {
 		name   string
 		q      *ds.Query
+		fields []docstore.FieldPath       // fields to get
 		want   func(*HighScore) bool      // filters queryDocuments
 		before func(x, y *HighScore) bool // if present, checks result order
 	}{
@@ -944,10 +949,30 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
 		},
 		// TODO(jba): add more OrderBy tests.
+
+		{
+			name:   "AllWithKeyFields",
+			q:      coll.Query(),
+			fields: []docstore.FieldPath{"Game", "Player"},
+			want: func(h *HighScore) bool {
+				h.Score = 0
+				h.Time = time.Time{}
+				return true
+			},
+		},
+		{
+			name:   "AllWithScore",
+			q:      coll.Query(),
+			fields: []docstore.FieldPath{"Game", "Player", "Score"},
+			want: func(h *HighScore) bool {
+				h.Time = time.Time{}
+				return true
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := collectHighScores(ctx, tc.q.Get(ctx))
+			got, err := collectHighScores(ctx, tc.q.Get(ctx, tc.fields...))
 			if gcerrors.Code(err) == gcerrors.Unimplemented {
 				t.Skip("unimplemented")
 			}
