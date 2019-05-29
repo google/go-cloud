@@ -15,7 +15,6 @@
 package docstore
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/url"
@@ -339,7 +338,9 @@ func (c *Collection) toDriverAction(a *Action) (*driver.Action, error) {
 	if key == nil && a.kind != driver.Create {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
 	}
-
+	if reflect.ValueOf(key).Kind() == reflect.Ptr {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "keys cannot be pointers")
+	}
 	d := &driver.Action{Kind: a.kind, Doc: ddoc, Key: key}
 	if a.fieldpaths != nil {
 		d.FieldPaths, err = parseFieldPaths(a.fieldpaths)
@@ -445,7 +446,7 @@ func (l *ActionList) String() string {
 }
 
 func (a *Action) String() string {
-	buf := &bytes.Buffer{}
+	buf := &strings.Builder{}
 	fmt.Fprintf(buf, "%s(%v", a.kind, a.doc)
 	for _, fp := range a.fieldpaths {
 		fmt.Fprintf(buf, ", %s", fp)

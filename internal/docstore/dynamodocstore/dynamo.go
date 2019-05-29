@@ -216,13 +216,6 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	return keys, nil
 }
 
-// func (c *collection) KeyFields() []string {
-// 	if c.sortKey == "" {
-// 		return []string{c.partitionKey}
-// 	}
-// 	return []string{c.partitionKey, c.sortKey}
-// }
-
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	if opts.Unordered {
 		return c.runActionsUnordered(ctx, actions, opts)
