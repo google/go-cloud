@@ -17,42 +17,55 @@ package main
 import (
 	"bytes"
 	"context"
-	"flag"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func build(ctx context.Context, pctx *processContext, args []string) error {
-	f := newFlagSet(pctx, "build")
-	list := f.Bool("list", false, "display Docker images of this project")
-	ref := f.String("t", ":latest", "name and/or tag in the form `name[:tag] OR :tag`")
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("gocdk build: %w", err)
+const defaultDockerTag = ":latest"
+
+func registerBuildCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	var list bool
+	var ref string
+	buildCmd := &cobra.Command{
+		Use:   "build",
+		Short: "TODO Build a Docker image",
+		Long:  "TODO more about build",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if list {
+				if err := listBuilds(ctx, pctx); err != nil {
+					return xerrors.Errorf("gocdk build: %w", err)
+				}
+				return nil
+			}
+			return build(ctx, pctx, ref)
+		},
 	}
-	if *list {
-		if err := listBuilds(ctx, pctx, f.Args()); err != nil {
-			return xerrors.Errorf("gocdk build: %w", err)
-		}
-		return nil
-	}
+	buildCmd.Flags().BoolVar(&list, "list", false, "display Docker images of this project")
+	buildCmd.Flags().StringVarP(&ref, "tag", "t", defaultDockerTag, "name and/or tag in the form `name[:tag] OR :tag`")
+	rootCmd.AddCommand(buildCmd)
+}
+
+// TODO(rvangent): Rename ref and/or dockerTag for consistency?
+// https://github.com/google/go-cloud/pull/2144#discussion_r288625539
+func build(ctx context.Context, pctx *processContext, ref string) error {
 	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
 		return xerrors.Errorf("gocdk build: %w", err)
 	}
-	if strings.HasPrefix(*ref, ":") {
+	if strings.HasPrefix(ref, ":") {
 		imageName, err := moduleDockerImageName(moduleRoot)
 		if err != nil {
 			return xerrors.Errorf("gocdk build: %w", err)
 		}
-		*ref = imageName + *ref
+		ref = imageName + ref
 	}
-	c := exec.CommandContext(ctx, "docker", "build", "--tag", *ref, ".")
+	c := exec.CommandContext(ctx, "docker", "build", "--tag", ref, ".")
 	c.Dir = moduleRoot
 	c.Stdout = pctx.stdout
 	c.Stderr = pctx.stderr
@@ -62,10 +75,7 @@ func build(ctx context.Context, pctx *processContext, args []string) error {
 	return nil
 }
 
-func listBuilds(ctx context.Context, pctx *processContext, args []string) error {
-	if len(args) != 0 {
-		return usagef("gocdk build --list")
-	}
+func listBuilds(ctx context.Context, pctx *processContext) error {
 	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
 		return xerrors.Errorf("list builds: %w", err)

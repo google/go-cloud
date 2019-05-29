@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +24,7 @@ import (
 	"os/signal"
 	"path/filepath"
 
+	"github.com/spf13/cobra"
 	"gocloud.dev/gcp"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/xerrors"
@@ -41,58 +41,38 @@ func main() {
 		os.Exit(1)
 
 	}
-	debug := false
 	ctx, done := withInterrupt(context.Background())
-	err = run(ctx, pctx, os.Args[1:], &debug)
+	err = run(ctx, pctx, os.Args[1:])
 	done()
 	if err != nil {
-		if debug {
-			fmt.Fprintf(os.Stderr, "%+v\n", err)
-		} else {
-			// TODO(light): format error message parts one per line?
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
-		if xerrors.As(err, new(usageError)) {
-			os.Exit(64)
-		}
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, pctx *processContext, args []string, debug *bool) error {
-	globalFlags := newFlagSet(pctx, "gocdk")
-	globalFlags.BoolVar(debug, "debug", false, "show verbose error messages")
-	if err := globalFlags.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("gocdk: %w", err)
-	}
-	if globalFlags.NArg() == 0 {
-		return usagef("gocdk COMMAND ...")
+func run(ctx context.Context, pctx *processContext, args []string) error {
+	var rootCmd = &cobra.Command{
+		Use:   "gocdk",
+		Short: "TODO gocdk",
+		Long:  "TODO more about gocdk",
+		// We want to print usage for any command/flag parsing errors, but
+		// suppress usage for random errors returned by a command's RunE.
+		// This function gets called right before RunE, so suppress from now on.
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cmd.SilenceUsage = true
+		},
 	}
 
-	cmdArgs := globalFlags.Args()[1:]
-	switch cmdName := globalFlags.Arg(0); cmdName {
-	case "init":
-		return init_(ctx, pctx, cmdArgs)
-	case "serve":
-		return serve(ctx, pctx, cmdArgs)
-	case "demo":
-		return addDemo(ctx, pctx, cmdArgs)
-	case "biome":
-		return biomeAdd(ctx, pctx, cmdArgs)
-	case "deploy":
-		return deploy(ctx, pctx, cmdArgs)
-	case "build":
-		return build(ctx, pctx, cmdArgs)
-	case "apply":
-		return apply(ctx, pctx, cmdArgs)
-	case "launch":
-		return launch(ctx, pctx, cmdArgs)
-	default:
-		// TODO(light): We should do spell-checking/fuzzy-matching.
-		return usagef("unknown gocdk command %s", cmdName)
-	}
+	registerInitCmd(ctx, pctx, rootCmd)
+	registerServeCmd(ctx, pctx, rootCmd)
+	registerDemoCmd(ctx, pctx, rootCmd)
+	registerBiomeCmd(ctx, pctx, rootCmd)
+	registerDeployCmd(ctx, pctx, rootCmd)
+	registerBuildCmd(ctx, pctx, rootCmd)
+	registerApplyCmd(ctx, pctx, rootCmd)
+	registerLaunchCmd(ctx, pctx, rootCmd)
+
+	rootCmd.SetArgs(args)
+	return rootCmd.Execute()
 }
 
 // processContext is the state that gocdk uses to run. It is collected in
