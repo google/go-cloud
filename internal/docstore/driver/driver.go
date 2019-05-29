@@ -24,6 +24,14 @@ import (
 
 // A Collection is a set of documents.
 type Collection interface {
+	// Key returns the document key, or nil if the document doesn't have one.
+	// If the collection is able to generate a key for a Create action, then
+	// it should not return an error if the key is missing. If the collection
+	// can't generate a missing key, it should return an error.
+	//
+	// The returned key must be comparable.
+	Key(Document) (interface{}, error)
+
 	// RunActions executes a slice of actions.
 	//
 	// If unordered is false, it must appear as if the actions were executed in the
@@ -74,12 +82,15 @@ const (
 	Update
 )
 
+//go:generate stringer -type=ActionKind
+
 // An Action describes a single operation on a single document.
 type Action struct {
-	Kind       ActionKind // the kind of action
-	Doc        Document   // the document on which to perform the action
-	FieldPaths [][]string // field paths to retrieve, for Get only
-	Mods       []Mod      // modifications to make, for Update only
+	Kind       ActionKind  // the kind of action
+	Doc        Document    // the document on which to perform the action
+	Key        interface{} // the document key returned by Collection.Key, to avoid recomputing it
+	FieldPaths [][]string  // field paths to retrieve, for Get only
+	Mods       []Mod       // modifications to make, for Update only
 }
 
 // A Mod is a modification to a field path in a document.

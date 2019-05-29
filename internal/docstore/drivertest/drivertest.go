@@ -378,7 +378,10 @@ func testGet(t *testing.T, coll *ds.Collection) {
 func testDelete(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
-	if errs := coll.Actions().Put(doc).Delete(doc).Do(ctx); errs != nil {
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	if errs := coll.Actions().Delete(doc).Do(ctx); errs != nil {
 		t.Fatal(errs)
 	}
 	// The document should no longer exist.

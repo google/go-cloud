@@ -23,6 +23,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/openurl"
@@ -268,10 +269,45 @@ func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *Acti
 // attribute failures to specific actions; in such cases, the returned
 // ActionListError will have entries whose Index field is negative.
 func (l *ActionList) Do(ctx context.Context) error {
+	das, err := l.toDriverActions()
+	if err != nil {
+		return err
+	}
+	dopts := &driver.RunActionsOptions{
+		Unordered: l.unordered,
+		BeforeDo:  l.beforeDo,
+	}
+	alerr := ActionListError(l.coll.driver.RunActions(ctx, das, dopts))
+	if len(alerr) == 0 {
+		return nil // Explicitly return nil, because alerr is not of type error.
+	}
+	for i := range alerr {
+		alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)
+	}
+	return alerr
+}
+
+func (l *ActionList) toDriverActions() ([]*driver.Action, error) {
 	var das []*driver.Action
 	var alerr ActionListError
+	// Create a set of (document key, is Get action) pairs for detecting duplicates:
+	// an action list can have at most one get and at most one write for each key.
+	type keyAndKind struct {
+		key   interface{}
+		isGet bool
+	}
+	seen := map[keyAndKind]bool{}
 	for i, a := range l.actions {
-		d, err := a.toDriverAction()
+		d, err := l.coll.toDriverAction(a)
+		// Check for duplicate key.
+		if err == nil && d.Key != nil {
+			kk := keyAndKind{d.Key, d.Kind == driver.Get}
+			if seen[kk] {
+				err = gcerr.Newf(gcerr.InvalidArgument, nil, "duplicate key in action list: %v", d.Key)
+			} else {
+				seen[kk] = true
+			}
+		}
 		if err != nil {
 			alerr = append(alerr, struct {
 				Index int
@@ -282,28 +318,30 @@ func (l *ActionList) Do(ctx context.Context) error {
 		}
 	}
 	if len(alerr) > 0 {
-		return alerr
+		return nil, alerr
 	}
-	dopts := &driver.RunActionsOptions{
-		Unordered: l.unordered,
-		BeforeDo:  l.beforeDo,
-	}
-	alerr = ActionListError(l.coll.driver.RunActions(ctx, das, dopts))
-	if len(alerr) == 0 {
-		return nil // Explicitly return nil, because alerr is not of type error.
-	}
-	for i := range alerr {
-		alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)
-	}
-	return alerr
+	return das, nil
 }
 
-func (a *Action) toDriverAction() (*driver.Action, error) {
+func (c *Collection) toDriverAction(a *Action) (*driver.Action, error) {
 	ddoc, err := driver.NewDocument(a.doc)
 	if err != nil {
 		return nil, err
 	}
-	d := &driver.Action{Kind: a.kind, Doc: ddoc}
+	key, err := c.driver.Key(ddoc)
+	if err != nil {
+		if gcerrors.Code(err) != gcerr.InvalidArgument {
+			err = gcerr.Newf(gcerr.InvalidArgument, err, "bad document key")
+		}
+		return nil, err
+	}
+	if key == nil && a.kind != driver.Create {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
+	}
+	if reflect.ValueOf(key).Kind() == reflect.Ptr {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "keys cannot be pointers")
+	}
+	d := &driver.Action{Kind: a.kind, Doc: ddoc, Key: key}
 	if a.fieldpaths != nil {
 		d.FieldPaths, err = parseFieldPaths(a.fieldpaths)
 		if err != nil {
@@ -397,6 +435,27 @@ func isIncNumber(x interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func (l *ActionList) String() string {
+	var as []string
+	for _, a := range l.actions {
+		as = append(as, a.String())
+	}
+	return "[" + strings.Join(as, ", ") + "]"
+}
+
+func (a *Action) String() string {
+	buf := &strings.Builder{}
+	fmt.Fprintf(buf, "%s(%v", a.kind, a.doc)
+	for _, fp := range a.fieldpaths {
+		fmt.Fprintf(buf, ", %s", fp)
+	}
+	for _, m := range a.mods {
+		fmt.Fprintf(buf, ", %v", m)
+	}
+	fmt.Fprint(buf, ")")
+	return buf.String()
 }
 
 // Create is a convenience for building and running a single-element action list.
