@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
 	"gocloud.dev/gcp"
 	"golang.org/x/xerrors"
 	"google.golang.org/api/googleapi"
@@ -36,31 +36,34 @@ import (
 	cloudrun "google.golang.org/api/run/v1alpha1"
 )
 
-func launch(ctx context.Context, pctx *processContext, args []string) error {
-	f := newFlagSet(pctx, "launch")
-	dockerImage := f.String("image", ":latest", "Docker image to launch in the form `name[:tag] OR :tag`")
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("gocdk launch: %w", err)
+func registerLaunchCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	var dockerImage string
+	launchCmd := &cobra.Command{
+		Use:   "launch BIOME",
+		Short: "TODO Launch BIOME",
+		Long:  "TODO more about launch",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return launch(ctx, pctx, args[0], dockerImage)
+		},
 	}
-	if f.NArg() != 1 {
-		return usagef("gocdk launch BIOME")
-	}
-	biome := f.Arg(0)
+	launchCmd.Flags().StringVar(&dockerImage, "image", defaultDockerTag, "Docker image to launch in the form `name[:tag] OR :tag`")
+	rootCmd.AddCommand(launchCmd)
+}
 
+func launch(ctx context.Context, pctx *processContext, biome, dockerImage string) error {
 	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
 
 	// Get the image name from the Dockerfile if not specified.
-	if *dockerImage == "" || strings.HasPrefix(*dockerImage, ":") {
+	if dockerImage == "" || strings.HasPrefix(dockerImage, ":") {
 		name, err := moduleDockerImageName(moduleRoot)
 		if err != nil {
 			return xerrors.Errorf("gocdk launch: %w", err)
 		}
-		*dockerImage = name + *dockerImage
+		dockerImage = name + dockerImage
 	}
 
 	// Prepare the launcher.
@@ -90,7 +93,7 @@ func launch(ctx context.Context, pctx *processContext, args []string) error {
 
 	// Launch the application.
 	launchURL, err := launcher.Launch(ctx, &LaunchInput{
-		DockerImage: *dockerImage,
+		DockerImage: dockerImage,
 		Env:         env,
 		Specifier:   tfOutput["launch_specifier"].mapValue(),
 	})

@@ -39,27 +39,22 @@ func TestApply(t *testing.T) {
 	}
 
 	t.Run("TerraformNotInitialized", func(t *testing.T) {
-		dir, cleanup, err := newTestModule()
+		ctx := context.Background()
+		pctx, cleanup, err := newTestProject(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer cleanup()
 		const biomeName = "dev"
 		const wantGreeting = "HALLO WORLD"
-		if err := newTestBiome(dir, biomeName, wantGreeting, new(biomeConfig)); err != nil {
+		if err := newTestBiome(pctx.workdir, biomeName, wantGreeting, new(biomeConfig)); err != nil {
 			t.Fatal(err)
 		}
-		pctx := &processContext{
-			workdir: dir,
-			stdout:  ioutil.Discard,
-			stderr:  ioutil.Discard,
-		}
-		ctx := context.Background()
 
 		// Call the main package run function as if 'apply' and biomeName were passed
 		// on the command line. As part of this, ensureTerraformInit is called to check
 		// that terraform has been properly initialized before running 'terraform apply'.
-		if err := run(ctx, pctx, []string{"apply", biomeName}, new(bool)); err != nil {
+		if err := run(ctx, pctx, []string{"apply", biomeName}); err != nil {
 			t.Errorf("run error: %+v", err)
 		}
 
@@ -67,7 +62,7 @@ func TestApply(t *testing.T) {
 		// we configured. Terraform output fails if 'terraform init' was not called.
 		// It also fails if 'terraform apply' has never been run, as there will be no
 		// terraform state file (terraform.tfstate).
-		outputs, err := tfReadOutput(ctx, findBiomeDir(dir, biomeName), os.Environ())
+		outputs, err := tfReadOutput(ctx, findBiomeDir(pctx.workdir, biomeName), os.Environ())
 		if err != nil {
 			t.Fatal(err)
 		}

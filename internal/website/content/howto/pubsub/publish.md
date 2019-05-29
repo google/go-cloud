@@ -17,10 +17,13 @@ like this:
 
 {{< goexample src="gocloud.dev/pubsub.ExampleTopic_Send" imports="0" >}}
 
+Note that the [semantics of message delivery][] can vary by provider.
+
 The rest of this guide will discuss how to accomplish the first step: opening
 a topic for your chosen Pub/Sub provider.
 
 [`*pubsub.Topic`]: https://godoc.org/gocloud.dev/pubsub#Topic
+[semantics of message delivery][https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery]
 
 ## Constructors versus URL openers
 

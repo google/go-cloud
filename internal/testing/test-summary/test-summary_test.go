@@ -24,7 +24,9 @@ func Test(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "ran 6; passed 3; failed 1; skipped 2"
+	want := `Failures (reporting up to 10):
+  gocloud.dev/internal/docstore/internal/fields/TestUnexportedAnonymousNonStruct
+ran 6; passed 3; failed 1; skipped 2`
 	if got != want {
 		t.Errorf("\ngot  %s\nwant %s", got, want)
 	}

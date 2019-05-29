@@ -16,31 +16,29 @@ package main
 
 import (
 	"context"
-	"flag"
 
-	"golang.org/x/xerrors"
+	"github.com/spf13/cobra"
 )
 
-func deploy(ctx context.Context, pctx *processContext, args []string) error {
-	f := newFlagSet(pctx, "deploy")
-	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
-		return nil
-	} else if err != nil {
-		return usagef("gocdk deploy: %w", err)
+func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	deployCmd := &cobra.Command{
+		Use:   "deploy BIOME",
+		Short: "TODO Deploy the biome",
+		Long:  "TODO more about deploy",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(_ *cobra.Command, args []string) error {
+			biome := args[0]
+			if err := build(ctx, pctx, defaultDockerTag); err != nil {
+				return err
+			}
+			if err := apply(ctx, pctx, biome, true); err != nil {
+				return err
+			}
+			if err := launch(ctx, pctx, biome, defaultDockerTag); err != nil {
+				return err
+			}
+			return nil
+		},
 	}
-
-	if f.NArg() != 1 {
-		return usagef("gocdk deploy BIOME")
-	}
-	biome := f.Arg(0)
-	if err := build(ctx, pctx, nil); err != nil {
-		return err
-	}
-	if err := apply(ctx, pctx, []string{biome}); err != nil {
-		return err
-	}
-	if err := launch(ctx, pctx, []string{biome}); err != nil {
-		return err
-	}
-	return nil
+	rootCmd.AddCommand(deployCmd)
 }

@@ -17,9 +17,7 @@ package main
 import (
 	"context"
 	"io/ioutil"
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -27,27 +25,19 @@ import (
 
 func TestBiomeAdd(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		dir, cleanup, err := newTestModule()
+		ctx := context.Background()
+		pctx, cleanup, err := newTestProject(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		os.MkdirAll(filepath.Join(dir, "biomes"), 0777)
 		defer cleanup()
-
-		ctx := context.Background()
-		pctx := &processContext{
-			workdir: dir,
-			stdin:   strings.NewReader(""),
-			stdout:  ioutil.Discard,
-			stderr:  ioutil.Discard,
-		}
 		const newBiome = "foo"
-		if err := biomeAdd(ctx, pctx, []string{"add", newBiome}); err != nil {
+		if err := biomeAdd(ctx, pctx, newBiome); err != nil {
 			t.Fatal(err)
 		}
 
 		// Ensure at least one file exists in the new biome with extension .tf.
-		newBiomePath := filepath.Join(dir, "biomes", newBiome)
+		newBiomePath := filepath.Join(pctx.workdir, "biomes", newBiome)
 		newBiomeContents, err := ioutil.ReadDir(newBiomePath)
 		if err != nil {
 			t.Error(err)
@@ -71,7 +61,7 @@ func TestBiomeAdd(t *testing.T) {
 			ServeEnabled: configBool(false),
 			Launcher:     configString("cloudrun"),
 		}
-		got, err := readBiomeConfig(dir, newBiome)
+		got, err := readBiomeConfig(pctx.workdir, newBiome)
 		if err != nil {
 			t.Fatalf("biomeAdd: %+v", err)
 		}
