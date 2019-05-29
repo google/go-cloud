@@ -65,6 +65,13 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 	var failedTests []string
 
 	for scanner.Scan() {
+		// When the build fails, go test -json doesn't emit a valid JSON value, only
+		// a line of output starting with FAIL. Report a more reasonable error in
+		// this case.
+		if strings.HasPrefix(scanner.Text(), "FAIL") {
+			return "", true, fmt.Errorf("No test output: %q", scanner.Text())
+		}
+
 		var event TestEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			return "", false, fmt.Errorf("%q: %v", scanner.Text(), err)
