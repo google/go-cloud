@@ -713,8 +713,5 @@ func (*subscription) ErrorAs(err error, i interface{}) bool {
 	return errorAs(err, i)
 }
 
-// AckFunc implements driver.Subscription.AckFunc.
-func (*subscription) AckFunc() func() { return nil }
-
 // Close implements driver.Subscription.Close.
 func (*subscription) Close() error { return nil }

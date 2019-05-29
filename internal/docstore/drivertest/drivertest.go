@@ -862,18 +862,24 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 	if diff != "" {
 		t.Error(diff)
 	}
+
+	// TODO(jba): test that queries with selected fields always return the key and revision fields.
 }
 
 func testGetQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	addQueryDocuments(t, coll)
 
+	// TODO(jba): test that queries with selected fields always return the revision field when there is one.
+
 	// Query filters should have the same behavior when doing string and number
 	// comparison.
 	tests := []struct {
-		name string
-		q    *ds.Query
-		want func(*HighScore) bool // filters queryDocuments
+		name   string
+		q      *ds.Query
+		fields []docstore.FieldPath       // fields to get
+		want   func(*HighScore) bool      // filters queryDocuments
+		before func(x, y *HighScore) bool // if present, checks result order
 	}{
 		{
 			name: "All",
@@ -920,15 +926,58 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			q:    coll.Query().Where("Score", ">=", 50).Where("Time", ">", date(4, 1)),
 			want: func(h *HighScore) bool { return h.Score >= 50 && h.Time.After(date(4, 1)) },
 		},
+		{
+			name:   "AllByPlayerAsc",
+			q:      coll.Query().OrderBy("Player", docstore.Ascending),
+			want:   func(h *HighScore) bool { return true },
+			before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
+		},
+		{
+			name:   "AllByPlayerDesc",
+			q:      coll.Query().OrderBy("Player", docstore.Descending),
+			want:   func(h *HighScore) bool { return true },
+			before: func(h1, h2 *HighScore) bool { return h1.Player > h2.Player },
+		},
+		{
+			name: "GameByPlayer",
+			q: coll.Query().Where("Game", "=", game1).Where("Player", ">", "").
+				OrderBy("Player", docstore.Ascending),
+			want:   func(h *HighScore) bool { return h.Game == game1 },
+			before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
+		},
+		// TODO(jba): add more OrderBy tests.
+
+		{
+			name:   "AllWithKeyFields",
+			q:      coll.Query(),
+			fields: []docstore.FieldPath{"Game", "Player"},
+			want: func(h *HighScore) bool {
+				h.Score = 0
+				h.Time = time.Time{}
+				return true
+			},
+		},
+		{
+			name:   "AllWithScore",
+			q:      coll.Query(),
+			fields: []docstore.FieldPath{"Game", "Player", "Score"},
+			want: func(h *HighScore) bool {
+				h.Time = time.Time{}
+				return true
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := mustCollectHighScores(ctx, t, tc.q.Get(ctx))
+			got, err := collectHighScores(ctx, tc.q.Get(ctx, tc.fields...))
+			if gcerrors.Code(err) == gcerrors.Unimplemented {
+				t.Skip("unimplemented")
+			}
 			for _, g := range got {
 				g.DocstoreRevision = nil
 			}
 			want := filterHighScores(queryDocuments, tc.want)
-			_, err := tc.q.Plan()
+			_, err = tc.q.Plan()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -936,7 +985,15 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 				return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
 			}))
 			if diff != "" {
-				t.Error(diff)
+				t.Fatal(diff)
+			}
+			if tc.before != nil {
+				// Verify that the results are sorted according to tc.less.
+				for i := 1; i < len(got); i++ {
+					if tc.before(got[i], got[i-1]) {
+						t.Errorf("%s at %d sorts before previous %s", got[i], i, got[i-1])
+					}
+				}
 			}
 			// We can't assume anything about the query plan. Just verify that Plan returns
 			// successfully.
@@ -954,6 +1011,7 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 	}
 
 	// Errors are returned from the iterator's Next method.
+	// TODO(jba): move this test to docstore_test, because it's checked in docstore.go.
 	iter := coll.Query().Where("Game", "!=", "").Get(ctx) // != is disallowed
 	var h HighScore
 	err := iter.Next(ctx, &h)
@@ -1097,12 +1155,20 @@ func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) [
 }
 
 func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []*HighScore {
-	var hs []*HighScore
-	collect := func(h interface{}) error { hs = append(hs, h.(*HighScore)); return nil }
-	if err := forEach(ctx, iter, newHighScore, collect); err != nil {
+	hs, err := collectHighScores(ctx, iter)
+	if err != nil {
 		t.Fatal(err)
 	}
 	return hs
+}
+
+func collectHighScores(ctx context.Context, iter *ds.DocumentIterator) ([]*HighScore, error) {
+	var hs []*HighScore
+	collect := func(h interface{}) error { hs = append(hs, h.(*HighScore)); return nil }
+	if err := forEach(ctx, iter, newHighScore, collect); err != nil {
+		return nil, err
+	}
+	return hs, nil
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {

@@ -360,8 +360,5 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerrors.Unknown
 }
 
-// AckFunc implements driver.Subscription.AckFunc.
-func (*subscription) AckFunc() func() { return nil }
-
 // Close implements driver.Subscription.Close.
 func (*subscription) Close() error { return nil }

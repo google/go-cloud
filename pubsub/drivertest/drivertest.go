@@ -505,9 +505,6 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer subCleanup()
-	if ds.AckFunc() != nil {
-		t.Skip("Ack not supported")
-	}
 
 	// Publish 3 messages.
 	for i := 0; i < 3; i++ {

@@ -22,8 +22,6 @@ import (
 	"gocloud.dev/internal/gcerr"
 )
 
-var fieldCache = fields.NewCache(nil, nil, nil)
-
 // A Document is a lightweight wrapper around either a map[string]interface{} or a
 // struct pointer. It provides operations to get and set fields and field paths.
 type Document struct {

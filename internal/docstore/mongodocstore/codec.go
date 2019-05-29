@@ -26,7 +26,7 @@ import (
 
 // Encode and decode to map[string]interface{}.
 // This isn't ideal, because the mongo client encodes/decodes a second time.
-// TODO(jba): find a way do only one encode/decode.
+// TODO(jba): Benchmark the double decode to see if it's worth trying to avoid it.
 
 // This code is copied from memdocstore/codec.go, with some changes:
 // - special treatment for primitive.Binary
