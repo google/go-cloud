@@ -250,81 +250,61 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	if opts.Unordered {
-		return c.runActionsUnordered(ctx, actions, opts)
-	}
-	return c.runActionsOrdered(ctx, actions, opts)
-}
-
-func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	// Split the actions into groups, each of which can be done with a single RPC.
-	// - Consecutive writes are grouped together.
-	// - Consecutive gets with the same field paths are grouped together.
-	// TODO(jba): when we have transforms, apply the constraint that at most one transform per document
-	// is allowed in a given request (see write.proto).
-	groups := driver.SplitActions(actions, shouldSplit)
-	nRun := 0 // number of actions successfully run
-	var n int
-	var err error
-	for _, g := range groups {
-		if g[0].Kind == driver.Get {
-			n, err = c.runGetsOrdered(ctx, g, opts)
-			nRun += n
-		} else {
-			err = c.runWrites(ctx, g, opts)
-			// Writes happen atomically: all or none.
-			if err != nil {
-				nRun += len(g)
-			}
-		}
-		if err != nil {
-			return driver.ActionListError{{nRun, err}}
-		}
-	}
-	return nil
-}
-
-// Reports whether two consecutive actions in a list should be split into different groups.
-func shouldSplit(cur, new *driver.Action) bool {
-	// If the new action isn't a Get but the current group consists of Gets, split.
-	if new.Kind != driver.Get && cur.Kind == driver.Get {
-		return true
-	}
-	// If the new  action is a Get and either (1) the current group consists of writes, or (2) the current group
-	// of gets has a different list of field paths to retrieve, then split.
-	// (The BatchGetDocuments RPC we use for Gets supports only a single set of field paths.)
-	return new.Kind == driver.Get && (cur.Kind != driver.Get || !fpsEqual(cur.FieldPaths, new.FieldPaths))
-}
-
-// Run a sequence of Get actions by calling the BatchGetDocuments RPC.
-// It returns the number of initial successful gets, as well as an error.
-func (c *collection) runGetsOrdered(ctx context.Context, gets []*driver.Action, opts *driver.RunActionsOptions) (int, error) {
-	errs := c.runGets(ctx, gets, opts)
-	for i, err := range errs {
-		if err != nil {
-			return i, err
-		}
-	}
-	return len(gets), nil
+	errs := make([]error, len(actions))
+	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	c.runGets(ctx, beforeGets, errs, opts)
+	ch := make(chan struct{})
+	go func() { defer close(ch); c.runWrites(ctx, writes, errs, opts) }()
+	c.runGets(ctx, gets, errs, opts)
+	<-ch
+	c.runGets(ctx, afterGets, errs, opts)
+	return driver.NewActionListError(errs)
 }
 
 // runGets executes a group of Get actions by calling the BatchGetDocuments RPC.
-// It returns the error for each Get action in order.
-func (c *collection) runGets(ctx context.Context, gets []*driver.Action, opts *driver.RunActionsOptions) []error {
-	errs := make([]error, len(gets))
+// It may make several calls, because all gets in a single RPC must have the same set of field paths.
+func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	for _, group := range groupByFieldPath(actions) {
+		c.batchGet(ctx, group, errs, opts)
+	}
+}
+
+// Collect the Get actions into groups with the same set of field paths.
+func groupByFieldPath(gets []*driver.Action) [][]*driver.Action {
+	// This is quadratic in the worst case, but it's unlikely that there would be
+	// many Gets with different field paths.
+	var groups [][]*driver.Action
+	seen := map[*driver.Action]bool{}
+	for len(seen) < len(gets) {
+		var g []*driver.Action
+		for _, a := range gets {
+			if !seen[a] {
+				if len(g) == 0 || fpsEqual(g[0].FieldPaths, a.FieldPaths) {
+					g = append(g, a)
+					seen[a] = true
+				}
+			}
+		}
+		groups = append(groups, g)
+	}
+	return groups
+}
+
+// Run a single BatchGet RPC with the given Get actions, all of which have the same set of field paths.
+// Populate errs, a slice of per-action errors indexed by the original action list position.
+func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
 	setErr := func(err error) {
-		for i := range errs {
-			errs[i] = err
+		for _, g := range gets {
+			errs[g.Index] = err
 		}
 	}
 
 	req, err := c.newGetRequest(gets)
 	if err != nil {
 		setErr(err)
-		return errs
+		return
 	}
-
-	indexByPath := map[string]int{} // from document path to index in gets slice
+	indexByPath := map[string]int{} // from document path to index in gets
 	for i, path := range req.Documents {
 		indexByPath[path] = i
 	}
@@ -339,13 +319,13 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action, opts *d
 		}
 		if err := opts.BeforeDo(asFunc); err != nil {
 			setErr(err)
-			return errs
+			return
 		}
 	}
 	streamClient, err := c.client.BatchGetDocuments(withResourceHeader(ctx, req.Database), req)
 	if err != nil {
 		setErr(err)
-		return errs
+		return
 	}
 	for {
 		resp, err := streamClient.Recv()
@@ -354,26 +334,25 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action, opts *d
 		}
 		if err != nil {
 			setErr(err)
-			return errs
+			return
 		}
 		switch r := resp.Result.(type) {
 		case *pb.BatchGetDocumentsResponse_Found:
 			pdoc := r.Found
 			i, ok := indexByPath[pdoc.Name]
 			if !ok {
-				errs[i] = gcerr.Newf(gcerr.Internal, nil, "no index for path %s", pdoc.Name)
+				setErr(gcerr.Newf(gcerr.Internal, nil, "no index for path %s", pdoc.Name))
 			} else {
-				errs[i] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
+				errs[gets[i].Index] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
 			}
 		case *pb.BatchGetDocumentsResponse_Missing:
 			i := indexByPath[r.Missing]
-			errs[i] = gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", r.Missing)
+			errs[gets[i].Index] = gcerr.Newf(gcerr.NotFound, nil, "document at path %q is missing", r.Missing)
 		default:
 			setErr(gcerr.Newf(gcerr.Internal, nil, "unknown BatchGetDocumentsResponse result type"))
-			return errs
+			return
 		}
 	}
-	return errs
 }
 
 func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocumentsRequest, error) {
@@ -395,30 +374,39 @@ func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocuments
 
 // runWrites executes all the actions in a single RPC. The actions are done atomically,
 // so either they all succeed or they all fail.
-func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
+func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	setErr := func(err error) {
+		for _, a := range actions {
+			errs[a.Index] = err
+		}
+	}
+
 	// Convert each action to one or more writes, collecting names for newly created
 	// documents along the way.
 	var pws []*pb.Write
-	newNames := make([]string, len(actions)) // from Creates without a name
-	for i, a := range actions {
+	newNames := map[*driver.Action]string{} // from Creates without a name to the new name
+	for _, a := range actions {
 		ws, nn, err := c.actionToWrites(a)
 		if err != nil {
-			return err
+			errs[a.Index] = err
+		} else {
+			if nn != "" {
+				newNames[a] = nn
+			}
+			pws = append(pws, ws...)
 		}
-		newNames[i] = nn
-		pws = append(pws, ws...)
 	}
 	// Call the Commit RPC with the list of writes.
 	wrs, err := c.commit(ctx, pws, opts)
 	if err != nil {
-		return err
+		// TODO(jba): re-run actions so that it appears they happen independently.
+		setErr(err)
+		return
 	}
 	// Now that we've successfully done the action, set the names for newly created docs
 	// that weren't given a name by the caller.
-	for i, nn := range newNames {
-		if nn != "" {
-			_ = actions[i].Doc.SetField(c.nameField, nn)
-		}
+	for a, nn := range newNames {
+		_ = a.Doc.SetField(c.nameField, nn)
 	}
 	// TODO(jba): should we set the revision fields of all docs to the returned update times?
 	// We should only do this if we can for all providers.
@@ -429,7 +417,6 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, op
 	// 	// we just decide to ignore those as well.)
 	// 	_ = actions[i].Doc.SetField(docstore.RevisionField, wr.UpdateTime)
 	// }
-	return nil
 }
 
 // Convert an action to one or more Firestore Write protos.
@@ -599,38 +586,7 @@ func processMods(mods []driver.Mod) (fields map[string]*pb.Value, maskPaths []st
 	return fields, maskPaths, transforms, nil
 }
 
-func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	// Split into groups the same way, but run them concurrently.
-	// TODO(jba): group without considering order.
-	groups := driver.SplitActions(actions, shouldSplit)
-	errs := make([]error, len(actions))
-	var wg sync.WaitGroup
-	groupBaseIndex := 0 // index in actions of first action in group
-	for _, g := range groups {
-		g := g
-		base := groupBaseIndex
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if g[0].Kind == driver.Get {
-				for i, err := range c.runGets(ctx, g, opts) {
-					errs[base+i] = err
-				}
-			} else {
-				err := c.runWrites(ctx, g, opts)
-				// Writes run in a transaction, so there is a single error for the group.
-				for i := 0; i < len(g); i++ {
-					errs[base+i] = err
-				}
-			}
-		}()
-		groupBaseIndex += len(g)
-	}
-	wg.Wait()
-	return driver.NewActionListError(errs)
-}
-
-////////////////
+///////////////
 // From memdocstore/mem.go.
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as

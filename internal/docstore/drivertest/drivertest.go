@@ -33,15 +33,7 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 )
 
-// TODO(jba): Test RunActions with unordered=true. We can't actually test the ordering,
-// but we can check that all actions are executed even if some fail.
-
-// TODO(jba): test an ordered list of actions, with an expected error in the middle,
-// and check that we get the right error back and that the actions after the error
-// aren't executed.
-
-// TODO(jba): test that a malformed action is returned as an error and none of the
-// actions are executed.
+// TODO(jba): Test RunActions to verify as much as possible that they happen independently.
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
@@ -828,7 +820,7 @@ var queryDocuments = []*HighScore{
 }
 
 func addQueryDocuments(t *testing.T, coll *ds.Collection) {
-	alist := coll.Actions().Unordered()
+	alist := coll.Actions()
 	for _, doc := range queryDocuments {
 		alist.Put(doc)
 	}
@@ -846,7 +838,7 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 		{KeyField: "qkf2"},
 		{KeyField: "qkf3"},
 	}
-	al := coll.Actions().Unordered()
+	al := coll.Actions()
 	for _, d := range docs {
 		al.Put(d)
 	}
@@ -855,6 +847,7 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 	}
 	iter := coll.Query().Where(KeyField, "<", "qkf3").Get(ctx)
 	got := mustCollect(ctx, t, iter)
+
 	for _, g := range got {
 		delete(g, docstore.RevisionField)
 	}
@@ -1260,14 +1253,14 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	}
 
 	// Put the first three docs.
-	actions := coll.Actions().Unordered()
+	actions := coll.Actions()
 	for i := 0; i < 6; i++ {
 		actions.Create(docs[i])
 	}
 	must(actions.Do(ctx))
 
 	// Replace the first three and put six more.
-	actions = coll.Actions().Unordered()
+	actions = coll.Actions()
 	for i := 0; i < 3; i++ {
 		doc := docmap{KeyField: docs[i][KeyField], "s": fmt.Sprintf("%d'", i)}
 		actions.Replace(doc)
@@ -1278,7 +1271,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	must(actions.Do(ctx))
 
 	// Delete the first three, get the second three, and put three more.
-	actions = coll.Actions().Unordered()
+	actions = coll.Actions()
 	gdocs := []docmap{
 		{KeyField: docs[3][KeyField]},
 		{KeyField: docs[4][KeyField]},
@@ -1298,7 +1291,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 
 	// Get the first four, and try to create one that already exists. Only the
 	// fourth should succeed.
-	actions = coll.Actions().Unordered()
+	actions = coll.Actions()
 	gdocs = []docmap{
 		{KeyField: docs[0][KeyField]},
 		{KeyField: docs[1][KeyField]},
