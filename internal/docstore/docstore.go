@@ -74,20 +74,23 @@ func (c *Collection) Actions() *ActionList {
 
 // An ActionList is a group of actions that affect a single collection.
 //
-// By default, the actions in the list are performed in order from the point of view
-// of the client. However, the actions may not be performed atomically, and there is
-// no guarantee that a Get following a write will see the value just written (for
-// example, if the provider is eventually consistent). Execution stops with the first
-// failed action.
+// The writes in an action list (Put, Create, Replace, Update and Delete actions)
+// must refer to distinct documents and are unordered with respect to each other.
+// Each write happens independently of the others: all actions will be executed, even
+// if some fail.
 //
-// If the Unordered method is called on an ActionList, then the actions may be
-// executed in any order, perhaps concurrently. All actions will be executed, even if
-// some fail.
+// The Gets in an action list must also refer to distinct documents and are unordered
+// and independent of each other.
+//
+// A Get and a write may refer to the same document. Each write may be paired with
+// only one Get in this way. The Get and write will be executed in the order
+// specified in the list: a Get before a write will see the old value of the
+// document; a Get after the write will see the new value if the provider is strongly
+// consistent, but may see the old value if the provider is eventually consistent.
 type ActionList struct {
-	coll      *Collection
-	actions   []*Action
-	unordered bool
-	beforeDo  func(asFunc func(interface{}) bool) error
+	coll     *Collection
+	actions  []*Action
+	beforeDo func(asFunc func(interface{}) bool) error
 }
 
 // An Action is a read or write on a single document.
@@ -189,13 +192,6 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 	})
 }
 
-// After Unordered is called, Do may execute the actions in any order.
-// All actions will be executed, even if some fail.
-func (l *ActionList) Unordered() *ActionList {
-	l.unordered = true
-	return l
-}
-
 // Mods is a map from field paths to modifications.
 // At present, a modification is one of:
 // - nil, to delete the field
@@ -257,25 +253,19 @@ func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *Acti
 //
 // If Do returns a non-nil error, it will be of type ActionListError. If any action
 // fails, the returned error will contain the position in the ActionList of each
-// failed action (but see the discussion of unordered mode, below). As a special
-// case, none of the actions will be executed if any is invalid (for example, a Put
-// whose document is missing its key field).
+// failed action.
 //
-// In ordered mode (when the Unordered method was not called on the list), execution
-// will stop after the first action that fails.
-//
-// In unordered mode, all the actions will be executed. Docstore tries to execute the
-// actions as efficiently as possible. Sometimes this makes it impossible to
-// attribute failures to specific actions; in such cases, the returned
-// ActionListError will have entries whose Index field is negative.
+// All the actions will be executed. Docstore tries to execute the actions as
+// efficiently as possible. Sometimes this makes it impossible to attribute failures
+// to specific actions; in such cases, the returned ActionListError will have entries
+// whose Index field is negative.
 func (l *ActionList) Do(ctx context.Context) error {
 	das, err := l.toDriverActions()
 	if err != nil {
 		return err
 	}
 	dopts := &driver.RunActionsOptions{
-		Unordered: l.unordered,
-		BeforeDo:  l.beforeDo,
+		BeforeDo: l.beforeDo,
 	}
 	alerr := ActionListError(l.coll.driver.RunActions(ctx, das, dopts))
 	if len(alerr) == 0 {
@@ -314,6 +304,7 @@ func (l *ActionList) toDriverActions() ([]*driver.Action, error) {
 				Err   error
 			}{i, wrapError(l.coll.driver, err)})
 		} else {
+			d.Index = i
 			das = append(das, d)
 		}
 	}

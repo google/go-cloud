@@ -217,13 +217,6 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	if opts.Unordered {
-		return c.runActionsUnordered(ctx, actions, opts)
-	}
-	return c.runActionsOrdered(ctx, actions, opts)
-}
-
-func (c *collection) runActionsOrdered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	groups := c.splitActions(actions)
 	nRun := 0 // number of actions successfully run
 	var err error
@@ -342,11 +335,7 @@ func (c *collection) splitActionsUnordered(actions []*driver.Action) ([][]*drive
 // unordered mode, it returns a list of errors with indices matched with these
 // in the action list.
 func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) (errs []error) {
-	if opts.Unordered {
-		errs = make([]error, len(actions))
-	} else {
-		errs = make([]error, 1)
-	}
+	errs = make([]error, len(actions))
 	setErr := func(err error) {
 		for i := range errs {
 			errs[i] = err
@@ -387,26 +376,17 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts
 
 	for i, res := range out.Responses {
 		item := res.Item
-		if opts.Unordered {
-			if item == nil {
-				errs[i] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", actions[i].Doc)
-			} else {
-				errs[i] = decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc)
-			}
+		if item == nil {
+			errs[i] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", actions[i].Doc)
 		} else {
-			if item == nil {
-				setErr(gcerr.Newf(gcerr.NotFound, nil, "item %v not found", actions[i].Doc))
-				return errs
-			} else if err := decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc); err != nil {
-				setErr(err)
-				return errs
-			}
+			errs[i] = decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc)
 		}
 	}
 	return errs
 }
 
 func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
+	// TODO(shantuo/jba): make writes independent of each other.
 	tws := make([]*dyn.TransactWriteItem, len(actions))
 	for i, a := range actions {
 		var pc *expression.ConditionBuilder
