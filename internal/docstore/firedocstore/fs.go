@@ -372,51 +372,53 @@ func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocuments
 	return req, nil
 }
 
+// commitCall holds information needed to make a Commit RPC and to follow up after it is done.
+type commitCall struct {
+	writes   []*pb.Write      // writes to commit
+	actions  []*driver.Action // actions corresponding to those writes
+	newNames []string         // new names for Create; parallel to actions
+}
+
 // runWrites executes all the actions in a single RPC. The actions are done atomically,
 // so either they all succeed or they all fail.
 func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	setErr := func(err error) {
-		for _, a := range actions {
-			errs[a.Index] = err
-		}
-	}
-
 	// Convert each action to one or more writes, collecting names for newly created
-	// documents along the way.
-	var pws []*pb.Write
-	newNames := map[*driver.Action]string{} // from Creates without a name to the new name
+	// documents along the way. Divide writes into those with preconditions and those without.
+	// Writes without preconditions can't fail, so we can execute them all in one Commit RPC.
+	// All other writes must be run as separate Commits.
+	var (
+		nCall  = &commitCall{} // for writes without preconditions
+		pCalls []*commitCall   // for writes with preconditions
+	)
 	for _, a := range actions {
 		ws, nn, err := c.actionToWrites(a)
 		if err != nil {
 			errs[a.Index] = err
-		} else {
-			if nn != "" {
-				newNames[a] = nn
-			}
-			pws = append(pws, ws...)
+		} else if ws[0].CurrentDocument == nil { // no precondition
+			nCall.writes = append(nCall.writes, ws...)
+			nCall.actions = append(nCall.actions, a)
+			nCall.newNames = append(nCall.newNames, nn)
+		} else { // writes have a precondition
+			pCalls = append(pCalls, &commitCall{
+				writes:   ws,
+				actions:  []*driver.Action{a},
+				newNames: []string{nn},
+			})
 		}
 	}
-	// Call the Commit RPC with the list of writes.
-	wrs, err := c.commit(ctx, pws, opts)
-	if err != nil {
-		// TODO(jba): re-run actions so that it appears they happen independently.
-		setErr(err)
-		return
+	// Run the commit calls concurrently.
+	// TODO(jba): limit number of outstanding RPCs.
+	calls := append(pCalls, nCall)
+	var wg sync.WaitGroup
+	for _, call := range calls {
+		call := call
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.doCommitCall(ctx, call, errs, opts)
+		}()
 	}
-	// Now that we've successfully done the action, set the names for newly created docs
-	// that weren't given a name by the caller.
-	for a, nn := range newNames {
-		_ = a.Doc.SetField(c.nameField, nn)
-	}
-	// TODO(jba): should we set the revision fields of all docs to the returned update times?
-	// We should only do this if we can for all providers.
-	_ = wrs
-	// for i, wr := range wrs {
-	// 	// Ignore errors. It's fine if the doc doesn't have a revision field.
-	// 	// (We also could get an error if that field is unsettable for some reason, but
-	// 	// we just decide to ignore those as well.)
-	// 	_ = actions[i].Doc.SetField(docstore.RevisionField, wr.UpdateTime)
-	// }
+	wg.Wait()
 }
 
 // Convert an action to one or more Firestore Write protos.
@@ -586,6 +588,65 @@ func processMods(mods []driver.Mod) (fields map[string]*pb.Value, maskPaths []st
 	return fields, maskPaths, transforms, nil
 }
 
+// doCommitCall Calls the Commit RPC with a list of writes, and handles the results.
+func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []error, opts *driver.RunActionsOptions) {
+	wrs, err := c.commit(ctx, call.writes, opts)
+	if err != nil {
+		for _, a := range call.actions {
+			errs[a.Index] = err
+		}
+		return
+	}
+	_ = wrs
+	// Set the revision fields of the documents.
+	// The actions and writes may not correspond, because Update actions may require
+	// two writes. We can tell which writes correspond to actions by the type of write.
+	// TODO(jba): enable this in a separate PR; it breaks tests.
+	// TODO(jba): test that writes return revisions in drivertest.go.
+	// j := 0
+	// for i, wr := range wrs {
+	// 	if _, ok := call.writes[i].Operation.(*pb.Write_Transform); !ok {
+	// 		// Ignore errors. It's fine if the doc doesn't have a revision field.
+	// 		_ = call.actions[j].Doc.SetField(docstore.RevisionField, wr.UpdateTime)
+	// 		j++
+	// 	}
+	// }
+	// Set new names for Create actions.
+	for i, a := range call.actions {
+		if call.newNames[i] != "" {
+			_ = a.Doc.SetField(c.nameField, call.newNames[i])
+		}
+	}
+}
+
+func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.RunActionsOptions) ([]*pb.WriteResult, error) {
+	req := &pb.CommitRequest{
+		Database: c.dbPath,
+		Writes:   ws,
+	}
+	if opts.BeforeDo != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**pb.CommitRequest)
+			if !ok {
+				return false
+			}
+			*p = req
+			return true
+		}
+		if err := opts.BeforeDo(asFunc); err != nil {
+			return nil, err
+		}
+	}
+	res, err := c.client.Commit(withResourceHeader(ctx, req.Database), req)
+	if err != nil {
+		return nil, err
+	}
+	if len(res.WriteResults) != len(ws) {
+		return nil, gcerr.Newf(gcerr.Internal, nil, "wrong number of WriteResults from firestore commit")
+	}
+	return res.WriteResults, nil
+}
+
 ///////////////
 // From memdocstore/mem.go.
 
@@ -692,38 +753,6 @@ func preconditionFromTimestamp(ts *tspb.Timestamp) *pb.Precondition {
 		return nil
 	}
 	return &pb.Precondition{ConditionType: &pb.Precondition_UpdateTime{ts}}
-}
-
-// TODO(jba): make sure we enforce these Firestore commit constraints:
-// - At most one `transform` per document is allowed in a given request.
-// - An `update` cannot follow a `transform` on the same document in a given request.
-// These should actually happen in groupActions.
-func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.RunActionsOptions) ([]*pb.WriteResult, error) {
-	req := &pb.CommitRequest{
-		Database: c.dbPath,
-		Writes:   ws,
-	}
-	if opts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**pb.CommitRequest)
-			if !ok {
-				return false
-			}
-			*p = req
-			return true
-		}
-		if err := opts.BeforeDo(asFunc); err != nil {
-			return nil, err
-		}
-	}
-	res, err := c.client.Commit(withResourceHeader(ctx, req.Database), req)
-	if err != nil {
-		return nil, err
-	}
-	if len(res.WriteResults) != len(ws) {
-		return nil, gcerr.Newf(gcerr.Internal, nil, "wrong number of WriteResults from firestore commit")
-	}
-	return res.WriteResults, nil
 }
 
 // Report whether two lists of field paths are equal.

@@ -1289,19 +1289,23 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	must(actions.Do(ctx))
 	compare(gdocs, docs[3:6])
 
-	// Get the first four, and try to create one that already exists. Only the
-	// fourth should succeed.
+	// At this point, the existing documents are 3 - 9.
+
+	// Get the first four, try to create one that already exists, delete a
+	// nonexistent doc, and put one. Only the Get of #3, the Delete and the Put
+	// should succeed.
 	actions = coll.Actions()
-	gdocs = []docmap{
+	for _, doc := range []docmap{
 		{KeyField: docs[0][KeyField]},
 		{KeyField: docs[1][KeyField]},
 		{KeyField: docs[2][KeyField]},
 		{KeyField: docs[3][KeyField]},
-	}
-	for i := 0; i < len(gdocs); i++ {
-		actions.Get(gdocs[i])
+	} {
+		actions.Get(doc)
 	}
 	actions.Create(docs[4])
+	actions.Put(docs[5])
+	actions.Delete(docs[0])
 	err := actions.Do(ctx)
 	if err == nil {
 		t.Fatal("want error, got nil")
@@ -1312,15 +1316,15 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	}
 	for _, e := range alerr {
 		switch i := e.Index; i {
-		case 3:
-			if e.Err != nil {
-				t.Errorf("index 3: got %v, want nil", e.Err)
-			}
+		case 3, 5, 6:
+			t.Errorf("index %d: got %v, want nil", i, e.Err)
+
 		case 4, -1: // -1 for mongodb issue, see https://jira.mongodb.org/browse/GODRIVER-1028
 			if ec := gcerrors.Code(e.Err); ec != gcerrors.AlreadyExists &&
 				ec != gcerrors.FailedPrecondition { // TODO(shantuo): distinguish this case for dyanmo
 				t.Errorf("index 4: create an existing document: got %v, want error", e.Err)
 			}
+
 		default:
 			if gcerrors.Code(e.Err) != gcerrors.NotFound {
 				t.Errorf("index %d: got %v, want NotFound", i, e.Err)
