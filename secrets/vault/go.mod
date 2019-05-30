@@ -15,7 +15,7 @@
 module gocloud.dev/secrets/vault
 
 require (
-	github.com/hashicorp/vault/api v1.0.2
+	github.com/hashicorp/vault/api v1.0.1
 	gocloud.dev v0.14.0
 )
 
