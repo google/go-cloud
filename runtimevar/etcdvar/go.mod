@@ -38,8 +38,6 @@ require (
 	go.etcd.io/etcd v3.3.12+incompatible
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
-	gocloud.dev v0.14.0
+	gocloud.dev v0.15.0
 	google.golang.org/grpc v1.20.1
 )
-
-replace gocloud.dev => ../../

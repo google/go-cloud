@@ -10,24 +10,12 @@ require (
 	github.com/google/wire v0.2.2
 	github.com/gorilla/mux v1.7.1
 	go.opencensus.io v0.21.0
-	gocloud.dev v0.14.0
-	gocloud.dev/pubsub/kafkapubsub v0.14.0
-	gocloud.dev/pubsub/natspubsub v0.14.0
-	gocloud.dev/pubsub/rabbitpubsub v0.14.0
-	gocloud.dev/runtimevar/etcdvar v0.14.0
-	gocloud.dev/secrets/vault v0.14.0
+	gocloud.dev v0.15.0
+	gocloud.dev/pubsub/kafkapubsub v0.15.0
+	gocloud.dev/pubsub/natspubsub v0.15.0
+	gocloud.dev/pubsub/rabbitpubsub v0.15.0
+	gocloud.dev/runtimevar/etcdvar v0.15.0
+	gocloud.dev/secrets/vault v0.15.0
 	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
-
-replace gocloud.dev => ../
-
-replace gocloud.dev/pubsub/kafkapubsub => ../pubsub/kafkapubsub
-
-replace gocloud.dev/pubsub/natspubsub => ../pubsub/natspubsub
-
-replace gocloud.dev/pubsub/rabbitpubsub => ../pubsub/rabbitpubsub
-
-replace gocloud.dev/runtimevar/etcdvar => ../runtimevar/etcdvar
-
-replace gocloud.dev/secrets/vault => ../secrets/vault

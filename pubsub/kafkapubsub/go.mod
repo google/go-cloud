@@ -23,7 +23,5 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/pierrec/lz4 v2.0.7+incompatible // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
-	gocloud.dev v0.14.0
+	gocloud.dev v0.15.0
 )
-
-replace gocloud.dev => ../../
