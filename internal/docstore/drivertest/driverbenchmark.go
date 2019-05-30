@@ -70,7 +70,7 @@ func benchmarkSingleActionGet(n int, b *testing.B, coll *docstore.Collection) {
 		docs[i] = docmap{KeyField: baseKey + strconv.Itoa(i), "n": i}
 		puts.Put(docs[i])
 	}
-	if err := puts.Unordered().Do(ctx); err != nil {
+	if err := puts.Do(ctx); err != nil {
 		b.Fatal(err)
 	}
 
@@ -101,7 +101,7 @@ func benchmarkActionListPut(n int, b *testing.B, coll *docstore.Collection) {
 				doc := docmap{KeyField: key, "S": key}
 				actions.Put(doc)
 			}
-			if err := actions.Unordered().Do(ctx); err != nil {
+			if err := actions.Do(ctx); err != nil {
 				b.Error(err)
 			}
 		}
@@ -117,7 +117,7 @@ func benchmarkActionListGet(n int, b *testing.B, coll *docstore.Collection) {
 		docs[i] = docmap{KeyField: baseKey + strconv.Itoa(i), "n": i}
 		puts.Put(docs[i])
 	}
-	if err := puts.Unordered().Do(ctx); err != nil {
+	if err := puts.Do(ctx); err != nil {
 		b.Fatal(err)
 	}
 
@@ -129,7 +129,7 @@ func benchmarkActionListGet(n int, b *testing.B, coll *docstore.Collection) {
 				got := docmap{KeyField: doc[KeyField]}
 				gets.Get(got)
 			}
-			if err := gets.Unordered().Do(ctx); err != nil {
+			if err := gets.Do(ctx); err != nil {
 				b.Fatal(err)
 			}
 		}
