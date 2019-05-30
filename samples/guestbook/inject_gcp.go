@@ -78,8 +78,12 @@ func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from Runtime Configurator.
 func gcpMOTDVar(ctx context.Context, client pb.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	varKey := gcpruntimeconfig.VariableKey(project, flags.runtimeConfigName, flags.motdVar)
-	v, err := gcpruntimeconfig.OpenVariable(client, varKey, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
+	name := gcpruntimeconfig.ResourceName{
+		ProjectID: string(project),
+		Config:    flags.runtimeConfigName,
+		Variable:  flags.motdVar,
+	}
+	v, err := gcpruntimeconfig.OpenVariable(client, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
