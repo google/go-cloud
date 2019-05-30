@@ -68,6 +68,8 @@ if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   echo
   echo "Starting local dependencies..."
   ./internal/testing/start_local_deps.sh
+  echo
+  echo "Installing Wire..."
   go install -mod=readonly github.com/google/wire/cmd/wire
 fi
 
@@ -87,14 +89,9 @@ while read -r path || [[ -n "$path" ]]; do
   # codecov will only save the last one anyway.
   if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
     echo "Running Go tests with coverage..."
-    go test -mod=readonly -json -race -coverpkg=./... -coverprofile=coverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
-    if [ -f coverage.out ] && [ $result -eq 0 ]; then
-      # Filter out test packages.
-      grep -v test coverage.out > coverage2.out
-      mv coverage2.out coverage.out
-      bash <(curl -s https://codecov.io/bash)
-      rm coverage.out
-    fi
+    go test -mod=readonly -json -race -coverpkg=./... -coverprofile=modcoverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
+    cat modcoverage.out >> coverage.out
+    rm modcoverage.out
   else
     echo "Running Go tests..."
     # TODO(rvangent): Special case modules to skip for Windows. Perhaps
@@ -106,6 +103,16 @@ while read -r path || [[ -n "$path" ]]; do
       go test -mod=readonly -json -race ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
     fi
   fi
+
+  # Upload cumulative coverage data.
+  if [ -f coverage.out ] && [ $result -eq 0 ]; then
+    # Filter out test packages.
+    grep -v test coverage.out > coverage2.out
+    mv coverage2.out coverage.out
+    bash <(curl -s https://codecov.io/bash)
+    rm coverage.out
+  fi
+
   # Do these additional checks for the Linux build on Travis, or when running
   # locally.
   if [[ "${TRAVIS_OS_NAME:-linux}" == "linux" ]]; then
