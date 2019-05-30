@@ -100,7 +100,7 @@ func ExampleCollection_Update() {
 	fmt.Printf("%+v\n", pat2)
 
 	// Output:
-	// &{Name:Pat Score:0 DocstoreRevision:<nil>}
+	// &{Name:Pat Score:0 DocstoreRevision:1}
 	// &{Name:Pat Score:15 DocstoreRevision:2}
 	// &{Name:Pat Score:20 DocstoreRevision:3}
 }

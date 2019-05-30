@@ -107,19 +107,30 @@ func (l *ActionList) add(a *Action) *ActionList {
 	return l
 }
 
-// Create adds an action that creates a new document to the given ActionList, and returns the ActionList.
-// The document must not already exist; an error for which gcerrors.Code returns
-// AlreadyExists is returned if it does. If the document doesn't have key fields, it
-// will be given key fields with unique values.
+// Create adds an action that creates a new document to the given ActionList, and
+// returns the ActionList. The document must not already exist; an error with code
+// AlreadyExists is returned if it does. (See gocloud.dev/gcerrors for more on error
+// codes.)
+//
+// If the document doesn't have key
+// fields, key fields with unique values will be created and doc will be populated
+// with them.
+//
+// If doc is a map, or a struct with a revision field, then the revision field will
+// be set to the revision of the newly created document.
 // TODO(jba): treat zero values for struct fields as not present?
+//
+// Except for setting the revision field and possibly setting the key fields, the doc
+// argument is not modified.
 func (l *ActionList) Create(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Create, doc: doc})
 }
 
 // Replace adds an action that replaces a document to the given ActionList, and returns the ActionList.
-// The key fields must be set.
-// The document must already exist; an error for which gcerrors.Code returns NotFound
-// is returned if it does not.
+// The key fields of the doc argument must be set.
+// The document must already exist; an error with code NotFound is returned if it
+// does not. (See gocloud.dev/gcerrors for more on error codes.)
+//
 // See the Revisions section of the package documentation for how revisions are
 // handled.
 func (l *ActionList) Replace(doc Document) *ActionList {

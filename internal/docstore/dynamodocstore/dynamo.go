@@ -365,7 +365,7 @@ func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]
 
 func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
 	// TODO(jba): Do these concurrently.
-	// TODO(jba): reimplemente opts.BeforeDo
+	// TODO(jba): reimplement opts.BeforeDo
 	for _, a := range writes {
 		var pc *expression.ConditionBuilder
 		var err error
@@ -423,8 +423,8 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 		// It doesn't make sense to generate a random sort key.
 		return fmt.Errorf("missing sort key %q", c.sortKey)
 	}
-
-	if av.M[docstore.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
+	rev := driver.UniqueString()
+	if av.M[docstore.RevisionField], err = encodeValue(rev); err != nil {
 		return err
 	}
 	in := &dyn.PutItemInput{
@@ -441,8 +441,11 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 		in.ConditionExpression = ce.Condition()
 	}
 	_, err = c.db.PutItemWithContext(ctx, in)
-	if err == nil && newPartitionKey != "" {
-		doc.SetField(c.partitionKey, newPartitionKey)
+	if err == nil {
+		if newPartitionKey != "" {
+			_ = doc.SetField(c.partitionKey, newPartitionKey)
+		}
+		_ = doc.SetField(docstore.RevisionField, rev)
 	}
 	return err
 }
@@ -490,7 +493,8 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 			ub = ub.Set(fp, expression.Value(m.Value))
 		}
 	}
-	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
+	rev := driver.UniqueString()
+	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(rev))
 	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
 	if err != nil {
 		return err
@@ -503,6 +507,9 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 		ExpressionAttributeNames:  ce.Names(),
 		ExpressionAttributeValues: ce.Values(),
 	})
+	if err == nil {
+		_ = doc.SetField(docstore.RevisionField, rev)
+	}
 	return err
 }
 

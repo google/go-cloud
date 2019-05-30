@@ -223,6 +223,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 			return err
 		}
 		c.changeRevision(doc)
+		_ = a.Doc.SetField(c.opts.RevisionField, doc[c.opts.RevisionField])
 		c.docs[a.Key] = doc
 
 	case driver.Delete:
@@ -238,6 +239,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		if err := c.update(current, a.Mods); err != nil {
 			return err
 		}
+		_ = a.Doc.SetField(c.opts.RevisionField, current[c.opts.RevisionField])
 
 	case driver.Get:
 		// We've already retrieved the document into current, above.
@@ -297,6 +299,7 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 			m.parentMap[m.key] = m.encodedValue
 		}
 	}
+	// TODO(jba): we shouldn't have to check len(mods) because it should never be zero.
 	if len(mods) > 0 {
 		c.changeRevision(doc)
 	}

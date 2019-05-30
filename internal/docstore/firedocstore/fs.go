@@ -580,16 +580,14 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 	// Set the revision fields of the documents.
 	// The actions and writes may not correspond, because Update actions may require
 	// two writes. We can tell which writes correspond to actions by the type of write.
-	// TODO(jba): enable this in a separate PR; it breaks tests.
-	// TODO(jba): test that writes return revisions in drivertest.go.
-	// j := 0
-	// for i, wr := range wrs {
-	// 	if _, ok := call.writes[i].Operation.(*pb.Write_Transform); !ok {
-	// 		// Ignore errors. It's fine if the doc doesn't have a revision field.
-	// 		_ = call.actions[j].Doc.SetField(docstore.RevisionField, wr.UpdateTime)
-	// 		j++
-	// 	}
-	// }
+	j := 0
+	for i, wr := range wrs {
+		if _, ok := call.writes[i].Operation.(*pb.Write_Transform); !ok {
+			// Ignore errors. It's fine if the doc doesn't have a revision field.
+			_ = call.actions[j].Doc.SetField(docstore.RevisionField, wr.UpdateTime)
+			j++
+		}
+	}
 	// Set new names for Create actions.
 	for i, a := range call.actions {
 		if call.newNames[i] != "" {

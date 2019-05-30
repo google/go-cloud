@@ -144,6 +144,9 @@
 // write action with that same document, it will fail if the document was changed
 // since the Get.
 //
+// Create, Put, Replace and Update all populate their argument document with the
+// new revision of the document.
+//
 // Since different providers use different types for revisions, the type of the
 // revision field is unspecified. When defining a struct for storing docstore data,
 // define the field to be of type interface{}. For example,
