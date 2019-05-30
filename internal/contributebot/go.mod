@@ -10,7 +10,7 @@ require (
 	github.com/kr/pty v1.1.3 // indirect
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829 // indirect
 	go.opencensus.io v0.21.0
-	gocloud.dev v0.13.0
+	gocloud.dev v0.15.0
 	golang.org/x/crypto v0.0.0-20190424203555-c05e17bb3b2d // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sys v0.0.0-20190424175732-18eb32c0e2f0

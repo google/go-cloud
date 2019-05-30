@@ -16,6 +16,4 @@
 # Run gatherexamples for the project.
 
 set -eo pipefail
-cd "$(dirname "$0")"
-# TODO(#1883): Use a consolidated list of all modules.
-go run gatherexamples.go ../../..
+sed -e '/^#/d' -e '/^$/d' allmodules | xargs go run internal/website/gatherexamples/gatherexamples.go
