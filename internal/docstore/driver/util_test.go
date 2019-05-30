@@ -15,6 +15,7 @@
 package driver
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -69,4 +70,51 @@ func TestSplitActions(t *testing.T) {
 			t.Errorf("%s: %s", test.desc, diff)
 		}
 	}
+}
+
+func TestGroupActions(t *testing.T) {
+	for _, test := range []struct {
+		in   []*Action
+		want [][]int // in the same order as the return args
+	}{
+		{
+			in:   []*Action{{Kind: Get, Key: 1}},
+			want: [][]int{nil, {0}, nil, nil},
+		},
+		{
+			in: []*Action{
+				{Kind: Get, Key: 1},
+				{Kind: Get, Key: 3},
+				{Kind: Put, Key: 1},
+				{Kind: Replace, Key: 2},
+				{Kind: Get, Key: 2},
+			},
+			want: [][]int{{0}, {1}, {2, 3}, {4}},
+		},
+	} {
+		got := make([][]*Action, 4)
+		got[0], got[1], got[2], got[3] = GroupActions(test.in)
+		want := make([][]*Action, 4)
+		for i, s := range test.want {
+			for _, x := range s {
+				want[i] = append(want[i], test.in[x])
+			}
+		}
+		diff := cmp.Diff(got, want,
+			cmpopts.IgnoreUnexported(Document{}),
+			cmpopts.SortSlices(func(a1, a2 *Action) bool {
+				if a1.Kind != a2.Kind {
+					return a1.Kind < a2.Kind
+				}
+				return a1.Key.(int) < a2.Key.(int)
+			}))
+		if diff != "" {
+
+			t.Errorf("%v: %s", test.in, diff)
+		}
+	}
+}
+
+func (a *Action) String() string { // for TestGroupActions
+	return fmt.Sprintf("<%s %v>", a.Kind, a.Key)
 }

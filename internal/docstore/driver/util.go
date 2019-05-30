@@ -15,6 +15,8 @@
 package driver
 
 import (
+	"sort"
+
 	"github.com/google/uuid"
 )
 
@@ -47,4 +49,45 @@ func SplitActions(actions []*Action, split func(a, b *Action) bool) [][]*Action 
 	}
 	collect()
 	return groups
+}
+
+// GroupActions separates actions into four sets: writes, gets that must happen before the writes,
+// gets that must happen after the writes, and gets that can happen concurrently with the writes.
+func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets []*Action) {
+	// maps from key to action
+	bgets := map[interface{}]*Action{}
+	agets := map[interface{}]*Action{}
+	cgets := map[interface{}]*Action{}
+	writes := map[interface{}]*Action{}
+	for _, a := range actions {
+		if a.Kind == Get {
+			// If there was a prior write with this key, make sure this get
+			// happens after the writes.
+			if _, ok := writes[a.Key]; ok {
+				agets[a.Key] = a
+			} else {
+				cgets[a.Key] = a
+			}
+		} else {
+			// This is a write. A prior get on the same key was put into cgets; move
+			// it to bgets because it has to happen before writes.
+			if g, ok := cgets[a.Key]; ok {
+				delete(cgets, a.Key)
+				bgets[a.Key] = g
+			}
+			writes[a.Key] = a
+		}
+	}
+
+	vals := func(m map[interface{}]*Action) []*Action {
+		var as []*Action
+		for _, v := range m {
+			as = append(as, v)
+		}
+		// Sort so the order is always the same for replay.
+		sort.Slice(as, func(i, j int) bool { return as[i].Index < as[j].Index })
+		return as
+	}
+
+	return vals(bgets), vals(cgets), vals(writes), vals(agets)
 }
