@@ -35,7 +35,7 @@ import (
 // 1. Update this constant to your GCP project ID.
 // 2. Ensure that the "Runtime Configuration API" is enabled for your project.
 // TODO(issue #300): Use Terraform to get this.
-const projectID = "google.com:rvangent-testing-prod"
+const projectID = "go-cloud-test-216917"
 
 const (
 	// configID is the runtimeconfig high-level config that variables sit under.
