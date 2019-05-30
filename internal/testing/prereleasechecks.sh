@@ -48,143 +48,169 @@ esac
 #       we assume that if the "init" steps succeeded, the necessary tests will
 #       run.
 
-echo "***** mysql/azuremysql *****"
-pushd mysql/azuremysql &> /dev/null
+rootdir="$(pwd)"
+FAILURES=""
+
+TESTDIR="mysql/azuremysql"
+echo "***** $TESTDIR *****"
+pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
-    terraform init && terraform apply -var location="centralus" -var resourcegroup="GoCloud" -auto-approve
+    terraform init && terraform apply -var location="centralus" -var resourcegroup="GoCloud" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
     # TODO: These tests fail with "Error 9999".
-    go test -mod=readonly ./...
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
     ;;
   cleanup)
-    terraform destroy
+    terraform destroy -var location="centralus" -var resourcegroup="GoCloud" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
 
 
+TESTDIR="mysql/cloudmysql"
 echo
-echo "***** mysql/cloudmysql *****"
-pushd mysql/cloudmysql &> /dev/null
+echo "***** $TESTDIR *****"
+pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
     # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test" -auto-approve
+    terraform init && terraform apply -var project="go-cloud-test" -auto-approve || echo "[KNOWN FAILURE]"
     ;;
   run)
-    go test -mod=readonly
+    # TODO: This fails, probably because of the Terraform error above.
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
     ;;
   cleanup)
-    terraform destroy
+    terraform destroy -var project="go-cloud-test" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
 
 
+TESTDIR="mysql/rdsmysql"
 echo
-echo "***** mysql/rdsmysql *****"
-pushd mysql/rdsmysql &> /dev/null
+echo "***** $TESTDIR *****"
+pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
-    terraform init && terraform apply -var region="us-west-1" -auto-approve
+    terraform init && terraform apply -var region="us-west-1" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
-    go test -mod=readonly
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
-    terraform destroy
+    terraform destroy -var region="us-west-1" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
 
 
+TESTDIR="postgres/cloudpostgres"
 echo
-echo "***** postgres/cloudpostgres *****"
-pushd postgres/cloudpostgres &> /dev/null
+echo "***** $TESTDIR *****"
+pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
     # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test" -auto-approve
+    terraform init && terraform apply -var project="go-cloud-test" -auto-approve || echo "[KNOWN FAILURE]"
     ;;
   run)
-    go test -mod=readonly
+    # TODO: This fails, probably because of the Terraform error above.
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
     ;;
   cleanup)
-    terraform destroy
+    terraform destroy -var project="go-cloud-test" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
 
 
+TESTDIR="postgres/rdspostgres"
 echo
-echo "***** postgres/rdspostgres *****"
-pushd postgres/rdspostgres &> /dev/null
+echo "***** $TESTDIR *****"
+pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
-    terraform init && terraform apply -var region="us-west-1" -auto-approve
+    terraform init && terraform apply -var region="us-west-1" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
-    go test -mod=readonly
+    go test -mod=readonly -race -json  | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
-    terraform destroy
+    terraform destroy -var region="us-west-1" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
 
 
+TESTDIR="tests/aws"
 echo
-echo "***** tests/aws *****"
-pushd tests/aws &> /dev/null
+echo "***** $TESTDIR *****"
+pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
     # TODO: Need some more vars, like app_binary.
-    terraform init && terraform apply -var region="us-west-1" -auto-approve
+    # terraform init && terraform apply -var region="us-west-1" -auto-approve || echo "[KNOWN FAILURE]"
     ;;
   run)
     # TODO: Is this the right way to run this test? There's also a `test.sh`.
-    go test -mod=readonly ./...
+    go test -mod=readonly -race -json ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
-    terraform destroy
+    # terraform destroy
     ;;
 esac
 popd &> /dev/null
 
 
+TESTDIR="tests/gcp"
 echo
-echo "***** tests/gcp *****"
-pushd tests/gcp &> /dev/null
+echo "***** $TESTDIR *****"
+pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
     # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test" -auto-approve
+    terraform init && terraform apply -var project="go-cloud-test" -auto-approve || echo "[KNOWN FAILURE]"
     ;;
   run)
     # TODO: Is this the right way to run this test? There's also a `test.sh`.
-    go test -mod=readonly ./...
+    go test -mod=readonly -race -json ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
-    terraform destroy
+    terraform destroy -var project="go-cloud-test" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
 
+
+# This iterates over all packages that have a "testdata" directory, using that
+# as a signal for record/replay tests, and runs the tests with a "-record" flag.
+# This verifies that we can generate a fresh recording against the live
+# provider.
+while read -r TESTDIR; do
+  echo
+  echo "***** $TESTDIR *****"
+  pushd "$TESTDIR" &> /dev/null
+  case "$op" in
+    init)
+      ;;
+    run)
+      go test -mod=readonly -race -record -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
+      ;;
+    cleanup)
+      ;;
+  esac
+  popd &> /dev/null
+done < <( find . -name testdata -printf "%h\n" )
 
 echo
-echo "***** pubsub/azure *****"
-pushd pubsub/azuresb &> /dev/null
-case "$op" in
-  init)
-    ;;
-  run)
-    go test -mod=readonly -v -record
-    ;;
-  cleanup)
-    ;;
-esac
-popd &> /dev/null
+echo
+if [ ! -z "$FAILURES" ]; then
+  echo "FAILED!"
+  echo "Investigate and re-run -record tests for the following packages: $FAILURES"
+  exit 1
+fi
 
 echo "SUCCESS!"
