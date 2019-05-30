@@ -234,13 +234,14 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 		return nil, xerrors.New("cloud run launch: launch_specifier missing project_id, location, and/or service_name")
 	}
 
-	// Push to GCR if needed.
-	// TODO(light): Check for presence in Docker daemon and country-specific
-	// prefixes.
-	if strings.HasPrefix(input.DockerImage, "gcr.io/") {
-		if err := crl.dockerPush(ctx, input.DockerImage); err != nil {
-			return nil, xerrors.Errorf("cloud run launch: %w", err)
-		}
+	// Push to GCR.
+	localImage := input.DockerImage
+	remoteImage, err := cloudRunImage(localImage, input.Specifier)
+	if err != nil {
+		return nil, xerrors.Errorf("cloud run launch: %w", err)
+	}
+	if err := crl.dockerPush(ctx, localImage, remoteImage); err != nil {
+		return nil, xerrors.Errorf("cloud run launch: %w", err)
 	}
 
 	// Launch on Cloud Run.
@@ -268,7 +269,7 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 				RevisionTemplate: &cloudrun.RevisionTemplate{
 					Spec: &cloudrun.RevisionSpec{
 						Container: &cloudrun.Container{
-							Image: input.DockerImage,
+							Image: remoteImage,
 							Env:   env,
 							// TODO(light): Add liveness and readiness probes.
 						},
@@ -286,7 +287,7 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 		Metadata:   serviceMeta,
 		Spec:       serviceSpec,
 	})
-	_, err := createCall.Context(ctx).Do()
+	_, err = createCall.Context(ctx).Do()
 	if err == nil && !specifierBoolValue(input.Specifier, "internal_only") {
 		// Service created for first time. Make publicly accessible.
 		policyCall := crl.client.Projects.Locations.Services.SetIamPolicy(serviceString, &cloudrun.SetIamPolicyRequest{
@@ -350,8 +351,20 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 	}
 }
 
-func (crl *cloudRunLauncher) dockerPush(ctx context.Context, imageName string) error {
-	c := exec.CommandContext(ctx, "docker", "push", imageName)
+func (crl *cloudRunLauncher) dockerPush(ctx context.Context, localImage, remoteImage string) error {
+	if localImage != remoteImage {
+		c := exec.CommandContext(ctx, "docker", "tag", localImage, remoteImage)
+		c.Env = crl.dockerEnv
+		c.Dir = crl.dockerDir
+		out, err := c.CombinedOutput()
+		if err != nil {
+			if len(out) == 0 {
+				return xerrors.Errorf("docker tag: %w", err)
+			}
+			return xerrors.Errorf("docker tag:\n%s", out)
+		}
+	}
+	c := exec.CommandContext(ctx, "docker", "push", remoteImage)
 	c.Env = crl.dockerEnv
 	c.Dir = crl.dockerDir
 	out, err := c.CombinedOutput()
@@ -362,6 +375,75 @@ func (crl *cloudRunLauncher) dockerPush(ctx context.Context, imageName string) e
 		return xerrors.Errorf("docker push:\n%s", out)
 	}
 	return nil
+}
+
+// cloudRunImage computes the image reference needed to launch the given local
+// image reference on gcr.io and the launch specifier. If the returned string
+// is equal to localImage, then no retagging is necessary before pushing.
+func cloudRunImage(localImage string, launchSpecifier map[string]interface{}) (string, error) {
+	name, tag, digest := parseImageRef(localImage)
+	if tag == ":" {
+		return "", xerrors.Errorf("determine image name for Cloud Run: empty tag in %q", localImage)
+	}
+	if specName := specifierStringValue(launchSpecifier, "image_name"); specName != "" {
+		// First, use image name from launch specifier if present.
+		if !isGCRName(specName) {
+			return "", xerrors.Errorf("determine image name for Cloud Run: launch specifier image_name = %q, not a gcr.io name", specName)
+		}
+		name = specName
+	} else if !isGCRName(name) {
+		// Otherwise, if the image name does not have a gcr.io prefix, then prepend it.
+		project := specifierStringValue(launchSpecifier, "project_id")
+		if project == "" {
+			return "", xerrors.New("determine image name for Cloud Run: launch specifier project_id empty")
+		}
+		// TODO(light): This can be wrong for ORG:PROJECT project IDs, but those
+		// are deprecated anyway.
+		name = "gcr.io/" + project + "/" + name
+	}
+	return name + tag + digest, nil
+}
+
+// parseImageRef parses a Docker image reference, as documented in
+// https://godoc.org/github.com/docker/distribution/reference. It permits some
+// looseness in characters, and in particular, permits the empty name form
+// ":foo". It is guaranteed that name + tag + digest == s.
+func parseImageRef(s string) (name, tag, digest string) {
+	if i := strings.LastIndexByte(s, '@'); i != -1 {
+		s, digest = s[:i], s[i:]
+	}
+	i := strings.LastIndexFunc(s, func(c rune) bool { return !isTagChar(c) })
+	if i == -1 || s[i] != ':' {
+		return s, "", digest
+	}
+	return s[:i], s[i:], digest
+}
+
+func isTagChar(c rune) bool {
+	return 'a' <= c && c <= 'z' ||
+		'A' <= c && c <= 'Z' ||
+		'0' <= c && c <= '9' ||
+		c == '_' || c == '-' || c == '.'
+}
+
+// isGCRName reports whether the given image name or reference identifies an
+// image on Google Container Registry.
+//
+// The acceptable host names are documented here:
+// https://cloud.google.com/container-registry/docs/pushing-and-pulling#tag_the_local_image_with_the_registry_name
+func isGCRName(image string) bool {
+	prefixes := []string{
+		"gcr.io/",
+		"us.gcr.io/",
+		"eu.gcr.io/",
+		"asia.gcr.io/",
+	}
+	for _, p := range prefixes {
+		if strings.HasPrefix(image, p) {
+			return true
+		}
+	}
+	return false
 }
 
 // conditionStatus finds the Cloud Run condition with the given name and returns
