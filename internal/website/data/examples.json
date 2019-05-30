@@ -127,22 +127,6 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/gcppubsub\"\n)",
 		"code": "topic, err := pubsub.OpenTopic(ctx, \"gcppubsub://myproject/mytopic\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
-	"gocloud.dev/pubsub/kafkapubsub.ExampleOpenSubscription": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub/kafkapubsub\"\n)",
-		"code": "// The set of brokers in the Kafka cluster.\naddrs := []string{\"1.2.3.4:9092\"}\n// The Kafka client configuration to use.\nconfig := kafkapubsub.MinimalConfig()\n\n// Construct a *pubsub.Subscription, joining the consumer group \"my-group\"\n// and receiving messages from \"my-topic\".\nsubscription, err := kafkapubsub.OpenSubscription(\n\taddrs, config, \"my-group\", []string{\"my-topic\"}, nil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/kafkapubsub.ExampleOpenTopic": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub/kafkapubsub\"\n)",
-		"code": "// The set of brokers in the Kafka cluster.\naddrs := []string{\"1.2.3.4:9092\"}\n// The Kafka client configuration to use.\nconfig := kafkapubsub.MinimalConfig()\n\n// Construct a *pubsub.Topic.\ntopic, err := kafkapubsub.OpenTopic(addrs, config, \"my-topic\", nil)\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/kafkapubsub.Example_openSubscriptionFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/kafkapubsub\"\n)",
-		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// The host + path are used as the consumer group name.\n// The \"topic\" query parameter sets one or more topics to subscribe to.\n// The set of brokers must be in an environment variable KAFKA_BROKERS.\nsubscription, err := pubsub.OpenSubscription(ctx,\n\t\"kafka://my-group?topic=my-topic\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/kafkapubsub.Example_openTopicFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/kafkapubsub\"\n)",
-		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// The host + path are the topic name to send to.\n// The set of brokers must be in an environment variable KAFKA_BROKERS.\ntopic, err := pubsub.OpenTopic(ctx, \"kafka://my-topic\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
-	},
 	"gocloud.dev/pubsub/mempubsub.ExampleNewSubscription": {
 		"imports": "import (\n\t\"context\"\n\t\"time\"\n\n\t\"gocloud.dev/pubsub/mempubsub\"\n)",
 		"code": "// Construct a *pubsub.Topic.\ntopic := mempubsub.NewTopic()\ndefer topic.Shutdown(ctx)\n\n// Construct a *pubsub.Subscription for the topic.\nsubscription := mempubsub.NewSubscription(topic, 1*time.Minute /* ack deadline */)\ndefer subscription.Shutdown(ctx)"
@@ -158,37 +142,5 @@
 	"gocloud.dev/pubsub/mempubsub.Example_openTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/mempubsub\"\n)",
 		"code": "topic, err := pubsub.OpenTopic(ctx, \"mem://topicA\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/natspubsub.ExampleOpenSubscription": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/go-nats\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscription(\n\tnatsConn,\n\t\"example.mysubject\",\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/natspubsub.ExampleOpenTopic": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/go-nats\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\ntopic, err := natspubsub.OpenTopic(natsConn, \"example.mysubject\", nil)\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/natspubsub.Example_openSubscriptionFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and receive messages with subject \"example.mysubject\".\nsubscription, err := pubsub.OpenSubscription(ctx, \"nats://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/natspubsub.Example_openTopicFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and send messages with subject \"example.mysubject\".\ntopic, err := pubsub.OpenTopic(ctx, \"nats://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/rabbitpubsub.ExampleOpenSubscription": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/streadway/amqp\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
-		"code": "rabbitConn, err := amqp.Dial(\"amqp://guest:guest@localhost:5672/\")\nif err != nil {\n\treturn err\n}\ndefer rabbitConn.Close()\nsubscription := rabbitpubsub.OpenSubscription(rabbitConn, \"myqueue\", nil)\ndefer subscription.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/rabbitpubsub.ExampleOpenTopic": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/streadway/amqp\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
-		"code": "rabbitConn, err := amqp.Dial(\"amqp://guest:guest@localhost:5672/\")\nif err != nil {\n\treturn err\n}\ndefer rabbitConn.Close()\ntopic := rabbitpubsub.OpenTopic(rabbitConn, \"myexchange\", nil)\ndefer topic.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/rabbitpubsub.Example_openSubscriptionFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
-		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the queue \"myqueue\".\nsubscription, err := pubsub.OpenSubscription(ctx, \"rabbit://myqueue\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
-	},
-	"gocloud.dev/pubsub/rabbitpubsub.Example_openTopicFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
-		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the exchange \"myexchange\".\ntopic, err := pubsub.OpenTopic(ctx, \"rabbit://myexchange\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	}
 }
