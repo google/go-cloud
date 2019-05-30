@@ -234,12 +234,11 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 	errs := make([]error, len(actions))
 	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
 	c.runGets(ctx, beforeGets, errs, opts)
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() { defer wg.Done(); c.runGets(ctx, gets, errs, opts) }()
-	writeErrs := c.bulkWrite(ctx, writes, errs)
+	ch := make(chan []error)
+	go func() { ch <- c.bulkWrite(ctx, writes, errs) }()
+	c.runGets(ctx, gets, errs, opts)
+	writeErrs := <-ch
 	c.runGets(ctx, afterGets, errs, opts)
-	wg.Wait()
 	alerr := driver.NewActionListError(errs)
 	for _, werr := range writeErrs {
 		alerr = append(alerr, indexedError{-1, werr})
