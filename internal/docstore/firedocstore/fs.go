@@ -253,9 +253,10 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 	errs := make([]error, len(actions))
 	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
 	c.runGets(ctx, beforeGets, errs, opts)
-	// TODO(jba): run gets and writes concurrently.
+	ch := make(chan struct{})
+	go func() { defer close(ch); c.runWrites(ctx, writes, errs, opts) }()
 	c.runGets(ctx, gets, errs, opts)
-	c.runWrites(ctx, writes, errs, opts)
+	<-ch
 	c.runGets(ctx, afterGets, errs, opts)
 	return driver.NewActionListError(errs)
 }
@@ -263,25 +264,8 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 // runGets executes a group of Get actions by calling the BatchGetDocuments RPC.
 // It may make several calls, because all gets in a single RPC must have the same set of field paths.
 func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	if len(actions) == 0 {
-		return
-	}
-	// Collect actions with the same set of field paths, and run them.
-	// Repeat until we've run all the actions.
-	// This is quadratic in the worst case, but it's unlikely that there would be
-	// many Gets with different field paths.
-	seen := map[*driver.Action]bool{}
-	for len(seen) < len(actions) {
-		var toRun []*driver.Action
-		for _, a := range actions {
-			if !seen[a] {
-				if len(toRun) == 0 || fpsEqual(toRun[0].FieldPaths, a.FieldPaths) {
-					toRun = append(toRun, a)
-					seen[a] = true
-				}
-			}
-		}
-		c.batchGet(ctx, toRun, errs, opts)
+	for _, group := range groupByFieldPath(actions) {
+		c.batchGet(ctx, group, errs, opts)
 	}
 }
 
