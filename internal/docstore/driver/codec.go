@@ -740,7 +740,12 @@ type tagOptions struct {
 
 // parseTag interprets docstore struct field tags.
 func parseTag(t reflect.StructTag) (name string, keep bool, other interface{}, err error) {
-	name, keep, opts := fields.ParseStandardTag("docstore", t)
+	var opts []string
+	if _, ok := t.Lookup("docstore"); ok {
+		name, keep, opts = fields.ParseStandardTag("docstore", t)
+	} else {
+		name, keep, opts = fields.ParseStandardTag("json", t)
+	}
 	tagOpts := tagOptions{}
 	for _, opt := range opts {
 		switch opt {
