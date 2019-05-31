@@ -66,9 +66,7 @@ func build(ctx context.Context, pctx *processContext, ref string) error {
 		ref = imageName + ref
 	}
 	c := exec.CommandContext(ctx, "docker", "build", "--tag", ref, ".")
-	c.Dir = moduleRoot
-	c.Stdout = pctx.stdout
-	c.Stderr = pctx.stderr
+	pctx.ApplyToCmd(c, moduleRoot)
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("gocdk build: %w", err)
 	}
@@ -85,8 +83,7 @@ func listBuilds(ctx context.Context, pctx *processContext) error {
 		return xerrors.Errorf("list builds: %w", err)
 	}
 	c := exec.CommandContext(ctx, "docker", "images", imageName)
-	c.Stdout = pctx.stdout
-	c.Stderr = pctx.stderr
+	pctx.ApplyToCmd(c, "")
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("list builds: %w", err)
 	}

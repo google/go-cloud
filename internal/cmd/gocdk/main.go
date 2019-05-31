@@ -19,10 +19,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gocloud.dev/gcp"
@@ -35,7 +38,7 @@ import (
 //go:generate go run generate_static.go -- static.go
 
 func main() {
-	pctx, err := osProcessContext()
+	pctx, err := newDefaultProcessContext()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -81,12 +84,12 @@ type processContext struct {
 	workdir string
 	env     []string
 	stdin   io.Reader
-	stdout  io.Writer
-	stderr  io.Writer
+	outlog  *log.Logger
+	errlog  *log.Logger
 }
 
-// osProcessContext returns the default process context from global variables.
-func osProcessContext() (*processContext, error) {
+// newDefaultProcessContext returns the default processContext from global variables.
+func newDefaultProcessContext() (*processContext, error) {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -95,9 +98,20 @@ func osProcessContext() (*processContext, error) {
 		workdir: workdir,
 		env:     os.Environ(),
 		stdin:   os.Stdin,
-		stdout:  os.Stdout,
-		stderr:  os.Stderr,
+		outlog:  log.New(os.Stdout, "", 0),
+		errlog:  log.New(os.Stderr, "gocdk: ", 0),
 	}, nil
+}
+
+// newTestProcessContext returns a processContext for use in tests.
+func newTestProcessContext(workdir string) *processContext {
+	return &processContext{
+		workdir: workdir,
+		env:     os.Environ(),
+		stdin:   strings.NewReader(""),
+		outlog:  log.New(ioutil.Discard, "", 0),
+		errlog:  log.New(ioutil.Discard, "gocdk: ", 0),
+	}
 }
 
 // overrideEnv returns a copy of env that has vars appended to the end.
@@ -122,6 +136,38 @@ func (pctx *processContext) gcpCredentials(ctx context.Context) (*google.Credent
 	// TODO(light): google.DefaultCredentials uses Getenv directly, so it is
 	// difficult to disentangle to use processContext.
 	return gcp.DefaultCredentials(ctx)
+}
+
+func (pctx *processContext) Logf(format string, a ...interface{}) {
+	pctx.errlog.Printf(format, a...)
+}
+
+func (pctx *processContext) Printf(format string, a ...interface{}) {
+	pctx.outlog.Printf(format, a...)
+}
+
+func (pctx *processContext) Println(a ...interface{}) {
+	pctx.outlog.Println(a...)
+}
+
+// ApplyToCmd updates fields of cmd for this processContext.
+//
+// dir may be empty; it defaults to pctx.workdir.
+//
+// Note that this function sets cmd.Stdout, and that Cmd.Output requires
+// Stdout to be nil; you may need to set it back to nil explicitly (or
+// don't use this function). Similarly for Cmd.CombinedOutput, for both
+// Stdout and Stderr.
+func (pctx *processContext) ApplyToCmd(cmd *exec.Cmd, dir string) {
+	if dir == "" {
+		cmd.Dir = pctx.workdir
+	} else {
+		cmd.Dir = dir
+	}
+	cmd.Env = pctx.env
+	cmd.Stdin = pctx.stdin
+	cmd.Stdout = pctx.outlog.Writer()
+	cmd.Stderr = pctx.errlog.Writer()
 }
 
 // findModuleRoot searches the given directory and those above it for the Go

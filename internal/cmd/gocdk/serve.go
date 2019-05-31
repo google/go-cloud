@@ -91,9 +91,8 @@ func serve(ctx context.Context, pctx *processContext, opts *serveOptions) error 
 	})
 
 	// Start main build loop.
-	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
 	group.Go(func() error {
-		return serveBuildLoop(groupCtx, pctx, logger, myProxy, opts)
+		return serveBuildLoop(groupCtx, pctx, pctx.errlog, myProxy, opts)
 	})
 	if err := group.Wait(); err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
@@ -249,27 +248,22 @@ loop:
 // buildForServe runs Wire and `go build` at moduleRoot to create exePath.
 // Note that on Windows, exePath must end with .EXE.
 func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string, exePath string) error {
-	moduleEnv := overrideEnv(pctx.env, "GO111MODULE=on")
 
 	if wireExe, err := exec.LookPath("wire"); err == nil {
 		// TODO(light): Only run Wire if needed, but that requires source analysis.
 		wireCmd := exec.CommandContext(ctx, wireExe, "./...")
-		wireCmd.Dir = moduleRoot
-		wireCmd.Env = moduleEnv
+		pctx.ApplyToCmd(wireCmd, moduleRoot)
+		wireCmd.Env = append(wireCmd.Env, "GO111MODULE=on")
 		// TODO(light): Collect build logs into error.
-		wireCmd.Stdout = pctx.stderr
-		wireCmd.Stderr = pctx.stderr
 		if err := wireCmd.Run(); err != nil {
 			return xerrors.Errorf("build server: wire: %w", err)
 		}
 	}
 
 	buildCmd := exec.CommandContext(ctx, "go", "build", "-o", exePath)
-	buildCmd.Dir = moduleRoot
-	buildCmd.Env = moduleEnv
+	pctx.ApplyToCmd(buildCmd, moduleRoot)
+	buildCmd.Env = append(buildCmd.Env, "GO111MODULE=on")
 	// TODO(light): Collect build logs into error.
-	buildCmd.Stdout = pctx.stderr
-	buildCmd.Stderr = pctx.stderr
 	if err := buildCmd.Run(); err != nil {
 		return xerrors.Errorf("build server: go build: %w", err)
 	}
@@ -302,11 +296,9 @@ func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logge
 	// Run server.
 	logger.Print("Starting server...")
 	process := exec.Command(alloc.exePath)
-	process.Dir = workdir
-	process.Env = overrideEnv(pctx.env, envOverrides...)
+	pctx.ApplyToCmd(process, workdir)
+	process.Env = append(process.Env, envOverrides...)
 	process.Env = append(process.Env, "PORT="+strconv.Itoa(alloc.port))
-	process.Stdout = pctx.stdout
-	process.Stderr = pctx.stderr
 	if err := process.Start(); err != nil {
 		return nil, xerrors.Errorf("start server: %w", err)
 	}

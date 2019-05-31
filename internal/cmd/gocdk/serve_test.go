@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -74,12 +73,7 @@ func testBuildForServe(t *testing.T, files map[string]string) {
 			t.Fatal(err)
 		}
 	}
-	pctx := &processContext{
-		workdir: dir,
-		env:     os.Environ(),
-		stdout:  ioutil.Discard,
-		stderr:  ioutil.Discard,
-	}
+	pctx := newTestProcessContext(dir)
 	exePath := filepath.Join(dir, "hello")
 	if runtime.GOOS == "windows" {
 		exePath += ".EXE"

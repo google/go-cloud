@@ -23,7 +23,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -44,12 +43,7 @@ func TestInit(t *testing.T) {
 			}
 		}()
 		ctx := context.Background()
-		pctx := &processContext{
-			workdir: dir,
-			stdin:   strings.NewReader(""),
-			stdout:  ioutil.Discard,
-			stderr:  ioutil.Discard,
-		}
+		pctx := newTestProcessContext(dir)
 
 		const projectName = "myspecialproject"
 		if err := run(ctx, pctx, []string{"init", "--module-path=example.com/foo/" + projectName, projectName}); err != nil {
@@ -181,12 +175,7 @@ func newTestProject(ctx context.Context) (*processContext, func(), error) {
 	cleanup := func() {
 		os.RemoveAll(dir)
 	}
-	pctx := &processContext{
-		workdir: dir,
-		env:     os.Environ(),
-		stdout:  ioutil.Discard,
-		stderr:  ioutil.Discard,
-	}
+	pctx := newTestProcessContext(dir)
 	if err := run(ctx, pctx, []string{"init", "-m", "example.com/test", "--allow-existing-dir", dir}); err != nil {
 		cleanup()
 		return nil, nil, err

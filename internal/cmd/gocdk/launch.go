@@ -100,7 +100,7 @@ func launch(ctx context.Context, pctx *processContext, biome, dockerImage string
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
-	fmt.Fprintf(pctx.stdout, "Serving at %s\n", launchURL)
+	pctx.Logf("Serving at %s\n", launchURL)
 	return nil
 }
 
@@ -129,11 +129,10 @@ type LaunchInput struct {
 
 // newLauncher creates the launcher for the given name.
 func newLauncher(ctx context.Context, pctx *processContext, launcherName string) (Launcher, error) {
-	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
 	switch launcherName {
 	case "local":
 		return &localLauncher{
-			logger:    logger,
+			logger:    pctx.errlog,
 			dockerEnv: pctx.env,
 			dockerDir: pctx.workdir,
 		}, nil
@@ -148,7 +147,7 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 			return nil, xerrors.Errorf("prepare cloudrun launcher: %w", err)
 		}
 		return &cloudRunLauncher{
-			logger:    logger,
+			logger:    pctx.errlog,
 			client:    runService,
 			dockerEnv: pctx.env,
 			dockerDir: pctx.workdir,

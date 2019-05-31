@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -81,16 +80,15 @@ func init_(ctx context.Context, pctx *processContext, dir, modpath string, allow
 	if err := materializeTemplateDir(projectDir, "init", tmplValues); err != nil {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
-	fmt.Fprintf(pctx.stdout, "Project created at %s with:\n", projectDir)
-	fmt.Fprintln(pctx.stdout, "- Go HTTP server")
-	fmt.Fprintln(pctx.stdout, "- Dockerfile")
-	fmt.Fprintln(pctx.stdout, "- 'dev' biome for local development settings")
-	fmt.Fprintln(pctx.stdout)
-	fmt.Fprintf(pctx.stdout, "Run `cd %s`, then run:\n", dir)
-	fmt.Fprintln(pctx.stdout, "- `gocdk serve` to run the server locally with live code reloading")
-	fmt.Fprintln(pctx.stdout, "- `gocdk demo` to test new APIs")
-	fmt.Fprintln(pctx.stdout, "- `gocdk build` to build a Docker container")
-	fmt.Fprintln(pctx.stdout, "- `gocdk biome add` to configure launch settings")
+	pctx.Logf("Project created at %s with:\n", projectDir)
+	pctx.Logf("- Go HTTP server")
+	pctx.Logf("- Dockerfile")
+	pctx.Logf("- 'dev' biome for local development settings")
+	pctx.Logf("Run `cd %s`, then run:\n", dir)
+	pctx.Logf("- `gocdk serve` to run the server locally with live code reloading")
+	pctx.Logf("- `gocdk demo` to test new APIs")
+	pctx.Logf("- `gocdk build` to build a Docker container")
+	pctx.Logf("- `gocdk biome add` to configure launch settings")
 	return nil
 }
 
@@ -147,8 +145,10 @@ func materializeTemplateDir(dst string, srcRoot string, data interface{}) error 
 func inferModulePath(ctx context.Context, pctx *processContext, projectDir string) (string, error) {
 	// TODO(issue #2016): Add tests for init behavior when module-path is not given.
 	cmd := exec.CommandContext(ctx, "go", "env", "GOPATH")
-	cmd.Dir = pctx.workdir
-	cmd.Env = pctx.env
+	pctx.ApplyToCmd(cmd, "")
+	// Since we're going to call Output, we need to make sure cmd.Stdout is nil
+	// so Output can collect stdout.
+	cmd.Stdout = nil
 	gopath, err := cmd.Output()
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
