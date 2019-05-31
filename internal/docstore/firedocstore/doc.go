@@ -18,7 +18,6 @@
 //
 // Docstore types not supported by the Go firestore client, cloud.google.com/go/firestore:
 // - unsigned integers: encoded is int64s
-// - complex64/128: encoded as an array of two float32/64s.
 // - arrays: encoded as Firestore array values
 //
 // Firestore types not supported by Docstore:
