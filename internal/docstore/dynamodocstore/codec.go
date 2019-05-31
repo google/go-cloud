@@ -49,10 +49,6 @@ func (e *encoder) EncodeString(x string) {
 	}
 }
 
-func (e *encoder) EncodeComplex(x complex128) {
-	e.av = new(dyn.AttributeValue).SetL([]*dyn.AttributeValue{encodeFloat(real(x)), encodeFloat(imag(x))})
-}
-
 func (e *encoder) EncodeList(n int) driver.Encoder {
 	s := make([]*dyn.AttributeValue, n)
 	e.av = new(dyn.AttributeValue).SetL(s)
@@ -211,24 +207,6 @@ func (d decoder) AsFloat() (float64, bool) {
 	}
 	return f, true
 
-}
-
-func (d decoder) AsComplex() (complex128, bool) {
-	if d.av.L == nil {
-		return 0, false
-	}
-	if len(d.av.L) != 2 {
-		return 0, false
-	}
-	r, ok := decoder{d.av.L[0]}.AsFloat()
-	if !ok {
-		return 0, false
-	}
-	i, ok := decoder{d.av.L[1]}.AsFloat()
-	if !ok {
-		return 0, false
-	}
-	return complex(r, i), true
 }
 
 func (d decoder) AsBytes() ([]byte, bool) {
