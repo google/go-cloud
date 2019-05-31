@@ -76,9 +76,11 @@ type MyStruct struct {
 	*Embed2
 	embed3
 	*embed4
-	Omit      int `docstore:"-"`
-	OmitEmpty int `docstore:",omitempty"`
-	Rename    int `docstore:"rename"`
+	Omit         int `docstore:"-"`
+	OmitEmpty    int `docstore:",omitempty"`
+	Rename       int `docstore:"rename"`
+	DocstoreWins int `json:"j" docstore:"winning"`
+	JsonWorks    int `json:"jason"`
 }
 
 func TestEncode(t *testing.T) {
@@ -148,18 +150,20 @@ func TestEncode(t *testing.T) {
 		},
 		{
 			MyStruct{
-				A:         1,
-				B:         &tru,
-				C:         []*te{{'T'}},
-				D:         []time.Time{tm},
-				T:         ts,
-				Embed1:    Embed1{E1: "E1"},
-				Embed2:    &Embed2{E2: "E2"},
-				embed3:    embed3{E3: "E3"},
-				embed4:    &embed4{E4: "E4"},
-				Omit:      3,
-				OmitEmpty: 4,
-				Rename:    5,
+				A:            1,
+				B:            &tru,
+				C:            []*te{{'T'}},
+				D:            []time.Time{tm},
+				T:            ts,
+				Embed1:       Embed1{E1: "E1"},
+				Embed2:       &Embed2{E2: "E2"},
+				embed3:       embed3{E3: "E3"},
+				embed4:       &embed4{E4: "E4"},
+				Omit:         3,
+				OmitEmpty:    4,
+				Rename:       5,
+				DocstoreWins: 6,
+				JsonWorks:    7,
 			},
 			map[string]interface{}{
 				"A":         int64(1),
@@ -173,19 +177,23 @@ func TestEncode(t *testing.T) {
 				"E4":        "E4",
 				"OmitEmpty": int64(4),
 				"rename":    int64(5),
+				"winning":   int64(6),
+				"jason":     int64(7),
 			},
 		},
 		{
 			MyStruct{},
 			map[string]interface{}{
-				"A":      int64(0),
-				"B":      nil,
-				"C":      nil,
-				"D":      nil,
-				"T":      nil,
-				"E1":     "",
-				"E3":     "",
-				"rename": int64(0),
+				"A":       int64(0),
+				"B":       nil,
+				"C":       nil,
+				"D":       nil,
+				"T":       nil,
+				"E1":      "",
+				"E3":      "",
+				"rename":  int64(0),
+				"winning": int64(0),
+				"jason":   int64(0),
 			},
 		},
 	} {
