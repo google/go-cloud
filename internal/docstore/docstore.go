@@ -183,7 +183,7 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 // {a: {b: 2}}.
 //
 // Update does not modify its doc argument, except to set the new revision. To obtain
-// the new value of the document, call Get after calling Update.
+// the updated document, call Get after calling Update.
 // TODO(jba): test that doc's revision field is updated.
 func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 	return l.add(&Action{
