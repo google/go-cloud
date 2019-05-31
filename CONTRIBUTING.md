@@ -28,17 +28,15 @@ an issue with the necessary details.
 ### Triaging
 
 The Go CDK team triages issues at least every two weeks, but usually within two
-business days. Bugs or feature requests are either placed into a **Sprint**
-milestone which means the issue is intended to be worked on. Issues that we
-would like to address but do not have time for are placed into the [Unplanned][]
-milestone.
+business days. Issues that we would like to address, but do not have time for
+are placed into the [Unplanned][] milestone.
 
 [Unplanned]: https://github.com/google/go-cloud/milestone/2
 
 ## Contributing Code
 
 We love accepting contributions! If your change is minor, please feel free
-submit a [pull request](https://help.github.com/articles/about-pull-requests/).
+to submit a [pull request](https://help.github.com/articles/about-pull-requests/).
 If your change is larger, or adds a feature, please file an issue beforehand so
 that we can discuss the change. You're welcome to file an implementation pull
 request immediately as well, although we generally lean towards discussing the
@@ -53,15 +51,15 @@ about conventions and design patterns found in the project.
 
 If you want to write some code, but don't know where to start or what you might
 want to do, take a look at our [Unplanned][] milestone. This is where you can
-find issues we would like to address but can't currently find time for. See if
+find issues we would like to address, but can't currently find time for. See if
 any of the latest ones look interesting! If you need help before you can start
-work, you can comment on the issue and we will try to help as best we can.
+work, you can comment on the issue, and we will try to help as best we can.
 
 ### Contributor License Agreement
 
 Contributions to this project can only be made by those who have signed Google's
 Contributor License Agreement. You (or your employer) retain the copyright to
-your contribution, this simply gives us permission to use and redistribute your
+your contribution, so this simply gives us permission to use and redistribute your
 contributions as part of the project. Head over to
 <https://cla.developers.google.com/> to see your current agreements on file or
 to sign a new one.
@@ -80,7 +78,8 @@ is then read back in unit tests on Travis, so the tests get to operate with real
 data. Unfortunately, while the Go CDK team can generate these replay files
 against our test cloud infrastructure, it is not yet possible for external
 contributors to do the same. We want to improve this process in the future and
-are researching how we can do this. If you have any ideas, please file an issue!
+are researching how we can do this. If you have any ideas, please 
+[file an issue](https://github.com/google/go-cloud/issues/new)!
 
 #### Writing and running tests against a cloud environment
 
@@ -96,7 +95,7 @@ generate new ones to be used by others.
 ## Making a pull request
 
 *   Follow the normal
-    [pull request flow](https://help.github.com/articles/creating-a-pull-request/)
+    [pull request flow](https://help.github.com/articles/creating-a-pull-request/).
 *   Build your changes using Go 1.11 with Go modules enabled. The Go CDK's
     continuous integration uses Go modules in order to ensure
     [reproducible builds](https://research.swtch.com/vgo-repro).
@@ -129,8 +128,8 @@ make a comment containing "PTAL" (Please Take Another Look) on your pull
 request. GitHub notifications can be noisy, and it is unfortunately easy for
 things to be lost in the shuffle.
 
-Once your PR is approved (hooray!) the reviewer will squash your commits into a
-single commit, and then merge the commit onto the Go CDK master branch. Thank
+Once your PR is approved (hooray!), the reviewer will squash your commits into a
+single commit and then merge the commit onto the Go CDK master branch. Thank
 you!
 
 ## Github code review workflow conventions
