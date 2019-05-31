@@ -105,12 +105,12 @@
 // Actions
 //
 // Docstore supports six actions on documents:
-// - Get retrieves a document.
-// - Create creates a new document.
-// - Replace replaces an existing document.
-// - Put puts a document into a collection whether or not it is already present.
-// - Update applies a set of modifications to a document.
-// - Delete deletes a document.
+//   - Get retrieves a document.
+//   - Create creates a new document.
+//   - Replace replaces an existing document.
+//   - Put puts a document into a collection whether or not it is already present.
+//   - Update applies a set of modifications to a document.
+//   - Delete deletes a document.
 //
 // Each action acts atomically on a single document. You can execute actions
 // individually--the Collection type has a method for each one--or you can group them
