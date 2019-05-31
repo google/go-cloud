@@ -48,6 +48,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -149,11 +151,11 @@ func (o *lazyCredsOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (
 // Scheme is the URL scheme gcppubsub registers its URLOpeners under on pubsub.DefaultMux.
 const Scheme = "gcppubsub"
 
-// URLOpener opens GCP Pub/Sub URLs like "gcppubsub://myproject/mytopic" for
-// topics or "gcppubsub://myproject/mysub" for subscriptions.
+// URLOpener opens GCP Pub/Sub URLs like "gcppubsub://projects/myproject/topics/mytopic" for
+// topics or "gcppubsub://projects/myproject/subscriptions/mysub" for subscriptions.
 //
-// The URL's host is used as the projectID, and the URL's path (with the
-// leading "/" trimmed) is used as the topic or subscription name.
+// The shortened forms "gcppubsub://myproject/mytopic" for topics or
+// "gcppubsub://myproject/mysub" for subscriptions are also supported.
 //
 // No URL parameters are supported.
 type URLOpener struct {
@@ -176,6 +178,11 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	if err != nil {
 		return nil, err
 	}
+	topicPath := path.Join(u.Host, u.Path)
+	if topicPathRE.MatchString(topicPath) {
+		return OpenTopicByPath(pc, topicPath, &o.TopicOptions)
+	}
+	// Shortened form?
 	topicName := strings.TrimPrefix(u.Path, "/")
 	return OpenTopic(pc, gcp.ProjectID(u.Host), topicName, &o.TopicOptions), nil
 }
@@ -189,6 +196,11 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	if err != nil {
 		return nil, err
 	}
+	subPath := path.Join(u.Host, u.Path)
+	if subscriptionPathRE.MatchString(subPath) {
+		return OpenSubscriptionByPath(sc, subPath, &o.SubscriptionOptions)
+	}
+	// Shortened form?
 	subName := strings.TrimPrefix(u.Path, "/")
 	return OpenSubscription(sc, gcp.ProjectID(u.Host), subName, &o.SubscriptionOptions), nil
 }
@@ -228,17 +240,30 @@ func SubscriberClient(ctx context.Context, conn *grpc.ClientConn) (*raw.Subscrib
 type TopicOptions struct{}
 
 // OpenTopic returns a *pubsub.Topic backed by an existing GCP PubSub topic
-// topicName in the given projectID. See the package documentation for an
-// example.
-func OpenTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(client, proj, topicName), sendBatcherOpts)
+// in the given projectID. topicName is the last part of the full topic
+// path, e.g., "foo" from "projects/<projectID>/topic/foo".
+// See the package documentation for an example.
+func OpenTopic(client *raw.PublisherClient, projectID gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
+	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+	return pubsub.NewTopic(openTopic(client, topicPath), sendBatcherOpts)
+}
+
+var topicPathRE = regexp.MustCompile("^projects/.+/topics/.+$")
+
+// OpenTopicByPath returns a *pubsub.Topic backed by an existing GCP PubSub
+// topic. topicPath must be of the form "projects/<projectID>/topic/<topic>".
+// See the package documentation for an example.
+func OpenTopicByPath(client *raw.PublisherClient, topicPath string, opts *TopicOptions) (*pubsub.Topic, error) {
+	if !topicPathRE.MatchString(topicPath) {
+		return nil, fmt.Errorf("invalid topicPath %q; must match %v", topicPath, topicPathRE)
+	}
+	return pubsub.NewTopic(openTopic(client, topicPath), sendBatcherOpts), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string) driver.Topic {
-	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
-	return &topic{path, client}
+func openTopic(client *raw.PublisherClient, topicPath string) driver.Topic {
+	return &topic{topicPath, client}
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -319,15 +344,27 @@ type SubscriptionOptions struct{}
 // OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
 // PubSub subscription subscriptionName in the given projectID. See the package
 // documentation for an example.
-func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
-	ds := openSubscription(client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds, nil, ackBatcherOpts)
+func OpenSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
+	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
+	return pubsub.NewSubscription(openSubscription(client, path), nil, ackBatcherOpts)
+}
+
+var subscriptionPathRE = regexp.MustCompile("^projects/.+/subscriptions/.+$")
+
+// OpenSubscriptionByPath returns a *pubsub.Subscription backed by an existing
+// GCP PubSub subscription. subscriptionPath must be of the form
+// "projects/<projectID>/subscriptions/<subscription>".
+// See the package documentation for an example.
+func OpenSubscriptionByPath(client *raw.SubscriberClient, subscriptionPath string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
+	if !subscriptionPathRE.MatchString(subscriptionPath) {
+		return nil, fmt.Errorf("invalid subscriptionPath %q; must match %v", subscriptionPath, subscriptionPathRE)
+	}
+	return pubsub.NewSubscription(openSubscription(client, subscriptionPath), nil, ackBatcherOpts), nil
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) driver.Subscription {
-	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	return &subscription{client, path}
+func openSubscription(client *raw.SubscriberClient, subscriptionPath string) driver.Subscription {
+	return &subscription{client, subscriptionPath}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
