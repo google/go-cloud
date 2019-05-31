@@ -41,7 +41,11 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 	if q.OrderByField != "" {
 		sortDocs(docs, q.OrderByField, q.OrderAscending)
 	}
-	return &docIterator{docs: docs, fieldPaths: q.FieldPaths}, nil
+	return &docIterator{
+		docs:       docs,
+		fieldPaths: q.FieldPaths,
+		revField:   c.opts.RevisionField,
+	}, nil
 }
 
 func filtersMatch(fs []driver.Filter, doc map[string]interface{}) bool {
@@ -145,6 +149,7 @@ func sortDocs(docs []map[string]interface{}, field string, asc bool) {
 type docIterator struct {
 	docs       []map[string]interface{}
 	fieldPaths [][]string
+	revField   string
 	err        error
 }
 
@@ -156,7 +161,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 		it.err = io.EOF
 		return it.err
 	}
-	if err := decodeDoc(it.docs[0], doc, it.fieldPaths); err != nil {
+	if err := decodeDoc(it.docs[0], doc, it.fieldPaths, it.revField); err != nil {
 		it.err = err
 		return it.err
 	}
