@@ -48,7 +48,6 @@ func TestEncodeValue(t *testing.T) {
 		{nullptr, nullValue},
 		{seven, avn("7")},
 		{&seven, avn("7")},
-		{3 + 4i, avl(avn("3"), avn("4"))},
 		{[]int(nil), nullValue},
 		{[]int{}, av().SetL([]*dyn.AttributeValue{})},
 		{[]int{1, 2}, avl(avn("1"), avn("2"))},
@@ -96,7 +95,7 @@ func TestDecodeErrorOnUnsupported(t *testing.T) {
 type codecTester struct{}
 
 func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
-	return []drivertest.UnsupportedType{drivertest.Complex, drivertest.BinarySet}
+	return []drivertest.UnsupportedType{drivertest.BinarySet}
 }
 
 func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {

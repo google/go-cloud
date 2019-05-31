@@ -17,18 +17,18 @@ module gocloud.dev
 require (
 	cloud.google.com/go v0.39.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
-	contrib.go.opencensus.io/exporter/stackdriver v0.11.0
+	contrib.go.opencensus.io/exporter/stackdriver v0.11.1
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
 	github.com/Azure/azure-amqp-common-go v1.1.4
 	github.com/Azure/azure-pipeline-go v0.1.9
-	github.com/Azure/azure-sdk-for-go v27.3.0+incompatible
-	github.com/Azure/azure-service-bus-go v0.4.1
+	github.com/Azure/azure-sdk-for-go v30.0.0+incompatible
+	github.com/Azure/azure-service-bus-go v0.7.0
 	github.com/Azure/azure-storage-blob-go v0.6.0
-	github.com/Azure/go-autorest v11.1.2+incompatible
-	github.com/Azure/go-autorest/tracing v0.1.0 // indirect
-	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190418212003-6ac0b49e7197
-	github.com/aws/aws-sdk-go v1.19.16
+	github.com/Azure/go-autorest v12.0.0+incompatible
+	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190507215335-7265f74d826f
+	github.com/aws/aws-sdk-go v1.19.41
 	github.com/dimchansky/utfbom v1.1.0 // indirect
+	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-stack/stack v1.8.0 // indirect
@@ -39,25 +39,29 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.2.2
 	github.com/googleapis/gax-go v2.0.2+incompatible
-	github.com/hashicorp/golang-lru v0.5.1 // indirect
-	github.com/lib/pq v1.1.0
+	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
+	github.com/uber-go/atomic v1.4.0 // indirect
+	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
+	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
-	go.mongodb.org/mongo-driver v1.0.1
-	go.opencensus.io v0.21.0
-	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
-	golang.org/x/net v0.0.0-20190424112056-4829fb13d2c6
-	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+	go.mongodb.org/mongo-driver v1.0.2
+	go.opencensus.io v0.22.0
+	go.uber.org/atomic v1.4.0 // indirect
+	golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5
+	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
+	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect
-	golang.org/x/xerrors v0.0.0-20190410155217-1f06c39b4373
+	golang.org/x/sys v0.0.0-20190530182044-ad28b68e88f1 // indirect
+	golang.org/x/xerrors v0.0.0-20190513163551-3ee3066db522
 	google.golang.org/api v0.5.0
-	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8
-	google.golang.org/grpc v1.20.1
-	gopkg.in/yaml.v2 v2.2.1 // indirect
+	google.golang.org/appengine v1.6.0 // indirect
+	google.golang.org/genproto v0.0.0-20190530194941-fb225487d101
+	google.golang.org/grpc v1.21.0
 	pack.ag/amqp v0.11.0
 )
