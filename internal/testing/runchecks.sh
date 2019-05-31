@@ -150,13 +150,6 @@ fi;
 
 
 echo
-echo "Ensuring that go mod tidy has been run for the root module..."
-( ./internal/testing/check_mod_tidy.sh && echo "  OK" ) || {
-  echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1
-}
-
-
-echo
 echo "Ensuring that gocdk static content is up to date..."
 tmpstaticgo=$(mktemp)
 function cleanupstaticgo() {

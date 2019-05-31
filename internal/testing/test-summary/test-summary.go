@@ -76,7 +76,10 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 			return "", false, fmt.Errorf("%q: %v", scanner.Text(), err)
 		}
 
-		if event.Action == "fail" {
+		// The Test field, if non-empty, specifies the test, example, or benchmark
+		// function that caused the event. Events for the overall package test do
+		// not set Test.
+		if event.Action == "fail" && event.Test != "" {
 			failedTests = append(failedTests, filepath.Join(event.Package, event.Test))
 		}
 
@@ -84,11 +87,9 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 			fmt.Print(event.Output)
 		}
 
-		// The Test field, if non-empty, specifies the test, example, or benchmark
-		// function that caused the event. Events for the overall package test do
-		// not set Test. We don't want to count package passes/fails because these
-		// don't represent specific tests being run. However, skips of an entire
-		// package are not duplicated with individual test skips.
+		// We don't want to count package passes/fails because these don't
+		// represent specific tests being run. However, skips of an entire package
+		// are not duplicated with individual test skips.
 		if event.Test != "" || event.Action == "skip" {
 			counts[event.Action]++
 		}
