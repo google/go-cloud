@@ -34,10 +34,10 @@
 // function in this package. For example:
 //
 //   coll, err := memdocstore.OpenBucket("SSN", nil)
-//     if err != nil {
-//       return fmt.Errorf("opening collection: %v", err)
-//     }
-//     // coll is a *docstore.Collection
+//   if err != nil {
+//     return fmt.Errorf("opening collection: %v", err)
+//   }
+//   // coll is a *docstore.Collection
 //
 // Then, write your application code using the *Collection type. You can easily
 // reconfigure your initialization code to choose a different provider.
@@ -59,7 +59,9 @@
 // You can alter this default mapping by using a struct tag beginning with
 // "docstore:". Docstore struct tags support renaming, omitting fields
 // unconditionally, or omitting them only when they are empty, exactly like
-// encoding/json.
+// encoding/json. Docstore also honors a "json" struct tag if there is no "docstore"
+// tag on the field.
+// TODO(#2219)implement json tags.
 //
 //
 // Representing Data
@@ -72,7 +74,7 @@
 // closely matches the encoding/json package.
 //
 // Times deserve special mention. Docstore can store and retrieve values of type
-// time.Time, with two caveats. First, the timezone may not be preserved. Second,
+// time.Time, with two caveats. First, the timezone will not be preserved. Second,
 // Docstore guarantees only that time.Time values are represented to millisecond
 // precision. Many providers will do better, but if you need to be sure that times
 // are stored with nanosecond precision, convert the time.Time to another type before
@@ -126,19 +128,22 @@
 //
 // Revisions
 //
-// Docstore gives every document a revision when it is created. Whenever a document
-// is modified, its revision changes. Revisions can be used for optimistic locking:
-// whenever you pass a document with a revision to Put, Replace, Update or Delete,
-// Docstore will return an error with code FailedPrecondition if the stored
-// document's revision does not match the given document's. (See the
-// gocloud.dev/gcerrors package for information about error codes.) A Get followed by
-// one of those write actions will fail if the document was changed between the Get
-// and the write.
-//
-// By default, Docstore uses the field name "DocstoreRevision" (stored in the
-// constant docstore.RevisionField) to hold the revision. Some providers give you the
-// option of changing that field name.
+// Docstore supports document revisions to distinguish different version of a
+// document and enable optimistic locking. By default, Docstore stores the revision
+// in the field named "DocstoreRevision" (stored in the constant
+// docstore.RevisionField). Some providers give you the option of changing that field
+// name.
 // TODO(jba): make it all providers
+//
+// If a struct doesn't have a DocstoreRevision field, then no revision logic is
+// performed. Otherwise, Docstore gives every document a revision when it is created,
+// and changes that revision whenever the document is modified. Whenever you pass a
+// document with a revision to Put, Replace, Update or Delete, Docstore will return
+// an error with code FailedPrecondition if the stored document's revision does not
+// match the given document's. (See the gocloud.dev/gcerrors package for information
+// about error codes.) If you call Get to retrieve a document, then later perform a
+// write action with that same document, it will fail if the document was changed
+// since the Get.
 //
 // Since different providers use different types for revisions, the type of the
 // revision field is unspecified. When defining a struct for storing docstore data,
@@ -148,10 +153,6 @@
 //      Name             string
 //      DocstoreRevision interface{}
 //    }
-//
-// If a struct doesn't have a DocstoreRevision field, then the logic described above
-// won't apply to documents read and written with that struct. All writes with the
-// struct will succeed even if the document was changed since the last Get.
 //
 //
 // Queries
