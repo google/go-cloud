@@ -15,13 +15,12 @@
 module gocloud.dev/pubsub/kafkapubsub
 
 require (
-	github.com/Shopify/sarama v1.19.0
-	github.com/Shopify/toxiproxy v2.1.4+incompatible // indirect
-	github.com/eapache/go-resiliency v1.1.0 // indirect
-	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
-	github.com/eapache/queue v1.1.0 // indirect
+	github.com/DataDog/zstd v1.4.0 // indirect
+	github.com/Shopify/sarama v1.22.1
 	github.com/google/go-cmp v0.3.0
 	github.com/pierrec/lz4 v2.0.7+incompatible // indirect
-	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
 	gocloud.dev v0.15.0
+	golang.org/x/net v0.0.0-20190522155817-f3200d17e092 // indirect
+	golang.org/x/sys v0.0.0-20190530182044-ad28b68e88f1 // indirect
+	golang.org/x/text v0.3.2 // indirect
 )
