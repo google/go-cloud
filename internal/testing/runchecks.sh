@@ -91,7 +91,7 @@ while read -r path || [[ -n "$path" ]]; do
     echo "Running Go tests with coverage..."
     go test -mod=readonly -json -race -coverpkg=./... -coverprofile=modcoverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
     if [ -f modcoverage.out ] && [ $result -eq 0 ]; then
-      cat modcoverage.out >> coverage.out
+      cat modcoverage.out >> "$rootdir"/coverage.out
       rm modcoverage.out
     fi
   else
