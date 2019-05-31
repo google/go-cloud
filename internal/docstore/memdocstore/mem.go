@@ -110,11 +110,11 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{},
 		opts = &Options{RevisionField: docstore.RevisionField}
 	}
 	return &collection{
-		keyField:     keyField,
-		keyFunc:      keyFunc,
-		opts:         opts,
-		docs:         map[interface{}]map[string]interface{}{},
-		nextRevision: 0,
+		keyField:    keyField,
+		keyFunc:     keyFunc,
+		opts:        opts,
+		docs:        map[interface{}]map[string]interface{}{},
+		curRevision: 0,
 	}, nil
 }
 
@@ -126,8 +126,8 @@ type collection struct {
 	// map from keys to documents. Documents are represented as map[string]interface{},
 	// regardless of what their original representation is. Even if the user is using
 	// map[string]interface{}, we make our own copy.
-	docs         map[interface{}]map[string]interface{}
-	nextRevision int64 // incremented on each write
+	docs        map[interface{}]map[string]interface{}
+	curRevision int64 // incremented on each write
 }
 
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
@@ -334,8 +334,8 @@ func add(x, y interface{}) (interface{}, error) {
 
 // Must be called with the lock held.
 func (c *collection) changeRevision(doc map[string]interface{}) {
-	c.nextRevision++
-	doc[c.opts.RevisionField] = c.nextRevision
+	c.curRevision++
+	doc[c.opts.RevisionField] = c.curRevision
 }
 
 func (c *collection) checkRevision(arg driver.Document, current map[string]interface{}) error {
