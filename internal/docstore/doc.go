@@ -61,7 +61,6 @@
 // unconditionally, or omitting them only when they are empty, exactly like
 // encoding/json. Docstore also honors a "json" struct tag if there is no "docstore"
 // tag on the field.
-// TODO(#2219)implement json tags.
 //
 //
 // Representing Data
