@@ -34,9 +34,10 @@ package azurekeyvault
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"net/url"
+	"path"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -51,8 +52,6 @@ import (
 )
 
 var (
-	// KeyVault URI suffix
-	keyVaultEndpointSuffix = "vault.azure.net"
 	// Map of HTTP Status Code to go-cloud ErrorCode
 	errorCodeMap = map[int]gcerrors.ErrorCode{
 		200: gcerrors.OK,
@@ -104,12 +103,15 @@ func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets
 const Scheme = "azurekeyvault"
 
 // URLOpener opens Azure KeyVault URLs like
-// "azurekeyvault://mykeyvaultname/mykeyname/mykeyversion?algorithm=RSA-OAEP-256".
+// "azurekeyvault://{keyvault-name}.vault.azure.net/keys/{key-name}/{key-version}?algorithm=RSA-OAEP-256".
 //
-//   - The URL's host holds the KeyVault name (https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers).
-//   - The first element of the URL's path holds the key name (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters).
-//   - The second element of the URL's path, if included, holds the key version (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameter).
-//   - The "algorithm" query parameter (required) holds the algorithm (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm).
+// The "azurekeyvault" URL scheme is replaced with "https" to construct an Azure
+// Key Vault keyID, as described in https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates.
+// The "/{key-version}"" suffix is optional; it defaults to the latest version.
+//
+// The "algorithm" query parameter sets the algorithm to use; see
+// https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
+// for supported algorithms. It defaults to "RSA-OAEP-256".
 //
 // No other query parameters are supported.
 type URLOpener struct {
@@ -125,54 +127,32 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	q := u.Query()
 	algorithm := q.Get("algorithm")
 	if algorithm != "" {
-		o.Options.Algorithm = algorithm
+		o.Options.Algorithm = keyvault.JSONWebKeyEncryptionAlgorithm(algorithm)
 		q.Del("algorithm")
-	}
-	if o.Options.Algorithm == "" {
-		return nil, fmt.Errorf("open keeper %v: algorithm is required", u)
 	}
 	for param := range q {
 		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
-
-	vaultName, keyName, keyVersion, err := keyInfoFromURL(u)
-	if err != nil {
-		return nil, fmt.Errorf("open keeper %v: %v", u, err)
-	}
-	return OpenKeeper(o.Client, vaultName, keyName, keyVersion, &o.Options)
+	keyID := "https://" + path.Join(u.Host, u.Path)
+	return OpenKeeper(o.Client, keyID, &o.Options)
 }
 
-func keyInfoFromURL(u *url.URL) (vaultName, keyName, keyVersion string, err error) {
-	vaultName = u.Host
-	if vaultName == "" {
-		return "", "", "", errors.New("URL Host (the key vault name) cannot be empty")
-	}
-	if pathParts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/"); len(pathParts) == 1 {
-		keyName = pathParts[0]
-	} else if len(pathParts) == 2 {
-		keyName = pathParts[0]
-		keyVersion = pathParts[1]
-	}
-	if keyName == "" {
-		return "", "", "", errors.New("URL is expected to have a Path with 1 or 2 non-empty elements (the key name and optionally, key version")
-	}
-	return vaultName, keyName, keyVersion, nil
+type keeper struct {
+	client      *keyvault.BaseClient
+	keyVaultURI string
+	keyName     string
+	keyVersion  string
+	options     *KeeperOptions
 }
 
-type (
-	keeper struct {
-		client       *keyvault.BaseClient
-		keyVaultName string
-		keyName      string
-		keyVersion   string
-		options      *KeeperOptions
-	}
-
-	// KeeperOptions provides configuration options for encryption/decryption operations.
-	KeeperOptions struct {
-		Algorithm string
-	}
-)
+// KeeperOptions provides configuration options for encryption/decryption operations.
+type KeeperOptions struct {
+	// Algorithm sets the encryption algorithm used.
+	// Defaults to "RSA-OAEP-256".
+	// See https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
+	// for more details.
+	Algorithm keyvault.JSONWebKeyEncryptionAlgorithm
+}
 
 // Dial gets a new *keyvault.BaseClient, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
 func Dial() (*keyvault.BaseClient, error) {
@@ -187,33 +167,59 @@ func Dial() (*keyvault.BaseClient, error) {
 	return &client, nil
 }
 
+var (
+	// Note that the last binding may be just a key, or key/version.
+	keyIDRE = regexp.MustCompile("^(https://.+\\.vault\\.azure\\.net/)keys/(.+)$")
+)
+
 // OpenKeeper returns a *secrets.Keeper that uses Azure keyVault.
-// List of Parameters:
-// - client: *keyvault.BaseClient instance, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
-// - keyVaultName: string representing the KeyVault name, see https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers
-// - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
-// - keyVersion: string representing the keyVersion, or ""; see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
-// - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
-func OpenKeeper(client *keyvault.BaseClient, keyVaultName, keyName, keyVersion string, opts *KeeperOptions) (*secrets.Keeper, error) {
+//
+// client is a *keyvault.BaseClient instance, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient.
+//
+// keyID is a Azure Key Vault key identifier like "https://{keyvault-name}.vault.azure.net/keys/{key-name}/{key-version}".
+// The "/{key-version}" suffix is optional; it defaults to the latest version.
+// See https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates
+// for more details.
+func OpenKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) (*secrets.Keeper, error) {
+	drv, err := openKeeper(client, keyID, opts)
+	if err != nil {
+		return nil, err
+	}
+	return secrets.NewKeeper(drv), nil
+}
+
+func openKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) (*keeper, error) {
 	if opts == nil {
 		opts = &KeeperOptions{}
 	}
 	if opts.Algorithm == "" {
-		return nil, fmt.Errorf("invalid algorithm, choose from %s", getSupportedAlgorithmsForError())
+		opts.Algorithm = keyvault.RSAOAEP256
 	}
-	return secrets.NewKeeper(&keeper{
-		client:       client,
-		keyVaultName: keyVaultName,
-		keyName:      keyName,
-		keyVersion:   keyVersion,
-		options:      opts,
-	}), nil
+	matches := keyIDRE.FindStringSubmatch(keyID)
+	if len(matches) != 3 {
+		return nil, fmt.Errorf("invalid keyID %q; must match %v %v", keyID, keyIDRE, matches)
+	}
+	// matches[0] is the whole keyID, [1] is the keyVaultURI, and [2] is the key or the key/version.
+	keyVaultURI := matches[1]
+	parts := strings.SplitN(matches[2], "/", 1)
+	keyName := parts[0]
+	var keyVersion string
+	if len(parts) > 1 {
+		keyVersion = parts[1]
+	}
+	return &keeper{
+		client:      client,
+		keyVaultURI: keyVaultURI,
+		keyName:     keyName,
+		keyVersion:  keyVersion,
+		options:     opts,
+	}, nil
 }
 
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	b64Text := base64.StdEncoding.EncodeToString(plaintext)
-	keyOpsResult, err := k.client.Encrypt(ctx, k.getKeyVaultURI(), k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
+	keyOpsResult, err := k.client.Encrypt(ctx, k.keyVaultURI, k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
 		Algorithm: keyvault.JSONWebKeyEncryptionAlgorithm(k.options.Algorithm),
 		Value:     &b64Text,
 	})
@@ -227,7 +233,7 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 // Decrypt decrypts the ciphertext into a plaintext.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	cipherval := string(ciphertext)
-	keyOpsResult, err := k.client.Decrypt(ctx, k.getKeyVaultURI(), k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
+	keyOpsResult, err := k.client.Decrypt(ctx, k.keyVaultURI, k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
 		Algorithm: keyvault.JSONWebKeyEncryptionAlgorithm(k.options.Algorithm),
 		Value:     &cipherval,
 	})
@@ -266,16 +272,4 @@ func (k *keeper) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerr.Unknown
 	}
 	return ec
-}
-
-func (k *keeper) getKeyVaultURI() string {
-	return fmt.Sprintf("https://%s.%s/", k.keyVaultName, keyVaultEndpointSuffix)
-}
-
-func getSupportedAlgorithmsForError() string {
-	var algos []string
-	for _, a := range keyvault.PossibleJSONWebKeyEncryptionAlgorithmValues() {
-		algos = append(algos, string(a))
-	}
-	return strings.Join(algos, ", ")
 }
