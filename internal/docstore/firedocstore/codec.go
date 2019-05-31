@@ -75,11 +75,6 @@ func (e *encoder) EncodeString(x string) { e.pv = &pb.Value{ValueType: &pb.Value
 func (e *encoder) ListIndex(int) { panic("impossible") }
 func (e *encoder) MapKey(string) { panic("impossible") }
 
-func (e *encoder) EncodeComplex(x complex128) {
-	vals := []*pb.Value{floatval(real(x)), floatval(imag(x))}
-	e.pv = &pb.Value{ValueType: &pb.Value_ArrayValue{&pb.ArrayValue{Values: vals}}}
-}
-
 func (e *encoder) EncodeList(n int) driver.Encoder {
 	s := make([]*pb.Value, n)
 	e.pv = &pb.Value{ValueType: &pb.Value_ArrayValue{&pb.ArrayValue{Values: s}}}
@@ -218,23 +213,6 @@ func (d decoder) AsBytes() ([]byte, bool) {
 		return bs.BytesValue, true
 	}
 	return nil, false
-}
-
-func (d decoder) AsComplex() (complex128, bool) {
-	a := d.pv.GetArrayValue()
-	if a == nil {
-		return 0, false
-	}
-	vs := a.Values
-	if len(vs) != 2 {
-		return 0, false
-	}
-	r, okr := vs[0].ValueType.(*pb.Value_DoubleValue)
-	i, oki := vs[1].ValueType.(*pb.Value_DoubleValue)
-	if !okr || !oki {
-		return 0, false
-	}
-	return complex(r.DoubleValue, i.DoubleValue), true
 }
 
 // AsInterface decodes the value in d into the most appropriate Go type.

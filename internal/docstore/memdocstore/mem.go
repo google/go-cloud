@@ -107,7 +107,7 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{})
 		keyField:     keyField,
 		keyFunc:      keyFunc,
 		docs:         map[interface{}]map[string]interface{}{},
-		nextRevision: 1,
+		nextRevision: 0,
 	}, nil
 }
 

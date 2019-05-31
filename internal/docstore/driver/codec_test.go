@@ -76,9 +76,11 @@ type MyStruct struct {
 	*Embed2
 	embed3
 	*embed4
-	Omit      int `docstore:"-"`
-	OmitEmpty int `docstore:",omitempty"`
-	Rename    int `docstore:"rename"`
+	Omit         int `docstore:"-"`
+	OmitEmpty    int `docstore:",omitempty"`
+	Rename       int `docstore:"rename"`
+	DocstoreWins int `json:"j" docstore:"winning"`
+	JsonWorks    int `json:"jason"`
 }
 
 func TestEncode(t *testing.T) {
@@ -108,7 +110,6 @@ func TestEncode(t *testing.T) {
 		{nullptr, nil},
 		{seven, int64(seven)},
 		{&seven, int64(seven)},
-		{3 + 4i, 3 + 4i},
 		{[]byte{1, 2}, []byte{1, 2}},
 		{[]int(nil), nil},
 		{[]int{}, []interface{}{}},
@@ -149,18 +150,20 @@ func TestEncode(t *testing.T) {
 		},
 		{
 			MyStruct{
-				A:         1,
-				B:         &tru,
-				C:         []*te{{'T'}},
-				D:         []time.Time{tm},
-				T:         ts,
-				Embed1:    Embed1{E1: "E1"},
-				Embed2:    &Embed2{E2: "E2"},
-				embed3:    embed3{E3: "E3"},
-				embed4:    &embed4{E4: "E4"},
-				Omit:      3,
-				OmitEmpty: 4,
-				Rename:    5,
+				A:            1,
+				B:            &tru,
+				C:            []*te{{'T'}},
+				D:            []time.Time{tm},
+				T:            ts,
+				Embed1:       Embed1{E1: "E1"},
+				Embed2:       &Embed2{E2: "E2"},
+				embed3:       embed3{E3: "E3"},
+				embed4:       &embed4{E4: "E4"},
+				Omit:         3,
+				OmitEmpty:    4,
+				Rename:       5,
+				DocstoreWins: 6,
+				JsonWorks:    7,
 			},
 			map[string]interface{}{
 				"A":         int64(1),
@@ -174,19 +177,23 @@ func TestEncode(t *testing.T) {
 				"E4":        "E4",
 				"OmitEmpty": int64(4),
 				"rename":    int64(5),
+				"winning":   int64(6),
+				"jason":     int64(7),
 			},
 		},
 		{
 			MyStruct{},
 			map[string]interface{}{
-				"A":      int64(0),
-				"B":      nil,
-				"C":      nil,
-				"D":      nil,
-				"T":      nil,
-				"E1":     "",
-				"E3":     "",
-				"rename": int64(0),
+				"A":       int64(0),
+				"B":       nil,
+				"C":       nil,
+				"D":       nil,
+				"T":       nil,
+				"E1":      "",
+				"E3":      "",
+				"rename":  int64(0),
+				"winning": int64(0),
+				"jason":   int64(0),
 			},
 		},
 	} {
@@ -238,14 +245,13 @@ type testEncoder struct {
 	val interface{}
 }
 
-func (e *testEncoder) EncodeNil()                 { e.val = nil }
-func (e *testEncoder) EncodeBool(x bool)          { e.val = x }
-func (e *testEncoder) EncodeString(x string)      { e.val = x }
-func (e *testEncoder) EncodeInt(x int64)          { e.val = x }
-func (e *testEncoder) EncodeUint(x uint64)        { e.val = x }
-func (e *testEncoder) EncodeFloat(x float64)      { e.val = x }
-func (e *testEncoder) EncodeComplex(x complex128) { e.val = x }
-func (e *testEncoder) EncodeBytes(x []byte)       { e.val = x }
+func (e *testEncoder) EncodeNil()            { e.val = nil }
+func (e *testEncoder) EncodeBool(x bool)     { e.val = x }
+func (e *testEncoder) EncodeString(x string) { e.val = x }
+func (e *testEncoder) EncodeInt(x int64)     { e.val = x }
+func (e *testEncoder) EncodeUint(x uint64)   { e.val = x }
+func (e *testEncoder) EncodeFloat(x float64) { e.val = x }
+func (e *testEncoder) EncodeBytes(x []byte)  { e.val = x }
 
 var (
 	typeOfSpecial    = reflect.TypeOf(special(0))
@@ -319,7 +325,6 @@ func TestDecode(t *testing.T) {
 		{new(bool), true, true},
 		{new(string), "x", "x"},
 		{new(float32), 4.25, float32(4.25)},
-		{new(complex64), 3 + 5i, complex64(3 + 5i)},
 		{new(*int), int64(2), &two},
 		{new(*int), nil, (*int)(nil)},
 		{new([]byte), []byte("foo"), []byte("foo")},
@@ -541,7 +546,7 @@ func TestDecodeErrors(t *testing.T) {
 func TestDecodeFail(t *testing.T) {
 	// Verify that failure to decode a value results in an error.
 	for _, in := range []interface{}{
-		new(interface{}), new(bool), new(string), new(int), new(uint), new(float32), new(complex64),
+		new(interface{}), new(bool), new(string), new(int), new(uint), new(float32),
 		new([]byte), new([]int), new(map[string]interface{}),
 	} {
 		dec := &failDecoder{}
@@ -589,9 +594,8 @@ func (d testDecoder) AsUint() (uint64, bool) {
 	}
 }
 
-func (d testDecoder) AsFloat() (float64, bool)      { x, ok := d.val.(float64); return x, ok }
-func (d testDecoder) AsComplex() (complex128, bool) { x, ok := d.val.(complex128); return x, ok }
-func (d testDecoder) AsBytes() ([]byte, bool)       { x, ok := d.val.([]byte); return x, ok }
+func (d testDecoder) AsFloat() (float64, bool) { x, ok := d.val.(float64); return x, ok }
+func (d testDecoder) AsBytes() ([]byte, bool)  { x, ok := d.val.([]byte); return x, ok }
 
 func (d testDecoder) ListLen() (int, bool) {
 	l, ok := d.val.([]interface{})
@@ -647,7 +651,6 @@ func (failDecoder) AsString() (string, bool)                             { retur
 func (failDecoder) AsInt() (int64, bool)                                 { return 0, false }
 func (failDecoder) AsUint() (uint64, bool)                               { return 0, false }
 func (failDecoder) AsFloat() (float64, bool)                             { return 0, false }
-func (failDecoder) AsComplex() (complex128, bool)                        { return 0, false }
 func (failDecoder) AsBytes() ([]byte, bool)                              { return nil, false }
 func (failDecoder) ListLen() (int, bool)                                 { return 0, false }
 func (failDecoder) DecodeList(func(i int, vd Decoder) bool)              { panic("impossible") }

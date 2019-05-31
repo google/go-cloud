@@ -53,7 +53,6 @@ type Encoder interface {
 	EncodeInt(int64)
 	EncodeUint(uint64)
 	EncodeFloat(float64)
-	EncodeComplex(complex128)
 	EncodeBytes([]byte)
 
 	// EncodeList is called when a slice or array is encountered (except for a
@@ -162,8 +161,6 @@ func encode(v reflect.Value, enc Encoder) error {
 		enc.EncodeUint(v.Uint())
 	case reflect.Float32, reflect.Float64:
 		enc.EncodeFloat(v.Float())
-	case reflect.Complex64, reflect.Complex128:
-		enc.EncodeComplex(v.Complex())
 	case reflect.String:
 		enc.EncodeString(v.String())
 	case reflect.Slice:
@@ -324,7 +321,6 @@ type Decoder interface {
 	AsInt() (int64, bool)
 	AsUint() (uint64, bool)
 	AsFloat() (float64, bool)
-	AsComplex() (complex128, bool)
 	AsBytes() ([]byte, bool)
 	AsBool() (bool, bool)
 	AsNull() bool
@@ -471,12 +467,6 @@ func decode(v reflect.Value, d Decoder) error {
 		}
 		v.SetUint(u)
 		return nil
-
-	case reflect.Complex64, reflect.Complex128:
-		if c, ok := d.AsComplex(); ok {
-			v.SetComplex(c)
-			return nil
-		}
 
 	case reflect.Slice, reflect.Array:
 		return decodeList(v, d)
@@ -750,7 +740,12 @@ type tagOptions struct {
 
 // parseTag interprets docstore struct field tags.
 func parseTag(t reflect.StructTag) (name string, keep bool, other interface{}, err error) {
-	name, keep, opts := fields.ParseStandardTag("docstore", t)
+	var opts []string
+	if _, ok := t.Lookup("docstore"); ok {
+		name, keep, opts = fields.ParseStandardTag("docstore", t)
+	} else {
+		name, keep, opts = fields.ParseStandardTag("json", t)
+	}
 	tagOpts := tagOptions{}
 	for _, opt := range opts {
 		switch opt {
