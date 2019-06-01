@@ -75,6 +75,7 @@ func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.
 // Options are optional arguments to the OpenCollection functions.
 type Options struct {
 	// The name of the field holding the document revision.
+	// Defaults to docstore.RevisionField.
 	RevisionField string
 }
 
@@ -107,7 +108,10 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{},
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must provide either keyField or keyFunc")
 	}
 	if opts == nil {
-		opts = &Options{RevisionField: docstore.RevisionField}
+		opts = &Options{}
+	}
+	if opts.RevisionField == "" {
+		opts.RevisionField = docstore.RevisionField
 	}
 	return &collection{
 		keyField:    keyField,
