@@ -25,7 +25,7 @@ func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra
 		Use:   "deploy BIOME",
 		Short: "TODO Deploy the biome",
 		Long:  "TODO more about deploy",
-		Args:  cobra.ExactArgs(0),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			biome := args[0]
 			if err := build(ctx, pctx, defaultDockerTag); err != nil {

@@ -70,8 +70,7 @@ func (h *harness) Close() {}
 type codecTester struct{}
 
 func (codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
-	return []drivertest.UnsupportedType{
-		drivertest.Complex, drivertest.NanosecondTimes}
+	return []drivertest.UnsupportedType{drivertest.NanosecondTimes}
 }
 
 func (codecTester) DocstoreEncode(x interface{}) (interface{}, error) {

@@ -70,8 +70,6 @@ type UnsupportedType int
 const (
 	// Native codec doesn't support any unsigned integer type
 	Uint UnsupportedType = iota
-	// Native codec doesn't support any complex type
-	Complex
 	// Native codec doesn't support arrays
 	Arrays
 	// Native codec doesn't support full time precision
@@ -552,7 +550,6 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		I:  1,
 		U:  2,
 		F:  2.5,
-		C:  complex(3.0, 4.0),
 		St: "foo",
 		B:  true,
 		L:  []int{3, 4, 5},
@@ -598,16 +595,6 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		u := &Uint{10}
 		check(u, &Uint{}, ct.DocstoreEncode, ct.NativeDecode)
 		check(u, &Uint{}, ct.NativeEncode, ct.DocstoreDecode)
-	}
-
-	// Complex numbers.
-	if !unsupported[Complex] {
-		type Complex struct {
-			C complex128
-		}
-		c := &Complex{complex(11, 12)}
-		check(c, &Complex{}, ct.DocstoreEncode, ct.NativeDecode)
-		check(c, &Complex{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
 
 	// Arrays.
@@ -741,7 +728,6 @@ type docstoreRoundTrip struct {
 	I  int
 	U  uint
 	F  float64
-	C  complex128
 	St string
 	B  bool
 	By []byte

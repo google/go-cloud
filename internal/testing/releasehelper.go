@@ -120,7 +120,7 @@ func runOnGomod(path string) {
 			if r.Path == base {
 				reqPath = "."
 			} else {
-				reqPath = strings.TrimPrefix(r.Path, base)
+				reqPath = strings.TrimPrefix(r.Path, base+"/")
 			}
 			rel, err := filepath.Rel(path, reqPath)
 			if err != nil {

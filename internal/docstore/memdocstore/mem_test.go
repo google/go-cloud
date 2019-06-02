@@ -31,11 +31,11 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(drivertest.KeyField, nil)
+	return newCollection(drivertest.KeyField, nil, nil)
 }
 
 func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
-	return newCollection("", drivertest.HighScoreKey)
+	return newCollection("", drivertest.HighScoreKey, nil)
 }
 
 func (h *harness) Close() {}
@@ -50,7 +50,7 @@ type docmap = map[string]interface{}
 func TestUpdateEncodesValues(t *testing.T) {
 	// Check that update encodes the values in mods.
 	ctx := context.Background()
-	dc, err := newCollection(drivertest.KeyField, nil)
+	dc, err := newCollection(drivertest.KeyField, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestUpdateEncodesValues(t *testing.T) {
 func TestUpdateAtomic(t *testing.T) {
 	// Check that update is atomic.
 	ctx := context.Background()
-	dc, err := newCollection(drivertest.KeyField, nil)
+	dc, err := newCollection(drivertest.KeyField, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestOpenCollectionFromURL(t *testing.T) {
 }
 
 func TestMissingKeyCreateFailsWithKeyFunc(t *testing.T) {
-	dc, err := newCollection("", func(docstore.Document) interface{} { return nil })
+	dc, err := newCollection("", func(docstore.Document) interface{} { return nil }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,5 +173,25 @@ func TestSortDocs(t *testing.T) {
 		if diff := cmp.Diff(got, test.want); diff != "" {
 			t.Errorf("%q, asc=%t:\n%s", test.field, test.ascending, diff)
 		}
+	}
+}
+
+func TestAlternativeRevisionField(t *testing.T) {
+	coll, err := OpenCollection("Key", &Options{RevisionField: "Etag"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type S struct {
+		Key  int
+		Etag interface{}
+	}
+
+	got := S{Key: 1}
+	if err := coll.Actions().Put(&S{Key: 1}).Get(&got).Do(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got.Etag != int64(1) {
+		t.Errorf("got %v, want 1", got.Etag)
 	}
 }

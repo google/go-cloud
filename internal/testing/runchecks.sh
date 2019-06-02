@@ -68,6 +68,8 @@ if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   echo
   echo "Starting local dependencies..."
   ./internal/testing/start_local_deps.sh
+  echo
+  echo "Installing Wire..."
   go install -mod=readonly github.com/google/wire/cmd/wire
 fi
 
@@ -87,13 +89,10 @@ while read -r path || [[ -n "$path" ]]; do
   # codecov will only save the last one anyway.
   if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
     echo "Running Go tests with coverage..."
-    go test -mod=readonly -json -race -coverpkg=./... -coverprofile=coverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
-    if [ -f coverage.out ] && [ $result -eq 0 ]; then
-      # Filter out test packages.
-      grep -v test coverage.out > coverage2.out
-      mv coverage2.out coverage.out
-      bash <(curl -s https://codecov.io/bash)
-      rm coverage.out
+    go test -mod=readonly -json -race -coverpkg=./... -coverprofile=modcoverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
+    if [ -f modcoverage.out ] && [ $result -eq 0 ]; then
+      cat modcoverage.out >> "$rootdir"/coverage.out
+      rm modcoverage.out
     fi
   else
     echo "Running Go tests..."
@@ -106,6 +105,7 @@ while read -r path || [[ -n "$path" ]]; do
       go test -mod=readonly -json -race ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
     fi
   fi
+
   # Do these additional checks for the Linux build on Travis, or when running
   # locally.
   if [[ "${TRAVIS_OS_NAME:-linux}" == "linux" ]]; then
@@ -117,6 +117,15 @@ while read -r path || [[ -n "$path" ]]; do
   popd &> /dev/null
 done < <( sed -e '/^#/d' -e '/^$/d' allmodules )
 # The above filters out comments and empty lines from allmodules.
+
+# Upload cumulative coverage data if we generated it.
+if [ -f coverage.out ] && [ $result -eq 0 ]; then
+  # Filter out test packages.
+  grep -v test coverage.out > coverage2.out
+  mv coverage2.out coverage.out
+  bash <(curl -s https://codecov.io/bash)
+  rm coverage.out
+fi
 
 # The rest of these checks are not OS-specific, so we only run them for the
 # Linux build on Travis, or when running locally.
@@ -138,13 +147,6 @@ if [ -n "$DIFF" ]; then
 else
   echo "  OK"
 fi;
-
-
-echo
-echo "Ensuring that go mod tidy has been run for the root module..."
-( ./internal/testing/check_mod_tidy.sh && echo "  OK" ) || {
-  echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1
-}
 
 
 echo

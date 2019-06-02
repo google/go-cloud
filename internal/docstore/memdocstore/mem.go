@@ -73,14 +73,18 @@ func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.
 }
 
 // Options are optional arguments to the OpenCollection functions.
-type Options struct{}
+type Options struct {
+	// The name of the field holding the document revision.
+	// Defaults to docstore.RevisionField.
+	RevisionField string
+}
 
 // TODO(jba): make this package thread-safe.
 
 // OpenCollection creates a *docstore.Collection backed by memory. keyField is the
 // document field holding the primary key of the collection.
-func OpenCollection(keyField string, _ *Options) (*docstore.Collection, error) {
-	c, err := newCollection(keyField, nil)
+func OpenCollection(keyField string, opts *Options) (*docstore.Collection, error) {
+	c, err := newCollection(keyField, nil, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -91,35 +95,43 @@ func OpenCollection(keyField string, _ *Options) (*docstore.Collection, error) {
 // a document and returns the document's primary key. It should return nil if the
 // document is missing the information to construct a key. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionWithKeyFunc(keyFunc func(docstore.Document) interface{}, _ *Options) (*docstore.Collection, error) {
-	c, err := newCollection("", keyFunc)
+func OpenCollectionWithKeyFunc(keyFunc func(docstore.Document) interface{}, opts *Options) (*docstore.Collection, error) {
+	c, err := newCollection("", keyFunc, opts)
 	if err != nil {
 		return nil, err
 	}
 	return docstore.NewCollection(c), nil
 }
 
-func newCollection(keyField string, keyFunc func(docstore.Document) interface{}) (driver.Collection, error) {
+func newCollection(keyField string, keyFunc func(docstore.Document) interface{}, opts *Options) (driver.Collection, error) {
 	if keyField == "" && keyFunc == nil {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must provide either keyField or keyFunc")
 	}
+	if opts == nil {
+		opts = &Options{}
+	}
+	if opts.RevisionField == "" {
+		opts.RevisionField = docstore.RevisionField
+	}
 	return &collection{
-		keyField:     keyField,
-		keyFunc:      keyFunc,
-		docs:         map[interface{}]map[string]interface{}{},
-		nextRevision: 1,
+		keyField:    keyField,
+		keyFunc:     keyFunc,
+		opts:        opts,
+		docs:        map[interface{}]map[string]interface{}{},
+		curRevision: 0,
 	}, nil
 }
 
 type collection struct {
 	keyField string
 	keyFunc  func(docstore.Document) interface{}
+	opts     *Options
 	mu       sync.Mutex
 	// map from keys to documents. Documents are represented as map[string]interface{},
 	// regardless of what their original representation is. Even if the user is using
 	// map[string]interface{}, we make our own copy.
-	docs         map[interface{}]map[string]interface{}
-	nextRevision int64 // incremented on each write
+	docs        map[interface{}]map[string]interface{}
+	curRevision int64 // incremented on each write
 }
 
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
@@ -203,7 +215,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		fallthrough
 
 	case driver.Replace, driver.Put:
-		if err := checkRevision(a.Doc, current); err != nil {
+		if err := c.checkRevision(a.Doc, current); err != nil {
 			return err
 		}
 		doc, err := encodeDoc(a.Doc)
@@ -214,13 +226,13 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		c.docs[a.Key] = doc
 
 	case driver.Delete:
-		if err := checkRevision(a.Doc, current); err != nil {
+		if err := c.checkRevision(a.Doc, current); err != nil {
 			return err
 		}
 		delete(c.docs, a.Key)
 
 	case driver.Update:
-		if err := checkRevision(a.Doc, current); err != nil {
+		if err := c.checkRevision(a.Doc, current); err != nil {
 			return err
 		}
 		if err := c.update(current, a.Mods); err != nil {
@@ -230,7 +242,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
+		if err := decodeDoc(current, a.Doc, a.FieldPaths, c.opts.RevisionField); err != nil {
 			return err
 		}
 	default:
@@ -326,22 +338,22 @@ func add(x, y interface{}) (interface{}, error) {
 
 // Must be called with the lock held.
 func (c *collection) changeRevision(doc map[string]interface{}) {
-	c.nextRevision++
-	doc[docstore.RevisionField] = c.nextRevision
+	c.curRevision++
+	doc[c.opts.RevisionField] = c.curRevision
 }
 
-func checkRevision(arg driver.Document, current map[string]interface{}) error {
+func (c *collection) checkRevision(arg driver.Document, current map[string]interface{}) error {
 	if current == nil {
 		return nil // no existing document
 	}
-	curRev := current[docstore.RevisionField].(int64)
-	r, err := arg.GetField(docstore.RevisionField)
+	curRev := current[c.opts.RevisionField].(int64)
+	r, err := arg.GetField(c.opts.RevisionField)
 	if err != nil || r == nil {
 		return nil // no incoming revision information: nothing to check
 	}
 	wantRev, ok := r.(int64)
 	if !ok {
-		return gcerr.Newf(gcerr.InvalidArgument, nil, "revision field %s is not an int64", docstore.RevisionField)
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "revision field %s is not an int64", c.opts.RevisionField)
 	}
 	if wantRev != curRev {
 		return gcerr.Newf(gcerr.FailedPrecondition, nil, "mismatched revisions: want %d, current %d", wantRev, curRev)
