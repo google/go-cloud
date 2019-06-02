@@ -15,6 +15,7 @@
 package driver
 
 import (
+	"reflect"
 	"sort"
 
 	"github.com/google/uuid"
@@ -90,4 +91,20 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets 
 	}
 
 	return vals(bgets), vals(cgets), vals(writes), vals(agets)
+}
+
+func AsFunc(val interface{}) func(interface{}) bool {
+	rval := reflect.ValueOf(val)
+	wantType := reflect.PtrTo(rval.Type())
+	return func(i interface{}) bool {
+		if i == nil {
+			return false
+		}
+		ri := reflect.ValueOf(i)
+		if ri.Type() != wantType {
+			return false
+		}
+		ri.Elem().Set(rval)
+		return true
+	}
 }

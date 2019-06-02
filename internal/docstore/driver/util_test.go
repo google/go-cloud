@@ -118,3 +118,20 @@ func TestGroupActions(t *testing.T) {
 func (a *Action) String() string { // for TestGroupActions
 	return fmt.Sprintf("<%s %v>", a.Kind, a.Key)
 }
+
+func TestAsFunc(t *testing.T) {
+	x := 1
+	as := AsFunc(x)
+
+	var y int
+	if !as(&y) || y != 1 {
+		t.Errorf("*int: returned false or wrong value %d", y)
+	}
+
+	var z float64
+	for _, arg := range []interface{}{nil, y, &z} {
+		if as(arg) {
+			t.Errorf("%#v: got true, want false", arg)
+		}
+	}
+}
