@@ -92,9 +92,9 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 }
 
 func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
-	var tg *dyn.TransactGetItemsInput
+	var bg *dyn.BatchGetItemInput
 	var tw *dyn.TransactWriteItemsInput
-	if !as(&tg) && !as(&tw) {
+	if !as(&bg) && !as(&tw) {
 		return errors.New("ActionList.BeforeDo failed")
 	}
 	return nil

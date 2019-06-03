@@ -22,8 +22,6 @@ import (
 
 	vkit "cloud.google.com/go/firestore/apiv1"
 	"github.com/golang/protobuf/proto"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
@@ -244,42 +242,5 @@ func TestNewGetRequest(t *testing.T) {
 	}
 	if !proto.Equal(got, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
-	}
-}
-
-func TestGroupByFieldPath(t *testing.T) {
-	for i, test := range []struct {
-		in   []*driver.Action
-		want [][]int // indexes into test.in
-	}{
-		{
-			in:   []*driver.Action{{Index: 0}, {Index: 1}, {Index: 2}},
-			want: [][]int{{0, 1, 2}},
-		},
-		{
-			in:   []*driver.Action{{Index: 0}, {Index: 1, FieldPaths: [][]string{{"a"}}}, {Index: 2}},
-			want: [][]int{{0, 2}, {1}},
-		},
-		{
-			in: []*driver.Action{
-				{Index: 0, FieldPaths: [][]string{{"a", "b"}}},
-				{Index: 1, FieldPaths: [][]string{{"a"}}},
-				{Index: 2},
-				{Index: 3, FieldPaths: [][]string{{"a"}, {"b"}}},
-			},
-			want: [][]int{{0}, {1}, {2}, {3}},
-		},
-	} {
-		got := groupByFieldPath(test.in)
-		want := make([][]*driver.Action, len(test.want))
-		for i, s := range test.want {
-			want[i] = make([]*driver.Action, len(s))
-			for j, x := range s {
-				want[i][j] = test.in[x]
-			}
-		}
-		if diff := cmp.Diff(got, want, cmpopts.IgnoreUnexported(driver.Document{})); diff != "" {
-			t.Errorf("#%d: %s", i, diff)
-		}
 	}
 }

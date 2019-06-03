@@ -37,7 +37,7 @@ func RunBenchmarks(b *testing.B, coll *docstore.Collection) {
 		benchmarkActionListPut(50, b, coll)
 	})
 	b.Run("BenchmarkActionListGet", func(b *testing.B) {
-		benchmarkActionListGet(50, b, coll)
+		benchmarkActionListGet(100, b, coll)
 	})
 	cleanUpTable(b, coll)
 }
