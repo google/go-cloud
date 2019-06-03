@@ -30,7 +30,7 @@
 //
 // dynamodocstore exposes the following types for As:
 //  - Collection.As: *dynamodb.DynamoDB
-//  - ActionList.BeforeDo: *dynamodb.TransactGetItemsInput or *dynamodb.TransactWriteItemsInput
+//  - ActionList.BeforeDo: *dynamodb.BatchGetItemsInput or *dynamodb.TransactWriteItemsInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 package dynamodocstore
@@ -217,146 +217,96 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
-	groups := c.splitActions(actions)
-	nRun := 0 // number of actions successfully run
-	var err error
-	for _, g := range groups {
-		if g[0].Kind == driver.Get {
-			err = c.runGets(ctx, g, opts)[0]
-		} else {
-			err = c.runWrites(ctx, g, opts)
-		}
-		if err != nil {
-			return driver.ActionListError{{nRun, err}}
-		}
-		nRun += len(g)
-	}
-	return nil
-}
-
-// splitActions divides the actions slice into sub-slices, each of which can be
-// passed to run a dynamo transaction operation.
-// splitActions doesn't change the order of the input slice.
-func (c *collection) splitActions(actions []*driver.Action) [][]*driver.Action {
-	var (
-		groups [][]*driver.Action // the actions, split; the return value
-		cur    []*driver.Action   // the group currently being constructed
-	)
-	collect := func() { // called when the current group is known to be finished
-		if len(cur) > 0 {
-			groups = append(groups, cur)
-			cur = nil
-		}
-	}
-	for _, a := range actions {
-		if len(cur) > 0 && c.shouldSplit(cur[len(cur)-1], a) ||
-			len(cur) >= 10 { // each transaction can run up to 10 operations.
-			collect()
-		}
-		cur = append(cur, a)
-	}
-	collect()
-	return groups
-}
-
-func (c *collection) shouldSplit(curr, next *driver.Action) bool {
-	if (curr.Kind == driver.Get) != (next.Kind == driver.Get) { // different kind
-		return true
-	}
-	return false
-}
-
-func (c *collection) runActionsUnordered(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
-	groups, i, err := c.splitActionsUnordered(actions)
-	if err != nil {
-		errs[i] = err
-		return driver.NewActionListError(errs)
-	}
-	var wg sync.WaitGroup
-	groupBaseIndex := 0 // index in actions of first action in group
-	for _, g := range groups {
-		g := g
-		base := groupBaseIndex
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if g[0].Kind == driver.Get {
-				for i, err := range c.runGets(ctx, g, opts) {
-					errs[base+i] = err
-				}
-			} else {
-				err := c.runWrites(ctx, g, opts)
-				for i := 0; i < len(g); i++ {
-					errs[base+i] = err
-				}
-			}
-		}()
-		groupBaseIndex += len(g)
-	}
-	wg.Wait()
+	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	c.runGets(ctx, beforeGets, errs, opts)
+	ch := make(chan struct{})
+	go func() { defer close(ch); c.runWrites(ctx, writes, errs, opts) }()
+	c.runGets(ctx, gets, errs, opts)
+	<-ch
+	c.runGets(ctx, afterGets, errs, opts)
 	return driver.NewActionListError(errs)
 }
 
-// splitActionsUnordered divides the actions slice into sub-slices, which
-// maximizes the actions sent in each group and may change the order of the
-// action list, each of which can be passed to run a dynamo transaction
-// operation. If an error occurs, it returns the error and the index of the
-// action that cause the error.
-func (c *collection) splitActionsUnordered(actions []*driver.Action) ([][]*driver.Action, int, error) {
-	var (
-		groups [][]*driver.Action // the actions, split; the return value
-		gets   []*driver.Action   // the gets group currently being constructed
-		writes []*driver.Action   // the writes group currently being constructed
-	)
-	collect := func(cur *[]*driver.Action) { // called when the current group is known to be finished
-		if len(*cur) > 0 {
-			groups = append(groups, *cur)
-			*cur = nil
+func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	const batchSize = 100
+	var wg sync.WaitGroup
+	for _, group := range driver.GroupByFieldPath(actions) {
+		n := len(group) / batchSize
+		for i := 0; i < n; i++ {
+			i := i
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				c.batchGet(ctx, group, errs, opts, batchSize*i, batchSize*(i+1)-1)
+			}()
+		}
+		if n*batchSize < len(group) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				c.batchGet(ctx, group, errs, opts, batchSize*n, len(group)-1)
+			}()
 		}
 	}
-	for _, a := range actions {
-		cur := &writes
-		if a.Kind == driver.Get {
-			cur = &gets
-		}
-		*cur = append(*cur, a)
-		if len(*cur) >= 10 {
-			collect(cur)
-		}
-	}
-	collect(&gets)
-	collect(&writes)
-	return groups, -1, nil
+	wg.Wait()
 }
 
-// runGets runs a list of gets in a transaction call. When running in ordered
-// mode, it returns the first error encountered, if any; when running in
-// unordered mode, it returns a list of errors with indices matched with these
-// in the action list.
-func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) (errs []error) {
-	errs = make([]error, len(actions))
+func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions, start, end int) {
+	// errors need to be mapped to the actions' indices.
 	setErr := func(err error) {
-		for i := range errs {
-			errs[i] = err
+		for i := start; i <= end; i++ {
+			errs[gets[i].Index] = err
 		}
 	}
 
-	// Assume all actions Kinds are Gets.
-	tgs := make([]*dyn.TransactGetItem, len(actions))
-	for i, a := range actions {
-		tg, err := c.toTransactGet(a.Doc, a.FieldPaths)
+	keys := make([]map[string]*dyn.AttributeValue, 0, end-start+1)
+	for i := start; i <= end; i++ {
+		av, err := encodeDocKeyFields(gets[i].Doc, c.partitionKey, c.sortKey)
+		if err != nil {
+			errs[gets[i].Index] = err
+		}
+
+		keys = append(keys, av.M)
+	}
+	ka := &dyn.KeysAndAttributes{
+		Keys:           keys,
+		ConsistentRead: aws.Bool(true),
+	}
+	if len(gets[start].FieldPaths) != 0 {
+		// We need to add the key fields if the user doesn't include them. The
+		// BatchGet API doesn't return them otherwise.
+		var hasP, hasS bool
+		nbs := []expression.NameBuilder{expression.Name(docstore.RevisionField)}
+		for _, fp := range gets[start].FieldPaths {
+			p := strings.Join(fp, ".")
+			nbs = append(nbs, expression.Name(p))
+			if p == c.partitionKey {
+				hasP = true
+			} else if p == c.sortKey {
+				hasS = true
+			}
+		}
+		if !hasP {
+			nbs = append(nbs, expression.Name(c.partitionKey))
+		}
+		if c.sortKey != "" && !hasS {
+			nbs = append(nbs, expression.Name(c.sortKey))
+		}
+		expr, err := expression.NewBuilder().
+			WithProjection(expression.AddNames(expression.ProjectionBuilder{}, nbs...)).
+			Build()
 		if err != nil {
 			setErr(err)
-			return errs
+			return
 		}
-		tgs[i] = tg
+		ka.ProjectionExpression = expr.Projection()
+		ka.ExpressionAttributeNames = expr.Names()
 	}
-
-	in := &dyn.TransactGetItemsInput{TransactItems: tgs}
+	in := &dyn.BatchGetItemInput{RequestItems: map[string]*dyn.KeysAndAttributes{c.table: ka}}
 	if opts.BeforeDo != nil {
 		asFunc := func(i interface{}) bool {
-			p, ok := i.(**dyn.TransactGetItemsInput)
+			p, ok := i.(**dyn.BatchGetItemInput)
 			if !ok {
 				return false
 			}
@@ -365,36 +315,90 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action, opts
 		}
 		if err := opts.BeforeDo(asFunc); err != nil {
 			setErr(err)
-			return errs
+			return
 		}
 	}
-	out, err := c.db.TransactGetItemsWithContext(ctx, in)
+	out, err := c.db.BatchGetItemWithContext(ctx, in)
 	if err != nil {
 		setErr(err)
-		return errs
+		return
 	}
-
-	for i, res := range out.Responses {
-		item := res.Item
-		if item == nil {
-			errs[i] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", actions[i].Doc)
-		} else {
-			errs[i] = decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc)
+	found := make([]bool, end-start+1)
+	am := mapActionIndices(gets, start, end)
+	for _, item := range out.Responses[c.table] {
+		if item != nil {
+			key := map[string]interface{}{c.partitionKey: nil}
+			if c.sortKey != "" {
+				key[c.sortKey] = nil
+			}
+			keysOnly, err := driver.NewDocument(key)
+			if err != nil {
+				panic(err)
+			}
+			err = decodeDoc(&dyn.AttributeValue{M: item}, keysOnly)
+			if err != nil {
+				continue
+			}
+			decKey, err := c.Key(keysOnly)
+			if err != nil {
+				continue
+			}
+			i := am[decKey]
+			errs[gets[i].Index] = decodeDoc(&dyn.AttributeValue{M: item}, gets[i].Doc)
+			found[i-start] = true
 		}
 	}
-	return errs
+	for delta, f := range found {
+		if !f {
+			errs[gets[start+delta].Index] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", gets[start+delta].Doc)
+		}
+	}
 }
 
-func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) error {
-	// TODO(shantuo/jba): make writes independent of each other.
-	tws := make([]*dyn.TransactWriteItem, len(actions))
-	for i, a := range actions {
+func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]int {
+	m := make(map[interface{}]int)
+	for i := start; i <= end; i++ {
+		m[actions[i].Key] = i
+	}
+	return m
+}
+
+func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	const batchSize = 10
+	var wg sync.WaitGroup
+	n := len(actions) / batchSize
+	for i := 0; i < n; i++ {
+		i := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.transactWrite(ctx, actions, errs, opts, batchSize*i, batchSize*(i+1)-1)
+		}()
+	}
+	if n*batchSize < len(actions) {
+		c.transactWrite(ctx, actions, errs, opts, batchSize*n, len(actions)-1)
+	}
+	wg.Wait()
+}
+
+// TODO(shantuo/jba): make writes independent of each other.
+func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions, start, end int) {
+	setErr := func(err error) {
+		for i := start; i <= end; i++ {
+			errs[actions[i].Index] = err
+		}
+	}
+
+	tws := make([]*dyn.TransactWriteItem, 0, end-start+1)
+	for i := start; i <= end; i++ {
 		var pc *expression.ConditionBuilder
 		var err error
+		a := actions[i]
 		if a.Kind != driver.Create {
 			pc, err = revisionPrecondition(a.Doc)
 			if err != nil {
-				return err
+				setErr(err)
+				return
 			}
 		}
 
@@ -423,9 +427,10 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, op
 			panic("wrong action passed in; writes should be of kind Create, Replace, Put, Delete or Update")
 		}
 		if err != nil {
-			return err
+			setErr(err)
+			return
 		}
-		tws[i] = tw
+		tws = append(tws, tw)
 	}
 
 	in := &dyn.TransactWriteItemsInput{
@@ -442,11 +447,13 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, op
 			return true
 		}
 		if err := opts.BeforeDo(asFunc); err != nil {
-			return err
+			setErr(err)
+			return
 		}
 	}
 	if _, err := c.db.TransactWriteItemsWithContext(ctx, in); err != nil {
-		return err
+		setErr(err)
+		return
 	}
 	for i, a := range actions {
 		if a.Kind == driver.Create {
@@ -455,7 +462,6 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, op
 			}
 		}
 	}
-	return nil
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
@@ -502,35 +508,6 @@ func (c *collection) toTransactPut(ctx context.Context, k driver.ActionKind, doc
 		put.ConditionExpression = ce.Condition()
 	}
 	return &dyn.TransactWriteItem{Put: put}, nil
-}
-
-func (c *collection) toTransactGet(doc driver.Document, fieldpaths [][]string) (*dyn.TransactGetItem, error) {
-	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
-	if err != nil {
-		return nil, err
-	}
-
-	get := &dyn.Get{
-		TableName: &c.table,
-		Key:       av.M,
-	}
-	if len(fieldpaths) > 0 {
-		// Construct a projection expression for the field paths.
-		// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html.
-		nbs := []expression.NameBuilder{expression.Name(docstore.RevisionField)}
-		for _, fp := range fieldpaths {
-			nbs = append(nbs, expression.Name(strings.Join(fp, ".")))
-		}
-		expr, err := expression.NewBuilder().
-			WithProjection(expression.AddNames(expression.ProjectionBuilder{}, nbs...)).
-			Build()
-		if err != nil {
-			return nil, err
-		}
-		get.ProjectionExpression = expr.Projection()
-		get.ExpressionAttributeNames = expr.Names()
-	}
-	return &dyn.TransactGetItem{Get: get}, nil
 }
 
 func (c *collection) toTransactDelete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) (*dyn.TransactWriteItem, error) {

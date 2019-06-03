@@ -317,6 +317,19 @@ func splitFilters(fs []driver.Filter) (sendToFirestore, evaluateLocally []driver
 	return sendToFirestore, evaluateLocally
 }
 
+// Report whether two field paths are equal.
+func fpEqual(fp1, fp2 []string) bool {
+	if len(fp1) != len(fp2) {
+		return false
+	}
+	for i, s1 := range fp1 {
+		if s1 != fp2[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
 	// Treat filters on the name field specially.
 	if c.nameField != "" && fpEqualString(f.FieldPath, c.nameField) {

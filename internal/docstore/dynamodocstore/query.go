@@ -490,7 +490,7 @@ func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, mods [
 
 	var actions []*driver.Action
 	var startAfter map[string]*dyn.AttributeValue
-	for {
+	for i := 0; ; i++ {
 		items, last, _, err := qr.run(ctx, startAfter)
 		if err != nil {
 			return err
@@ -503,10 +503,14 @@ func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, mods [
 			if err := decodeDoc(&dyn.AttributeValue{M: item}, doc); err != nil {
 				return err
 			}
+			key, err := c.Key(doc)
+			if err != nil {
+				return err
+			}
 			if mods == nil {
-				actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
+				actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc, Index: i, Key: key})
 			} else {
-				actions = append(actions, &driver.Action{Kind: driver.Update, Doc: doc, Mods: mods})
+				actions = append(actions, &driver.Action{Kind: driver.Update, Doc: doc, Index: i, Key: key, Mods: mods})
 			}
 		}
 		if last == nil {
@@ -514,7 +518,7 @@ func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, mods [
 		}
 		startAfter = last
 	}
-	alerr := c.runActionsUnordered(ctx, actions, &driver.RunActionsOptions{})
+	alerr := c.RunActions(ctx, actions, &driver.RunActionsOptions{})
 	if len(alerr) == 0 {
 		return nil
 	}
