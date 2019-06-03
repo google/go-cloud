@@ -437,6 +437,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 		ClientRequestToken: aws.String(driver.UniqueString()),
 		TransactItems:      tws,
 	}
+
 	if opts.BeforeDo != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**dyn.TransactWriteItemsInput)
