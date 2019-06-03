@@ -118,3 +118,40 @@ func TestGroupActions(t *testing.T) {
 func (a *Action) String() string { // for TestGroupActions
 	return fmt.Sprintf("<%s %v>", a.Kind, a.Key)
 }
+
+func TestGroupByFieldPath(t *testing.T) {
+	for i, test := range []struct {
+		in   []*Action
+		want [][]int // indexes into test.in
+	}{
+		{
+			in:   []*Action{{Index: 0}, {Index: 1}, {Index: 2}},
+			want: [][]int{{0, 1, 2}},
+		},
+		{
+			in:   []*Action{{Index: 0}, {Index: 1, FieldPaths: [][]string{{"a"}}}, {Index: 2}},
+			want: [][]int{{0, 2}, {1}},
+		},
+		{
+			in: []*Action{
+				{Index: 0, FieldPaths: [][]string{{"a", "b"}}},
+				{Index: 1, FieldPaths: [][]string{{"a"}}},
+				{Index: 2},
+				{Index: 3, FieldPaths: [][]string{{"a"}, {"b"}}},
+			},
+			want: [][]int{{0}, {1}, {2}, {3}},
+		},
+	} {
+		got := GroupByFieldPath(test.in)
+		want := make([][]*Action, len(test.want))
+		for i, s := range test.want {
+			want[i] = make([]*Action, len(s))
+			for j, x := range s {
+				want[i][j] = test.in[x]
+			}
+		}
+		if diff := cmp.Diff(got, want, cmpopts.IgnoreUnexported(Document{})); diff != "" {
+			t.Errorf("#%d: %s", i, diff)
+		}
+	}
+}
