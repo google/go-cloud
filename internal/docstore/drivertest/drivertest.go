@@ -148,11 +148,11 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
-	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
+	// t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
 	// t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, testGet) })
 	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
-	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
+	// t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	// t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 	// t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
