@@ -364,21 +364,16 @@ func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]
 }
 
 func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	// TODO(jba): Do these concurrently. At present that breaks replay because the
+	// client request tokens can be claimed in different orders.
 	const batchSize = 10
-	var wg sync.WaitGroup
 	n := len(actions) / batchSize
 	for i := 0; i < n; i++ {
-		i := i
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			c.transactWrite(ctx, actions, errs, opts, batchSize*i, batchSize*(i+1)-1)
-		}()
+		c.transactWrite(ctx, actions, errs, opts, batchSize*i, batchSize*(i+1)-1)
 	}
 	if n*batchSize < len(actions) {
 		c.transactWrite(ctx, actions, errs, opts, batchSize*n, len(actions)-1)
 	}
-	wg.Wait()
 }
 
 // TODO(shantuo/jba): make writes independent of each other.
