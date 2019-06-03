@@ -12,16 +12,6 @@ services.
 
 <!--more-->
 
-Before we start with any code, it helps to think about possible designs. We
-could very well write a code path for Amazon's Simple Storage Service (S3) and
-another code path for Google Cloud Storage (GCS). That would work. However, it
-would also be tedious. We would have to learn the semantics of uploading files
-to both blob storage services. Even worse, we would have two code paths that
-effectively do the same thing, but would have to be maintained separately
-(ugh!). It would be much nicer if we could write the upload logic once and
-reuse it across providers. That's exactly the kind of [separation of
-concerns][] that the Go CDK makes possible. So, let's write some code!
-
 When we're done, our command line application will work like this:
 
 ```shell
@@ -37,7 +27,6 @@ $ ./upload azblob://go-cloud-bucket gopher.png
 
 (You can download the finished tutorial [from GitHub][samples/tutorial]).
 
-[separation of concerns]: https://en.wikipedia.org/wiki/Separation_of_concerns
 [samples/tutorial]: https://github.com/google/go-cloud/tree/master/samples/tutorial/
 
 ## Setup
@@ -251,4 +240,13 @@ We hope this example demonstrates how having one type for multiple clouds is a
 huge win for simplicity and maintainability. By writing an application using a
 generic interface like `*blob.Bucket`, we retain the option of using
 infrastructure in whichever cloud that best fits our needs all without having to
-worry about a rewrite.
+worry about a rewrite. If you want to learn more, you can read about
+[Structuring Portable Code][].
+
+If you want to see how to deploy a Go CDK application, see [other tutorials][].
+If you want to see how to use Go CDK APIs in your application, see the
+[how-to guides][].
+
+[how-to guides]: {{< ref "/howto/_index.md" >}}
+[other tutorials]: {{< ref "/tutorials/_index.md" >}}
+[Structuring Portable Code]: {{< ref "/concepts/structure/index.md" >}}

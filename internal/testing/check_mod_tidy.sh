@@ -13,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script checks to see if `go mod tidy` has been run on a module.
-#
-# With no arguments, it checks the module in the current directory.
-# Alternatively, it accepts a single argument to check the module in the given
-# directory.
+# This script checks to see if `go mod tidy` has been run on the module
+# in the current directory.
 #
 # It exits with status 1 if "go mod tidy && go list -deps ./..." would
 # make changes.
@@ -29,11 +26,6 @@
 # https://github.com/golang/go/issues/31248 is fixed.
 
 set -euo pipefail
-
-# If an argument is given, cd there.
-if [[ $# -eq 1 ]]; then
-  cd "$1"
-fi
 
 TMP_GOMOD=$(mktemp)
 TMP_GOSUM=$(mktemp)
