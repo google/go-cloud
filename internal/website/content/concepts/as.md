@@ -1,6 +1,7 @@
 ---
 title: Using provider-specific APIs
 date: 2019-05-10T11:17:09-07:00
+weight: 3
 ---
 
 It is not feasible or desirable for APIs like `blob.Bucket` to encompass the

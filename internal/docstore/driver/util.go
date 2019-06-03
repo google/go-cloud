@@ -91,3 +91,52 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets 
 
 	return vals(bgets), vals(cgets), vals(writes), vals(agets)
 }
+
+// GroupByFieldPath collect the Get actions into groups with the same set of
+// field paths.
+func GroupByFieldPath(gets []*Action) [][]*Action {
+	// This is quadratic in the worst case, but it's unlikely that there would be
+	// many Gets with different field paths.
+	var groups [][]*Action
+	seen := map[*Action]bool{}
+	for len(seen) < len(gets) {
+		var g []*Action
+		for _, a := range gets {
+			if !seen[a] {
+				if len(g) == 0 || fpsEqual(g[0].FieldPaths, a.FieldPaths) {
+					g = append(g, a)
+					seen[a] = true
+				}
+			}
+		}
+		groups = append(groups, g)
+	}
+	return groups
+}
+
+// Report whether two lists of field paths are equal.
+func fpsEqual(fps1, fps2 [][]string) bool {
+	// TODO?: We really care about sets of field paths, but that's too tedious to determine.
+	if len(fps1) != len(fps2) {
+		return false
+	}
+	for i, fp1 := range fps1 {
+		if !fpEqual(fp1, fps2[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// Report whether two field paths are equal.
+func fpEqual(fp1, fp2 []string) bool {
+	if len(fp1) != len(fp2) {
+		return false
+	}
+	for i, s1 := range fp1 {
+		if s1 != fp2[i] {
+			return false
+		}
+	}
+	return true
+}
