@@ -36,14 +36,10 @@ if (!doNotTrack) {
 
 <div class="PageList">
   <article class="PageList-item">
-  <a href="/concepts/as/"><h2 class="PageList-itemTitle">Using provider-specific APIs</h2></a>
-  <div class="PageList-summary"><p>It is not feasible or desirable for APIs like <code>blob.Bucket</code> to encompass the
-full functionality of every provider. Rather, we intend to provide a subset
-of the most commonly used functionality. There will be cases where a
-developer wants to access provider-specific functionality, such as unexposed
-APIs or data fields, errors, or options. This can be accomplished using <code>As</code>
-functions.</p></div>
-  <div class="PageList-readMore"><a href="/concepts/as/">Read more&hellip;</a></div>
+  <a href="/concepts/structure/"><h2 class="PageList-itemTitle">Structuring Portable Code</h2></a>
+  <div class="PageList-summary"><p>The Go CDK&rsquo;s APIs are intentionally structured to make it easier to separate
+your application&rsquo;s core logic from the details of the services it is using.</p></div>
+  <div class="PageList-readMore"><a href="/concepts/structure/">Read more&hellip;</a></div>
 </article>
 
   <article class="PageList-item">
@@ -56,6 +52,17 @@ needed to call its constructor. For example, calling
 <code>blob.OpenBucket(&quot;s3blob://my-bucket&quot;)</code> will return a <code>*blob.Bucket</code> created
 using <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blob.OpenBucket</code></a>.</p></div>
   <div class="PageList-readMore"><a href="/concepts/urls/">Read more&hellip;</a></div>
+</article>
+
+  <article class="PageList-item">
+  <a href="/concepts/as/"><h2 class="PageList-itemTitle">Using provider-specific APIs</h2></a>
+  <div class="PageList-summary"><p>It is not feasible or desirable for APIs like <code>blob.Bucket</code> to encompass the
+full functionality of every provider. Rather, we intend to provide a subset
+of the most commonly used functionality. There will be cases where a
+developer wants to access provider-specific functionality, such as unexposed
+APIs or data fields, errors, or options. This can be accomplished using <code>As</code>
+functions.</p></div>
+  <div class="PageList-readMore"><a href="/concepts/as/">Read more&hellip;</a></div>
 </article>
 
 </div>
@@ -123,6 +130,9 @@ using <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blo
         <li class="Sidenav-section">
           <a href="/concepts/" class="Sidenav-sectionLink">Concepts</a>
             <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/concepts/structure/" class="Sidenav-pageLink">Structuring Portable Code</a>
+              </li>
               <li class="Sidenav-page">
                 <a href="/concepts/urls/" class="Sidenav-pageLink">URLs</a>
               </li>

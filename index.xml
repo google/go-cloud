@@ -7,10 +7,20 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Copyright © 2018–2019 The Go Cloud Development Kit Authors</copyright>
-    <lastBuildDate>Tue, 26 Mar 2019 09:44:15 -0700</lastBuildDate>
+    <lastBuildDate>Mon, 03 Jun 2019 07:34:22 -0700</lastBuildDate>
     
 	<atom:link href="https://gocloud.dev/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Structuring Portable Code</title>
+      <link>https://gocloud.dev/concepts/structure/</link>
+      <pubDate>Mon, 03 Jun 2019 07:34:22 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/concepts/structure/</guid>
+      <description>&lt;p&gt;The Go CDK&amp;rsquo;s APIs are intentionally structured to make it easier to separate
+your application&amp;rsquo;s core logic from the details of the services it is using.&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>Publish Messages to a Topic</title>
@@ -47,6 +57,21 @@ lets you interact with all of them using the &lt;a href=&#34;https://godoc.org/g
 uploads files to blob storage on both AWS and GCP. Blob storage stores binary
 data under a string key, and is one of the most frequently used cloud
 services.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>URLs</title>
+      <link>https://gocloud.dev/concepts/urls/</link>
+      <pubDate>Mon, 06 May 2019 09:55:09 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/concepts/urls/</guid>
+      <description>&lt;p&gt;In addition to creating portable types via provider-specific constructors
+(e.g., creating a &lt;code&gt;*blob.Bucket&lt;/code&gt; using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&gt;&lt;code&gt;s3blob.OpenBucket&lt;/code&gt;&lt;/a&gt;), many portable types
+can also be created using a URL. The scheme of the URL specifies the provider,
+and each provider implementation has code to convert the URL into the data
+needed to call its constructor. For example, calling
+&lt;code&gt;blob.OpenBucket(&amp;quot;s3blob://my-bucket&amp;quot;)&lt;/code&gt; will return a &lt;code&gt;*blob.Bucket&lt;/code&gt; created
+using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&gt;&lt;code&gt;s3blob.OpenBucket&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -87,6 +112,20 @@ Guestbook to Amazon Web Services (AWS).&lt;/p&gt;</description>
     </item>
     
     <item>
+      <title>Using provider-specific APIs</title>
+      <link>https://gocloud.dev/concepts/as/</link>
+      <pubDate>Fri, 10 May 2019 11:17:09 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/concepts/as/</guid>
+      <description>&lt;p&gt;It is not feasible or desirable for APIs like &lt;code&gt;blob.Bucket&lt;/code&gt; to encompass the
+full functionality of every provider. Rather, we intend to provide a subset
+of the most commonly used functionality. There will be cases where a
+developer wants to access provider-specific functionality, such as unexposed
+APIs or data fields, errors, or options. This can be accomplished using &lt;code&gt;As&lt;/code&gt;
+functions.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
       <title>Tutorial: Deploy to GCP</title>
       <link>https://gocloud.dev/tutorials/deploy-gcp/</link>
       <pubDate>Wed, 20 Mar 2019 09:47:11 -0700</pubDate>
@@ -107,35 +146,6 @@ backed by services running on Microsoft Azure. The Go CDK doesn&amp;rsquo;t have
 support for SQL on Azure yet (&lt;a href=&#34;https://github.com/google/go-cloud/issues/1305&#34;&gt;#1305&lt;/a&gt;), so we&amp;rsquo;ll run MySQL and the
 binary locally. This tutorial will show how to use Azure storage for the MOTD
 and Gopher logo.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
-      <title>Using provider-specific APIs</title>
-      <link>https://gocloud.dev/concepts/as/</link>
-      <pubDate>Fri, 10 May 2019 11:17:09 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/concepts/as/</guid>
-      <description>&lt;p&gt;It is not feasible or desirable for APIs like &lt;code&gt;blob.Bucket&lt;/code&gt; to encompass the
-full functionality of every provider. Rather, we intend to provide a subset
-of the most commonly used functionality. There will be cases where a
-developer wants to access provider-specific functionality, such as unexposed
-APIs or data fields, errors, or options. This can be accomplished using &lt;code&gt;As&lt;/code&gt;
-functions.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
-      <title>URLs</title>
-      <link>https://gocloud.dev/concepts/urls/</link>
-      <pubDate>Mon, 06 May 2019 09:55:09 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/concepts/urls/</guid>
-      <description>&lt;p&gt;In addition to creating portable types via provider-specific constructors
-(e.g., creating a &lt;code&gt;*blob.Bucket&lt;/code&gt; using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&gt;&lt;code&gt;s3blob.OpenBucket&lt;/code&gt;&lt;/a&gt;), many portable types
-can also be created using a URL. The scheme of the URL specifies the provider,
-and each provider implementation has code to convert the URL into the data
-needed to call its constructor. For example, calling
-&lt;code&gt;blob.OpenBucket(&amp;quot;s3blob://my-bucket&amp;quot;)&lt;/code&gt; will return a &lt;code&gt;*blob.Bucket&lt;/code&gt; created
-using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&gt;&lt;code&gt;s3blob.OpenBucket&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
     <item>
