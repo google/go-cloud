@@ -134,7 +134,7 @@ func TestDecodeDoc(t *testing.T) {
 	} {
 		got := test.val
 		doc := drivertest.MustDocument(test.val)
-		if err := decodeDoc(test.in, doc, nil); err != nil {
+		if err := decodeDoc(test.in, doc, nil, ""); err != nil {
 			t.Fatal(err)
 		}
 		if diff := cmp.Diff(got, test.want, cmp.AllowUnexported(aStruct{})); diff != "" {

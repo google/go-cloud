@@ -264,30 +264,9 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 // runGets executes a group of Get actions by calling the BatchGetDocuments RPC.
 // It may make several calls, because all gets in a single RPC must have the same set of field paths.
 func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	for _, group := range groupByFieldPath(actions) {
+	for _, group := range driver.GroupByFieldPath(actions) {
 		c.batchGet(ctx, group, errs, opts)
 	}
-}
-
-// Collect the Get actions into groups with the same set of field paths.
-func groupByFieldPath(gets []*driver.Action) [][]*driver.Action {
-	// This is quadratic in the worst case, but it's unlikely that there would be
-	// many Gets with different field paths.
-	var groups [][]*driver.Action
-	seen := map[*driver.Action]bool{}
-	for len(seen) < len(gets) {
-		var g []*driver.Action
-		for _, a := range gets {
-			if !seen[a] {
-				if len(g) == 0 || fpsEqual(g[0].FieldPaths, a.FieldPaths) {
-					g = append(g, a)
-					seen[a] = true
-				}
-			}
-		}
-		groups = append(groups, g)
-	}
-	return groups
 }
 
 // Run a single BatchGet RPC with the given Get actions, all of which have the same set of field paths.
@@ -724,33 +703,6 @@ func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.Ru
 		return nil, gcerr.Newf(gcerr.Internal, nil, "wrong number of WriteResults from firestore commit")
 	}
 	return res.WriteResults, nil
-}
-
-// Report whether two lists of field paths are equal.
-func fpsEqual(fps1, fps2 [][]string) bool {
-	// TODO?: We really care about sets of field paths, but that's too tedious to determine.
-	if len(fps1) != len(fps2) {
-		return false
-	}
-	for i, fp1 := range fps1 {
-		if !fpEqual(fp1, fps2[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// Report whether two field paths are equal.
-func fpEqual(fp1, fp2 []string) bool {
-	if len(fp1) != len(fp2) {
-		return false
-	}
-	for i, s1 := range fp1 {
-		if s1 != fp2[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
