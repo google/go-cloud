@@ -4,6 +4,8 @@ go 1.12
 
 require (
 	github.com/google/go-cmp v0.3.0
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/shurcooL/httpfs v0.0.0-20190527155220-6a4d4a70508b // indirect
 	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect

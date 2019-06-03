@@ -19,7 +19,6 @@ import (
 	"reflect"
 	"time"
 
-	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
 
@@ -44,16 +43,15 @@ type encoder struct {
 	val interface{}
 }
 
-func (e *encoder) EncodeNil()                 { e.val = nil }
-func (e *encoder) EncodeBool(x bool)          { e.val = x }
-func (e *encoder) EncodeInt(x int64)          { e.val = x }
-func (e *encoder) EncodeUint(x uint64)        { e.val = int64(x) }
-func (e *encoder) EncodeBytes(x []byte)       { e.val = x }
-func (e *encoder) EncodeFloat(x float64)      { e.val = x }
-func (e *encoder) EncodeComplex(x complex128) { e.val = x }
-func (e *encoder) EncodeString(x string)      { e.val = x }
-func (e *encoder) ListIndex(int)              { panic("impossible") }
-func (e *encoder) MapKey(string)              { panic("impossible") }
+func (e *encoder) EncodeNil()            { e.val = nil }
+func (e *encoder) EncodeBool(x bool)     { e.val = x }
+func (e *encoder) EncodeInt(x int64)     { e.val = x }
+func (e *encoder) EncodeUint(x uint64)   { e.val = int64(x) }
+func (e *encoder) EncodeBytes(x []byte)  { e.val = x }
+func (e *encoder) EncodeFloat(x float64) { e.val = x }
+func (e *encoder) EncodeString(x string) { e.val = x }
+func (e *encoder) ListIndex(int)         { panic("impossible") }
+func (e *encoder) MapKey(string)         { panic("impossible") }
 
 var typeOfGoTime = reflect.TypeOf(time.Time{})
 
@@ -95,14 +93,14 @@ func (e *mapEncoder) MapKey(k string) { e.m[k] = e.val }
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string) error {
+func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string, revField string) error {
 	var m2 map[string]interface{}
 	if len(fps) == 0 {
 		m2 = m
 	} else {
 		// Make a document to decode from that has only the field paths and the revision field.
 		// (We don't need the key field because ddoc must already have it.)
-		m2 = map[string]interface{}{docstore.RevisionField: m[docstore.RevisionField]}
+		m2 = map[string]interface{}{revField: m[revField]}
 		for _, fp := range fps {
 			val, err := getAtFieldPath(m, fp)
 			if err != nil {
@@ -151,11 +149,6 @@ func (d decoder) AsUint() (uint64, bool) {
 func (d decoder) AsFloat() (float64, bool) {
 	f, ok := d.val.(float64)
 	return f, ok
-}
-
-func (d decoder) AsComplex() (complex128, bool) {
-	c, ok := d.val.(complex128)
-	return c, ok
 }
 
 func (d decoder) AsBytes() ([]byte, bool) {

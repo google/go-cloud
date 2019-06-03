@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO(jba): figure out how to get filters with complex values to work (since they
-// are represented as arrays of floats). Also, uints: since they are represented as
-// int64s, the sign is wrong. Since you can only compare complex numbers for
-// equality, maybe it could work if Firestore arrays can be compared for equality.
+// TODO(jba): figure out how to get filters with uints to work: since they are represented as
+// int64s, the sign is wrong.
 
 package firedocstore
 
@@ -168,7 +166,6 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 	// that are hard to do otherwise. For example, comparing the max int64
 	// with a float64: float64(math.MaxInt64) == float64(math.MaxInt64-1)
 	// is true in Go.
-	// TODO(jba): handle complex
 	lf := toBigFloat(lhs)
 	rf := toBigFloat(rhs)
 	// If either one is not a number, return false.

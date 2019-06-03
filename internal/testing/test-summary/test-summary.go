@@ -61,7 +61,11 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 	counts := map[string]int{}
 	scanner := bufio.NewScanner(bufio.NewReader(r))
 
+	// Collects tests that failed.
 	var failedTests []string
+
+	// Stores output produced by each test.
+	testOutputs := map[string][]string{}
 
 	for scanner.Scan() {
 		// When the build fails, go test -json doesn't emit a valid JSON value, only
@@ -75,22 +79,33 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			return "", false, fmt.Errorf("%q: %v", scanner.Text(), err)
 		}
-
-		if event.Action == "fail" {
-			failedTests = append(failedTests, filepath.Join(event.Package, event.Test))
-		}
-
-		if *verbose && event.Action == "output" {
-			fmt.Print(event.Output)
-		}
+		testpath := filepath.Join(event.Package, event.Test)
 
 		// The Test field, if non-empty, specifies the test, example, or benchmark
 		// function that caused the event. Events for the overall package test do
-		// not set Test. We don't want to count package passes/fails because these
-		// don't represent specific tests being run. However, skips of an entire
-		// package are not duplicated with individual test skips.
+		// not set Test.
+		if event.Action == "fail" && event.Test != "" {
+			failedTests = append(failedTests, testpath)
+		}
+
+		if event.Action == "output" {
+			if *verbose {
+				fmt.Print(event.Output)
+			}
+			testOutputs[testpath] = append(testOutputs[testpath], event.Output)
+		}
+
+		// We don't want to count package passes/fails because these don't
+		// represent specific tests being run. However, skips of an entire package
+		// are not duplicated with individual test skips.
 		if event.Test != "" || event.Action == "skip" {
 			counts[event.Action]++
+		}
+
+		// For failed tests, print all the output we collected for them before
+		// the "fail" event.
+		if event.Action == "fail" {
+			fmt.Println(strings.Join(testOutputs[testpath], ""))
 		}
 
 		if *progress {
@@ -98,8 +113,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 			// pass events for packages only (not individual tests, since this is
 			// too noisy).
 			if event.Action == "fail" || (event.Test == "" && event.Action == "pass") {
-				path := filepath.Join(event.Package, event.Test)
-				fmt.Printf("%s %s (%.2fs)\n", event.Action, path, event.Elapsed)
+				fmt.Printf("%s %s (%.2fs)\n", event.Action, testpath, event.Elapsed)
 			}
 		}
 	}

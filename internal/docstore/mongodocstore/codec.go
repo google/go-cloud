@@ -52,16 +52,15 @@ type encoder struct {
 	lowercaseFields bool
 }
 
-func (e *encoder) EncodeNil()                 { e.val = nil }
-func (e *encoder) EncodeBool(x bool)          { e.val = x }
-func (e *encoder) EncodeInt(x int64)          { e.val = x }
-func (e *encoder) EncodeUint(x uint64)        { e.val = int64(x) }
-func (e *encoder) EncodeBytes(x []byte)       { e.val = x }
-func (e *encoder) EncodeFloat(x float64)      { e.val = x }
-func (e *encoder) EncodeComplex(x complex128) { e.val = []float64{real(x), imag(x)} }
-func (e *encoder) EncodeString(x string)      { e.val = x }
-func (e *encoder) ListIndex(int)              { panic("impossible") }
-func (e *encoder) MapKey(string)              { panic("impossible") }
+func (e *encoder) EncodeNil()            { e.val = nil }
+func (e *encoder) EncodeBool(x bool)     { e.val = x }
+func (e *encoder) EncodeInt(x int64)     { e.val = x }
+func (e *encoder) EncodeUint(x uint64)   { e.val = int64(x) }
+func (e *encoder) EncodeBytes(x []byte)  { e.val = x }
+func (e *encoder) EncodeFloat(x float64) { e.val = x }
+func (e *encoder) EncodeString(x string) { e.val = x }
+func (e *encoder) ListIndex(int)         { panic("impossible") }
+func (e *encoder) MapKey(string)         { panic("impossible") }
 
 var typeOfGoTime = reflect.TypeOf(time.Time{})
 
@@ -163,31 +162,6 @@ func (d decoder) AsUint() (uint64, bool) {
 func (d decoder) AsFloat() (float64, bool) {
 	f, ok := d.val.(float64)
 	return f, ok
-}
-
-func (d decoder) AsComplex() (complex128, bool) {
-	switch v := d.val.(type) {
-	case []float64:
-		if len(v) != 2 {
-			return 0, false
-		}
-		return complex(v[0], v[1]), true
-	case primitive.A: // []interface{}
-		if len(v) != 2 {
-			return 0, false
-		}
-		r, ok := v[0].(float64)
-		if !ok {
-			return 0, false
-		}
-		i, ok := v[1].(float64)
-		if !ok {
-			return 0, false
-		}
-		return complex(r, i), true
-	default:
-		return 0, false
-	}
 }
 
 func (d decoder) AsBytes() ([]byte, bool) {

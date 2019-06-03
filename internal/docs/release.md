@@ -4,6 +4,19 @@ We aim to do a release after each Sprint (roughly, every 3 weeks).
 
 To do a release:
 
+-   Do the prerelease checks until everything is passing.
+    -   Create a new branch (`git branch -B prerelease`). Running the script
+        will modify hundreds of golden files, so you want to do it in a branch.
+        You can delete the branch and abandon all the changes when you are done.
+    -   Run `./internal/testing/prerelease.sh init` until it finishes with
+        `SUCCESS`. Note that there are some known failures that are logged but
+        don't prevent overall `SUCCESS`.
+    -   Run `./internal/testing/prerelease.sh run` Again, there are some known
+        failures. You can re-run any unexpected failures independently to
+        investigate; see the `prerelease.sh` script to see the exact command
+        line to use.
+    -   Run `./internal/testing/prerelease.sh cleanup` when you are done.
+    -   Commit the changes to the branch, and then delete the branch.
 -   Identify the [commit](https://github.com/google/go-cloud/commits/master) you
     want to label as the release; it should be a commit from around the end of
     the last Sprint.

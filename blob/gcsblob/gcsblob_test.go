@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/user"
+	"path/filepath"
 	"testing"
 
 	"cloud.google.com/go/storage"
@@ -54,7 +56,7 @@ const (
 	serviceAccountID = "storage-viewer@go-cloud-test-216917.iam.gserviceaccount.com"
 )
 
-var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containing private key (required for --record)")
+var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containing private key (required for --record); defaults to ~/Downloads/gcs-private-key.pem")
 
 type harness struct {
 	client *gcp.HTTPClient
@@ -67,7 +69,8 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	opts := &Options{GoogleAccessID: serviceAccountID}
 	if *setup.Record {
 		if *pathToPrivateKey == "" {
-			t.Fatalf("--privatekey is required in --record mode.")
+			usr, _ := user.Current()
+			*pathToPrivateKey = filepath.Join(usr.HomeDir, "Downloads", "gcs-private-key.pem")
 		}
 		// Use a real private key for signing URLs during -record.
 		pk, err := ioutil.ReadFile(*pathToPrivateKey)
