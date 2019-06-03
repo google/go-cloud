@@ -235,12 +235,11 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 	}
 
 	// Push to GCR.
-	localImage := input.DockerImage
-	remoteImage, err := cloudRunImage(localImage, input.Specifier)
+	imageRef, err := crl.tagForCloudRun(ctx, input.DockerImage, input.Specifier)
 	if err != nil {
 		return nil, xerrors.Errorf("cloud run launch: %w", err)
 	}
-	if err := crl.dockerPush(ctx, localImage, remoteImage); err != nil {
+	if err := crl.dockerPush(ctx, imageRef); err != nil {
 		return nil, xerrors.Errorf("cloud run launch: %w", err)
 	}
 
@@ -269,7 +268,7 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 				RevisionTemplate: &cloudrun.RevisionTemplate{
 					Spec: &cloudrun.RevisionSpec{
 						Container: &cloudrun.Container{
-							Image: remoteImage,
+							Image: imageRef,
 							Env:   env,
 							// TODO(light): Add liveness and readiness probes.
 						},
@@ -351,20 +350,32 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 	}
 }
 
-func (crl *cloudRunLauncher) dockerPush(ctx context.Context, localImage, remoteImage string) error {
-	if localImage != remoteImage {
-		c := exec.CommandContext(ctx, "docker", "tag", localImage, remoteImage)
-		c.Env = crl.dockerEnv
-		c.Dir = crl.dockerDir
-		out, err := c.CombinedOutput()
-		if err != nil {
-			if len(out) == 0 {
-				return xerrors.Errorf("docker tag: %w", err)
-			}
-			return xerrors.Errorf("docker tag:\n%s", out)
-		}
+// tagForCloudRun tags the given image as needed so that running `docker push`
+// will place the image in a registry accessible by Cloud Run. The returned
+// string is the image reference that should be passed to Cloud Run.
+func (crl *cloudRunLauncher) tagForCloudRun(ctx context.Context, imageRef string, launchSpecifier map[string]interface{}) (string, error) {
+	rewrittenRef, err := imageRefForCloudRun(imageRef, launchSpecifier)
+	if err != nil {
+		return "", xerrors.Errorf("docker tag: %w")
 	}
-	c := exec.CommandContext(ctx, "docker", "push", remoteImage)
+	if rewrittenRef == imageRef {
+		return rewrittenRef, nil
+	}
+	c := exec.CommandContext(ctx, "docker", "tag", imageRef, rewrittenRef)
+	c.Env = crl.dockerEnv
+	c.Dir = crl.dockerDir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		if len(out) == 0 {
+			return "", xerrors.Errorf("docker tag: %w", err)
+		}
+		return "", xerrors.Errorf("docker tag:\n%s", out)
+	}
+	return rewrittenRef, nil
+}
+
+func (crl *cloudRunLauncher) dockerPush(ctx context.Context, imageRef string) error {
+	c := exec.CommandContext(ctx, "docker", "push", imageRef)
 	c.Env = crl.dockerEnv
 	c.Dir = crl.dockerDir
 	out, err := c.CombinedOutput()
@@ -377,10 +388,10 @@ func (crl *cloudRunLauncher) dockerPush(ctx context.Context, localImage, remoteI
 	return nil
 }
 
-// cloudRunImage computes the image reference needed to launch the given local
-// image reference on gcr.io and the launch specifier. If the returned string
-// is equal to localImage, then no retagging is necessary before pushing.
-func cloudRunImage(localImage string, launchSpecifier map[string]interface{}) (string, error) {
+// imageRefForCloudRun computes the image reference needed to launch the given
+// local image reference on gcr.io and the launch specifier. If the returned
+// string is equal to localImage, then no retagging is necessary before pushing.
+func imageRefForCloudRun(localImage string, launchSpecifier map[string]interface{}) (string, error) {
 	name, tag, digest := parseImageRef(localImage)
 	if tag == ":" {
 		return "", xerrors.Errorf("determine image name for Cloud Run: empty tag in %q", localImage)

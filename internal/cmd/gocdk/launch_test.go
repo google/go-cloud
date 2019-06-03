@@ -18,7 +18,7 @@ import (
 	"testing"
 )
 
-func TestCloudRunImage(t *testing.T) {
+func TestImageRefForCloudRun(t *testing.T) {
 	tests := []struct {
 		name            string
 		localImage      string
@@ -122,13 +122,13 @@ func TestCloudRunImage(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := cloudRunImage(test.localImage, test.launchSpecifier)
+			got, err := imageRefForCloudRun(test.localImage, test.launchSpecifier)
 			if got != test.want || (err != nil) != test.wantErr {
 				wantErr := "<nil>"
 				if test.wantErr {
 					wantErr = "<error>"
 				}
-				t.Errorf("cloudRunImage(%q, %v) = %q, %v; want %q, %s", test.localImage, test.launchSpecifier, got, err, test.want, wantErr)
+				t.Errorf("imageRefForCloudRun(%q, %v) = %q, %v; want %q, %s", test.localImage, test.launchSpecifier, got, err, test.want, wantErr)
 			}
 		})
 	}
