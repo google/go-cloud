@@ -17,14 +17,16 @@
 # current branch relative to the upstream branch.
 # It fails if it finds any, unless there is a commit with BREAKING_CHANGE_OK
 # in the first line of the commit message.
-
-# This script expects:
-# a) to be run at the root of the repository
-# b) HEAD is pointing to a commit that merges between the pull request and the
-#    upstream branch (TRAVIS_BRANCH). This is what Travis does (see
-#    https://docs.travis-ci.com/user/pull-requests/ for details), but if you
-#    are testing this script manually, you may need to manually create a merge
-#    commit.
+#
+# It checks all modules listed in allmodules, and skips packages with
+# "internal" or "test" in their name.
+#
+# It expects to be run at the root of the repository, and that HEAD is pointing
+# to a commit that merges between the pull request and the upstream branch
+# (TRAVIS_BRANCH). This is what Travis does (see
+# https://docs.travis-ci.com/user/pull-requests/ for details), but if you
+# are testing this script manually, you may need to manually create a merge
+# commit.
 
 set -euo pipefail
 
@@ -52,31 +54,40 @@ trap cleanup EXIT
 git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 
 incompatible_change_pkgs=()
-PKGS=$(cd "$MASTER_CLONE_DIR"; go list ./... | grep -v internal | grep -v test | grep -v samples)
-for pkg in $PKGS; do
-  echo "  Testing ${pkg}..."
+while read -r path || [[ -n "$path" ]]; do
+  echo "  checking packages in module $path"
+  pushd "$path" &> /dev/null
 
-  # Compute export data for the current branch.
-  package_deleted=0
-  apidiff -w "$PKGINFO_BRANCH" "$pkg" || package_deleted=1
-  if [[ $package_deleted -eq 1 ]]; then
-    echo "  Package ${pkg} was deleted! Recording as an incompatible change.";
-    incompatible_change_pkgs+=(${pkg});
-    continue;
-  fi
+  PKGS=$(cd "$MASTER_CLONE_DIR" && cd "$path" && go list ./...)
+  for pkg in $PKGS; do
+    if [[ "$pkg" =~ "test" ]] || [[ "$pkg" =~ "internal" ]]; then
+      continue
+    fi
+    echo "    checking ${pkg}..."
 
-  # Compute export data for master@HEAD.
-  (cd "$MASTER_CLONE_DIR"; apidiff -w "$PKGINFO_MASTER" "$pkg")
+    # Compute export data for the current branch.
+    package_deleted=0
+    apidiff -w "$PKGINFO_BRANCH" "$pkg" || package_deleted=1
+    if [[ $package_deleted -eq 1 ]]; then
+      echo "    package ${pkg} was deleted! Recording as an incompatible change.";
+      incompatible_change_pkgs+=(${pkg});
+      continue;
+    fi
 
-  # Print all changes for posterity.
-  apidiff "$PKGINFO_MASTER" "$PKGINFO_BRANCH"
+    # Compute export data for master@HEAD.
+    (cd "$MASTER_CLONE_DIR" && cd "$path" && apidiff -w "$PKGINFO_MASTER" "$pkg")
 
-  # Note if there's an incompatible change.
-  ic=$(apidiff -incompatible "$PKGINFO_MASTER" "$PKGINFO_BRANCH")
-  if [ ! -z "$ic" ]; then
-    incompatible_change_pkgs+=("$pkg");
-  fi
-done
+    # Print all changes for posterity.
+    apidiff "$PKGINFO_MASTER" "$PKGINFO_BRANCH"
+
+    # Note if there's an incompatible change.
+    ic=$(apidiff -incompatible "$PKGINFO_MASTER" "$PKGINFO_BRANCH")
+    if [ ! -z "$ic" ]; then
+      incompatible_change_pkgs+=("$pkg");
+    fi
+  done
+  popd &> /dev/null
+done < <( sed -e '/^#/d' -e '/^$/d' allmodules )
 
 if [ ${#incompatible_change_pkgs[@]} -eq 0 ]; then
   # No incompatible changes, we are good.
