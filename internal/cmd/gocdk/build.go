@@ -17,11 +17,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	"gocloud.dev/internal/cmd/gocdk/internal/docker"
 	"golang.org/x/xerrors"
 )
 
@@ -64,8 +67,8 @@ func build(ctx context.Context, pctx *processContext, ref string) error {
 		}
 		ref = imageName + ref
 	}
-	c := pctx.NewCommand(ctx, moduleRoot, "docker", "build", "--tag", ref, ".")
-	if err := c.Run(); err != nil {
+	err = docker.New(pctx.env).Build(ctx, ref, moduleRoot, pctx.stderr)
+	if err != nil {
 		return xerrors.Errorf("gocdk build: %w", err)
 	}
 	return nil
@@ -80,9 +83,16 @@ func listBuilds(ctx context.Context, pctx *processContext) error {
 	if err != nil {
 		return xerrors.Errorf("list builds: %w", err)
 	}
-	c := pctx.NewCommand(ctx, "", "docker", "images", imageName)
-	if err := c.Run(); err != nil {
+	images, err := docker.New(pctx.env).ListImages(ctx, imageName)
+	if err != nil {
 		return xerrors.Errorf("list builds: %w", err)
+	}
+	for _, image := range images {
+		if image.Repository == "" || image.Tag == "" {
+			fmt.Fprintf(pctx.stdout, "@%-60s  %s\n", image.Digest, image.CreatedAt.Local().Format(time.Stamp))
+		} else {
+			fmt.Fprintf(pctx.stdout, "%-60s  %s\n", image.Repository+":"+image.Tag, image.CreatedAt.Local().Format(time.Stamp))
+		}
 	}
 	return nil
 }
