@@ -152,15 +152,19 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
 	}
-	// Check if the projectDir is relative to GOPATH.
-	rel, err := filepath.Rel(strings.TrimSuffix(string(gopath), "\n"), projectDir)
-	if err != nil {
-		return "", xerrors.Errorf("infer module path: %w", err)
+
+	gopathEntries := filepath.SplitList(strings.TrimSuffix(string(gopath), "\n"))
+	for _, entry := range gopathEntries {
+		// Check if the projectDir is relative to GOPATH.
+		rel, err := filepath.Rel(entry, projectDir)
+		if err != nil {
+			return "", xerrors.Errorf("infer module path: %w", err)
+		}
+		inGOPATH := !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+		if inGOPATH {
+			return filepath.ToSlash(rel), nil
+		}
 	}
-	inGOPATH := !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-	if !inGOPATH {
-		// If the project dir is outside of GOPATH, we can't infer the module import path.
-		return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
-	}
-	return filepath.ToSlash(rel), nil
+	// If the project dir is outside of GOPATH, we can't infer the module import path.
+	return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
 }
