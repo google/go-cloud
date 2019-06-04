@@ -50,10 +50,13 @@ about conventions and design patterns found in the project.
 ### Finding something to work on
 
 If you want to write some code, but don't know where to start or what you might
-want to do, take a look at our [Unplanned][] milestone. This is where you can
-find issues we would like to address, but can't currently find time for. See if
-any of the latest ones look interesting! If you need help before you can start
-work, you can comment on the issue, and we will try to help as best we can.
+want to do, take a look at the [Good First Issue] label and our [Unplanned][]
+milestone. The latter is where you can find issues we would like to address, but
+can't currently find time for. See if any of the latest ones look interesting!
+If you need help before you can start work, you can comment on the issue, and we
+will try to help as best we can.
+
+[Good First Issue]: https://github.com/google/go-cloud/labels/good%20first%20issue
 
 ### Contributor License Agreement
 
