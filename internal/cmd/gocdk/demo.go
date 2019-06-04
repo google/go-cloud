@@ -16,9 +16,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -72,7 +70,7 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 		Long:  "TODO more about listing demos",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return listDemos()
+			return listDemos(pctx)
 		},
 	}
 	demoCmd.AddCommand(demoListCmd)
@@ -92,14 +90,14 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 	rootCmd.AddCommand(demoCmd)
 }
 
-func listDemos() error {
+func listDemos(pctx *processContext) error {
 	// Compute a sorted slice of available demos for usage.
 	var avail []string
 	for _, demo := range allDemos {
 		avail = append(avail, demo.name)
 	}
 	sort.Strings(avail)
-	fmt.Println(strings.Join(avail, "\n"))
+	pctx.Println(strings.Join(avail, "\n"))
 	return nil
 }
 
@@ -118,8 +116,7 @@ func addDemo(ctx context.Context, pctx *processContext, demoToAdd string, force 
 // additionally iterate over existing biomes, adding a config entry and possibly
 // Terraform files.
 func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
-	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
-	logger.Printf("Adding %q...", demo.name)
+	pctx.Logf("Adding %q...", demo.name)
 
 	// TODO(rvangent): Consider using materializeTemplateDir here. It can't
 	// be used right now because it treats the source files as templates;
@@ -150,7 +147,7 @@ func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
 	if err != nil {
 		return err
 	}
-	logger.Printf("  added a demo of %s to your project.", filepath.Base(demo.goDemoPath))
-	logger.Printf("Run 'gocdk serve' and visit http://localhost:8080%s to see a demo of %s functionality.", demo.demoURL, demo.name)
+	pctx.Logf("  added a demo of %s to your project.", filepath.Base(demo.goDemoPath))
+	pctx.Logf("Run 'gocdk serve' and visit http://localhost:8080%s to see a demo of %s functionality.", demo.demoURL, demo.name)
 	return nil
 }
