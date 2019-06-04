@@ -38,7 +38,7 @@ func registerInitCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 		Long:  "TODO more about init",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return init_(ctx, pctx, args[0], modpath, allowExistingDir)
+			return doInit(ctx, pctx, args[0], modpath, allowExistingDir)
 		},
 	}
 	initCmd.Flags().StringVarP(&modpath, "module-path", "m", "", "the module import path for your project's go.mod file (required if project is outside of GOPATH)")
@@ -49,7 +49,7 @@ func registerInitCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 	rootCmd.AddCommand(initCmd)
 }
 
-func init_(ctx context.Context, pctx *processContext, dir, modpath string, allowExistingDir bool) error {
+func doInit(ctx context.Context, pctx *processContext, dir, modpath string, allowExistingDir bool) error {
 	projectDir := pctx.resolve(dir)
 	if modpath == "" {
 		var err error

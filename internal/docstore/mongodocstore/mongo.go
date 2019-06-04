@@ -271,15 +271,7 @@ func (c *collection) get(ctx context.Context, a *driver.Action, dopts *driver.Ru
 		opts.Projection = c.projectionDoc(a.FieldPaths)
 	}
 	if dopts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.FindOneOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := dopts.BeforeDo(asFunc); err != nil {
+		if err := dopts.BeforeDo(driver.AsFunc(opts)); err != nil {
 			return err
 		}
 	}
