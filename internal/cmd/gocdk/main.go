@@ -75,6 +75,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	registerLaunchCmd(ctx, pctx, rootCmd)
 
 	rootCmd.SetArgs(args)
+	rootCmd.SetOutput(pctx.stderr)
 	return rootCmd.Execute()
 }
 

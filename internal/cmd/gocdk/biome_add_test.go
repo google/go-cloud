@@ -55,7 +55,7 @@ func TestBiomeAdd(t *testing.T) {
 			}
 		}
 
-		// Ensure that there is a biome.json file in teh correct directory and
+		// Ensure that there is a biome.json file in the correct directory and
 		// that it contains the correct settings for a non-dev biome.
 		want := &biomeConfig{
 			ServeEnabled: configBool(false),

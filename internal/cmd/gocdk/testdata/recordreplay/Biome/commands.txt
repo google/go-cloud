@@ -1,0 +1,9 @@
+# Add fails when we're not in a module.
+gocdk biome add mybiome --> FAIL
+
+gocdk init myproj
+cd myproj
+
+gocdk biome add mybiome
+cd biomes
+ls mybiome

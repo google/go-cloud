@@ -1,0 +1,31 @@
+$ gocdk biome add mybiome
+gocdk: Adding biome "mybiome"...
+Error: biome add: couldn't find a Go module root at or above [ROOTDIR]
+
+$ gocdk init myproj
+gocdk: Project created at [ROOTDIR]/myproj with:
+gocdk: - Go HTTP server
+gocdk: - Dockerfile
+gocdk: - 'dev' biome for local development settings
+gocdk: Run `cd myproj`, then run:
+gocdk: - `gocdk serve` to run the server locally with live code reloading
+gocdk: - `gocdk demo` to test new APIs
+gocdk: - `gocdk build` to build a Docker container
+gocdk: - `gocdk biome add` to configure launch settings
+
+$ cd myproj
+
+$ gocdk biome add mybiome
+gocdk: Adding biome "mybiome"...
+gocdk: Success!
+
+$ cd biomes
+
+$ ls mybiome
+mybiome/
+  biome.json
+  main.tf
+  outputs.tf
+  secrets.auto.tfvars
+  variables.tf
+
