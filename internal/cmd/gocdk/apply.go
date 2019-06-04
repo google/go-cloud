@@ -40,7 +40,7 @@ func registerApplyCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 }
 
 func apply(ctx context.Context, pctx *processContext, biome string, input bool) error {
-	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
@@ -52,7 +52,7 @@ func apply(ctx context.Context, pctx *processContext, biome string, input bool) 
 	// TODO(#1821): take over steps (plan, confirm, apply) so we can
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
-	c := pctx.NewCommand(ctx, findBiomeDir(moduleRoot, biome), "terraform", "apply", "-input="+strconv.FormatBool(input))
+	c := pctx.NewCommand(ctx, biomeDir(moduleRoot, biome), "terraform", "apply", "-input="+strconv.FormatBool(input))
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
@@ -63,7 +63,7 @@ func apply(ctx context.Context, pctx *processContext, biome string, input bool) 
 // If one doesn't exist, ensureTerraformInit runs terraform init.
 func ensureTerraformInit(ctx context.Context, pctx *processContext, moduleRoot, biome string, input bool) error {
 	// Check for .terraform directory.
-	biomePath := findBiomeDir(moduleRoot, biome)
+	biomePath := biomeDir(moduleRoot, biome)
 	_, err := os.Stat(filepath.Join(biomePath, ".terraform"))
 	if err == nil {
 		// .terraform exists, no op.

@@ -84,6 +84,8 @@ type processContext struct {
 	workdir string
 	env     []string
 	stdin   io.Reader
+	stdout  io.Writer
+	stderr  io.Writer
 	outlog  *log.Logger
 	errlog  *log.Logger
 }
@@ -94,23 +96,24 @@ func newOSProcessContext() (*processContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &processContext{
-		workdir: workdir,
-		env:     os.Environ(),
-		stdin:   os.Stdin,
-		outlog:  log.New(os.Stdout, "", 0),
-		errlog:  log.New(os.Stderr, "gocdk: ", 0),
-	}, nil
+	return newProcessContext(workdir, os.Stdin, os.Stdout, os.Stderr), nil
 }
 
 // newTestProcessContext returns a processContext for use in tests.
 func newTestProcessContext(workdir string) *processContext {
+	return newProcessContext(workdir, strings.NewReader(""), ioutil.Discard, ioutil.Discard)
+}
+
+// newProcessContext returns a processContext.
+func newProcessContext(workdir string, stdin io.Reader, stdout, stderr io.Writer) *processContext {
 	return &processContext{
 		workdir: workdir,
 		env:     os.Environ(),
-		stdin:   strings.NewReader(""),
-		outlog:  log.New(ioutil.Discard, "", 0),
-		errlog:  log.New(ioutil.Discard, "", 0),
+		stdin:   stdin,
+		stdout:  stdout,
+		stderr:  stderr,
+		outlog:  log.New(stdout, "", 0),
+		errlog:  log.New(stderr, "gocdk: ", 0),
 	}
 }
 
@@ -138,16 +141,40 @@ func (pctx *processContext) gcpCredentials(ctx context.Context) (*google.Credent
 	return gcp.DefaultCredentials(ctx)
 }
 
+// Logf writes to the pctx's stderr.
 func (pctx *processContext) Logf(format string, a ...interface{}) {
 	pctx.errlog.Printf(format, a...)
 }
 
+// Printf writes to the pctx's stdout.
 func (pctx *processContext) Printf(format string, a ...interface{}) {
 	pctx.outlog.Printf(format, a...)
 }
 
+// Println writes to the pctx's stdout.
 func (pctx *processContext) Println(a ...interface{}) {
 	pctx.outlog.Println(a...)
+}
+
+// ModuleRoot searches the given directory and those above it for the Go
+// module root. It also ensures that the module looks like a Go CDK project,
+// based on the existence of a "biomes" directory.
+func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
+	c := exec.CommandContext(ctx, "go", "list", "-m", "-f", "{{.Dir}}")
+	c.Dir = pctx.workdir
+	output, err := c.Output()
+	if err != nil {
+		return "", xerrors.Errorf("couldn't find a Go module root at or above %s: %w", pctx.workdir, err)
+	}
+	output = bytes.TrimSuffix(output, []byte("\n"))
+	if len(output) == 0 {
+		return "", xerrors.Errorf("couldn't find a Go module root at or above %s", pctx.workdir)
+	}
+	root := string(output)
+	if _, err := os.Stat(biomesRootDir(root)); err != nil {
+		return "", xerrors.Errorf("Go module root %s doesn't look like a Go CDK project (no biomes/ directory)", root)
+	}
+	return root, nil
 }
 
 // NewCommand creates a new exec.Cmd based on this processContext.
@@ -167,25 +194,9 @@ func (pctx *processContext) NewCommand(ctx context.Context, dir, name string, ar
 	}
 	cmd.Env = pctx.env
 	cmd.Stdin = pctx.stdin
-	cmd.Stdout = pctx.outlog.Writer()
-	cmd.Stderr = pctx.errlog.Writer()
+	cmd.Stdout = pctx.stdout
+	cmd.Stderr = pctx.stderr
 	return cmd
-}
-
-// findModuleRoot searches the given directory and those above it for the Go
-// module root.
-func findModuleRoot(ctx context.Context, dir string) (string, error) {
-	c := exec.CommandContext(ctx, "go", "list", "-m", "-f", "{{.Dir}}")
-	c.Dir = dir
-	output, err := c.Output()
-	if err != nil {
-		return "", xerrors.Errorf("find module root for %s: %w", dir, err)
-	}
-	output = bytes.TrimSuffix(output, []byte("\n"))
-	if len(output) == 0 {
-		return "", xerrors.Errorf("find module root for %s: no module found", dir, err)
-	}
-	return string(output), nil
 }
 
 // withInterrupt returns a copy of parent with a new Done channel. The returned

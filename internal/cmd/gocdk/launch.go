@@ -52,7 +52,7 @@ func registerLaunchCmd(ctx context.Context, pctx *processContext, rootCmd *cobra
 }
 
 func launch(ctx context.Context, pctx *processContext, biome, dockerImage string) error {
-	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
@@ -72,7 +72,7 @@ func launch(ctx context.Context, pctx *processContext, biome, dockerImage string
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
 	if cfg.Launcher == nil {
-		return xerrors.Errorf("gocdk launch: launcher not specified in %s", filepath.Join(findBiomeDir(moduleRoot, biome), biomeConfigFileName))
+		return xerrors.Errorf("gocdk launch: launcher not specified in %s", filepath.Join(biomeDir(moduleRoot, biome), biomeConfigFileName))
 	}
 	launcher, err := newLauncher(ctx, pctx, *cfg.Launcher)
 	if err != nil {
@@ -81,7 +81,7 @@ func launch(ctx context.Context, pctx *processContext, biome, dockerImage string
 
 	// Read the launch specifier from the biome's Terraform output.
 	tfOutput, err := tfReadOutput(ctx,
-		findBiomeDir(moduleRoot, biome),
+		biomeDir(moduleRoot, biome),
 		pctx.env)
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)

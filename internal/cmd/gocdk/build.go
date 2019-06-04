@@ -53,7 +53,7 @@ func registerBuildCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 // TODO(rvangent): Rename ref and/or dockerTag for consistency?
 // https://github.com/google/go-cloud/pull/2144#discussion_r288625539
 func build(ctx context.Context, pctx *processContext, ref string) error {
-	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("gocdk build: %w", err)
 	}
@@ -72,7 +72,7 @@ func build(ctx context.Context, pctx *processContext, ref string) error {
 }
 
 func listBuilds(ctx context.Context, pctx *processContext) error {
-	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("list builds: %w", err)
 	}

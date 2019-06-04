@@ -16,86 +16,70 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestFindModuleRoot(t *testing.T) {
+func TestProcessContextModuleRoot(t *testing.T) {
+	ctx := context.Background()
 	t.Run("SameDirAsModule", func(t *testing.T) {
-		dir, cleanup, err := newTestModule()
+		pctx, cleanup, err := newTestProject(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		dir, err = filepath.EvalSymlinks(dir) // in case TMPDIR has a symlink like on darwin
+
+		got, err := pctx.ModuleRoot(ctx)
+		if got != pctx.workdir || err != nil {
+			t.Errorf("got %q/%v want %q/<nil>", got, err, pctx.workdir)
+		}
+	})
+	t.Run("NoBiomesDir", func(t *testing.T) {
+		pctx, cleanup, err := newTestProject(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer cleanup()
+		if err := os.RemoveAll(biomesRootDir(pctx.workdir)); err != nil {
+			t.Fatal(err)
+		}
 
-		got, err := findModuleRoot(context.Background(), dir)
-		if got != dir || err != nil {
-			t.Errorf("findModuleRoot(ctx, %q) = %q, %v; want %q, <nil>", dir, got, err, dir)
+		if _, err = pctx.ModuleRoot(ctx); err == nil {
+			t.Errorf("got nil error, want non-nil error due to missing biomes/ dir")
 		}
 	})
 	t.Run("NoModFile", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "gocdk-test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dir)
-		dir, err = filepath.EvalSymlinks(dir) // in case TMPDIR has a symlink like on darwin
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		got, err := findModuleRoot(context.Background(), dir)
-		if err == nil {
-			t.Errorf("findModuleRoot(ctx, %q) = %q, %v; want _, non-nil", dir, got, err)
-		}
-	})
-	t.Run("ParentDirectory", func(t *testing.T) {
-		dir, cleanup, err := newTestModule()
+		pctx, cleanup, err := newTestProject(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		dir, err = filepath.EvalSymlinks(dir) // in case TMPDIR has a symlink like on darwin
+		if err := os.Remove(filepath.Join(pctx.workdir, "go.mod")); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err = pctx.ModuleRoot(ctx); err == nil {
+			t.Errorf("got nil error, want non-nil error due to missing go.mod")
+		}
+	})
+	t.Run("ParentDirectory", func(t *testing.T) {
+		pctx, cleanup, err := newTestProject(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		subdir := filepath.Join(dir, "subdir")
+		defer cleanup()
+
+		rootdir := pctx.workdir
+		subdir := filepath.Join(rootdir, "subdir")
 		if err := os.Mkdir(subdir, 0777); err != nil {
 			t.Fatal(err)
 		}
+		pctx.workdir = subdir
 
-		got, err := findModuleRoot(context.Background(), subdir)
-		if got != dir || err != nil {
-			t.Errorf("findModuleRoot(ctx, %q) = %q, %v; want %q, <nil>", dir, got, err, dir)
+		got, err := pctx.ModuleRoot(ctx)
+		if got != rootdir || err != nil {
+			t.Errorf("got %q/%v want %q/<nil>", got, err, rootdir)
 		}
 	})
-}
-
-const testTempDirPrefix = "gocdk-test"
-
-// newTestModule creates a temporary directory with a go.mod at the root,
-// and returns the path. The returned cleanup function removes the
-// temporary directory and its contents.
-func newTestModule() (string, func(), error) {
-	dir, err := ioutil.TempDir("", testTempDirPrefix)
-	if err != nil {
-		return "", nil, err
-	}
-	cleanup := func() {
-		os.RemoveAll(dir)
-	}
-
-	err = ioutil.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com\n"), 0666)
-	if err != nil {
-		cleanup()
-		return "", nil, err
-	}
-
-	return dir, cleanup, nil
 }

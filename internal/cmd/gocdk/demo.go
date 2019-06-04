@@ -16,11 +16,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path"
-	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -33,28 +32,8 @@ type demoInfo struct {
 	demoURL    string // the URL for the demo
 }
 
-var allDemos = []*demoInfo{
-	{
-		name:       "blob",
-		goDemoPath: "/demo/blob/demo_blob.go",
-		demoURL:    "/demo/blob/",
-	},
-	{
-		name:       "pubsub",
-		goDemoPath: "/demo/pubsub/demo_pubsub.go",
-		demoURL:    "/demo/pubsub/",
-	},
-	{
-		name:       "runtimevar",
-		goDemoPath: "/demo/runtimevar/demo_runtimevar.go",
-		demoURL:    "/demo/runtimevar/",
-	},
-	{
-		name:       "secrets",
-		goDemoPath: "/demo/secrets/demo_secrets.go",
-		demoURL:    "/demo/secrets/",
-	},
-}
+// In sorted order.
+var allDemos = []string{"blob", "pubsub", "runtimevar", "secrets"}
 
 func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 
@@ -87,27 +66,26 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 	}
 	demoAddCmd.Flags().BoolVar(&force, "force", false, "re-add even the demo even if it has already been added, overwriting previous files")
 	demoCmd.AddCommand(demoAddCmd)
+
 	rootCmd.AddCommand(demoCmd)
 }
 
 func listDemos(pctx *processContext) error {
-	// Compute a sorted slice of available demos for usage.
-	var avail []string
-	for _, demo := range allDemos {
-		avail = append(avail, demo.name)
-	}
-	sort.Strings(avail)
-	pctx.Println(strings.Join(avail, "\n"))
+	pctx.Println(strings.Join(allDemos, "\n"))
 	return nil
 }
 
 func addDemo(ctx context.Context, pctx *processContext, demoToAdd string, force bool) error {
+	moduleRoot, err := pctx.ModuleRoot(ctx)
+	if err != nil {
+		return xerrors.Errorf("demo add: %w", err)
+	}
 	for _, demo := range allDemos {
-		if demo.name == demoToAdd {
-			return instantiateDemo(pctx, demo, force)
+		if demo == demoToAdd {
+			return instantiateDemo(pctx, moduleRoot, demo, force)
 		}
 	}
-	return xerrors.Errorf("%q is not a supported demo; try 'demo list' to see available demos")
+	return xerrors.Errorf("%q is not a supported demo; try 'gocdk demo list' to see available demos")
 }
 
 // instantiateDemo does all of the work required to add a demo of a
@@ -115,8 +93,8 @@ func addDemo(ctx context.Context, pctx *processContext, demoToAdd string, force 
 // TODO(rvangent): It currently copies a single source code file. It should
 // additionally iterate over existing biomes, adding a config entry and possibly
 // Terraform files.
-func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
-	pctx.Logf("Adding %q...", demo.name)
+func instantiateDemo(pctx *processContext, moduleRoot, demo string, force bool) error {
+	pctx.Logf("Adding %q...", demo)
 
 	// TODO(rvangent): Consider using materializeTemplateDir here. It can't
 	// be used right now because it treats the source files as templates;
@@ -124,14 +102,15 @@ func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
 	// processed at copy time.
 	// It would also need support for "force".
 
-	dstPath := path.Join(pctx.workdir, filepath.Base(demo.goDemoPath))
+	fileName := fmt.Sprintf("demo_%s.go", demo)
+	dstPath := path.Join(moduleRoot, fileName)
 	if !force {
 		if _, err := os.Stat(dstPath); err == nil {
-			return xerrors.Errorf("%q has already been added to your project. Use --force if you want to re-add it, overwriting previous files", demo.name)
+			return xerrors.Errorf("%q has already been added to your project. Use --force if you want to re-add it, overwriting previous files", demo)
 		}
 	}
-
-	srcFile, err := static.Open(demo.goDemoPath)
+	srcPath := fmt.Sprintf("/demo/%s/%s", demo, fileName)
+	srcFile, err := static.Open(srcPath)
 	if err != nil {
 		return err
 	}
@@ -147,7 +126,7 @@ func instantiateDemo(pctx *processContext, demo *demoInfo, force bool) error {
 	if err != nil {
 		return err
 	}
-	pctx.Logf("  added a demo of %s to your project.", filepath.Base(demo.goDemoPath))
-	pctx.Logf("Run 'gocdk serve' and visit http://localhost:8080%s to see a demo of %s functionality.", demo.demoURL, demo.name)
+	pctx.Logf("  added %q to your project.", fileName)
+	pctx.Logf("Run 'gocdk serve' and visit http://localhost:8080/demo/%s to see the demo.", demo)
 	return nil
 }
