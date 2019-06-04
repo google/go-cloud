@@ -89,7 +89,7 @@ This has a number of benefits:
     result to the driver type.
 -   Methods can be added to the portable type without breaking compatibility.
     Contrast with adding methods to an interface, which is a breaking change.
--   As new operations on the driver are added as new optional interfaces, the
+-   When new operations on the driver are added as new optional interfaces, the
     portable type can hide the need for type-assertions from the user.
 
 As a rule, if a method `Foo` has the same inputs and semantics in the portable
