@@ -36,14 +36,14 @@ type biomeConfig struct {
 	Launcher     *string `json:"launcher,omitempty"`
 }
 
-// biomeRootDir returns the path to the biomes directory.
-func biomeRootDir(moduleRoot string) string {
+// biomesRootDir returns the path to the biomes directory.
+func biomesRootDir(moduleRoot string) string {
 	return filepath.Join(moduleRoot, "biomes")
 }
 
 // biomeDir returns the path to the named biome.
 func biomeDir(moduleRoot, name string) string {
-	return filepath.Join(biomeRootDir(moduleRoot), name)
+	return filepath.Join(biomesRootDir(moduleRoot), name)
 }
 
 // readBiomeConfig reads and parses the biome configuration from the filesystem.

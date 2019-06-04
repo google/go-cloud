@@ -139,7 +139,7 @@ func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
 		return "", xerrors.Errorf("couldn't find a Go module root at or above %s", pctx.workdir)
 	}
 	root := string(output)
-	if _, err := os.Stat(biomeRootDir(root)); err != nil {
+	if _, err := os.Stat(biomesRootDir(root)); err != nil {
 		return "", xerrors.Errorf("Go module root %s doesn't look like a Go CDK project (no biomes/ directory)", root)
 	}
 	return root, nil

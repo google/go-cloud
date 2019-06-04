@@ -41,7 +41,7 @@ func TestProcessContextModuleRoot(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		if err := os.RemoveAll(biomeRootDir(pctx.workdir)); err != nil {
+		if err := os.RemoveAll(biomesRootDir(pctx.workdir)); err != nil {
 			t.Fatal(err)
 		}
 
