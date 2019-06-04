@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -50,7 +49,7 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 		Long:  "TODO more about listing demos",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return listDemos()
+			return listDemos(pctx)
 		},
 	}
 	demoCmd.AddCommand(demoListCmd)
@@ -71,8 +70,8 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 	rootCmd.AddCommand(demoCmd)
 }
 
-func listDemos() error {
-	fmt.Println(strings.Join(allDemos, "\n"))
+func listDemos(pctx *processContext) error {
+	pctx.Println(strings.Join(allDemos, "\n"))
 	return nil
 }
 
@@ -95,8 +94,7 @@ func addDemo(ctx context.Context, pctx *processContext, demoToAdd string, force 
 // additionally iterate over existing biomes, adding a config entry and possibly
 // Terraform files.
 func instantiateDemo(pctx *processContext, moduleRoot, demo string, force bool) error {
-	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
-	logger.Printf("Adding %q...", demo)
+	pctx.Logf("Adding %q...", demo)
 
 	// TODO(rvangent): Consider using materializeTemplateDir here. It can't
 	// be used right now because it treats the source files as templates;
@@ -128,7 +126,7 @@ func instantiateDemo(pctx *processContext, moduleRoot, demo string, force bool) 
 	if err != nil {
 		return err
 	}
-	logger.Printf("  added %q to your project.", fileName)
-	logger.Printf("Run 'gocdk serve' and visit http://localhost:8080/demo/%s to see the demo.", demo)
+	pctx.Logf("  added %q to your project.", fileName)
+	pctx.Logf("Run 'gocdk serve' and visit http://localhost:8080/demo/%s to see the demo.", demo)
 	return nil
 }

@@ -19,10 +19,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gocloud.dev/gcp"
@@ -35,7 +38,7 @@ import (
 //go:generate go run generate_static.go -- static.go
 
 func main() {
-	pctx, err := osProcessContext()
+	pctx, err := newOSProcessContext()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -81,12 +84,12 @@ type processContext struct {
 	workdir string
 	env     []string
 	stdin   io.Reader
-	stdout  io.Writer
-	stderr  io.Writer
+	outlog  *log.Logger
+	errlog  *log.Logger
 }
 
-// osProcessContext returns the default process context from global variables.
-func osProcessContext() (*processContext, error) {
+// newOSProcessContext returns the default processContext from global variables.
+func newOSProcessContext() (*processContext, error) {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -95,9 +98,20 @@ func osProcessContext() (*processContext, error) {
 		workdir: workdir,
 		env:     os.Environ(),
 		stdin:   os.Stdin,
-		stdout:  os.Stdout,
-		stderr:  os.Stderr,
+		outlog:  log.New(os.Stdout, "", 0),
+		errlog:  log.New(os.Stderr, "gocdk: ", 0),
 	}, nil
+}
+
+// newTestProcessContext returns a processContext for use in tests.
+func newTestProcessContext(workdir string) *processContext {
+	return &processContext{
+		workdir: workdir,
+		env:     os.Environ(),
+		stdin:   strings.NewReader(""),
+		outlog:  log.New(ioutil.Discard, "", 0),
+		errlog:  log.New(ioutil.Discard, "", 0),
+	}
 }
 
 // overrideEnv returns a copy of env that has vars appended to the end.
@@ -124,6 +138,21 @@ func (pctx *processContext) gcpCredentials(ctx context.Context) (*google.Credent
 	return gcp.DefaultCredentials(ctx)
 }
 
+// Logf writes to the pctx's stderr.
+func (pctx *processContext) Logf(format string, a ...interface{}) {
+	pctx.errlog.Printf(format, a...)
+}
+
+// Printf writes to the pctx's stdout.
+func (pctx *processContext) Printf(format string, a ...interface{}) {
+	pctx.outlog.Printf(format, a...)
+}
+
+// Println writes to the pctx's stdout.
+func (pctx *processContext) Println(a ...interface{}) {
+	pctx.outlog.Println(a...)
+}
+
 // ModuleRoot searches the given directory and those above it for the Go
 // module root. It also ensures that the module looks like a Go CDK project,
 // based on the existence of a "biomes" directory.
@@ -143,6 +172,28 @@ func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
 		return "", xerrors.Errorf("Go module root %s doesn't look like a Go CDK project (no biomes/ directory)", root)
 	}
 	return root, nil
+}
+
+// NewCommand creates a new exec.Cmd based on this processContext.
+//
+// dir may be empty; it defaults to pctx.workdir.
+//
+// Note that this function sets cmd.Stdout, and that Cmd.Output requires
+// Stdout to be nil; you may need to set it back to nil explicitly (or
+// don't use this function). Similarly for Cmd.CombinedOutput, for both
+// Stdout and Stderr.
+func (pctx *processContext) NewCommand(ctx context.Context, dir, name string, arg ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, name, arg...)
+	if dir == "" {
+		cmd.Dir = pctx.workdir
+	} else {
+		cmd.Dir = dir
+	}
+	cmd.Env = pctx.env
+	cmd.Stdin = pctx.stdin
+	cmd.Stdout = pctx.outlog.Writer()
+	cmd.Stderr = pctx.errlog.Writer()
+	return cmd
 }
 
 // withInterrupt returns a copy of parent with a new Done channel. The returned
