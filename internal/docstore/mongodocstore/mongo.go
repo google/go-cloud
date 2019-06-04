@@ -216,13 +216,13 @@ func newCollection(mcoll *mongo.Collection, idField string, idFunc func(docstore
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	if c.idField != "" {
 		id, _ := doc.GetField(c.idField)
-		return id, nil // missing field is not an error
+		return encodeValue(id) // missing field is not an error
 	}
 	id := c.idFunc(doc.Origin)
 	if id == nil {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
 	}
-	return id, nil
+	return encodeValue(id)
 }
 
 // From https://docs.mongodb.com/manual/core/document: "The field name _id is
@@ -290,37 +290,35 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 			return
 		}
 	}
-	cursor, err := c.coll.Find(ctx, bson.D{bson.E{Key: "_id", Value: bson.D{{Key: "$in", Value: ids}}}}, opts)
+	cursor, err := c.coll.Find(ctx, bson.D{bson.E{Key: mongoIDField, Value: bson.D{{Key: "$in", Value: ids}}}}, opts)
 	if err != nil {
 		setErr(err)
 		return
 	}
 	defer cursor.Close(ctx)
 
-	found := make([]bool, len(gets))
+	found := make(map[*driver.Action]bool)
 	am := mapActionIndices(gets)
-	n := 0
 	for cursor.Next(ctx) {
 		var m map[string]interface{}
 		if err := cursor.Decode(&m); err != nil {
 			continue
 		}
-		i := am[m["_id"]]
-		errs[gets[i].Index] = decodeDoc(m, gets[i].Doc, c.idField)
-		found[i] = true
-		n++
+		a := am[m[mongoIDField]]
+		errs[a.Index] = decodeDoc(m, a.Doc, c.idField)
+		found[a] = true
 	}
-	for i, f := range found {
-		if !f {
-			errs[gets[i].Index] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", gets[i].Doc)
+	for _, a := range gets {
+		if !found[a] {
+			errs[a.Index] = gcerr.Newf(gcerr.NotFound, nil, "item with key=%v not found", a.Key)
 		}
 	}
 }
 
-func mapActionIndices(actions []*driver.Action) map[interface{}]int {
-	m := make(map[interface{}]int)
-	for i, a := range actions {
-		m[a.Key] = i
+func mapActionIndices(actions []*driver.Action) map[interface{}]*driver.Action {
+	m := make(map[interface{}]*driver.Action)
+	for _, a := range actions {
+		m[a.Key] = a
 	}
 	return m
 }
@@ -443,7 +441,7 @@ func (c *collection) makeFilter(id interface{}, doc driver.Document) (filter bso
 		return nil, nil, err
 	}
 	// Only select the document with the given ID.
-	filter = bson.D{{"_id", id}}
+	filter = bson.D{bson.E{Key: "_id", Value: id}}
 	// If the given document has a revision, it must match the stored document.
 	if rev != nil {
 		filter = append(filter, bson.E{Key: c.revisionField, Value: rev})
