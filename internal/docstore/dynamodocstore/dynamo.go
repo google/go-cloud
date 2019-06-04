@@ -363,20 +363,150 @@ func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]
 	return m
 }
 
-func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	// TODO(jba): Do these concurrently. At present that breaks replay because the
-	// client request tokens can be claimed in different orders.
-	const batchSize = 10
-	n := len(actions) / batchSize
-	for i := 0; i < n; i++ {
-		c.transactWrite(ctx, actions, errs, opts, batchSize*i, batchSize*(i+1)-1)
-	}
-	if n*batchSize < len(actions) {
-		c.transactWrite(ctx, actions, errs, opts, batchSize*n, len(actions)-1)
+func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	// TODO(jba): Do these concurrently.
+	// TODO(jba): reimplemente opts.BeforeDo
+	for _, a := range writes {
+		var pc *expression.ConditionBuilder
+		var err error
+		if a.Kind != driver.Create {
+			pc, err = revisionPrecondition(a.Doc)
+			if err != nil {
+				errs[a.Index] = err
+				continue
+			}
+		}
+		switch a.Kind {
+		case driver.Create:
+			cb := expression.AttributeNotExists(expression.Name(c.partitionKey))
+			err = c.put(ctx, a.Kind, a.Doc, &cb)
+		case driver.Replace:
+			if pc == nil {
+				c := expression.AttributeExists(expression.Name(c.partitionKey))
+				pc = &c
+			}
+			err = c.put(ctx, a.Kind, a.Doc, pc)
+		case driver.Put:
+			err = c.put(ctx, a.Kind, a.Doc, pc)
+		case driver.Delete:
+			err = c.delete(ctx, a.Doc, pc)
+		case driver.Update:
+			cb := expression.AttributeExists(expression.Name(c.partitionKey))
+			if pc != nil {
+				cb = cb.And(*pc)
+			}
+			err = c.update(ctx, a.Doc, a.Mods, &cb)
+		default:
+			panic("bad write kind")
+		}
+		if err != nil {
+			errs[a.Index] = err
+		}
 	}
 }
 
-// TODO(shantuo/jba): make writes independent of each other.
+func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Document, condition *expression.ConditionBuilder) error {
+	av, err := encodeDoc(doc)
+	if err != nil {
+		return err
+	}
+	mf := c.missingKeyField(av.M)
+	if k != driver.Create && mf != "" {
+		return fmt.Errorf("missing key field %q", mf)
+	}
+	var newPartitionKey string
+	if mf == c.partitionKey {
+		newPartitionKey = driver.UniqueString()
+		av.M[c.partitionKey] = new(dyn.AttributeValue).SetS(newPartitionKey)
+	}
+	if c.sortKey != "" && mf == c.sortKey {
+		// It doesn't make sense to generate a random sort key.
+		return fmt.Errorf("missing sort key %q", c.sortKey)
+	}
+
+	if av.M[docstore.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
+		return err
+	}
+	in := &dyn.PutItemInput{
+		TableName: &c.table,
+		Item:      av.M,
+	}
+	if condition != nil {
+		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
+		if err != nil {
+			return err
+		}
+		in.ExpressionAttributeNames = ce.Names()
+		in.ExpressionAttributeValues = ce.Values()
+		in.ConditionExpression = ce.Condition()
+	}
+	_, err = c.db.PutItemWithContext(ctx, in)
+	if err == nil && newPartitionKey != "" {
+		doc.SetField(c.partitionKey, newPartitionKey)
+	}
+	return err
+}
+
+func (c *collection) delete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) error {
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	if err != nil {
+		return err
+	}
+
+	in := &dyn.DeleteItemInput{
+		TableName: &c.table,
+		Key:       av.M,
+	}
+	if condition != nil {
+		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
+		if err != nil {
+			return err
+		}
+		in.ExpressionAttributeNames = ce.Names()
+		in.ExpressionAttributeValues = ce.Values()
+		in.ConditionExpression = ce.Condition()
+	}
+	_, err = c.db.DeleteItemWithContext(ctx, in)
+	return err
+}
+
+func (c *collection) update(ctx context.Context, doc driver.Document, mods []driver.Mod, condition *expression.ConditionBuilder) error {
+	if len(mods) == 0 {
+		return nil
+	}
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	if err != nil {
+		return err
+	}
+	var ub expression.UpdateBuilder
+	for _, m := range mods {
+		// TODO(shantuo): check for invalid field paths
+		fp := expression.Name(strings.Join(m.FieldPath, "."))
+		if inc, ok := m.Value.(driver.IncOp); ok {
+			ub.Add(fp, expression.Value(inc.Amount))
+		} else if m.Value == nil {
+			ub = ub.Remove(fp)
+		} else {
+			ub = ub.Set(fp, expression.Value(m.Value))
+		}
+	}
+	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
+	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
+	if err != nil {
+		return err
+	}
+	_, err = c.db.UpdateItemWithContext(ctx, &dyn.UpdateItemInput{
+		TableName:                 &c.table,
+		Key:                       av.M,
+		ConditionExpression:       ce.Condition(),
+		UpdateExpression:          ce.Update(),
+		ExpressionAttributeNames:  ce.Names(),
+		ExpressionAttributeValues: ce.Values(),
+	})
+	return err
+}
+
+// TODO(jba): use this if/when we support atomic writes.
 func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions, start, end int) {
 	setErr := func(err error) {
 		for i := start; i <= end; i++ {
