@@ -503,18 +503,24 @@ func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, mods [
 			if err := decodeDoc(&dyn.AttributeValue{M: item}, doc); err != nil {
 				return err
 			}
-			if mods == nil {
-				actions = append(actions, &driver.Action{Kind: driver.Delete, Doc: doc})
-			} else {
-				actions = append(actions, &driver.Action{Kind: driver.Update, Doc: doc, Mods: mods})
+			key, err := c.Key(doc)
+			if err != nil {
+				return err
 			}
+			a := &driver.Action{Doc: doc, Key: key, Index: len(actions), Mods: mods}
+			if mods == nil {
+				a.Kind = driver.Delete
+			} else {
+				a.Kind = driver.Update
+			}
+			actions = append(actions, a)
 		}
 		if last == nil {
 			break
 		}
 		startAfter = last
 	}
-	alerr := c.runActionsUnordered(ctx, actions, &driver.RunActionsOptions{})
+	alerr := c.RunActions(ctx, actions, &driver.RunActionsOptions{})
 	if len(alerr) == 0 {
 		return nil
 	}
