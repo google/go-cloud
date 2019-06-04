@@ -38,7 +38,7 @@ import (
 //go:generate go run generate_static.go -- static.go
 
 func main() {
-	pctx, err := newDefaultProcessContext()
+	pctx, err := newOSProcessContext()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -88,8 +88,8 @@ type processContext struct {
 	errlog  *log.Logger
 }
 
-// newDefaultProcessContext returns the default processContext from global variables.
-func newDefaultProcessContext() (*processContext, error) {
+// newOSProcessContext returns the default processContext from global variables.
+func newOSProcessContext() (*processContext, error) {
 	workdir, err := os.Getwd()
 	if err != nil {
 		return nil, err
