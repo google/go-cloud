@@ -144,34 +144,34 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 
-	// t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
-	// t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
-	// t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
-	// t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, testGet) })
-	// t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
-	// t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
-	// t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
-	// t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
-	// t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
-	// t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
+	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
+	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
+	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
+	t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, testGet) })
+	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
+	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
+	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
+	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
+	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
+	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
 
-	// t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
-	// t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
-	// t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
+	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
+	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
+	t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
 
-	// asTests = append(asTests, verifyAsFailsOnNil{})
-	// t.Run("As", func(t *testing.T) {
-	// 	for _, st := range asTests {
-	// 		if st.Name() == "" {
-	// 			t.Fatalf("AsTest.Name is required")
-	// 		}
-	// 		t.Run(st.Name(), func(t *testing.T) {
-	// 			withTwoKeyCollection(t, newHarness, func(t *testing.T, coll *docstore.Collection) {
-	// 				testAs(t, coll, st)
-	// 			})
-	// 		})
-	// 	}
-	// })
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("As", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				withTwoKeyCollection(t, newHarness, func(t *testing.T, coll *docstore.Collection) {
+					testAs(t, coll, st)
+				})
+			})
+		}
+	})
 }
 
 func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
