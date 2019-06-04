@@ -76,14 +76,14 @@ pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
     # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test" -auto-approve || echo "[KNOWN FAILURE]"
+    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
     ;;
   run)
     # TODO: This fails, probably because of the Terraform error above.
     go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
     ;;
   cleanup)
-    terraform destroy -var project="go-cloud-test" -auto-approve || FAILURES="$FAILURES $TESTDIR"
+    terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
@@ -114,14 +114,14 @@ pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
     # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test" -auto-approve || echo "[KNOWN FAILURE]"
+    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
     ;;
   run)
     # TODO: This fails, probably because of the Terraform error above.
     go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
     ;;
   cleanup)
-    terraform destroy -var project="go-cloud-test" -auto-approve || FAILURES="$FAILURES $TESTDIR"
+    terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null
@@ -172,14 +172,14 @@ pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
     # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test" -auto-approve || echo "[KNOWN FAILURE]"
+    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
     ;;
   run)
     # TODO: Is this the right way to run this test? There's also a `test.sh`.
     go test -mod=readonly -race -json ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
-    terraform destroy -var project="go-cloud-test" -auto-approve || FAILURES="$FAILURES $TESTDIR"
+    terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null

@@ -35,7 +35,7 @@ var (
 	verbose  = flag.Bool("verbose", false, "display all test output")
 )
 
-// From running "go doc test2json".
+// TestEvent is copied from "go doc test2json".
 type TestEvent struct {
 	Time    time.Time // encodes as an RFC3339-format string
 	Action  string
@@ -67,6 +67,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 	// Stores output produced by each test.
 	testOutputs := map[string][]string{}
 
+	start := time.Now()
 	for scanner.Scan() {
 		// When the build fails, go test -json doesn't emit a valid JSON value, only
 		// a line of output starting with FAIL. Report a more reasonable error in
@@ -124,7 +125,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 	f := counts["fail"]
 	s := counts["skip"]
 
-	summary := fmt.Sprintf("ran %d; passed %d; failed %d; skipped %d", p+f+s, p, f, s)
+	summary := fmt.Sprintf("ran %d; passed %d; failed %d; skipped %d (in %.1f sec)", p+f+s, p, f, s, time.Since(start).Seconds())
 	if len(failedTests) > 0 {
 		var sb strings.Builder
 		sb.WriteString("Failures (reporting up to 10):\n")
