@@ -52,7 +52,7 @@ func registerLaunchCmd(ctx context.Context, pctx *processContext, rootCmd *cobra
 }
 
 func launch(ctx context.Context, pctx *processContext, biome, dockerImage string) error {
-	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
@@ -72,7 +72,7 @@ func launch(ctx context.Context, pctx *processContext, biome, dockerImage string
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
 	if cfg.Launcher == nil {
-		return xerrors.Errorf("gocdk launch: launcher not specified in %s", filepath.Join(findBiomeDir(moduleRoot, biome), biomeConfigFileName))
+		return xerrors.Errorf("gocdk launch: launcher not specified in %s", filepath.Join(biomeDir(moduleRoot, biome), biomeConfigFileName))
 	}
 	launcher, err := newLauncher(ctx, pctx, *cfg.Launcher)
 	if err != nil {
@@ -81,7 +81,7 @@ func launch(ctx context.Context, pctx *processContext, biome, dockerImage string
 
 	// Read the launch specifier from the biome's Terraform output.
 	tfOutput, err := tfReadOutput(ctx,
-		findBiomeDir(moduleRoot, biome),
+		biomeDir(moduleRoot, biome),
 		pctx.env)
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
@@ -100,7 +100,7 @@ func launch(ctx context.Context, pctx *processContext, biome, dockerImage string
 	if err != nil {
 		return xerrors.Errorf("gocdk launch: %w", err)
 	}
-	fmt.Fprintf(pctx.stdout, "Serving at %s\n", launchURL)
+	pctx.Logf("Serving at %s\n", launchURL)
 	return nil
 }
 
@@ -129,11 +129,10 @@ type LaunchInput struct {
 
 // newLauncher creates the launcher for the given name.
 func newLauncher(ctx context.Context, pctx *processContext, launcherName string) (Launcher, error) {
-	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
 	switch launcherName {
 	case "local":
 		return &localLauncher{
-			logger:    logger,
+			logger:    pctx.errlog,
 			dockerEnv: pctx.env,
 			dockerDir: pctx.workdir,
 		}, nil
@@ -148,7 +147,7 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 			return nil, xerrors.Errorf("prepare cloudrun launcher: %w", err)
 		}
 		return &cloudRunLauncher{
-			logger:    logger,
+			logger:    pctx.errlog,
 			client:    runService,
 			dockerEnv: pctx.env,
 			dockerDir: pctx.workdir,

@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -64,29 +63,24 @@ func greeting() string {
 }
 
 func testBuildForServe(t *testing.T, files map[string]string) {
-	dir, cleanup, err := newTestModule()
+	ctx := context.Background()
+	pctx, cleanup, err := newTestProject(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
 	for name, content := range files {
-		if err := ioutil.WriteFile(filepath.Join(dir, name), []byte(content), 0666); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(pctx.workdir, name), []byte(content), 0666); err != nil {
 			t.Fatal(err)
 		}
 	}
-	pctx := &processContext{
-		workdir: dir,
-		env:     os.Environ(),
-		stdout:  ioutil.Discard,
-		stderr:  ioutil.Discard,
-	}
-	exePath := filepath.Join(dir, "hello")
+	exePath := filepath.Join(pctx.workdir, "hello")
 	if runtime.GOOS == "windows" {
 		exePath += ".EXE"
 	}
 
 	// Build program.
-	if err := buildForServe(context.Background(), pctx, dir, exePath); err != nil {
+	if err := buildForServe(ctx, pctx, pctx.workdir, exePath); err != nil {
 		t.Error("buildForServe(...):", err)
 	}
 

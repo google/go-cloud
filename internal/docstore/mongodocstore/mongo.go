@@ -277,15 +277,7 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 		ids = append(ids, a.Key)
 	}
 	if dopts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.FindOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := dopts.BeforeDo(asFunc); err != nil {
+		if err := dopts.BeforeDo(driver.AsFunc(opts)); err != nil {
 			setErr(err)
 			return
 		}
