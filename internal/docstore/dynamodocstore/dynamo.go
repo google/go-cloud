@@ -365,6 +365,7 @@ func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]
 
 func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
 	// TODO(jba): Do these concurrently.
+	// TODO(jba): reimplemente opts.BeforeDo
 	for _, a := range writes {
 		var pc *expression.ConditionBuilder
 		var err error
