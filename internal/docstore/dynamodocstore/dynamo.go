@@ -389,8 +389,6 @@ func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, err
 			err = c.put(ctx, a.Kind, a.Doc, pc)
 		case driver.Delete:
 			err = c.delete(ctx, a.Doc, pc)
-		case driver.Get:
-			err = c.get(ctx, a.Doc, a.FieldPaths)
 		case driver.Update:
 			cb := expression.AttributeExists(expression.Name(c.partitionKey))
 			if pc != nil {
@@ -398,7 +396,7 @@ func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, err
 			}
 			err = c.update(ctx, a.Doc, a.Mods, &cb)
 		default:
-			panic("unimp")
+			panic("bad write kind")
 		}
 		if err != nil {
 			errs[a.Index] = err
@@ -445,6 +443,65 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 	if err == nil && newPartitionKey != "" {
 		doc.SetField(c.partitionKey, newPartitionKey)
 	}
+	return err
+}
+
+func (c *collection) delete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) error {
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	if err != nil {
+		return err
+	}
+
+	in := &dyn.DeleteItemInput{
+		TableName: &c.table,
+		Key:       av.M,
+	}
+	if condition != nil {
+		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
+		if err != nil {
+			return err
+		}
+		in.ExpressionAttributeNames = ce.Names()
+		in.ExpressionAttributeValues = ce.Values()
+		in.ConditionExpression = ce.Condition()
+	}
+	_, err = c.db.DeleteItemWithContext(ctx, in)
+	return err
+}
+
+func (c *collection) update(ctx context.Context, doc driver.Document, mods []driver.Mod, condition *expression.ConditionBuilder) error {
+	if len(mods) == 0 {
+		return nil
+	}
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	if err != nil {
+		return err
+	}
+	var ub expression.UpdateBuilder
+	for _, m := range mods {
+		// TODO(shantuo): check for invalid field paths
+		fp := expression.Name(strings.Join(m.FieldPath, "."))
+		if inc, ok := m.Value.(driver.IncOp); ok {
+			ub.Add(fp, expression.Value(inc.Amount))
+		} else if m.Value == nil {
+			ub = ub.Remove(fp)
+		} else {
+			ub = ub.Set(fp, expression.Value(m.Value))
+		}
+	}
+	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
+	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
+	if err != nil {
+		return err
+	}
+	_, err = c.db.UpdateItemWithContext(ctx, &dyn.UpdateItemInput{
+		TableName:                 &c.table,
+		Key:                       av.M,
+		ConditionExpression:       ce.Condition(),
+		UpdateExpression:          ce.Update(),
+		ExpressionAttributeNames:  ce.Names(),
+		ExpressionAttributeValues: ce.Values(),
+	})
 	return err
 }
 
