@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"gocloud.dev/internal/cmd/gocdk/internal/probe"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
 )
@@ -303,7 +304,7 @@ func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logge
 	// Server must report alive within 30 seconds.
 	// TODO(light): Also wait on process to see if it exits early.
 	aliveCtx, aliveCancel := context.WithTimeout(ctx, 30*time.Second)
-	err := waitForHealthy(aliveCtx, alloc.url("/healthz/liveness"))
+	err := probe.WaitForHealthy(aliveCtx, alloc.url("/healthz/liveness"))
 	aliveCancel()
 	if err != nil {
 		process.Process.Kill() // Send SIGKILL; no graceful shutdown.
@@ -313,7 +314,7 @@ func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logge
 
 	// Wait for server to be ready.
 	logger.Printf("Waiting for server %s to report ready...", alloc.url("/"))
-	err = waitForHealthy(ctx, alloc.url("/healthz/readiness"))
+	err = probe.WaitForHealthy(ctx, alloc.url("/healthz/readiness"))
 	if err != nil {
 		endServerProcess(process)
 		return nil, xerrors.Errorf("start server: %w", err)
@@ -374,38 +375,6 @@ func (p *serveProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// waitForHealthy polls a URL repeatedly until the server responds with a
-// non-server-error status, the context is canceled, or the context's deadline
-// is met. waitForHealthy returns an error in the latter two cases.
-func waitForHealthy(ctx context.Context, u *url.URL) error {
-	// Create health request.
-	// (Avoiding http.NewRequest to not reparse the URL.)
-	req := &http.Request{
-		Method: http.MethodGet,
-		URL:    u,
-	}
-	req = req.WithContext(ctx)
-
-	// Poll for healthy.
-	tick := time.NewTicker(100 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		// Check response. Allow 200-level (success) or 400-level (client error)
-		// status codes. The latter is permitted for the case where the application
-		// doesn't serve explicit health checks.
-		resp, err := http.DefaultClient.Do(req)
-		if err == nil && (statusCodeInRange(resp.StatusCode, 200) || statusCodeInRange(resp.StatusCode, 400)) {
-			return nil
-		}
-		// Wait for the next tick.
-		select {
-		case <-tick.C:
-		case <-ctx.Done():
-			return xerrors.Errorf("wait for healthy: %w", ctx.Err())
-		}
-	}
-}
-
 // endServerProcess kills and waits for a subprocess to exit.
 func endServerProcess(process *exec.Cmd) {
 	if err := signalGracefulShutdown(process.Process); err != nil {
@@ -421,13 +390,4 @@ func formatTCPAddr(addr *net.TCPAddr) string {
 		return fmt.Sprintf("localhost:%d", addr.Port)
 	}
 	return addr.String()
-}
-
-// statusCodeInRange reports whether the given HTTP status code is in the range
-// [start, start+100).
-func statusCodeInRange(statusCode, start int) bool {
-	if start < 100 || start%100 != 0 {
-		panic("statusCodeInRange start must be a multiple of 100")
-	}
-	return start <= statusCode && statusCode < start+100
 }
