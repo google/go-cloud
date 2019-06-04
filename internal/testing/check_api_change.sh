@@ -60,7 +60,7 @@ while read -r path || [[ -n "$path" ]]; do
 
   PKGS=$(cd "$MASTER_CLONE_DIR" && cd "$path" && go list ./...)
   for pkg in $PKGS; do
-    if [[ "$pkg" =~ "test" ]] || [[ "$pkg" =~ "internal" ]]; then
+    if [[ "$pkg" =~ "test" ]] || [[ "$pkg" =~ "internal" ]] || [[ "$pkg" =~ "samples" ]]; then
       continue
     fi
     echo "    checking ${pkg}..."
