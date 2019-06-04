@@ -89,7 +89,7 @@ while read -r path || [[ -n "$path" ]]; do
   # codecov will only save the last one anyway.
   if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
     echo "Running Go tests with coverage..."
-    go test -mod=readonly -json -race -coverpkg=./... -coverprofile=modcoverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
+    go test -mod=readonly -race -coverpkg=./... -coverprofile=modcoverage.out ./... 
     if [ -f modcoverage.out ] && [ $result -eq 0 ]; then
       cat modcoverage.out >> "$rootdir"/coverage.out
       rm modcoverage.out
