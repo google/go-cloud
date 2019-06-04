@@ -36,16 +36,21 @@ type biomeConfig struct {
 	Launcher     *string `json:"launcher,omitempty"`
 }
 
-// findBiomeDir returns the path to the named biome.
-func findBiomeDir(moduleRoot, name string) string {
-	return filepath.Join(moduleRoot, "biomes", name)
+// biomeRootDir returns the path to the biomes directory.
+func biomeRootDir(moduleRoot string) string {
+	return filepath.Join(moduleRoot, "biomes")
+}
+
+// biomeDir returns the path to the named biome.
+func biomeDir(moduleRoot, name string) string {
+	return filepath.Join(biomeRootDir(moduleRoot), name)
 }
 
 // readBiomeConfig reads and parses the biome configuration from the filesystem.
 // If the configuration file could not be found, readBiomeConfig returns an
 // error for which xerrors.As(err, new(*biomeNotFoundError)) returns true.
 func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
-	configPath := filepath.Join(findBiomeDir(moduleRoot, biome), biomeConfigFileName)
+	configPath := filepath.Join(biomeDir(moduleRoot, biome), biomeConfigFileName)
 	data, err := ioutil.ReadFile(configPath)
 	if os.IsNotExist(err) {
 		// TODO(light): Wrap error for formatting chain but not unwrap chain.
@@ -71,7 +76,7 @@ func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
 // the outputs.
 func refreshBiome(ctx context.Context, moduleRoot, biome string, env []string) error {
 	c := exec.CommandContext(ctx, "terraform", "refresh", "-input=false")
-	c.Dir = findBiomeDir(moduleRoot, biome)
+	c.Dir = biomeDir(moduleRoot, biome)
 	c.Env = overrideEnv(env, "TF_IN_AUTOMATION=1")
 	out, err := c.CombinedOutput()
 	if err != nil {
@@ -167,7 +172,7 @@ func (e *biomeNotFoundError) FormatError(p xerrors.Printer) error {
 	if !p.Detail() {
 		return nil
 	}
-	p.Printf("biome = %q", findBiomeDir(e.moduleRoot, e.biome))
+	p.Printf("biome = %q", biomeDir(e.moduleRoot, e.biome))
 	e.frame.Format(p)
 	return e.detail
 }

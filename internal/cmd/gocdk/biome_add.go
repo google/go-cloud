@@ -52,15 +52,15 @@ func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
 	logger.Printf("Adding biome %q...", newName)
 
-	projectDir, err := findModuleRoot(ctx, pctx.workdir)
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
-		xerrors.Errorf("biome add: %w", err)
+		return xerrors.Errorf("biome add: %w", err)
 	}
-	dstPath := findBiomeDir(projectDir, newName)
+	dstPath := biomeDir(moduleRoot, newName)
 	data := struct {
 		ProjectName string
 	}{
-		ProjectName: filepath.Base(projectDir),
+		ProjectName: filepath.Base(moduleRoot),
 	}
 
 	if err := materializeTemplateDir(dstPath, "biome_add", data); err != nil {

@@ -124,20 +124,25 @@ func (pctx *processContext) gcpCredentials(ctx context.Context) (*google.Credent
 	return gcp.DefaultCredentials(ctx)
 }
 
-// findModuleRoot searches the given directory and those above it for the Go
-// module root.
-func findModuleRoot(ctx context.Context, dir string) (string, error) {
+// ModuleRoot searches the given directory and those above it for the Go
+// module root. It also ensures that the module looks like a Go CDK project,
+// based on the existence of a "biomes" directory.
+func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
 	c := exec.CommandContext(ctx, "go", "list", "-m", "-f", "{{.Dir}}")
-	c.Dir = dir
+	c.Dir = pctx.workdir
 	output, err := c.Output()
 	if err != nil {
-		return "", xerrors.Errorf("find module root for %s: %w", dir, err)
+		return "", xerrors.Errorf("couldn't find a Go module root at or above %s: %w", pctx.workdir, err)
 	}
 	output = bytes.TrimSuffix(output, []byte("\n"))
 	if len(output) == 0 {
-		return "", xerrors.Errorf("find module root for %s: no module found", dir, err)
+		return "", xerrors.Errorf("couldn't find a Go module root at or above %s", pctx.workdir)
 	}
-	return string(output), nil
+	root := string(output)
+	if _, err := os.Stat(biomeRootDir(root)); err != nil {
+		return "", xerrors.Errorf("Go module root %s doesn't look like a Go CDK project (no biomes/ directory)", root)
+	}
+	return root, nil
 }
 
 // withInterrupt returns a copy of parent with a new Done channel. The returned

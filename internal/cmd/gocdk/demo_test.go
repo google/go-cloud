@@ -36,10 +36,10 @@ func TestAddDemo(t *testing.T) {
 	}
 	defer cleanup()
 
-	// Call the main package run function as if 'add-demo' were being called
+	// Call the main package run function as if 'gocdk demo add' were being called
 	// from the command line for each of the demos.
 	for _, demo := range allDemos {
-		if err := run(ctx, pctx, []string{"demo", "add", demo.name}); err != nil {
+		if err := run(ctx, pctx, []string{"demo", "add", demo}); err != nil {
 			t.Fatalf("run demo error: %+v", err)
 		}
 	}

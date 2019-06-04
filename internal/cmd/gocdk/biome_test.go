@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -23,38 +24,35 @@ import (
 
 func TestReadBiomeConfig(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		dir, cleanup, err := newTestModule()
+		pctx, cleanup, err := newTestProject(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		const biome = "foo"
+
 		want := &biomeConfig{
 			ServeEnabled: configBool(true),
-			Launcher:     configString("rocket"),
-		}
-		if err := newTestBiome(dir, biome, "ohai", want); err != nil {
-			t.Fatal(err)
+			Launcher:     configString("local"),
 		}
 
-		got, err := readBiomeConfig(dir, biome)
+		got, err := readBiomeConfig(pctx.workdir, "dev")
 		if err != nil {
-			t.Fatalf("readBiomeConfig(%q, %q): %+v", dir, biome, err)
+			t.Fatalf("readBiomeConfig(%q, \"dev\"): %+v", pctx.workdir, err)
 		}
 		if diff := cmp.Diff(want, got); diff != "" {
-			t.Errorf("readBiomeConfig(%q, %q) diff (-want +got):\n%s", dir, biome, diff)
+			t.Errorf("readBiomeConfig(%q, \"dev\") diff (-want +got):\n%s", pctx.workdir, diff)
 		}
 	})
 	t.Run("DirNotExist", func(t *testing.T) {
-		dir, cleanup, err := newTestModule()
+		pctx, cleanup, err := newTestProject(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer cleanup()
 
-		_, err = readBiomeConfig(dir, "dev")
+		_, err = readBiomeConfig(pctx.workdir, "notabiome")
 		if !xerrors.As(err, new(*biomeNotFoundError)) {
-			t.Errorf("readBiomeConfig(%q, \"dev\") error =\n%+v\n; want biome not found error", dir, err)
+			t.Errorf("readBiomeConfig(%q, \"dev\") error =\n%+v\n; want biome not found error", pctx.workdir, err)
 		}
 	})
 }

@@ -170,11 +170,17 @@ func containsLine(data []byte, want string) bool {
 	return false
 }
 
+const testTempDirPrefix = "gocdk-test"
+
 // newTestProject creates a temporary project using "gocdk init" and
 // returns a pctx with workdir set to the project directory, and a cleanup
 // function.
 func newTestProject(ctx context.Context) (*processContext, func(), error) {
 	dir, err := ioutil.TempDir("", testTempDirPrefix)
+	if err != nil {
+		return nil, nil, err
+	}
+	dir, err = filepath.EvalSymlinks(dir) // in case TMPDIR has a symlink like on darwin
 	if err != nil {
 		return nil, nil, err
 	}

@@ -56,7 +56,7 @@ func registerServeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 func serve(ctx context.Context, pctx *processContext, opts *serveOptions) error {
 	// Check first that we're in a Go module.
 	var err error
-	opts.moduleRoot, err = findModuleRoot(ctx, pctx.workdir)
+	opts.moduleRoot, err = pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
@@ -67,7 +67,7 @@ func serve(ctx context.Context, pctx *processContext, opts *serveOptions) error 
 		// TODO(light): Keep err in formatting chain for debugging.
 		return xerrors.Errorf("gocdk serve: biome configuration not found for %s. "+
 			"Make sure that %s exists and has `\"serve_enabled\": true`.",
-			opts.biome, filepath.Join(findBiomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
+			opts.biome, filepath.Join(biomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
 	}
 	if err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
@@ -75,7 +75,7 @@ func serve(ctx context.Context, pctx *processContext, opts *serveOptions) error 
 	if biomeConfig.ServeEnabled == nil || !*biomeConfig.ServeEnabled {
 		return xerrors.Errorf("gocdk serve: biome %s has not enabled serving. "+
 			"Add `\"serve_enabled\": true` to %s and try again.",
-			opts.biome, filepath.Join(findBiomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
+			opts.biome, filepath.Join(biomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
 	}
 
 	// Start reverse proxy on address.
@@ -190,7 +190,7 @@ loop:
 		}
 
 		// Read output from Terraform built during apply or refresh.
-		tfOutput, err := tfReadOutput(ctx, findBiomeDir(opts.moduleRoot, opts.biome), pctx.env)
+		tfOutput, err := tfReadOutput(ctx, biomeDir(opts.moduleRoot, opts.biome), pctx.env)
 		if err != nil {
 			logger.Printf("Terraform: %v", err)
 			if process == nil {

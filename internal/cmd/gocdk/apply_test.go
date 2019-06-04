@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -45,16 +44,21 @@ func TestApply(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		const biomeName = "dev"
-		const wantGreeting = "HALLO WORLD"
-		if err := newTestBiome(pctx.workdir, biomeName, wantGreeting, new(biomeConfig)); err != nil {
+
+		const greeting = "HALLO WORLD"
+		devBiomeDir := biomeDir(pctx.workdir, "dev")
+
+		// Overwrite the default "main.tf" file with a custom output.
+		// We'll verify that we can read it down below.
+		terraformSource := `output "greeting" { value = ` + strconv.Quote(greeting) + `	}`
+		if err := ioutil.WriteFile(filepath.Join(devBiomeDir, "main.tf"), []byte(terraformSource), 0666); err != nil {
 			t.Fatal(err)
 		}
 
-		// Call the main package run function as if 'apply' and biomeName were passed
+		// Call the main package run function as if 'apply dev' were passed
 		// on the command line. As part of this, ensureTerraformInit is called to check
 		// that terraform has been properly initialized before running 'terraform apply'.
-		if err := run(ctx, pctx, []string{"apply", biomeName}); err != nil {
+		if err := run(ctx, pctx, []string{"apply", "dev"}); err != nil {
 			t.Errorf("run error: %+v", err)
 		}
 
@@ -62,38 +66,12 @@ func TestApply(t *testing.T) {
 		// we configured. Terraform output fails if 'terraform init' was not called.
 		// It also fails if 'terraform apply' has never been run, as there will be no
 		// terraform state file (terraform.tfstate).
-		outputs, err := tfReadOutput(ctx, findBiomeDir(pctx.workdir, biomeName), os.Environ())
+		outputs, err := tfReadOutput(ctx, devBiomeDir, os.Environ())
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := outputs["greeting"].stringValue(); got != wantGreeting {
-			t.Errorf("greeting = %q; want %q", got, wantGreeting)
+		if got := outputs["greeting"].stringValue(); got != greeting {
+			t.Errorf("greeting = %q; want %q", got, greeting)
 		}
 	})
-}
-
-func newTestBiome(dir, name, tfGreeting string, cfg *biomeConfig) error {
-	biomeDir := filepath.Join(dir, "biomes", name)
-	if err := os.MkdirAll(biomeDir, 0777); err != nil {
-		return err
-	}
-	terraformSource := `output "greeting" {
-	value = ` + strconv.Quote(tfGreeting) + `
-}
-provider "random" {
-}`
-
-	err := ioutil.WriteFile(filepath.Join(biomeDir, "main.tf"), []byte(terraformSource), 0666)
-	if err != nil {
-		return err
-	}
-	cfgData, err := json.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(filepath.Join(biomeDir, "biome.json"), cfgData, 0666)
-	if err != nil {
-		return err
-	}
-	return nil
 }
