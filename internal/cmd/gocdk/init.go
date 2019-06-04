@@ -19,7 +19,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	slashpath "path"
 	"path/filepath"
 	"strings"
@@ -144,8 +143,7 @@ func materializeTemplateDir(dst string, srcRoot string, data interface{}) error 
 // import path for the project.
 func inferModulePath(ctx context.Context, pctx *processContext, projectDir string) (string, error) {
 	// TODO(issue #2016): Add tests for init behavior when module-path is not given.
-	cmd := exec.CommandContext(ctx, "go", "env", "GOPATH")
-	pctx.ApplyToCmd(cmd, "")
+	cmd := pctx.NewCommand(ctx, "", "go", "env", "GOPATH")
 	// Since we're going to call Output, we need to make sure cmd.Stdout is nil
 	// so Output can collect stdout.
 	cmd.Stdout = nil

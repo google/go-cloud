@@ -150,7 +150,7 @@ func (pctx *processContext) Println(a ...interface{}) {
 	pctx.outlog.Println(a...)
 }
 
-// ApplyToCmd updates fields of cmd for this processContext.
+// NewCommand creates a new exec.Cmd based on this processContext.
 //
 // dir may be empty; it defaults to pctx.workdir.
 //
@@ -158,7 +158,8 @@ func (pctx *processContext) Println(a ...interface{}) {
 // Stdout to be nil; you may need to set it back to nil explicitly (or
 // don't use this function). Similarly for Cmd.CombinedOutput, for both
 // Stdout and Stderr.
-func (pctx *processContext) ApplyToCmd(cmd *exec.Cmd, dir string) {
+func (pctx *processContext) NewCommand(ctx context.Context, dir, name string, arg ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, name, arg...)
 	if dir == "" {
 		cmd.Dir = pctx.workdir
 	} else {
@@ -168,6 +169,7 @@ func (pctx *processContext) ApplyToCmd(cmd *exec.Cmd, dir string) {
 	cmd.Stdin = pctx.stdin
 	cmd.Stdout = pctx.outlog.Writer()
 	cmd.Stderr = pctx.errlog.Writer()
+	return cmd
 }
 
 // findModuleRoot searches the given directory and those above it for the Go

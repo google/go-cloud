@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -65,8 +64,7 @@ func build(ctx context.Context, pctx *processContext, ref string) error {
 		}
 		ref = imageName + ref
 	}
-	c := exec.CommandContext(ctx, "docker", "build", "--tag", ref, ".")
-	pctx.ApplyToCmd(c, moduleRoot)
+	c := pctx.NewCommand(ctx, moduleRoot, "docker", "build", "--tag", ref, ".")
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("gocdk build: %w", err)
 	}
@@ -82,8 +80,7 @@ func listBuilds(ctx context.Context, pctx *processContext) error {
 	if err != nil {
 		return xerrors.Errorf("list builds: %w", err)
 	}
-	c := exec.CommandContext(ctx, "docker", "images", imageName)
-	pctx.ApplyToCmd(c, "")
+	c := pctx.NewCommand(ctx, "", "docker", "images", imageName)
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("list builds: %w", err)
 	}

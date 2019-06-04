@@ -251,8 +251,7 @@ func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string,
 
 	if wireExe, err := exec.LookPath("wire"); err == nil {
 		// TODO(light): Only run Wire if needed, but that requires source analysis.
-		wireCmd := exec.CommandContext(ctx, wireExe, "./...")
-		pctx.ApplyToCmd(wireCmd, moduleRoot)
+		wireCmd := pctx.NewCommand(ctx, moduleRoot, wireExe, "./...")
 		wireCmd.Env = append(wireCmd.Env, "GO111MODULE=on")
 		// TODO(light): Collect build logs into error.
 		if err := wireCmd.Run(); err != nil {
@@ -260,8 +259,7 @@ func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string,
 		}
 	}
 
-	buildCmd := exec.CommandContext(ctx, "go", "build", "-o", exePath)
-	pctx.ApplyToCmd(buildCmd, moduleRoot)
+	buildCmd := pctx.NewCommand(ctx, moduleRoot, "go", "build", "-o", exePath)
 	buildCmd.Env = append(buildCmd.Env, "GO111MODULE=on")
 	// TODO(light): Collect build logs into error.
 	if err := buildCmd.Run(); err != nil {
@@ -295,8 +293,7 @@ func (alloc *serverAlloc) url(path string) *url.URL {
 func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logger *log.Logger, workdir string, envOverrides []string) (*exec.Cmd, error) {
 	// Run server.
 	logger.Print("Starting server...")
-	process := exec.Command(alloc.exePath)
-	pctx.ApplyToCmd(process, workdir)
+	process := pctx.NewCommand(ctx, workdir, alloc.exePath)
 	process.Env = append(process.Env, envOverrides...)
 	process.Env = append(process.Env, "PORT="+strconv.Itoa(alloc.port))
 	if err := process.Start(); err != nil {
