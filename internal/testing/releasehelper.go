@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Helper tool for creating new releases of the Go CDK. See -help for details.
+// Helper tool for creating new releases of the Go CDK. Run without arguments
+// or with 'help' for details.
 package main
 
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -27,7 +27,7 @@ import (
 	"strings"
 )
 
-// TODO(eliben): add bumpversion flag that bumps version by 1, or to a version
+// TODO(eliben): add bumpversion command that bumps version by 1, or to a version
 // given on the command line
 var helpText string = `
 Helper tool for creating new releases of the Go CDK.
@@ -39,16 +39,27 @@ The tool processes all modules listed in the 'allmodules'
 file. For each module it handles all dependencies on
 other gocloud.dev modules.
 
--replace adds 'replace' directives to point to local versions
-for testing. -dropreplace removes these directives.
+Run it from the root directory of the project, as follows:
+
+$ %s <command>
+
+Where command is one of the following:
+
+  addreplace    adds 'replace' directives to point to local versions
+                for testing.
+
+  dropreplace   removes these directives.
+
+  help          prints this usage message
 
 Run it from the root directory of the project.
-
-Usage:
 `
 
-var doReplace = flag.Bool("replace", false, "add replace directives")
-var doDropReplace = flag.Bool("dropreplace", false, "drop replace directives")
+func printHelp() {
+	_, binName := filepath.Split(os.Args[0])
+	fmt.Printf(helpText, binName)
+	fmt.Println()
+}
 
 // cmdCheck invokes the command given in s, echoing the invocation to stdout.
 // It checks that the command was successful and returns its standard output.
@@ -105,7 +116,17 @@ func parseModuleInfo(path string) GoMod {
 	return modInfo
 }
 
-func runOnGomod(path string) {
+// reqHandlerFunc is a callback function type invoked by runOnGomod when it
+// finds 'require' lines in go.mod files that refer to our modules. It's called
+// with these arguments:
+//
+//   gomodPath - path to the go.mod file where this 'require' was found
+//   mod - name of the module being 'require'd
+//   modPath - mod's location in the filesystem relative to
+//             the go.mod 'require'ing it
+type reqHandlerFunc func(gomodPath string, mod string, modPath string)
+
+func runOnGomod(path string, reqHandler reqHandlerFunc) {
 	gomodPath := filepath.Join(path, "go.mod")
 	fmt.Println("Processing", gomodPath)
 	modInfo := parseModuleInfo(gomodPath)
@@ -132,24 +153,32 @@ func runOnGomod(path string) {
 				rel, _ = filepath.Split(rel)
 			}
 
-			if *doReplace {
-				cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", r.Path, rel, gomodPath))
-			} else if *doDropReplace {
-				cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", r.Path, gomodPath))
-			}
+			reqHandler(gomodPath, r.Path, rel)
 		}
 	}
 }
 
 func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), helpText)
-		flag.PrintDefaults()
+	if len(os.Args) < 2 {
+		printHelp()
+		os.Exit(0)
 	}
 
-	flag.Parse()
-	if *doReplace && *doDropReplace {
-		log.Fatal("Expected only one of -replace/-dropreplace")
+	var handlerFunc reqHandlerFunc
+	switch os.Args[1] {
+	case "help":
+		printHelp()
+		os.Exit(0)
+	case "addreplace":
+		handlerFunc = func(gomodPath string, mod string, modPath string) {
+			cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", mod, modPath, gomodPath))
+		}
+	case "dropreplace":
+		handlerFunc = func(gomodPath string, mod string, modPath string) {
+			cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", mod, gomodPath))
+		}
+	default:
+		log.Fatal("Expected 'addreplace' or 'dropreplace'")
 	}
 
 	f, err := os.Open("allmodules")
@@ -161,7 +190,7 @@ func main() {
 	input.Split(bufio.ScanLines)
 	for input.Scan() {
 		if len(input.Text()) > 0 && !strings.HasPrefix(input.Text(), "#") {
-			runOnGomod(input.Text())
+			runOnGomod(input.Text(), handlerFunc)
 		}
 	}
 
