@@ -27,7 +27,7 @@
 //
 // mongodocstore exposes the following types for As:
 // - Collection: *mongo.Collection
-// - ActionList.BeforeDo: *options.FindOneOptions, *options.InsertOneOptions,
+// - ActionList.BeforeDo: *options.FindOptions, *options.InsertOneOptions,
 //   *options.ReplaceOptions, *options.UpdateOptions or *options.DeleteOptions
 // - Query.BeforeQuery: *options.FindOptions
 // - DocumentIterator: *mongo.Cursor
@@ -251,28 +251,34 @@ type indexedError = struct {
 	Err   error
 }
 
-// TODO(jba): consider doing a bulk get by using Find with an "or" filter.
 func (c *collection) runGets(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	var wg sync.WaitGroup
-	for _, g := range gets {
-		g := g
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			errs[g.Index] = c.get(ctx, g, opts)
-		}()
+	// TODO(shantuo): figure out a reasonable batch size, there is no hard limit on
+	// the item number or filter sting length. The limit for bulk write batch size
+	// is 100,000.
+	for _, group := range driver.GroupByFieldPath(gets) {
+		c.bulkFind(ctx, group, errs, opts)
 	}
-	wg.Wait()
 }
 
-func (c *collection) get(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
-	opts := options.FindOne()
-	if len(a.FieldPaths) > 0 {
-		opts.Projection = c.projectionDoc(a.FieldPaths)
+func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs []error, dopts *driver.RunActionsOptions) {
+	// errors need to be mapped to the actions' indices.
+	setErr := func(err error) {
+		for _, get := range gets {
+			errs[get.Index] = err
+		}
+	}
+
+	opts := options.Find()
+	if len(gets[0].FieldPaths) > 0 {
+		opts.Projection = c.projectionDoc(gets[0].FieldPaths)
+	}
+	ids := bson.A{}
+	for _, a := range gets {
+		ids = append(ids, a.Key)
 	}
 	if dopts.BeforeDo != nil {
 		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.FindOneOptions)
+			p, ok := i.(**options.FindOptions)
 			if !ok {
 				return false
 			}
@@ -280,18 +286,43 @@ func (c *collection) get(ctx context.Context, a *driver.Action, dopts *driver.Ru
 			return true
 		}
 		if err := dopts.BeforeDo(asFunc); err != nil {
-			return err
+			setErr(err)
+			return
 		}
 	}
-	res := c.coll.FindOne(ctx, bson.D{{"_id", a.Key}}, opts)
-	if res.Err() != nil {
-		return res.Err()
+	cursor, err := c.coll.Find(ctx, bson.D{bson.E{Key: "_id", Value: bson.D{{Key: "$in", Value: ids}}}}, opts)
+	if err != nil {
+		setErr(err)
+		return
 	}
-	var m map[string]interface{}
-	if err := res.Decode(&m); err != nil {
-		return err
+	defer cursor.Close(ctx)
+
+	found := make([]bool, len(gets))
+	am := mapActionIndices(gets)
+	n := 0
+	for cursor.Next(ctx) {
+		var m map[string]interface{}
+		if err := cursor.Decode(&m); err != nil {
+			continue
+		}
+		i := am[m["_id"]]
+		errs[gets[i].Index] = decodeDoc(m, gets[i].Doc, c.idField)
+		found[i] = true
+		n++
 	}
-	return decodeDoc(m, a.Doc, c.idField)
+	for i, f := range found {
+		if !f {
+			errs[gets[i].Index] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", gets[i].Doc)
+		}
+	}
+}
+
+func mapActionIndices(actions []*driver.Action) map[interface{}]int {
+	m := make(map[interface{}]int)
+	for i, a := range actions {
+		m[a.Key] = i
+	}
+	return m
 }
 
 // Construct a mongo "projection document" from field paths.
@@ -513,6 +544,7 @@ func (c *collection) determineDeleteErrors(ctx context.Context, models []mongo.W
 			if len(filter) > 1 {
 				// Delete with both ID and revision. See if the document is still there.
 				idOnlyFilter := filter[:1]
+				// TODO(shantuo): use Find instead of FindOne.
 				res := c.coll.FindOne(ctx, idOnlyFilter)
 				// Assume an error means the document wasn't found.
 				// That means either that it was deleted successfully, or that it never

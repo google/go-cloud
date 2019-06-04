@@ -112,7 +112,7 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 }
 
 func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
-	var find *options.FindOneOptions
+	var find *options.FindOptions
 	var insert *options.InsertOneOptions
 	var replace *options.ReplaceOptions
 	var update *options.UpdateOptions
