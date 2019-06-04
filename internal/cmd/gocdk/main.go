@@ -84,6 +84,8 @@ type processContext struct {
 	workdir string
 	env     []string
 	stdin   io.Reader
+	stdout  io.Writer
+	stderr  io.Writer
 	outlog  *log.Logger
 	errlog  *log.Logger
 }
@@ -94,23 +96,24 @@ func newOSProcessContext() (*processContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &processContext{
-		workdir: workdir,
-		env:     os.Environ(),
-		stdin:   os.Stdin,
-		outlog:  log.New(os.Stdout, "", 0),
-		errlog:  log.New(os.Stderr, "gocdk: ", 0),
-	}, nil
+	return newProcessContext(workdir, os.Stdin, os.Stdout, os.Stderr), nil
 }
 
 // newTestProcessContext returns a processContext for use in tests.
 func newTestProcessContext(workdir string) *processContext {
+	return newProcessContext(workdir, strings.NewReader(""), ioutil.Discard, ioutil.Discard)
+}
+
+// newProcessContext returns a processContext.
+func newProcessContext(workdir string, stdin io.Reader, stdout, stderr io.Writer) *processContext {
 	return &processContext{
 		workdir: workdir,
 		env:     os.Environ(),
-		stdin:   strings.NewReader(""),
-		outlog:  log.New(ioutil.Discard, "", 0),
-		errlog:  log.New(ioutil.Discard, "", 0),
+		stdin:   stdin,
+		stdout:  stdout,
+		stderr:  stderr,
+		outlog:  log.New(stdout, "", 0),
+		errlog:  log.New(stderr, "gocdk: ", 0),
 	}
 }
 
@@ -191,8 +194,8 @@ func (pctx *processContext) NewCommand(ctx context.Context, dir, name string, ar
 	}
 	cmd.Env = pctx.env
 	cmd.Stdin = pctx.stdin
-	cmd.Stdout = pctx.outlog.Writer()
-	cmd.Stderr = pctx.errlog.Writer()
+	cmd.Stdout = pctx.stdout
+	cmd.Stderr = pctx.stderr
 	return cmd
 }
 
