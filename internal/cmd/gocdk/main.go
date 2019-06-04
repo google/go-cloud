@@ -110,7 +110,7 @@ func newTestProcessContext(workdir string) *processContext {
 		env:     os.Environ(),
 		stdin:   strings.NewReader(""),
 		outlog:  log.New(ioutil.Discard, "", 0),
-		errlog:  log.New(ioutil.Discard, "gocdk: ", 0),
+		errlog:  log.New(ioutil.Discard, "", 0),
 	}
 }
 
