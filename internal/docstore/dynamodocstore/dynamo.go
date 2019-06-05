@@ -474,9 +474,6 @@ func (c *collection) delete(ctx context.Context, doc driver.Document, condition 
 }
 
 func (c *collection) update(ctx context.Context, doc driver.Document, mods []driver.Mod, condition *expression.ConditionBuilder) error {
-	if len(mods) == 0 {
-		return nil
-	}
 	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
 	if err != nil {
 		return err

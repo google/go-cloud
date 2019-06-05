@@ -111,6 +111,7 @@ func TestEncode(t *testing.T) {
 		{seven, int64(seven)},
 		{&seven, int64(seven)},
 		{[]byte{1, 2}, []byte{1, 2}},
+		{[2]byte{3, 4}, []interface{}{uint64(3), uint64(4)}},
 		{[]int(nil), nil},
 		{[]int{}, []interface{}{}},
 		{[]int{1, 2}, []interface{}{int64(1), int64(2)}},
