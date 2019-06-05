@@ -16,167 +16,52 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
 	"path/filepath"
-	"sort"
-	"strings"
 
+	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-const biomeConfigFileName = "biome.json"
-
-// biomeConfig is the parsed configuration from a biome.json file.
-type biomeConfig struct {
-	ServeEnabled *bool   `json:"serve_enabled,omitempty"`
-	Launcher     *string `json:"launcher,omitempty"`
-}
-
-// biomesRootDir returns the path to the biomes directory.
-func biomesRootDir(moduleRoot string) string {
-	return filepath.Join(moduleRoot, "biomes")
-}
-
-// biomeDir returns the path to the named biome.
-func biomeDir(moduleRoot, name string) string {
-	return filepath.Join(biomesRootDir(moduleRoot), name)
-}
-
-// readBiomeConfig reads and parses the biome configuration from the filesystem.
-// If the configuration file could not be found, readBiomeConfig returns an
-// error for which xerrors.As(err, new(*biomeNotFoundError)) returns true.
-func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
-	configPath := filepath.Join(biomeDir(moduleRoot, biome), biomeConfigFileName)
-	data, err := ioutil.ReadFile(configPath)
-	if os.IsNotExist(err) {
-		// TODO(light): Wrap error for formatting chain but not unwrap chain.
-		notFound := &biomeNotFoundError{
-			moduleRoot: moduleRoot,
-			biome:      biome,
-			frame:      xerrors.Caller(0),
-			detail:     err,
-		}
-		return nil, xerrors.Errorf("read biome %s configuration: %w", biome, notFound)
+func registerBiomeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	biomeCmd := &cobra.Command{
+		Use:   "biome",
+		Short: "TODO Manage biomes",
+		Long:  "TODO more about biomes",
 	}
+	biomeAddCmd := &cobra.Command{
+		Use:   "add BIOME_NAME",
+		Short: "TODO Add BIOME_NAME",
+		Long:  "TODO more about adding biomes",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return biomeAdd(ctx, pctx, args[0])
+		},
+	}
+	biomeCmd.AddCommand(biomeAddCmd)
+
+	// TODO(rvangent): More biome subcommands.
+
+	rootCmd.AddCommand(biomeCmd)
+}
+
+func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
+	// TODO(clausti) interpolate launcher from one supplied as a flag
+	pctx.Logf("Adding biome %q...", newName)
+
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf("read biome %s configuration: %w", err)
+		return xerrors.Errorf("biome add: %w", err)
 	}
-	config := new(biomeConfig)
-	if err := json.Unmarshal(data, config); err != nil {
-		return nil, xerrors.Errorf("read biome %s configuration: %w", err)
+	dstPath := biomeDir(moduleRoot, newName)
+	data := struct {
+		ProjectName string
+	}{
+		ProjectName: filepath.Base(moduleRoot),
 	}
-	return config, nil
-}
 
-// refreshBiome refreshes the Terraform state for the biome. This updates
-// the outputs.
-func refreshBiome(ctx context.Context, moduleRoot, biome string, env []string) error {
-	c := exec.CommandContext(ctx, "terraform", "refresh", "-input=false")
-	c.Dir = biomeDir(moduleRoot, biome)
-	c.Env = overrideEnv(env, "TF_IN_AUTOMATION=1")
-	out, err := c.CombinedOutput()
-	if err != nil {
-		if len(out) > 0 {
-			return xerrors.Errorf("refresh biome %s:\n%s", biome, out)
-		}
-		return xerrors.Errorf("refresh biome %s: %w", biome, err)
+	if err := materializeTemplateDir(dstPath, "biome_add", data); err != nil {
+		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
+	pctx.Logf("Success!")
 	return nil
-}
-
-// launchEnv returns the list of environment variables to pass to the launched
-// server based on a biome's "launch_environment" Terraform output. On success,
-// The returned slice will never be nil.
-func launchEnv(tfOutput map[string]*tfOutput) ([]string, error) {
-	envMap := tfOutput["launch_environment"].mapValue()
-	env := make([]string, 0, len(envMap))
-	for k, v := range envMap {
-		if k == "PORT" {
-			return nil, xerrors.Errorf("read launch environment: cannot set PORT manually (set by launcher)")
-		}
-		s, ok := v.(string)
-		if !ok {
-			return nil, xerrors.Errorf("read launch environment: variable %s is not a string (found %T)", k, v)
-		}
-		env = append(env, k+"="+s)
-	}
-	sort.Slice(env, func(i, j int) bool {
-		// Sort by key.
-		ki := env[i][:strings.IndexByte(env[i], '=')]
-		kj := env[j][:strings.IndexByte(env[j], '=')]
-		return ki < kj
-	})
-	return env, nil
-}
-
-// tfReadOutput runs `terraform output` on the given directory and returns
-// the parsed result.
-func tfReadOutput(ctx context.Context, dir string, env []string) (map[string]*tfOutput, error) {
-	c := exec.CommandContext(ctx, "terraform", "output", "-json")
-	c.Dir = dir
-	c.Env = overrideEnv(env, "TF_IN_AUTOMATION=1")
-	data, err := c.Output()
-	if err != nil {
-		return nil, xerrors.Errorf("read terraform output: %w", err)
-	}
-	var parsed map[string]*tfOutput
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return nil, xerrors.Errorf("read terraform output: %w", err)
-	}
-	return parsed, nil
-}
-
-// tfOutput describes a single output value.
-type tfOutput struct {
-	Type      string      `json:"type"` // one of "string", "list", or "map"
-	Sensitive bool        `json:"sensitive"`
-	Value     interface{} `json:"value"`
-}
-
-// stringValue returns the output's value if it is a string.
-func (out *tfOutput) stringValue() string {
-	if out == nil {
-		return ""
-	}
-	v, _ := out.Value.(string)
-	return v
-}
-
-// mapValue returns the output's value if it is a map.
-func (out *tfOutput) mapValue() map[string]interface{} {
-	if out == nil {
-		return nil
-	}
-	v, _ := out.Value.(map[string]interface{})
-	return v
-}
-
-// biomeNotFoundError is an error returned when a biome cannot be found.
-type biomeNotFoundError struct {
-	moduleRoot string
-	biome      string
-	frame      xerrors.Frame
-	detail     error
-}
-
-func (e *biomeNotFoundError) Error() string {
-	return fmt.Sprintf("biome %s not found", e.biome)
-}
-
-func (e *biomeNotFoundError) FormatError(p xerrors.Printer) error {
-	p.Print(e.Error())
-	if !p.Detail() {
-		return nil
-	}
-	p.Printf("biome = %q", biomeDir(e.moduleRoot, e.biome))
-	e.frame.Format(p)
-	return e.detail
-}
-
-func (e *biomeNotFoundError) Format(f fmt.State, c rune) {
-	xerrors.FormatError(e, f, c)
 }
