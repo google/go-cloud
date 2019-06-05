@@ -116,8 +116,7 @@ type RunOptions struct {
 	Publish      []string
 }
 
-// Start starts a Docker container. It does not wait for the container to stop.
-// Start returns the container's ID on success.
+// Start starts a Docker container and returns its ID.
 func (c *Client) Start(ctx context.Context, imageRef string, opts *RunOptions) (string, error) {
 	args := []string{"run", "--detach"}
 	if opts != nil {
