@@ -225,6 +225,11 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	return id, nil
 }
 
+func (c *collection) RevisionField() string {
+	// TODO(jba): should this be the lowercased version?
+	return c.revisionField
+}
+
 // From https://docs.mongodb.com/manual/core/document: "The field name _id is
 // reserved for use as a primary key; its value must be unique in the collection, is
 // immutable, and may be of any type other than an array."
@@ -459,11 +464,11 @@ func (c *collection) makeFilter(id interface{}, doc driver.Document) (filter bso
 	return filter, rev, nil
 }
 
-// bulkWrite calls the Mongo driver's BulkWrite RPC in unordered mode with the actions, which must
-// be writes.
+// bulkWrite calls the Mongo driver's BulkWrite RPC in unordered mode with the
+// actions, which must be writes.
 // errs is the slice of errors indexed by the position of the action in the original
-// action list. bulkWrite populates this slice. In addition, bulkWrite's return value
-// contains errors that cannot be attributed to any single action.
+// action list. bulkWrite populates this slice. In addition, bulkWrite returns a list
+// of errors that cannot be attributed to any single action.
 func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, errs []error) []error {
 	var (
 		models          []mongo.WriteModel
@@ -654,7 +659,7 @@ const mongoDupKeyCode = 11000
 func translateMongoCode(code int) gcerrors.ErrorCode {
 	switch code {
 	case mongoDupKeyCode:
-		return gcerrors.FailedPrecondition
+		return gcerrors.AlreadyExists
 	default:
 		return gcerrors.Unknown
 	}

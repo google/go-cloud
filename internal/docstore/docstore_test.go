@@ -238,3 +238,5 @@ type fakeDriverCollection struct {
 func (fakeDriverCollection) Key(doc driver.Document) (interface{}, error) {
 	return doc.GetField("key")
 }
+
+func (fakeDriverCollection) RevisionField() string { return RevisionField }

@@ -30,7 +30,7 @@ import (
 
 // TODO: support parallel scans (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.ParallelScan)
 
-// TODO: support an empty item slice returned from an RPC: "A Query operation can
+// TODO(jba): support an empty item slice returned from an RPC: "A Query operation can
 // return an empty result set and a LastEvaluatedKey if all the items read for the
 // page of results are filtered out."
 
@@ -66,9 +66,6 @@ func (c *collection) checkPlan(qr *queryRunner) error {
 	return nil
 }
 
-// From https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.html:
-// "Query results are always sorted by the sort key value."
-
 func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 	var cb expression.Builder
 	cbUsed := false // It's an error to build an empty Builder.
@@ -102,6 +99,8 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			// TODO(jba): If the user specifies all the partition keys, and there is a global
 			// secondary index whose sort key is the order-by field, then we can query that index
 			// for every value of the partition key and merge the results.
+			// TODO(jba): If the query has a reasonable limit N, then we can run a scan and keep
+			// the top N documents in memory.
 			return nil, gcerr.Newf(gcerr.Unimplemented, nil, "query requires a table scan, but has an ordering requirement; add an index or provide Options.RunQueryFallback")
 		}
 		if len(q.Filters) > 0 {
@@ -157,6 +156,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 	if hasEqualityFilter(q, c.partitionKey) {
 		// If the table has a sort key that's in the query, and the ordering
 		// constraint works with the sort key, use the table.
+		// (Query results are always ordered by sort key.)
 		if hasFilter(q, c.sortKey) && orderingConsistent(q, c.sortKey) {
 			return nil, c.partitionKey, c.sortKey
 		}
