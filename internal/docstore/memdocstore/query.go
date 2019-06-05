@@ -29,21 +29,29 @@ import (
 func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.DocumentIterator, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var docs []map[string]interface{}
+	var resultDocs []map[string]interface{}
 	for _, doc := range c.docs {
-		if q.Limit > 0 && len(docs) == q.Limit {
+		if q.Limit > 0 && len(resultDocs) == q.Limit {
 			break
 		}
 		if filtersMatch(q.Filters, doc) {
-			docs = append(docs, doc)
+			resultDocs = append(resultDocs, doc)
 		}
 	}
 	if q.OrderByField != "" {
-		sortDocs(docs, q.OrderByField, q.OrderAscending)
+		sortDocs(resultDocs, q.OrderByField, q.OrderAscending)
 	}
+	// Include the key field in the field paths if there is one.
+	var fps [][]string
+	if len(q.FieldPaths) > 0 && c.keyField != "" {
+		fps = append([][]string{{c.keyField}}, q.FieldPaths...)
+	} else {
+		fps = q.FieldPaths
+	}
+
 	return &docIterator{
-		docs:       docs,
-		fieldPaths: q.FieldPaths,
+		docs:       resultDocs,
+		fieldPaths: fps,
 		revField:   c.opts.RevisionField,
 	}, nil
 }

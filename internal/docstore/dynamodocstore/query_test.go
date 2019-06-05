@@ -311,7 +311,7 @@ func TestPlanQuery(t *testing.T) {
 				FilterExpression:          aws.String("#0 <= :0"),
 				ExpressionAttributeNames:  eans("globalS", "tableP", "other", "DocstoreRevision"),
 				ExpressionAttributeValues: eavs(2),
-				ProjectionExpression:      aws.String("#2, #3"),
+				ProjectionExpression:      aws.String("#2, #1, #3"),
 			},
 			wantPlan: "Table",
 		},
@@ -331,7 +331,7 @@ func TestPlanQuery(t *testing.T) {
 			want: &dynamodb.QueryInput{
 				IndexName:                 aws.String("global"),
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
-				ProjectionExpression:      aws.String("#2, #3"),
+				ProjectionExpression:      aws.String("#2, #0, #3"),
 				ExpressionAttributeNames:  eans("tableP", "globalS", "other", "DocstoreRevision"),
 				ExpressionAttributeValues: eavs(2),
 			},
