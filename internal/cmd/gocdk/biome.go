@@ -59,7 +59,7 @@ func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
 		ProjectName: filepath.Base(moduleRoot),
 	}
 
-	if err := materializeTemplateDir(dstPath, "biome_add", data); err != nil {
+	if err := materializeTemplateDir(dstPath, "biome", data); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
 	pctx.Logf("Success!")
