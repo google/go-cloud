@@ -31,7 +31,7 @@ The rest of this guide will discuss how to accomplish the first step: opening
 a subscription for your chosen Pub/Sub provider.
 
 [`*pubsub.Subscription`]: https://godoc.org/gocloud.dev/pubsub#Subscription
-[semantics of message delivery][https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery]
+[semantics of message delivery]: https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 
 ## Constructors versus URL openers
 
