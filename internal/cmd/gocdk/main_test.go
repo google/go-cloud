@@ -211,6 +211,9 @@ func TestRecordReplay(t *testing.T) {
 				cmd := args[0]
 				args = args[1:]
 
+				// We can add support for additional commands as needed; see
+				// https://github.com/golang/go/blob/master/src/cmd/go/testdata/script/README
+				// for inspiration.
 				var cmdErr error
 				switch cmd {
 				case "gocdk":
