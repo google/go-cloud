@@ -223,7 +223,8 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 			return err
 		}
 		c.changeRevision(doc)
-		_ = a.Doc.SetField(c.opts.RevisionField, doc[c.opts.RevisionField])
+		// Ignore errors. It's fine if the doc doesn't have a revision field.
+		a.Doc.SetField(c.opts.RevisionField, doc[c.opts.RevisionField])
 		c.docs[a.Key] = doc
 
 	case driver.Delete:
