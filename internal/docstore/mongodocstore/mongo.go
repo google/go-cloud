@@ -27,7 +27,7 @@
 //
 // mongodocstore exposes the following types for As:
 // - Collection: *mongo.Collection
-// - ActionList.BeforeDo: *options.FindOneOptions, *options.InsertOneOptions,
+// - ActionList.BeforeDo: *options.FindOptions, *options.InsertOneOptions,
 //   *options.ReplaceOptions, *options.UpdateOptions or *options.DeleteOptions
 // - Query.BeforeQuery: *options.FindOptions
 // - DocumentIterator: *mongo.Cursor
@@ -251,47 +251,68 @@ type indexedError = struct {
 	Err   error
 }
 
-// TODO(jba): consider doing a bulk get by using Find with an "or" filter.
 func (c *collection) runGets(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	var wg sync.WaitGroup
-	for _, g := range gets {
-		g := g
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			errs[g.Index] = c.get(ctx, g, opts)
-		}()
+	// TODO(shantuo): figure out a reasonable batch size, there is no hard limit on
+	// the item number or filter sting length. The limit for bulk write batch size
+	// is 100,000.
+	for _, group := range driver.GroupByFieldPath(gets) {
+		c.bulkFind(ctx, group, errs, opts)
 	}
-	wg.Wait()
 }
 
-func (c *collection) get(ctx context.Context, a *driver.Action, dopts *driver.RunActionsOptions) error {
-	opts := options.FindOne()
-	if len(a.FieldPaths) > 0 {
-		opts.Projection = c.projectionDoc(a.FieldPaths)
+func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs []error, dopts *driver.RunActionsOptions) {
+	// errors need to be mapped to the actions' indices.
+	setErr := func(err error) {
+		for _, get := range gets {
+			if errs[get.Index] == nil {
+				errs[get.Index] = err
+			}
+		}
+	}
+
+	opts := options.Find()
+	if len(gets[0].FieldPaths) > 0 {
+		opts.Projection = c.projectionDoc(gets[0].FieldPaths)
+	}
+	ids := bson.A{}
+	idToAction := map[interface{}]*driver.Action{}
+	for _, a := range gets {
+		id, err := encodeValue(a.Key)
+		if err != nil {
+			errs[a.Index] = err
+		} else {
+			ids = append(ids, id)
+			idToAction[id] = a
+		}
 	}
 	if dopts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.FindOneOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := dopts.BeforeDo(asFunc); err != nil {
-			return err
+		if err := dopts.BeforeDo(driver.AsFunc(opts)); err != nil {
+			setErr(err)
+			return
 		}
 	}
-	res := c.coll.FindOne(ctx, bson.D{{"_id", a.Key}}, opts)
-	if res.Err() != nil {
-		return res.Err()
+	cursor, err := c.coll.Find(ctx, bson.D{bson.E{Key: mongoIDField, Value: bson.D{{Key: "$in", Value: ids}}}}, opts)
+	if err != nil {
+		setErr(err)
+		return
 	}
-	var m map[string]interface{}
-	if err := res.Decode(&m); err != nil {
-		return err
+	defer cursor.Close(ctx)
+
+	found := make(map[*driver.Action]bool)
+	for cursor.Next(ctx) {
+		var m map[string]interface{}
+		if err := cursor.Decode(&m); err != nil {
+			continue
+		}
+		a := idToAction[m[mongoIDField]]
+		errs[a.Index] = decodeDoc(m, a.Doc, c.idField)
+		found[a] = true
 	}
-	return decodeDoc(m, a.Doc, c.idField)
+	for _, a := range gets {
+		if !found[a] {
+			errs[a.Index] = gcerr.Newf(gcerr.NotFound, nil, "item with key %v not found", a.Key)
+		}
+	}
 }
 
 // Construct a mongo "projection document" from field paths.
@@ -317,37 +338,48 @@ func sliceToLower(s []string) {
 	}
 }
 
-func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{}, err error) {
+func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{}, rev string, err error) {
 	id := a.Key
 	if id == nil {
 		// Create a unique ID here. (The MongoDB Go client does this for us when calling InsertOne,
 		// but not for BulkWrite.)
 		id = primitive.NewObjectID()
 		createdID = id
+	} else {
+		id, err = encodeValue(id)
+		if err != nil {
+			return nil, nil, "", err
+		}
 	}
-	mdoc, err = c.encodeDoc(a.Doc, id)
+	mdoc, rev, err = c.encodeDoc(a.Doc, id)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	return mdoc, createdID, nil
+	return mdoc, createdID, rev, nil
 }
 
-func (c *collection) prepareReplace(a *driver.Action) (filter bson.D, mdoc map[string]interface{}, err error) {
-	filter, _, err = c.makeFilter(a.Key, a.Doc)
+func (c *collection) prepareReplace(a *driver.Action) (filter bson.D, mdoc map[string]interface{}, rev string, err error) {
+	id, err := encodeValue(a.Key)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	mdoc, err = c.encodeDoc(a.Doc, a.Key)
+	filter, _, err = c.makeFilter(id, a.Doc)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	return filter, mdoc, nil
+	mdoc, rev, err = c.encodeDoc(a.Doc, id)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return filter, mdoc, rev, nil
 }
 
-func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]interface{}, error) {
+// encodeDoc encodes doc and sets its ID to the encoded value id. It also creates a new revision and sets it.
+// It returns the encoded document and the new revision.
+func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]interface{}, string, error) {
 	mdoc, err := encodeDoc(doc, c.opts.LowercaseFields)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if id != nil {
 		if c.idField != "" {
@@ -355,23 +387,28 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 		}
 		mdoc[mongoIDField] = id
 	}
-	mdoc[c.revisionField] = driver.UniqueString()
-	return mdoc, nil
+	rev := driver.UniqueString()
+	mdoc[c.revisionField] = rev
+	return mdoc, rev, nil
 }
 
-func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc map[string]bson.D, err error) {
-	filter, _, err = c.makeFilter(a.Key, a.Doc)
+func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc map[string]bson.D, rev string, err error) {
+	id, err := encodeValue(a.Key)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	updateDoc, err = c.newUpdateDoc(a.Mods)
+	filter, _, err = c.makeFilter(id, a.Doc)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	return filter, updateDoc, nil
+	updateDoc, rev, err = c.newUpdateDoc(a.Mods)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return filter, updateDoc, rev, nil
 }
 
-func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) {
+func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, string, error) {
 	var (
 		sets   bson.D
 		unsets bson.D
@@ -384,35 +421,37 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, error) 
 		} else if inc, ok := m.Value.(driver.IncOp); ok {
 			val, err := encodeValue(inc.Amount)
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			incs = append(incs, bson.E{Key: key, Value: val})
 		} else {
 			val, err := encodeValue(m.Value)
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			sets = append(sets, bson.E{Key: key, Value: val})
 		}
 	}
 	updateDoc := map[string]bson.D{}
-	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: driver.UniqueString()})
+	rev := driver.UniqueString()
+	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: rev})
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}
 	if len(incs) > 0 {
 		updateDoc["$inc"] = incs
 	}
-	return updateDoc, nil
+	return updateDoc, rev, nil
 }
 
+// makeFilter constructs a filter using the given encoded id and the document's revision field, if any.
 func (c *collection) makeFilter(id interface{}, doc driver.Document) (filter bson.D, rev interface{}, err error) {
 	rev, err = doc.GetField(c.revisionField)
 	if err != nil && gcerrors.Code(err) != gcerrors.NotFound {
 		return nil, nil, err
 	}
 	// Only select the document with the given ID.
-	filter = bson.D{{"_id", id}}
+	filter = bson.D{bson.E{Key: "_id", Value: id}}
 	// If the given document has a revision, it must match the stored document.
 	if rev != nil {
 		filter = append(filter, bson.E{Key: c.revisionField, Value: rev})
@@ -430,6 +469,7 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 		models          []mongo.WriteModel
 		modelActions    []*driver.Action // corresponding action for each model
 		newIDs          []interface{}    // new IDs for Create actions, corresponding to models slice
+		revs            []string         // new revisions, corresponding to models slice
 		nDeletes        int64
 		nNonCreateWrite int64 // total operations expected from Put, Replace and Update
 	)
@@ -437,21 +477,22 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 		var m mongo.WriteModel
 		var err error
 		var newID interface{}
+		var rev string
 		switch a.Kind {
 		case driver.Create:
-			m, newID, err = c.newCreateModel(a)
+			m, newID, rev, err = c.newCreateModel(a)
 		case driver.Delete:
 			m, err = c.newDeleteModel(a)
 			if err == nil {
 				nDeletes++
 			}
 		case driver.Replace, driver.Put:
-			m, err = c.newReplaceModel(a, a.Kind == driver.Put)
+			m, rev, err = c.newReplaceModel(a, a.Kind == driver.Put)
 			if err == nil {
 				nNonCreateWrite++
 			}
 		case driver.Update:
-			m, err = c.newUpdateModel(a)
+			m, rev, err = c.newUpdateModel(a)
 			if err == nil && m != nil {
 				nNonCreateWrite++
 			}
@@ -464,11 +505,14 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 			models = append(models, m)
 			modelActions = append(modelActions, a)
 			newIDs = append(newIDs, newID)
+			revs = append(revs, rev)
 		}
 	}
 	if len(models) == 0 {
 		return nil
 	}
+	// TODO(jba): improve independent execution. I think that even if BulkWrite returns an error,
+	// some of the actions may have succeeded.
 	var reterrs []error
 	res, err := c.coll.BulkWrite(ctx, models, options.BulkWrite().SetOrdered(false))
 	if err != nil {
@@ -492,6 +536,12 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 			errs[a.Index] = err
 		}
 	}
+	for i, rev := range revs {
+		if rev != "" {
+			// Ignore error, because document may not have a revision field.
+			_ = modelActions[i].Doc.SetField(c.revisionField, rev)
+		}
+	}
 	if res.DeletedCount != nDeletes {
 		// Some Delete actions failed. It's not an error if a Delete failed because
 		// the document didn't exist, but it is an error if it failed because of a
@@ -513,7 +563,9 @@ func (c *collection) determineDeleteErrors(ctx context.Context, models []mongo.W
 			if len(filter) > 1 {
 				// Delete with both ID and revision. See if the document is still there.
 				idOnlyFilter := filter[:1]
+				// TODO(shantuo): use Find instead of FindOne.
 				res := c.coll.FindOne(ctx, idOnlyFilter)
+
 				// Assume an error means the document wasn't found.
 				// That means either that it was deleted successfully, or that it never
 				// existed. Either way, it's not an error.
@@ -529,43 +581,47 @@ func (c *collection) determineDeleteErrors(ctx context.Context, models []mongo.W
 	}
 }
 
-func (c *collection) newCreateModel(a *driver.Action) (*mongo.InsertOneModel, interface{}, error) {
-	mdoc, createdID, err := c.prepareCreate(a)
+func (c *collection) newCreateModel(a *driver.Action) (*mongo.InsertOneModel, interface{}, string, error) {
+	mdoc, createdID, rev, err := c.prepareCreate(a)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	return &mongo.InsertOneModel{Document: mdoc}, createdID, nil
+	return &mongo.InsertOneModel{Document: mdoc}, createdID, rev, nil
 }
 
 func (c *collection) newDeleteModel(a *driver.Action) (*mongo.DeleteOneModel, error) {
-	filter, _, err := c.makeFilter(a.Key, a.Doc)
+	id, err := encodeValue(a.Key)
+	if err != nil {
+		return nil, err
+	}
+	filter, _, err := c.makeFilter(id, a.Doc)
 	if err != nil {
 		return nil, err
 	}
 	return &mongo.DeleteOneModel{Filter: filter}, nil
 }
 
-func (c *collection) newReplaceModel(a *driver.Action, upsert bool) (*mongo.ReplaceOneModel, error) {
-	filter, mdoc, err := c.prepareReplace(a)
+func (c *collection) newReplaceModel(a *driver.Action, upsert bool) (*mongo.ReplaceOneModel, string, error) {
+	filter, mdoc, rev, err := c.prepareReplace(a)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	return &mongo.ReplaceOneModel{
 		Filter:      filter,
 		Replacement: mdoc,
 		Upsert:      &upsert,
-	}, nil
+	}, rev, nil
 }
 
-func (c *collection) newUpdateModel(a *driver.Action) (*mongo.UpdateOneModel, error) {
-	filter, updateDoc, err := c.prepareUpdate(a)
+func (c *collection) newUpdateModel(a *driver.Action) (*mongo.UpdateOneModel, string, error) {
+	filter, updateDoc, rev, err := c.prepareUpdate(a)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if filter == nil { // no-op
-		return nil, nil
+		return nil, "", nil
 	}
-	return &mongo.UpdateOneModel{Filter: filter, Update: updateDoc}, nil
+	return &mongo.UpdateOneModel{Filter: filter, Update: updateDoc}, rev, nil
 }
 
 // As implements driver.As.

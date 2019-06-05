@@ -201,8 +201,8 @@ func encode(v reflect.Value, enc Encoder) error {
 
 // Encode an array or non-nil slice.
 func encodeList(v reflect.Value, enc Encoder) error {
-	// Byte slices or byte arrays encode specially.
-	if v.Type().Elem().Kind() == reflect.Uint8 {
+	// Byte slices encode specially.
+	if v.Type().Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
 		enc.EncodeBytes(v.Bytes())
 		return nil
 	}

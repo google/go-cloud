@@ -15,6 +15,7 @@
 package driver
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -135,5 +136,45 @@ func TestSet(t *testing.T) {
 		if !cmp.Equal(got, test.val) {
 			t.Errorf("got %v, want %v", got, test.val)
 		}
+	}
+}
+
+func TestGetField(t *testing.T) {
+	type S struct {
+		A int         `docstore:"a"`
+		B interface{} `docstore:"b"`
+	}
+
+	want := 1
+	for _, in := range []interface{}{
+		map[string]interface{}{"a": want, "b": nil},
+		&S{A: want, B: nil},
+	} {
+		t.Run(fmt.Sprint(in), func(t *testing.T) {
+			doc, err := NewDocument(in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := doc.GetField("a")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != want {
+				t.Errorf("got %v, want %v", got, want)
+			}
+
+			got, err = doc.GetField("b")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != nil {
+				t.Errorf("got %v, want nil", got)
+			}
+
+			_, err = doc.GetField("c")
+			if gcerrors.Code(err) != gcerrors.NotFound {
+				t.Fatalf("got %v, want NotFound", err)
+			}
+		})
 	}
 }

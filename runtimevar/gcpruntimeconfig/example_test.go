@@ -49,17 +49,19 @@ func ExampleOpenVariable() {
 	// Create a decoder for decoding JSON strings into MyConfig.
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
-	// Fill these in with the values from the Cloud Console.
+	// You can use the VariableKey helper to construct a Variable key from
+	// your project ID, config ID, and the variable name; alternatively,
+	// you can construct the full string yourself (e.g.,
+	// "projects/gcp-project-id/configs/config-id/variables/variable-name").
+	// See https://cloud.google.com/deployment-manager/runtime-configurator/
+	// for more details.
+	//
 	// For this example, the GCP Cloud Runtime Configurator variable being
 	// referenced should have a JSON string that decodes into MyConfig.
-	name := gcpruntimeconfig.ResourceName{
-		ProjectID: "gcp-project-id",
-		Config:    "cfg-name",
-		Variable:  "cfg-variable-name",
-	}
+	variableKey := gcpruntimeconfig.VariableKey("gcp-project-id", "config-id", "variable-name")
 
 	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := gcpruntimeconfig.OpenVariable(client, name, decoder, nil)
+	v, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,8 +78,11 @@ func ExampleOpenVariable() {
 
 func Example_openVariableFromURL() {
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+	// The URL host+path form the GCP Runtime Configurator variable key.
+	// See https://cloud.google.com/deployment-manager/runtime-configurator/
+	// for more details.
 	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://myproject/myconfigid/myvar?decoder=string")
+	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}

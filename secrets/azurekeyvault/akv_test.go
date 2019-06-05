@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -61,14 +60,8 @@ import (
 // 6. Update constants below to match your Azure KeyVault settings.
 
 const (
-	keyVaultName = "go-cdk"
-	keyID1       = "test1"
-	keyID2       = "test2"
-	// Important: an empty key version will default to 'Current Version' in Azure Key Vault.
-	// See link below for more information on versioning
-	// https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates
-	keyVersion = ""
-	algorithm  = string(keyvault.RSAOAEP256)
+	keyID1 = "https://go-cdk.vault.azure.net/keys/test1"
+	keyID2 = "https://go-cdk.vault.azure.net/keys/test2"
 )
 
 type harness struct {
@@ -77,23 +70,15 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	keeper1 := keeper{
-		client:       h.client,
-		keyVaultName: keyVaultName,
-		keyName:      keyID1,
-		keyVersion:   keyVersion,
-		options:      &KeeperOptions{Algorithm: algorithm},
+	keeper1, err := openKeeper(h.client, keyID1, nil)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	keeper2 := keeper{
-		client:       h.client,
-		keyVaultName: keyVaultName,
-		keyName:      keyID2,
-		keyVersion:   keyVersion,
-		options:      &KeeperOptions{Algorithm: algorithm},
+	keeper2, err := openKeeper(h.client, keyID2, nil)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	return &keeper1, &keeper2, nil
+	return keeper1, keeper2, nil
 }
 
 func (h *harness) Close() {
@@ -169,7 +154,7 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 
 func TestNoConnectionError(t *testing.T) {
 	client := keyvault.NewWithoutDefaults()
-	k, err := OpenKeeper(&client, keyVaultName, keyID1, keyVersion, &KeeperOptions{Algorithm: algorithm})
+	k, err := OpenKeeper(&client, keyID1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,70 +164,23 @@ func TestNoConnectionError(t *testing.T) {
 	}
 }
 
-func TestAlgorithmNotProvided(t *testing.T) {
-	client := keyvault.NewWithoutDefaults()
-	if _, err := OpenKeeper(&client, keyVaultName, keyID1, keyVersion, nil); err == nil {
-		t.Error("OpenKeeper with no algorithm: got nil, want no algorithm error")
-	}
-}
-
-func TestKeyInfoFromURL(t *testing.T) {
-	tests := []struct {
-		URL         string
-		WantErr     bool
-		WantVault   string
-		WantKey     string
-		WantVersion string
-	}{
-		{"azurekeyvault://vault1/key1/version1", false, "vault1", "key1", "version1"},
-		{"azurekeyvault://vault2/key2/version2", false, "vault2", "key2", "version2"},
-		{"azurekeyvault://vault3/key3", false, "vault3", "key3", ""},
-		{"azurekeyvault://vault/key/version/extra", true, "", "", ""},
-		{"azurekeyvault://vault", true, "", "", ""},
-	}
-	for _, test := range tests {
-		u, err := url.Parse(test.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		gotVault, gotKey, gotVersion, gotErr := keyInfoFromURL(u)
-		if (gotErr != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
-		}
-		if gotErr != nil {
-			continue
-		}
-		if gotVault != test.WantVault {
-			t.Errorf("%s: got vault %q want %q", test.URL, gotVault, test.WantVault)
-		}
-		if gotKey != test.WantKey {
-			t.Errorf("%s: got key %q want %q", test.URL, gotKey, test.WantKey)
-		}
-		if gotVersion != test.WantVersion {
-			t.Errorf("%s: got version %q want %q", test.URL, gotVersion, test.WantVersion)
-		}
-	}
-}
-
 func TestOpenKeeper(t *testing.T) {
 	tests := []struct {
 		URL     string
 		WantErr bool
 	}{
-		// Missing algorithm query param.
-		{"azurekeyvault://mykeyvault/mykey/myversion", true},
-		// Invalid query parameter.
-		{"azurekeyvault://mykeyvault/mykey/myversion?algorithm=RSA-OAEP-256&param=value", true},
-		// Empty host.
-		{"azurekeyvault:///mykey/myversion?algorithm=RSA-OAEP-256", true},
-		// Path has 1 elements (no version) -> OK.
-		{"azurekeyvault://mykeyvault/mykey?algorithm=RSA-OAEP-256", false},
-		// Path has > 2 elements.
-		{"azurekeyvault://mykeyvault/mykey/myversion/extra?algorithm=RSA-OAEP-256", true},
-		// Path has empty first element.
-		{"azurekeyvault://mykeyvault//myversion?algorithm=RSA-OAEP-256", true},
 		// OK.
-		{"azurekeyvault://mykeyvault/mykey/myversion?algorithm=RSA-OAEP-256", false},
+		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey/myversion", false},
+		// No version -> OK.
+		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey", false},
+		// Setting algorithm query param -> OK.
+		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey/myversion?algorithm=RSA-OAEP", false},
+		// Invalid query parameter.
+		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey/myversion?param=value", true},
+		// Missing key vault name.
+		{"azurekeyvault:///vault.azure.net/keys/mykey/myversion", true},
+		// Missing "keys".
+		{"azurekeyvault://mykeyvault.vault.azure.net/mykey/myversion", true},
 	}
 
 	ctx := context.Background()

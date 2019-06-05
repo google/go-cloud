@@ -180,7 +180,7 @@ func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods [
 	if err != nil {
 		return err
 	}
-	updateDoc, err := c.newUpdateDoc(mods)
+	updateDoc, _, err := c.newUpdateDoc(mods)
 	if err != nil {
 		return err
 	}

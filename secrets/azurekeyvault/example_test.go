@@ -18,7 +18,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"gocloud.dev/secrets"
 	akv "gocloud.dev/secrets/azurekeyvault"
 )
@@ -33,21 +32,7 @@ func ExampleOpenKeeper() {
 	}
 
 	// Construct a *secrets.Keeper.
-	// List of Parameters:
-	// - client: *keyvault.BaseClient instance, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
-	// - keyVaultName: string representing the KeyVault name, see https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers
-	// - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
-	// - keyVersion: string representing the keyVersion, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
-	// - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
-	keeper, err := akv.OpenKeeper(
-		client,
-		"replace with keyVaultName",
-		"replace with keyName",
-		"", // replace with keyVersion if you don't want to use the default one.
-		&akv.KeeperOptions{
-			Algorithm: string(keyvault.RSAOAEP256),
-		},
-	)
+	keeper, err := akv.OpenKeeper(client, "https://mykeyvaultname.vault.azure.net/keys/mykeyname", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,13 +56,11 @@ func Example_openFromURL() {
 	ctx := context.Background()
 
 	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
-	// The URL's host holds the KeyVault name.
-	// The first element of the URL's path holds the key name.
-	// The second element of the URL's path, if included, holds the key version.
-	// The "algorithm" query parameter (required) holds the algorithm.
-	// See https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt
-	// for more information.
-	keeper, err := secrets.OpenKeeper(ctx, "azurekeyvault://mykeyvaultname/mykeyname?algorithm=RSA-OAEP-256")
+	// The "azurekeyvault" URL scheme is replaced with "https" to construct an Azure
+	// Key Vault keyID, as described in https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates.
+	// You can add an optional "/{key-version}" to the path to use a specific
+	// version of the key; it defaults to the latest version.
+	keeper, err := secrets.OpenKeeper(ctx, "azurekeyvault://mykeyvaultname.vault.azure.net/keys/mykeyname")
 	if err != nil {
 		log.Fatal(err)
 	}

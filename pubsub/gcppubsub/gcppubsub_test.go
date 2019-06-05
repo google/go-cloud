@@ -17,6 +17,7 @@ package gcppubsub
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -80,7 +81,7 @@ func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName,
 	if err != nil {
 		return nil, nil, err
 	}
-	dt = openTopic(pubClient, projectID, topicName)
+	dt = openTopic(pubClient, path.Join("projects", projectID, "topics", topicName))
 	cleanup = func() {
 		pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
 	}
@@ -88,7 +89,7 @@ func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName,
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	return openTopic(h.pubClient, projectID, "nonexistent-topic"), nil
+	return openTopic(h.pubClient, path.Join("projects", projectID, "topics", "nonexistent-topic")), nil
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
@@ -118,7 +119,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 	if err != nil {
 		return nil, nil, err
 	}
-	ds = openSubscription(subClient, projectID, subName)
+	ds = openSubscription(subClient, path.Join("projects", projectID, "subscriptions", subName))
 	cleanup = func() {
 		subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{Subscription: subPath})
 	}
@@ -126,7 +127,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	return openSubscription(h.subClient, projectID, "nonexistent-subscription"), nil
+	return openSubscription(h.subClient, path.Join("projects", projectID, "subscriptions", "nonexistent-subscription")), nil
 }
 
 func (h *harness) Close() {
@@ -294,6 +295,23 @@ func TestOpenTopic(t *testing.T) {
 	if err == nil {
 		t.Error("got nil, want error")
 	}
+
+	// Repeat with OpenTopicByPath.
+	topic, err = OpenTopicByPath(pc, path.Join("projects", string(projID), "topics", "my-topic"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
+	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello world")})
+	if err == nil {
+		t.Error("got nil, want error")
+	}
+
+	// Try an invalid path.
+	_, err = OpenTopicByPath(pc, "my-topic", nil)
+	if err == nil {
+		t.Error("got nil, want error")
+	}
 }
 
 func TestOpenSubscription(t *testing.T) {
@@ -321,6 +339,23 @@ func TestOpenSubscription(t *testing.T) {
 	if err == nil {
 		t.Error("got nil, want error")
 	}
+
+	// Repeat with OpenSubscriptionByPath.
+	sub, err = OpenSubscriptionByPath(sc, path.Join("projects", string(projID), "subscriptions", "my-subscription"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Shutdown(ctx)
+	_, err = sub.Receive(ctx)
+	if err == nil {
+		t.Error("got nil, want error")
+	}
+
+	// Try an invalid path.
+	_, err = OpenSubscriptionByPath(sc, "my-subscription", nil)
+	if err == nil {
+		t.Error("got nil, want error")
+	}
 }
 
 func TestOpenTopicFromURL(t *testing.T) {
@@ -331,8 +366,10 @@ func TestOpenTopicFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
-		// OK.
+		// OK, short form.
 		{"gcppubsub://myproject/mytopic", false},
+		// OK, long form.
+		{"gcppubsub://projects/myproject/topic/mytopic", false},
 		// Invalid parameter.
 		{"gcppubsub://myproject/mytopic?param=value", true},
 	}
@@ -357,8 +394,10 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
-		// OK.
+		// OK, short form.
 		{"gcppubsub://myproject/mysub", false},
+		// OK, long form.
+		{"gcppubsub://projects/myproject/subscriptions/mysub", false},
 		// Invalid parameter.
 		{"gcppubsub://myproject/mysub?param=value", true},
 	}

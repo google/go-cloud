@@ -28,7 +28,7 @@ function usage() {
   echo
   echo "Usage: prereleasechecks.sh <init | run | cleanup>" 1>&2
   echo "  init: creates any needed resources; rerun until it succeeds"
-  echo "  runs: runs all needed checks"
+  echo "  run: runs all needed checks"
   echo "  cleanup: cleans up resources created in init"
   exit 64
 }
@@ -140,46 +140,6 @@ case "$op" in
     ;;
   cleanup)
     terraform destroy -var region="us-west-1" -auto-approve || FAILURES="$FAILURES $TESTDIR"
-    ;;
-esac
-popd &> /dev/null
-
-
-TESTDIR="tests/aws"
-echo
-echo "***** $TESTDIR *****"
-pushd "$TESTDIR" &> /dev/null
-case "$op" in
-  init)
-    # TODO: Need some more vars, like app_binary.
-    # terraform init && terraform apply -var region="us-west-1" -auto-approve || echo "[KNOWN FAILURE]"
-    ;;
-  run)
-    # TODO: Is this the right way to run this test? There's also a `test.sh`.
-    go test -mod=readonly -race -json ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
-    ;;
-  cleanup)
-    # terraform destroy
-    ;;
-esac
-popd &> /dev/null
-
-
-TESTDIR="tests/gcp"
-echo
-echo "***** $TESTDIR *****"
-pushd "$TESTDIR" &> /dev/null
-case "$op" in
-  init)
-    # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
-    ;;
-  run)
-    # TODO: Is this the right way to run this test? There's also a `test.sh`.
-    go test -mod=readonly -race -json ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
-    ;;
-  cleanup)
-    terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
 esac
 popd &> /dev/null

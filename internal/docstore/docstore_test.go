@@ -158,9 +158,10 @@ func TestToDriverMods(t *testing.T) {
 	} {
 		got, gotErr := toDriverMods(test.mods)
 		if test.wantErr {
-			if gotErr == nil {
-				t.Errorf("%v: got nil, want error", test.mods)
+			if gcerrors.Code(gotErr) != gcerrors.InvalidArgument {
+				t.Errorf("%v: got error '%v', want InvalidArgument", test.mods, gotErr)
 			}
+
 		} else if !cmp.Equal(got, test.want) {
 			t.Errorf("%v: got %v, want %v", test.mods, got, test.want)
 		}

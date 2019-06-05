@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -41,7 +40,7 @@ func registerApplyCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 }
 
 func apply(ctx context.Context, pctx *processContext, biome string, input bool) error {
-	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
@@ -53,12 +52,7 @@ func apply(ctx context.Context, pctx *processContext, biome string, input bool) 
 	// TODO(#1821): take over steps (plan, confirm, apply) so we can
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
-	c := exec.CommandContext(ctx, "terraform", "apply", "-input="+strconv.FormatBool(input))
-	c.Dir = findBiomeDir(moduleRoot, biome)
-	c.Env = pctx.env
-	c.Stdin = pctx.stdin
-	c.Stdout = pctx.stdout
-	c.Stderr = pctx.stderr
+	c := pctx.NewCommand(ctx, biomeDir(moduleRoot, biome), "terraform", "apply", "-input="+strconv.FormatBool(input))
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
@@ -69,7 +63,7 @@ func apply(ctx context.Context, pctx *processContext, biome string, input bool) 
 // If one doesn't exist, ensureTerraformInit runs terraform init.
 func ensureTerraformInit(ctx context.Context, pctx *processContext, moduleRoot, biome string, input bool) error {
 	// Check for .terraform directory.
-	biomePath := findBiomeDir(moduleRoot, biome)
+	biomePath := biomeDir(moduleRoot, biome)
 	_, err := os.Stat(filepath.Join(biomePath, ".terraform"))
 	if err == nil {
 		// .terraform exists, no op.
@@ -96,12 +90,7 @@ func ensureTerraformInit(ctx context.Context, pctx *processContext, moduleRoot, 
 	}
 
 	// Biome exists but not initialized. Need to run terraform init.
-	c := exec.CommandContext(ctx, "terraform", "init", "-input="+strconv.FormatBool(input))
-	c.Dir = biomePath
-	c.Env = pctx.env
-	c.Stdin = pctx.stdin
-	c.Stdout = pctx.stdout
-	c.Stderr = pctx.stderr
+	c := pctx.NewCommand(ctx, biomePath, "terraform", "init", "-input="+strconv.FormatBool(input))
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("ensure terraform init: %w", err)
 	}

@@ -112,7 +112,7 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 }
 
 func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
-	var find *options.FindOneOptions
+	var find *options.FindOptions
 	var insert *options.InsertOneOptions
 	var replace *options.ReplaceOptions
 	var update *options.UpdateOptions
@@ -285,7 +285,7 @@ func TestLowercaseFields(t *testing.T) {
 	// Get with map.
 	got2 := map[string]interface{}{"id": 1}
 	must(coll.Get(ctx, got2))
-	check(got2, map[string]interface{}{"id": int32(1), "f": int64(2), "g": int64(3)})
+	check(got2, map[string]interface{}{"id": int64(1), "f": int64(2), "g": int64(3)})
 
 	// Field paths in Get.
 	got3 := S{ID: 1}
@@ -295,7 +295,7 @@ func TestLowercaseFields(t *testing.T) {
 	// Field paths in Update.
 	got4 := map[string]interface{}{"id": 1}
 	must(coll.Actions().Update(&S{ID: 1}, docstore.Mods{"F": 4}).Get(got4).Do(ctx))
-	check(got4, map[string]interface{}{"id": int32(1), "f": int64(4), "g": int64(3)})
+	check(got4, map[string]interface{}{"id": int64(1), "f": int64(4), "g": int64(3)})
 
 	// // Query filters.
 	var got5 S
