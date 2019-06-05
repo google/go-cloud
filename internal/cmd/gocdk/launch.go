@@ -220,6 +220,7 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 	if err != nil {
 		return nil, xerrors.Errorf("cloud run launch: %w", err)
 	}
+	// TODO(light): Send docker push output somewhere.
 	if err := crl.dockerClient.Push(ctx, imageRef, ioutil.Discard); err != nil {
 		return nil, xerrors.Errorf("cloud run launch: %w", err)
 	}

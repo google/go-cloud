@@ -45,33 +45,39 @@ func New(env []string) *Client {
 
 // Image stores metadata about a Docker image.
 type Image struct {
-	ID         string
+	// ID is the randomly generated ID of the image.
+	// See https://windsock.io/explaining-docker-image-ids/
+	ID string
+	// Repository is the name component of a Docker image reference.
+	// It may be empty if the image has no tags.
+	// See https://godoc.org/github.com/docker/distribution/reference
 	Repository string
-	Tag        string
-	Digest     string
-	CreatedAt  time.Time
+	// Tag is the tag component of a Docker image reference.
+	// It will be empty if the image has no tags.
+	// See https://godoc.org/github.com/docker/distribution/reference
+	Tag string
+	// Digest is the content-based hash of the image.
+	// It may be empty.
+	Digest string
+	// CreatedAt is the time the image was built.
+	CreatedAt time.Time
 }
 
-// ListImages list images the Docker daemon has stored locally that match filterRef.
-func (c *Client) ListImages(ctx context.Context, filterRef string) ([]Image, error) {
+// ListImages lists images the Docker daemon has stored locally that match filterRef.
+func (c *Client) ListImages(ctx context.Context, filterRef string) ([]*Image, error) {
 	args := []string{"images", "--digests", "--format={{json .}}"}
 	if filterRef != "" {
 		args = append(args, filterRef)
 	}
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Env = c.env
-	stderr := new(bytes.Buffer)
-	cmd.Stderr = stderr
-	out, err := cmd.Output()
+	out, err := run(cmd)
 	if err != nil {
-		if stderr.Len() > 0 {
-			return nil, xerrors.Errorf("docker images:\n%s", stderr)
-		}
-		return nil, xerrors.Errorf("docker images: %w", err)
+		return nil, xerrors.Errorf("list docker images: %w", err)
 	}
 	lf := []byte("\n")
 	out = bytes.TrimSuffix(out, lf)
-	var images []Image
+	var images []*Image
 	for _, line := range bytes.Split(out, lf) {
 		var img struct {
 			ID         string
@@ -81,10 +87,10 @@ func (c *Client) ListImages(ctx context.Context, filterRef string) ([]Image, err
 			CreatedAt  string
 		}
 		if err := json.Unmarshal(line, &img); err != nil {
-			return nil, xerrors.Errorf("docker images: parse output: %w", err)
+			return nil, xerrors.Errorf("list docker images: parse output: %w", err)
 		}
 		createdAt, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", img.CreatedAt)
-		images = append(images, Image{
+		images = append(images, &Image{
 			ID:         cleanNone(img.ID),
 			Repository: cleanNone(img.Repository),
 			Tag:        cleanNone(img.Tag),
@@ -132,13 +138,8 @@ func (c *Client) Start(ctx context.Context, imageRef string, opts *RunOptions) (
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Env = c.env
-	stderr := new(bytes.Buffer)
-	cmd.Stderr = stderr
-	out, err := cmd.Output()
+	out, err := run(cmd)
 	if err != nil {
-		if stderr.Len() > 0 {
-			return "", xerrors.Errorf("docker run %s:\n%s", imageRef, stderr)
-		}
 		return "", xerrors.Errorf("docker run %s: %w", imageRef, err)
 	}
 	out = bytes.TrimSuffix(out, []byte("\n"))
@@ -166,10 +167,7 @@ func (c *Client) Tag(ctx context.Context, srcImageRef, dstImageRef string) error
 	cmd := exec.CommandContext(ctx, "docker", "tag", "--", srcImageRef, dstImageRef)
 	cmd.Env = c.env
 	if out, err := cmd.CombinedOutput(); err != nil {
-		if len(out) > 0 {
-			return xerrors.Errorf("docker tag:\n%s", out)
-		}
-		return xerrors.Errorf("docker push: %w", err)
+		return xerrors.Errorf("docker push: %w", cmdError(err, out))
 	}
 	return nil
 }
@@ -201,6 +199,25 @@ func ParseImageRef(s string) (name, tag, digest string) {
 		return s, "", digest
 	}
 	return s[:i], s[i:], digest
+}
+
+// run runs a command, capturing its stdout and stderr, and returns the stdout
+// output. If the program exits with a failure status code, the error will
+// contain the stderr.
+func run(cmd *exec.Cmd) ([]byte, error) {
+	stderr := new(bytes.Buffer)
+	cmd.Stderr = stderr
+	out, err := cmd.Output()
+	return out, cmdError(err, stderr.Bytes())
+}
+
+// cmdError wraps an error with stderr output as needed.
+func cmdError(err error, stderr []byte) error {
+	if err == nil || len(stderr) == 0 {
+		return err
+	}
+	// TODO(light): Maybe wrap err?
+	return xerrors.New(string(stderr))
 }
 
 func isTagChar(c rune) bool {

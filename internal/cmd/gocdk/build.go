@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -67,8 +66,7 @@ func build(ctx context.Context, pctx *processContext, ref string) error {
 		}
 		ref = imageName + ref
 	}
-	err = docker.New(pctx.env).Build(ctx, ref, moduleRoot, pctx.stderr)
-	if err != nil {
+	if err := docker.New(pctx.env).Build(ctx, ref, moduleRoot, pctx.stderr); err != nil {
 		return xerrors.Errorf("gocdk build: %w", err)
 	}
 	return nil
@@ -89,9 +87,9 @@ func listBuilds(ctx context.Context, pctx *processContext) error {
 	}
 	for _, image := range images {
 		if image.Repository == "" || image.Tag == "" {
-			fmt.Fprintf(pctx.stdout, "@%-60s  %s\n", image.Digest, image.CreatedAt.Local().Format(time.Stamp))
+			pctx.Printf("@%-60s  %s\n", image.Digest, image.CreatedAt.Local().Format(time.Stamp))
 		} else {
-			fmt.Fprintf(pctx.stdout, "%-60s  %s\n", image.Repository+":"+image.Tag, image.CreatedAt.Local().Format(time.Stamp))
+			pctx.Printf("%-60s  %s\n", image.Repository+":"+image.Tag, image.CreatedAt.Local().Format(time.Stamp))
 		}
 	}
 	return nil
