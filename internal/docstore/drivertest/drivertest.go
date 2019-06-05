@@ -244,6 +244,9 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 
 	createThenGet(named)
 	createThenGet(unnamed)
+	if unnamed[KeyField] == nil {
+		t.Error("unnamed[KeyField]: got nil, want a generated key")
+	}
 
 	// Can't create an existing doc.
 	// TODO(jba): test for NotFound code

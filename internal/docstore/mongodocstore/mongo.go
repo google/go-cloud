@@ -216,13 +216,13 @@ func newCollection(mcoll *mongo.Collection, idField string, idFunc func(docstore
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	if c.idField != "" {
 		id, _ := doc.GetField(c.idField)
-		return encodeValue(id) // missing field is not an error
+		return id, nil // missing field is not an error
 	}
 	id := c.idFunc(doc.Origin)
 	if id == nil {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
 	}
-	return encodeValue(id)
+	return id, nil
 }
 
 // From https://docs.mongodb.com/manual/core/document: "The field name _id is
@@ -264,7 +264,9 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 	// errors need to be mapped to the actions' indices.
 	setErr := func(err error) {
 		for _, get := range gets {
-			errs[get.Index] = err
+			if errs[get.Index] == nil {
+				errs[get.Index] = err
+			}
 		}
 	}
 
@@ -273,8 +275,15 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 		opts.Projection = c.projectionDoc(gets[0].FieldPaths)
 	}
 	ids := bson.A{}
+	idToAction := map[interface{}]*driver.Action{}
 	for _, a := range gets {
-		ids = append(ids, a.Key)
+		id, err := encodeValue(a.Key)
+		if err != nil {
+			errs[a.Index] = err
+		} else {
+			ids = append(ids, id)
+			idToAction[id] = a
+		}
 	}
 	if dopts.BeforeDo != nil {
 		if err := dopts.BeforeDo(driver.AsFunc(opts)); err != nil {
@@ -290,29 +299,20 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 	defer cursor.Close(ctx)
 
 	found := make(map[*driver.Action]bool)
-	am := mapActionIndices(gets)
 	for cursor.Next(ctx) {
 		var m map[string]interface{}
 		if err := cursor.Decode(&m); err != nil {
 			continue
 		}
-		a := am[m[mongoIDField]]
+		a := idToAction[m[mongoIDField]]
 		errs[a.Index] = decodeDoc(m, a.Doc, c.idField)
 		found[a] = true
 	}
 	for _, a := range gets {
 		if !found[a] {
-			errs[a.Index] = gcerr.Newf(gcerr.NotFound, nil, "item with key=%v not found", a.Key)
+			errs[a.Index] = gcerr.Newf(gcerr.NotFound, nil, "item with key %v not found", a.Key)
 		}
 	}
-}
-
-func mapActionIndices(actions []*driver.Action) map[interface{}]*driver.Action {
-	m := make(map[interface{}]*driver.Action)
-	for _, a := range actions {
-		m[a.Key] = a
-	}
-	return m
 }
 
 // Construct a mongo "projection document" from field paths.
@@ -345,6 +345,11 @@ func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{
 		// but not for BulkWrite.)
 		id = primitive.NewObjectID()
 		createdID = id
+	} else {
+		id, err = encodeValue(id)
+		if err != nil {
+			return nil, nil, "", err
+		}
 	}
 	mdoc, rev, err = c.encodeDoc(a.Doc, id)
 	if err != nil {
@@ -354,18 +359,22 @@ func (c *collection) prepareCreate(a *driver.Action) (mdoc, createdID interface{
 }
 
 func (c *collection) prepareReplace(a *driver.Action) (filter bson.D, mdoc map[string]interface{}, rev string, err error) {
-	filter, _, err = c.makeFilter(a.Key, a.Doc)
+	id, err := encodeValue(a.Key)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	mdoc, rev, err = c.encodeDoc(a.Doc, a.Key)
+	filter, _, err = c.makeFilter(id, a.Doc)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	mdoc, rev, err = c.encodeDoc(a.Doc, id)
 	if err != nil {
 		return nil, nil, "", err
 	}
 	return filter, mdoc, rev, nil
 }
 
-// encodeDoc encodes doc and sets its ID to id. It also creates a new revision and sets it.
+// encodeDoc encodes doc and sets its ID to the encoded value id. It also creates a new revision and sets it.
 // It returns the encoded document and the new revision.
 func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]interface{}, string, error) {
 	mdoc, err := encodeDoc(doc, c.opts.LowercaseFields)
@@ -384,7 +393,11 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 }
 
 func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc map[string]bson.D, rev string, err error) {
-	filter, _, err = c.makeFilter(a.Key, a.Doc)
+	id, err := encodeValue(a.Key)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	filter, _, err = c.makeFilter(id, a.Doc)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -431,6 +444,7 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, string,
 	return updateDoc, rev, nil
 }
 
+// makeFilter constructs a filter using the given encoded id and the document's revision field, if any.
 func (c *collection) makeFilter(id interface{}, doc driver.Document) (filter bson.D, rev interface{}, err error) {
 	rev, err = doc.GetField(c.revisionField)
 	if err != nil && gcerrors.Code(err) != gcerrors.NotFound {
@@ -576,7 +590,11 @@ func (c *collection) newCreateModel(a *driver.Action) (*mongo.InsertOneModel, in
 }
 
 func (c *collection) newDeleteModel(a *driver.Action) (*mongo.DeleteOneModel, error) {
-	filter, _, err := c.makeFilter(a.Key, a.Doc)
+	id, err := encodeValue(a.Key)
+	if err != nil {
+		return nil, err
+	}
+	filter, _, err := c.makeFilter(id, a.Doc)
 	if err != nil {
 		return nil, err
 	}

@@ -30,6 +30,9 @@ type Collection interface {
 	// can't generate a missing key, it should return an error.
 	//
 	// The returned key must be comparable.
+	//
+	// The returned key should not be encoded with the provider's codec; it should
+	// be the user-supplied Go value.
 	Key(Document) (interface{}, error)
 
 	// RunActions executes a slice of actions.

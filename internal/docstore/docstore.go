@@ -112,9 +112,8 @@ func (l *ActionList) add(a *Action) *ActionList {
 // AlreadyExists is returned if it does. (See gocloud.dev/gcerrors for more on error
 // codes.)
 //
-// If the document doesn't have key
-// fields, key fields with unique values will be created and doc will be populated
-// with them.
+// If the document doesn't have key fields, key fields with unique values will be
+// created and doc will be populated with them.
 //
 // If doc is a map, or a struct with a revision field, then the revision field will
 // be set to the revision of the newly created document.
@@ -195,7 +194,6 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 //
 // Update does not modify its doc argument, except to set the new revision. To obtain
 // the updated document, call Get after calling Update.
-// TODO(jba): test that doc's revision field is updated.
 func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 	return l.add(&Action{
 		kind: driver.Update,

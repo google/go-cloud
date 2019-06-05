@@ -300,10 +300,7 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 			m.parentMap[m.key] = m.encodedValue
 		}
 	}
-	// TODO(jba): we shouldn't have to check len(mods) because it should never be zero.
-	if len(mods) > 0 {
-		c.changeRevision(doc)
-	}
+	c.changeRevision(doc)
 	return nil
 }
 

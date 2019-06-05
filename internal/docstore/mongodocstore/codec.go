@@ -62,11 +62,15 @@ func (e *encoder) EncodeString(x string) { e.val = x }
 func (e *encoder) ListIndex(int)         { panic("impossible") }
 func (e *encoder) MapKey(string)         { panic("impossible") }
 
-var typeOfGoTime = reflect.TypeOf(time.Time{})
+var (
+	typeOfGoTime   = reflect.TypeOf(time.Time{})
+	typeOfObjectID = reflect.TypeOf(primitive.ObjectID{})
+)
 
 func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
-	// Treat time "specially" as itself (otherwise its BinaryMarshal method will be called).
-	if v.Type() == typeOfGoTime {
+	// Treat time specially as itself (otherwise its BinaryMarshal method will be called).
+	// Also, ObjectIDs are already encoded.
+	if v.Type() == typeOfGoTime || v.Type() == typeOfObjectID {
 		e.val = v.Interface()
 		return true, nil
 	}
