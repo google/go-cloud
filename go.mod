@@ -40,9 +40,9 @@ require (
 	github.com/google/wire v0.2.2
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/lib/pq v1.1.1
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
-	github.com/spf13/cobra v0.0.4 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
 	github.com/uber-go/atomic v1.4.0 // indirect
