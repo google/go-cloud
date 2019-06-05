@@ -39,7 +39,7 @@ The tool processes all modules listed in the 'allmodules'
 file. For each module it handles all dependencies on
 other gocloud.dev modules.
 
-Run it from the root directory of the project, as follows:
+Run it from the root directory of the repository, as follows:
 
 $ %s <command>
 
@@ -51,14 +51,12 @@ Where command is one of the following:
   dropreplace   removes these directives.
 
   help          prints this usage message
-
-Run it from the root directory of the project.
 `
 
 func printHelp() {
 	_, binName := filepath.Split(os.Args[0])
-	fmt.Printf(helpText, binName)
-	fmt.Println()
+	fmt.Fprintf(os.Stderr, helpText, binName)
+	fmt.Fprintln(os.Stderr)
 }
 
 // cmdCheck invokes the command given in s, echoing the invocation to stdout.
@@ -124,7 +122,7 @@ func parseModuleInfo(path string) GoMod {
 //   mod - name of the module being 'require'd
 //   modPath - mod's location in the filesystem relative to
 //             the go.mod 'require'ing it
-type reqHandlerFunc func(gomodPath string, mod string, modPath string)
+type reqHandlerFunc func(gomodPath, mod, modPath string)
 
 func runOnGomod(path string, reqHandler reqHandlerFunc) {
 	gomodPath := filepath.Join(path, "go.mod")
@@ -170,15 +168,16 @@ func main() {
 		printHelp()
 		os.Exit(0)
 	case "addreplace":
-		handlerFunc = func(gomodPath string, mod string, modPath string) {
+		handlerFunc = func(gomodPath, mod, modPath string) {
 			cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", mod, modPath, gomodPath))
 		}
 	case "dropreplace":
-		handlerFunc = func(gomodPath string, mod string, modPath string) {
+		handlerFunc = func(gomodPath, mod, modPath string) {
 			cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", mod, gomodPath))
 		}
 	default:
-		log.Fatal("Expected 'addreplace' or 'dropreplace'")
+		printHelp()
+		os.Exit(1)
 	}
 
 	f, err := os.Open("allmodules")
