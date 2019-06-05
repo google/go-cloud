@@ -34,8 +34,6 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 )
 
-// TODO(jba): Test RunActions to verify as much as possible that they happen independently.
-
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
@@ -858,9 +856,9 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 	// (The collection used for testGetQuery uses a key function rather than a key field.)
 	ctx := context.Background()
 	docs := []docmap{
-		{KeyField: "qkf1"},
-		{KeyField: "qkf2"},
-		{KeyField: "qkf3"},
+		{KeyField: "qkf1", "a": "one"},
+		{KeyField: "qkf2", "a": "two"},
+		{KeyField: "qkf3", "a": "three"},
 	}
 	al := coll.Actions()
 	for _, d := range docs {
@@ -870,23 +868,32 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 		t.Fatal(err)
 	}
 	iter := coll.Query().Where(KeyField, "<", "qkf3").Get(ctx)
+	defer iter.Stop()
 	got := mustCollect(ctx, t, iter)
 	want := docs[:2]
-	diff := cmp.Diff(got, want, cmpopts.SortSlices(func(d1, d2 docmap) bool {
-		return d1[KeyField].(string) < d2[KeyField].(string)
-	}))
+	diff := cmpDiff(got, want, cmpopts.SortSlices(sortByKeyField))
 	if diff != "" {
 		t.Error(diff)
 	}
 
-	// TODO(jba): test that queries with selected fields always return the key and revision fields.
+	// Test that queries with selected fields always return the key and revision fields.
+	iter = coll.Query().Get(ctx, "a")
+	defer iter.Stop()
+	got = mustCollect(ctx, t, iter)
+	for _, d := range docs {
+		checkHasRevisionField(t, d)
+	}
+	diff = cmpDiff(got, docs, cmpopts.SortSlices(sortByKeyField))
+	if diff != "" {
+		t.Error(diff)
+	}
 }
+
+func sortByKeyField(d1, d2 docmap) bool { return d1[KeyField].(string) < d2[KeyField].(string) }
 
 func testGetQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	addQueryDocuments(t, coll)
-
-	// TODO(jba): test that queries with selected fields always return the revision field when there is one.
 
 	// Query filters should have the same behavior when doing string and number
 	// comparison.
@@ -990,7 +997,11 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 				t.Skip("unimplemented")
 			}
 			for _, g := range got {
-				g.DocstoreRevision = nil
+				if g.DocstoreRevision == nil {
+					t.Errorf("%v missing DocstoreRevision", g)
+				} else {
+					g.DocstoreRevision = nil
+				}
 			}
 			want := filterHighScores(queryDocuments, tc.want)
 			_, err = tc.q.Plan()
@@ -1411,7 +1422,7 @@ func clone(m docmap) docmap {
 	return r
 }
 
-func cmpDiff(a, b interface{}) string {
+func cmpDiff(a, b interface{}, opts ...cmp.Option) string {
 	// Firestore revisions can be protos.
-	return cmp.Diff(a, b, cmp.Comparer(proto.Equal))
+	return cmp.Diff(a, b, append([]cmp.Option{cmp.Comparer(proto.Equal)}, opts...)...)
 }

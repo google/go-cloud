@@ -71,16 +71,19 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 	// Set up the projection expression.
 	if len(q.FieldPaths) > 0 {
 		var pb expression.ProjectionBuilder
-		hasRevisionField := false
+		hasFields := map[string]bool{}
 		for _, fp := range q.FieldPaths {
-			if fpEqual(fp, docstore.RevisionField) {
-				hasRevisionField = true
+			if len(fp) == 1 {
+				hasFields[fp[0]] = true
 			}
 			pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
 		}
-		if !hasRevisionField {
-			pb = pb.AddNames(expression.Name(docstore.RevisionField))
-			q.FieldPaths = append(q.FieldPaths, []string{docstore.RevisionField})
+		// Always include the key and revision fields.
+		for _, f := range []string{c.partitionKey, c.sortKey, docstore.RevisionField} {
+			if f != "" && !hasFields[f] {
+				pb = pb.AddNames(expression.Name(f))
+				q.FieldPaths = append(q.FieldPaths, []string{f})
+			}
 		}
 		cb = cb.WithProjection(pb)
 		cbUsed = true
@@ -250,7 +253,7 @@ func hasFilter(q *driver.Query, field string) bool {
 		return false
 	}
 	for _, f := range q.Filters {
-		if fpEqual(f.FieldPath, field) {
+		if driver.FieldPathEqualsField(f.FieldPath, field) {
 			return true
 		}
 	}
@@ -260,15 +263,11 @@ func hasFilter(q *driver.Query, field string) bool {
 // Reports whether q has a filter that checks if the top-level field is equal to something.
 func hasEqualityFilter(q *driver.Query, field string) bool {
 	for _, f := range q.Filters {
-		if f.Op == driver.EqualOp && fpEqual(f.FieldPath, field) {
+		if f.Op == driver.EqualOp && driver.FieldPathEqualsField(f.FieldPath, field) {
 			return true
 		}
 	}
 	return false
-}
-
-func fpEqual(fp []string, s string) bool {
-	return len(fp) == 1 && fp[0] == s
 }
 
 type queryRunner struct {
