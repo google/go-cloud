@@ -31,10 +31,12 @@ func TestQueryValidFilter(t *testing.T) {
 			t.Errorf("fieldpath %q: got %s, want InvalidArgument", fp, got)
 		}
 	}
-	q := Query{dq: &driver.Query{}}
-	q.Where("a", "==", 1)
-	if got := gcerrors.Code(q.err); got != gcerrors.InvalidArgument {
-		t.Errorf("got %s, want InvalidArgument", got)
+	for _, op := range []string{"==", "!="} {
+		q := Query{dq: &driver.Query{}}
+		q.Where("a", op, 1)
+		if got := gcerrors.Code(q.err); got != gcerrors.InvalidArgument {
+			t.Errorf("op %s: got %s, want InvalidArgument", op, got)
+		}
 	}
 	for _, v := range []interface{}{nil, 5 + 2i, []byte("x"), func() {}, []int{}, map[string]bool{}} {
 		q := Query{dq: &driver.Query{}}
@@ -63,7 +65,6 @@ func TestInvalidQuery(t *testing.T) {
 		{"bad OrderBy direction", true, c.Query().OrderBy("x", "y"), "direction"},
 		{"two OrderBys", true, c.Query().OrderBy("x", Ascending).OrderBy("y", Descending), "orderby"},
 		{"OrderBy not in Where", true, c.Query().OrderBy("x", Ascending).Where("y", ">", 1), "orderby"},
-
 		{"any Limit", false, c.Query().Limit(1), "limit"},
 		{"any OrderBy", false, c.Query().OrderBy("x", Descending), "orderby"},
 	} {

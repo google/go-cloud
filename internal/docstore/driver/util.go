@@ -162,6 +162,7 @@ func FieldPathsEqual(fp1, fp2 []string) bool {
 }
 
 // FieldPathEqualsField reports whether a field path equals a field.
+// This is a convenience for FieldPathsEqual(fp, []string{s}).
 func FieldPathEqualsField(fp []string, s string) bool {
 	return len(fp) == 1 && fp[0] == s
 }
