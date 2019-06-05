@@ -195,7 +195,7 @@ The URLs use the project ID and the subscription ID.
 <span class="p">)</span>
 
 <span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-	<span class="s">&#34;gcppubsub://my-project/my-subscription&#34;</span><span class="p">)</span>
+	<span class="s">&#34;gcppubsub://projects/my-project/subscriptions/my-subscription&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -223,11 +223,6 @@ reused among subscriptions.)</p>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="c1">// Get the project ID from the credentials (required by OpenSubscription).
-</span><span class="c1"></span><span class="nx">projectID</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultProjectID</span><span class="p">(</span><span class="nx">creds</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
 
 <span class="c1">// Open a gRPC connection to the GCP Pub/Sub API.
 </span><span class="c1"></span><span class="nx">conn</span><span class="p">,</span> <span class="nx">cleanup</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcppubsub</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">creds</span><span class="p">.</span><span class="nx">TokenSource</span><span class="p">)</span>
@@ -244,8 +239,11 @@ reused among subscriptions.)</p>
 <span class="k">defer</span> <span class="nx">subClient</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 
 <span class="c1">// Construct a *pubsub.Subscription.
-</span><span class="c1"></span><span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">gcppubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span>
-	<span class="nx">subClient</span><span class="p">,</span> <span class="nx">projectID</span><span class="p">,</span> <span class="s">&#34;example-subscription&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcppubsub</span><span class="p">.</span><span class="nf">OpenSubscriptionByPath</span><span class="p">(</span>
+	<span class="nx">subClient</span><span class="p">,</span> <span class="s">&#34;projects/myprojectID/subscriptions/example-subscription&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
