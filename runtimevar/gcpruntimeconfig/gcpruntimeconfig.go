@@ -38,10 +38,10 @@ package gcpruntimeconfig // import "gocloud.dev/runtimevar/gcpruntimeconfig"
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
-	"strings"
+	"path"
+	"regexp"
 	"sync"
 	"time"
 
@@ -125,12 +125,10 @@ func (o *lazyCredsOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*run
 // Scheme is the URL scheme gcpruntimeconfig registers its URLOpener under on runtimevar.DefaultMux.
 const Scheme = "gcpruntimeconfig"
 
-// URLOpener opens gcpruntimeconfig URLs like "gcpruntimeconfig://myproject/mycfg/myvar".
+// URLOpener opens gcpruntimeconfig URLs like "gcpruntimeconfig://projects/[project_id]/configs/[CONFIG_ID]/variables/[VARIABLE_NAME]".
 //
-//   - The URL's host holds the GCP projectID.
-//   - The first element of the URL's path holds the GCP RuntimeConfigurator ConfigID.
-//   - The second element of the URL's path holds the GCP RuntimeConfigurator Variable Name.
-// See https://cloud.google.com/deployment-manager/runtime-configurator/
+// The URL Host+Path are used as the GCP Runtime Configurator Variable key;
+// see https://cloud.google.com/deployment-manager/runtime-configurator/
 // for more details.
 //
 // The following query parameters are supported:
@@ -165,11 +163,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	for param := range q {
 		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
-	rn, err := newResourceNameFromURL(u)
-	if err != nil {
-		return nil, fmt.Errorf("open variable %v: %v", u, err)
-	}
-	return OpenVariable(o.Client, rn, decoder, &o.Options)
+	return OpenVariable(o.Client, path.Join(u.Host, u.Path), decoder, &o.Options)
 }
 
 // Options sets options.
@@ -179,61 +173,52 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// OpenVariable constructs a *runtimevar.Variable backed by the variable name in
+// OpenVariable constructs a *runtimevar.Variable backed by variableKey in
 // GCP Cloud Runtime Configurator.
+//
+// A variableKey will look like:
+//   projects/[project_id]/configs/[CONFIG_ID]/variables/[VARIABLE_NAME]
+//
+// You can use the full string (e.g., copied from the GCP Console), or
+// construct one from its parts using VariableKey.
+//
+// See https://cloud.google.com/deployment-manager/runtime-configurator/ for
+// more details.
+//
 // Runtime Configurator returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func OpenVariable(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(client, name, decoder, opts)), nil
+func OpenVariable(client pb.RuntimeConfigManagerClient, variableKey string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(client, variableKey, decoder, opts)
+	if err != nil {
+		return nil, err
+	}
+	return runtimevar.New(w), nil
 }
 
-func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) driver.Watcher {
+var variableKeyRE = regexp.MustCompile("^projects/.+/configs/.+/variables/.+$")
+
+func newWatcher(client pb.RuntimeConfigManagerClient, variableKey string, decoder *runtimevar.Decoder, opts *Options) (driver.Watcher, error) {
 	if opts == nil {
 		opts = &Options{}
+	}
+	if !variableKeyRE.MatchString(variableKey) {
+		return nil, fmt.Errorf("invalid variableKey %q; must match %v", variableKey, variableKeyRE)
 	}
 	return &watcher{
 		client:  client,
 		wait:    driver.WaitDuration(opts.WaitDuration),
-		name:    name.String(),
+		name:    variableKey,
 		decoder: decoder,
-	}
+	}, nil
 }
 
-// ResourceName identifies a configuration variable.
-type ResourceName struct {
-	ProjectID string
-	Config    string
-	Variable  string
-}
-
-func newResourceNameFromURL(u *url.URL) (ResourceName, error) {
-	var rn ResourceName
-	rn.ProjectID = u.Host
-	// Using SplitN because the variable name can be hierarchical; we
-	// take the first path element as the Config and the result for the
-	// Variable.
-	pathParts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2)
-	if len(pathParts) == 2 {
-		rn.Config = pathParts[0]
-		rn.Variable = pathParts[1]
-	}
-	if rn.ProjectID == "" {
-		return ResourceName{}, errors.New("URL must have a non-empty Host (the project ID)")
-	}
-	if rn.Config == "" || rn.Variable == "" {
-		return ResourceName{}, errors.New("URL must have a Path with at 2 non-empty elements (the key config and key name)")
-	}
-	return rn, nil
-}
-
-func (r ResourceName) configPath() string {
-	return fmt.Sprintf("projects/%s/configs/%s", r.ProjectID, r.Config)
-}
-
-// String returns the full configuration variable path.
-func (r ResourceName) String() string {
-	return fmt.Sprintf("%s/variables/%s", r.configPath(), r.Variable)
+// VariableKey constructs a GCP Runtime Configurator variable key from
+// component parts. See
+// https://cloud.google.com/deployment-manager/runtime-configurator/
+// for more details.
+func VariableKey(projectID gcp.ProjectID, configID, variableName string) string {
+	return fmt.Sprintf("projects/%s/configs/%s/variables/%s", projectID, configID, variableName)
 }
 
 // state implements driver.State.

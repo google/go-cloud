@@ -127,12 +127,14 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 }
 
 // OpenKeeper returns a *secrets.Keeper that uses Google Cloud KMS.
+// You can use KeyResourceID to construct keyResourceID from its parts,
+// or provide the whole string if you have it (e.g., from the GCP console).
 // See https://cloud.google.com/kms/docs/object-hierarchy#key for more details.
 // See the package documentation for an example.
-func OpenKeeper(client *cloudkms.KeyManagementClient, keyID string, opts *KeeperOptions) *secrets.Keeper {
+func OpenKeeper(client *cloudkms.KeyManagementClient, keyResourceID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
-		keyID:  keyID,
-		client: client,
+		keyResourceID: keyResourceID,
+		client:        client,
 	})
 }
 
@@ -145,14 +147,14 @@ func KeyResourceID(projectID, location, keyRing, key string) string {
 
 // keeper implements driver.Keeper.
 type keeper struct {
-	keyID  string
-	client *cloudkms.KeyManagementClient
+	keyResourceID string
+	client        *cloudkms.KeyManagementClient
 }
 
 // Decrypt decrypts the ciphertext using the key constructed from ki.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
-		Name:       k.keyID,
+		Name:       k.keyResourceID,
 		Ciphertext: ciphertext,
 	}
 	resp, err := k.client.Decrypt(ctx, req)
@@ -165,7 +167,7 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
-		Name:      k.keyID,
+		Name:      k.keyResourceID,
 		Plaintext: plaintext,
 	}
 	resp, err := k.client.Encrypt(ctx, req)
