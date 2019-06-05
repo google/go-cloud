@@ -114,17 +114,15 @@ func parseModuleInfo(path string) GoMod {
 	return modInfo
 }
 
-// reqHandlerFunc is a callback function type invoked by runOnGomod when it
-// finds 'require' lines in go.mod files that refer to our modules. It's called
-// with these arguments:
+// runOnGomod processes a single go.mod file (located in directory 'path').
+// Each require in the go.mod file is processed with reqHandler, a callback
+// function. It's called with these arguments:
 //
 //   gomodPath - path to the go.mod file where this 'require' was found
 //   mod - name of the module being 'require'd
 //   modPath - mod's location in the filesystem relative to
 //             the go.mod 'require'ing it
-type reqHandlerFunc func(gomodPath, mod, modPath string)
-
-func runOnGomod(path string, reqHandler reqHandlerFunc) {
+func runOnGomod(path string, reqHandler func(gomodPath, mod, modPath string)) {
 	gomodPath := filepath.Join(path, "go.mod")
 	fmt.Println("Processing", gomodPath)
 	modInfo := parseModuleInfo(gomodPath)
