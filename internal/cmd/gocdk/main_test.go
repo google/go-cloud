@@ -300,7 +300,7 @@ func doList(dir string, out io.Writer, arg, indent string) error {
 func scrub(rootDir string, b []byte) []byte {
 	const scrubbedRootDir = "[ROOTDIR]"
 	rootDirWithSeparator := rootDir + string(filepath.Separator)
-	scrubbedRootDirWithSeparator := scrubbedRootDir + string(filepath.Separator)
+	scrubbedRootDirWithSeparator := scrubbedRootDir + "/"
 	b = bytes.Replace(b, []byte(rootDirWithSeparator), []byte(scrubbedRootDirWithSeparator), -1)
 	b = bytes.Replace(b, []byte(rootDir), []byte(scrubbedRootDir), -1)
 	return b
