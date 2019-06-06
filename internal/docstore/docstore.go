@@ -145,8 +145,9 @@ func (l *ActionList) Replace(doc Document) *ActionList {
 // Put adds an action that adds or replaces a document to the given ActionList, and returns the ActionList.
 // The key fields must be set.
 //
-// If the revision field is non-nil, then Put behaves exactly like Replace. Otherwise,
-// Put will create the document if it does not already exist.
+// If the revision field is non-nil, then Put behaves exactly like Replace, returning
+// an error if the document does not exist. Otherwise, Put will create the document
+// if it does not exist.
 //
 // See the Revisions section of the package documentation for how revisions are
 // handled.
