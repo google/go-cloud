@@ -299,5 +299,9 @@ func doList(dir string, out io.Writer, arg, indent string) error {
 // scrub removes dynamic content from recorded files.
 func scrub(rootDir string, b []byte) []byte {
 	const scrubbedRootDir = "[ROOTDIR]"
-	return bytes.ReplaceAll(b, []byte(rootDir), []byte(scrubbedRootDir))
+	rootDirWithSeparator := rootDir + string(filepath.Separator)
+	scrubbedRootDirWithSeparator := scrubbedRootDir + string(filepath.Separator)
+	b = bytes.Replace(b, []byte(rootDirWithSeparator), []byte(scrubbedRootDirWithSeparator), -1)
+	b = bytes.Replace(b, []byte(rootDir), []byte(scrubbedRootDir), -1)
+	return b
 }
