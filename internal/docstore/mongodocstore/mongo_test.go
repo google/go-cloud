@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"gocloud.dev/internal/gcerr"
-
 	"github.com/google/go-cmp/cmp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,6 +32,7 @@ import (
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/setup"
 )
 
