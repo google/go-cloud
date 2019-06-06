@@ -230,6 +230,8 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	return keys, nil
 }
 
+func (c *collection) RevisionField() string { return "" }
+
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
 	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
@@ -455,13 +457,22 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 		in.ConditionExpression = ce.Condition()
 	}
 	_, err = c.db.PutItemWithContext(ctx, in)
-	if err == nil {
-		if newPartitionKey != "" {
-			_ = doc.SetField(c.partitionKey, newPartitionKey)
+	if err != nil {
+		if ae, ok := err.(awserr.Error); ok && ae.Code() == dyn.ErrCodeConditionalCheckFailedException {
+			if k == driver.Create {
+				return gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
+			}
+			if rev, _ := doc.GetField(docstore.RevisionField); rev == nil && k == driver.Replace {
+				return gcerr.Newf(gcerr.NotFound, nil, "document not found")
+			}
 		}
-		_ = doc.SetField(docstore.RevisionField, rev)
+		return err
 	}
-	return err
+	if newPartitionKey != "" {
+		_ = doc.SetField(c.partitionKey, newPartitionKey)
+	}
+	_ = doc.SetField(docstore.RevisionField, rev)
+	return nil
 }
 
 func (c *collection) delete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) error {

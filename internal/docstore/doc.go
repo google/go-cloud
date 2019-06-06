@@ -134,18 +134,16 @@
 // name.
 // TODO(jba): make it all providers
 //
-// If a struct doesn't have a DocstoreRevision field, then no revision logic is
-// performed. Otherwise, Docstore gives every document a revision when it is created,
-// and changes that revision whenever the document is modified. Whenever you pass a
+// Docstore gives every document a revision when it is created, and changes that
+// revision whenever the document is modified. If a struct doesn't have a revision
+// field, then no revision logic is performed. Otherwise, whenever you pass a
 // document with a revision to Put, Replace, Update or Delete, Docstore will return
 // an error with code FailedPrecondition if the stored document's revision does not
 // match the given document's. (See the gocloud.dev/gcerrors package for information
 // about error codes.) If you call Get to retrieve a document, then later perform a
 // write action with that same document, it will fail if the document was changed
-// since the Get.
-//
-// Create, Put, Replace and Update all populate their argument document with the
-// new revision of the document.
+// since the Get. Create, Put, Replace and Update all populate their argument
+// document with the new revision of the document.
 //
 // Since different providers use different types for revisions, the type of the
 // revision field is unspecified. When defining a struct for storing docstore data,
