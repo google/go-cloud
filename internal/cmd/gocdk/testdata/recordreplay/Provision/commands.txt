@@ -1,0 +1,8 @@
+# Add fails when we're not in a module.
+gocdk provision add dev blob/fileblob --> FAIL
+
+gocdk init myproj
+cd myproj
+
+# Not yet implemented.
+gocdk provision add dev blob/fileblob --> FAIL
