@@ -45,3 +45,4 @@ create_index Player ascending Score ascending
 create_index Game   ascending Score ascending
 create_index Player ascending Time  ascending
 create_index Game   ascending Player ascending
+create_index Game   ascending Player descending

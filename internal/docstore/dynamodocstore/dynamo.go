@@ -173,7 +173,21 @@ type Options struct {
 	// If false, queries that can only be executed by scanning the entire table
 	// return an error instead (with the exception of a query with no filters).
 	AllowScans bool
+
+	// If set, call this function on queries that we cannot execute at all (for
+	// example, a query with an OrderBy clause that lacks an equality filter on a
+	// partition key). The function should execute the query however it wishes, and
+	// return an iterator over the results. It can use the RunQueryFunc passed as its
+	// third argument to have the DynamoDB driver run a query, for instance a
+	// modified version of the original query.
+	//
+	// If RunQueryFallback is nil, queries that cannot be executed will fail with a
+	// error that has code Unimplemented.
+	RunQueryFallback func(context.Context, *driver.Query, RunQueryFunc) (driver.DocumentIterator, error)
 }
+
+// RunQueryFunc is the type of the function passed to RunQueryFallback.
+type RunQueryFunc func(context.Context, *driver.Query) (driver.DocumentIterator, error)
 
 // OpenCollection creates a *docstore.Collection representing a DynamoDB collection.
 func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options) (*docstore.Collection, error) {

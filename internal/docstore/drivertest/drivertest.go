@@ -427,6 +427,7 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
+	// TODO(jba): test an increment-only update.
 	ctx := context.Background()
 	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B", "n": 3.5, "i": 1}
 	if err := coll.Put(ctx, doc); err != nil {
@@ -459,8 +460,6 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
-
-	// TODO(jba): test that empty mods is a no-op.
 
 	// Can't update a nonexistent doc.
 	if err := coll.Update(ctx, nonexistentDoc(), ds.Mods{"x": "y"}); err == nil {
@@ -962,14 +961,23 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			before: func(h1, h2 *HighScore) bool { return h1.Player > h2.Player },
 		},
 		{
-			name: "GameByPlayer",
-			q: coll.Query().Where("Game", "=", game1).Where("Player", ">", "").
+			name: "GameByPlayerAsc",
+			// We need a filter on Player, and it can't be the empty string (DynamoDB limitation).
+			// So pick any string that sorts less than all valid player names.
+			q: coll.Query().Where("Game", "=", game1).Where("Player", ">", ".").
 				OrderBy("Player", docstore.Ascending),
 			want:   func(h *HighScore) bool { return h.Game == game1 },
 			before: func(h1, h2 *HighScore) bool { return h1.Player < h2.Player },
 		},
+		{
+			// Same as above, but descending.
+			name: "GameByPlayerDesc",
+			q: coll.Query().Where("Game", "=", game1).Where("Player", ">", ".").
+				OrderBy("Player", docstore.Descending),
+			want:   func(h *HighScore) bool { return h.Game == game1 },
+			before: func(h1, h2 *HighScore) bool { return h1.Player > h2.Player },
+		},
 		// TODO(jba): add more OrderBy tests.
-
 		{
 			name:   "AllWithKeyFields",
 			q:      coll.Query(),
@@ -993,8 +1001,8 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := collectHighScores(ctx, tc.q.Get(ctx, tc.fields...))
-			if gcerrors.Code(err) == gcerrors.Unimplemented {
-				t.Skip("unimplemented")
+			if err != nil {
+				t.Fatal(err)
 			}
 			for _, g := range got {
 				if g.DocstoreRevision == nil {
@@ -1029,22 +1037,14 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			}
 		})
 	}
-
-	// For limit, we can't be sure which documents will be returned, only their count.
-	limitQ := coll.Query().Limit(2)
-	got := mustCollectHighScores(ctx, t, limitQ.Get(ctx))
-	if len(got) != 2 {
-		t.Errorf("got %v, wanted two documents", got)
-	}
-
-	// Errors are returned from the iterator's Next method.
-	// TODO(jba): move this test to docstore_test, because it's checked in docstore.go.
-	iter := coll.Query().Where("Game", "!=", "").Get(ctx) // != is disallowed
-	var h HighScore
-	err := iter.Next(ctx, &h)
-	if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
-		t.Errorf("got %v, want InvalidArgument", err)
-	}
+	t.Run("Limit", func(t *testing.T) {
+		// For limit, we can't be sure which documents will be returned, only their count.
+		limitQ := coll.Query().Limit(2)
+		got := mustCollectHighScores(ctx, t, limitQ.Get(ctx))
+		if len(got) != 2 {
+			t.Errorf("got %v, wanted two documents", got)
+		}
+	})
 }
 
 func testDeleteQuery(t *testing.T, coll *ds.Collection) {

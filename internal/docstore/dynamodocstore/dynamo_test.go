@@ -17,7 +17,10 @@ package dynamodocstore
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"net/url"
+	"sort"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -74,8 +77,84 @@ func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
 }
 
 func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{AllowScans: true})
+	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{
+		AllowScans: true,
+		RunQueryFallback: func(ctx context.Context, q *driver.Query, run RunQueryFunc) (driver.DocumentIterator, error) {
+			// If the query failed because it needs to do a scan and there is an OrderBy clause,
+			// then do the scan and sort the results locally.
+			// This isn't always the recommended approach for production code, but it can
+			// work if the collection is small.
+			if q.OrderByField == "" {
+				return nil, errors.New("RunQueryFallback cannot handle query")
+			}
+			var less func(int, int) bool
+			var hs []*drivertest.HighScore
+			switch q.OrderByField {
+			case "Player":
+				if q.OrderAscending {
+					less = func(i, j int) bool { return hs[i].Player < hs[j].Player }
+				} else {
+					less = func(i, j int) bool { return hs[i].Player > hs[j].Player }
+				}
+			default:
+				return nil, fmt.Errorf("RunQueryFallback cannot handle OrderByField %q", q.OrderByField)
+			}
+			q.OrderByField = ""
+			iter, err := run(ctx, q)
+			if err != nil {
+				return nil, err
+			}
+			defer iter.Stop()
+			hs, err = collectHighScores(ctx, iter)
+			if err != nil {
+				return nil, err
+			}
+			sort.Slice(hs, less)
+			return &highScoreSliceIterator{hs, 0}, nil
+		},
+	})
 }
+
+func collectHighScores(ctx context.Context, iter driver.DocumentIterator) ([]*drivertest.HighScore, error) {
+	var hs []*drivertest.HighScore
+	for {
+		var h drivertest.HighScore
+		doc, err := driver.NewDocument(&h)
+		if err != nil {
+			return nil, err
+		}
+		err = iter.Next(ctx, doc)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		hs = append(hs, &h)
+	}
+	return hs, nil
+}
+
+type highScoreSliceIterator struct {
+	hs   []*drivertest.HighScore
+	next int
+}
+
+func (it *highScoreSliceIterator) Next(ctx context.Context, doc driver.Document) error {
+	if it.next >= len(it.hs) {
+		return io.EOF
+	}
+	dest, ok := doc.Origin.(*drivertest.HighScore)
+	if !ok {
+		return fmt.Errorf("doc is %T, not HighScore", doc.Origin)
+	}
+	*dest = *it.hs[it.next]
+	it.next++
+	return nil
+}
+
+func (*highScoreSliceIterator) Stop()               {}
+func (*highScoreSliceIterator) As(interface{}) bool { return false }
 
 type verifyAs struct{}
 
