@@ -10,8 +10,11 @@ import (
 	"os"
 
 	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/azureblob"
 	_ "gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/memblob"
+	_ "gocloud.dev/blob/s3blob"
 )
 
 // TODO(rvangent): This file is user-visible, add many comments explaining
