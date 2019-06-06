@@ -49,9 +49,9 @@ Where command is one of the following:
 
   dropreplace   removes these directives.
 
-	setversion <version>
-	              sets 'required' version of modules to a given version formatted
-	              as vX.Y.Z
+  setversion <version>
+                sets 'required' version of modules to a given version formatted
+                as vX.Y.Z
 
   help          prints this usage message
 `
