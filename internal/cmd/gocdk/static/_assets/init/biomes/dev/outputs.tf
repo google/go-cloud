@@ -7,6 +7,8 @@ output "launch_environment" {
 	value {
 		# Example:
 		# FOO = "BAR"
+
+		# DO NOT REMOVE: DEMO URLs WILL BE INSERTED BELOW HERE
 	}
 }
 
