@@ -33,9 +33,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// generate_static converts the files in _static/ into constants in a new
-// file,
-//go:generate go run generate_static.go -- static.go
+// generate_static converts the files in static/_assets into constants in
+// the static package (in static/vfsdata.go).
+//go:generate go run generate_static.go
 
 func main() {
 	pctx, err := newOSProcessContext()
