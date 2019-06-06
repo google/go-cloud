@@ -150,16 +150,16 @@ fi;
 
 
 echo
-echo "Ensuring that gocdk static content is up to date..."
-tmpstaticgo=$(mktemp)
+echo "Ensuring that gocdk compiled assets are up to date..."
+tmpvfsdatago=$(mktemp)
 function cleanupstaticgo() {
-  rm -rf "$tmpstaticgo"
+  rm -rf "$tmpvfsdatago"
 }
 trap cleanupstaticgo EXIT
 pushd internal/cmd/gocdk/ &> /dev/null
-go run -mod=readonly generate_static.go -- "$tmpstaticgo" &> /dev/null
-( diff -u ./static.go - < "$tmpstaticgo" && echo "  OK" ) || {
-  echo "FAIL: gocdk static files are out of date; please run go generate in internal/cmd/gocdk and commit the updated static.go" && result=1
+go run -mod=readonly generate_static.go -- "$tmpvfsdatago" &> /dev/null
+( diff -u static/vfsdata.go - < "$tmpvfsdatago" && echo "  OK" ) || {
+  echo "FAIL: gocdk compiled assets are out of date; please run go generate in internal/cmd/gocdk and commit the updated static/vfsdata.go" && result=1
 }
 popd &> /dev/null
 

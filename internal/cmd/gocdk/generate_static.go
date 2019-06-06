@@ -14,8 +14,11 @@
 
 // +build tools
 
-// This script is called by "go generate". It converts the files in _static/
-// into constants in a new .go file.
+// This script is called by "go generate". It converts the files in
+// static/_assets into constants in static/vfsdata.go.
+//
+// It accepts an optional argument, the path to write the output to.
+// It is used by Travis to see if the file is up to date.
 package main
 
 import (
@@ -61,12 +64,12 @@ func main() {
 	flag.Parse()
 	outfile := flag.Arg(0)
 	if outfile == "" {
-		log.Fatalln("usage: generate_static <output filename>")
+		outfile = "static/vfsdata.go"
 	}
-	var fs http.FileSystem = zeroModTimeFS{http.Dir("./_static")}
+	var fs http.FileSystem = zeroModTimeFS{http.Dir("./static/_assets")}
 	err := vfsgen.Generate(fs, vfsgen.Options{
-		Filename:     outfile,
-		VariableName: "static", // output variable name
+		Filename:    outfile,
+		PackageName: "static",
 	})
 	if err != nil {
 		log.Fatalln(err)
