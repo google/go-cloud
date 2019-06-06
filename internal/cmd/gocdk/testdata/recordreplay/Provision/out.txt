@@ -17,6 +17,9 @@ $ cd myproj
 
 $ gocdk provision add dev blob/fileblob
 gocdk: Adding "blob/fileblob" to "dev"...
+gocdk:   added a new file "fileblob.tf" to your project
+gocdk:   added a Terraform provider "local" for creating a scratch directory to "main.tf"
+gocdk:   added a BLOB_BUCKET_URL variable to "outputs.tf"
 gocdk: Success!
 
 $ cd biomes

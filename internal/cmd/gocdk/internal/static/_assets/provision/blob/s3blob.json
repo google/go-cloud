@@ -1,0 +1,19 @@
+{
+  "Path": "main_awsprovider.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "provider \"aws\"",
+  "AddToDescription": "a Terraform provider for Amazon Web Services"
+}
+{
+  "Path": "mainlocal_awsregion.tf",
+  "AddTo": "main.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK LOCALS WILL BE INSERTED BELOW HERE",
+  "AddToSkipMarker": "aws_region =",
+  "AddToDescription": "an aws_region variable"
+}
+{
+  "Path": "outputs_url.tf",
+  "AddTo": "outputs.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE",
+  "AddToDescription": "a BLOB_BUCKET_URL variable"
+}

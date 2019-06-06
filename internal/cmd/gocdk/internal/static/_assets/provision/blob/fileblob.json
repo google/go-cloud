@@ -1,0 +1,12 @@
+{
+  "Path": "main_localprovider.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "provider \"local\"",
+  "AddToDescription": "a Terraform provider \"local\" for creating a scratch directory"
+}
+{
+  "Path": "outputs_url.tf",
+  "AddTo": "outputs.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE",
+  "AddToDescription": "a BLOB_BUCKET_URL variable"
+}

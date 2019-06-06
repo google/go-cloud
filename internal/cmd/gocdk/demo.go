@@ -16,9 +16,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"os"
 	"path"
 	"strings"
 
@@ -26,12 +23,6 @@ import (
 	"gocloud.dev/internal/cmd/gocdk/internal/static"
 	"golang.org/x/xerrors"
 )
-
-type demoInfo struct {
-	name       string // the portable API name
-	goDemoPath string // the path to the .go file to add to the project for static.Open
-	demoURL    string // the URL for the demo
-}
 
 // In sorted order.
 var allDemos = []string{"blob", "pubsub", "runtimevar", "secrets"}
@@ -97,37 +88,13 @@ func addDemo(ctx context.Context, pctx *processContext, demoToAdd string, force 
 func instantiateDemo(pctx *processContext, moduleRoot, demo string, force bool) error {
 	pctx.Logf("Adding %q...", demo)
 
-	// TODO(rvangent): Consider using materializeTemplateDir here. It can't
-	// be used right now because it treats the source files as templates;
-	// the demo .go files have embedded templates that shouldn't be
-	// processed at copy time.
-	// It would also need support for "force".
-
-	fileName := fmt.Sprintf("demo_%s.go", demo)
-	dstPath := path.Join(moduleRoot, fileName)
-	if !force {
-		if _, err := os.Stat(dstPath); err == nil {
-			return xerrors.Errorf("%q has already been added to your project. Use --force if you want to re-add it, overwriting previous files", demo)
-		}
+	opts := static.MaterializeOptions{
+		Force:  force,
+		Logger: pctx.errlog,
 	}
-	srcPath := fmt.Sprintf("/demo/%s/%s", demo, fileName)
-	srcFile, err := static.Open(srcPath)
-	if err != nil {
+	if err := static.Materialize(moduleRoot, path.Join("/demo", demo), &opts); err != nil {
 		return err
 	}
-	defer srcFile.Close()
-
-	destFile, err := os.Create(dstPath)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, srcFile)
-	if err != nil {
-		return err
-	}
-	pctx.Logf("  added %q to your project.", fileName)
 	pctx.Logf("Run 'gocdk serve' and visit http://localhost:8080/demo/%s to see the demo.", demo)
 	return nil
 }

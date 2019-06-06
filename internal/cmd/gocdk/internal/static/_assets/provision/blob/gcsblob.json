@@ -1,0 +1,32 @@
+{
+  "Path": "main_googleprovider.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "provider \"google\"",
+  "AddToDescription": "a Terraform provider for Google Cloud Platform"
+}
+{
+  "Path": "main_randomprovider.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "provider \"random\"",
+  "AddToDescription": "a Terraform provider for randomness"
+}
+{
+  "Path": "mainlocal_gcpproject.tf",
+  "AddTo": "main.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK LOCALS WILL BE INSERTED BELOW HERE",
+  "AddToSkipMarker": "gcp_project =",
+  "AddToDescription": "a gcp_project variable"
+}
+{
+  "Path": "mainlocal_storagelocation.tf",
+  "AddTo": "main.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK LOCALS WILL BE INSERTED BELOW HERE",
+  "AddToSkipMarker": "gcs_bucket_location =",
+  "AddToDescription": "a gcs_bucket_location variable"
+}
+{
+  "Path": "outputs_url.tf",
+  "AddTo": "outputs.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE",
+  "AddToDescription": "a BLOB_BUCKET_URL variable"
+}

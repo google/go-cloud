@@ -1,0 +1,37 @@
+{
+  "Path": "main_azureprovider.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "provider \"azurerm\"",
+  "AddToDescription": "a Terraform provider for Azure"
+}
+{
+  "Path": "main_randomprovider.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "provider \"random\"",
+  "AddToDescription": "a Terraform provider for randomness"
+}
+{
+  "Path": "main_randomsuffix.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "resource \"random_string\" \"azure_suffix\"",
+  "AddToDescription": "a resource for random Azure resource suffixes"
+}
+{
+  "Path": "main_resourcegroup.tf",
+  "AddTo": "main.tf",
+  "AddToSkipMarker": "resource \"azurerm_resource_group\" \"resource_group\"",
+  "AddToDescription": "a resource for for an Azure Resource Group"
+}
+{
+  "Path": "mainlocal_location.tf",
+  "AddTo": "main.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK LOCALS WILL BE INSERTED BELOW HERE",
+  "AddToSkipMarker": "azure_location =",
+  "AddToDescription": "an azure_location variable"
+}
+{
+  "Path": "outputs_url.tf",
+  "AddTo": "outputs.tf",
+  "AddToAfterMarker": "# DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE",
+  "AddToDescription": "BLOB_BUCKET_URL, AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_KEY variables"
+}
