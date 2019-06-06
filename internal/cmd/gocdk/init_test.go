@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -144,6 +145,83 @@ func TestInit(t *testing.T) {
 			t.Errorf("go build returned error: %v. Output:\n%s", err, output)
 		} else if _, err := os.Stat(filepath.Join(projectDir, exeName(projectName))); err != nil {
 			t.Errorf("could not stat built binary: %v", err)
+		}
+	})
+}
+func TestInferModulePath(t *testing.T) {
+	t.Run("NoGOPATHEntry", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", testTempDirPrefix)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := os.RemoveAll(dir); err != nil {
+				t.Error(err)
+			}
+		}()
+		ctx := context.Background()
+		pctx := &processContext{
+			workdir: dir,
+			env:     []string{},
+			stdin:   strings.NewReader(""),
+			stdout:  ioutil.Discard,
+			stderr:  ioutil.Discard,
+		}
+
+		fmt.Println(pctx.env)
+
+		const projectName = "myspecialproject"
+		if err := run(ctx, pctx, []string{"init", projectName}); err == nil {
+			t.Errorf("inferModulePath should error when --module-path is not" +
+				" supplied and GOPATH is empty")
+		}
+	})
+	t.Run("SingleGOPATHEntry", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", testTempDirPrefix)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := os.RemoveAll(dir); err != nil {
+				t.Error(err)
+			}
+		}()
+		ctx := context.Background()
+		pctx := &processContext{
+			workdir: dir,
+			env:     []string{"GOPATH=" + dir},
+			stdin:   strings.NewReader(""),
+			stdout:  ioutil.Discard,
+			stderr:  ioutil.Discard,
+		}
+		fmt.Println(pctx.env)
+		const projectName = "myspecialproject"
+		if err := run(ctx, pctx, []string{"init", projectName}); err != nil {
+			t.Errorf("inferModulePath errored: %+v", err)
+		}
+	})
+	t.Run("MultipleGOPATHEntries", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", testTempDirPrefix)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := os.RemoveAll(dir); err != nil {
+				t.Error(err)
+			}
+		}()
+		ctx := context.Background()
+		pctx := &processContext{
+			workdir: dir,
+			env:     []string{"GOPATH=" + dir + ":~/some/other/path"},
+			stdin:   strings.NewReader(""),
+			stdout:  ioutil.Discard,
+			stderr:  ioutil.Discard,
+		}
+		fmt.Println(pctx.env)
+		const projectName = "myspecialproject"
+		if err := run(ctx, pctx, []string{"init", projectName}); err == nil {
+			t.Errorf("inferModulePath errored: %+v", err)
 		}
 	})
 }
