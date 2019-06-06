@@ -14,9 +14,12 @@ gocdk: - `gocdk biome add` to configure launch settings
 
 $ cd myproj
 
+$ gocdk demo add foo
+Error: "foo" is not a supported demo; try 'gocdk demo list' to see available demos
+
 $ gocdk demo add blob
 gocdk: Adding "blob"...
-gocdk:   added "demo_blob.go" to your project.
+gocdk:   added a new file "demo_blob.go"
 gocdk: Run 'gocdk serve' and visit http://localhost:8080/demo/blob to see the demo.
 
 $ ls demo_blob.go

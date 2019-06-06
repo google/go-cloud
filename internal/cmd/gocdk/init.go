@@ -15,14 +15,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
-	slashpath "path"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/spf13/cobra"
 	"gocloud.dev/internal/cmd/gocdk/internal/static"
@@ -77,7 +73,18 @@ func doInit(ctx context.Context, pctx *processContext, dir, modpath string, allo
 		ProjectName: filepath.Base(projectDir),
 		ModulePath:  modpath,
 	}
-	if err := materializeTemplateDir(projectDir, "init", tmplValues); err != nil {
+	// Copy the whole /init directory to the new project. Two of the files
+	// are treated as templates.
+	actions, err := static.CopyDir("/init")
+	if err != nil {
+		return xerrors.Errorf("gocdk init: %w", err)
+	}
+	for _, a := range actions {
+		if a.SourcePath == "/init/go.mod" || a.SourcePath == "/init/Dockerfile" {
+			a.TemplateData = tmplValues
+		}
+	}
+	if err := static.Do(projectDir, actions, nil); err != nil {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
 	pctx.Logf("Project created at %s with:\n", projectDir)
@@ -89,54 +96,6 @@ func doInit(ctx context.Context, pctx *processContext, dir, modpath string, allo
 	pctx.Logf("- `gocdk demo` to test new APIs")
 	pctx.Logf("- `gocdk build` to build a Docker container")
 	pctx.Logf("- `gocdk biome add` to configure launch settings")
-	return nil
-}
-
-// TODO(rvangent): Consider having this log all of the file(s) it adds?
-func materializeTemplateDir(dst string, srcRoot string, data interface{}) error {
-	dir, err := static.Open(srcRoot)
-	if err != nil {
-		return xerrors.Errorf("materialize %s at %s: %w", srcRoot, dst, err)
-	}
-	infos, err := dir.Readdir(-1)
-	dir.Close()
-	if err != nil {
-		return xerrors.Errorf("materialize %s at %s: %w", srcRoot, dst, err)
-	}
-	if err := os.MkdirAll(dst, 0777); err != nil {
-		return xerrors.Errorf("materialize %s at %s: %w", srcRoot, dst, err)
-	}
-	for _, info := range infos {
-		name := info.Name()
-		currDst := filepath.Join(dst, name)
-		currSrc := slashpath.Join(srcRoot, name)
-		if info.IsDir() {
-			if err := materializeTemplateDir(currDst, currSrc, data); err != nil {
-				return err
-			}
-			continue
-		}
-		f, err := static.Open(currSrc)
-		if err != nil {
-			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
-		}
-		templateSource, err := ioutil.ReadAll(f)
-		f.Close()
-		if err != nil {
-			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
-		}
-		tmpl, err := template.New(name).Parse(string(templateSource))
-		if err != nil {
-			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
-		}
-		buf := new(bytes.Buffer)
-		if err := tmpl.Execute(buf, data); err != nil {
-			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
-		}
-		if err := ioutil.WriteFile(currDst, buf.Bytes(), 0666); err != nil {
-			return xerrors.Errorf("materialize %s at %s: %w", currSrc, currDst, err)
-		}
-	}
 	return nil
 }
 

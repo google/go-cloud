@@ -16,9 +16,9 @@ package main
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"gocloud.dev/internal/cmd/gocdk/internal/static"
 	"golang.org/x/xerrors"
 )
 
@@ -52,14 +52,13 @@ func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
 	if err != nil {
 		return xerrors.Errorf("biome add: %w", err)
 	}
-	dstPath := biomeDir(moduleRoot, newName)
-	data := struct {
-		ProjectName string
-	}{
-		ProjectName: filepath.Base(moduleRoot),
-	}
 
-	if err := materializeTemplateDir(dstPath, "biome", data); err != nil {
+	// Create a whole new directory, copied from /biome, into biomes/<newName>.
+	actions, err := static.CopyDir("/biome")
+	if err != nil {
+		return xerrors.Errorf("biome add: %w", err)
+	}
+	if err := static.Do(biomeDir(moduleRoot, newName), actions, nil); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
 	pctx.Logf("Success!")
