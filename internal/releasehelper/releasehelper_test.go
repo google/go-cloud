@@ -91,8 +91,8 @@ func Test(t *testing.T) {
 	}
 
 	replaceLines := []string{
-		"replace gocloud.dev => ../",
-		"replace gocloud.dev/submod => ../submod"}
+		"replace gocloud.dev => " + filepath.Clean("../"),
+		"replace gocloud.dev/submod => " + filepath.Clean("../submod")}
 
 	for _, line := range replaceLines {
 		if !strings.Contains(string(c), line) {
