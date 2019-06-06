@@ -28,6 +28,7 @@ import (
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -140,6 +141,14 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 	}
 	_, err := c.Header()
 	return err
+}
+
+func (v verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
+	var s *status.Status
+	if !c.ErrorAs(err, &s) {
+		return errors.New("Collection.ErrorAs failed")
+	}
+	return nil
 }
 
 func TestConformance(t *testing.T) {

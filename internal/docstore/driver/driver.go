@@ -68,6 +68,12 @@ type Collection interface {
 	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
+	// ErrorAs allows providers to expose provider-specific types for returned
+	// errors.
+	//
+	// See https://gocloud.dev/concepts/as/ for background information.
+	ErrorAs(err error, i interface{}) bool
+
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerr.ErrorCode

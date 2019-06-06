@@ -20,9 +20,12 @@ package mongodocstore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
+
+	"gocloud.dev/internal/gcerr"
 
 	"github.com/google/go-cmp/cmp"
 	"go.mongodb.org/mongo-driver/bson"
@@ -135,6 +138,19 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 	var c *mongo.Cursor
 	if !it.As(&c) {
 		return errors.New("DocumentIterator.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
+	var cmderr mongo.CommandError
+	var bwerr mongo.BulkWriteError
+	var bwexc mongo.BulkWriteException
+	if !c.ErrorAs(err, &cmderr) && !c.ErrorAs(err, &bwerr) && !c.ErrorAs(err, &bwexc) {
+		if e, ok := err.(*gcerr.Error); ok {
+			err = e.Unwrap()
+		}
+		return fmt.Errorf("Collection.ErrorAs failed, got %T", err)
 	}
 	return nil
 }
