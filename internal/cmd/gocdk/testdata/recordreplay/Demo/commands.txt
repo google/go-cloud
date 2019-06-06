@@ -1,0 +1,8 @@
+# Add fails when we're not in a module.
+gocdk demo add blob --> FAIL
+
+gocdk init myproj
+cd myproj
+
+gocdk demo add blob
+ls demo_blob.go
