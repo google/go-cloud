@@ -24,11 +24,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
-// TODO(eliben): add bumpversion command that bumps version by 1, or to a version
-// given on the command line
 var helpText string = `
 Helper tool for creating new releases of the Go CDK.
 
@@ -49,6 +48,10 @@ Where command is one of the following:
                 for testing.
 
   dropreplace   removes these directives.
+
+	setversion <version>
+	              sets 'required' version of modules to a given version formatted
+	              as vX.Y.Z
 
   help          prints this usage message
 `
@@ -166,6 +169,20 @@ func gomodDropReplace(path string) {
 	})
 }
 
+func gomodSetVersion(path string, v string) {
+	runOnGomod(path, func(gomodPath, mod, modPath string) {
+		cmdCheck(fmt.Sprintf("go mod edit -require=%s@%s %s", mod, v, gomodPath))
+	})
+}
+
+func validSemanticVersion(v string) bool {
+	match, err := regexp.MatchString(`v\d+\.\d+\.\d+`, v)
+	if err != nil {
+		return false
+	}
+	return match
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		printHelp()
@@ -181,6 +198,14 @@ func main() {
 		gomodHandler = gomodAddReplace
 	case "dropreplace":
 		gomodHandler = gomodDropReplace
+	case "setversion":
+		if len(os.Args) < 3 || !validSemanticVersion(os.Args[2]) {
+			printHelp()
+			os.Exit(1)
+		}
+		gomodHandler = func(path string) {
+			gomodSetVersion(path, os.Args[2])
+		}
 	default:
 		printHelp()
 		os.Exit(1)
