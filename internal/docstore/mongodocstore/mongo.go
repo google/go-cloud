@@ -23,6 +23,7 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
+//
 // As
 //
 // mongodocstore exposes the following types for As:
@@ -32,11 +33,17 @@
 // - Query.BeforeQuery: *options.FindOptions
 // - DocumentIterator: *mongo.Cursor
 //
-// Docstore types not supported by the Go mongo client, go.mongodb.org/mongo-driver/mongo:
-// TODO(jba): write
 //
-// MongoDB types not supported by Docstore:
-// TODO(jba): write
+// Special Considerations
+//
+// MongoDB represents times to millisecond precision, while Go's time.Time type has
+// nanosecond precision. To save time.Times to MongoDB without loss of precision,
+// save the result of calling  UnixNano on the time.
+//
+// The official Go driver for MongoDB, go.mongodb.org/mongo-driver/mongo, lowercases
+// struct field names; other docstore drivers do not. This means that you have to choose
+// between interoperating with the MongoDB driver and interoperating with other docstore drivers.
+// See Options.LowercaseFields for more information.
 package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
 // MongoDB reference manual: https://docs.mongodb.com/manual
@@ -47,12 +54,7 @@ package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"net/url"
-	"os"
 	"strings"
-	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -63,38 +65,6 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
 )
-
-func init() {
-	docstore.DefaultURLMux().RegisterCollection(Scheme, new(defaultDialer))
-}
-
-// defaultDialer dials a default Mongo server based on the environment variable
-// MONGO_SERVER_URL.
-type defaultDialer struct {
-	init   sync.Once
-	opener *URLOpener
-	err    error
-}
-
-func (o *defaultDialer) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
-	o.init.Do(func() {
-		serverURL := os.Getenv("MONGO_SERVER_URL")
-		if serverURL == "" {
-			o.err = errors.New("MONGO_SERVER_URL environment variable is not set")
-			return
-		}
-		client, err := Dial(ctx, serverURL)
-		if err != nil {
-			o.err = fmt.Errorf("failed to dial default Mongo server at %q: %v", serverURL, err)
-			return
-		}
-		o.opener = &URLOpener{Client: client}
-	})
-	if o.err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
-	}
-	return o.opener.OpenCollectionURL(ctx, u)
-}
 
 // Dial returns a new mongoDB client that is connected to the server URI.
 func Dial(ctx context.Context, uri string) (*mongo.Client, error) {
@@ -112,47 +82,6 @@ func Dial(ctx context.Context, uri string) (*mongo.Client, error) {
 	return client, nil
 }
 
-// Scheme is the URL scheme mongodocstore registers its URLOpener under on
-// docstore.DefaultMux.
-const Scheme = "mongo"
-
-// URLOpener opens URLs like "mongo://mydb/mycollection".
-// See https://docs.mongodb.com/manual/reference/limits/#naming-restrictions for
-// naming restrictions.
-//
-// The URL Host is used as the database name.
-// The URL Path is used as the collection name.
-//
-// No query parameters are supported.
-type URLOpener struct {
-	// A Client is a MongoDB client that performs operations on the db, must be
-	// non-nil.
-	Client *mongo.Client
-
-	// Options specifies the options to pass to OpenCollection.
-	Options Options
-}
-
-// OpenCollectionURL opens the Collection URL.
-func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
-	q := u.Query()
-	idField := q.Get("id_field")
-	q.Del("id_field")
-	for param := range q {
-		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
-	}
-
-	dbName := u.Host
-	if dbName == "" {
-		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Host (database name)", u)
-	}
-	collName := strings.TrimPrefix(u.Path, "/")
-	if collName == "" {
-		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Path (collection name)", u)
-	}
-	return OpenCollection(o.Client.Database(dbName).Collection(collName), idField, &o.Options)
-}
-
 type collection struct {
 	coll          *mongo.Collection
 	idField       string
@@ -162,8 +91,19 @@ type collection struct {
 }
 
 type Options struct {
-	// Lowercase all field names for document encoding, field selection, update modifications
-	// and queries.
+	// Lowercase all field names for document encoding, field selection, update
+	// modifications and queries.
+	//
+	// If false (the default), then struct fields and MongoDB document fields will
+	// have the same names. For example, a struct field F will correspond to a
+	// MongoDB document field "F". This setting matches the behavior of other
+	// docstore providers, making code portable across providers.
+	//
+	// If true, struct fields correspond to lower-cased MongoDB document fields. The
+	// struct field F will correspond to the MongoDB document field "f", for
+	// instance. Use this to make code that uses this package interoperate with code
+	// that uses the official Go client for MongoDB,
+	// go.mongodb.org/mongo-driver/mongo, which lowercases field names.
 	LowercaseFields bool
 }
 
@@ -258,7 +198,7 @@ type indexedError = struct {
 
 func (c *collection) runGets(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
 	// TODO(shantuo): figure out a reasonable batch size, there is no hard limit on
-	// the item number or filter sting length. The limit for bulk write batch size
+	// the item number or filter string length. The limit for bulk write batch size
 	// is 100,000.
 	for _, group := range driver.GroupByFieldPath(gets) {
 		c.bulkFind(ctx, group, errs, opts)
