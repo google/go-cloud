@@ -45,7 +45,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	"sync"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
@@ -84,6 +83,11 @@ type Options struct {
 	// The name of the field holding the document revision.
 	// Defaults to docstore.RevisionField.
 	RevisionField string
+
+	// The maximum number of RPCs that can be in progress for a single call to
+	// ActionList.Do.
+	// If less than 1, there is no limit.
+	MaxOutstandingActionRPCs int
 }
 
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
@@ -179,11 +183,22 @@ func (c *collection) RevisionField() string {
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
 	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	calls := c.buildCommitCalls(writes, errs)
+	// runGets does not issue concurrent RPCs, so it doesn't need a throttle.
 	c.runGets(ctx, beforeGets, errs, opts)
-	ch := make(chan struct{})
-	go func() { defer close(ch); c.runWrites(ctx, writes, errs, opts) }()
+	t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
+	for _, call := range calls {
+		call := call
+		t.Acquire()
+		go func() {
+			defer t.Release()
+			c.doCommitCall(ctx, call, errs, opts)
+		}()
+	}
+	t.Acquire()
 	c.runGets(ctx, gets, errs, opts)
-	<-ch
+	t.Release()
+	t.Wait()
 	c.runGets(ctx, afterGets, errs, opts)
 	return driver.NewActionListError(errs)
 }
@@ -277,9 +292,8 @@ type commitCall struct {
 	newNames []string         // new names for Create; parallel to actions
 }
 
-// runWrites executes all the actions in a single RPC. The actions are done atomically,
-// so either they all succeed or they all fail.
-func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+// Construct a set of concurrently runnable calls to Commit.
+func (c *collection) buildCommitCalls(actions []*driver.Action, errs []error) []*commitCall {
 	// Convert each action to one or more writes, collecting names for newly created
 	// documents along the way. Divide writes into those with preconditions and those without.
 	// Writes without preconditions can't fail, so we can execute them all in one Commit RPC.
@@ -304,19 +318,10 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action, er
 			})
 		}
 	}
-	// Run the commit calls concurrently.
-	// TODO(jba): limit number of outstanding RPCs.
-	calls := append(pCalls, nCall)
-	var wg sync.WaitGroup
-	for _, call := range calls {
-		call := call
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			c.doCommitCall(ctx, call, errs, opts)
-		}()
+	if len(nCall.writes) == 0 {
+		return pCalls
 	}
-	wg.Wait()
+	return append(pCalls, nCall)
 }
 
 // Convert an action to one or more Firestore Write protos.

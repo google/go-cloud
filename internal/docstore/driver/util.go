@@ -17,6 +17,7 @@ package driver
 import (
 	"reflect"
 	"sort"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -165,4 +166,45 @@ func FieldPathsEqual(fp1, fp2 []string) bool {
 // This is a convenience for FieldPathsEqual(fp, []string{s}).
 func FieldPathEqualsField(fp []string, s string) bool {
 	return len(fp) == 1 && fp[0] == s
+}
+
+// Throttle is used to limit the number of outstanding activities, like RPCs.
+// It acts like a combination of a semaphore and a WaitGroup.
+type Throttle struct {
+	c  chan struct{} // token semaphore
+	wg sync.WaitGroup
+}
+
+// NewThrottle returns a Throttle that will allow max calls to Acquire that
+// are not matched with Release calls before blocking.
+// If max is <= 0, there is no throttling: Acquire always returns immediately.
+func NewThrottle(max int) *Throttle {
+	t := &Throttle{}
+	if max > 0 {
+		t.c = make(chan struct{}, max)
+	}
+	return t
+}
+
+// Acquire blocks until a token is available, then acquires it and returns.
+// Acquire is deliberately not sensitive to context.Context, because it assumes
+// that whatever acquires a token will be context-sensitive, and thus will release
+// the token when the context is done.
+func (t *Throttle) Acquire() {
+	t.wg.Add(1)
+	if t.c != nil {
+		t.c <- struct{}{}
+	}
+}
+
+// Release releases a token obtained by Acquire.
+func (t *Throttle) Release() {
+	if t.c != nil {
+		<-t.c
+	}
+	t.wg.Done()
+}
+
+func (t *Throttle) Wait() {
+	t.wg.Wait()
 }
