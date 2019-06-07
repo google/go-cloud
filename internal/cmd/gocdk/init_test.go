@@ -149,81 +149,67 @@ func TestInit(t *testing.T) {
 	})
 }
 func TestInferModulePath(t *testing.T) {
-	t.Run("NoGOPATHEntry", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", testTempDirPrefix)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error(err)
-			}
-		}()
-		ctx := context.Background()
-		pctx := &processContext{
-			workdir: dir,
-			env:     []string{},
-			stdin:   strings.NewReader(""),
-			stdout:  ioutil.Discard,
-			stderr:  ioutil.Discard,
-		}
+	testCases := []struct {
+		name       string
+		testGOPATH func(string) string
+		wantErr    bool
+	}{
+		{
+			"no GOPATH entry",
+			func(dir string) string {
+				return ""
+			},
+			true,
+		},
+		{
+			"single GOPATH entry",
+			func(dir string) string {
+				return "GOPATH=" + dir
+			},
+			false,
+		},
+		{
+			"multiple GOPATH entries",
+			func(dir string) string {
+				multiPath := "GOPATH=" + dir + ":" + filepath.Join("", "some", "other", "path")
+				fmt.Println("INSIDE--" + multiPath)
+				return multiPath
+			},
+			false,
+		},
+	}
 
-		fmt.Println(pctx.env)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, err := ioutil.TempDir("", testTempDirPrefix)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := os.RemoveAll(dir); err != nil {
+					t.Error(err)
+				}
+			}()
 
-		const projectName = "myspecialproject"
-		if err := run(ctx, pctx, []string{"init", projectName}); err == nil {
-			t.Errorf("inferModulePath should error when --module-path is not" +
-				" supplied and GOPATH is empty")
-		}
-	})
-	t.Run("SingleGOPATHEntry", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", testTempDirPrefix)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error(err)
+			ctx := context.Background()
+			pctx := newTestProcessContext(dir)
+			pctx.env = []string{tc.testGOPATH(dir)}
+			fmt.Println("FROM SET ENV " + pctx.env[0])
+
+			err = run(ctx, pctx, []string{"init", "myspecialproject"})
+
+			switch tc.wantErr {
+			case true:
+				if err == nil {
+					t.Errorf("got nil error, want non-nil error")
+				}
+			case false:
+				if err != nil {
+					t.Errorf("inferModulePath errored: %+v", err)
+				}
 			}
-		}()
-		ctx := context.Background()
-		pctx := &processContext{
-			workdir: dir,
-			env:     []string{"GOPATH=" + dir},
-			stdin:   strings.NewReader(""),
-			stdout:  ioutil.Discard,
-			stderr:  ioutil.Discard,
-		}
-		fmt.Println(pctx.env)
-		const projectName = "myspecialproject"
-		if err := run(ctx, pctx, []string{"init", projectName}); err != nil {
-			t.Errorf("inferModulePath errored: %+v", err)
-		}
-	})
-	t.Run("MultipleGOPATHEntries", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", testTempDirPrefix)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := os.RemoveAll(dir); err != nil {
-				t.Error(err)
-			}
-		}()
-		ctx := context.Background()
-		pctx := &processContext{
-			workdir: dir,
-			env:     []string{"GOPATH=" + dir + ":~/some/other/path"},
-			stdin:   strings.NewReader(""),
-			stdout:  ioutil.Discard,
-			stderr:  ioutil.Discard,
-		}
-		fmt.Println(pctx.env)
-		const projectName = "myspecialproject"
-		if err := run(ctx, pctx, []string{"init", projectName}); err == nil {
-			t.Errorf("inferModulePath errored: %+v", err)
-		}
-	})
+		})
+	}
 }
 
 func exeName(name string) string {
