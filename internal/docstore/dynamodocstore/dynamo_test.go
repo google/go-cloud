@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	gcaws "gocloud.dev/aws"
@@ -119,11 +120,8 @@ func collectHighScores(ctx context.Context, iter driver.DocumentIterator) ([]*dr
 	var hs []*drivertest.HighScore
 	for {
 		var h drivertest.HighScore
-		doc, err := driver.NewDocument(&h)
-		if err != nil {
-			return nil, err
-		}
-		err = iter.Next(ctx, doc)
+		doc := drivertest.MustDocument(&h)
+		err := iter.Next(ctx, doc)
 		if err == io.EOF {
 			break
 		}
@@ -198,6 +196,14 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 	var qo *dyn.QueryOutput
 	if !it.As(&so) && !it.As(&qo) {
 		return errors.New("DocumentIterator.As failed")
+	}
+	return nil
+}
+
+func (v verifyAs) ErrorCheck(k *docstore.Collection, err error) error {
+	var e awserr.Error
+	if !k.ErrorAs(err, &e) {
+		return errors.New("Collection.ErrorAs failed")
 	}
 	return nil
 }

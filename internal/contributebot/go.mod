@@ -9,10 +9,10 @@ require (
 	github.com/google/wire v0.2.2
 	go.opencensus.io v0.22.0
 	gocloud.dev v0.15.0
-	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0
-	golang.org/x/sys v0.0.0-20190530182044-ad28b68e88f1
-	google.golang.org/api v0.5.0
-	google.golang.org/appengine v1.6.0
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/sys v0.0.0-20190606203320-7fc4e5ec1444
+	google.golang.org/api v0.6.0
+	google.golang.org/appengine v1.6.1
 )
 
 replace gocloud.dev => ../../
