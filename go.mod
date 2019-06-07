@@ -19,16 +19,15 @@ require (
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
 	contrib.go.opencensus.io/exporter/stackdriver v0.12.1
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
-	github.com/Azure/azure-amqp-common-go v1.1.4
+	github.com/Azure/azure-amqp-common-go/v2 v2.0.0
 	github.com/Azure/azure-pipeline-go v0.1.9
 	github.com/Azure/azure-sdk-for-go v30.0.0+incompatible
-	github.com/Azure/azure-service-bus-go v0.7.0
+	github.com/Azure/azure-service-bus-go v0.8.0
 	github.com/Azure/azure-storage-blob-go v0.6.0
 	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190605020000-c4ba1fdf4d36
 	github.com/aws/aws-sdk-go v1.19.45
 	github.com/dimchansky/utfbom v1.1.0 // indirect
-	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-stack/stack v1.8.0 // indirect
@@ -43,8 +42,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.9.0 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/tidwall/pretty v1.0.0 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
