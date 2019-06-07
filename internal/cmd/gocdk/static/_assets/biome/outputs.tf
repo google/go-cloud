@@ -5,7 +5,10 @@
 # which can be read inside your program using os.Getenv.
 output "launch_environment" {
   value {
-    # Example:  # FOO = "BAR"  # DO NOT REMOVE: DEMO URLs WILL BE INSERTED BELOW HERE
+    # Example:
+    # FOO = "BAR"
+
+    # DO NOT REMOVE: DEMO URLs WILL BE INSERTED BELOW HERE
   }
 }
 
