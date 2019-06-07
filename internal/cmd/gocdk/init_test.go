@@ -171,7 +171,7 @@ func TestInferModulePath(t *testing.T) {
 		{
 			"multiple GOPATH entries",
 			func(dir string) string {
-				multiPath := "GOPATH=" + dir + ":" + filepath.Join("", "some", "other", "path")
+				multiPath := "GOPATH=" + dir + string(filepath.ListSeparator) + filepath.Join("", "some", "other", "path")
 				fmt.Println("INSIDE--" + multiPath)
 				return multiPath
 			},

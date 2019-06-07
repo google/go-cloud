@@ -144,7 +144,6 @@ func materializeTemplateDir(dst string, srcRoot string, data interface{}) error 
 // inferModulePath will check the default GOPATH to attempt to infer the module
 // import path for the project.
 func inferModulePath(ctx context.Context, pctx *processContext, projectDir string) (string, error) {
-	// TODO(issue #2016): Add tests for init behavior when module-path is not given.
 	cmd := pctx.NewCommand(ctx, "", "go", "env", "GOPATH")
 	// Since we're going to call Output, we need to make sure cmd.Stdout is nil
 	// so Output can collect stdout.
