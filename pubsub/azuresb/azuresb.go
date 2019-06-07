@@ -64,10 +64,10 @@ import (
 	"sync"
 	"time"
 
-	common "github.com/Azure/azure-amqp-common-go"
-	"github.com/Azure/azure-amqp-common-go/cbs"
-	"github.com/Azure/azure-amqp-common-go/rpc"
-	"github.com/Azure/azure-amqp-common-go/uuid"
+	common "github.com/Azure/azure-amqp-common-go/v2"
+	"github.com/Azure/azure-amqp-common-go/v2/cbs"
+	"github.com/Azure/azure-amqp-common-go/v2/rpc"
+	"github.com/Azure/azure-amqp-common-go/v2/uuid"
 	servicebus "github.com/Azure/azure-service-bus-go"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
@@ -445,10 +445,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	go func() {
 		s.sbSub.Receive(rctx, servicebus.HandlerFunc(func(innerctx context.Context, sbmsg *servicebus.Message) error {
 			metadata := map[string]string{}
-			sbmsg.ForeachKey(func(k, v string) error {
-				metadata[k] = v
-				return nil
-			})
+			for key, value := range sbmsg.GetKeyValues() {
+				if strVal, ok := value.(string); ok {
+					metadata[key] = strVal
+				}
+			}
 			messages = append(messages, &driver.Message{
 				Body:     sbmsg.Data,
 				Metadata: metadata,

@@ -87,7 +87,7 @@ while read -r path || [[ -n "$path" ]]; do
     fi
   done
   popd &> /dev/null
-done < <( sed -e '/^#/d' -e '/^$/d' allmodules )
+done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
 
 if [ ${#incompatible_change_pkgs[@]} -eq 0 ]; then
   # No incompatible changes, we are good.

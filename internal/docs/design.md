@@ -204,6 +204,28 @@ needed). However, this would result in inconsistent names over time (e.g., some
 packages would expose `New` with an `Options`, while others would expose
 `NewWithOptions`).
 
+### Compound IDs
+
+Many cloud providers have resource IDs that are made up of subcomponents in
+some well-defined syntax. For example, [GCP KMS key IDs][] take the form
+`projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]`.
+We call these _compound IDs_.
+
+There are two broad compound ID usage patterns we have observed:
+
+1. Applications will keep resources in the same location, so the application
+   will build the ID from the subcomponents rather than passing the entire
+   resource ID around.
+2. Applications will pass a verbatim string from configuration down to the
+   API, since this is what was easily copy-pasteable from the cloud console UI.
+
+Go CDK constructors that take in compound IDs should take in a `string` with the
+full compound ID. Helper functions to build these compound IDs from
+subcomponents may be provided as needed. URL openers (described below) should
+prefer to use the full compound ID in their URL format.
+
+[GCP KMS key IDs]: https://cloud.google.com/kms/docs/object-hierarchy#key
+
 ### URLs
 
 To enable the [Backing services factor][] of a Twelve-Factor Application, Go

@@ -19,7 +19,7 @@
 # form that Travis will verify (see check_mod_tidy.sh).
 set -euo pipefail
 
-sed -e '/^#/d' -e '/^$/d' allmodules | while read -r path || [[ -n "$path" ]]; do
+sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' | while read -r path || [[ -n "$path" ]]; do
   echo "cleaning up $path"
   ( cd "$path" && go mod tidy && go list -deps ./... &> /dev/null || echo "  FAILED!")
 done
