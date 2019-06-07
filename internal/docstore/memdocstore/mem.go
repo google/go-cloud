@@ -146,6 +146,10 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	return key, nil
 }
 
+func (c *collection) RevisionField() string {
+	return c.opts.RevisionField
+}
+
 // ErrorCode implements driver.ErrorCode.
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 	return gcerrors.Code(err)

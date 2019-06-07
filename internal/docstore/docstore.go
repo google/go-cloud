@@ -52,10 +52,17 @@ func newCollection(d driver.Collection) *Collection {
 	return &Collection{driver: d}
 }
 
-// RevisionField is the name of the document field used for document revision
+// RevisionField is the default name of the document field used for document revision
 // information, to implement optimistic locking.
 // See the Revisions section of the package documentation.
 const RevisionField = "DocstoreRevision"
+
+func (c *Collection) revisionField() string {
+	if r := c.driver.RevisionField(); r != "" {
+		return r
+	}
+	return RevisionField
+}
 
 // A FieldPath is a dot-separated sequence of UTF-8 field names. Examples:
 //   room
@@ -115,9 +122,7 @@ func (l *ActionList) add(a *Action) *ActionList {
 // If the document doesn't have key fields, key fields with unique values will be
 // created and doc will be populated with them.
 //
-// If doc is a map, or a struct with a revision field, then the revision field will
-// be set to the revision of the newly created document.
-// TODO(jba): treat zero values for struct fields as not present?
+// The revision field of the document must be absent or nil.
 //
 // Except for setting the revision field and possibly setting the key fields, the doc
 // argument is not modified.
@@ -125,10 +130,11 @@ func (l *ActionList) Create(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Create, doc: doc})
 }
 
-// Replace adds an action that replaces a document to the given ActionList, and returns the ActionList.
-// The key fields of the doc argument must be set.
-// The document must already exist; an error with code NotFound is returned if it
-// does not. (See gocloud.dev/gcerrors for more on error codes.)
+// Replace adds an action that replaces a document to the given ActionList, and
+// returns the ActionList. The key fields of the doc argument must be set. The
+// document must already exist; an error with code NotFound is returned if it does
+// not (or possibly FailedPrecondition, if the doc argument has a non-nil revision).
+// (See gocloud.dev/gcerrors for more on error codes.)
 //
 // See the Revisions section of the package documentation for how revisions are
 // handled.
@@ -138,7 +144,11 @@ func (l *ActionList) Replace(doc Document) *ActionList {
 
 // Put adds an action that adds or replaces a document to the given ActionList, and returns the ActionList.
 // The key fields must be set.
-// The document may or may not already exist.
+//
+// If the revision field is non-nil, then Put behaves exactly like Replace, returning
+// an error if the document does not exist. Otherwise, Put will create the document
+// if it does not exist.
+//
 // See the Revisions section of the package documentation for how revisions are
 // handled.
 func (l *ActionList) Put(doc Document) *ActionList {
@@ -342,7 +352,16 @@ func (c *Collection) toDriverAction(a *Action) (*driver.Action, error) {
 	if reflect.ValueOf(key).Kind() == reflect.Ptr {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "keys cannot be pointers")
 	}
-	d := &driver.Action{Kind: a.kind, Doc: ddoc, Key: key}
+	rev, _ := ddoc.GetField(c.revisionField())
+	if a.kind == driver.Create && rev != nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "cannot create a document with a revision field")
+	}
+	kind := a.kind
+	if kind == driver.Put && rev != nil {
+		// A Put with a revision field is equivalent to a Replace.
+		kind = driver.Replace
+	}
+	d := &driver.Action{Kind: kind, Doc: ddoc, Key: key}
 	if a.fieldpaths != nil {
 		d.FieldPaths, err = parseFieldPaths(a.fieldpaths)
 		if err != nil {

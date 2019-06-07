@@ -133,28 +133,3 @@ func TestImageRefForCloudRun(t *testing.T) {
 		})
 	}
 }
-
-func TestParseImageRef(t *testing.T) {
-	tests := []struct {
-		s      string
-		name   string
-		tag    string
-		digest string
-	}{
-		{"", "", "", ""},
-		{"foo", "foo", "", ""},
-		{"foo:bar", "foo", ":bar", ""},
-		{"foo:bar@sha256:xyzzy", "foo", ":bar", "@sha256:xyzzy"},
-		{":foo", "", ":foo", ""},
-		{"foo:", "foo", ":", ""},
-		{"example.com:8080/foo/bar", "example.com:8080/foo/bar", "", ""},
-		{"example.com:8080/foo/bar:baz", "example.com:8080/foo/bar", ":baz", ""},
-		{"example:!foo", "example:!foo", "", ""},
-	}
-	for _, test := range tests {
-		name, tag, digest := parseImageRef(test.s)
-		if name != test.name || tag != test.tag || digest != test.digest {
-			t.Errorf("parseImageRef(%q) = %q, %q, %q; want %q, %q, %q", test.s, name, tag, digest, test.name, test.tag, test.digest)
-		}
-	}
-}

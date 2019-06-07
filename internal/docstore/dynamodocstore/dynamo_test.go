@@ -120,11 +120,8 @@ func collectHighScores(ctx context.Context, iter driver.DocumentIterator) ([]*dr
 	var hs []*drivertest.HighScore
 	for {
 		var h drivertest.HighScore
-		doc, err := driver.NewDocument(&h)
-		if err != nil {
-			return nil, err
-		}
-		err = iter.Next(ctx, doc)
+		doc := drivertest.MustDocument(&h)
+		err := iter.Next(ctx, doc)
 		if err == io.EOF {
 			break
 		}

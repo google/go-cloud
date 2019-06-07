@@ -231,11 +231,6 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	named := docmap{KeyField: "testCreate1", "b": true}
 	unnamed := docmap{"b": false}
-	// Attempt to clean up
-	defer func() {
-		_ = coll.Actions().Delete(named).Delete(unnamed).Do(ctx)
-	}()
-
 	createThenGet := func(doc docmap) {
 		t.Helper()
 		checkNoRevisionField(t, doc)
@@ -259,10 +254,12 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	}
 
 	// Can't create an existing doc.
-	// TODO(jba): test for NotFound code
-	if err := coll.Create(ctx, docmap{KeyField: "testCreate1"}); err == nil {
-		t.Error("got nil, want error")
-	}
+	err := coll.Create(ctx, docmap{KeyField: named[KeyField]})
+	checkCode(t, err, gcerrors.AlreadyExists)
+
+	// Can't create a doc with a revision field.
+	err = coll.Create(ctx, docmap{KeyField: "testCreate2", docstore.RevisionField: 0})
+	checkCode(t, err, gcerrors.InvalidArgument)
 }
 
 func testPut(t *testing.T, coll *ds.Collection) {
@@ -291,11 +288,18 @@ func testPut(t *testing.T, coll *ds.Collection) {
 	checkNoRevisionField(t, named)
 	must(coll.Put(ctx, named))
 	checkHasRevisionField(t, named)
+	rev := named[ds.RevisionField]
 	must(coll.Get(ctx, got))
 	if diff := cmpDiff(got, named); diff != "" {
 		t.Fatalf(diff)
 	}
 
+	// Putting a doc with a revision field is the same as Replace, meaning
+	// it will fail if the document doesn't exist.
+	err := coll.Put(ctx, docmap{KeyField: "testPut2", ds.RevisionField: rev})
+	if c := gcerrors.Code(err); c != gcerrors.NotFound && c != gcerrors.FailedPrecondition {
+		t.Errorf("got %v, want NotFound or FailedPrecondition", err)
+	}
 	t.Run("revision", func(t *testing.T) {
 		testRevisionField(t, coll, func(dm docmap) error {
 			return coll.Put(ctx, dm)
@@ -325,9 +329,7 @@ func testReplace(t *testing.T, coll *ds.Collection) {
 		t.Fatalf(diff)
 	}
 	// Can't replace a nonexistent doc.
-	if err := coll.Replace(ctx, nonexistentDoc()); err == nil {
-		t.Fatal("got nil, want error")
-	}
+	checkCode(t, coll.Replace(ctx, nonexistentDoc()), gcerrors.NotFound)
 
 	t.Run("revision", func(t *testing.T) {
 		testRevisionField(t, coll, func(dm docmap) error {
@@ -400,9 +402,7 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	}
 
 	err := coll.Get(ctx, nonexistentDoc())
-	if gcerrors.Code(err) != gcerrors.NotFound {
-		t.Errorf("Get of nonexistent doc: got %v, want NotFound", err)
-	}
+	checkCode(t, err, gcerrors.NotFound)
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -433,9 +433,7 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
-	if err := coll.Delete(ctx, got); gcerrors.Code(err) != gcerrors.FailedPrecondition {
-		t.Errorf("got %v, want FailedPrecondition", err)
-	}
+	checkCode(t, coll.Delete(ctx, got), gcerrors.FailedPrecondition)
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
@@ -480,9 +478,7 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 
 	// Bad increment value.
 	err := coll.Update(ctx, doc, ds.Mods{"x": ds.Increment("3")})
-	if gcerrors.Code(err) != gcerrors.InvalidArgument {
-		t.Errorf("bad increment: got %v, want InvalidArgument", err)
-	}
+	checkCode(t, err, gcerrors.InvalidArgument)
 
 	t.Run("revision", func(t *testing.T) {
 		testRevisionField(t, coll, func(dm docmap) error {
@@ -1118,10 +1114,6 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 
 func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	if err := coll.Query().Update(ctx, docstore.Mods{"a": 1}); gcerrors.Code(err) == gcerrors.Unimplemented {
-		t.Skip("update queries not yet implemented")
-	}
-
 	addQueryDocuments(t, coll)
 
 	err := coll.Query().Where("Player", "=", "fran").Update(ctx, docstore.Mods{"Score": 13, "Time": nil})
@@ -1343,9 +1335,10 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	} {
 		actions.Get(doc)
 	}
+	docs[4][ds.RevisionField] = nil
 	actions.Create(docs[4]) // create existing doc
 	actions.Put(docs[5])
-	// TODO(jba): reconsider why the following line is necessary for dynamo but not the others.
+	// TODO(jba): Understand why the following line is necessary for dynamo but not the others.
 	docs[0][ds.RevisionField] = nil
 	actions.Delete(docs[0]) // delete nonexistent doc
 	err := actions.Do(ctx)
@@ -1452,4 +1445,11 @@ func clone(m docmap) docmap {
 func cmpDiff(a, b interface{}, opts ...cmp.Option) string {
 	// Firestore revisions can be protos.
 	return cmp.Diff(a, b, append([]cmp.Option{cmp.Comparer(proto.Equal)}, opts...)...)
+}
+
+func checkCode(t *testing.T, err error, code gcerrors.ErrorCode) {
+	t.Helper()
+	if gcerrors.Code(err) != code {
+		t.Errorf("got %v, want %s", err, code)
+	}
 }

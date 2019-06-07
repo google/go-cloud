@@ -166,7 +166,7 @@ func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
 	c.Dir = pctx.workdir
 	output, err := c.Output()
 	if err != nil {
-		return "", xerrors.Errorf("couldn't find a Go module root at or above %s: %w", pctx.workdir, err)
+		return "", xerrors.Errorf("couldn't find a Go module root at or above %s", pctx.workdir)
 	}
 	output = bytes.TrimSuffix(output, []byte("\n"))
 	if len(output) == 0 {

@@ -35,6 +35,10 @@ type Collection interface {
 	// be the user-supplied Go value.
 	Key(Document) (interface{}, error)
 
+	// RevisionField returns the name of the field used to hold revisions.
+	// If the empty string is returned, docstore.RevisionField will be used.
+	RevisionField() string
+
 	// RunActions executes a slice of actions.
 	//
 	// If unordered is false, it must appear as if the actions were executed in the
