@@ -112,11 +112,12 @@ while read -r path || [[ -n "$path" ]]; do
     echo "Running go mod tidy:"
     ( "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
     echo "Running wire diff:"
-    ( wire diff ./... && echo "  OK " ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+    ( wire diff ./... && echo "  OK" ) || { echo "FAIL: wire diff found diffs!" && result=1; }
   fi
   popd &> /dev/null
-done < <( sed -e '/^#/d' -e '/^$/d' allmodules )
-# The above filters out comments and empty lines from allmodules.
+done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
+# The above filters out comments and empty lines from allmodules and only takes
+# the first (whitespace-separated) field from each line.
 
 # Upload cumulative coverage data if we generated it.
 if [ -f coverage.out ] && [ $result -eq 0 ]; then
