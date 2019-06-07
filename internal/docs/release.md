@@ -49,7 +49,7 @@ To do a release:
     ```bash
     $ git tag v0.x.0
     $ git tag secrets/vault/v0.x.0
-    $ git tag runtimevar/etcdvar/v0.15.0
+    $ git tag runtimevar/etcdvar/v0.x.0
     ...
     ```
 
@@ -70,3 +70,13 @@ To do a release:
 -   Send an email to
     [go-cloud@googlegroups.com](https://groups.google.com/forum/#!forum/go-cloud)
     announcing the release, and including the release notes.
+
+-   Disable force pushing on GitHub.
+
+-   Add back `replace` lines:
+
+    ```bash
+    $ go run internal/releasehelper/releasehelper.go addreplace
+    ```
+
+    Run tests and send out PR as usual.
