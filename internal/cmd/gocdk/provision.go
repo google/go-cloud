@@ -123,6 +123,7 @@ func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) 
 	}
 	dstPath := biomeDir(moduleDir, biome)
 
+	// TODO(rvangent): Use an explicit allowlist instead of just blindly reading "typ".
 	srcRoot := path.Join(provisionStaticRootDir, typ)
 	srcDir, err := static.Open(srcRoot)
 	if err != nil {
