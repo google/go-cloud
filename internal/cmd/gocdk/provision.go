@@ -21,7 +21,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/spf13/cobra"
 	"gocloud.dev/internal/cmd/gocdk/static"
@@ -169,29 +168,13 @@ func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) 
 				return xerrors.Errorf("provision add: %w", err)
 			}
 		} else if strings.HasPrefix(name, "mainlocal_") {
-			const marker = "# DO NOT REMOVE: GO CDK LOCAL WILL BE INSERTED BELOW HERE"
-			tmpl, err := template.New(name).Parse(string(srcBytes))
-			if err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-			buf := new(bytes.Buffer)
-			if err := tmpl.Execute(buf, nil); err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-			if err := insertIntoFile(filepath.Join(dstPath, "outputs.tf"), marker, buf.Bytes()); err != nil {
+			const marker = "# DO NOT REMOVE: GO CDK LOCALS WILL BE INSERTED BELOW HERE"
+			if err := insertIntoFile(filepath.Join(dstPath, "main.tf"), marker, srcBytes); err != nil {
 				return xerrors.Errorf("provision add: %w", err)
 			}
 		} else if strings.HasPrefix(name, "outputs_") {
 			const marker = "# DO NOT REMOVE: DEMO URLs WILL BE INSERTED BELOW HERE"
-			tmpl, err := template.New(name).Parse(string(srcBytes))
-			if err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-			buf := new(bytes.Buffer)
-			if err := tmpl.Execute(buf, nil); err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-			if err := insertIntoFile(filepath.Join(dstPath, "outputs.tf"), marker, buf.Bytes()); err != nil {
+			if err := insertIntoFile(filepath.Join(dstPath, "outputs.tf"), marker, srcBytes); err != nil {
 				return xerrors.Errorf("provision add: %w", err)
 			}
 		} else {
