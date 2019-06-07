@@ -213,15 +213,16 @@ We call these _compound IDs_.
 
 There are two broad compound ID usage patterns we have observed:
 
-1. Applications will keep resources in the same location or project, so the
-   application will build the ID from the subcomponents rather than passing the
-   entire resource ID around.
+1. Applications will keep resources in the same location, so the application
+   will build the ID from the subcomponents rather than passing the entire
+   resource ID around.
 2. Applications will pass a verbatim string from configuration down to the
    API, since this is what was easily copy-pasteable from the cloud console UI.
 
 Go CDK constructors that take in compound IDs should take in a `string` with the
-full compound ID. Helper functions to build these compound IDs may be provided
-as needed.
+full compound ID. Helper functions to build these compound IDs from
+subcomponents may be provided as needed. URL openers (described below) should
+prefer to use the full compound ID in their URL format.
 
 [GCP KMS key IDs]: https://cloud.google.com/kms/docs/object-hierarchy#key
 
