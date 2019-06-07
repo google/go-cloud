@@ -26,7 +26,7 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
-	common "github.com/Azure/azure-amqp-common-go"
+	common "github.com/Azure/azure-amqp-common-go/v2"
 	servicebus "github.com/Azure/azure-service-bus-go"
 )
 
