@@ -3,18 +3,21 @@
 #
 # Any line that doesn't begin with a '#' character and isn't empty is treated
 # as a path relative to the top of the repository that has a module in it.
+# The 'released' field specifies whether this is a module we release and tag (a
+# module importable by users).
 #
 # Note: another file that lists all the modules in our repo is
 # the VSCode workspace gocloud.code-workspace - for now it has to be updated
 # manually whenever this file changes.
 
-.
-internal/cmd/gocdk
-internal/contributebot
-internal/website
-pubsub/kafkapubsub
-pubsub/natspubsub
-pubsub/rabbitpubsub
-runtimevar/etcdvar
-samples
-secrets/vault
+# module-directory           released
+.                            yes
+internal/cmd/gocdk           no
+internal/contributebot       no
+internal/website             no
+pubsub/kafkapubsub           yes
+pubsub/natspubsub            yes
+pubsub/rabbitpubsub          yes
+runtimevar/etcdvar           yes
+samples                      no
+secrets/vault                yes

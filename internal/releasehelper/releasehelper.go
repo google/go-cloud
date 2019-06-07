@@ -53,6 +53,9 @@ Where command is one of the following:
                 sets 'required' version of modules to a given version formatted
                 as vX.Y.Z
 
+  tag <version>
+                runs 'git tag <module>/<version>' for all CDK modules
+
   help          prints this usage message
 `
 
@@ -175,6 +178,16 @@ func gomodSetVersion(path string, v string) {
 	})
 }
 
+func gomodTag(path string, v string) {
+	var tagName string
+	if path == "." {
+		tagName = v
+	} else {
+		tagName = filepath.Join(path, v)
+	}
+	cmdCheck(fmt.Sprintf("git tag %s", tagName))
+}
+
 func validSemanticVersion(v string) bool {
 	match, err := regexp.MatchString(`v\d+\.\d+\.\d+`, v)
 	if err != nil {
@@ -206,6 +219,14 @@ func main() {
 		gomodHandler = func(path string) {
 			gomodSetVersion(path, os.Args[2])
 		}
+	case "tag":
+		if len(os.Args) < 3 || !validSemanticVersion(os.Args[2]) {
+			printHelp()
+			os.Exit(1)
+		}
+		gomodHandler = func(path string) {
+			gomodTag(path, os.Args[2])
+		}
 	default:
 		printHelp()
 		os.Exit(1)
@@ -220,7 +241,15 @@ func main() {
 	input.Split(bufio.ScanLines)
 	for input.Scan() {
 		if len(input.Text()) > 0 && !strings.HasPrefix(input.Text(), "#") {
-			gomodHandler(input.Text())
+			fields := strings.Fields(input.Text())
+			if len(fields) != 2 {
+				log.Fatalf("want 2 fields, got '%s'\n", input.Text())
+			}
+			// "tag" only runs if the released field is "yes". Other commands run
+			// for every line.
+			if os.Args[1] != "tag" || fields[1] == "yes" {
+				gomodHandler(fields[0])
+			}
 		}
 	}
 
