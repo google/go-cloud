@@ -173,7 +173,21 @@ type Options struct {
 	// If false, queries that can only be executed by scanning the entire table
 	// return an error instead (with the exception of a query with no filters).
 	AllowScans bool
+
+	// If set, call this function on queries that we cannot execute at all (for
+	// example, a query with an OrderBy clause that lacks an equality filter on a
+	// partition key). The function should execute the query however it wishes, and
+	// return an iterator over the results. It can use the RunQueryFunc passed as its
+	// third argument to have the DynamoDB driver run a query, for instance a
+	// modified version of the original query.
+	//
+	// If RunQueryFallback is nil, queries that cannot be executed will fail with a
+	// error that has code Unimplemented.
+	RunQueryFallback func(context.Context, *driver.Query, RunQueryFunc) (driver.DocumentIterator, error)
 }
+
+// RunQueryFunc is the type of the function passed to RunQueryFallback.
+type RunQueryFunc func(context.Context, *driver.Query) (driver.DocumentIterator, error)
 
 // OpenCollection creates a *docstore.Collection representing a DynamoDB collection.
 func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options) (*docstore.Collection, error) {
@@ -215,6 +229,8 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	}
 	return keys, nil
 }
+
+func (c *collection) RevisionField() string { return "" }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
@@ -441,13 +457,22 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 		in.ConditionExpression = ce.Condition()
 	}
 	_, err = c.db.PutItemWithContext(ctx, in)
-	if err == nil {
-		if newPartitionKey != "" {
-			_ = doc.SetField(c.partitionKey, newPartitionKey)
+	if err != nil {
+		if ae, ok := err.(awserr.Error); ok && ae.Code() == dyn.ErrCodeConditionalCheckFailedException {
+			if k == driver.Create {
+				return gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
+			}
+			if rev, _ := doc.GetField(docstore.RevisionField); rev == nil && k == driver.Replace {
+				return gcerr.Newf(gcerr.NotFound, nil, "document not found")
+			}
 		}
-		_ = doc.SetField(docstore.RevisionField, rev)
+		return err
 	}
-	return err
+	if newPartitionKey != "" {
+		_ = doc.SetField(c.partitionKey, newPartitionKey)
+	}
+	_ = doc.SetField(docstore.RevisionField, rev)
+	return nil
 }
 
 func (c *collection) delete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) error {

@@ -114,17 +114,15 @@ func parseModuleInfo(path string) GoMod {
 	return modInfo
 }
 
-// reqHandlerFunc is a callback function type invoked by runOnGomod when it
-// finds 'require' lines in go.mod files that refer to our modules. It's called
-// with these arguments:
+// runOnGomod processes a single go.mod file (located in directory 'path').
+// Each require in the go.mod file is processed with reqHandler, a callback
+// function. It's called with these arguments:
 //
 //   gomodPath - path to the go.mod file where this 'require' was found
 //   mod - name of the module being 'require'd
 //   modPath - mod's location in the filesystem relative to
 //             the go.mod 'require'ing it
-type reqHandlerFunc func(gomodPath, mod, modPath string)
-
-func runOnGomod(path string, reqHandler reqHandlerFunc) {
+func runOnGomod(path string, reqHandler func(gomodPath, mod, modPath string)) {
 	gomodPath := filepath.Join(path, "go.mod")
 	fmt.Println("Processing", gomodPath)
 	modInfo := parseModuleInfo(gomodPath)
@@ -156,25 +154,33 @@ func runOnGomod(path string, reqHandler reqHandlerFunc) {
 	}
 }
 
+func gomodAddReplace(path string) {
+	runOnGomod(path, func(gomodPath, mod, modPath string) {
+		cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", mod, modPath, gomodPath))
+	})
+}
+
+func gomodDropReplace(path string) {
+	runOnGomod(path, func(gomodPath, mod, modPath string) {
+		cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", mod, gomodPath))
+	})
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		printHelp()
 		os.Exit(0)
 	}
 
-	var handlerFunc reqHandlerFunc
+	var gomodHandler func(path string)
 	switch os.Args[1] {
 	case "help":
 		printHelp()
 		os.Exit(0)
 	case "addreplace":
-		handlerFunc = func(gomodPath, mod, modPath string) {
-			cmdCheck(fmt.Sprintf("go mod edit -replace=%s=%s %s", mod, modPath, gomodPath))
-		}
+		gomodHandler = gomodAddReplace
 	case "dropreplace":
-		handlerFunc = func(gomodPath, mod, modPath string) {
-			cmdCheck(fmt.Sprintf("go mod edit -dropreplace=%s %s", mod, gomodPath))
-		}
+		gomodHandler = gomodDropReplace
 	default:
 		printHelp()
 		os.Exit(1)
@@ -189,7 +195,7 @@ func main() {
 	input.Split(bufio.ScanLines)
 	for input.Scan() {
 		if len(input.Text()) > 0 && !strings.HasPrefix(input.Text(), "#") {
-			runOnGomod(input.Text(), handlerFunc)
+			gomodHandler(input.Text())
 		}
 	}
 

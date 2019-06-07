@@ -18,7 +18,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/natspubsub"
 )

@@ -33,9 +33,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// generate_static converts the files in _static/ into constants in a new
-// file,
-//go:generate go run generate_static.go -- static.go
+// generate_static converts the files in static/_assets into constants in
+// the static package (in static/vfsdata.go).
+//go:generate go run generate_static.go
 
 func main() {
 	pctx, err := newOSProcessContext()
@@ -69,12 +69,14 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	registerServeCmd(ctx, pctx, rootCmd)
 	registerDemoCmd(ctx, pctx, rootCmd)
 	registerBiomeCmd(ctx, pctx, rootCmd)
+	registerProvisionCmd(ctx, pctx, rootCmd)
 	registerDeployCmd(ctx, pctx, rootCmd)
 	registerBuildCmd(ctx, pctx, rootCmd)
 	registerApplyCmd(ctx, pctx, rootCmd)
 	registerLaunchCmd(ctx, pctx, rootCmd)
 
 	rootCmd.SetArgs(args)
+	rootCmd.SetOutput(pctx.stderr)
 	return rootCmd.Execute()
 }
 
@@ -164,7 +166,7 @@ func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
 	c.Dir = pctx.workdir
 	output, err := c.Output()
 	if err != nil {
-		return "", xerrors.Errorf("couldn't find a Go module root at or above %s: %w", pctx.workdir, err)
+		return "", xerrors.Errorf("couldn't find a Go module root at or above %s", pctx.workdir)
 	}
 	output = bytes.TrimSuffix(output, []byte("\n"))
 	if len(output) == 0 {

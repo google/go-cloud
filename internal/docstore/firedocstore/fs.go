@@ -248,6 +248,10 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	return sname, nil
 }
 
+func (c *collection) RevisionField() string {
+	return ""
+}
+
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
@@ -513,7 +517,6 @@ func newUpdateWrites(docPath string, ts *tspb.Timestamp, fields map[string]*pb.V
 		}}
 		pc = nil // If the precondition is in the write, we don't need it in the transform.
 	}
-	// TODO(jba): test an increment-only update.
 	if len(transforms) > 0 {
 		ws = append(ws, &pb.Write{
 			Operation: &pb.Write_Transform{

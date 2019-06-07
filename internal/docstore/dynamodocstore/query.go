@@ -22,6 +22,7 @@ import (
 
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
@@ -29,18 +30,18 @@ import (
 
 // TODO: support parallel scans (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.ParallelScan)
 
-// TODO: support an empty item slice returned from an RPC: "A Query operation can
+// TODO(jba): support an empty item slice returned from an RPC: "A Query operation can
 // return an empty result set and a LastEvaluatedKey if all the items read for the
 // page of results are filtered out."
 
 type avmap = map[string]*dyn.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	if q.OrderByField != "" {
-		return nil, gcerr.Newf(gcerr.Unimplemented, nil, "OrderBy not implemented")
-	}
 	qr, err := c.planQuery(q)
 	if err != nil {
+		if gcerrors.Code(err) == gcerrors.Unimplemented && c.opts.RunQueryFallback != nil {
+			return c.opts.RunQueryFallback(ctx, q, c.RunGetQuery)
+		}
 		return nil, err
 	}
 	if err := c.checkPlan(qr); err != nil {
@@ -71,16 +72,19 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 	// Set up the projection expression.
 	if len(q.FieldPaths) > 0 {
 		var pb expression.ProjectionBuilder
-		hasRevisionField := false
+		hasFields := map[string]bool{}
 		for _, fp := range q.FieldPaths {
-			if fpEqual(fp, docstore.RevisionField) {
-				hasRevisionField = true
+			if len(fp) == 1 {
+				hasFields[fp[0]] = true
 			}
 			pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
 		}
-		if !hasRevisionField {
-			pb = pb.AddNames(expression.Name(docstore.RevisionField))
-			q.FieldPaths = append(q.FieldPaths, []string{docstore.RevisionField})
+		// Always include the key and revision fields.
+		for _, f := range []string{c.partitionKey, c.sortKey, docstore.RevisionField} {
+			if f != "" && !hasFields[f] {
+				pb = pb.AddNames(expression.Name(f))
+				q.FieldPaths = append(q.FieldPaths, []string{f})
+			}
 		}
 		cb = cb.WithProjection(pb)
 		cbUsed = true
@@ -90,6 +94,15 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 	indexName, pkey, skey := c.bestQueryable(q)
 	if indexName == nil && pkey == "" {
 		// No query can be done: fall back to scanning.
+		if q.OrderByField != "" {
+			// Scans are unordered, so we can't run this query.
+			// TODO(jba): If the user specifies all the partition keys, and there is a global
+			// secondary index whose sort key is the order-by field, then we can query that index
+			// for every value of the partition key and merge the results.
+			// TODO(jba): If the query has a reasonable limit N, then we can run a scan and keep
+			// the top N documents in memory.
+			return nil, gcerr.Newf(gcerr.Unimplemented, nil, "query requires a table scan, but has an ordering requirement; add an index or provide Options.RunQueryFallback")
+		}
 		if len(q.Filters) > 0 {
 			cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
 			cbUsed = true
@@ -114,17 +127,21 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 	if err != nil {
 		return nil, err
 	}
+	qIn := &dyn.QueryInput{
+		TableName:                 &c.table,
+		IndexName:                 indexName,
+		ExpressionAttributeNames:  ce.Names(),
+		ExpressionAttributeValues: ce.Values(),
+		KeyConditionExpression:    ce.KeyCondition(),
+		FilterExpression:          ce.Filter(),
+		ProjectionExpression:      ce.Projection(),
+	}
+	if q.OrderByField != "" && !q.OrderAscending {
+		qIn.ScanIndexForward = &q.OrderAscending
+	}
 	return &queryRunner{
-		c: c,
-		queryIn: &dyn.QueryInput{
-			TableName:                 &c.table,
-			IndexName:                 indexName,
-			ExpressionAttributeNames:  ce.Names(),
-			ExpressionAttributeValues: ce.Values(),
-			KeyConditionExpression:    ce.KeyCondition(),
-			FilterExpression:          ce.Filter(),
-			ProjectionExpression:      ce.Projection(),
-		},
+		c:         c,
+		queryIn:   qIn,
 		beforeRun: q.BeforeQuery,
 	}, nil
 }
@@ -137,15 +154,17 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 	// If the query has an "=" filter on the table's partition key, look at the table
 	// and local indexes.
 	if hasEqualityFilter(q, c.partitionKey) {
-		// If the table has a sort key that's in the query, use the table.
-		if hasFilter(q, c.sortKey) {
+		// If the table has a sort key that's in the query, and the ordering
+		// constraint works with the sort key, use the table.
+		// (Query results are always ordered by sort key.)
+		if hasFilter(q, c.sortKey) && orderingConsistent(q, c.sortKey) {
 			return nil, c.partitionKey, c.sortKey
 		}
 		// Look at local indexes. They all have the same partition key as the base table.
 		// If one has a sort key in the query, use it.
 		for _, li := range c.description.LocalSecondaryIndexes {
 			pkey, skey := keyAttributes(li.KeySchema)
-			if hasFilter(q, skey) && localFieldsIncluded(q, li) {
+			if hasFilter(q, skey) && localFieldsIncluded(q, li) && orderingConsistent(q, skey) {
 				return li.IndexName, pkey, skey
 			}
 		}
@@ -157,21 +176,21 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 		if skey == "" {
 			continue // We'll visit global indexes without a sort key later.
 		}
-		if hasEqualityFilter(q, pkey) && hasFilter(q, skey) && c.globalFieldsIncluded(q, gi) {
+		if hasEqualityFilter(q, pkey) && hasFilter(q, skey) && c.globalFieldsIncluded(q, gi) && orderingConsistent(q, skey) {
 			return gi.IndexName, pkey, skey
 		}
 	}
 	// There are no matches for both partition and sort key. Now consider matches on partition key only.
 	// That will still be better than a scan.
 	// First, check the table itself.
-	if hasEqualityFilter(q, c.partitionKey) {
+	if hasEqualityFilter(q, c.partitionKey) && orderingConsistent(q, c.sortKey) {
 		return nil, c.partitionKey, c.sortKey
 	}
 	// No point checking local indexes: they have the same partition key as the table.
 	// Check the global indexes.
 	for _, gi := range c.description.GlobalSecondaryIndexes {
 		pkey, skey := keyAttributes(gi.KeySchema)
-		if hasEqualityFilter(q, pkey) && c.globalFieldsIncluded(q, gi) {
+		if hasEqualityFilter(q, pkey) && c.globalFieldsIncluded(q, gi) && orderingConsistent(q, skey) {
 			return gi.IndexName, pkey, skey
 		}
 	}
@@ -189,6 +208,12 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 // See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html#LSI.Projections.
 func localFieldsIncluded(q *driver.Query, li *dyn.LocalSecondaryIndexDescription) bool {
 	return len(q.FieldPaths) > 0 || *li.Projection.ProjectionType == "ALL"
+}
+
+// orderingConsistent reports whether the ordering constraint is consistent with the sort key field.
+// That is, either there is no OrderBy clause, or the clause specifies the sort field.
+func orderingConsistent(q *driver.Query, sortField string) bool {
+	return q.OrderByField == "" || q.OrderByField == sortField
 }
 
 // globalFieldsIncluded reports whether the fields selected by the query are
@@ -250,7 +275,7 @@ func hasFilter(q *driver.Query, field string) bool {
 		return false
 	}
 	for _, f := range q.Filters {
-		if fpEqual(f.FieldPath, field) {
+		if driver.FieldPathEqualsField(f.FieldPath, field) {
 			return true
 		}
 	}
@@ -260,15 +285,11 @@ func hasFilter(q *driver.Query, field string) bool {
 // Reports whether q has a filter that checks if the top-level field is equal to something.
 func hasEqualityFilter(q *driver.Query, field string) bool {
 	for _, f := range q.Filters {
-		if f.Op == driver.EqualOp && fpEqual(f.FieldPath, field) {
+		if f.Op == driver.EqualOp && driver.FieldPathEqualsField(f.FieldPath, field) {
 			return true
 		}
 	}
 	return false
-}
-
-func fpEqual(fp []string, s string) bool {
-	return len(fp) == 1 && fp[0] == s
 }
 
 type queryRunner struct {

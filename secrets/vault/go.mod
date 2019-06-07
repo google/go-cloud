@@ -18,3 +18,5 @@ require (
 	github.com/hashicorp/vault/api v1.0.2
 	gocloud.dev v0.15.0
 )
+
+replace gocloud.dev => ../../

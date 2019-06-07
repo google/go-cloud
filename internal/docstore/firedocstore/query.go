@@ -48,15 +48,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 		QueryType: &pb.RunQueryRequest_StructuredQuery{sq},
 	}
 	if q.BeforeQuery != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**pb.RunQueryRequest)
-			if !ok {
-				return false
-			}
-			*p = req
-			return true
-		}
-		if err := q.BeforeQuery(asFunc); err != nil {
+		if err := q.BeforeQuery(driver.AsFunc(req)); err != nil {
 			return nil, err
 		}
 	}
@@ -165,7 +157,7 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 	// it will get the right answer for some mixed-type comparisons
 	// that are hard to do otherwise. For example, comparing the max int64
 	// with a float64: float64(math.MaxInt64) == float64(math.MaxInt64-1)
-	// is true in Go.
+	// is true in Go, but the right answer is false.
 	lf := toBigFloat(lhs)
 	rf := toBigFloat(rhs)
 	// If either one is not a number, return false.
@@ -305,7 +297,7 @@ func splitFilters(fs []driver.Filter) (sendToFirestore, evaluateLocally []driver
 		if f.Op == driver.EqualOp {
 			sendToFirestore = append(sendToFirestore, f)
 		} else {
-			if rangeFP == nil || fpEqual(rangeFP, f.FieldPath) {
+			if rangeFP == nil || driver.FieldPathsEqual(rangeFP, f.FieldPath) {
 				// Multiple inequality filters on the same field are OK.
 				rangeFP = f.FieldPath
 				sendToFirestore = append(sendToFirestore, f)
@@ -317,22 +309,9 @@ func splitFilters(fs []driver.Filter) (sendToFirestore, evaluateLocally []driver
 	return sendToFirestore, evaluateLocally
 }
 
-// Report whether two field paths are equal.
-func fpEqual(fp1, fp2 []string) bool {
-	if len(fp1) != len(fp2) {
-		return false
-	}
-	for i, s1 := range fp1 {
-		if s1 != fp2[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
 	// Treat filters on the name field specially.
-	if c.nameField != "" && fpEqualString(f.FieldPath, c.nameField) {
+	if c.nameField != "" && driver.FieldPathEqualsField(f.FieldPath, c.nameField) {
 		v := reflect.ValueOf(f.Value)
 		if v.Kind() != reflect.String {
 			return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
@@ -485,8 +464,4 @@ func (c *collection) runWriteQuery(ctx context.Context, q *driver.Query, writes 
 		return err
 	}
 	return nil
-}
-
-func fpEqualString(fp []string, s string) bool {
-	return len(fp) == 1 && fp[0] == s
 }

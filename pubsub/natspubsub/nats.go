@@ -55,7 +55,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/pubsub"

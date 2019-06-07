@@ -27,9 +27,9 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/nats-io/gnatsd/server"
-	gnatsd "github.com/nats-io/gnatsd/test"
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats-server/v2/server"
+	gnatsd "github.com/nats-io/nats-server/v2/test"
+	"github.com/nats-io/nats.go"
 )
 
 const (
@@ -202,6 +202,10 @@ func TestInteropWithDirectNATS(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg, err := ps.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer msg.Ack()
 	if !bytes.Equal(msg.Body, body) {
 		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
 	}
@@ -275,8 +279,6 @@ func TestErrorCode(t *testing.T) {
 	}
 }
 
-/* Temporarily disabled due to #1556, a data race in NATS.
-
 func TestBadSubjects(t *testing.T) {
 	ctx := context.Background()
 	dh, err := newHarness(ctx, t)
@@ -286,7 +288,7 @@ func TestBadSubjects(t *testing.T) {
 	defer dh.Close()
 	h := dh.(*harness)
 
-	sub, err := CreateSubscription(h.nc, "..bad", func() { t.Fatal("ack called unexpectedly") }, nil)
+	sub, err := OpenSubscription(h.nc, "..bad", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +296,7 @@ func TestBadSubjects(t *testing.T) {
 		t.Fatal("Expected an error with bad subject")
 	}
 
-	pt, err := CreateTopic(h.nc, "..bad", nil)
+	pt, err := OpenTopic(h.nc, "..bad", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,7 +304,6 @@ func TestBadSubjects(t *testing.T) {
 		t.Fatal("Expected an error with bad subject")
 	}
 }
-*/
 
 func BenchmarkNatsPubSub(b *testing.B) {
 	ctx := context.Background()

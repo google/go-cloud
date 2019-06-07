@@ -16,129 +16,57 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"golang.org/x/xerrors"
 )
 
-func TestReadBiomeConfig(t *testing.T) {
+func TestBiomeAdd(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		pctx, cleanup, err := newTestProject(context.Background())
+		ctx := context.Background()
+		pctx, cleanup, err := newTestProject(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer cleanup()
-
-		want := &biomeConfig{
-			ServeEnabled: configBool(true),
-			Launcher:     configString("local"),
+		const newBiome = "foo"
+		if err := biomeAdd(ctx, pctx, newBiome); err != nil {
+			t.Fatal(err)
 		}
 
-		got, err := readBiomeConfig(pctx.workdir, "dev")
+		// Ensure at least one file exists in the new biome with extension .tf.
+		newBiomePath := filepath.Join(pctx.workdir, "biomes", newBiome)
+		newBiomeContents, err := ioutil.ReadDir(newBiomePath)
 		if err != nil {
-			t.Fatalf("readBiomeConfig(%q, \"dev\"): %+v", pctx.workdir, err)
+			t.Error(err)
+		} else {
+			foundTF := false
+			var foundNames []string
+			for _, info := range newBiomeContents {
+				foundNames = append(foundNames, info.Name())
+				if filepath.Ext(info.Name()) == ".tf" {
+					foundTF = true
+				}
+			}
+			if !foundTF {
+				t.Errorf("%s contains %v; want to contain at least one \".tf\" file", newBiomePath, foundNames)
+			}
+		}
+
+		// Ensure that there is a biome.json file in the correct directory and
+		// that it contains the correct settings for a non-dev biome.
+		want := &biomeConfig{
+			ServeEnabled: configBool(false),
+			Launcher:     configString("cloudrun"),
+		}
+		got, err := readBiomeConfig(pctx.workdir, newBiome)
+		if err != nil {
+			t.Fatalf("biomeAdd: %+v", err)
 		}
 		if diff := cmp.Diff(want, got); diff != "" {
-			t.Errorf("readBiomeConfig(%q, \"dev\") diff (-want +got):\n%s", pctx.workdir, diff)
+			t.Errorf("biomeAdd diff (-want +got):\n%s", diff)
 		}
 	})
-	t.Run("DirNotExist", func(t *testing.T) {
-		pctx, cleanup, err := newTestProject(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer cleanup()
-
-		_, err = readBiomeConfig(pctx.workdir, "notabiome")
-		if !xerrors.As(err, new(*biomeNotFoundError)) {
-			t.Errorf("readBiomeConfig(%q, \"dev\") error =\n%+v\n; want biome not found error", pctx.workdir, err)
-		}
-	})
-}
-
-func TestLaunchEnv(t *testing.T) {
-	tests := []struct {
-		name     string
-		tfOutput map[string]*tfOutput
-		want     []string
-		wantErr  bool
-	}{
-		{
-			name:     "NilOutput",
-			tfOutput: nil,
-			want:     []string{},
-		},
-		{
-			name: "EmptyMap",
-			tfOutput: map[string]*tfOutput{
-				"launch_environment": {
-					Type:  "map",
-					Value: map[string]interface{}{},
-				},
-			},
-			want: []string{},
-		},
-		{
-			name: "MultipleEntries",
-			tfOutput: map[string]*tfOutput{
-				"launch_environment": {
-					Type: "map",
-					Value: map[string]interface{}{
-						"FOO": "BAR",
-						"BAZ": "QUUX",
-					},
-				},
-			},
-			// Sorted.
-			want: []string{"BAZ=QUUX", "FOO=BAR"},
-		},
-		{
-			name: "Port",
-			tfOutput: map[string]*tfOutput{
-				"launch_environment": {
-					Type: "map",
-					Value: map[string]interface{}{
-						"PORT": "8080",
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "NonStringValue",
-			tfOutput: map[string]*tfOutput{
-				"launch_environment": {
-					Type: "map",
-					Value: map[string]interface{}{
-						"FOO": 8080,
-					},
-				},
-			},
-			wantErr: true,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := launchEnv(test.tfOutput)
-			if err != nil {
-				t.Log("Error:", err)
-				if !test.wantErr {
-					t.Fail()
-				}
-				return
-			}
-			if diff := cmp.Diff(got, test.want); diff != "" {
-				t.Errorf("diff (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
-func configBool(b bool) *bool {
-	return &b
-}
-
-func configString(s string) *string {
-	return &s
 }

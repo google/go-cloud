@@ -141,15 +141,15 @@ func fpsEqual(fps1, fps2 [][]string) bool {
 		return false
 	}
 	for i, fp1 := range fps1 {
-		if !fpEqual(fp1, fps2[i]) {
+		if !FieldPathsEqual(fp1, fps2[i]) {
 			return false
 		}
 	}
 	return true
 }
 
-// Report whether two field paths are equal.
-func fpEqual(fp1, fp2 []string) bool {
+// FieldPathsEqual reports whether two field paths are equal.
+func FieldPathsEqual(fp1, fp2 []string) bool {
 	if len(fp1) != len(fp2) {
 		return false
 	}
@@ -159,4 +159,10 @@ func fpEqual(fp1, fp2 []string) bool {
 		}
 	}
 	return true
+}
+
+// FieldPathEqualsField reports whether a field path equals a field.
+// This is a convenience for FieldPathsEqual(fp, []string{s}).
+func FieldPathEqualsField(fp []string, s string) bool {
+	return len(fp) == 1 && fp[0] == s
 }

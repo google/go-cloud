@@ -20,7 +20,6 @@ package mongodocstore
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -187,43 +186,6 @@ func BenchmarkConformance(b *testing.B) {
 
 // Mongo-specific tests.
 
-func fakeConnectionStringInEnv() func() {
-	oldURLVal := os.Getenv("MONGO_SERVER_URL")
-	os.Setenv("MONGO_SERVER_URL", "mongodb://localhost")
-	return func() {
-		os.Setenv("MONGO_SERVER_URL", oldURLVal)
-	}
-}
-
-func TestOpenCollectionURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
-
-	tests := []struct {
-		URL     string
-		WantErr bool
-	}{
-		// OK.
-		{"mongo://mydb/mycollection", false},
-		// Missing database name.
-		{"mongo:///mycollection", true},
-		// Missing collection name.
-		{"mongo://mydb/", true},
-		// Passing id_field parameter.
-		{"mongo://mydb/mycollection?id_field=foo", false},
-		// Invalid parameter.
-		{"mongo://mydb/mycollection?param=value", true},
-	}
-
-	ctx := context.Background()
-	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
-	}
-}
-
 func TestLowercaseFields(t *testing.T) {
 	// Verify that the LowercaseFields option works in all cases.
 	must := func(err error) {
@@ -262,43 +224,42 @@ func TestLowercaseFields(t *testing.T) {
 
 	check := func(got, want interface{}) {
 		t.Helper()
-		switch w := want.(type) {
-		case S:
-			w.DocstoreRevision = got.(S).DocstoreRevision
-			want = w
-		case map[string]interface{}:
-			w["docstorerevision"] = got.(map[string]interface{})["docstorerevision"]
-			want = w
-		}
 		if !cmp.Equal(got, want) {
 			t.Errorf("\ngot  %+v\nwant %+v", got, want)
 		}
 	}
 
-	must(coll.Put(ctx, &S{ID: 1, F: 2, G: 3}))
+	sdoc := &S{ID: 1, F: 2, G: 3}
+	must(coll.Put(ctx, sdoc))
+	if sdoc.DocstoreRevision == nil {
+		t.Fatal("revision is nil")
+	}
 
 	// Get with a struct.
 	got := S{ID: 1}
 	must(coll.Get(ctx, &got))
-	check(got, S{ID: 1, F: 2, G: 3})
+	check(got, S{ID: 1, F: 2, G: 3, DocstoreRevision: sdoc.DocstoreRevision})
 
 	// Get with map.
 	got2 := map[string]interface{}{"id": 1}
 	must(coll.Get(ctx, got2))
-	check(got2, map[string]interface{}{"id": int64(1), "f": int64(2), "g": int64(3)})
+	check(got2, map[string]interface{}{"id": int64(1), "f": int64(2), "g": int64(3),
+		"docstorerevision": sdoc.DocstoreRevision})
 
 	// Field paths in Get.
 	got3 := S{ID: 1}
 	must(coll.Get(ctx, &got3, "G"))
-	check(got3, S{ID: 1, F: 0, G: 3})
+	check(got3, S{ID: 1, F: 0, G: 3, DocstoreRevision: sdoc.DocstoreRevision})
 
 	// Field paths in Update.
 	got4 := map[string]interface{}{"id": 1}
-	must(coll.Actions().Update(&S{ID: 1}, docstore.Mods{"F": 4}).Get(got4).Do(ctx))
-	check(got4, map[string]interface{}{"id": int64(1), "f": int64(4), "g": int64(3)})
+	udoc := &S{ID: 1}
+	must(coll.Actions().Update(udoc, docstore.Mods{"F": 4}).Get(got4).Do(ctx))
+	check(got4, map[string]interface{}{"id": int64(1), "f": int64(4), "g": int64(3),
+		"docstorerevision": udoc.DocstoreRevision})
 
 	// // Query filters.
 	var got5 S
 	must(coll.Query().Where("ID", "=", 1).Where("G", ">", 2).Get(ctx).Next(ctx, &got5))
-	check(got5, S{ID: 1, F: 4, G: 3})
+	check(got5, S{ID: 1, F: 4, G: 3, DocstoreRevision: udoc.DocstoreRevision})
 }
