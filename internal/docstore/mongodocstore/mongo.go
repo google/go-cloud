@@ -32,6 +32,7 @@
 //   *options.ReplaceOptions, *options.UpdateOptions or *options.DeleteOptions
 // - Query.BeforeQuery: *options.FindOptions
 // - DocumentIterator: *mongo.Cursor
+// - Error: mongo.CommandError, mongo.BulkWriteError, mongo.BulkWriteException
 //
 //
 // Special Considerations
@@ -468,7 +469,7 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 		// The returned indexes of the WriteErrors are wrong. See https://jira.mongodb.org/browse/GODRIVER-1028.
 		// Until it's fixed, use negative values for the indexes in the errors we return.
 		for _, w := range bwe.WriteErrors {
-			reterrs = append(reterrs, gcerr.Newf(translateMongoCode(w.Code), nil, "%s", w.Message))
+			reterrs = append(reterrs, gcerr.Newf(translateMongoCode(w.Code), w, "%s", w.Message))
 		}
 		return reterrs
 	}
@@ -577,6 +578,28 @@ func (c *collection) As(i interface{}) bool {
 	}
 	*p = c.coll
 	return true
+}
+
+// ErrorAs implements driver.Collection.ErrorAs
+func (c *collection) ErrorAs(err error, i interface{}) bool {
+	switch e := err.(type) {
+	case mongo.CommandError:
+		if p, ok := i.(*mongo.CommandError); ok {
+			*p = e
+			return true
+		}
+	case mongo.BulkWriteError:
+		if p, ok := i.(*mongo.BulkWriteError); ok {
+			*p = e
+			return true
+		}
+	case mongo.BulkWriteException:
+		if p, ok := i.(*mongo.BulkWriteException); ok {
+			*p = e
+			return true
+		}
+	}
+	return false
 }
 
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {

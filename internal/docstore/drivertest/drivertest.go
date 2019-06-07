@@ -102,6 +102,8 @@ type AsTest interface {
 	// QueryCheck will be called after calling Query. It should call it.As and
 	// verify the results.
 	QueryCheck(it *docstore.DocumentIterator) error
+	// ErrorCheck is called to allow verification of Collection.ErrorAs.
+	ErrorCheck(c *docstore.Collection, err error) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -135,6 +137,16 @@ func (verifyAsFailsOnNil) QueryCheck(it *docstore.DocumentIterator) error {
 	if it.As(nil) {
 		return errors.New("want DocumentIterator.As to return false when passed nil")
 	}
+	return nil
+}
+
+func (v verifyAsFailsOnNil) ErrorCheck(c *docstore.Collection, err error) (ret error) {
+	defer func() {
+		if recover() == nil {
+			ret = errors.New("want ErrorAs to panic when passed nil")
+		}
+	}()
+	c.ErrorAs(err, nil)
 	return nil
 }
 
@@ -1403,6 +1415,22 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 		iter := q.BeforeQuery(st.BeforeQuery).Get(ctx)
 		if err := st.QueryCheck(iter); err != nil {
 			t.Error(err)
+		}
+	}
+
+	// ErrorCheck
+	doc := &HighScore{game3, "steph", 24, date(4, 25), nil} // docs[0] w/o revision
+	if err := coll.Create(ctx, doc); err == nil {
+		t.Fatal("got nil error from creating an existing item, want an error")
+	} else {
+		if alerr, ok := err.(docstore.ActionListError); ok {
+			for _, aerr := range alerr {
+				if checkerr := st.ErrorCheck(coll, aerr.Err); checkerr != nil {
+					t.Error(checkerr)
+				}
+			}
+		} else if checkerr := st.ErrorCheck(coll, err); checkerr != nil {
+			t.Error(checkerr)
 		}
 	}
 }

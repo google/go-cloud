@@ -33,6 +33,7 @@
 //  - ActionList.BeforeDo: *dynamodb.BatchGetItemsInput or *dynamodb.TransactWriteItemsInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
+//  - Error: awserr.Error
 package dynamodocstore
 
 import (
@@ -754,6 +755,20 @@ func (c *collection) As(i interface{}) bool {
 		return false
 	}
 	*p = c.db
+	return true
+}
+
+// ErrorAs implements driver.Collection.ErrorAs.
+func (c *collection) ErrorAs(err error, i interface{}) bool {
+	e, ok := err.(awserr.Error)
+	if !ok {
+		return false
+	}
+	p, ok := i.(*awserr.Error)
+	if !ok {
+		return false
+	}
+	*p = e
 	return true
 }
 
