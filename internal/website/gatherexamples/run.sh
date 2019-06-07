@@ -16,4 +16,4 @@
 # Run gatherexamples for the project.
 
 set -eo pipefail
-sed -e '/^#/d' -e '/^$/d' allmodules | xargs go run internal/website/gatherexamples/gatherexamples.go
+sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' | xargs go run internal/website/gatherexamples/gatherexamples.go
