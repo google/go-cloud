@@ -1,0 +1,53 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "gocdk serve",
+            "type": "shell",
+            "command": "gocdk serve",
+            "isBackground": true,
+            "problemMatcher": {
+                "base": "$go",
+                "fileLocation": "absolute",
+                "background": {
+                    "activeOnStart": false,
+                    "beginsPattern": "Building server\\.\\.\\.$",
+                    "endsPattern": "Starting server\\.\\.\\.$",
+                }
+            }
+        },
+        {
+            "label": "gocdk deploy",
+            "type": "shell",
+            "command": "gocdk deploy ${input:biome}",
+            "problemMatcher": []
+        },
+        {
+            "label": "gocdk build",
+            "type": "shell",
+            "command": "gocdk build",
+            "group": "build",
+            "problemMatcher": [
+                "$go"
+            ]
+        },
+        {
+            "label": "gocdk apply",
+            "type": "shell",
+            "command": "gocdk apply ${input:biome}",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "biome",
+            "type": "pickString",
+            "description": "Which biome to use",
+            // You can add other biome names here to have them show up in the
+            // menu.
+            "options": ["dev"]
+        }
+    ]
+}
