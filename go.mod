@@ -17,7 +17,7 @@ module gocloud.dev
 require (
 	cloud.google.com/go v0.39.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
-	contrib.go.opencensus.io/exporter/stackdriver v0.11.1
+	contrib.go.opencensus.io/exporter/stackdriver v0.12.1
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
 	github.com/Azure/azure-amqp-common-go v1.1.4
 	github.com/Azure/azure-pipeline-go v0.1.9
@@ -25,8 +25,8 @@ require (
 	github.com/Azure/azure-service-bus-go v0.7.0
 	github.com/Azure/azure-storage-blob-go v0.6.0
 	github.com/Azure/go-autorest v12.0.0+incompatible
-	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190507215335-7265f74d826f
-	github.com/aws/aws-sdk-go v1.19.41
+	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190605020000-c4ba1fdf4d36
+	github.com/aws/aws-sdk-go v1.19.45
 	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
@@ -40,29 +40,25 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.2.2
 	github.com/googleapis/gax-go v2.0.2+incompatible
+	github.com/grpc-ecosystem/grpc-gateway v1.9.0 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/tidwall/pretty v0.0.0-20190325153808-1166b9ac2b65 // indirect
-	github.com/uber-go/atomic v1.4.0 // indirect
-	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
-	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
+	github.com/tidwall/pretty v1.0.0 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
-	go.mongodb.org/mongo-driver v1.0.2
+	go.mongodb.org/mongo-driver v1.0.3
 	go.opencensus.io v0.22.0
-	go.uber.org/atomic v1.4.0 // indirect
-	golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5
-	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
-	golang.org/x/oauth2 v0.0.0-20190523182746-aaccbc9213b0
+	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/net v0.0.0-20190606173856-1492cefac77f
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/sys v0.0.0-20190530182044-ad28b68e88f1 // indirect
+	golang.org/x/sys v0.0.0-20190606203320-7fc4e5ec1444 // indirect
 	golang.org/x/xerrors v0.0.0-20190513163551-3ee3066db522
-	google.golang.org/api v0.5.0
-	google.golang.org/appengine v1.6.0 // indirect
-	google.golang.org/genproto v0.0.0-20190530194941-fb225487d101
-	google.golang.org/grpc v1.21.0
+	google.golang.org/api v0.6.0
+	google.golang.org/appengine v1.6.1 // indirect
+	google.golang.org/genproto v0.0.0-20190605220351-eb0b1bdb6ae6
+	google.golang.org/grpc v1.21.1
 	pack.ag/amqp v0.11.0
 )
