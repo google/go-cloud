@@ -103,7 +103,8 @@ func provisionList(pctx *processContext) error {
 // TODO(rvangent): If things fail in the middle, we are in an undefined state.
 //                 Unclear how to handle that....
 // TODO(rvangent): Modifying Terraform files in place means that we need to run
-//                 "terraform init" again; currently we don't.
+//                 "terraform init" again; currently we don't; see
+//                 https://github.com/google/go-cloud/issues/2291.
 // TODO(rvangent): Currently all of the variables.tf files have default values, so
 //                 "terraform apply" works fine. Add the ability to prompt the user
 //                 for things (e.g., GCP project ID), and then instantiate auto.tfvars
@@ -164,6 +165,19 @@ func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) 
 			}
 		} else if strings.HasPrefix(name, "variables_") {
 			if err := insertIntoFile(filepath.Join(dstPath, "variables.tf"), "", srcBytes); err != nil {
+				return xerrors.Errorf("provision add: %w", err)
+			}
+		} else if strings.HasPrefix(name, "mainlocal_") {
+			const marker = "# DO NOT REMOVE: GO CDK LOCAL WILL BE INSERTED BELOW HERE"
+			tmpl, err := template.New(name).Parse(string(srcBytes))
+			if err != nil {
+				return xerrors.Errorf("provision add: %w", err)
+			}
+			buf := new(bytes.Buffer)
+			if err := tmpl.Execute(buf, nil); err != nil {
+				return xerrors.Errorf("provision add: %w", err)
+			}
+			if err := insertIntoFile(filepath.Join(dstPath, "outputs.tf"), marker, buf.Bytes()); err != nil {
 				return xerrors.Errorf("provision add: %w", err)
 			}
 		} else if strings.HasPrefix(name, "outputs_") {

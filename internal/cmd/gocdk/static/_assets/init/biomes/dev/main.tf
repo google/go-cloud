@@ -4,3 +4,7 @@
 terraform {
   required_version = "~> 0.11"
 }
+
+locals {
+  # DO NOT REMOVE: DEMO URLs WILL BE INSERTED BELOW HERE
+}
