@@ -2,7 +2,12 @@
 
 To do a release:
 
--   Make sure all tests pass localy with `runchecks.sh` and Travis is green.
+-   Announce to the team that a release is in progress - avoid merging PRs
+    during the release window (likely 1-2 hours). TODO(eliben): find a way to
+    enforce this on GitHub.
+
+-   Make sure all tests pass locally with `runchecks.sh` and Travis is green.
+
 -   Run the prerelease checks until everything is passing.
     -   Create a new branch (`git checkout -B prerelease`). Running the script
         will modify hundreds of golden files, so you want to do it in a branch.
@@ -79,4 +84,7 @@ To do a release:
     $ go run internal/releasehelper/releasehelper.go addreplace
     ```
 
-    Run tests and send out PR as usual.
+    Run tests and send out a PR as usual.
+
+-   Update dependencies by running `internal/testing/update_deps.sh`, run tests
+    and send out a PR.
