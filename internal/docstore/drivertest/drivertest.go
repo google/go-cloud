@@ -1419,7 +1419,8 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 	}
 
 	// ErrorCheck
-	if err := coll.Create(ctx, docs[0]); err == nil {
+	doc := &HighScore{game3, "steph", 24, date(4, 25), nil} // docs[0] w/o revision
+	if err := coll.Create(ctx, doc); err == nil {
 		t.Fatal("got nil error from creating an existing item, want an error")
 	} else {
 		if alerr, ok := err.(docstore.ActionListError); ok {
