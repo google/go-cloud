@@ -15,14 +15,13 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/cmd/gocdk/internal/docker"
 	"golang.org/x/xerrors"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
@@ -132,9 +132,8 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 	switch launcherName {
 	case "local":
 		return &localLauncher{
-			logger:    pctx.errlog,
-			dockerEnv: pctx.env,
-			dockerDir: pctx.workdir,
+			logger:       pctx.errlog,
+			dockerClient: docker.New(pctx.env),
 		}, nil
 	case "cloudrun":
 		creds, err := pctx.gcpCredentials(ctx)
@@ -147,10 +146,9 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 			return nil, xerrors.Errorf("prepare cloudrun launcher: %w", err)
 		}
 		return &cloudRunLauncher{
-			logger:    pctx.errlog,
-			client:    runService,
-			dockerEnv: pctx.env,
-			dockerDir: pctx.workdir,
+			logger:       pctx.errlog,
+			client:       runService,
+			dockerClient: docker.New(pctx.env),
 		}, nil
 	default:
 		return nil, xerrors.Errorf("prepare launcher: unknown launcher %q", launcherName)
@@ -159,9 +157,8 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 
 // localLauncher starts local Docker containers.
 type localLauncher struct {
-	logger    *log.Logger
-	dockerEnv []string
-	dockerDir string
+	logger       *log.Logger
+	dockerClient *docker.Client
 }
 
 // Launch implements Launcher.Launch.
@@ -172,30 +169,16 @@ func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*ur
 	} else if hostPort < 0 || hostPort > 65535 {
 		return nil, xerrors.Errorf("local launch: host_port is out of range [0, 65535]")
 	}
-	dockerArgs := []string{
-		"run",
-		"--rm",
-		"--detach",
-		"--publish", fmt.Sprintf("%d:8080", hostPort),
-	}
-	for _, v := range input.Env {
-		dockerArgs = append(dockerArgs, "--env", v)
-	}
-	dockerArgs = append(dockerArgs, "--env", "PORT=8080")
-	dockerArgs = append(dockerArgs, input.DockerImage)
-
-	c := exec.CommandContext(ctx, "docker", dockerArgs...)
-	c.Env = local.dockerEnv
-	c.Dir = local.dockerDir
-	out, err := c.CombinedOutput()
+	// TODO(light): Maybe don't remove on exit?
+	containerID, err := local.dockerClient.Start(ctx, input.DockerImage, &docker.RunOptions{
+		Env:          append(append([]string(nil), input.Env...), "PORT=8080"),
+		RemoveOnExit: true,
+		Publish:      []string{fmt.Sprintf("%d:8080", hostPort)},
+	})
 	if err != nil {
-		if len(out) == 0 {
-			return nil, xerrors.Errorf("local launch: docker run: %w", err)
-		}
-		return nil, xerrors.Errorf("local launch: docker run:\n%s", out)
+		return nil, xerrors.Errorf("local launch: %w", err)
 	}
 
-	containerID := string(bytes.TrimSuffix(out, []byte("\n")))
 	local.logger.Printf("Docker container %s started, waiting for healthy...", containerID)
 	serveURL := &url.URL{
 		Scheme: "http",
@@ -218,10 +201,9 @@ func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*ur
 // cloudRunLauncher pushes Docker containers to Google Container Registry and
 // creates/updates a Cloud Run service.
 type cloudRunLauncher struct {
-	logger    *log.Logger
-	client    *cloudrun.APIService
-	dockerEnv []string
-	dockerDir string
+	logger       *log.Logger
+	client       *cloudrun.APIService
+	dockerClient *docker.Client
 }
 
 // Launch implements Launcher.Launch.
@@ -238,7 +220,8 @@ func (crl *cloudRunLauncher) Launch(ctx context.Context, input *LaunchInput) (*u
 	if err != nil {
 		return nil, xerrors.Errorf("cloud run launch: %w", err)
 	}
-	if err := crl.dockerPush(ctx, imageRef); err != nil {
+	// TODO(light): Send docker push output somewhere.
+	if err := crl.dockerClient.Push(ctx, imageRef, ioutil.Discard); err != nil {
 		return nil, xerrors.Errorf("cloud run launch: %w", err)
 	}
 
@@ -360,38 +343,17 @@ func (crl *cloudRunLauncher) tagForCloudRun(ctx context.Context, imageRef string
 	if rewrittenRef == imageRef {
 		return rewrittenRef, nil
 	}
-	c := exec.CommandContext(ctx, "docker", "tag", imageRef, rewrittenRef)
-	c.Env = crl.dockerEnv
-	c.Dir = crl.dockerDir
-	out, err := c.CombinedOutput()
-	if err != nil {
-		if len(out) == 0 {
-			return "", xerrors.Errorf("docker tag: %w", err)
-		}
-		return "", xerrors.Errorf("docker tag:\n%s", out)
+	if err := crl.dockerClient.Tag(ctx, imageRef, rewrittenRef); err != nil {
+		return "", xerrors.Errorf("docker tag: %w", err)
 	}
 	return rewrittenRef, nil
-}
-
-func (crl *cloudRunLauncher) dockerPush(ctx context.Context, imageRef string) error {
-	c := exec.CommandContext(ctx, "docker", "push", imageRef)
-	c.Env = crl.dockerEnv
-	c.Dir = crl.dockerDir
-	out, err := c.CombinedOutput()
-	if err != nil {
-		if len(out) == 0 {
-			return xerrors.Errorf("docker push: %w", err)
-		}
-		return xerrors.Errorf("docker push:\n%s", out)
-	}
-	return nil
 }
 
 // imageRefForCloudRun computes the image reference needed to launch the given
 // local image reference on gcr.io and the launch specifier. If the returned
 // string is equal to localImage, then no retagging is necessary before pushing.
 func imageRefForCloudRun(localImage string, launchSpecifier map[string]interface{}) (string, error) {
-	name, tag, digest := parseImageRef(localImage)
+	name, tag, digest := docker.ParseImageRef(localImage)
 	if tag == ":" {
 		return "", xerrors.Errorf("determine image name for Cloud Run: empty tag in %q", localImage)
 	}
@@ -412,28 +374,6 @@ func imageRefForCloudRun(localImage string, launchSpecifier map[string]interface
 		name = "gcr.io/" + project + "/" + name
 	}
 	return name + tag + digest, nil
-}
-
-// parseImageRef parses a Docker image reference, as documented in
-// https://godoc.org/github.com/docker/distribution/reference. It permits some
-// looseness in characters, and in particular, permits the empty name form
-// ":foo". It is guaranteed that name + tag + digest == s.
-func parseImageRef(s string) (name, tag, digest string) {
-	if i := strings.LastIndexByte(s, '@'); i != -1 {
-		s, digest = s[:i], s[i:]
-	}
-	i := strings.LastIndexFunc(s, func(c rune) bool { return !isTagChar(c) })
-	if i == -1 || s[i] != ':' {
-		return s, "", digest
-	}
-	return s[:i], s[i:], digest
-}
-
-func isTagChar(c rune) bool {
-	return 'a' <= c && c <= 'z' ||
-		'A' <= c && c <= 'Z' ||
-		'0' <= c && c <= '9' ||
-		c == '_' || c == '-' || c == '.'
 }
 
 // isGCRName reports whether the given image name or reference identifies an
