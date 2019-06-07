@@ -39,10 +39,8 @@ package firedocstore
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
@@ -60,94 +58,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func init() {
-	docstore.DefaultURLMux().RegisterCollection(Scheme, &lazyCredsOpener{})
-}
-
-type lazyCredsOpener struct {
-	init   sync.Once
-	opener *URLOpener
-	err    error
-}
-
-func (o *lazyCredsOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
-	o.init.Do(func() {
-		creds, err := gcp.DefaultCredentials(ctx)
-		if err != nil {
-			o.err = err
-			return
-		}
-		client, _, err := Dial(ctx, creds.TokenSource)
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{Client: client}
-	})
-	if o.err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
-	}
-	return o.opener.OpenCollectionURL(ctx, u)
-}
-
 // Dial returns a client to use with Firestore and a clean-up function to close
 // the client after used.
 func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error) {
 	c, err := vkit.NewClient(ctx, option.WithTokenSource(ts), useragent.ClientOption("docstore"))
 	return c, func() { c.Close() }, err
-}
-
-// Scheme is the URL scheme firestore registers its URLOpener under on
-// docstore.DefaultMux.
-const Scheme = "firestore"
-
-// URLOpener opens firestore URLs like
-// "firestore://myproject/mycollection?name_field=myID".
-//
-//   - The URL's host holds the GCP projectID.
-//   - The only element of the URL's path holds the path to a Firestore collection.
-// See https://firebase.google.com/docs/firestore/data-model for more details.
-//
-// The following query parameters are supported:
-//
-//   - name_field (required): firedocstore requires that a single string field,
-// name_field, be designated the primary key. Its values must be unique over all
-// documents in the collection, and the primary key must be provided to retrieve
-// a document.
-type URLOpener struct {
-	// Client must be set to a non-nil client authenticated with Cloud Firestore
-	// scope or equivalent.
-	Client *vkit.Client
-}
-
-// OpenCollectionURL opens a docstore.Collection based on u.
-func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
-	q := u.Query()
-
-	nameField := q.Get("name_field")
-	if nameField == "" {
-		return nil, errors.New("open collection %s: name_field is required to open a collection")
-	}
-	q.Del("name_field")
-	for param := range q {
-		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
-	}
-	project, collPath, err := collectionNameFromURL(u)
-	if err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, err)
-	}
-	return OpenCollection(o.Client, project, collPath, nameField, nil)
-}
-
-func collectionNameFromURL(u *url.URL) (string, string, error) {
-	var project, collPath string
-	if project = u.Host; project == "" {
-		return "", "", errors.New("URL must have a non-empty Host (the project ID)")
-	}
-	if collPath = strings.TrimPrefix(u.Path, "/"); collPath == "" {
-		return "", "", errors.New("URL must have a non-empty Path (the collection path)")
-	}
-	return project, collPath, nil
 }
 
 type collection struct {
@@ -164,6 +79,9 @@ type Options struct {
 	// If true, allow queries that require client-side evaluation of filters (Where clauses)
 	// to run.
 	AllowLocalFilters bool
+	// The name of the field holding the document revision.
+	// Defaults to docstore.RevisionField.
+	RevisionField string
 }
 
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
@@ -209,6 +127,9 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string, n
 	if opts == nil {
 		opts = &Options{}
 	}
+	if opts.RevisionField == "" {
+		opts.RevisionField = docstore.RevisionField
+	}
 	return &collection{
 		client:    client,
 		nameField: nameField,
@@ -249,7 +170,7 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 }
 
 func (c *collection) RevisionField() string {
-	return ""
+	return c.opts.RevisionField
 }
 
 // RunActions implements driver.RunActions.
@@ -292,15 +213,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		indexByPath[path] = i
 	}
 	if opts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**pb.BatchGetDocumentsRequest)
-			if !ok {
-				return false
-			}
-			*p = req
-			return true
-		}
-		if err := opts.BeforeDo(asFunc); err != nil {
+		if err := opts.BeforeDo(driver.AsFunc(req)); err != nil {
 			setErr(err)
 			return
 		}
@@ -326,7 +239,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 			if !ok {
 				setErr(gcerr.Newf(gcerr.Internal, nil, "no index for path %s", pdoc.Name))
 			} else {
-				errs[gets[i].Index] = decodeDoc(pdoc, gets[i].Doc, c.nameField)
+				errs[gets[i].Index] = decodeDoc(pdoc, gets[i].Doc, c.nameField, c.opts.RevisionField)
 			}
 		case *pb.BatchGetDocumentsResponse_Missing:
 			i := indexByPath[r.Missing]
@@ -427,7 +340,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 
 	case driver.Replace:
 		// If the given document has a revision, use it as the precondition (it implies existence).
-		pc, perr := revisionPrecondition(a.Doc)
+		pc, perr := c.revisionPrecondition(a.Doc)
 		if perr != nil {
 			return nil, "", perr
 		}
@@ -438,7 +351,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 		w, err = c.putWrite(a.Doc, docName, pc)
 
 	case driver.Put:
-		pc, perr := revisionPrecondition(a.Doc)
+		pc, perr := c.revisionPrecondition(a.Doc)
 		if perr != nil {
 			return nil, "", perr
 		}
@@ -475,7 +388,7 @@ func (c *collection) putWrite(doc driver.Document, docName string, pc *pb.Precon
 }
 
 func (c *collection) deleteWrite(doc driver.Document, docName string) (*pb.Write, error) {
-	pc, err := revisionPrecondition(doc)
+	pc, err := c.revisionPrecondition(doc)
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +401,7 @@ func (c *collection) deleteWrite(doc driver.Document, docName string) (*pb.Write
 // updateWrites returns a slice of writes because we may need two: one for setting
 // and deleting values, the other for transforms.
 func (c *collection) updateWrites(doc driver.Document, docName string, mods []driver.Mod) ([]*pb.Write, error) {
-	ts, err := revisionTimestamp(doc)
+	ts, err := c.revisionTimestamp(doc)
 	if err != nil {
 		return nil, err
 	}
@@ -587,7 +500,7 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 	for i, wr := range wrs {
 		if _, ok := call.writes[i].Operation.(*pb.Write_Transform); !ok {
 			// Ignore errors. It's fine if the doc doesn't have a revision field.
-			call.actions[j].Doc.SetField(docstore.RevisionField, wr.UpdateTime)
+			call.actions[j].Doc.SetField(c.opts.RevisionField, wr.UpdateTime)
 			j++
 		}
 	}
@@ -605,15 +518,7 @@ func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.Ru
 		Writes:   ws,
 	}
 	if opts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**pb.CommitRequest)
-			if !ok {
-				return false
-			}
-			*p = req
-			return true
-		}
-		if err := opts.BeforeDo(asFunc); err != nil {
+		if err := opts.BeforeDo(driver.AsFunc(req)); err != nil {
 			return nil, err
 		}
 	}
@@ -701,8 +606,8 @@ func toServiceFieldPathComponent(key string) string {
 
 // revisionPrecondition returns a Firestore precondition that asserts that the stored document's
 // revision matches the revision of doc.
-func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
-	rev, err := revisionTimestamp(doc)
+func (c *collection) revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
+	rev, err := c.revisionTimestamp(doc)
 	if err != nil {
 		return nil, err
 	}
@@ -711,8 +616,8 @@ func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
 
 // revisionTimestamp extracts the timestamp from the revision field of doc, if there is one.
 // It only returns an error if the revision field is present and does not contain the right type.
-func revisionTimestamp(doc driver.Document) (*tspb.Timestamp, error) {
-	v, err := doc.GetField(docstore.RevisionField)
+func (c *collection) revisionTimestamp(doc driver.Document) (*tspb.Timestamp, error) {
+	v, err := doc.GetField(c.opts.RevisionField)
 	if err != nil { // revision field not present
 		return nil, nil
 	}
@@ -723,7 +628,7 @@ func revisionTimestamp(doc driver.Document) (*tspb.Timestamp, error) {
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
 			"%s field contains wrong type: got %T, want proto Timestamp",
-			docstore.RevisionField, v)
+			c.opts.RevisionField, v)
 	}
 	return rev, nil
 }

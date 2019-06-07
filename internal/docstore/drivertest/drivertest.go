@@ -48,6 +48,11 @@ type Harness interface {
 	// drivertest.HighScoreKey as the key function.
 	MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error)
 
+	// MakeAlternateRevisionFieldCollection makes a driver.Collection for testing.
+	// The collection should behave like the one returned from MakeCOllection, except
+	// that the revision field should be drivertest.AlternateRevisionField.
+	MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error)
+
 	// Close closes resources used by the harness.
 	Close()
 }
@@ -173,7 +178,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	})
 }
 
-func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
+func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection, string)) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -186,8 +191,17 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
-	cleanUpTable(t, coll)
-	f(t, coll)
+	clearCollection(t, coll)
+	t.Run("StdRev", func(t *testing.T) { f(t, coll, ds.RevisionField) })
+
+	dc, err = h.MakeAlternateRevisionFieldCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll = ds.NewCollection(dc)
+	clearCollection(t, coll)
+	t.Run("AltRev", func(t *testing.T) { f(t, coll, AlternateRevisionField) })
+
 }
 
 func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
@@ -203,29 +217,33 @@ func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
-	cleanUpTable(t, coll)
+	clearCollection(t, coll)
 	f(t, coll)
 }
 
 // KeyField is the primary key field for the main test collection.
 const KeyField = "name"
 
+// AlternateRevisionField is used for testing the option to provide a different
+// name for the revision field.
+const AlternateRevisionField = "Etag"
+
 type docmap = map[string]interface{}
 
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
 
 // TODO(jba): test structs
-func testCreate(t *testing.T, coll *ds.Collection) {
+func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 	named := docmap{KeyField: "testCreate1", "b": true}
 	unnamed := docmap{"b": false}
 	createThenGet := func(doc docmap) {
 		t.Helper()
-		checkNoRevisionField(t, doc)
+		checkNoRevisionField(t, doc, revField)
 		if err := coll.Create(ctx, doc); err != nil {
 			t.Fatalf("Create: %v", err)
 		}
-		checkHasRevisionField(t, doc)
+		checkHasRevisionField(t, doc, revField)
 		got := docmap{KeyField: doc[KeyField]}
 		if err := coll.Get(ctx, got); err != nil {
 			t.Fatalf("Get: %v", err)
@@ -246,11 +264,11 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	checkCode(t, err, gcerrors.AlreadyExists)
 
 	// Can't create a doc with a revision field.
-	err = coll.Create(ctx, docmap{KeyField: "testCreate2", docstore.RevisionField: 0})
+	err = coll.Create(ctx, docmap{KeyField: "testCreate2", revField: 0})
 	checkCode(t, err, gcerrors.InvalidArgument)
 }
 
-func testPut(t *testing.T, coll *ds.Collection) {
+func testPut(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -261,9 +279,9 @@ func testPut(t *testing.T, coll *ds.Collection) {
 
 	named := docmap{KeyField: "testPut1", "b": true}
 	// Create a new doc.
-	checkNoRevisionField(t, named)
+	checkNoRevisionField(t, named, revField)
 	must(coll.Put(ctx, named))
-	checkHasRevisionField(t, named)
+	checkHasRevisionField(t, named, revField)
 	got := docmap{KeyField: named[KeyField]}
 	must(coll.Get(ctx, got))
 	if diff := cmpDiff(got, named); diff != "" {
@@ -272,11 +290,11 @@ func testPut(t *testing.T, coll *ds.Collection) {
 
 	// Replace an existing doc.
 	named["b"] = false
-	named[ds.RevisionField] = nil
-	checkNoRevisionField(t, named)
+	named[revField] = nil
+	checkNoRevisionField(t, named, revField)
 	must(coll.Put(ctx, named))
-	checkHasRevisionField(t, named)
-	rev := named[ds.RevisionField]
+	checkHasRevisionField(t, named, revField)
+	rev := named[revField]
 	must(coll.Get(ctx, got))
 	if diff := cmpDiff(got, named); diff != "" {
 		t.Fatalf(diff)
@@ -284,18 +302,18 @@ func testPut(t *testing.T, coll *ds.Collection) {
 
 	// Putting a doc with a revision field is the same as Replace, meaning
 	// it will fail if the document doesn't exist.
-	err := coll.Put(ctx, docmap{KeyField: "testPut2", ds.RevisionField: rev})
+	err := coll.Put(ctx, docmap{KeyField: "testPut2", revField: rev})
 	if c := gcerrors.Code(err); c != gcerrors.NotFound && c != gcerrors.FailedPrecondition {
 		t.Errorf("got %v, want NotFound or FailedPrecondition", err)
 	}
 	t.Run("revision", func(t *testing.T) {
-		testRevisionField(t, coll, func(dm docmap) error {
+		testRevisionField(t, coll, revField, func(dm docmap) error {
 			return coll.Put(ctx, dm)
 		})
 	})
 }
 
-func testReplace(t *testing.T, coll *ds.Collection) {
+func testReplace(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -307,10 +325,10 @@ func testReplace(t *testing.T, coll *ds.Collection) {
 	doc1 := docmap{KeyField: "testReplace", "s": "a"}
 	must(coll.Put(ctx, doc1))
 	doc1["s"] = "b"
-	doc1[ds.RevisionField] = nil
-	checkNoRevisionField(t, doc1)
+	doc1[revField] = nil
+	checkNoRevisionField(t, doc1, revField)
 	must(coll.Replace(ctx, doc1))
-	checkHasRevisionField(t, doc1)
+	checkHasRevisionField(t, doc1, revField)
 	got := docmap{KeyField: doc1[KeyField]}
 	must(coll.Get(ctx, got))
 	if diff := cmpDiff(got, doc1); diff != "" {
@@ -320,7 +338,7 @@ func testReplace(t *testing.T, coll *ds.Collection) {
 	checkCode(t, coll.Replace(ctx, nonexistentDoc()), gcerrors.NotFound)
 
 	t.Run("revision", func(t *testing.T) {
-		testRevisionField(t, coll, func(dm docmap) error {
+		testRevisionField(t, coll, revField, func(dm docmap) error {
 			return coll.Replace(ctx, dm)
 		})
 	})
@@ -328,30 +346,30 @@ func testReplace(t *testing.T, coll *ds.Collection) {
 }
 
 // Check that doc does not have a revision field (or has a nil one).
-func checkNoRevisionField(t *testing.T, doc interface{}) {
+func checkNoRevisionField(t *testing.T, doc interface{}, revField string) {
 	t.Helper()
 	ddoc, err := driver.NewDocument(doc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rev, _ := ddoc.GetField(ds.RevisionField); rev != nil {
+	if rev, _ := ddoc.GetField(revField); rev != nil {
 		t.Fatal("doc has revision field")
 	}
 }
 
 // Check that doc has a non-nil revision field.
-func checkHasRevisionField(t *testing.T, doc interface{}) {
+func checkHasRevisionField(t *testing.T, doc interface{}, revField string) {
 	t.Helper()
 	ddoc, err := driver.NewDocument(doc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rev, err := ddoc.GetField(ds.RevisionField); err != nil || rev == nil {
+	if rev, err := ddoc.GetField(revField); err != nil || rev == nil {
 		t.Fatalf("doc missing revision field (error = %v)", err)
 	}
 }
 
-func testGet(t *testing.T, coll *ds.Collection) {
+func testGet(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -371,7 +389,6 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	// If Get is called with no field paths, the full document is populated.
 	got := docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got))
-	doc[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmpDiff(got, doc); diff != "" {
 		t.Error(diff)
 	}
@@ -380,12 +397,12 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	got = docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got, "f", "m.b"))
 	want := docmap{
-		KeyField:         doc[KeyField],
-		ds.RevisionField: got[ds.RevisionField], // copy returned revision field
-		"f":              32.3,
-		"m":              docmap{"b": "two"},
+		KeyField: doc[KeyField],
+		"f":      32.3,
+		"m":      docmap{"b": "two"},
+		revField: doc[revField],
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
+	if diff := cmpDiff(got, want); diff != "" {
 		t.Error("Get with field paths:\n", diff)
 	}
 
@@ -393,7 +410,7 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	checkCode(t, err, gcerrors.NotFound)
 }
 
-func testDelete(t *testing.T, coll *ds.Collection) {
+func testDelete(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
 	if err := coll.Put(ctx, doc); err != nil {
@@ -413,7 +430,7 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 
 	// Delete will fail if the revision field is mismatched.
 	got := docmap{KeyField: doc[KeyField]}
-	doc[ds.RevisionField] = nil
+	doc[revField] = nil
 	if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
 		t.Fatal(errs)
 	}
@@ -424,16 +441,16 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 	checkCode(t, coll.Delete(ctx, got), gcerrors.FailedPrecondition)
 }
 
-func testUpdate(t *testing.T, coll *ds.Collection) {
+func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 	// TODO(jba): test an increment-only update.
 	ctx := context.Background()
 	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B", "n": 3.5, "i": 1}
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
-	doc[ds.RevisionField] = nil
+	doc[revField] = nil
 	got := docmap{KeyField: doc[KeyField]}
-	checkNoRevisionField(t, doc)
+	checkNoRevisionField(t, doc, revField)
 	errs := coll.Actions().Update(doc, ds.Mods{
 		"a": "X",
 		"b": nil,
@@ -445,15 +462,15 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if errs != nil {
 		t.Fatal(errs)
 	}
-	checkHasRevisionField(t, doc)
+	checkHasRevisionField(t, doc, revField)
 	want := docmap{
-		KeyField:         doc[KeyField],
-		ds.RevisionField: got[ds.RevisionField],
-		"a":              "X",
-		"c":              "C",
-		"n":              2.5,
-		"i":              3.5,
-		"m":              int64(3),
+		KeyField: doc[KeyField],
+		revField: got[revField],
+		"a":      "X",
+		"c":      "C",
+		"n":      2.5,
+		"i":      3.5,
+		"m":      int64(3),
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
@@ -469,7 +486,7 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	checkCode(t, err, gcerrors.InvalidArgument)
 
 	t.Run("revision", func(t *testing.T) {
-		testRevisionField(t, coll, func(dm docmap) error {
+		testRevisionField(t, coll, revField, func(dm docmap) error {
 			return coll.Update(ctx, dm, ds.Mods{"s": "c"})
 		})
 	})
@@ -478,7 +495,7 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 // Test that:
 // - Writing a document with a revision field succeeds if the document hasn't changed.
 // - Writing a document with a revision field fails if the document has changed.
-func testRevisionField(t *testing.T, coll *ds.Collection, write func(docmap) error) {
+func testRevisionField(t *testing.T, coll *ds.Collection, revField string, write func(docmap) error) {
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -491,12 +508,12 @@ func testRevisionField(t *testing.T, coll *ds.Collection, write func(docmap) err
 	must(coll.Put(ctx, doc1))
 	got := docmap{KeyField: key}
 	must(coll.Get(ctx, got))
-	rev, ok := got[ds.RevisionField]
+	rev, ok := got[revField]
 	if !ok || rev == nil {
 		t.Fatal("missing revision field")
 	}
 	// A write should succeed, because the document hasn't changed since it was gotten.
-	if err := write(docmap{KeyField: key, "s": "b", ds.RevisionField: rev}); err != nil {
+	if err := write(docmap{KeyField: key, "s": "b", revField: rev}); err != nil {
 		t.Fatalf("write with revision field got %v, want nil", err)
 	}
 	// This write should fail: got's revision field hasn't changed, but the stored document has.
@@ -506,7 +523,7 @@ func testRevisionField(t *testing.T, coll *ds.Collection, write func(docmap) err
 	}
 }
 
-func testData(t *testing.T, coll *ds.Collection) {
+func testData(t *testing.T, coll *ds.Collection, revField string) {
 	// All Go integer types are supported, but they all come back as int64.
 	ctx := context.Background()
 	for _, test := range []struct {
@@ -531,9 +548,9 @@ func testData(t *testing.T, coll *ds.Collection) {
 			t.Fatal(errs)
 		}
 		want := docmap{
-			"val":            test.want,
-			KeyField:         doc[KeyField],
-			ds.RevisionField: got[ds.RevisionField],
+			"val":    test.want,
+			KeyField: doc[KeyField],
+			revField: got[revField],
 		}
 		if len(got) != len(want) {
 			t.Errorf("%v: got %v, want %v", test.in, got, want)
@@ -846,7 +863,7 @@ func addQueryDocuments(t *testing.T, coll *ds.Collection) {
 	}
 }
 
-func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
+func testGetQueryKeyField(t *testing.T, coll *ds.Collection, revField string) {
 	// Query the key field of a collection that has one.
 	// (The collection used for testGetQuery uses a key function rather than a key field.)
 	ctx := context.Background()
@@ -876,7 +893,7 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection) {
 	defer iter.Stop()
 	got = mustCollect(ctx, t, iter)
 	for _, d := range docs {
-		checkHasRevisionField(t, d)
+		checkHasRevisionField(t, d, revField)
 	}
 	diff = cmpDiff(got, docs, cmpopts.SortSlices(sortByKeyField))
 	if diff != "" {
@@ -1139,8 +1156,8 @@ func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 	return res
 }
 
-// cleanUpTable delete all documents from this collection after test.
-func cleanUpTable(fataler interface{ Fatalf(string, ...interface{}) }, coll *docstore.Collection) {
+// clearCollection delete all documents from this collection after test.
+func clearCollection(fataler interface{ Fatalf(string, ...interface{}) }, coll *docstore.Collection) {
 	if err := coll.Query().Delete(context.Background()); err != nil {
 		fataler.Fatalf("%+v", err)
 	}
@@ -1190,7 +1207,7 @@ func collectHighScores(ctx context.Context, iter *ds.DocumentIterator) ([]*HighS
 	return hs, nil
 }
 
-func testMultipleActions(t *testing.T, coll *ds.Collection) {
+func testMultipleActions(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 
 	docs := []docmap{
@@ -1227,7 +1244,6 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 		t.Fatal(err)
 	}
 	for i, got := range gots {
-		docs[i][docstore.RevisionField] = got[docstore.RevisionField] // copy the revision
 		if diff := cmpDiff(got, docs[i]); diff != "" {
 			t.Error(diff)
 		}
@@ -1243,10 +1259,8 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	}
 }
 
-func testUnorderedActions(t *testing.T, coll *ds.Collection) {
+func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
-
-	defer cleanUpTable(t, coll)
 
 	must := func(err error) {
 		t.Helper()
@@ -1265,7 +1279,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 		for i := 0; i < len(gots); i++ {
 			got := gots[i]
 			want := clone(wants[i])
-			want[docstore.RevisionField] = got[docstore.RevisionField]
+			want[revField] = got[revField]
 			if !cmp.Equal(got, want) {
 				t.Errorf("index #%d:\ngot  %v\nwant %v", i, got, want)
 			}
@@ -1323,11 +1337,11 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection) {
 	} {
 		actions.Get(doc)
 	}
-	docs[4][ds.RevisionField] = nil
+	docs[4][revField] = nil
 	actions.Create(docs[4]) // create existing doc
 	actions.Put(docs[5])
 	// TODO(jba): Understand why the following line is necessary for dynamo but not the others.
-	docs[0][ds.RevisionField] = nil
+	docs[0][revField] = nil
 	actions.Delete(docs[0]) // delete nonexistent doc
 	err := actions.Do(ctx)
 	if err == nil {

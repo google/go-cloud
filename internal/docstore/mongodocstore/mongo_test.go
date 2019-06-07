@@ -65,6 +65,11 @@ func (h *harness) MakeTwoKeyCollection(ctx context.Context) (driver.Collection, 
 	return newCollection(h.db.Collection(collectionName2), "", drivertest.HighScoreKey, nil)
 }
 
+func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
+	return newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil,
+		&Options{RevisionField: drivertest.AlternateRevisionField})
+}
+
 func (h *harness) Close() {}
 
 type codecTester struct{}

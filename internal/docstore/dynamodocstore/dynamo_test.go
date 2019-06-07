@@ -115,6 +115,11 @@ func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, erro
 	})
 }
 
+func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
+	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "",
+		&Options{AllowScans: true, RevisionField: drivertest.AlternateRevisionField})
+}
+
 func collectHighScores(ctx context.Context, iter driver.DocumentIterator) ([]*drivertest.HighScore, error) {
 	var hs []*drivertest.HighScore
 	for {
