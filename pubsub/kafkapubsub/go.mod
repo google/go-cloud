@@ -20,7 +20,6 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/pierrec/lz4 v2.0.7+incompatible // indirect
 	gocloud.dev v0.15.0
-	golang.org/x/net v0.0.0-20190522155817-f3200d17e092 // indirect
-	golang.org/x/sys v0.0.0-20190530182044-ad28b68e88f1 // indirect
-	golang.org/x/text v0.3.2 // indirect
 )
+
+replace gocloud.dev => ../../

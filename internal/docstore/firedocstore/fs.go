@@ -34,6 +34,7 @@
 // - ActionList.BeforeDo: *pb.BatchGetDocumentRequest or *pb.CommitRequest.
 // - Query.BeforeQuery: *firestore.RunQueryRequest
 // - DocumentIterator: firestore.Firestore_RunQueryClient
+// - Error: *google.golang.org/grpc/status.Status
 package firedocstore
 
 import (
@@ -56,6 +57,7 @@ import (
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // Dial returns a client to use with Firestore and a clean-up function to close
@@ -663,5 +665,19 @@ func (c *collection) As(i interface{}) bool {
 		return false
 	}
 	*p = c.client
+	return true
+}
+
+// ErrorAs implements driver.Collection.ErrorAs.
+func (c *collection) ErrorAs(err error, i interface{}) bool {
+	s, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+	p, ok := i.(**status.Status)
+	if !ok {
+		return false
+	}
+	*p = s
 	return true
 }

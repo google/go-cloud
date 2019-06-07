@@ -112,4 +112,15 @@ func Test(t *testing.T) {
 			t.Errorf("Expected to not find '%s' in samples/go.mod", line)
 		}
 	}
+
+	// Set new version and check it was set as expected.
+	gomodSetVersion("samples", "v1.8.99")
+	c, err = ioutil.ReadFile(samplesGomod)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(c), "gocloud.dev v1.8.99") || !strings.Contains(string(c), "gocloud.dev/submod v1.8.99") {
+		t.Error("New versions for require not found in samples/go.mod")
+	}
 }

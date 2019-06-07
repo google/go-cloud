@@ -28,8 +28,8 @@ import (
 // This isn't ideal, because the mongo client encodes/decodes a second time.
 // TODO(jba): Benchmark the double decode to see if it's worth trying to avoid it.
 
-// This code is copied from memdocstore/codec.go, with some changes:
-// - special treatment for primitive.Binary
+// This code is copied from memdocstore/codec.go, except for special treatment of
+// primitive.Binary.
 
 func encodeDoc(doc driver.Document, lowercaseFields bool) (map[string]interface{}, error) {
 	e := encoder{lowercaseFields: lowercaseFields}

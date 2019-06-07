@@ -639,4 +639,16 @@ func wrapError(c driver.Collection, err error) error {
 	return gcerr.New(c.ErrorCode(err), err, 2, "docstore")
 }
 
-// TODO(shantuo): ErrorAs
+// ErrorAs converts i to provider-specific types. See
+// https://gocloud.dev/concepts/as/ for background information and the
+// provider-specific package documentation for the specific types supported for
+// that provider.
+//
+// When the error is an ActionListError, ErrorAs works on individual errors in
+// the slice, not the list itself.
+//
+// ErrorAs panics if i is nil or not a pointer.
+// ErrorAs returns false if err == nil.
+func (c *Collection) ErrorAs(err error, i interface{}) bool {
+	return gcerr.ErrorAs(err, i, c.driver.ErrorAs)
+}
