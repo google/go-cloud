@@ -212,7 +212,7 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, op
 		opts = &Options{}
 	}
 	if opts.RevisionField == "" {
-		opts.RevisionField = docstore.RevisionField
+		opts.RevisionField = docstore.DefaultRevisionField
 	}
 	return &collection{
 		db:           db,

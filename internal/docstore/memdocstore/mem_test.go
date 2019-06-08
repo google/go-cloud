@@ -72,9 +72,9 @@ func TestUpdateEncodesValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := docmap{
-		drivertest.KeyField:    doc[drivertest.KeyField],
-		"a":                    int64(2),
-		docstore.RevisionField: got[docstore.RevisionField],
+		drivertest.KeyField: doc[drivertest.KeyField],
+		"a":                 int64(2),
+		dc.RevisionField():  got[dc.RevisionField()],
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
@@ -103,10 +103,10 @@ func TestUpdateAtomic(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := docmap{
-		drivertest.KeyField:    doc[drivertest.KeyField],
-		docstore.RevisionField: got[docstore.RevisionField],
-		"a":                    "A",
-		"b":                    "B",
+		drivertest.KeyField: doc[drivertest.KeyField],
+		dc.RevisionField():  got[dc.RevisionField()],
+		"a":                 "A",
+		"b":                 "B",
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)

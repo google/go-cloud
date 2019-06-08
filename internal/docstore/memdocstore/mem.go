@@ -111,7 +111,7 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{},
 		opts = &Options{}
 	}
 	if opts.RevisionField == "" {
-		opts.RevisionField = docstore.RevisionField
+		opts.RevisionField = docstore.DefaultRevisionField
 	}
 	return &collection{
 		keyField:    keyField,

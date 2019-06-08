@@ -130,7 +130,7 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string, n
 		opts = &Options{}
 	}
 	if opts.RevisionField == "" {
-		opts.RevisionField = docstore.RevisionField
+		opts.RevisionField = docstore.DefaultRevisionField
 	}
 	return &collection{
 		client:    client,

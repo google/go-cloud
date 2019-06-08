@@ -140,7 +140,7 @@ func newCollection(mcoll *mongo.Collection, idField string, idFunc func(docstore
 		opts = &Options{}
 	}
 	if opts.RevisionField == "" {
-		opts.RevisionField = docstore.RevisionField
+		opts.RevisionField = docstore.DefaultRevisionField
 	}
 	c := &collection{
 		coll:          mcoll,

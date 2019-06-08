@@ -59,7 +59,7 @@ func TestCodecSpecial(t *testing.T) {
 	enc.Name = "collPath/" + in.Name
 	gotdoc := drivertest.MustDocument(&got)
 	// Test type-driven decoding (where the types of the struct fields are available).
-	if err := decodeDoc(enc, gotdoc, nameField, docstore.RevisionField); err != nil {
+	if err := decodeDoc(enc, gotdoc, nameField, docstore.DefaultRevisionField); err != nil {
 		t.Fatal(err)
 	}
 	if diff := cmp.Diff(&got, in); diff != "" {
@@ -69,7 +69,7 @@ func TestCodecSpecial(t *testing.T) {
 	// Test type-blind decoding.
 	gotmap := map[string]interface{}{}
 	gotmapdoc := drivertest.MustDocument(gotmap)
-	if err := decodeDoc(enc, gotmapdoc, nameField, docstore.RevisionField); err != nil {
+	if err := decodeDoc(enc, gotmapdoc, nameField, docstore.DefaultRevisionField); err != nil {
 		t.Fatal(err)
 	}
 	wantmap := map[string]interface{}{

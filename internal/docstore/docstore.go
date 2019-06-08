@@ -52,16 +52,16 @@ func newCollection(d driver.Collection) *Collection {
 	return &Collection{driver: d}
 }
 
-// RevisionField is the default name of the document field used for document revision
+// DefaultRevisionField is the default name of the document field used for document revision
 // information, to implement optimistic locking.
 // See the Revisions section of the package documentation.
-const RevisionField = "DocstoreRevision"
+const DefaultRevisionField = "DocstoreRevision"
 
 func (c *Collection) revisionField() string {
 	if r := c.driver.RevisionField(); r != "" {
 		return r
 	}
-	return RevisionField
+	return DefaultRevisionField
 }
 
 // A FieldPath is a dot-separated sequence of UTF-8 field names. Examples:
@@ -155,8 +155,8 @@ func (l *ActionList) Put(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Put, doc: doc})
 }
 
-// Delete adds an action that deletes a document to the given ActionList, and returns the ActionList.
-// Only the key fields and RevisionField of doc are used.
+// Delete adds an action that deletes a document to the given ActionList, and returns
+// the ActionList. Only the key and revision fields of doc are used.
 // See the Revisions section of the package documentation for how revisions are
 // handled.
 // If doc has no revision and the document doesn't exist, nothing happens and no

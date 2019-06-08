@@ -204,7 +204,7 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 	}
 	coll := ds.NewCollection(dc)
 	clearCollection(t, coll)
-	t.Run("StdRev", func(t *testing.T) { f(t, coll, ds.RevisionField) })
+	t.Run("StdRev", func(t *testing.T) { f(t, coll, ds.DefaultRevisionField) })
 
 	dc, err = h.MakeAlternateRevisionFieldCollection(ctx)
 	if err != nil {
