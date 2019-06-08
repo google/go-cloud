@@ -12,29 +12,59 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamodocstore_test
+package mongodocstore_test
 
 import (
 	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"gocloud.dev/internal/docstore"
-	"gocloud.dev/internal/docstore/dynamodocstore"
+	"gocloud.dev/internal/docstore/mongodocstore"
 )
 
 func ExampleOpenCollection() {
 	// This example is used in https://gocloud.dev/howto/docstore.
 
-	// import _ "gocloud.dev/docstore/dynamodocstore"
+	// Variables set up elsewhere:
+	ctx := context.Background()
 
-	sess, err := session.NewSession()
+	client, err := mongodocstore.Dial(ctx, "mongodb://my-host")
 	if err != nil {
 		log.Fatal(err)
 	}
-	coll, err := dynamodocstore.OpenCollection(
-		dynamodb.New(sess), "docstore-test", "partitionKeyField", "", nil)
+	mcoll := client.Database("my-db").Collection("my-coll")
+	coll, err := mongodocstore.OpenCollection(mcoll, "userID", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Ignore unused variables in example:
+	_ = coll
+}
+
+func ExampleOpenCollectionWithIDFunc() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	type HighScore struct {
+		Game   string
+		Player string
+	}
+
+	client, err := mongodocstore.Dial(ctx, "mongodb://my-host")
+	if err != nil {
+		log.Fatal(err)
+	}
+	mcoll := client.Database("my-db").Collection("my-coll")
+
+	// The name of a document is constructed from the Game and Player fields.
+	nameFromDocument := func(doc docstore.Document) interface{} {
+		hs := doc.(*HighScore)
+		return hs.Game + "|" + hs.Player
+	}
+
+	coll, err := mongodocstore.OpenCollectionWithIDFunc(mcoll, nameFromDocument, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,13 +76,13 @@ func ExampleOpenCollection() {
 func Example_openCollectionFromURL() {
 	// This example is used in https://gocloud.dev/howto/docstore.
 
-	// import _ "gocloud.dev/docstore/dynamodocstore"
+	// import _ "gocloud.dev/docstore/mongodocstore"
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.
-	coll, err := docstore.OpenCollection(ctx, "dynamodb://my-table?partition_key=name")
+	coll, err := docstore.OpenCollection(ctx, "mongo://my-db/my-collection?id_field=userID")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -70,7 +70,9 @@ const Scheme = "mongo"
 // The URL Host is used as the database name.
 // The URL Path is used as the collection name.
 //
-// No query parameters are supported.
+// The following query parameters are supported:
+//
+//   - id_field (optional): the field name to use for the "_id" field.
 type URLOpener struct {
 	// A Client is a MongoDB client that performs operations on the db, must be
 	// non-nil.
