@@ -26,7 +26,7 @@ import (
 
 // RunBenchmarks runs benchmarks for docstore drivers.
 func RunBenchmarks(b *testing.B, coll *docstore.Collection) {
-	cleanUpTable(b, coll)
+	clearCollection(b, coll)
 	b.Run("BenchmarkSingleActionPut", func(b *testing.B) {
 		benchmarkSingleActionPut(10, b, coll)
 	})
@@ -39,7 +39,7 @@ func RunBenchmarks(b *testing.B, coll *docstore.Collection) {
 	b.Run("BenchmarkActionListGet", func(b *testing.B) {
 		benchmarkActionListGet(100, b, coll)
 	})
-	cleanUpTable(b, coll)
+	clearCollection(b, coll)
 }
 
 func benchmarkSingleActionPut(n int, b *testing.B, coll *docstore.Collection) {

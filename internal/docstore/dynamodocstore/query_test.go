@@ -22,7 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/google/go-cmp/cmp"
-	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
 
@@ -31,7 +30,7 @@ func TestPlanQuery(t *testing.T) {
 		table:        "T",
 		partitionKey: "tableP",
 		description:  &dynamodb.TableDescription{},
-		opts:         &Options{AllowScans: true},
+		opts:         &Options{AllowScans: true, RevisionField: "rev"},
 	}
 
 	// Build an ExpressionAttributeNames map with the given names.
@@ -201,7 +200,7 @@ func TestPlanQuery(t *testing.T) {
 			desc: "equality filter on table partition, filter on local index sort, good projection",
 			// Same as above, but now the query no longer asks for all fields, so
 			// even though the local index's project doesn't appear to cover the
-			// selected fields (because of DocstoreRevision), DynamoDB will read the
+			// selected fields (because of rev), DynamoDB will read the
 			// other fields from the table.
 			localIndexSortKey: "localS",
 			localIndexFields:  []string{}, // keys only
@@ -214,7 +213,7 @@ func TestPlanQuery(t *testing.T) {
 			want: &dynamodb.QueryInput{
 				IndexName:                 aws.String("local"),
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
-				ExpressionAttributeNames:  eans("tableP", "localS", "DocstoreRevision"),
+				ExpressionAttributeNames:  eans("tableP", "localS", "rev"),
 				ExpressionAttributeValues: eavs(2),
 				ProjectionExpression:      aws.String("#0, #1, #2"),
 			},
@@ -294,7 +293,7 @@ func TestPlanQuery(t *testing.T) {
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort, bad projection 2",
-			// As above. Here the global index is missing the implicit DocstoreRevision field
+			// As above. Here the global index is missing the implicit rev field
 			// we add to all queries.
 			globalIndexPartitionKey: "tableP",
 			globalIndexSortKey:      "globalS",
@@ -309,7 +308,7 @@ func TestPlanQuery(t *testing.T) {
 				IndexName:                 nil,
 				KeyConditionExpression:    aws.String("#1 = :1"),
 				FilterExpression:          aws.String("#0 <= :0"),
-				ExpressionAttributeNames:  eans("globalS", "tableP", "other", "DocstoreRevision"),
+				ExpressionAttributeNames:  eans("globalS", "tableP", "other", "rev"),
 				ExpressionAttributeValues: eavs(2),
 				ProjectionExpression:      aws.String("#2, #1, #3"),
 			},
@@ -321,7 +320,7 @@ func TestPlanQuery(t *testing.T) {
 			// fields. So we query against it.
 			globalIndexPartitionKey: "tableP",
 			globalIndexSortKey:      "globalS",
-			globalIndexFields:       []string{"other", docstore.RevisionField},
+			globalIndexFields:       []string{"other", "rev"},
 			query: &driver.Query{
 				FieldPaths: [][]string{{"other"}},
 				Filters: []driver.Filter{
@@ -332,7 +331,7 @@ func TestPlanQuery(t *testing.T) {
 				IndexName:                 aws.String("global"),
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ProjectionExpression:      aws.String("#2, #0, #3"),
-				ExpressionAttributeNames:  eans("tableP", "globalS", "other", "DocstoreRevision"),
+				ExpressionAttributeNames:  eans("tableP", "globalS", "other", "rev"),
 				ExpressionAttributeValues: eavs(2),
 			},
 			wantPlan: `Index: "global"`,

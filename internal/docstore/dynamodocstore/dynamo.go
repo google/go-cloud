@@ -175,6 +175,10 @@ type Options struct {
 	// return an error instead (with the exception of a query with no filters).
 	AllowScans bool
 
+	// The name of the field holding the document revision.
+	// Defaults to docstore.RevisionField.
+	RevisionField string
+
 	// If set, call this function on queries that we cannot execute at all (for
 	// example, a query with an OrderBy clause that lacks an equality filter on a
 	// partition key). The function should execute the query however it wishes, and
@@ -207,6 +211,9 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, op
 	if opts == nil {
 		opts = &Options{}
 	}
+	if opts.RevisionField == "" {
+		opts.RevisionField = docstore.DefaultRevisionField
+	}
 	return &collection{
 		db:           db,
 		table:        tableName,
@@ -231,7 +238,7 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	return keys, nil
 }
 
-func (c *collection) RevisionField() string { return "" }
+func (c *collection) RevisionField() string { return c.opts.RevisionField }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
@@ -294,7 +301,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		// We need to add the key fields if the user doesn't include them. The
 		// BatchGet API doesn't return them otherwise.
 		var hasP, hasS bool
-		nbs := []expression.NameBuilder{expression.Name(docstore.RevisionField)}
+		nbs := []expression.NameBuilder{expression.Name(c.opts.RevisionField)}
 		for _, fp := range gets[start].FieldPaths {
 			p := strings.Join(fp, ".")
 			nbs = append(nbs, expression.Name(p))
@@ -387,7 +394,7 @@ func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, err
 		var pc *expression.ConditionBuilder
 		var err error
 		if a.Kind != driver.Create {
-			pc, err = revisionPrecondition(a.Doc)
+			pc, err = revisionPrecondition(a.Doc, c.opts.RevisionField)
 			if err != nil {
 				errs[a.Index] = err
 				continue
@@ -441,7 +448,7 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 		return fmt.Errorf("missing sort key %q", c.sortKey)
 	}
 	rev := driver.UniqueString()
-	if av.M[docstore.RevisionField], err = encodeValue(rev); err != nil {
+	if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
 		return err
 	}
 	in := &dyn.PutItemInput{
@@ -463,7 +470,7 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 			if k == driver.Create {
 				return gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
 			}
-			if rev, _ := doc.GetField(docstore.RevisionField); rev == nil && k == driver.Replace {
+			if rev, _ := doc.GetField(c.opts.RevisionField); rev == nil && k == driver.Replace {
 				return gcerr.Newf(gcerr.NotFound, nil, "document not found")
 			}
 		}
@@ -472,7 +479,7 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 	if newPartitionKey != "" {
 		_ = doc.SetField(c.partitionKey, newPartitionKey)
 	}
-	_ = doc.SetField(docstore.RevisionField, rev)
+	_ = doc.SetField(c.opts.RevisionField, rev)
 	return nil
 }
 
@@ -517,7 +524,7 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 		}
 	}
 	rev := driver.UniqueString()
-	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(rev))
+	ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(rev))
 	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
 	if err != nil {
 		return err
@@ -531,7 +538,7 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 		ExpressionAttributeValues: ce.Values(),
 	})
 	if err == nil {
-		_ = doc.SetField(docstore.RevisionField, rev)
+		_ = doc.SetField(c.opts.RevisionField, rev)
 	}
 	return err
 }
@@ -550,7 +557,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 		var err error
 		a := actions[i]
 		if a.Kind != driver.Create {
-			pc, err = revisionPrecondition(a.Doc)
+			pc, err = revisionPrecondition(a.Doc, c.opts.RevisionField)
 			if err != nil {
 				setErr(err)
 				return
@@ -647,7 +654,7 @@ func (c *collection) toTransactPut(ctx context.Context, k driver.ActionKind, doc
 		return nil, fmt.Errorf("missing sort key %q", c.sortKey)
 	}
 
-	if av.M[docstore.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
+	if av.M[c.opts.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
 		return nil, err
 	}
 	put := &dyn.Put{
@@ -708,7 +715,7 @@ func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, 
 			ub = ub.Set(fp, expression.Value(m.Value))
 		}
 	}
-	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
+	ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(driver.UniqueString()))
 	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
 	if err != nil {
 		return nil, err
@@ -727,8 +734,8 @@ func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, 
 
 // revisionPrecondition returns a DynamoDB expression that asserts that the
 // stored document's revision matches the revision of doc.
-func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, error) {
-	v, err := doc.GetField(docstore.RevisionField)
+func revisionPrecondition(doc driver.Document, revField string) (*expression.ConditionBuilder, error) {
+	v, err := doc.GetField(revField)
 	if err != nil { // field not present
 		return nil, nil
 	}
@@ -739,13 +746,13 @@ func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, er
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
 			"%s field contains wrong type: got %T, want string",
-			docstore.RevisionField, v)
+			revField, v)
 	}
 	if rev == "" {
 		return nil, nil
 	}
 	// Value encodes rev to an attribute value.
-	cb := expression.Name(docstore.RevisionField).Equal(expression.Value(rev))
+	cb := expression.Name(revField).Equal(expression.Value(rev))
 	return &cb, nil
 }
 

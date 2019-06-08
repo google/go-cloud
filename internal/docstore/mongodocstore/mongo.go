@@ -106,6 +106,9 @@ type Options struct {
 	// that uses the official Go client for MongoDB,
 	// go.mongodb.org/mongo-driver/mongo, which lowercases field names.
 	LowercaseFields bool
+	// The name of the field holding the document revision.
+	// Defaults to docstore.RevisionField.
+	RevisionField string
 }
 
 // OpenCollection opens a MongoDB collection for use with Docstore.
@@ -136,11 +139,14 @@ func newCollection(mcoll *mongo.Collection, idField string, idFunc func(docstore
 	if opts == nil {
 		opts = &Options{}
 	}
+	if opts.RevisionField == "" {
+		opts.RevisionField = docstore.DefaultRevisionField
+	}
 	c := &collection{
 		coll:          mcoll,
 		idField:       idField,
 		idFunc:        idFunc,
-		revisionField: docstore.RevisionField,
+		revisionField: opts.RevisionField,
 		opts:          opts,
 	}
 	if c.idField == "" && c.idFunc == nil {
@@ -167,8 +173,7 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 }
 
 func (c *collection) RevisionField() string {
-	// TODO(jba): should this be the lowercased version?
-	return c.revisionField
+	return c.opts.RevisionField
 }
 
 // From https://docs.mongodb.com/manual/core/document: "The field name _id is

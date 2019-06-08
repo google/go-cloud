@@ -38,6 +38,10 @@ func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, erro
 	return newCollection("", drivertest.HighScoreKey, nil)
 }
 
+func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
+	return newCollection(drivertest.KeyField, nil, &Options{RevisionField: drivertest.AlternateRevisionField})
+}
+
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
@@ -68,9 +72,9 @@ func TestUpdateEncodesValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := docmap{
-		drivertest.KeyField:    doc[drivertest.KeyField],
-		"a":                    int64(2),
-		docstore.RevisionField: got[docstore.RevisionField],
+		drivertest.KeyField: doc[drivertest.KeyField],
+		"a":                 int64(2),
+		dc.RevisionField():  got[dc.RevisionField()],
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
@@ -99,10 +103,10 @@ func TestUpdateAtomic(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := docmap{
-		drivertest.KeyField:    doc[drivertest.KeyField],
-		docstore.RevisionField: got[docstore.RevisionField],
-		"a":                    "A",
-		"b":                    "B",
+		drivertest.KeyField: doc[drivertest.KeyField],
+		dc.RevisionField():  got[dc.RevisionField()],
+		"a":                 "A",
+		"b":                 "B",
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
@@ -173,25 +177,5 @@ func TestSortDocs(t *testing.T) {
 		if diff := cmp.Diff(got, test.want); diff != "" {
 			t.Errorf("%q, asc=%t:\n%s", test.field, test.ascending, diff)
 		}
-	}
-}
-
-func TestAlternativeRevisionField(t *testing.T) {
-	coll, err := OpenCollection("Key", &Options{RevisionField: "Etag"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	type S struct {
-		Key  int
-		Etag interface{}
-	}
-
-	got := S{Key: 1}
-	if err := coll.Actions().Put(&S{Key: 1}).Get(&got).Do(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if got.Etag != int64(1) {
-		t.Errorf("got %v, want 1", got.Etag)
 	}
 }
