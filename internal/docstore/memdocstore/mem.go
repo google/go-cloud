@@ -36,8 +36,6 @@ package memdocstore // import "gocloud.dev/internal/docstore/memdocstore"
 
 import (
 	"context"
-	"fmt"
-	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -48,35 +46,15 @@ import (
 	"gocloud.dev/internal/gcerr"
 )
 
-func init() {
-	docstore.DefaultURLMux().RegisterCollection(Scheme, &URLOpener{})
-}
-
-// Scheme is the URL scheme memdocstore registers its URLOpener under on
-// docstore.DefaultMux.
-const Scheme = "mem"
-
-// URLOpener opens URLs like "mem://_id".
-//
-// The URL's host is used as the keyField.
-// The URL's path is ignored.
-//
-// No query parameters are supported.
-type URLOpener struct{}
-
-// OpenCollectionURL opens a docstore.Collection based on u.
-func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
-	}
-	return OpenCollection(u.Host, nil)
-}
-
 // Options are optional arguments to the OpenCollection functions.
 type Options struct {
 	// The name of the field holding the document revision.
 	// Defaults to docstore.RevisionField.
 	RevisionField string
+
+	// The maximum number of concurrent goroutines started for a single call to
+	// ActionList.Do. If less than 1, there is no limit.
+	MaxOutstandingActionRPCs int
 }
 
 // TODO(jba): make this package thread-safe.
@@ -111,7 +89,7 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{},
 		opts = &Options{}
 	}
 	if opts.RevisionField == "" {
-		opts.RevisionField = docstore.RevisionField
+		opts.RevisionField = docstore.DefaultRevisionField
 	}
 	return &collection{
 		keyField:    keyField,
@@ -161,16 +139,16 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 
 	// Run the actions concurrently with each other.
 	run := func(as []*driver.Action) {
-		var wg sync.WaitGroup
+		t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
 		for _, a := range as {
 			a := a
-			wg.Add(1)
+			t.Acquire()
 			go func() {
-				defer wg.Done()
+				defer t.Release()
 				errs[a.Index] = c.runAction(ctx, a)
 			}()
 		}
-		wg.Wait()
+		t.Wait()
 	}
 
 	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)

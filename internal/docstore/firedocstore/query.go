@@ -61,6 +61,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 	return &docIterator{
 		streamClient: sc,
 		nameField:    c.nameField,
+		revField:     c.opts.RevisionField,
 		localFilters: localFilters,
 		cancel:       cancel,
 	}, nil
@@ -70,9 +71,9 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 // The code below is adapted from cloud.google.com/go/firestore.
 
 type docIterator struct {
-	streamClient pb.Firestore_RunQueryClient
-	nameField    string
-	localFilters []driver.Filter
+	streamClient        pb.Firestore_RunQueryClient
+	nameField, revField string
+	localFilters        []driver.Filter
 	// We call cancel to make sure the stream client doesn't leak resources.
 	// We don't need to call it if Recv() returns a non-nil error.
 	// See https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
@@ -84,7 +85,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 	if err != nil {
 		return err
 	}
-	return decodeDoc(res.Document, doc, it.nameField)
+	return decodeDoc(res.Document, doc, it.nameField, it.revField)
 }
 
 func (it *docIterator) nextResponse(ctx context.Context) (*pb.RunQueryResponse, error) {
@@ -118,7 +119,7 @@ func (it *docIterator) evaluateLocalFilters(pdoc *pb.Document) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err := decodeDoc(pdoc, doc, it.nameField); err != nil {
+	if err := decodeDoc(pdoc, doc, it.nameField, it.revField); err != nil {
 		return false, err
 	}
 	for _, f := range it.localFilters {

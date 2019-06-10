@@ -239,4 +239,4 @@ func (fakeDriverCollection) Key(doc driver.Document) (interface{}, error) {
 	return doc.GetField("key")
 }
 
-func (fakeDriverCollection) RevisionField() string { return RevisionField }
+func (fakeDriverCollection) RevisionField() string { return DefaultRevisionField }

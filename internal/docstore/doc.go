@@ -130,9 +130,8 @@
 // Docstore supports document revisions to distinguish different version of a
 // document and enable optimistic locking. By default, Docstore stores the revision
 // in the field named "DocstoreRevision" (stored in the constant
-// docstore.RevisionField). Some providers give you the option of changing that field
+// docstore.RevisionField). Providers give you the option of changing that field
 // name.
-// TODO(jba): make it all providers
 //
 // Docstore gives every document a revision when it is created, and changes that
 // revision whenever the document is modified. If a struct doesn't have a revision
