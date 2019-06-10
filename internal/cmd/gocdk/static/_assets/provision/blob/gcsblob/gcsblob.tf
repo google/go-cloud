@@ -1,8 +1,7 @@
 # TODO(rvangent): Add comments explaining.
 
 locals {
-  gcsblob_bucket_name = "gocdk-${random_id.gcsblob_bucket_name_suffix.hex}"
-  gcsblob_bucket_url  = "gs://${local.gcsblob_bucket_name}"
+  gcsblob_bucket_url  = "gs://${google_storage_bucket.bucket.id}"
 }
 
 resource "random_id" "gcsblob_bucket_name_suffix" {
@@ -20,7 +19,7 @@ resource "google_project_service" "storage_api" {
 }
 
 resource "google_storage_bucket" "bucket" {
-  name     = "${local.gcsblob_bucket_name}"
+  name     = "gocdk-${random_id.gcsblob_bucket_name_suffix.hex}"
   location = "${local.gcs_bucket_location}"
 
   depends_on = [
