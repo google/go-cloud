@@ -315,7 +315,7 @@ func add(x, y interface{}) (interface{}, error) {
 			return float64(x) + y, nil
 		default:
 			// This shouldn't happen because it should be checked by docstore.
-			panic("bad increment amount")
+			return nil, gcerr.Newf(gcerr.Internal, nil, "bad increment aount type %T", y)
 		}
 	case float64:
 		switch y := y.(type) {
@@ -324,7 +324,8 @@ func add(x, y interface{}) (interface{}, error) {
 		case float64:
 			return x + y, nil
 		default:
-			panic("bad increment amount")
+			// This shouldn't happen because it should be checked by docstore.
+			return nil, gcerr.Newf(gcerr.Internal, nil, "bad increment aount type %T", y)
 		}
 	default:
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "value %v being incremented not int64 or float64", x)

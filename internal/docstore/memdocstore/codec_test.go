@@ -28,6 +28,9 @@ type aStruct struct {
 	Z *bool
 	W uint
 	T time.Time
+	L []int
+	F float32
+	B []byte
 }
 
 type embed struct {
@@ -66,6 +69,9 @@ func TestEncodeDoc(t *testing.T) {
 				Z:     &b,
 				W:     33,
 				T:     tm,
+				L:     []int{4, 5},
+				F:     2.5,
+				B:     []byte("abc"),
 			},
 			want: map[string]interface{}{
 				"X": int64(3),
@@ -73,6 +79,9 @@ func TestEncodeDoc(t *testing.T) {
 				"Z": true,
 				"W": int64(33),
 				"T": tm,
+				"L": []interface{}{int64(4), int64(5)},
+				"F": 2.5,
+				"B": []byte("abc"),
 			},
 		},
 	} {
@@ -121,6 +130,9 @@ func TestDecodeDoc(t *testing.T) {
 				"Z": true,
 				"W": int64(33),
 				"T": tm,
+				"L": []interface{}{int64(4), int64(5)},
+				"F": 2.5,
+				"B": []byte("abc"),
 			},
 			&aStruct{},
 			&aStruct{
@@ -129,6 +141,9 @@ func TestDecodeDoc(t *testing.T) {
 				Z:     &b,
 				W:     33,
 				T:     tm,
+				L:     []int{4, 5},
+				F:     2.5,
+				B:     []byte("abc"),
 			},
 		},
 	} {
