@@ -1,11 +1,11 @@
 # TODO(rvangent): Add comments explaining.
 
 locals {
-  gcsblob_bucket_name = "gocdk-${random_id.gcsblob_bucket_name.hex}"
+  gcsblob_bucket_name = "gocdk-${random_id.gcsblob_bucket_name_suffix.hex}"
   gcsblob_bucket_url  = "gs://${local.gcsblob_bucket_name}"
 }
 
-resource "random_id" "gcsblob_bucket_name" {
+resource "random_id" "gcsblob_bucket_name_suffix" {
   byte_length = 16
 }
 
