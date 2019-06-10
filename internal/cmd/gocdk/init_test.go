@@ -198,15 +198,8 @@ func TestInferModulePath(t *testing.T) {
 
 			err = run(ctx, pctx, []string{"init", "myspecialproject"})
 
-			switch tc.wantErr {
-			case true:
-				if err == nil {
-					t.Errorf("got nil error, want non-nil error")
-				}
-			case false:
-				if err != nil {
-					t.Errorf("inferModulePath errored: %+v", err)
-				}
+			if (err != nil) != tc.wantErr {
+				t.Errorf("got err %v but wantErr is %v", err, tc.wantErr)
 			}
 		})
 	}
