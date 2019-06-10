@@ -1,4 +1,4 @@
 {
-  "serve_enabled" : false,
-  "launcher" : "cloudrun"
+  "serve_enabled" : {{ .ServeEnabled }},
+  "launcher" : "{{ .Launcher }}"
 }

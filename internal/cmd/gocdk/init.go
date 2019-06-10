@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,6 +86,12 @@ func doInit(ctx context.Context, pctx *processContext, dir, modpath string, allo
 		}
 	}
 	if err := static.Do(projectDir, nil, actions...); err != nil {
+		return xerrors.Errorf("gocdk init: %w", err)
+	}
+	// Add a "dev" biome with a local launcher, using a new pctx that discards
+	// the normal output of "gocdk biome add".
+	subpctx := newProcessContext(projectDir, pctx.stdin, ioutil.Discard, ioutil.Discard)
+	if err := biomeAdd(ctx, subpctx, "dev", "local"); err != nil {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
 	pctx.Logf("Project created at %s with:\n", projectDir)

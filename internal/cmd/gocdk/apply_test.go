@@ -16,12 +16,12 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"testing"
+
+	"gocloud.dev/internal/cmd/gocdk/internal/static"
 )
 
 func TestApply(t *testing.T) {
@@ -48,10 +48,13 @@ func TestApply(t *testing.T) {
 		const greeting = "HALLO WORLD"
 		devBiomeDir := biomeDir(pctx.workdir, "dev")
 
-		// Overwrite the default "main.tf" file with a custom output.
+		// Add a custom output variable to "main.tf".
 		// We'll verify that we can read it down below.
-		terraformSource := `output "greeting" { value = ` + strconv.Quote(greeting) + `	}`
-		if err := ioutil.WriteFile(filepath.Join(devBiomeDir, "main.tf"), []byte(terraformSource), 0666); err != nil {
+		if err := static.Do(devBiomeDir, nil, &static.Action{
+			SourceContent: []byte(`output "greeting" { value = ` + strconv.Quote(greeting) + `	}`),
+			DestRelPath: "outputs.tf",
+			DestExists:  true,
+		}); err != nil {
 			t.Fatal(err)
 		}
 

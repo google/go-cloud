@@ -13,12 +13,10 @@ output "launch_environment" {
 }
 
 # The launch specifier sets options for the biome's launcher.
-# This is a local launcher, which runs on the local Docker daemon.
 output "launch_specifier" {
   value {
-    host_port    = 8080
-    project_id   = ""            # fill this in
-    location     = "us-central1"
-    service_name = ""            # fill this in
+    {{ range . -}}
+    {{ .Key }} = {{ .Value }}
+    {{ end -}}
   }
 }
