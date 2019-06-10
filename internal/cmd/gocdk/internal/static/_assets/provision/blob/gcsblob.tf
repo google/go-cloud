@@ -20,7 +20,7 @@ resource "google_project_service" "storage_api" {
 
 resource "google_storage_bucket" "bucket" {
   name     = "gocdk-${random_id.gcsblob_bucket_name_suffix.hex}"
-  location = "${local.gcs_bucket_location}"
+  location = "${local.gcp_storage_location}"
 
   depends_on = [
     "google_project_service.storage",

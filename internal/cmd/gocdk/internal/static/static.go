@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"text/template"
 
 	"golang.org/x/xerrors"
@@ -132,8 +133,27 @@ func AddProvider(provider string) *Action {
 	}
 }
 
+// ReadLocal reads a local Terraform variable from main.tf.
+// The local variable was likely added using an Action returned from AddLocal.
+// If the variable is not found, it returns the empty string and no error.
+func ReadLocal(biomeDir, key string) (string, error) {
+	tfMainPath := filepath.Join(biomeDir, "main.tf")
+	existing, err := ioutil.ReadFile(tfMainPath)
+	if err != nil {
+		fmt.Printf("  failed to read: %v\n", err)
+		return "", xerrors.Errorf("couldn't read existing file %q: %w", tfMainPath, err)
+	}
+	re := regexp.MustCompile(fmt.Sprintf(`%s = "([^"]*)"`, key))
+	matches := re.FindSubmatch(existing)
+	if len(matches) > 1 {
+		return string(matches[1]), nil
+	}
+	return "", nil
+}
+
 // AddLocal returns an Action that will add a Terraform variable to the "locals"
 // section in main.tf.
+// The value can later be read using ReadLocal.
 func AddLocal(key, val string) *Action {
 	return &Action{
 		SourceContent: []byte(fmt.Sprintf("  %s = %q\n", key, val)),

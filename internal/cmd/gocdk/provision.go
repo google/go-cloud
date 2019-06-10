@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
+	"gocloud.dev/internal/cmd/gocdk/internal/prompt"
 	"gocloud.dev/internal/cmd/gocdk/internal/static"
 	"golang.org/x/xerrors"
 )
@@ -61,41 +62,56 @@ func registerProvisionCmd(ctx context.Context, pctx *processContext, rootCmd *co
 	rootCmd.AddCommand(provisionCmd)
 }
 
-var (
-	provisionableTypes = map[string][]*static.Action{
-		"blob/azureblob": {
+var provisionableTypes = map[string]func(*processContext, string) ([]*static.Action, error){
+	"blob/azureblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		_, err := prompt.AzureLocationIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
 			static.AddProvider("azurerm"),
 			static.AddProvider("random"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.azureblob_bucket_url}"),
 			static.AddOutputVar("AZURE_STORAGE_ACCOUNT", "${azurerm_storage_account.storage_account.name}"),
 			static.AddOutputVar("AZURE_STORAGE_KEY", "${azurerm_storage_account.storage_account.primary_access_key}"),
 			static.CopyFile("/provision/blob/azureblob.tf", "azureblob.tf"),
-			// TODO(rvangent): Prompt for this if needed.
-			static.AddLocal("azure_location", "westus"),
-		},
-		"blob/fileblob": {
+		}, nil
+	},
+	"blob/fileblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		return []*static.Action{
 			static.AddProvider("local"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.fileblob_bucket_url}"),
 			static.CopyFile("/provision/blob/fileblob.tf", "fileblob.tf"),
-		},
-		"blob/gcsblob": {
+		}, nil
+	},
+	"blob/gcsblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		_, err := prompt.GCPProjectIDIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		_, err = prompt.GCPStorageLocationIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
 			static.AddProvider("google"),
 			static.AddProvider("random"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.gcsblob_bucket_url}"),
 			static.CopyFile("/provision/blob/gcsblob.tf", "gcsblob.tf"),
-			// TODO(rvangent): Prompt for these if needed.
-			static.AddLocal("gcp_project", "go-cloud-test-216917"),
-			static.AddLocal("gcs_bucket_location", "US"),
-		},
-		"blob/s3blob": {
+		}, nil
+	},
+	"blob/s3blob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		_, err := prompt.AWSRegionIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
 			static.AddProvider("aws"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.s3blob_bucket_url}"),
 			static.CopyFile("/provision/blob/s3blob.tf", "s3blob.tf"),
-			// TODO(rvangent): Prompt for this if needed.
-			static.AddLocal("aws_region", "us-west-1"),
-		},
-	}
-)
+		}, nil
+	},
+}
 
 // The "provision list" command.
 func provisionList(pctx *processContext) error {
@@ -124,15 +140,22 @@ func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) 
 	if err != nil {
 		return xerrors.Errorf("provision add: %w", err)
 	}
+	destBiomeDir := biomeDir(moduleDir, biome)
 
-	actions := provisionableTypes[typ]
-	if actions == nil {
+	doProvision := provisionableTypes[typ]
+	if doProvision == nil {
 		return fmt.Errorf("provision add: %q is not a supported type; use 'gocdk provision list' to see available types", typ)
+	}
+
+	// Do the prompts for the chosen type.
+	actions, err := doProvision(pctx, destBiomeDir)
+	if err != nil {
+		return xerrors.Errorf("provision add: %w", err)
 	}
 	// Perform the actions for the chosen type, instantiating into the
 	// chosen biome directory.
 	opts := &static.Options{Logger: pctx.errlog}
-	if err := static.Do(biomeDir(moduleDir, biome), opts, actions...); err != nil {
+	if err := static.Do(destBiomeDir, opts, actions...); err != nil {
 		return xerrors.Errorf("provision add: %w", err)
 	}
 	pctx.Logf("Success!")
