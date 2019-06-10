@@ -69,6 +69,10 @@ func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.
 		&Options{RevisionField: drivertest.AlternateRevisionField})
 }
 
+func (*harness) BeforeDoTypes() []interface{} {
+	return []interface{}{&pb.BatchGetDocumentsRequest{}, &pb.CommitRequest{}}
+}
+
 func (h *harness) Close() {
 	_ = h.client.Close()
 	h.done()
@@ -116,15 +120,6 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	var fc *vkit.Client
 	if !coll.As(&fc) {
 		return errors.New("Collection.As failed")
-	}
-	return nil
-}
-
-func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
-	var get *pb.BatchGetDocumentsRequest
-	var write *pb.CommitRequest
-	if !as(&get) && !as(&write) {
-		return errors.New("ActionList.BeforeDo failed")
 	}
 	return nil
 }

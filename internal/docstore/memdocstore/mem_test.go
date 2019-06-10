@@ -42,7 +42,9 @@ func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.
 	return newCollection(drivertest.KeyField, nil, &Options{RevisionField: drivertest.AlternateRevisionField})
 }
 
-func (h *harness) Close() {}
+func (*harness) BeforeDoTypes() []interface{} { return nil }
+
+func (*harness) Close() {}
 
 func TestConformance(t *testing.T) {
 	// CodecTester is nil because memdocstore has no native representation.

@@ -146,8 +146,8 @@ func NewActionListError(errs []error) ActionListError {
 
 // RunActionsOptions controls the behavior of RunActions.
 type RunActionsOptions struct {
-	// BeforeDo is a callback that must be called exactly once before each one or
-	// group of the underlying provider's actions is executed. asFunc allows
+	// BeforeDo is a callback that must be called once, sequentially, before each one
+	// or group of the underlying provider's actions is executed. asFunc allows
 	// providers to expose provider-specific types.
 	BeforeDo func(asFunc func(interface{}) bool) error
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -52,6 +53,12 @@ type Harness interface {
 	// The collection should behave like the one returned from MakeCOllection, except
 	// that the revision field should be drivertest.AlternateRevisionField.
 	MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error)
+
+	// BeforeDoTypes should return a list of values whose types are valid for the as
+	// function given to BeforeDo. For example, if the provider converts Get actions
+	// to *GetRequests and write actions to *WriteRequests, then BeforeDoTypes should
+	// return []interface{}{&GetRequest{}, &WriteRequest{}}.
+	BeforeDoTypes() []interface{}
 
 	// Close closes resources used by the harness.
 	Close()
@@ -98,9 +105,6 @@ type AsTest interface {
 	Name() string
 	// CollectionCheck will be called to allow verification of Collection.As.
 	CollectionCheck(coll *docstore.Collection) error
-	// BeforeDo will be passed directly to ActionList.BeforeDo as part of running
-	// the test actions.
-	BeforeDo(as func(interface{}) bool) error
 	// BeforeQuery will be passed directly to Query.BeforeQuery as part of doing
 	// the test query.
 	BeforeQuery(as func(interface{}) bool) error
@@ -120,13 +124,6 @@ func (verifyAsFailsOnNil) Name() string {
 func (verifyAsFailsOnNil) CollectionCheck(coll *docstore.Collection) error {
 	if coll.As(nil) {
 		return errors.New("want Collection.As to return false when passed nil")
-	}
-	return nil
-}
-
-func (verifyAsFailsOnNil) BeforeDo(as func(interface{}) bool) error {
-	if as(nil) {
-		return errors.New("want ActionList.As to return false when passed nil")
 	}
 	return nil
 }
@@ -174,6 +171,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
 	t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
+
+	t.Run("BeforeDo", func(t *testing.T) { testBeforeDo(t, newHarness) })
 
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("As", func(t *testing.T) {
@@ -1382,39 +1381,85 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 	}
 }
 
-func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
-	docs := []*HighScore{
-		{game3, "steph", 24, date(4, 25), nil},
-		{game3, "mia", 99, date(4, 26), nil},
+// Verify that BeforeDo is invoked, and its as function behaves as expected.
+func testBeforeDo(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	dc, err := h.MakeCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := ds.NewCollection(dc)
+	clearCollection(t, coll)
+
+	var called bool
+	beforeDo := func(asFunc func(interface{}) bool) error {
+		called = true
+		if asFunc(nil) {
+			return errors.New("asFunc returned true when called with nil, want false")
+		}
+		// At least one of the expected types must return true. Special case: if
+		// there are no types, then the as function never returns true, so skip the
+		// check.
+		if len(h.BeforeDoTypes()) > 0 {
+			found := false
+			for _, b := range h.BeforeDoTypes() {
+				v := reflect.New(reflect.TypeOf(b)).Interface()
+				if asFunc(v) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return errors.New("none of the BeforeDoTypes works with the as function")
+			}
+		}
+		return nil
 	}
 
+	check := func(f func(*ds.ActionList)) {
+		t.Helper()
+		// First, verify that if a BeforeDo function returns an error, so does ActionList.Do.
+		// We depend on that for the rest of the test.
+		al := coll.Actions().BeforeDo(func(func(interface{}) bool) error { return errors.New("") })
+		f(al)
+		if err := al.Do(ctx); err == nil {
+			t.Error("beforeDo returning error: got nil from Do, want error")
+			return
+		}
+		called = false
+		al = coll.Actions().BeforeDo(beforeDo)
+		f(al)
+		if err := al.Do(ctx); err != nil {
+			t.Error(err)
+			return
+		}
+		if !called {
+			t.Error("BeforeDo function never called")
+		}
+	}
+
+	doc := docmap{KeyField: "testBeforeDo"}
+	check(func(l *docstore.ActionList) { l.Create(doc) })
+	check(func(l *docstore.ActionList) { l.Replace(doc) })
+	check(func(l *docstore.ActionList) { l.Put(doc) })
+	check(func(l *docstore.ActionList) { l.Update(doc, docstore.Mods{"a": 1}) })
+	check(func(l *docstore.ActionList) { l.Get(doc) })
+	check(func(l *docstore.ActionList) { l.Delete(doc) })
+}
+
+func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 	// Verify Collection.As
 	if err := st.CollectionCheck(coll); err != nil {
 		t.Error(err)
 	}
 
 	ctx := context.Background()
-	actions := coll.Actions()
-	// Create docs
-	for _, doc := range docs {
-		actions.Put(doc)
-	}
-	if err := actions.BeforeDo(st.BeforeDo).Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-
-	// Get docs
-	gets := coll.Actions()
-	want := docs[0]
-	got := &HighScore{Game: want.Game, Player: want.Player}
-	gets.Get(got)
-	if err := gets.BeforeDo(st.BeforeDo).Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-	want.DocstoreRevision = got.DocstoreRevision
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Error(diff)
-	}
 
 	// Query
 	qs := []*docstore.Query{
@@ -1433,7 +1478,11 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 	}
 
 	// ErrorCheck
-	doc := &HighScore{game3, "steph", 24, date(4, 25), nil} // docs[0] w/o revision
+	doc := &HighScore{game3, "steph", 24, date(4, 25), nil}
+	if err := coll.Create(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	doc.DocstoreRevision = nil
 	if err := coll.Create(ctx, doc); err == nil {
 		t.Fatal("got nil error from creating an existing item, want an error")
 	} else {

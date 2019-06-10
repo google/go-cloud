@@ -69,6 +69,11 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{sess: sess, closer: done}, nil
 }
 
+func (*harness) BeforeDoTypes() []interface{} {
+	return []interface{}{&dyn.BatchGetItemInput{}, &dyn.TransactWriteItemsInput{},
+		&dyn.PutItemInput{}, &dyn.DeleteItemInput{}, &dyn.UpdateItemInput{}}
+}
+
 func (h *harness) Close() {
 	h.closer()
 }
@@ -169,15 +174,6 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	var db *dyn.DynamoDB
 	if !coll.As(&db) {
 		return errors.New("Collection.As failed")
-	}
-	return nil
-}
-
-func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
-	var bg *dyn.BatchGetItemInput
-	var tw *dyn.TransactWriteItemsInput
-	if !as(&bg) && !as(&tw) {
-		return errors.New("ActionList.BeforeDo failed")
 	}
 	return nil
 }
