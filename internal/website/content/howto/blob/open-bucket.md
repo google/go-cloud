@@ -59,7 +59,7 @@ create an [AWS session][] with the same region as your bucket:
 
 {{< goexample "gocloud.dev/blob/s3blob.ExampleOpenBucket" >}}
 
-[`s3blob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/s3blob
+[`s3blob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 [S3]: https://aws.amazon.com/s3/
 
