@@ -219,6 +219,7 @@ func TestLowercaseFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	coll := docstore.NewCollection(dc)
+	defer coll.Close()
 
 	type S struct {
 		ID, F, G         int

@@ -184,3 +184,7 @@ This can be useful for documents whose name is the combination of two or more fi
 [`memdocstore.OpenCollectionWithKeyFunc`]: https://godoc.org/gocloud.dev/internal/docstore/memdocstore#OpenCollectionWithKeyFunc
 
 
+## What's Next
+
+Now that you have opened a collection, you can [perform actions on
+documents]({{< ref "./actions.md" >}}) in the collection using portable operations.
