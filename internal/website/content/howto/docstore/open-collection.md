@@ -29,7 +29,7 @@ should call the constructor function in the driver package directly (like
 configuration, you can use `docstore.OpenCollection`, making sure you ["blank
 import"][] the driver package to link it in. See the
 [documentation on URLs][] for more details. This guide will show how to use
-both forms for each storage provider.
+both forms for each document store provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [documentation on URLs]: {{< ref "/concepts/urls.md" >}}
@@ -40,8 +40,6 @@ The
 [`dynamodocstore`](https://godoc.org/gocloud.dev/internal/docstore/dynamodocstore) 
 package supports [Amazon DynamoDB](https://aws.amazon.com/dynamodb).
 A Docstore collection corresponds to a DynamoDB table.
-
-### DynamoDB URLs {#dynamodb-url}
 
 DynamoDB URLs provide the table, partition key field and optionally the sort key
 field for the collection.
@@ -74,8 +72,6 @@ Docstore, these unique names are represented as part of the document. You must
 supply a way to extract a document's name from its contents. This can be done by
 specifying a document field that holds the name, or by providing a function to
 extract the name from a document.
-
-### Firestore URLs {#firestore-url}
 
 Firestore URLs provide the project and collection, as well as the field
 that holds the document name. 
@@ -119,8 +115,6 @@ are uniquely identified by a field called `_id`. In
 Docstore, you can choose a different name for this field, or provide a function to
 extract the document ID from a document.
 
-### MongoDB URLs {#mongo-url}
-
 MongoDB URLs provide the database and collection, and optionally the field
 that holds the document ID. Specify the Mongo server URL by setting the
 `MONGO_SERVER_URL` environment variable.
@@ -161,8 +155,6 @@ The
 [`memdocstore`](https://godoc.org/gocloud.dev/internal/docstore/mongodocstore)
 package implements an in-memory document store suitable for testing and
 development. 
-
-### Mem URLs {#mem-url}
 
 URLs for the in-memory store have a `mem:` scheme and provide the name of the
 document field to use as a primary key. There is no collection name; each call

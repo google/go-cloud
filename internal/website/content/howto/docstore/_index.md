@@ -5,7 +5,8 @@ draft: true
 showInSidenav: true
 ---
 
-Docstore provides an abstraction layer over common document stores like Amazon
+Docstore provides an abstraction layer over common [document
+stores](https://en.wikipedia.org/wiki/Document-oriented_database) like Amazon
 DynamoDB, Google Cloud Firestore, and MongoDB. These guides show how to work
 with Docstore in the Go CDK.
 
