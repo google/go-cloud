@@ -58,6 +58,7 @@ type Harness interface {
 	// function given to BeforeDo. For example, if the provider converts Get actions
 	// to *GetRequests and write actions to *WriteRequests, then BeforeDoTypes should
 	// return []interface{}{&GetRequest{}, &WriteRequest{}}.
+	// TODO(jba): consider splitting these by action kind.
 	BeforeDoTypes() []interface{}
 
 	// Close closes resources used by the harness.
