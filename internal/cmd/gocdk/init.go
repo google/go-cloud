@@ -25,7 +25,7 @@ import (
 	"text/template"
 
 	"github.com/spf13/cobra"
-	"gocloud.dev/internal/cmd/gocdk/static"
+	"gocloud.dev/internal/cmd/gocdk/internal/static"
 	"golang.org/x/xerrors"
 )
 
