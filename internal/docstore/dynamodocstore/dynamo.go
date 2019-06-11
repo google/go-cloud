@@ -31,7 +31,7 @@
 // dynamodocstore exposes the following types for As:
 //  - Collection.As: *dynamodb.DynamoDB
 //  - ActionList.BeforeDo: *dynamodb.BatchGetItemInput, *dynamodb.PutItemInput, *dynamodb.DeleteItemInput,
-//                         *dynamodb.UpdateItemInput
+//                         or *dynamodb.UpdateItemInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 //  - Error: awserr.Error

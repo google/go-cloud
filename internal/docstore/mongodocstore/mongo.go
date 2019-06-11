@@ -31,7 +31,7 @@
 // It calls the BeforeDo function once before each call to the underlying driver. The as function passed
 // to the BeforeDo function exposes the following types:
 // - Gets: *options.FindOptions
-// - writes: []mongo.WriteModel, *options.BulkWriteOptions
+// - writes: []mongo.WriteModel and *options.BulkWriteOptions
 
 // As
 //
