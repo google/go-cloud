@@ -260,10 +260,15 @@ func (e ActionListError) Unwrap() error {
 	return nil
 }
 
-// BeforeDo takes a callback function that will be called before the ActionList
-// is executed by the underlying provider's action functionality. The callback
-// takes a parameter, asFunc, that converts its argument to provider-specific
-// types. See https://gocloud.dev/concepts/as/ for background information.
+// BeforeDo takes a callback function that will be called before the ActionList is
+// executed by the underlying provider. It may be invoked multiple times for a single
+// call to ActionList.Do, because the driver may split the action list into several
+// provider calls. If any callback invocation returns an error, ActionList.Do returns
+// an error.
+//
+// The callback takes a parameter, asFunc, that converts its argument to
+// provider-specific types. See https://gocloud.dev/concepts/as for background
+// information.
 func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *ActionList {
 	l.beforeDo = f
 	return l
@@ -284,9 +289,7 @@ func (l *ActionList) Do(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	dopts := &driver.RunActionsOptions{
-		BeforeDo: l.beforeDo,
-	}
+	dopts := &driver.RunActionsOptions{BeforeDo: l.beforeDo}
 	alerr := ActionListError(l.coll.driver.RunActions(ctx, das, dopts))
 	if len(alerr) == 0 {
 		return nil // Explicitly return nil, because alerr is not of type error.

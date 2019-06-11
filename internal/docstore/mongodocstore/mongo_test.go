@@ -71,7 +71,14 @@ func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.
 		&Options{RevisionField: drivertest.AlternateRevisionField})
 }
 
-func (h *harness) Close() {}
+func (*harness) BeforeDoTypes() []interface{} {
+	return []interface{}{
+		[]mongo.WriteModel{},
+		&options.FindOptions{},
+	}
+}
+
+func (*harness) Close() {}
 
 type codecTester struct{}
 
@@ -113,18 +120,6 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	var mc *mongo.Collection
 	if !coll.As(&mc) {
 		return errors.New("Collection.As failed")
-	}
-	return nil
-}
-
-func (verifyAs) BeforeDo(as func(i interface{}) bool) error {
-	var find *options.FindOptions
-	var insert *options.InsertOneOptions
-	var replace *options.ReplaceOptions
-	var update *options.UpdateOptions
-	var del *options.DeleteOptions
-	if !as(&find) && !as(&insert) && !as(&replace) && !as(&update) && !as(&del) {
-		return errors.New("ActionList.BeforeDo failed")
 	}
 	return nil
 }

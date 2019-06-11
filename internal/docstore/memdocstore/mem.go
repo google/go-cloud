@@ -24,6 +24,9 @@
 // Action lists are executed concurrently. Each action in an action list is executed
 // in a separate goroutine.
 //
+// memdocstore calls the BeforeDo function of an ActionList once before executing the
+// actions. Its as function never returns true.
+//
 //
 // URLs
 //
@@ -149,6 +152,15 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 			}()
 		}
 		t.Wait()
+	}
+
+	if opts.BeforeDo != nil {
+		if err := opts.BeforeDo(func(interface{}) bool { return false }); err != nil {
+			for i := range errs {
+				errs[i] = err
+			}
+			return driver.NewActionListError(errs)
+		}
 	}
 
 	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)

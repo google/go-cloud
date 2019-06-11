@@ -30,7 +30,8 @@
 //
 // dynamodocstore exposes the following types for As:
 //  - Collection.As: *dynamodb.DynamoDB
-//  - ActionList.BeforeDo: *dynamodb.BatchGetItemsInput or *dynamodb.TransactWriteItemsInput
+//  - ActionList.BeforeDo: *dynamodb.BatchGetItemInput or *dynamodb.PutItemInput or *dynamodb.DeleteItemInput
+//                         or *dynamodb.UpdateItemInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 //  - Error: awserr.Error
@@ -333,15 +334,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 	}
 	in := &dyn.BatchGetItemInput{RequestItems: map[string]*dyn.KeysAndAttributes{c.table: ka}}
 	if opts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**dyn.BatchGetItemInput)
-			if !ok {
-				return false
-			}
-			*p = in
-			return true
-		}
-		if err := opts.BeforeDo(asFunc); err != nil {
+		if err := opts.BeforeDo(driver.AsFunc(in)); err != nil {
 			setErr(err)
 			return
 		}
@@ -393,10 +386,9 @@ func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]
 
 // runWrites executes all the writes as separate RPCs, concurrently.
 func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	// TODO(jba): reimplement opts.BeforeDo
 	var ops []*writeOp
 	for _, w := range writes {
-		op, err := c.newWriteOp(w)
+		op, err := c.newWriteOp(w, opts)
 		if err != nil {
 			errs[w.Index] = err
 		} else {
@@ -432,20 +424,20 @@ type writeOp struct {
 	run             func(context.Context) error // run as a single RPC
 }
 
-func (c *collection) newWriteOp(a *driver.Action) (*writeOp, error) {
+func (c *collection) newWriteOp(a *driver.Action, opts *driver.RunActionsOptions) (*writeOp, error) {
 	switch a.Kind {
 	case driver.Create, driver.Replace, driver.Put:
-		return c.newPut(a)
+		return c.newPut(a, opts)
 	case driver.Update:
-		return c.newUpdate(a)
+		return c.newUpdate(a, opts)
 	case driver.Delete:
-		return c.newDelete(a)
+		return c.newDelete(a, opts)
 	default:
 		panic("bad write kind")
 	}
 }
 
-func (c *collection) newPut(a *driver.Action) (*writeOp, error) {
+func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*writeOp, error) {
 	av, err := encodeDoc(a.Doc)
 	if err != nil {
 		return nil, err
@@ -490,31 +482,37 @@ func (c *collection) newPut(a *driver.Action) (*writeOp, error) {
 		newPartitionKey: newPartitionKey,
 		newRevision:     rev,
 		run: func(ctx context.Context) error {
-			in := &dyn.PutItemInput{
-				TableName:                 dput.TableName,
-				Item:                      dput.Item,
-				ConditionExpression:       dput.ConditionExpression,
-				ExpressionAttributeNames:  dput.ExpressionAttributeNames,
-				ExpressionAttributeValues: dput.ExpressionAttributeValues,
-			}
-			_, err := c.db.PutItemWithContext(ctx, in)
-			if err != nil {
-				if ae, ok := err.(awserr.Error); ok && ae.Code() == dyn.ErrCodeConditionalCheckFailedException {
-					if a.Kind == driver.Create {
-						err = gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
-					}
-					if rev, _ := a.Doc.GetField(c.opts.RevisionField); rev == nil && a.Kind == driver.Replace {
-						err = gcerr.Newf(gcerr.NotFound, nil, "document not found")
-					}
-				}
-				return err
-			}
-			return nil
+			return c.runPut(ctx, dput, a, opts)
 		},
 	}, nil
 }
 
-func (c *collection) newDelete(a *driver.Action) (*writeOp, error) {
+func (c *collection) runPut(ctx context.Context, dput *dyn.Put, a *driver.Action, opts *driver.RunActionsOptions) error {
+	in := &dyn.PutItemInput{
+		TableName:                 dput.TableName,
+		Item:                      dput.Item,
+		ConditionExpression:       dput.ConditionExpression,
+		ExpressionAttributeNames:  dput.ExpressionAttributeNames,
+		ExpressionAttributeValues: dput.ExpressionAttributeValues,
+	}
+	if opts.BeforeDo != nil {
+		if err := opts.BeforeDo(driver.AsFunc(in)); err != nil {
+			return err
+		}
+	}
+	_, err := c.db.PutItemWithContext(ctx, in)
+	if ae, ok := err.(awserr.Error); ok && ae.Code() == dyn.ErrCodeConditionalCheckFailedException {
+		if a.Kind == driver.Create {
+			err = gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
+		}
+		if rev, _ := a.Doc.GetField(c.opts.RevisionField); rev == nil && a.Kind == driver.Replace {
+			err = gcerr.Newf(gcerr.NotFound, nil, "document not found")
+		}
+	}
+	return err
+}
+
+func (c *collection) newDelete(a *driver.Action, opts *driver.RunActionsOptions) (*writeOp, error) {
 	av, err := encodeDocKeyFields(a.Doc, c.partitionKey, c.sortKey)
 	if err != nil {
 		return nil, err
@@ -540,19 +538,25 @@ func (c *collection) newDelete(a *driver.Action) (*writeOp, error) {
 		action:    a,
 		writeItem: &dyn.TransactWriteItem{Delete: del},
 		run: func(ctx context.Context) error {
-			_, err := c.db.DeleteItemWithContext(ctx, &dyn.DeleteItemInput{
+			in := &dyn.DeleteItemInput{
 				TableName:                 del.TableName,
 				Key:                       del.Key,
 				ConditionExpression:       del.ConditionExpression,
 				ExpressionAttributeNames:  del.ExpressionAttributeNames,
 				ExpressionAttributeValues: del.ExpressionAttributeValues,
-			})
+			}
+			if opts.BeforeDo != nil {
+				if err := opts.BeforeDo(driver.AsFunc(in)); err != nil {
+					return err
+				}
+			}
+			_, err := c.db.DeleteItemWithContext(ctx, in)
 			return err
 		},
 	}, nil
 }
 
-func (c *collection) newUpdate(a *driver.Action) (*writeOp, error) {
+func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions) (*writeOp, error) {
 	av, err := encodeDocKeyFields(a.Doc, c.partitionKey, c.sortKey)
 	if err != nil {
 		return nil, err
@@ -592,14 +596,20 @@ func (c *collection) newUpdate(a *driver.Action) (*writeOp, error) {
 		writeItem:   &dyn.TransactWriteItem{Update: up},
 		newRevision: rev,
 		run: func(ctx context.Context) error {
-			_, err := c.db.UpdateItemWithContext(ctx, &dyn.UpdateItemInput{
+			in := &dyn.UpdateItemInput{
 				TableName:                 up.TableName,
 				Key:                       up.Key,
 				ConditionExpression:       up.ConditionExpression,
 				UpdateExpression:          up.UpdateExpression,
 				ExpressionAttributeNames:  up.ExpressionAttributeNames,
 				ExpressionAttributeValues: up.ExpressionAttributeValues,
-			})
+			}
+			if opts.BeforeDo != nil {
+				if err := opts.BeforeDo(driver.AsFunc(in)); err != nil {
+					return err
+				}
+			}
+			_, err := c.db.UpdateItemWithContext(ctx, in)
 			return err
 		},
 	}, nil
@@ -693,7 +703,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 	tws := make([]*dyn.TransactWriteItem, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		a := actions[i]
-		op, err := c.newWriteOp(a)
+		op, err := c.newWriteOp(a, opts)
 		if err != nil {
 			setErr(err)
 			return

@@ -24,12 +24,19 @@
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
 //
+// Action Lists
+//
+// mongodocstore uses the unordered BulkWrite call of the underlying driver for writes, and uses Find with a list of document IDs for Get.
+// (These implementation choices are subject to change.)
+// It calls the BeforeDo function once before each call to the underlying driver. The as function passed
+// to the BeforeDo function exposes the following types:
+// - Gets: *options.FindOptions
+// - writes: []mongo.WriteModel and *options.BulkWriteOptions
+
 // As
 //
 // mongodocstore exposes the following types for As:
 // - Collection: *mongo.Collection
-// - ActionList.BeforeDo: *options.FindOptions, *options.InsertOneOptions,
-//   *options.ReplaceOptions, *options.UpdateOptions or *options.DeleteOptions
 // - Query.BeforeQuery: *options.FindOptions
 // - DocumentIterator: *mongo.Cursor
 // - Error: mongo.CommandError, mongo.BulkWriteError, mongo.BulkWriteException
@@ -186,7 +193,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
 	c.runGets(ctx, beforeGets, errs, opts)
 	ch := make(chan []error)
-	go func() { ch <- c.bulkWrite(ctx, writes, errs) }()
+	go func() { ch <- c.bulkWrite(ctx, writes, errs, opts) }()
 	c.runGets(ctx, gets, errs, opts)
 	writeErrs := <-ch
 	c.runGets(ctx, afterGets, errs, opts)
@@ -415,7 +422,7 @@ func (c *collection) makeFilter(id interface{}, doc driver.Document) (filter bso
 // errs is the slice of errors indexed by the position of the action in the original
 // action list. bulkWrite populates this slice. In addition, bulkWrite returns a list
 // of errors that cannot be attributed to any single action.
-func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, errs []error) []error {
+func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, errs []error, dopts *driver.RunActionsOptions) []error {
 	var (
 		models          []mongo.WriteModel
 		modelActions    []*driver.Action // corresponding action for each model
@@ -462,10 +469,29 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 	if len(models) == 0 {
 		return nil
 	}
+
+	bopts := options.BulkWrite().SetOrdered(false)
+	if dopts.BeforeDo != nil {
+		asFunc := func(target interface{}) bool {
+			switch t := target.(type) {
+			case *[]mongo.WriteModel:
+				*t = models
+			case **options.BulkWriteOptions:
+				*t = bopts
+			default:
+				return false
+			}
+			return true
+		}
+		if err := dopts.BeforeDo(asFunc); err != nil {
+			return []error{err}
+		}
+	}
+
 	// TODO(jba): improve independent execution. I think that even if BulkWrite returns an error,
 	// some of the actions may have succeeded.
 	var reterrs []error
-	res, err := c.coll.BulkWrite(ctx, models, options.BulkWrite().SetOrdered(false))
+	res, err := c.coll.BulkWrite(ctx, models, bopts)
 	if err != nil {
 		bwe, ok := err.(mongo.BulkWriteException)
 		if !ok { // assume everything failed with this error

@@ -27,11 +27,14 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
+//
 // As
 //
-// firedocstore exposes the following types for As:
+// firedocstore exposes the following types for as functions.
+// The pb package is google.golang.org/genproto/googleapis/firestore/v1.
+// The firestore  package is cloud.google.com/go/firestore/apiv1.
 // - Collection.As: *firestore.Client
-// - ActionList.BeforeDo: *pb.BatchGetDocumentRequest or *pb.CommitRequest.
+// - ActionList.BeforeDo: *pb.BatchGetDocumentsRequest or *pb.CommitRequest.
 // - Query.BeforeQuery: *firestore.RunQueryRequest
 // - DocumentIterator: firestore.Firestore_RunQueryClient
 // - Error: *google.golang.org/grpc/status.Status
