@@ -186,6 +186,7 @@ func TestInferModulePath(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir, err := ioutil.TempDir("", testTempDirPrefix)
@@ -198,9 +199,7 @@ func TestInferModulePath(t *testing.T) {
 				}
 			}()
 
-			ctx := context.Background()
 			pctx := newTestProcessContext(dir)
-
 			gopath, cleanup := tc.testGOPATH(dir)
 			defer cleanup()
 			pctx.env = []string{gopath}
