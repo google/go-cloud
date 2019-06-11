@@ -261,9 +261,10 @@ func (e ActionListError) Unwrap() error {
 }
 
 // BeforeDo takes a callback function that will be called before the ActionList is
-// executed by the underlying provider. It may be invoked multiple times for a
-// single call to ActionList.Do. If the callback returns an error, ActionList.Do
-// returns an error.
+// executed by the underlying provider. It may be invoked multiple times for a single
+// call to ActionList.Do, because the driver may split the action list into several
+// provider calls. If any callback invocation returns an error, ActionList.Do returns
+// an error.
 //
 // The callback takes a parameter, asFunc, that converts its argument to
 // provider-specific types. See https://gocloud.dev/concepts/as for background
