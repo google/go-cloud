@@ -189,6 +189,10 @@ type Options struct {
 	// If RunQueryFallback is nil, queries that cannot be executed will fail with a
 	// error that has code Unimplemented.
 	RunQueryFallback func(context.Context, *driver.Query, RunQueryFunc) (driver.DocumentIterator, error)
+
+	// The maximum number of concurrent goroutines started for a single call to
+	// ActionList.Do. If less than 1, there is no limit.
+	MaxOutstandingActionRPCs int
 }
 
 // RunQueryFunc is the type of the function passed to RunQueryFallback.
@@ -254,26 +258,26 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 
 func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
 	const batchSize = 100
-	var wg sync.WaitGroup
+	t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
 	for _, group := range driver.GroupByFieldPath(actions) {
 		n := len(group) / batchSize
 		for i := 0; i < n; i++ {
 			i := i
-			wg.Add(1)
+			t.Acquire()
 			go func() {
-				defer wg.Done()
+				defer t.Release()
 				c.batchGet(ctx, group, errs, opts, batchSize*i, batchSize*(i+1)-1)
 			}()
 		}
 		if n*batchSize < len(group) {
-			wg.Add(1)
+			t.Acquire()
 			go func() {
-				defer wg.Done()
+				defer t.Release()
 				c.batchGet(ctx, group, errs, opts, batchSize*n, len(group)-1)
 			}()
 		}
 	}
-	wg.Wait()
+	t.Wait()
 }
 
 func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions, start, end int) {
@@ -387,56 +391,68 @@ func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]
 	return m
 }
 
+// runWrites executes all the writes as separate RPCs, concurrently.
 func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
-	// TODO(jba): Do these concurrently.
 	// TODO(jba): reimplement opts.BeforeDo
-	for _, a := range writes {
-		var pc *expression.ConditionBuilder
-		var err error
-		if a.Kind != driver.Create {
-			pc, err = revisionPrecondition(a.Doc, c.opts.RevisionField)
+	var ops []*writeOp
+	for _, w := range writes {
+		op, err := c.newWriteOp(w)
+		if err != nil {
+			errs[w.Index] = err
+		} else {
+			ops = append(ops, op)
+		}
+	}
+
+	t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
+	for _, op := range ops {
+		op := op
+		t.Acquire()
+		go func() {
+			defer t.Release()
+			err := op.run(ctx)
+			a := op.action
 			if err != nil {
 				errs[a.Index] = err
-				continue
+			} else {
+				c.onSuccess(op)
 			}
-		}
-		switch a.Kind {
-		case driver.Create:
-			cb := expression.AttributeNotExists(expression.Name(c.partitionKey))
-			err = c.put(ctx, a.Kind, a.Doc, &cb)
-		case driver.Replace:
-			if pc == nil {
-				c := expression.AttributeExists(expression.Name(c.partitionKey))
-				pc = &c
-			}
-			err = c.put(ctx, a.Kind, a.Doc, pc)
-		case driver.Put:
-			err = c.put(ctx, a.Kind, a.Doc, pc)
-		case driver.Delete:
-			err = c.delete(ctx, a.Doc, pc)
-		case driver.Update:
-			cb := expression.AttributeExists(expression.Name(c.partitionKey))
-			if pc != nil {
-				cb = cb.And(*pc)
-			}
-			err = c.update(ctx, a.Doc, a.Mods, &cb)
-		default:
-			panic("bad write kind")
-		}
-		if err != nil {
-			errs[a.Index] = err
-		}
+		}()
+	}
+	t.Wait()
+}
+
+// A writeOp describes a single write to DynamoDB. The write can be executed
+// on its own, or included as part of a transaction.
+type writeOp struct {
+	action          *driver.Action
+	writeItem       *dyn.TransactWriteItem // for inclusion in a transaction
+	newPartitionKey string                 // for a Create on a document without a partition key
+	newRevision     string
+	run             func(context.Context) error // run as a single RPC
+}
+
+func (c *collection) newWriteOp(a *driver.Action) (*writeOp, error) {
+	switch a.Kind {
+	case driver.Create, driver.Replace, driver.Put:
+		return c.newPut(a)
+	case driver.Update:
+		return c.newUpdate(a)
+	case driver.Delete:
+		return c.newDelete(a)
+	default:
+		panic("bad write kind")
 	}
 }
 
-func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Document, condition *expression.ConditionBuilder) error {
-	av, err := encodeDoc(doc)
+func (c *collection) newPut(a *driver.Action) (*writeOp, error) {
+	av, err := encodeDoc(a.Doc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	mf := c.missingKeyField(av.M)
-	if k != driver.Create && mf != "" {
-		return fmt.Errorf("missing key field %q", mf)
+	if a.Kind != driver.Create && mf != "" {
+		return nil, fmt.Errorf("missing key field %q", mf)
 	}
 	var newPartitionKey string
 	if mf == c.partitionKey {
@@ -445,74 +461,104 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 	}
 	if c.sortKey != "" && mf == c.sortKey {
 		// It doesn't make sense to generate a random sort key.
-		return fmt.Errorf("missing sort key %q", c.sortKey)
+		return nil, fmt.Errorf("missing sort key %q", c.sortKey)
 	}
 	rev := driver.UniqueString()
 	if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
-		return err
+		return nil, err
 	}
-	in := &dyn.PutItemInput{
+	dput := &dyn.Put{
 		TableName: &c.table,
 		Item:      av.M,
 	}
-	if condition != nil {
-		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
-		if err != nil {
-			return err
-		}
-		in.ExpressionAttributeNames = ce.Names()
-		in.ExpressionAttributeValues = ce.Values()
-		in.ConditionExpression = ce.Condition()
-	}
-	_, err = c.db.PutItemWithContext(ctx, in)
+	cb, err := c.precondition(a)
 	if err != nil {
-		if ae, ok := err.(awserr.Error); ok && ae.Code() == dyn.ErrCodeConditionalCheckFailedException {
-			if k == driver.Create {
-				return gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
-			}
-			if rev, _ := doc.GetField(c.opts.RevisionField); rev == nil && k == driver.Replace {
-				return gcerr.Newf(gcerr.NotFound, nil, "document not found")
-			}
+		return nil, err
+	}
+	if cb != nil {
+		ce, err := expression.NewBuilder().WithCondition(*cb).Build()
+		if err != nil {
+			return nil, err
 		}
-		return err
+		dput.ExpressionAttributeNames = ce.Names()
+		dput.ExpressionAttributeValues = ce.Values()
+		dput.ConditionExpression = ce.Condition()
 	}
-	if newPartitionKey != "" {
-		_ = doc.SetField(c.partitionKey, newPartitionKey)
-	}
-	_ = doc.SetField(c.opts.RevisionField, rev)
-	return nil
+	return &writeOp{
+		action:          a,
+		writeItem:       &dyn.TransactWriteItem{Put: dput},
+		newPartitionKey: newPartitionKey,
+		newRevision:     rev,
+		run: func(ctx context.Context) error {
+			in := &dyn.PutItemInput{
+				TableName:                 dput.TableName,
+				Item:                      dput.Item,
+				ConditionExpression:       dput.ConditionExpression,
+				ExpressionAttributeNames:  dput.ExpressionAttributeNames,
+				ExpressionAttributeValues: dput.ExpressionAttributeValues,
+			}
+			_, err := c.db.PutItemWithContext(ctx, in)
+			if err != nil {
+				if ae, ok := err.(awserr.Error); ok && ae.Code() == dyn.ErrCodeConditionalCheckFailedException {
+					if a.Kind == driver.Create {
+						err = gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
+					}
+					if rev, _ := a.Doc.GetField(c.opts.RevisionField); rev == nil && a.Kind == driver.Replace {
+						err = gcerr.Newf(gcerr.NotFound, nil, "document not found")
+					}
+				}
+				return err
+			}
+			return nil
+		},
+	}, nil
 }
 
-func (c *collection) delete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) error {
-	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+func (c *collection) newDelete(a *driver.Action) (*writeOp, error) {
+	av, err := encodeDocKeyFields(a.Doc, c.partitionKey, c.sortKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	in := &dyn.DeleteItemInput{
+	del := &dyn.Delete{
 		TableName: &c.table,
 		Key:       av.M,
 	}
-	if condition != nil {
-		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
-		if err != nil {
-			return err
-		}
-		in.ExpressionAttributeNames = ce.Names()
-		in.ExpressionAttributeValues = ce.Values()
-		in.ConditionExpression = ce.Condition()
+	cb, err := c.precondition(a)
+	if err != nil {
+		return nil, err
 	}
-	_, err = c.db.DeleteItemWithContext(ctx, in)
-	return err
+	if cb != nil {
+		ce, err := expression.NewBuilder().WithCondition(*cb).Build()
+		if err != nil {
+			return nil, err
+		}
+		del.ExpressionAttributeNames = ce.Names()
+		del.ExpressionAttributeValues = ce.Values()
+		del.ConditionExpression = ce.Condition()
+	}
+	return &writeOp{
+		action:    a,
+		writeItem: &dyn.TransactWriteItem{Delete: del},
+		run: func(ctx context.Context) error {
+			_, err := c.db.DeleteItemWithContext(ctx, &dyn.DeleteItemInput{
+				TableName:                 del.TableName,
+				Key:                       del.Key,
+				ConditionExpression:       del.ConditionExpression,
+				ExpressionAttributeNames:  del.ExpressionAttributeNames,
+				ExpressionAttributeValues: del.ExpressionAttributeValues,
+			})
+			return err
+		},
+	}, nil
 }
 
-func (c *collection) update(ctx context.Context, doc driver.Document, mods []driver.Mod, condition *expression.ConditionBuilder) error {
-	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+func (c *collection) newUpdate(a *driver.Action) (*writeOp, error) {
+	av, err := encodeDocKeyFields(a.Doc, c.partitionKey, c.sortKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var ub expression.UpdateBuilder
-	for _, m := range mods {
+	for _, m := range a.Mods {
 		// TODO(shantuo): check for invalid field paths
 		fp := expression.Name(strings.Join(m.FieldPath, "."))
 		if inc, ok := m.Value.(driver.IncOp); ok {
@@ -525,22 +571,114 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 	}
 	rev := driver.UniqueString()
 	ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(rev))
-	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
+	cb, err := c.precondition(a)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = c.db.UpdateItemWithContext(ctx, &dyn.UpdateItemInput{
+	ce, err := expression.NewBuilder().WithCondition(*cb).WithUpdate(ub).Build()
+	if err != nil {
+		return nil, err
+	}
+	up := &dyn.Update{
 		TableName:                 &c.table,
 		Key:                       av.M,
 		ConditionExpression:       ce.Condition(),
 		UpdateExpression:          ce.Update(),
 		ExpressionAttributeNames:  ce.Names(),
 		ExpressionAttributeValues: ce.Values(),
-	})
-	if err == nil {
-		_ = doc.SetField(c.opts.RevisionField, rev)
 	}
-	return err
+	return &writeOp{
+		action:      a,
+		writeItem:   &dyn.TransactWriteItem{Update: up},
+		newRevision: rev,
+		run: func(ctx context.Context) error {
+			_, err := c.db.UpdateItemWithContext(ctx, &dyn.UpdateItemInput{
+				TableName:                 up.TableName,
+				Key:                       up.Key,
+				ConditionExpression:       up.ConditionExpression,
+				UpdateExpression:          up.UpdateExpression,
+				ExpressionAttributeNames:  up.ExpressionAttributeNames,
+				ExpressionAttributeValues: up.ExpressionAttributeValues,
+			})
+			return err
+		},
+	}, nil
+}
+
+// Handle the effects of successful execution.
+func (c *collection) onSuccess(op *writeOp) {
+	// Set the new partition key (if any) and the new revision into the user's document.
+	if op.newPartitionKey != "" {
+		_ = op.action.Doc.SetField(c.partitionKey, op.newPartitionKey) // cannot fail
+	}
+	if op.newRevision != "" {
+		_ = op.action.Doc.SetField(c.opts.RevisionField, op.newRevision) // OK if there is no revision field
+	}
+}
+
+func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
+	if _, ok := m[c.partitionKey]; !ok {
+		return c.partitionKey
+	}
+	if _, ok := m[c.sortKey]; !ok && c.sortKey != "" {
+		return c.sortKey
+	}
+	return ""
+}
+
+// Construct the precondition for the action.
+func (c *collection) precondition(a *driver.Action) (*expression.ConditionBuilder, error) {
+	switch a.Kind {
+	case driver.Create:
+		// Precondition: the document doesn't already exist. (Precisely: the partitionKey
+		// field is not on the document.)
+		c := expression.AttributeNotExists(expression.Name(c.partitionKey))
+		return &c, nil
+	case driver.Replace, driver.Update:
+		// Precondition: the revision matches, or if there is no revision, then
+		// the document exists.
+		cb, err := revisionPrecondition(a.Doc, c.opts.RevisionField)
+		if err != nil {
+			return nil, err
+		}
+		if cb == nil {
+			c := expression.AttributeExists(expression.Name(c.partitionKey))
+			cb = &c
+		}
+		return cb, nil
+	case driver.Put, driver.Delete:
+		// Precondition: the revision matches, if any.
+		return revisionPrecondition(a.Doc, c.opts.RevisionField)
+	case driver.Get:
+		// No preconditions on a Get.
+		return nil, nil
+	default:
+		panic("bad action kind")
+	}
+}
+
+// revisionPrecondition returns a DynamoDB expression that asserts that the
+// stored document's revision matches the revision of doc.
+func revisionPrecondition(doc driver.Document, revField string) (*expression.ConditionBuilder, error) {
+	v, err := doc.GetField(revField)
+	if err != nil { // field not present
+		return nil, nil
+	}
+	if v == nil { // field is present, but nil
+		return nil, nil
+	}
+	rev, ok := v.(string)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
+			"%s field contains wrong type: got %T, want string",
+			revField, v)
+	}
+	if rev == "" {
+		return nil, nil
+	}
+	// Value encodes rev to an attribute value.
+	cb := expression.Name(revField).Equal(expression.Value(rev))
+	return &cb, nil
 }
 
 // TODO(jba): use this if/when we support atomic writes.
@@ -551,48 +689,17 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 		}
 	}
 
+	var ops []*writeOp
 	tws := make([]*dyn.TransactWriteItem, 0, end-start+1)
 	for i := start; i <= end; i++ {
-		var pc *expression.ConditionBuilder
-		var err error
 		a := actions[i]
-		if a.Kind != driver.Create {
-			pc, err = revisionPrecondition(a.Doc, c.opts.RevisionField)
-			if err != nil {
-				setErr(err)
-				return
-			}
-		}
-
-		var tw *dyn.TransactWriteItem
-		switch a.Kind {
-		case driver.Create:
-			cb := expression.AttributeNotExists(expression.Name(c.partitionKey))
-			tw, err = c.toTransactPut(ctx, a.Kind, a.Doc, &cb)
-		case driver.Replace:
-			if pc == nil {
-				c := expression.AttributeExists(expression.Name(c.partitionKey))
-				pc = &c
-			}
-			tw, err = c.toTransactPut(ctx, a.Kind, a.Doc, pc)
-		case driver.Put:
-			tw, err = c.toTransactPut(ctx, a.Kind, a.Doc, pc)
-		case driver.Delete:
-			tw, err = c.toTransactDelete(ctx, a.Doc, pc)
-		case driver.Update:
-			cb := expression.AttributeExists(expression.Name(c.partitionKey))
-			if pc != nil {
-				cb = cb.And(*pc)
-			}
-			tw, err = c.toTransactUpdate(ctx, a.Doc, a.Mods, &cb)
-		default:
-			panic("wrong action passed in; writes should be of kind Create, Replace, Put, Delete or Update")
-		}
+		op, err := c.newWriteOp(a)
 		if err != nil {
 			setErr(err)
 			return
 		}
-		tws = append(tws, tw)
+		ops = append(ops, op)
+		tws = append(tws, op.writeItem)
 	}
 
 	in := &dyn.TransactWriteItemsInput{
@@ -618,142 +725,9 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 		setErr(err)
 		return
 	}
-	for i, a := range actions {
-		if a.Kind == driver.Create {
-			if _, err := a.Doc.GetField(c.partitionKey); err != nil && gcerrors.Code(err) == gcerrors.NotFound {
-				actions[i].Doc.SetField(c.partitionKey, *tws[i].Put.Item[c.partitionKey].S)
-			}
-		}
+	for _, op := range ops {
+		c.onSuccess(op)
 	}
-}
-
-func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
-	if _, ok := m[c.partitionKey]; !ok {
-		return c.partitionKey
-	}
-	if _, ok := m[c.sortKey]; !ok && c.sortKey != "" {
-		return c.sortKey
-	}
-	return ""
-}
-
-func (c *collection) toTransactPut(ctx context.Context, k driver.ActionKind, doc driver.Document, condition *expression.ConditionBuilder) (*dyn.TransactWriteItem, error) {
-	av, err := encodeDoc(doc)
-	if err != nil {
-		return nil, err
-	}
-	mf := c.missingKeyField(av.M)
-	if k != driver.Create && mf != "" {
-		return nil, fmt.Errorf("missing key field %q", mf)
-	}
-	if mf == c.partitionKey {
-		av.M[c.partitionKey] = new(dyn.AttributeValue).SetS(driver.UniqueString())
-	}
-	if c.sortKey != "" && mf == c.sortKey {
-		// It doesn't make sense to generate a random sort key.
-		return nil, fmt.Errorf("missing sort key %q", c.sortKey)
-	}
-
-	if av.M[c.opts.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
-		return nil, err
-	}
-	put := &dyn.Put{
-		TableName: &c.table,
-		Item:      av.M,
-	}
-	if condition != nil {
-		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
-		if err != nil {
-			return nil, err
-		}
-		put.ExpressionAttributeNames = ce.Names()
-		put.ExpressionAttributeValues = ce.Values()
-		put.ConditionExpression = ce.Condition()
-	}
-	return &dyn.TransactWriteItem{Put: put}, nil
-}
-
-func (c *collection) toTransactDelete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) (*dyn.TransactWriteItem, error) {
-	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
-	if err != nil {
-		return nil, err
-	}
-
-	del := &dyn.Delete{
-		TableName: &c.table,
-		Key:       av.M,
-	}
-	if condition != nil {
-		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
-		if err != nil {
-			return nil, err
-		}
-		del.ExpressionAttributeNames = ce.Names()
-		del.ExpressionAttributeValues = ce.Values()
-		del.ConditionExpression = ce.Condition()
-	}
-	return &dyn.TransactWriteItem{Delete: del}, nil
-}
-
-func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, mods []driver.Mod, condition *expression.ConditionBuilder) (*dyn.TransactWriteItem, error) {
-	if len(mods) == 0 {
-		return nil, nil
-	}
-	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
-	if err != nil {
-		return nil, err
-	}
-	var ub expression.UpdateBuilder
-	for _, m := range mods {
-		// TODO(shantuo): check for invalid field paths
-		fp := expression.Name(strings.Join(m.FieldPath, "."))
-		if inc, ok := m.Value.(driver.IncOp); ok {
-			ub.Add(fp, expression.Value(inc.Amount))
-		} else if m.Value == nil {
-			ub = ub.Remove(fp)
-		} else {
-			ub = ub.Set(fp, expression.Value(m.Value))
-		}
-	}
-	ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(driver.UniqueString()))
-	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
-	if err != nil {
-		return nil, err
-	}
-	return &dyn.TransactWriteItem{
-		Update: &dyn.Update{
-			TableName:                 &c.table,
-			Key:                       av.M,
-			ConditionExpression:       ce.Condition(),
-			UpdateExpression:          ce.Update(),
-			ExpressionAttributeNames:  ce.Names(),
-			ExpressionAttributeValues: ce.Values(),
-		},
-	}, nil
-}
-
-// revisionPrecondition returns a DynamoDB expression that asserts that the
-// stored document's revision matches the revision of doc.
-func revisionPrecondition(doc driver.Document, revField string) (*expression.ConditionBuilder, error) {
-	v, err := doc.GetField(revField)
-	if err != nil { // field not present
-		return nil, nil
-	}
-	if v == nil { // field is present, but nil
-		return nil, nil
-	}
-	rev, ok := v.(string)
-	if !ok {
-		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
-			"%s field contains wrong type: got %T, want string",
-			revField, v)
-	}
-	if rev == "" {
-		return nil, nil
-	}
-	// Value encodes rev to an attribute value.
-	cb := expression.Name(revField).Equal(expression.Value(rev))
-	return &cb, nil
 }
 
 func (c *collection) As(i interface{}) bool {

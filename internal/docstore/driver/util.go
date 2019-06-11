@@ -205,6 +205,8 @@ func (t *Throttle) Release() {
 	t.wg.Done()
 }
 
+// Wait blocks goroutine until the number of calls to Release matches the number of
+// calls to Acquire.
 func (t *Throttle) Wait() {
 	t.wg.Wait()
 }
