@@ -9,6 +9,13 @@ The first step in using Docstore is connecting to your
 document store provider. Every document store provider is a little different, but the Go CDK
 lets you interact with all of them using the [`*docstore.Collection`][] type. 
 
+While every provider has the concept of a primary key that uniquely
+distinguishes a document in a collection, each one specifies that key in its own
+way. To be portable, Docstore requires that the key be part of the document's
+contents. When you open a collection using one of the functions described here,
+you specify how to find the provider's primary key in the document.
+
+
 [`*docstore.Collection`]: https://godoc.org/gocloud.dev/internal/docstore#Collection
 
 <!--more-->
