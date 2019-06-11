@@ -163,12 +163,12 @@ func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) 
 				return xerrors.Errorf("provision add: %w", err)
 			}
 		} else if strings.HasPrefix(name, "mainlocal_") {
-			const marker = "# DO NOT REMOVE: GO CDK LOCALS WILL BE INSERTED BELOW HERE"
+			const marker = "# DO NOT REMOVE THIS COMMENT; GO CDK LOCALS WILL BE INSERTED BELOW HERE"
 			if err := insertIntoFile(filepath.Join(dstPath, "main.tf"), marker, srcBytes); err != nil {
 				return xerrors.Errorf("provision add: %w", err)
 			}
 		} else if strings.HasPrefix(name, "outputs_") {
-			const marker = "# DO NOT REMOVE: DEMO URLs WILL BE INSERTED BELOW HERE"
+			const marker = "# DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE"
 			if err := insertIntoFile(filepath.Join(dstPath, "outputs.tf"), marker, srcBytes); err != nil {
 				return xerrors.Errorf("provision add: %w", err)
 			}

@@ -8,7 +8,7 @@ output "launch_environment" {
     # Example:
     # FOO = "BAR"
 
-    # DO NOT REMOVE: DEMO URLs WILL BE INSERTED BELOW HERE
+    # DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE
   }
 }
 
