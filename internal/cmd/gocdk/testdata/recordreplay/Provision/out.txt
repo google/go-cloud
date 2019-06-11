@@ -1,5 +1,6 @@
 $ gocdk provision add dev blob/fileblob
-Error: not yet implemented
+gocdk: Adding "blob/fileblob" to "dev"...
+Error: provision add: couldn't find a Go module root at or above [ROOTDIR]
 
 $ gocdk init myproj
 gocdk: Project created at [ROOTDIR]/myproj with:
@@ -15,5 +16,17 @@ gocdk: - `gocdk biome add` to configure launch settings
 $ cd myproj
 
 $ gocdk provision add dev blob/fileblob
-Error: not yet implemented
+gocdk: Adding "blob/fileblob" to "dev"...
+gocdk: Success!
+
+$ cd biomes
+
+$ ls dev
+dev/
+  biome.json
+  fileblob.tf
+  main.tf
+  outputs.tf
+  secrets.auto.tfvars
+  variables.tf
 

@@ -32,8 +32,6 @@ var bucket *blob.Bucket
 var bucketErr error
 
 func init() {
-	// TODO(rvangent): BLOB_BUCKET_URL should be in each biome's config such
-	// that it can be read here.
 	bucketURL = os.Getenv("BLOB_BUCKET_URL")
 	if bucketURL == "" {
 		bucketURL = "mem://"
