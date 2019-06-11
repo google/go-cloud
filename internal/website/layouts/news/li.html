@@ -1,0 +1,6 @@
+<article class="NewsList-item">
+  <a href="{{.RelPermalink}}"><h2 class="NewsList-itemTitle">{{ .LinkTitle }}</h2></a>
+  <div class="NewsList-postInfo">Posted on <time datetime="{{.Date.UTC.Format "2006-01-02T15:04:05Z"}}">{{ .Date.Format "2006-01-02" }}</time></div>
+  <div class="NewsList-summary">{{.Summary}}</div>
+  <div class="NewsList-readMore"><a href="{{.RelPermalink}}">Read more&hellip;</a></div>
+</article>

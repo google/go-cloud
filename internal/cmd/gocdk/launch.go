@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/cmd/gocdk/internal/docker"
+	"gocloud.dev/internal/cmd/gocdk/internal/probe"
 	"golang.org/x/xerrors"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
@@ -190,7 +191,7 @@ func (local *localLauncher) Launch(ctx context.Context, input *LaunchInput) (*ur
 		Host:   serveURL.Host,
 		Path:   "/healthz/readiness",
 	}
-	if err := waitForHealthy(ctx, healthCheckURL); err != nil {
+	if err := probe.WaitForHealthy(ctx, healthCheckURL); err != nil {
 		// TODO(light): Run `docker stop`.
 		return nil, xerrors.Errorf("local launch: %w", err)
 	}

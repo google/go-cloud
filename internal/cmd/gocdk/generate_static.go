@@ -64,9 +64,9 @@ func main() {
 	flag.Parse()
 	outfile := flag.Arg(0)
 	if outfile == "" {
-		outfile = "static/vfsdata.go"
+		outfile = "internal/static/vfsdata.go"
 	}
-	var fs http.FileSystem = zeroModTimeFS{http.Dir("./static/_assets")}
+	var fs http.FileSystem = zeroModTimeFS{http.Dir("./internal/static/_assets")}
 	err := vfsgen.Generate(fs, vfsgen.Options{
 		Filename:    outfile,
 		PackageName: "static",

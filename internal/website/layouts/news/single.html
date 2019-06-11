@@ -1,0 +1,5 @@
+{{ define "main" -}}
+<h1>{{ .Title }}</h1>
+<div class="NewsPostInfo">Posted on <time datetime="{{.Date.UTC.Format "2006-01-02T15:04:05Z"}}">{{ .Date.Format "2006-01-02" }}</time></div>
+{{ .Content }}
+{{- end }}

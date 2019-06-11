@@ -17,18 +17,10 @@ package main
 import (
 	"context"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"testing"
-	"time"
-
-	"gocloud.dev/health"
-	"golang.org/x/xerrors"
 )
 
 func TestBuildForServe(t *testing.T) {
@@ -93,85 +85,4 @@ func testBuildForServe(t *testing.T, files map[string]string) {
 	if string(got) != want {
 		t.Errorf("program output = %q; want %q", got, want)
 	}
-}
-
-func TestWaitForHealthy(t *testing.T) {
-	t.Run("ImmediateHealthy", func(t *testing.T) {
-		srv := httptest.NewServer(new(health.Handler))
-		defer srv.Close()
-		u, err := url.Parse(srv.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := waitForHealthy(context.Background(), u); err != nil {
-			t.Error("waitForHealthy returned error:", err)
-		}
-	})
-	t.Run("404", func(t *testing.T) {
-		srv := httptest.NewServer(http.NotFoundHandler())
-		defer srv.Close()
-		u, err := url.Parse(srv.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := waitForHealthy(context.Background(), u); err != nil {
-			t.Error("waitForHealthy returned error:", err)
-		}
-	})
-	t.Run("SecondTimeHealthy", func(t *testing.T) {
-		handler := new(health.Handler)
-		handler.Add(new(secondTimeHealthy))
-		srv := httptest.NewServer(handler)
-		defer srv.Close()
-		u, err := url.Parse(srv.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := waitForHealthy(context.Background(), u); err != nil {
-			t.Error("waitForHealthy returned error:", err)
-		}
-	})
-	t.Run("ContextCancelled", func(t *testing.T) {
-		handler := new(health.Handler)
-		handler.Add(constHealthChecker{xerrors.New("bad")})
-		srv := httptest.NewServer(handler)
-		defer srv.Close()
-		u, err := url.Parse(srv.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
-
-		err = waitForHealthy(ctx, u)
-		cancel()
-		if err == nil {
-			t.Error("waitForHealthy did not return error")
-		}
-	})
-}
-
-type constHealthChecker struct {
-	err error
-}
-
-func (c constHealthChecker) CheckHealth() error {
-	return c.err
-}
-
-type secondTimeHealthy struct {
-	mu            sync.Mutex
-	firstReported bool
-}
-
-func (c *secondTimeHealthy) CheckHealth() error {
-	defer c.mu.Unlock()
-	c.mu.Lock()
-	if !c.firstReported {
-		c.firstReported = true
-		return xerrors.New("check again later")
-	}
-	return nil
 }
