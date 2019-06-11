@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	slashpath "path"
@@ -149,10 +148,6 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 	// so Output can collect stdout.
 	cmd.Stdout = nil
 	gopath, err := cmd.Output()
-	fmt.Println("FROM PCTX-- " + pctx.env[0])
-	fmt.Println("FROM CMD-- " + cmd.Env[0])
-	fmt.Println("WHAT IS HAPPENING HERE-- " + string(gopath))
-	fmt.Println(err)
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
 	}

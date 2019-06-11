@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -151,29 +150,37 @@ func TestInit(t *testing.T) {
 func TestInferModulePath(t *testing.T) {
 	testCases := []struct {
 		name       string
-		testGOPATH func(string) string
+		testGOPATH func(string) (string, func())
 		wantErr    bool
 	}{
 		{
 			"no GOPATH entry",
-			func(dir string) string {
-				return ""
+			func(dir string) (string, func()) {
+				return "", func() {}
 			},
 			true,
 		},
 		{
 			"single GOPATH entry",
-			func(dir string) string {
-				return "GOPATH=" + dir
+			func(dir string) (string, func()) {
+				return "GOPATH=" + dir, func() {}
 			},
 			false,
 		},
 		{
 			"multiple GOPATH entries",
-			func(dir string) string {
-				multiPath := "GOPATH=" + dir + string(filepath.ListSeparator) + filepath.Join("", "some", "other", "path")
-				fmt.Println("INSIDE--" + multiPath)
-				return multiPath
+			func(dir string) (string, func()) {
+				dir2, err := ioutil.TempDir("", testTempDirPrefix+"-2")
+				if err != nil {
+					t.Fatal(err)
+				}
+				cleanup := func() {
+					if err := os.RemoveAll(dir2); err != nil {
+						t.Error(err)
+					}
+				}
+				multiPath := "GOPATH=" + dir + string(filepath.ListSeparator) + dir2
+				return multiPath, cleanup
 			},
 			false,
 		},
@@ -193,11 +200,12 @@ func TestInferModulePath(t *testing.T) {
 
 			ctx := context.Background()
 			pctx := newTestProcessContext(dir)
-			pctx.env = []string{tc.testGOPATH(dir)}
-			fmt.Println("FROM SET ENV " + pctx.env[0])
+
+			gopath, cleanup := tc.testGOPATH(dir)
+			defer cleanup()
+			pctx.env = []string{gopath}
 
 			err = run(ctx, pctx, []string{"init", "myspecialproject"})
-
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v but wantErr is %v", err, tc.wantErr)
 			}
