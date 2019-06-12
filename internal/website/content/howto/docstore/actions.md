@@ -1,5 +1,5 @@
 ---
-title: "Actions"
+title: "Read and Write Documents"
 date: 2019-06-11T10:11:59-04:00
 draft: true
 weight: 2
@@ -13,7 +13,8 @@ execute a single action, or run multiple actions together in an _action list_.
 ## Representing Documents
 
 We'll use a collection with documents represented by this Go struct:
-```
+
+```go
 type Player struct {
 	Name             string
 	Score            int
@@ -29,7 +30,6 @@ for more information.
 
 The `DocstoreRevision` field holds information about the latest revision of the
 document. We discuss it [below]({{< ref "#docrev" >}}).
-<!-- TODO(jba): make sure the above link works -->
 
 ## Actions and Action Lists
 
@@ -38,16 +38,16 @@ can call action methods on it. We will use `coll` as the variable holding the co
 
 Docstore supports six actions on documents:
 
-- Get retrieves a document.
-- Create creates a new document.
-- Replace replaces an existing document.
-- Put puts a document whether or not it is already present.
-- Update applies a set of modifications to a document.
-- Delete deletes a document.
+- `Get` retrieves a document.
+- `Create` creates a new document.
+- `Replace` replaces an existing document.
+- `Put` puts a document whether or not it is already present.
+- `Update` applies a set of modifications to a document.
+- `Delete` deletes a document.
 
 You can create a single document with the `Collection.Create` method:
 
-```
+```go
 err := coll.Create(ctx, &Player{Name: "Pat", Score: 10})
 if err != nil {
     return err
@@ -62,7 +62,7 @@ and reduce cost. Here we create several documents using an action list.
 {{< goexample "gocloud.dev/internal/docstore.ExampleCollection_Actions_bulkWrite" >}}
 
 `ActionList` has a fluent API, so you can build and execute a sequence of
-actions in one line of code. Here we Put a document and immediately Get its new
+actions in one line of code. Here we `Put` a document and immediately `Get` its new
 contents.
 
 {{< goexample "gocloud.dev/internal/docstore.ExampleCollection_Actions_getAfterWrite" >}}
@@ -74,7 +74,7 @@ list execution.
 
 ## Updates
 
-Use Update to modify individual fields of a document. The Update action takes a
+Use `Update` to modify individual fields of a document. The `Update` action takes a
 set of modifications to document fields, and applies them all atomically. You
 can change the value of a field, increment it, or delete it.
 
@@ -89,12 +89,12 @@ in a field named `DocstoreRevision`.
 You can use revisions to perform _optimistic locking_, a technique for updating
 a document atomically:
 
-1. Get a document. This reads the current revision.
+1. `Get` a document. This reads the current revision.
 2. Modify the document contents on the client (but do not change the revision).
-3. Replace the document. If the document was changed since it was retrieved in
+3. `Replace` the document. If the document was changed since it was retrieved in
    step 1, the revision will be different, and Docstore will return an error
    instead of overwriting the document.
-4. If the Replace failed, start again from step 1.
+4. If the `Replace` failed, start again from step 1.
 
 {{< goexample "gocloud.dev/internal/docstore.Example_optimisticLocking" >}}
 
