@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
@@ -178,6 +179,28 @@ func TestSortDocs(t *testing.T) {
 		sortDocs(got, test.field, test.ascending)
 		if diff := cmp.Diff(got, test.want); diff != "" {
 			t.Errorf("%q, asc=%t:\n%s", test.field, test.ascending, diff)
+		}
+	}
+}
+
+func TestAdd(t *testing.T) {
+	for _, test := range []struct {
+		x, y, want interface{}
+		wantCode   gcerrors.ErrorCode
+	}{
+		{int64(1), int64(2), int64(3), gcerrors.OK},
+		{2.5, 3.5, 6.0, gcerrors.OK},
+		{int64(1), 1.5, 2.5, gcerrors.OK},
+		{-1.5, int64(1), -0.5, gcerrors.OK},
+		{"1", 1.1, nil, gcerrors.InvalidArgument},
+		{int64(1), "1", nil, gcerrors.Internal},
+		{1.2, "1", nil, gcerrors.Internal},
+	} {
+		got, err := add(test.x, test.y)
+		gotCode := gcerrors.Code(err)
+		if got != test.want || gotCode != test.wantCode {
+			t.Errorf("add(%v, %v): got (%v, %s), want (%v, %s)",
+				test.x, test.y, got, gotCode, test.want, test.wantCode)
 		}
 	}
 }
