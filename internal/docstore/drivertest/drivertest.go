@@ -203,6 +203,7 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
+	defer coll.Close()
 	clearCollection(t, coll)
 	t.Run("StdRev", func(t *testing.T) { f(t, coll, ds.DefaultRevisionField) })
 
@@ -211,6 +212,7 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 		t.Fatal(err)
 	}
 	coll = ds.NewCollection(dc)
+	defer coll.Close()
 	clearCollection(t, coll)
 	t.Run("AltRev", func(t *testing.T) { f(t, coll, AlternateRevisionField) })
 
@@ -229,6 +231,7 @@ func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
+	defer coll.Close()
 	clearCollection(t, coll)
 	f(t, coll)
 }
@@ -1396,6 +1399,7 @@ func testBeforeDo(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
+	defer coll.Close()
 	clearCollection(t, coll)
 
 	var called bool

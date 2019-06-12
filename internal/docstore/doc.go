@@ -33,10 +33,11 @@
 // its exported functions to create a *Collection; do not use the NewCollection
 // function in this package. For example:
 //
-//   coll, err := memdocstore.OpenBucket("SSN", nil)
+//   coll, err := memdocstore.OpenCollection("SSN", nil)
 //   if err != nil {
 //     return fmt.Errorf("opening collection: %v", err)
 //   }
+//   defer coll.Close()
 //   // coll is a *docstore.Collection
 //
 // Then, write your application code using the *Collection type. You can easily

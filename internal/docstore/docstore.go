@@ -17,8 +17,10 @@ package docstore
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -52,7 +54,21 @@ var NewCollection = newCollection
 
 // newCollection makes a Collection.
 func newCollection(d driver.Collection) *Collection {
-	return &Collection{driver: d}
+	c := &Collection{driver: d}
+	_, file, lineno, ok := runtime.Caller(1)
+	runtime.SetFinalizer(c, func(c *Collection) {
+		c.mu.Lock()
+		closed := c.closed
+		c.mu.Unlock()
+		if !closed {
+			var caller string
+			if ok {
+				caller = fmt.Sprintf(" (%s:%d)", file, lineno)
+			}
+			log.Printf("A docstore.Collection was never closed%s", caller)
+		}
+	})
+	return c
 }
 
 // DefaultRevisionField is the default name of the document field used for document revision
