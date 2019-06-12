@@ -143,7 +143,6 @@ func materializeTemplateDir(dst string, srcRoot string, data interface{}) error 
 // inferModulePath will check the default GOPATH to attempt to infer the module
 // import path for the project.
 func inferModulePath(ctx context.Context, pctx *processContext, projectDir string) (string, error) {
-	// TODO(issue #2016): Add tests for init behavior when module-path is not given.
 	cmd := pctx.NewCommand(ctx, "", "go", "env", "GOPATH")
 	// Since we're going to call Output, we need to make sure cmd.Stdout is nil
 	// so Output can collect stdout.
@@ -152,15 +151,19 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
 	}
-	// Check if the projectDir is relative to GOPATH.
-	rel, err := filepath.Rel(strings.TrimSuffix(string(gopath), "\n"), projectDir)
-	if err != nil {
-		return "", xerrors.Errorf("infer module path: %w", err)
+
+	gopathEntries := filepath.SplitList(strings.TrimSuffix(string(gopath), "\n"))
+	for _, entry := range gopathEntries {
+		// Check if the projectDir is relative to GOPATH.
+		rel, err := filepath.Rel(entry, projectDir)
+		if err != nil {
+			return "", xerrors.Errorf("infer module path: %w", err)
+		}
+		inGOPATH := !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+		if inGOPATH {
+			return filepath.ToSlash(rel), nil
+		}
 	}
-	inGOPATH := !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-	if !inGOPATH {
-		// If the project dir is outside of GOPATH, we can't infer the module import path.
-		return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
-	}
-	return filepath.ToSlash(rel), nil
+	// If the project dir is outside of GOPATH, we can't infer the module import path.
+	return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
 }

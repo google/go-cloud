@@ -147,6 +147,70 @@ func TestInit(t *testing.T) {
 		}
 	})
 }
+func TestInferModulePath(t *testing.T) {
+	testCases := []struct {
+		name       string
+		testGOPATH func(string) (string, func())
+		wantErr    bool
+	}{
+		{
+			"no GOPATH entry",
+			func(dir string) (string, func()) {
+				return "", func() {}
+			},
+			true,
+		},
+		{
+			"single GOPATH entry",
+			func(dir string) (string, func()) {
+				return "GOPATH=" + dir, func() {}
+			},
+			false,
+		},
+		{
+			"multiple GOPATH entries",
+			func(dir string) (string, func()) {
+				dir2, err := ioutil.TempDir("", testTempDirPrefix+"-2")
+				if err != nil {
+					t.Fatal(err)
+				}
+				cleanup := func() {
+					if err := os.RemoveAll(dir2); err != nil {
+						t.Error(err)
+					}
+				}
+				multiPath := "GOPATH=" + dir + string(filepath.ListSeparator) + dir2
+				return multiPath, cleanup
+			},
+			false,
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir, err := ioutil.TempDir("", testTempDirPrefix)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := os.RemoveAll(dir); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			pctx := newTestProcessContext(dir)
+			gopath, cleanup := tc.testGOPATH(dir)
+			defer cleanup()
+			pctx.env = []string{gopath}
+
+			err = run(ctx, pctx, []string{"init", "myspecialproject"})
+			if (err != nil) != tc.wantErr {
+				t.Errorf("got err %v but wantErr is %v", err, tc.wantErr)
+			}
+		})
+	}
+}
 
 func exeName(name string) string {
 	if runtime.GOOS == "windows" {
