@@ -65,11 +65,11 @@
 	},
 	"gocloud.dev/internal/docstore.ExampleCollection_Actions_getAfterWrite": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/internal/docstore\"\n)",
-		"code": "// Add a document to the collection, then retrieve it.\n// Because both the Put and the Get refer to the same document,\n// they happen in order.\ngot := Player{Name: \"Pat\"}\nerr = coll.Actions().Put(\u0026Player{Name: \"Pat\", Score: 88}).Get(\u0026got).Do(ctx)\nif err != nil {\n\treturn err\n}\nfmt.Println(got.Name, got.Score)"
+		"code": "// Add a document to the collection, then retrieve it.\n// Because both the Put and the Get refer to the same document,\n// they happen in order.\ngot := Player{Name: \"Pat\"}\nerr := coll.Actions().Put(\u0026Player{Name: \"Pat\", Score: 88}).Get(\u0026got).Do(ctx)\nif err != nil {\n\treturn err\n}\nfmt.Println(got.Name, got.Score)"
 	},
 	"gocloud.dev/internal/docstore.ExampleCollection_Update": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/internal/docstore\"\n)",
-		"code": "// Create a player.\npat := \u0026Player{Name: \"Pat\", Score: 0}\nif err := coll.Create(ctx, pat); err != nil {\n\treturn err\n}\n\n// Set the score to a new value.\npat2 := \u0026Player{Name: \"Pat\"}\nerr = coll.Actions().Update(pat, docstore.Mods{\"Score\": 15}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}\n\n// Increment the score.\nerr = coll.Actions().Update(pat, docstore.Mods{\"Score\": docstore.Increment(5)}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}"
+		"code": "// Create a player.\npat := \u0026Player{Name: \"Pat\", Score: 0}\nif err := coll.Create(ctx, pat); err != nil {\n\treturn err\n}\n\n// Set the score to a new value.\npat2 := \u0026Player{Name: \"Pat\"}\nerr := coll.Actions().Update(pat, docstore.Mods{\"Score\": 15}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}\n\n// Increment the score.\nerr = coll.Actions().Update(pat, docstore.Mods{\"Score\": docstore.Increment(5)}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}"
 	},
 	"gocloud.dev/internal/docstore.Example_optimisticLocking": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"time\"\n\n\t\"gocloud.dev/gcerrors\"\n\t\"gocloud.dev/internal/docstore/memdocstore\"\n)",
