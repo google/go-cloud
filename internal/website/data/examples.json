@@ -77,7 +77,7 @@
 	},
 	"gocloud.dev/internal/docstore/firedocstore.Example_openCollectionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/docstore/firedocstore\"\n\t\"gocloud.dev/internal/docstore\"\n)",
-		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\nurl := \"firestore://projects/my-project/databases/(default)/documents/my-collection?name_field=userID\"\ncoll, err := docstore.OpenCollection(ctx, url)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\nconst url = \"firestore://projects/my-project/databases/(default)/documents/my-collection?name_field=userID\"\ncoll, err := docstore.OpenCollection(ctx, url)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/memdocstore.ExampleOpenCollection": {
 		"imports": "import \"gocloud.dev/internal/docstore/memdocstore\"",
