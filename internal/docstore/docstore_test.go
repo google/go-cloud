@@ -231,6 +231,46 @@ func TestToDriverActionsErrors(t *testing.T) {
 	}
 }
 
+func TestClosedErrors(t *testing.T) {
+	// Check that all collection methods return errClosed if the collection is closed.
+	ctx := context.Background()
+	c := &Collection{driver: fakeDriverCollection{}}
+	if err := c.Close(); err != nil {
+		t.Fatalf("got %v, want nil", err)
+	}
+
+	check := func(err error) {
+		t.Helper()
+		if alerr, ok := err.(ActionListError); ok {
+			err = alerr.Unwrap()
+		}
+		if err != errClosed {
+			t.Errorf("got %v, want errClosed", err)
+		}
+	}
+
+	doc := map[string]interface{}{"key": "k"}
+	check(c.Close())
+	check(c.Actions().Create(doc).Do(ctx))
+	check(c.Create(ctx, doc))
+	check(c.Replace(ctx, doc))
+	check(c.Put(ctx, doc))
+	check(c.Get(ctx, doc))
+	check(c.Delete(ctx, doc))
+	check(c.Update(ctx, doc, Mods{"a": 1}))
+	check(c.Query().Delete(ctx))
+	check(c.Query().Update(ctx, Mods{"a": 1}))
+	iter := c.Query().Get(ctx)
+	check(iter.Next(ctx, doc))
+
+	// Check that DocumentIterator.Next returns errClosed if Close is called
+	// in the middle of the iteration.
+	c = &Collection{driver: fakeDriverCollection{}}
+	iter = c.Query().Get(ctx)
+	c.Close()
+	check(iter.Next(ctx, doc))
+}
+
 type fakeDriverCollection struct {
 	driver.Collection
 }
@@ -240,3 +280,15 @@ func (fakeDriverCollection) Key(doc driver.Document) (interface{}, error) {
 }
 
 func (fakeDriverCollection) RevisionField() string { return DefaultRevisionField }
+
+func (fakeDriverCollection) Close() error { return nil }
+
+func (fakeDriverCollection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
+	return fakeDriverDocumentIterator{}, nil
+}
+
+type fakeDriverDocumentIterator struct {
+	driver.DocumentIterator
+}
+
+func (fakeDriverDocumentIterator) Next(context.Context, driver.Document) error { return nil }

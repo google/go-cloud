@@ -633,6 +633,7 @@ func (c *collection) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
+// ErrorCode implements driver.Collection.ErrorCode.
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	if g, ok := err.(*gcerr.Error); ok {
 		return g.Code
@@ -645,6 +646,9 @@ func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	}
 	return gcerrors.Unknown
 }
+
+// Close implements driver.Collection.Close.
+func (c *collection) Close() error { return nil }
 
 // Error code for a write error when no documents match a filter.
 // (The Go mongo driver doesn't define an exported constant for this.)

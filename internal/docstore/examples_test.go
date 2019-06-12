@@ -37,6 +37,7 @@ func ExampleCollection_Actions_bulkWrite() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer coll.Close()
 
 	// Build an ActionList to create several new players, then execute it.
 	newPlayers := []string{"Pat", "Mel", "Fran"}
@@ -55,6 +56,7 @@ func ExampleCollection_Actions_getAfterWrite() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer coll.Close()
 
 	// Add a document to the collection, then retrieve it.
 	// Because both the Put and the Get refer to the same document,
@@ -76,6 +78,7 @@ func ExampleCollection_Update() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer coll.Close()
 
 	// Create a player.
 	pat := &Player{Name: "Pat", Score: 0}
@@ -114,8 +117,9 @@ func ExampleOpenCollection() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = coll // Use the collection.
+	defer coll.Close()
 
+	_ = coll // Use the collection.
 }
 
 func ExampleCollection_As() {
@@ -133,6 +137,7 @@ func ExampleCollection_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer coll.Close()
 
 	// Try to access and use the underlying mongo.Collection.
 	var mcoll *mongo.Collection
@@ -149,6 +154,7 @@ func ExampleQuery_Get() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer coll.Close()
 
 	// Add some documents to the collection.
 	err = coll.Actions().
@@ -188,6 +194,7 @@ func ExampleQuery_Delete() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer coll.Close()
 
 	// Add some documents to the collection.
 	err = coll.Actions().
@@ -231,6 +238,7 @@ func ExampleQuery_Update() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer coll.Close()
 
 	// Add some documents to the collection.
 	err = coll.Actions().

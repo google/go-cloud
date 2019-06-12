@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"gocloud.dev/gcerrors"
@@ -42,6 +43,8 @@ type Document = interface{}
 // TODO(jba): make the docstring look more like blob.Bucket.
 type Collection struct {
 	driver driver.Collection
+	mu     sync.Mutex
+	closed bool
 }
 
 // NewCollection is intended for use by provider implementations.
@@ -285,6 +288,9 @@ func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *Acti
 // to specific actions; in such cases, the returned ActionListError will have entries
 // whose Index field is negative.
 func (l *ActionList) Do(ctx context.Context) error {
+	if err := l.coll.checkClosed(); err != nil {
+		return ActionListError{{-1, errClosed}}
+	}
 	das, err := l.toDriverActions()
 	if err != nil {
 		return err
@@ -560,6 +566,29 @@ func (c *Collection) As(i interface{}) bool {
 		return false
 	}
 	return c.driver.As(i)
+}
+
+var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "docstore: Collection has been closed")
+
+// Close releases any resources used for the collection.
+func (c *Collection) Close() error {
+	c.mu.Lock()
+	prev := c.closed
+	c.closed = true
+	c.mu.Unlock()
+	if prev {
+		return errClosed
+	}
+	return wrapError(c.driver, c.driver.Close())
+}
+
+func (c *Collection) checkClosed() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return errClosed
+	}
+	return nil
 }
 
 // CollectionURLOpener opens a collection of documents based on a URL.

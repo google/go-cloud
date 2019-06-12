@@ -81,6 +81,11 @@ type Collection interface {
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerr.ErrorCode
+
+	// Close cleans up any resources used by the Collection. Once Close is called,
+	// there will be no method calls to the Collection other than As, ErrorAs, and
+	// ErrorCode.
+	Close() error
 }
 
 // ActionKind describes the type of an action.

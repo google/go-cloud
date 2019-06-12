@@ -788,3 +788,6 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	dyn.ErrCodeIdempotentParameterMismatchException:     gcerr.InvalidArgument,
 	"ValidationException":                               gcerr.InvalidArgument,
 }
+
+// Close implements driver.Collection.Close.
+func (c *collection) Close() error { return nil }
