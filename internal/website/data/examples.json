@@ -61,47 +61,47 @@
 	},
 	"gocloud.dev/internal/docstore/dynamodocstore.ExampleOpenCollection": {
 		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"github.com/aws/aws-sdk-go/service/dynamodb\"\n\t_ \"gocloud.dev/docstore/dynamodocstore\"\n\t\"gocloud.dev/internal/docstore/dynamodocstore\"\n)",
-		"code": "sess, err := session.NewSession()\nif err != nil {\n\treturn err\n}\ncoll, err := dynamodocstore.OpenCollection(\n\tdynamodb.New(sess), \"docstore-test\", \"partitionKeyField\", \"\", nil)\nif err != nil {\n\treturn err\n}"
+		"code": "sess, err := session.NewSession()\nif err != nil {\n\treturn err\n}\ncoll, err := dynamodocstore.OpenCollection(\n\tdynamodb.New(sess), \"docstore-test\", \"partitionKeyField\", \"\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/dynamodocstore.Example_openCollectionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/docstore/dynamodocstore\"\n\t\"gocloud.dev/internal/docstore\"\n)",
-		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"dynamodb://my-table?partition_key=name\")\nif err != nil {\n\treturn err\n}"
+		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"dynamodb://my-table?partition_key=name\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/firedocstore.ExampleOpenCollection": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/internal/docstore/firedocstore\"\n)",
-		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := firedocstore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ncoll, err := firedocstore.OpenCollection(client, \"my-project\", \"my-collection\", \"userID\", nil)\nif err != nil {\n\treturn err\n}"
+		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := firedocstore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ncoll, err := firedocstore.OpenCollection(client, \"my-project\", \"my-collection\", \"userID\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/firedocstore.ExampleOpenCollectionWithNameFunc": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/internal/docstore\"\n\t\"gocloud.dev/internal/docstore/firedocstore\"\n)",
-		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := firedocstore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\n\n// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) string {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\ncoll, err := firedocstore.OpenCollectionWithNameFunc(\n\tclient, \"my-project\", \"my-collection\", nameFromDocument, nil)\nif err != nil {\n\treturn err\n}"
+		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := firedocstore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\n\n// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) string {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\ncoll, err := firedocstore.OpenCollectionWithNameFunc(\n\tclient, \"my-project\", \"my-collection\", nameFromDocument, nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/firedocstore.Example_openCollectionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/docstore/firedocstore\"\n\t\"gocloud.dev/internal/docstore\"\n)",
-		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"firestore://my-project/my-collection?name_field=userID\")\nif err != nil {\n\treturn err\n}"
+		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"firestore://my-project/my-collection?name_field=userID\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/memdocstore.ExampleOpenCollection": {
 		"imports": "import \"gocloud.dev/internal/docstore/memdocstore\"",
-		"code": "coll, err := memdocstore.OpenCollection(\"userID\", nil)\nif err != nil {\n\treturn err\n}"
+		"code": "coll, err := memdocstore.OpenCollection(\"userID\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/memdocstore.ExampleOpenCollectionWithKeyFunc": {
 		"imports": "import (\n\t\"gocloud.dev/internal/docstore\"\n\t\"gocloud.dev/internal/docstore/memdocstore\"\n)",
-		"code": "// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) interface{} {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\ncoll, err := memdocstore.OpenCollectionWithKeyFunc(nameFromDocument, nil)\nif err != nil {\n\treturn err\n}"
+		"code": "// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) interface{} {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\ncoll, err := memdocstore.OpenCollectionWithKeyFunc(nameFromDocument, nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/memdocstore.Example_openCollectionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/docstore/memdocstore\"\n\t\"gocloud.dev/internal/docstore\"\n)",
-		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mem://userID\")\nif err != nil {\n\treturn err\n}"
+		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mem://userID\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/mongodocstore.ExampleOpenCollection": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/internal/docstore/mongodocstore\"\n)",
-		"code": "client, err := mongodocstore.Dial(ctx, \"mongodb://my-host\")\nif err != nil {\n\treturn err\n}\nmcoll := client.Database(\"my-db\").Collection(\"my-coll\")\ncoll, err := mongodocstore.OpenCollection(mcoll, \"userID\", nil)\nif err != nil {\n\treturn err\n}"
+		"code": "client, err := mongodocstore.Dial(ctx, \"mongodb://my-host\")\nif err != nil {\n\treturn err\n}\nmcoll := client.Database(\"my-db\").Collection(\"my-coll\")\ncoll, err := mongodocstore.OpenCollection(mcoll, \"userID\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/mongodocstore.ExampleOpenCollectionWithIDFunc": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/internal/docstore\"\n\t\"gocloud.dev/internal/docstore/mongodocstore\"\n)",
-		"code": "client, err := mongodocstore.Dial(ctx, \"mongodb://my-host\")\nif err != nil {\n\treturn err\n}\nmcoll := client.Database(\"my-db\").Collection(\"my-coll\")\n\n// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) interface{} {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\ncoll, err := mongodocstore.OpenCollectionWithIDFunc(mcoll, nameFromDocument, nil)\nif err != nil {\n\treturn err\n}"
+		"code": "client, err := mongodocstore.Dial(ctx, \"mongodb://my-host\")\nif err != nil {\n\treturn err\n}\nmcoll := client.Database(\"my-db\").Collection(\"my-coll\")\n\n// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) interface{} {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\ncoll, err := mongodocstore.OpenCollectionWithIDFunc(mcoll, nameFromDocument, nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/internal/docstore/mongodocstore.Example_openCollectionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/docstore/mongodocstore\"\n\t\"gocloud.dev/internal/docstore\"\n)",
-		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mongo://my-db/my-collection?id_field=userID\")\nif err != nil {\n\treturn err\n}"
+		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mongo://my-db/my-collection?id_field=userID\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/pubsub.ExampleSubscription_Receive": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/pubsub\"\n)",

@@ -689,3 +689,6 @@ func (c *collection) ErrorAs(err error, i interface{}) bool {
 	*p = s
 	return true
 }
+
+// Close implements driver.Collection.Close.
+func (c *collection) Close() error { return nil }

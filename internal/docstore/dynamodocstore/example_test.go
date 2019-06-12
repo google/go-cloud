@@ -38,9 +38,7 @@ func ExampleOpenCollection() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Ignore unused variables in example:
-	_ = coll
+	defer coll.Close()
 }
 
 func Example_openCollectionFromURL() {
@@ -56,7 +54,5 @@ func Example_openCollectionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Ignore unused variables in example:
-	_ = coll
+	defer coll.Close()
 }

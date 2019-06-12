@@ -413,3 +413,6 @@ func (c *collection) As(i interface{}) bool { return false }
 
 // As implements driver.Collection.ErrorAs.
 func (c *collection) ErrorAs(err error, i interface{}) bool { return false }
+
+// Close implements driver.Collection.Close.
+func (c *collection) Close() error { return nil }

@@ -155,17 +155,19 @@ func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query 
 // Call Stop on the iterator when finished.
 func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	dcoll := q.coll.driver
-	wrapErr := func(err error) error { return wrapError(dcoll, err) }
 	if err := q.initGet(fps); err != nil {
-		return &DocumentIterator{err: wrapErr(err)}
+		return &DocumentIterator{err: wrapError(dcoll, err)}
 	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
-	return &DocumentIterator{iter: it, wrapError: wrapErr, err: wrapErr(err)}
+	return &DocumentIterator{iter: it, coll: q.coll, err: wrapError(dcoll, err)}
 }
 
 func (q *Query) initGet(fps []FieldPath) error {
 	if q.err != nil {
 		return q.err
+	}
+	if err := q.coll.checkClosed(); err != nil {
+		return errClosed
 	}
 	pfps, err := parseFieldPaths(fps)
 	if err != nil {
@@ -214,6 +216,9 @@ func (q *Query) validateWrite(kind string) error {
 	if q.err != nil {
 		return q.err
 	}
+	if err := q.coll.checkClosed(); err != nil {
+		return errClosed
+	}
 	if q.dq.Limit > 0 {
 		return gcerr.Newf(gcerr.InvalidArgument, nil, "%s queries cannot have a limit", kind)
 	}
@@ -232,9 +237,9 @@ func (q *Query) invalidf(format string, args ...interface{}) *Query {
 //
 // Always call Stop on the iterator.
 type DocumentIterator struct {
-	iter      driver.DocumentIterator
-	wrapError func(error) error
-	err       error // already wrapped
+	iter driver.DocumentIterator
+	coll *Collection
+	err  error // already wrapped
 }
 
 // Next stores the next document in dst. It returns io.EOF if there are no more
@@ -244,12 +249,16 @@ func (it *DocumentIterator) Next(ctx context.Context, dst Document) error {
 	if it.err != nil {
 		return it.err
 	}
-	ddoc, err := driver.NewDocument(dst)
-	if err != nil {
-		it.err = it.wrapError(err)
+	if err := it.coll.checkClosed(); err != nil {
+		it.err = err
 		return it.err
 	}
-	it.err = it.wrapError(it.iter.Next(ctx, ddoc))
+	ddoc, err := driver.NewDocument(dst)
+	if err != nil {
+		it.err = wrapError(it.coll.driver, err)
+		return it.err
+	}
+	it.err = wrapError(it.coll.driver, it.iter.Next(ctx, ddoc))
 	return it.err
 }
 
