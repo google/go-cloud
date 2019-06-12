@@ -93,17 +93,23 @@ type Options struct {
 	MaxOutstandingActionRPCs int
 }
 
+// CollectionResourceID constructs a resource ID for a collection from the project ID and the collection path.
+// See the OpenCollection example for use.
+func CollectionResourceID(projectID, collPath string) string {
+	return fmt.Sprintf("projects/%s/databases/(default)/documents/%s", projectID, collPath)
+}
+
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
 //
-// collPath is the path to the collection, starting from a root collection. It may
-// refer to a top-level collection, like "States", or it may be a path to a nested
+// collResourceID must be of the form "project/<projectID>/databases/(default)/documents/<collPath>".
+// <collPath> may be a top-level collection, like "States", or it may be a path to a nested
 // collection, like "States/Wisconsin/Cities".
 //
 // firedocstore requires that a single string field, nameField, be designated the
 // primary key. Its values must be unique over all documents in the collection, and
 // the primary key must be provided to retrieve a document.
-func OpenCollection(client *vkit.Client, projectID, collPath, nameField string, opts *Options) (*docstore.Collection, error) {
-	c, err := newCollection(client, projectID, collPath, nameField, nil, opts)
+func OpenCollection(client *vkit.Client, collResourceID, nameField string, opts *Options) (*docstore.Collection, error) {
+	c, err := newCollection(client, collResourceID, nameField, nil, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -112,27 +118,34 @@ func OpenCollection(client *vkit.Client, projectID, collPath, nameField string, 
 
 // OpenCollectionWithNameFunc creates a *docstore.Collection representing a Firestore collection.
 //
-// collPath is the path to the collection, starting from a root collection. It may
-// refer to a top-level collection, like "States", or it may be a path to a nested
+// collResourceID must be of the form "project/<projectID>/databases/(default)/documents/<collPath>".
+// <collPath> may be a top-level collection, like "States", or it may be a path to a nested
 // collection, like "States/Wisconsin/Cities".
 //
 // The nameFunc argument is function that accepts a document and returns the value to
 // be used for the document's primary key. It should return the empty string if the
 // document is missing the information to construct a name. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionWithNameFunc(client *vkit.Client, projectID, collPath string, nameFunc func(docstore.Document) string, opts *Options) (*docstore.Collection, error) {
-	c, err := newCollection(client, projectID, collPath, "", nameFunc, opts)
+func OpenCollectionWithNameFunc(client *vkit.Client, collResourceID string, nameFunc func(docstore.Document) string, opts *Options) (*docstore.Collection, error) {
+	c, err := newCollection(client, collResourceID, "", nameFunc, opts)
 	if err != nil {
 		return nil, err
 	}
 	return docstore.NewCollection(c), nil
 }
 
-func newCollection(client *vkit.Client, projectID, collPath, nameField string, nameFunc func(docstore.Document) string, opts *Options) (*collection, error) {
+var resourceIDRE = regexp.MustCompile(`^(projects/[^/]+/databases/\(default\))/documents/.+`)
+
+func newCollection(client *vkit.Client, collResourceID, nameField string, nameFunc func(docstore.Document) string, opts *Options) (*collection, error) {
 	if nameField == "" && nameFunc == nil {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "one of nameField or nameFunc must be provided")
 	}
-	dbPath := fmt.Sprintf("projects/%s/databases/(default)", projectID)
+	matches := resourceIDRE.FindStringSubmatch(collResourceID)
+	if matches == nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "bad collection resource ID %q; must match %v",
+			collResourceID, resourceIDRE)
+	}
+	dbPath := matches[1]
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -144,7 +157,7 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string, n
 		nameField: nameField,
 		nameFunc:  nameFunc,
 		dbPath:    dbPath,
-		collPath:  fmt.Sprintf("%s/documents/%s", dbPath, collPath),
+		collPath:  collResourceID,
 		opts:      opts,
 	}, nil
 }
@@ -593,13 +606,13 @@ func toServiceFieldPath(fp []string) string {
 }
 
 // Google SQL syntax for an unquoted field.
-var unquotedFieldRegexp = regexp.MustCompile("^[A-Za-z_][A-Za-z_0-9]*$")
+var unquotedFieldRE = regexp.MustCompile("^[A-Za-z_][A-Za-z_0-9]*$")
 
 // toServiceFieldPathComponent returns a string that represents key and is a valid
 // Firestore field path component. Components must be quoted with backticks if
 // they don't match the above regexp.
 func toServiceFieldPathComponent(key string) string {
-	if unquotedFieldRegexp.MatchString(key) {
+	if unquotedFieldRE.MatchString(key) {
 		return key
 	}
 	var buf bytes.Buffer

@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
+	"path"
 	"sync"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
@@ -62,10 +62,8 @@ func (o *lazyCredsOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*d
 const Scheme = "firestore"
 
 // URLOpener opens firestore URLs like
-// "firestore://myproject/mycollection?name_field=myID".
+// "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID".
 //
-//   - The URL's host holds the GCP projectID.
-//   - The only element of the URL's path holds the path to a Firestore collection.
 // See https://firebase.google.com/docs/firestore/data-model for more details.
 //
 // The following query parameters are supported:
@@ -92,20 +90,6 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	for param := range q {
 		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
 	}
-	project, collPath, err := collectionNameFromURL(u)
-	if err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, err)
-	}
-	return OpenCollection(o.Client, project, collPath, nameField, nil)
-}
-
-func collectionNameFromURL(u *url.URL) (string, string, error) {
-	var project, collPath string
-	if project = u.Host; project == "" {
-		return "", "", errors.New("URL must have a non-empty Host (the project ID)")
-	}
-	if collPath = strings.TrimPrefix(u.Path, "/"); collPath == "" {
-		return "", "", errors.New("URL must have a non-empty Path (the collection path)")
-	}
-	return project, collPath, nil
+	collResourceID := path.Join(u.Host, u.Path)
+	return OpenCollection(o.Client, collResourceID, nameField, nil)
 }
