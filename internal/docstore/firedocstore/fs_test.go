@@ -55,17 +55,18 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName1, drivertest.KeyField, nil, nil)
+	return newCollection(h.client, CollectionResourceID(projectID, collectionName1), drivertest.KeyField, nil, nil)
 }
 
 func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName2, "", func(doc docstore.Document) string {
-		return drivertest.HighScoreKey(doc).(string)
-	}, &Options{AllowLocalFilters: true})
+	return newCollection(h.client, CollectionResourceID(projectID, collectionName2), "",
+		func(doc docstore.Document) string {
+			return drivertest.HighScoreKey(doc).(string)
+		}, &Options{AllowLocalFilters: true})
 }
 
 func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName1, drivertest.KeyField, nil,
+	return newCollection(h.client, CollectionResourceID(projectID, collectionName1), drivertest.KeyField, nil,
 		&Options{RevisionField: drivertest.AlternateRevisionField})
 }
 
@@ -166,7 +167,7 @@ func BenchmarkConformance(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	coll, err := newCollection(client, projectID, collectionName3, drivertest.KeyField, nil, nil)
+	coll, err := newCollection(client, CollectionResourceID(projectID, collectionName3), drivertest.KeyField, nil, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -191,5 +192,31 @@ func TestNewGetRequest(t *testing.T) {
 	}
 	if !proto.Equal(got, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+}
+
+func TestResourceIDRegexp(t *testing.T) {
+	for _, good := range []string{
+		"projects/abc-_.309/databases/(default)/documents/C",
+		"projects/P/databases/(default)/documents/C/D/E",
+	} {
+		if !resourceIDRE.MatchString(good) {
+			t.Errorf("%q did not match but should have", good)
+		}
+	}
+
+	for _, bad := range []string{
+		"",
+		"Projects/P/databases/(default)/documents/C",
+		"P/databases/(default)/documents/C",
+		"projects/P/Q/databases/(default)/documents/C",
+		"projects/P/databases/mydb/documents/C",
+		"projects/P/databases/(default)/C",
+		"projects/P/databases/(default)/documents/",
+		"projects/P/databases/(default)",
+	} {
+		if resourceIDRE.MatchString(bad) {
+			t.Errorf("%q matched but should not have", bad)
+		}
 	}
 }
