@@ -63,7 +63,7 @@ func ExampleCollection_Actions_getAfterWrite() {
 	// Because both the Put and the Get refer to the same document,
 	// they happen in order.
 	got := Player{Name: "Pat"}
-	err = coll.Actions().Put(&Player{Name: "Pat", Score: 88}).Get(&got).Do(ctx)
+	err := coll.Actions().Put(&Player{Name: "Pat", Score: 88}).Get(&got).Do(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func ExampleCollection_Update() {
 
 	// Set the score to a new value.
 	pat2 := &Player{Name: "Pat"}
-	err = coll.Actions().Update(pat, docstore.Mods{"Score": 15}).Get(pat2).Do(ctx)
+	err := coll.Actions().Update(pat, docstore.Mods{"Score": 15}).Get(pat2).Do(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
