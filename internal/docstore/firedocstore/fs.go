@@ -104,6 +104,7 @@ func CollectionResourceID(projectID, collPath string) string {
 // collResourceID must be of the form "project/<projectID>/databases/(default)/documents/<collPath>".
 // <collPath> may be a top-level collection, like "States", or it may be a path to a nested
 // collection, like "States/Wisconsin/Cities".
+// See https://cloud.google.com/firestore/docs/reference/rest/ for more detail.
 //
 // firedocstore requires that a single string field, nameField, be designated the
 // primary key. Its values must be unique over all documents in the collection, and

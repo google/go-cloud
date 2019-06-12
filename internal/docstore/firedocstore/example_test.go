@@ -87,7 +87,7 @@ func Example_openCollectionFromURL() {
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.
-	url := "firestore://projects/my-project/databases/(default)/documents/my-collection?name_field=userID"
+	const url = "firestore://projects/my-project/databases/(default)/documents/my-collection?name_field=userID"
 	coll, err := docstore.OpenCollection(ctx, url)
 	if err != nil {
 		log.Fatal(err)
