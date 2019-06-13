@@ -566,7 +566,7 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 		// TODO(shantuo): check for invalid field paths
 		fp := expression.Name(strings.Join(m.FieldPath, "."))
 		if inc, ok := m.Value.(driver.IncOp); ok {
-			ub.Add(fp, expression.Value(inc.Amount))
+			ub = ub.Add(fp, expression.Value(inc.Amount))
 		} else if m.Value == nil {
 			ub = ub.Remove(fp)
 		} else {
