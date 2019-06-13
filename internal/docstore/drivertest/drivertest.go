@@ -305,17 +305,12 @@ type docstruct struct {
 	DocstoreRevision interface{}
 	Etag             interface{}
 
-	// N  *int
-	I  int     `docstore:"i"`
-	U  uint    `docstore:"u"`
-	F  float64 `docstore:"f"`
-	St string  `docstore:"st"`
-	B  bool    `docstore:"b"`
-	// By []byte
-	// L  []int
-	// A  [2]int
-	M map[string]interface{} `docstore:"m"`
-	// P  *string
+	I  int                    `docstore:"i"`
+	U  uint                   `docstore:"u"`
+	F  float64                `docstore:"f"`
+	St string                 `docstore:"st"`
+	B  bool                   `docstore:"b"`
+	M  map[string]interface{} `docstore:"m"`
 }
 
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
