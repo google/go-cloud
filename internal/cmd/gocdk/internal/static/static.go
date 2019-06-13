@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -185,12 +184,17 @@ func CopyDir(srcRoot string) ([]*Action, error) {
 	return retval, nil
 }
 
+// Printer supports printing messages.
+type Printer interface {
+	Printf(format string, args ...interface{})
+}
+
 // Options holds options for Do.
 type Options struct {
 	// Force allows Do to clobber existing files when copying.
 	Force bool
 	// Logger is used to log information about changes.
-	Logger *log.Logger
+	Logger Printer
 }
 
 // Do recursively materializes files from the static data at srcRoot to
