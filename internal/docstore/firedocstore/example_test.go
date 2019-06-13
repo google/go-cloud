@@ -37,7 +37,8 @@ func ExampleOpenCollection() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	coll, err := firedocstore.OpenCollection(client, "my-project", "my-collection", "userID", nil)
+	resourceID := firedocstore.CollectionResourceID("my-project", "my-collection")
+	coll, err := firedocstore.OpenCollection(client, resourceID, "userID", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,8 +70,8 @@ func ExampleOpenCollectionWithNameFunc() {
 		return hs.Game + "|" + hs.Player
 	}
 
-	coll, err := firedocstore.OpenCollectionWithNameFunc(
-		client, "my-project", "my-collection", nameFromDocument, nil)
+	resourceID := firedocstore.CollectionResourceID("my-project", "my-collection")
+	coll, err := firedocstore.OpenCollectionWithNameFunc(client, resourceID, nameFromDocument, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -86,7 +87,8 @@ func Example_openCollectionFromURL() {
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.
-	coll, err := docstore.OpenCollection(ctx, "firestore://my-project/my-collection?name_field=userID")
+	const url = "firestore://projects/my-project/databases/(default)/documents/my-collection?name_field=userID"
+	coll, err := docstore.OpenCollection(ctx, url)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -348,22 +348,30 @@ func runHTTPServer(ctx context.Context, l net.Listener, handler http.Handler) er
 // The zero value will serve Bad Gateway responses until setBackend or
 // setBuildError is called.
 type serveProxy struct {
-	backend atomic.Value
+	mu      sync.RWMutex
+	backend interface{}
 }
 
 // setBackend serves any future requests by reverse proxying to the given URL.
 func (p *serveProxy) setBackend(target *url.URL) {
-	p.backend.Store(httputil.NewSingleHostReverseProxy(target))
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.backend = httputil.NewSingleHostReverseProxy(target)
 }
 
 // setBuildError serves any future requests by serving an Internal Server Error
 // with the error's message as the body.
 func (p *serveProxy) setBuildError(e error) {
-	p.backend.Store(e)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.backend = e
 }
 
 func (p *serveProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch b := p.backend.Load().(type) {
+	p.mu.RLock()
+	b := p.backend
+	p.mu.RUnlock()
+	switch b := b.(type) {
 	case nil:
 		http.Error(w, "waiting for initial build...", http.StatusBadGateway)
 	case error:
