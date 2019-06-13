@@ -47,6 +47,7 @@ func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&listCmd{}, "")
 	subcommands.Register(&putCmd{}, "")
+	subcommands.Register(&updateCmd{}, "")
 	subcommands.Register(&deleteCmd{}, "")
 	log.SetFlags(0)
 	log.SetPrefix("gocdk-docstore: ")
@@ -74,10 +75,10 @@ func (*listCmd) Synopsis() string { return "List items in a collection" }
 func (*listCmd) Usage() string {
 	return `ls [-d <date>] <collection URL>
 
-  List the docstores in <collection URL>.
+  List the documents in <collection URL>.
 
   Example:
-    gocdk-docstore ls -d "2006-01-02" firestore://mycollection` + helpSuffix
+    gocdk-docstore ls -d "2006-01-02" "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID"` + helpSuffix
 }
 
 func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
@@ -97,12 +98,14 @@ func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface
 		log.Printf("Failed to open collection: %v\n", err)
 		return subcommands.ExitFailure
 	}
+	defer collection.Close()
 
 	q := collection.Query()
 	if cmd.date != "" {
 		q = q.Where("Date", "=", cmd.date)
 	}
 	iter := q.Get(ctx)
+	defer iter.Stop()
 	for {
 		var msg Message
 		err := iter.Next(ctx, &msg)
@@ -128,7 +131,7 @@ func (*putCmd) Usage() string {
   Read from stdin and put an message with the current timestamp in <collection URL>.
 
   Example:
-    gocdk-docstore put firestore://mycollection "hello docstore` + helpSuffix
+    gocdk-docstore put "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID" "hello docstore` + helpSuffix
 }
 
 func (*putCmd) SetFlags(_ *flag.FlagSet) {}
@@ -144,19 +147,71 @@ func (*putCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) s
 	// Open a *docstore.Collection using the collectionURL.
 	collection, err := docstore.OpenCollection(ctx, collectionURL)
 	if err != nil {
-		log.Printf("Failed to open collection: %v\n", err)
+		log.Printf("Failed to open collection: %v", err)
 		return subcommands.ExitFailure
 	}
+	defer collection.Close()
 
 	t := time.Now()
 	if err := collection.Put(ctx, &Message{
 		Date:      t.Format("2006-01-02"),
-		Timestamp: t.Format(time.RFC3339Nano),
+		Timestamp: t.Format(time.RFC3339),
 		Content:   content,
 	}); err != nil {
-		log.Printf("Failed to put message: %v\n", err)
+		log.Printf("Failed to put message: %v", err)
 		return subcommands.ExitFailure
 	}
+	return subcommands.ExitSuccess
+}
+
+type updateCmd struct{}
+
+func (*updateCmd) Name() string     { return "update" }
+func (*updateCmd) Synopsis() string { return "Update an item in a collection" }
+func (*updateCmd) Usage() string {
+	return `update <timestamp> <collection URL> <updated message>
+
+  Update the document at <timestamp> in <collection URL>.
+
+  Example:
+    gocdk-docstore update "2019-06-13T15:57:59.186915-07:00" "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID" "hello again"` + helpSuffix
+}
+
+func (*updateCmd) SetFlags(_ *flag.FlagSet) {}
+
+func (cmd *updateCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if f.NArg() != 3 {
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+	timestamp := f.Arg(0)
+	collectionURL := f.Arg(1)
+	updated := f.Arg(2)
+
+	// Open a *docstore.Collection using the collectionURL.
+	collection, err := docstore.OpenCollection(ctx, collectionURL)
+	if err != nil {
+		log.Printf("Failed to open collection: %v\n", err)
+		return subcommands.ExitFailure
+	}
+	defer collection.Close()
+
+	t, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		log.Fatal("wrong timestamp passed in, use RFC3339 formact, e.g.", time.Now().Format(time.RFC3339))
+	}
+
+	msg := &Message{
+		Date:      t.Format("2006-01-02"),
+		Timestamp: timestamp,
+	}
+	if errs := collection.Actions().Update(msg, docstore.Mods{
+		"Content": updated,
+	}).Get(msg).Do(ctx); errs != nil {
+		log.Printf("Failed to update message: %v", errs)
+		return subcommands.ExitFailure
+	}
+	log.Println("updated:", msg.Timestamp, msg.Content)
 	return subcommands.ExitSuccess
 }
 
@@ -169,10 +224,10 @@ func (*deleteCmd) Synopsis() string { return "Delete items in a collection" }
 func (*deleteCmd) Usage() string {
 	return `delete [-d <date>] <collection URL>
 
-  Delete the docstores in <collection URL>.
+  Delete the documents in <collection URL>.
 
   Example:
-    gocdk-docstore delete -d "2006-01-02" firestore://mycollection` + helpSuffix
+    gocdk-docstore delete -d "2006-01-02" "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID"` + helpSuffix
 }
 
 func (cmd *deleteCmd) SetFlags(f *flag.FlagSet) {
@@ -192,6 +247,7 @@ func (cmd *deleteCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 		log.Printf("Failed to open collection: %v\n", err)
 		return subcommands.ExitFailure
 	}
+	defer collection.Close()
 
 	q := collection.Query()
 	if cmd.date != "" {
