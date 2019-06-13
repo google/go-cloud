@@ -62,6 +62,9 @@ func ListFiles(dir string) ([]string, error) {
 
 // Action represents an action relative to static content that will be performed
 // in Do.
+// TODO(rvangent): Consider unexporting most of the fields; only TemplateData
+// is currently used externally, and the helpers in this package are used to
+// construct Actions.
 type Action struct {
 	// SourceContent specifies the source content to be instantiated.
 	// Exactly one of SourceContent/SourcePath should be specified.
