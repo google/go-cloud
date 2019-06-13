@@ -27,6 +27,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// TODO(rvangent): Consider panicking instead of returning an error in more
+// cases where the static data itself returns an error. E.g., ListFiles should
+// never fail.
+
 // ListFiles returns a listing of files from the static data under dir,
 // recursively. The relative path to each file from dir is returned.
 func ListFiles(dir string) ([]string, error) {
