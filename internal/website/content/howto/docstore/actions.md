@@ -67,6 +67,10 @@ contents.
 
 {{< goexample "gocloud.dev/internal/docstore.ExampleCollection_Actions_getAfterWrite" >}}
 
+(If the underlying provider is eventually consistent, the result of the `Get`
+might not reflect the `Put`. Docstore only guarantees that it will perform the
+`Get` after the `Put` completes.)
+
 See the documentation for [`docstore.ActionList`][] for the semantics of action
 list execution.
 
