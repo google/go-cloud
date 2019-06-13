@@ -35,7 +35,7 @@
 // The firestore  package is cloud.google.com/go/firestore/apiv1.
 // - Collection.As: *firestore.Client
 // - ActionList.BeforeDo: *pb.BatchGetDocumentsRequest or *pb.CommitRequest.
-// - Query.BeforeQuery: *firestore.RunQueryRequest
+// - Query.BeforeQuery: *pb.RunQueryRequest
 // - DocumentIterator: firestore.Firestore_RunQueryClient
 // - Error: *google.golang.org/grpc/status.Status
 package firedocstore

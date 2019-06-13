@@ -42,7 +42,8 @@ func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.
 	return newCollection(drivertest.KeyField, nil, &Options{RevisionField: drivertest.AlternateRevisionField})
 }
 
-func (*harness) BeforeDoTypes() []interface{} { return nil }
+func (*harness) BeforeDoTypes() []interface{}    { return nil }
+func (*harness) BeforeQueryTypes() []interface{} { return nil }
 
 func (*harness) Close() {}
 

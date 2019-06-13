@@ -37,7 +37,7 @@
 //
 // mongodocstore exposes the following types for As:
 // - Collection: *mongo.Collection
-// - Query.BeforeQuery: *options.FindOptions
+// - Query.BeforeQuery: *options.FindOptions or bson.D (the filter for Delete and Update queries)
 // - DocumentIterator: *mongo.Cursor
 // - Error: mongo.CommandError, mongo.BulkWriteError, mongo.BulkWriteException
 //

@@ -74,6 +74,10 @@ func (*harness) BeforeDoTypes() []interface{} {
 		&dyn.PutItemInput{}, &dyn.DeleteItemInput{}, &dyn.UpdateItemInput{}}
 }
 
+func (*harness) BeforeQueryTypes() []interface{} {
+	return []interface{}{&dyn.QueryInput{}, &dyn.ScanInput{}}
+}
+
 func (h *harness) Close() {
 	h.closer()
 }
@@ -174,20 +178,6 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	var db *dyn.DynamoDB
 	if !coll.As(&db) {
 		return errors.New("Collection.As failed")
-	}
-	return nil
-}
-
-func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
-	var si *dyn.ScanInput
-	var qi *dyn.QueryInput
-	switch {
-	case as(&si):
-		si.ConsistentRead = aws.Bool(true)
-	case as(&qi):
-		qi.ConsistentRead = aws.Bool(true)
-	default:
-		return errors.New("Query.BeforeQuery failed")
 	}
 	return nil
 }
