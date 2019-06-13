@@ -130,13 +130,6 @@ func (verifyAsFailsOnNil) CollectionCheck(coll *docstore.Collection) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) BeforeQuery(as func(interface{}) bool) error {
-	if as(nil) {
-		return errors.New("want Query.As to return false when passed nil")
-	}
-	return nil
-}
-
 func (verifyAsFailsOnNil) QueryCheck(it *docstore.DocumentIterator) error {
 	if it.As(nil) {
 		return errors.New("want DocumentIterator.As to return false when passed nil")
