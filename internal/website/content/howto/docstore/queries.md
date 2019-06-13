@@ -1,5 +1,5 @@
 ---
-title: "Queries"
+title: "Run Queries"
 date: 2019-06-12T17:41:56-04:00
 draft: true
 weight: 3
@@ -13,7 +13,7 @@ use queries to delete or update all documents that match the conditions.
 
 ## Getting Documents
 
-Like action lists, queries are built up in a fluent style:
+Like [action lists]({{< ref "actions.md#actions-and-action-lists" >}}), queries are built up in a fluent style:
 
 ```go
 iter := coll.Query().Where("Score", ">", 20).Get(ctx)
@@ -29,8 +29,8 @@ will populate an empty document that you pass to it:
 doc := &Player{}
 err := iter.Next(ctx, doc)
 ```
-The iteration is over when `Next` returns `io.EOF`.
 
+The iteration is over when `Next` returns `io.EOF`.
 
 {{< goexample "gocloud.dev/internal/docstore.ExampleQuery_Get" >}}
 
