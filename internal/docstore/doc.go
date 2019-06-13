@@ -128,7 +128,7 @@
 //
 // Revisions
 //
-// Docstore supports document revisions to distinguish different version of a
+// Docstore supports document revisions to distinguish different versions of a
 // document and enable optimistic locking. By default, Docstore stores the revision
 // in the field named "DocstoreRevision" (stored in the constant
 // docstore.RevisionField). Providers give you the option of changing that field

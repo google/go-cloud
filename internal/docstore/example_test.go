@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/memdocstore"
 	_ "gocloud.dev/internal/docstore/mongodocstore"
@@ -33,14 +35,14 @@ type Player struct {
 }
 
 func ExampleCollection_Actions_bulkWrite() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	coll, err := memdocstore.OpenCollection("Name", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer coll.Close()
+	var coll *docstore.Collection
 
 	// Build an ActionList to create several new players, then execute it.
+	// The actions may happen in any order.
 	newPlayers := []string{"Pat", "Mel", "Fran"}
 	actionList := coll.Actions()
 	for _, p := range newPlayers {
@@ -52,61 +54,48 @@ func ExampleCollection_Actions_bulkWrite() {
 }
 
 func ExampleCollection_Actions_getAfterWrite() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	coll, err := memdocstore.OpenCollection("Name", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer coll.Close()
+	var coll *docstore.Collection
 
 	// Add a document to the collection, then retrieve it.
 	// Because both the Put and the Get refer to the same document,
 	// they happen in order.
 	got := Player{Name: "Pat"}
-	err = coll.Actions().Put(&Player{Name: "Pat", Score: 88}).Get(&got).Do(ctx)
+	err := coll.Actions().Put(&Player{Name: "Pat", Score: 88}).Get(&got).Do(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(got.Name, got.Score)
-
-	// Output:
-	// Pat 88
 }
 
 func ExampleCollection_Update() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	coll, err := memdocstore.OpenCollection("Name", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer coll.Close()
+	var coll *docstore.Collection
 
 	// Create a player.
 	pat := &Player{Name: "Pat", Score: 0}
 	if err := coll.Create(ctx, pat); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", pat)
 
 	// Set the score to a new value.
 	pat2 := &Player{Name: "Pat"}
-	err = coll.Actions().Update(pat, docstore.Mods{"Score": 15}).Get(pat2).Do(ctx)
+	err := coll.Actions().Update(pat, docstore.Mods{"Score": 15}).Get(pat2).Do(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", pat2)
 
 	// Increment the score.
 	err = coll.Actions().Update(pat, docstore.Mods{"Score": docstore.Increment(5)}).Get(pat2).Do(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", pat2)
-
-	// Output:
-	// &{Name:Pat Score:0 DocstoreRevision:1}
-	// &{Name:Pat Score:15 DocstoreRevision:2}
-	// &{Name:Pat Score:20 DocstoreRevision:3}
 }
 
 func ExampleOpenCollection() {
@@ -306,4 +295,60 @@ func ExampleQuery_Update() {
 	// Fran: 30
 	// Mel: 20
 	// Pat: 25
+}
+
+func Example_optimisticLocking() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	coll, err := memdocstore.OpenCollection("Name", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer coll.Close()
+
+	// Create a player.
+	pat := &Player{Name: "Pat", Score: 7}
+	if err := coll.Create(ctx, pat); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(pat) // memdocstore revisions are deterministic, so we can check the output.
+
+	// Double a player's score. We cannot use Update to multiply, so we use optimistic
+	// locking instead.
+
+	// We may have to retry a few times; put a time limit on that.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		// Get the document.
+		player := &Player{Name: "Pat"}
+		if err := coll.Get(ctx, player); err != nil {
+			log.Fatal(err)
+		}
+		// player.DocstoreRevision is set to the document's revision.
+
+		// Modify the document locally.
+		player.Score *= 2
+
+		// Replace the document. player.DocstoreRevision will be checked against
+		// the stored document's revision.
+		err := coll.Replace(ctx, player)
+		if err != nil {
+			code := gcerrors.Code(err)
+			// On FailedPrecondition or NotFound, try again.
+			if code == gcerrors.FailedPrecondition || code == gcerrors.NotFound {
+				continue
+			}
+			log.Fatal(err)
+		}
+		fmt.Println(player)
+		break
+	}
+
+	// Output:
+	// &{Pat 7 1}
+	// &{Pat 14 2}
 }
