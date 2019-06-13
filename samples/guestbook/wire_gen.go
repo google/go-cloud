@@ -45,8 +45,10 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	certFetcher := &rds.CertFetcher{
 		Client: client,
 	}
-	params := awsSQLParams(flags)
-	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params)
+	urlOpener := &rdsmysql.URLOpener{
+		CertSource: certFetcher,
+	}
+	db, cleanup, err := openAWSDatabase(ctx, urlOpener, flags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -286,16 +288,19 @@ func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (
 	return b, func() { b.Close() }, nil
 }
 
-// awsSQLParams is a Wire provider function that returns the RDS SQL connection
-// parameters based on the command-line flags. Other providers inside
-// awscloud.AWS use the parameters to construct a *sql.DB.
-func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
-	return &rdsmysql.Params{
-		Endpoint: flags.dbHost,
-		Database: flags.dbName,
-		User:     flags.dbUser,
-		Password: flags.dbPassword,
+// openAWSDatabase is a Wire provider function that connects to RDS based on
+// the command-line flags.
+func openAWSDatabase(ctx context.Context, opener *rdsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
+	db, err := opener.OpenMySQLURL(ctx, &url.URL{
+		Scheme: "rdsmysql",
+		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
+		Host:   flags.dbHost,
+		Path:   "/" + flags.dbName,
+	})
+	if err != nil {
+		return nil, nil, err
 	}
+	return db, func() { db.Close() }, nil
 }
 
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
