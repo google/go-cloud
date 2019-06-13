@@ -250,22 +250,22 @@ type docstruct struct {
 	DocstoreRevision interface{}
 	Etag             interface{}
 
-	N  *int
-	I  int
-	U  uint
-	F  float64
-	St string
-	B  bool
-	By []byte
-	L  []int
-	A  [2]int
-	M  map[string]bool
-	P  *string
+	// N  *int
+	I int `docstore:"i"`
+	// U  uint
+	F  float64 `docstore:"f"`
+	St string  `docstore:"st"`
+	B  bool    `docstore:"b"`
+	// By []byte
+	// L  []int
+	// A  [2]int
+	M map[string]interface{} `docstore:"m"`
+	// P  *string
 }
 
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
 
-func assignKey(doc interface{}) interface{} {
+func newDoc(doc interface{}) interface{} {
 	switch v := doc.(type) {
 	case docmap:
 		return docmap{KeyField: v[KeyField]}
@@ -273,6 +273,19 @@ func assignKey(doc interface{}) interface{} {
 		return &docstruct{Name: v.Name}
 	}
 	return nil
+}
+
+func assignRev(dst, src interface{}, revField string) {
+	switch s := src.(type) {
+	case docmap:
+		dst.(docmap)[revField] = s[revField]
+	case *docstruct:
+		if revField == docstore.DefaultRevisionField {
+			dst.(*docstruct).DocstoreRevision = s.DocstoreRevision
+		} else {
+			dst.(*docstruct).Etag = s.Etag
+		}
+	}
 }
 
 func testCreate(t *testing.T, coll *ds.Collection, revField string) {
@@ -305,7 +318,7 @@ func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 			}
 			checkHasRevisionField(t, tc.doc, revField)
 
-			got := assignKey(tc.doc)
+			got := newDoc(tc.doc)
 			if err := coll.Get(ctx, got); err != nil {
 				t.Fatalf("Get: %v", err)
 			}
@@ -362,7 +375,7 @@ func testPut(t *testing.T, coll *ds.Collection, revField string) {
 			checkNoRevisionField(t, tc.doc, revField)
 			must(coll.Put(ctx, tc.doc))
 			checkHasRevisionField(t, tc.doc, revField)
-			got := assignKey(tc.doc)
+			got := newDoc(tc.doc)
 			must(coll.Get(ctx, got))
 			if diff := cmpDiff(got, tc.doc); diff != "" {
 				t.Fatalf(diff)
@@ -441,7 +454,7 @@ func testReplace(t *testing.T, coll *ds.Collection, revField string) {
 			checkNoRevisionField(t, tc.doc2, revField)
 			must(coll.Replace(ctx, tc.doc2))
 			checkHasRevisionField(t, tc.doc2, revField)
-			got := assignKey(tc.doc2)
+			got := newDoc(tc.doc2)
 			must(coll.Get(ctx, got))
 			if diff := cmpDiff(got, tc.doc2); diff != "" {
 				t.Fatalf(diff)
@@ -492,36 +505,83 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 		}
 	}
 
-	doc := docmap{
-		KeyField: "testGet1",
-		"s":      "a string",
-		"i":      int64(95),
-		"f":      32.3,
-		"m":      map[string]interface{}{"a": "one", "b": "two"},
-	}
-	must(coll.Put(ctx, doc))
-	// If Get is called with no field paths, the full document is populated.
-	got := docmap{KeyField: doc[KeyField]}
-	must(coll.Get(ctx, got))
-	if diff := cmpDiff(got, doc); diff != "" {
-		t.Error(diff)
-	}
+	for _, tc := range []struct {
+		name string
+		doc  interface{}
+		fps  []docstore.FieldPath
+		want interface{}
+	}{
+		// If Get is called with no field paths, the full document is populated.
+		{
+			name: "get map",
+			doc: docmap{
+				KeyField: "testGetMap",
+				"s":      "a string",
+				"i":      int64(95),
+				"f":      32.3,
+				"m":      map[string]interface{}{"a": "one", "b": "two"},
+			},
+		},
+		{
+			name: "get struct",
+			doc: &docstruct{
+				Name: "testGetStruct",
+				St:   "a string",
+				I:    95,
+				F:    32.3,
+				M:    map[string]interface{}{"a": "one", "b": "two"},
+			},
+		},
+		// If Get is called with field paths, the resulting document has only those fields.
+		{
+			name: "get map with field path",
+			doc: docmap{
+				KeyField: "testGetMapFP",
+				"s":      "a string",
+				"i":      int64(95),
+				"f":      32.3,
+				"m":      map[string]interface{}{"a": "one", "b": "two"},
+			},
+			fps: []docstore.FieldPath{"f", "m.b"},
+			want: docmap{
+				KeyField: "testGetMapFP",
+				"f":      32.3,
+				"m":      map[string]interface{}{"b": "two"},
+			},
+		},
+		{
+			name: "get struct with field path",
+			doc: &docstruct{
+				Name: "testGetStruct",
+				St:   "a string",
+				I:    95,
+				F:    32.3,
+				M:    map[string]interface{}{"a": "one", "b": "two"},
+			},
+			fps: []docstore.FieldPath{"st", "m.a"},
+			want: &docstruct{
+				Name: "testGetStruct",
+				St:   "a string",
+				M:    map[string]interface{}{"a": "one"},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			must(coll.Put(ctx, tc.doc))
+			got := newDoc(tc.doc)
+			must(coll.Get(ctx, got, tc.fps...))
+			if tc.want == nil {
+				tc.want = tc.doc
+			}
+			assignRev(tc.want, got, revField)
+			if diff := cmpDiff(got, tc.want); diff != "" {
+				t.Error("Get with field paths:\n", diff)
+			}
+		})
 
-	// If Get is called with field paths, the resulting document has only those fields.
-	got = docmap{KeyField: doc[KeyField]}
-	must(coll.Get(ctx, got, "f", "m.b"))
-	want := docmap{
-		KeyField: doc[KeyField],
-		"f":      32.3,
-		"m":      docmap{"b": "two"},
-		revField: doc[revField],
+		err := coll.Get(ctx, nonexistentDoc())
+		checkCode(t, err, gcerrors.NotFound)
 	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Error("Get with field paths:\n", diff)
-	}
-
-	err := coll.Get(ctx, nonexistentDoc())
-	checkCode(t, err, gcerrors.NotFound)
 }
 
 func testDelete(t *testing.T, coll *ds.Collection, revField string) {

@@ -242,6 +242,7 @@ func TestQueryErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	coll := docstore.NewCollection(dc)
+	defer coll.Close()
 
 	// Here we are comparing a key field with the wrong type. DynamoDB cares about this
 	// because even though it's a document store and hence schemaless, the key fields
