@@ -18,31 +18,18 @@ import (
 	"context"
 	"log"
 
-	"gocloud.dev/gcp"
-	"gocloud.dev/gcp/cloudsql"
-	"gocloud.dev/postgres/cloudpostgres"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
+	"gocloud.dev/postgres"
+	_ "gocloud.dev/postgres/cloudpostgres"
 )
 
 func Example() {
 	ctx := context.Background()
-	creds, err := google.FindDefaultCredentials(ctx, "https://www.googleapis.com/auth/cloud-platform")
+	db, err := postgres.Open(ctx,
+		"cloudpostgres://myrole@example-project/us-central1/my-instance01/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}
-	authClient := gcp.HTTPClient{Client: *oauth2.NewClient(ctx, creds.TokenSource)}
-	db, _, err := cloudpostgres.Open(ctx, cloudsql.NewCertSource(&authClient), &cloudpostgres.Params{
-		// Replace these with your actual settings.
-		ProjectID: "example-project",
-		Region:    "us-central1",
-		Instance:  "my-instance01",
-		User:      "myrole",
-		Database:  "test",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	defer db.Close()
 
 	// Use database in your program.
 	db.Exec("CREATE TABLE foo (bar INT);")
