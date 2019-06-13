@@ -41,7 +41,7 @@ Docstore supports six actions on documents:
 - `Get` retrieves a document.
 - `Create` creates a new document.
 - `Replace` replaces an existing document.
-- `Put` puts a document whether or not it is already present.
+- `Put` puts a document whether or not it already exists.
 - `Update` applies a set of modifications to a document.
 - `Delete` deletes a document.
 
@@ -67,9 +67,9 @@ contents.
 
 {{< goexample "gocloud.dev/internal/docstore.ExampleCollection_Actions_getAfterWrite" >}}
 
-(If the underlying provider is eventually consistent, the result of the `Get`
+If the underlying provider is eventually consistent, the result of the `Get`
 might not reflect the `Put`. Docstore only guarantees that it will perform the
-`Get` after the `Put` completes.)
+`Get` after the `Put` completes.
 
 See the documentation for [`docstore.ActionList`][] for the semantics of action
 list execution.
@@ -88,7 +88,8 @@ can change the value of a field, increment it, or delete it.
 
 Docstore maintains a revision for every document. Whenever the document is
 changed, the revision is too. By default, Docstore stores the revision
-in a field named `DocstoreRevision`.
+in a field named `DocstoreRevision`, but you can change the field name via an
+option to a `Collection` constructor.
 
 You can use revisions to perform _optimistic locking_, a technique for updating
 a document atomically:
