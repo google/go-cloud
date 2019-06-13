@@ -23,6 +23,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/memdocstore"
+	_ "gocloud.dev/internal/docstore/mongodocstore"
 )
 
 type Player struct {
@@ -133,7 +134,7 @@ func ExampleCollection_As() {
 
 	// This URL will open the collection using default credentials.
 	ctx := context.Background()
-	coll, err := docstore.OpenCollection(ctx, "mongo://my-collection")
+	coll, err := docstore.OpenCollection(ctx, "mongo://my-db/my-collection")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -145,6 +146,34 @@ func ExampleCollection_As() {
 		fmt.Println(mcoll.Database())
 	} else {
 		log.Println("Unable to access mongo.Collection through Collection.As")
+	}
+}
+
+func ExampleCollection_ErrorAs() {
+	// This example is specific to the mongodocstore implementation; it demonstrates
+	// access to the underlying go.mongodb.org/mongo-driver/mongo.Collection.
+	// You will need to blank-import the package for this to work:
+	//   import _ "gocloud.dev/docstore/mongodocstore"
+
+	// The types exposed for As by mongodocstore are documented in
+	// https://godoc.org/gocloud.dev/docstore/mongodocstore#hdr-As
+
+	// This URL will open the collection using default credentials.
+	ctx := context.Background()
+	coll, err := docstore.OpenCollection(ctx, "mongo://my-db/my-collection")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer coll.Close()
+
+	doc := map[string]interface{}{"_id": "a"}
+	if err := coll.Create(ctx, doc); err != nil {
+		var bwe mongo.BulkWriteError
+		if coll.ErrorAs(err, &bwe) {
+			fmt.Println("got", bwe)
+		} else {
+			fmt.Println("could not convert error")
+		}
 	}
 }
 

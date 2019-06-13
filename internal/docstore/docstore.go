@@ -625,7 +625,7 @@ func wrapError(c driver.Collection, err error) error {
 // that provider.
 //
 // When the error is an ActionListError, ErrorAs works on individual errors in
-// the slice, not the list itself.
+// the slice, not the slice itself.
 //
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
