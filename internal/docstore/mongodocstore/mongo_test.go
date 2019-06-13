@@ -78,6 +78,10 @@ func (*harness) BeforeDoTypes() []interface{} {
 	}
 }
 
+func (*harness) BeforeQueryTypes() []interface{} {
+	return []interface{}{&options.FindOptions{}, bson.D{}}
+}
+
 func (*harness) Close() {}
 
 type codecTester struct{}
@@ -120,14 +124,6 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	var mc *mongo.Collection
 	if !coll.As(&mc) {
 		return errors.New("Collection.As failed")
-	}
-	return nil
-}
-
-func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
-	var find *options.FindOptions
-	if !as(&find) {
-		return errors.New("Query.BeforeQuery failed")
 	}
 	return nil
 }

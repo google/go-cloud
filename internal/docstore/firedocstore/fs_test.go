@@ -74,6 +74,10 @@ func (*harness) BeforeDoTypes() []interface{} {
 	return []interface{}{&pb.BatchGetDocumentsRequest{}, &pb.CommitRequest{}}
 }
 
+func (*harness) BeforeQueryTypes() []interface{} {
+	return []interface{}{&pb.RunQueryRequest{}}
+}
+
 func (h *harness) Close() {
 	_ = h.client.Close()
 	h.done()
@@ -122,15 +126,6 @@ func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
 	if !coll.As(&fc) {
 		return errors.New("Collection.As failed")
 	}
-	return nil
-}
-
-func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
-	var req *pb.RunQueryRequest
-	if !as(&req) {
-		return errors.New("Query.BeforeQuery failed")
-	}
-	_ = req.GetStructuredQuery()
 	return nil
 }
 

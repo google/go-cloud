@@ -27,8 +27,15 @@ import (
 )
 
 func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.DocumentIterator, error) {
+	if q.BeforeQuery != nil {
+		if err := q.BeforeQuery(func(interface{}) bool { return false }); err != nil {
+			return nil, err
+		}
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	var resultDocs []map[string]interface{}
 	for _, doc := range c.docs {
 		if q.Limit > 0 && len(resultDocs) == q.Limit {
@@ -186,6 +193,12 @@ func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 }
 
 func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
+	if q.BeforeQuery != nil {
+		if err := q.BeforeQuery(func(interface{}) bool { return false }); err != nil {
+			return err
+		}
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for key, doc := range c.docs {
@@ -197,6 +210,12 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 }
 
 func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
+	if q.BeforeQuery != nil {
+		if err := q.BeforeQuery(func(interface{}) bool { return false }); err != nil {
+			return err
+		}
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for _, doc := range c.docs {

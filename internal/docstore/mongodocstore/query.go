@@ -58,15 +58,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 		filter = append(filter, bf)
 	}
 	if q.BeforeQuery != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**options.FindOptions)
-			if !ok {
-				return false
-			}
-			*p = opts
-			return true
-		}
-		if err := q.BeforeQuery(asFunc); err != nil {
+		if err := q.BeforeQuery(driver.AsFunc(opts)); err != nil {
 			return nil, err
 		}
 	}
@@ -171,6 +163,11 @@ func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error 
 	if err != nil {
 		return err
 	}
+	if q.BeforeQuery != nil {
+		if err := q.BeforeQuery(driver.AsFunc(filter)); err != nil {
+			return err
+		}
+	}
 	_, err = c.coll.DeleteMany(ctx, filter)
 	return err
 }
@@ -183,6 +180,11 @@ func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods [
 	updateDoc, _, err := c.newUpdateDoc(mods)
 	if err != nil {
 		return err
+	}
+	if q.BeforeQuery != nil {
+		if err := q.BeforeQuery(driver.AsFunc(filter)); err != nil {
+			return err
+		}
 	}
 	_, err = c.coll.UpdateMany(ctx, filter, updateDoc)
 	return err
