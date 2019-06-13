@@ -151,7 +151,7 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 
 func TestConformance(t *testing.T) {
 	client := newTestClient(t)
-	defer func() { client.Disconnect(context.Background()) }()
+	defer client.Disconnect(context.Background())
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{client.Database(dbName)}, nil
