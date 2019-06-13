@@ -58,7 +58,7 @@ func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
 	if err != nil {
 		return xerrors.Errorf("biome add: %w", err)
 	}
-	if err := static.Do(biomeDir(moduleRoot, newName), actions, nil); err != nil {
+	if err := static.Do(biomeDir(moduleRoot, newName), nil, actions...); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
 	pctx.Logf("Success!")

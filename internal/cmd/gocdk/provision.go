@@ -127,7 +127,7 @@ func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) 
 	// Perform the actions for the chosen type, instantiating into the
 	// chosen biome directory.
 	opts := &static.Options{Logger: pctx.errlog}
-	if err := static.Do(biomeDir(moduleDir, biome), actions, opts); err != nil {
+	if err := static.Do(biomeDir(moduleDir, biome), opts, actions...); err != nil {
 		return xerrors.Errorf("provision add: %w", err)
 	}
 	pctx.Logf("Success!")

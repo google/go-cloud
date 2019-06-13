@@ -94,8 +94,8 @@ func instantiateDemo(pctx *processContext, moduleRoot, demo string, force bool) 
 	filename := fmt.Sprintf("demo_%s.go", demo)
 	action := static.CopyFile(path.Join("/demo", filename), filename)
 
-	opts := static.Options{Force: force, Logger: pctx.errlog}
-	if err := static.Do(moduleRoot, []*static.Action{action}, &opts); err != nil {
+	opts := &static.Options{Force: force, Logger: pctx.errlog}
+	if err := static.Do(moduleRoot, opts, action); err != nil {
 		return err
 	}
 	pctx.Logf("Run 'gocdk serve' and visit http://localhost:8080/demo/%s to see the demo.", demo)

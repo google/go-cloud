@@ -84,7 +84,7 @@ func doInit(ctx context.Context, pctx *processContext, dir, modpath string, allo
 			a.TemplateData = tmplValues
 		}
 	}
-	if err := static.Do(projectDir, actions, nil); err != nil {
+	if err := static.Do(projectDir, nil, actions...); err != nil {
 		return xerrors.Errorf("gocdk init: %w", err)
 	}
 	pctx.Logf("Project created at %s with:\n", projectDir)

@@ -196,7 +196,7 @@ type Options struct {
 // data, at srcRoot + ".json". The JSON file should consist of a sequence of
 // JSON objects that will be deserialized into fileOptions structs; see
 // the struct docstring for more info.
-func Do(destRoot string, actions []*Action, opts *Options) error {
+func Do(destRoot string, opts *Options, actions ...*Action) error {
 	if opts == nil {
 		opts = new(Options)
 	}
@@ -320,7 +320,7 @@ func addToFile(path, marker, skipMarker string, content []byte) (bool, error) {
 	}
 	newContent := append(existing[:idx], append(content, existing[idx:]...)...)
 
-	// TODO(rvangent): Copy os.FileMode from the current file?
+	// Note: ioutil.WriteFile ignores the permissions for an existing file.
 	if err := ioutil.WriteFile(path, newContent, 0666); err != nil {
 		return false, xerrors.Errorf("couldn't modify %q: %w", path, err)
 	}
