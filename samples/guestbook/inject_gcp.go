@@ -18,6 +18,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"net/url"
 
 	"github.com/google/wire"
 	"gocloud.dev/blob"
@@ -42,11 +45,11 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	// wire.Build.
 	wire.Build(
 		gcpcloud.GCP,
-		cloudmysql.Open,
+		wire.Struct(new(cloudmysql.URLOpener), "CertSource"),
 		applicationSet,
 		gcpBucket,
 		gcpMOTDVar,
-		gcpSQLParams,
+		openGCPDatabase,
 	)
 	return nil, nil, nil
 }
@@ -61,18 +64,19 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*b
 	return b, func() { b.Close() }, nil
 }
 
-// gcpSQLParams is a Wire provider function that returns the Cloud SQL
-// connection parameters based on the command-line flags. Other providers inside
-// gcpcloud.GCP use the parameters to construct a *sql.DB.
-func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
-	return &cloudmysql.Params{
-		ProjectID: string(id),
-		Region:    flags.cloudSQLRegion,
-		Instance:  flags.dbHost,
-		Database:  flags.dbName,
-		User:      flags.dbUser,
-		Password:  flags.dbPassword,
+// openGCPDatabase is a Wire provider function that connects to Cloud SQL
+// based on the command-line flags.
+func openGCPDatabase(ctx context.Context, opener *cloudmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
+	db, err := opener.OpenMySQLURL(ctx, &url.URL{
+		Scheme: "cloudmysql",
+		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
+		Host:   string(id),
+		Path:   fmt.Sprintf("/%s/%s/%s", flags.cloudSQLRegion, flags.dbHost, flags.dbName),
+	})
+	if err != nil {
+		return nil, nil, err
 	}
+	return db, func() { db.Close() }, nil
 }
 
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
