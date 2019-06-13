@@ -277,7 +277,7 @@ func assignKey(doc interface{}) interface{} {
 
 func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
-	testCases := []struct {
+	for _, tc := range []struct {
 		name string
 		doc  interface{}
 	}{
@@ -297,8 +297,7 @@ func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 			name: "unnamed struct",
 			doc:  &docstruct{B: true},
 		},
-	}
-	for _, tc := range testCases {
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			checkNoRevisionField(t, tc.doc, revField)
 			if err := coll.Create(ctx, tc.doc); err != nil {
@@ -335,7 +334,7 @@ func testPut(t *testing.T, coll *ds.Collection, revField string) {
 	}
 	var maprev, strmap interface{}
 
-	testCases := []struct {
+	for _, tc := range []struct {
 		name string
 		doc  interface{}
 		rev  bool
@@ -358,8 +357,7 @@ func testPut(t *testing.T, coll *ds.Collection, revField string) {
 			doc:  &docstruct{Name: "testPutStruct", B: false},
 			rev:  true,
 		},
-	}
-	for _, tc := range testCases {
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			checkNoRevisionField(t, tc.doc, revField)
 			must(coll.Put(ctx, tc.doc))
@@ -423,18 +421,34 @@ func testReplace(t *testing.T, coll *ds.Collection, revField string) {
 		}
 	}
 
-	doc1 := docmap{KeyField: "testReplace", "s": "a"}
-	must(coll.Put(ctx, doc1))
-	doc1["s"] = "b"
-	doc1[revField] = nil
-	checkNoRevisionField(t, doc1, revField)
-	must(coll.Replace(ctx, doc1))
-	checkHasRevisionField(t, doc1, revField)
-	got := docmap{KeyField: doc1[KeyField]}
-	must(coll.Get(ctx, got))
-	if diff := cmpDiff(got, doc1); diff != "" {
-		t.Fatalf(diff)
+	for _, tc := range []struct {
+		name       string
+		doc1, doc2 interface{}
+	}{
+		{
+			name: "replace map",
+			doc1: docmap{KeyField: "testReplaceMap", "s": "a"},
+			doc2: docmap{KeyField: "testReplaceMap", "s": "b"},
+		},
+		{
+			name: "replace struct",
+			doc1: &docstruct{Name: "testReplaceStruct", St: "a"},
+			doc2: &docstruct{Name: "testReplaceStruct", St: "b"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			must(coll.Put(ctx, tc.doc1))
+			checkNoRevisionField(t, tc.doc2, revField)
+			must(coll.Replace(ctx, tc.doc2))
+			checkHasRevisionField(t, tc.doc2, revField)
+			got := assignKey(tc.doc2)
+			must(coll.Get(ctx, got))
+			if diff := cmpDiff(got, tc.doc2); diff != "" {
+				t.Fatalf(diff)
+			}
+		})
 	}
+
 	// Can't replace a nonexistent doc.
 	checkCode(t, coll.Replace(ctx, nonexistentDoc()), gcerrors.NotFound)
 
@@ -443,7 +457,6 @@ func testReplace(t *testing.T, coll *ds.Collection, revField string) {
 			return coll.Replace(ctx, dm)
 		})
 	})
-
 }
 
 // Check that doc does not have a revision field (or has a nil one).
