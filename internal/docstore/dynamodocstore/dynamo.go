@@ -627,10 +627,10 @@ func (c *collection) onSuccess(op *writeOp) {
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
-	if _, ok := m[c.partitionKey]; !ok {
+	if v, ok := m[c.partitionKey]; !ok || v.NULL != nil {
 		return c.partitionKey
 	}
-	if _, ok := m[c.sortKey]; !ok && c.sortKey != "" {
+	if v, ok := m[c.sortKey]; (!ok || v.NULL != nil) && c.sortKey != "" {
 		return c.sortKey
 	}
 	return ""

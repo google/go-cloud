@@ -245,37 +245,77 @@ const AlternateRevisionField = "Etag"
 
 type docmap = map[string]interface{}
 
+type docstruct struct {
+	Name             interface{} `docstore:"name"`
+	DocstoreRevision interface{}
+	Etag             interface{}
+
+	// N  *int
+	// I  int
+	// U  uint
+	// F  float64
+	// St string
+	B bool
+	// By []byte
+	// L  []int
+	// A  [2]int
+	// M  map[string]bool
+	// P  *string
+}
+
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
 
-// TODO(jba): test structs
 func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
-	named := docmap{KeyField: "testCreate1", "b": true}
-	unnamed := docmap{"b": false}
-	createThenGet := func(doc docmap) {
-		t.Helper()
-		checkNoRevisionField(t, doc, revField)
-		if err := coll.Create(ctx, doc); err != nil {
-			t.Fatalf("Create: %v", err)
-		}
-		checkHasRevisionField(t, doc, revField)
-		got := docmap{KeyField: doc[KeyField]}
-		if err := coll.Get(ctx, got); err != nil {
-			t.Fatalf("Get: %v", err)
-		}
-		if diff := cmpDiff(got, doc); diff != "" {
-			t.Fatal(diff)
-		}
+	testCases := []struct {
+		name string
+		doc  interface{}
+	}{
+		{
+			name: "named map",
+			doc:  docmap{KeyField: "testCreateMap", "b": true},
+		},
+		{
+			name: "unnamed map",
+			doc:  docmap{"b": true},
+		},
+		{
+			name: "named struct",
+			doc:  &docstruct{Name: "testCreateStruct", B: true},
+		},
+		{
+			name: "unnamed struct",
+			doc:  &docstruct{B: true},
+		},
 	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			checkNoRevisionField(t, tc.doc, revField)
+			if err := coll.Create(ctx, tc.doc); err != nil {
+				t.Fatalf("Create: %v", err)
+			}
+			checkHasRevisionField(t, tc.doc, revField)
 
-	createThenGet(named)
-	createThenGet(unnamed)
-	if unnamed[KeyField] == nil {
-		t.Error("unnamed[KeyField]: got nil, want a generated key")
+			var got interface{}
+			switch v := tc.doc.(type) {
+			case docmap:
+				got = docmap{KeyField: v[KeyField]}
+			case *docstruct:
+				got = &docstruct{Name: v.Name}
+			default:
+				t.Fatalf("wrong type for this test: %T", tc.doc)
+			}
+			if err := coll.Get(ctx, got); err != nil {
+				t.Fatalf("Get: %v", err)
+			}
+			if diff := cmpDiff(got, tc.doc); diff != "" {
+				t.Fatal(diff)
+			}
+		})
 	}
 
 	// Can't create an existing doc.
-	err := coll.Create(ctx, docmap{KeyField: named[KeyField]})
+	err := coll.Create(ctx, docmap{KeyField: "testCreateMap"})
 	checkCode(t, err, gcerrors.AlreadyExists)
 
 	// Can't create a doc with a revision field.
