@@ -16,26 +16,33 @@ package mongodocstore
 
 import (
 	"context"
-	"flag"
+	"os"
 	"testing"
 
 	"gocloud.dev/internal/docstore/drivertest"
+	"gocloud.dev/internal/testing/setup"
 )
 
 // Run conformance tests on Azure Cosmos.
-// We cannot record this interaction, so this test must be enabled with a flag.
 
-var cosmosConnectionString = flag.String("cosmos", "", "connection string for Azure Cosmos")
+var (
+	// See https://docs.microsoft.com/en-us/azure/cosmos-db/connect-mongodb-account
+	// on how to get a MongoDB connection string for Azure Cosmos.
+	cosmosConnString = os.Getenv("COSMOS_CONNECTION_STRING")
+)
 
 func TestConformanceCosmos(t *testing.T) {
-	if *cosmosConnectionString == "" {
-		t.Skip("no -cosmos flag")
+	if !*setup.Record {
+		t.Skip("replaying is not yet supported for Azure Cosmos")
+	}
+	if cosmosConnString == "" {
+		t.Fatal("test harness requires COSMOS_CONNECTION_STRING environment variable to run")
 	}
 
 	ctx := context.Background()
-	client, err := Dial(ctx, *cosmosConnectionString)
+	client, err := Dial(ctx, cosmosConnString)
 	if err != nil {
-		t.Fatalf("dialing to %s: %v", *cosmosConnectionString, err)
+		t.Fatalf("dialing to %s: %v", cosmosConnString, err)
 	}
 	if err := client.Ping(ctx, nil); err != nil {
 		t.Fatalf("connecting to %s: %v", serverURI, err)
