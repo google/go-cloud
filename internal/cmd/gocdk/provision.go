@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"sort"
@@ -64,7 +65,8 @@ func registerProvisionCmd(ctx context.Context, pctx *processContext, rootCmd *co
 
 var provisionableTypes = map[string]func(*processContext, string) ([]*static.Action, error){
 	"blob/azureblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
-		_, err := prompt.AzureLocationIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AzureLocationIfNeeded(reader, pctx.stderr, biomeDir)
 		if err != nil {
 			return nil, err
 		}
@@ -85,11 +87,12 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		}, nil
 	},
 	"blob/gcsblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
-		_, err := prompt.GCPProjectIDIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.GCPProjectIDIfNeeded(reader, pctx.stderr, biomeDir)
 		if err != nil {
 			return nil, err
 		}
-		_, err = prompt.GCPStorageLocationIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		_, err = prompt.GCPStorageLocationIfNeeded(reader, pctx.stderr, biomeDir)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +104,8 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		}, nil
 	},
 	"blob/s3blob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
-		_, err := prompt.AWSRegionIfNeeded(pctx.stdin, pctx.stderr, biomeDir)
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AWSRegionIfNeeded(reader, pctx.stderr, biomeDir)
 		if err != nil {
 			return nil, err
 		}

@@ -30,14 +30,13 @@ import (
 // The function only returns an error if the user enters "cancel".
 // TODO(rvangent): Add support for validation?
 // TODO(rvangent): Ctrl-C doesn't work; maybe replace cancel.
-func String(in io.Reader, out io.Writer, msg, dflt string) (string, error) {
+func String(reader *bufio.Reader, out io.Writer, msg, dflt string) (string, error) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, msg)
 	if dflt != "" {
 		fmt.Fprintln(out, "  default:", dflt)
 	}
 	const prompt = `Enter a value, or "cancel": `
-	reader := bufio.NewReader(in)
 	for {
 		fmt.Fprintf(out, prompt)
 		s, err := reader.ReadString('\n')
@@ -83,35 +82,35 @@ func askIfNeeded(biomeDir, tfLocalName string, promptFn func() (string, error)) 
 }
 
 // AWSRegionIfNeeded prompts the user for an AWS region if needed.
-func AWSRegionIfNeeded(in io.Reader, out io.Writer, biomeDir string) (string, error) {
+func AWSRegionIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir string) (string, error) {
 	prompt := func() (string, error) {
-		return String(in, out, "Please enter an AWS region.\n  See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for more information.", "us-west-1")
+		return String(reader, out, "Please enter an AWS region.\n  See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for more information.", "us-west-1")
 	}
 	return askIfNeeded(biomeDir, "aws_region", prompt)
 }
 
 // AzureLocationIfNeeded prompts the user for an Azure location if needed.
-func AzureLocationIfNeeded(in io.Reader, out io.Writer, biomeDir string) (string, error) {
+func AzureLocationIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir string) (string, error) {
 	prompt := func() (string, error) {
-		return String(in, out, "Please enter an Azure location.\n  See https://azure.microsoft.com/en-us/global-infrastructure/locations for more information.", "westus")
+		return String(reader, out, "Please enter an Azure location.\n  See https://azure.microsoft.com/en-us/global-infrastructure/locations for more information.", "westus")
 	}
 	return askIfNeeded(biomeDir, "azure_location", prompt)
 }
 
 // GCPProjectID prompts the user for a GCP project ID.
-func GCPProjectID(in io.Reader, out io.Writer) (string, error) {
-	return String(in, out, "Please enter your GCP project ID.", "")
+func GCPProjectID(reader *bufio.Reader, out io.Writer) (string, error) {
+	return String(reader, out, "Please enter your GCP project ID.", "")
 }
 
 // GCPProjectIDIfNeeded prompts the user for a GCP project ID if needed.
-func GCPProjectIDIfNeeded(in io.Reader, out io.Writer, biomeDir string) (string, error) {
-	return askIfNeeded(biomeDir, "gcp_project", func() (string, error) { return GCPProjectID(in, out) })
+func GCPProjectIDIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir string) (string, error) {
+	return askIfNeeded(biomeDir, "gcp_project", func() (string, error) { return GCPProjectID(reader, out) })
 }
 
 // GCPStorageLocationIfNeeded prompts the user for a GCP storage location if needed.
-func GCPStorageLocationIfNeeded(in io.Reader, out io.Writer, biomeDir string) (string, error) {
+func GCPStorageLocationIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir string) (string, error) {
 	prompt := func() (string, error) {
-		return String(in, out, "Please enter a GCP storage location.\n  See https://cloud.google.com/storage/docs/locations for more information.", "US")
+		return String(reader, out, "Please enter a GCP storage location.\n  See https://cloud.google.com/storage/docs/locations for more information.", "US")
 	}
 	return askIfNeeded(biomeDir, "gcp_storage_location", prompt)
 }

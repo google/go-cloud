@@ -15,6 +15,7 @@
 package prompt
 
 import (
+	"bufio"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -63,7 +64,7 @@ func TestString(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.Description, func(t *testing.T) {
-			in := strings.NewReader(test.In)
+			in := bufio.NewReader(strings.NewReader(test.In))
 			got, err := String(in, ioutil.Discard, "unused message", test.Default)
 			if (err != nil) != test.WantErr {
 				t.Fatalf("got err %v, want err? %v", err, test.WantErr)
