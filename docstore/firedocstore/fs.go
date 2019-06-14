@@ -168,7 +168,7 @@ func newCollection(client *vkit.Client, collResourceID, nameField string, nameFu
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	if c.nameField != "" {
 		name, err := doc.GetField(c.nameField)
-		if err != nil || name == nil {
+		if err != nil || name == nil || driver.IsEmptyValue(reflect.ValueOf(name)) {
 			// missing field is not an error
 			return nil, nil
 		}

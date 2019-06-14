@@ -32,7 +32,7 @@
 // to the BeforeDo function exposes the following types:
 // - Gets: *options.FindOptions
 // - writes: []mongo.WriteModel and *options.BulkWriteOptions
-
+//
 // As
 //
 // mongodocstore exposes the following types for As:

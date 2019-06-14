@@ -273,7 +273,7 @@ func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) erro
 			// struct value. So we just ignore it.
 			continue
 		}
-		if f.ParsedTag.(tagOptions).omitEmpty && isEmptyValue(fv) {
+		if f.ParsedTag.(tagOptions).omitEmpty && IsEmptyValue(fv) {
 			continue
 		}
 		if err := encode(fv, e2); err != nil {
@@ -715,8 +715,8 @@ func wrap(err error, code gcerr.ErrorCode) error {
 var fieldCache = fields.NewCache(parseTag, nil, nil)
 
 // Copied from encoding/json, go 1.12.
-func isEmptyValue(v reflect.Value) bool {
-	switch v.Kind() {
+func IsEmptyValue(v reflect.Value) bool {
+	switch k := v.Kind(); k {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0
 	case reflect.Bool:

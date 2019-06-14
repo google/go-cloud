@@ -317,12 +317,18 @@ func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
 func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 	for _, tc := range []struct {
-		name string
-		doc  interface{}
+		name    string
+		doc     interface{}
+		wantErr gcerrors.ErrorCode
 	}{
 		{
 			name: "named map",
 			doc:  docmap{KeyField: "testCreateMap", "b": true},
+		},
+		{
+			name:    "existing",
+			doc:     docmap{KeyField: "testCreateMap"},
+			wantErr: gcerrors.AlreadyExists,
 		},
 		{
 			name: "unnamed map",
@@ -336,31 +342,33 @@ func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 			name: "unnamed struct",
 			doc:  &docstruct{B: true},
 		},
+		{
+			name:    "with revision",
+			doc:     docmap{KeyField: "testCreate2", revField: 0},
+			wantErr: gcerrors.InvalidArgument,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			checkNoRevisionField(t, tc.doc, revField)
-			if err := coll.Create(ctx, tc.doc); err != nil {
-				t.Fatalf("Create: %v", err)
-			}
-			checkHasRevisionField(t, tc.doc, revField)
+			if tc.wantErr == gcerrors.OK {
+				checkNoRevisionField(t, tc.doc, revField)
+				if err := coll.Create(ctx, tc.doc); err != nil {
+					t.Fatalf("Create: %v", err)
+				}
+				checkHasRevisionField(t, tc.doc, revField)
 
-			got := newDoc(tc.doc)
-			if err := coll.Get(ctx, got); err != nil {
-				t.Fatalf("Get: %v", err)
-			}
-			if diff := cmpDiff(got, tc.doc); diff != "" {
-				t.Fatal(diff)
+				got := newDoc(tc.doc)
+				if err := coll.Get(ctx, got); err != nil {
+					t.Fatalf("Get: %v", err)
+				}
+				if diff := cmpDiff(got, tc.doc); diff != "" {
+					t.Fatal(diff)
+				}
+			} else {
+				err := coll.Create(ctx, tc.doc)
+				checkCode(t, err, tc.wantErr)
 			}
 		})
 	}
-
-	// Can't create an existing doc.
-	err := coll.Create(ctx, docmap{KeyField: "testCreateMap"})
-	checkCode(t, err, gcerrors.AlreadyExists)
-
-	// Can't create a doc with a revision field.
-	err = coll.Create(ctx, docmap{KeyField: "testCreate2", revField: 0})
-	checkCode(t, err, gcerrors.InvalidArgument)
 }
 
 func testPut(t *testing.T, coll *ds.Collection, revField string) {
@@ -620,9 +628,8 @@ func testDelete(t *testing.T, coll *ds.Collection, revField string) {
 		wantErr gcerrors.ErrorCode
 	}{
 		{
-			name:    "delete map",
-			doc:     docmap{KeyField: "testDeleteMap"},
-			wantErr: gcerrors.OK,
+			name: "delete map",
+			doc:  docmap{KeyField: "testDeleteMap"},
 		},
 		{
 			name:    "delete map wrong rev",
@@ -630,9 +637,8 @@ func testDelete(t *testing.T, coll *ds.Collection, revField string) {
 			wantErr: gcerrors.FailedPrecondition,
 		},
 		{
-			name:    "delete struct",
-			doc:     &docstruct{Name: "testDeleteStruct"},
-			wantErr: gcerrors.OK,
+			name: "delete struct",
+			doc:  &docstruct{Name: "testDeleteStruct"},
 		},
 		{
 			name:    "delete struct wrong rev",
