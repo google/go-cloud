@@ -16,7 +16,7 @@ contents. When you open a collection using one of the functions described here,
 you specify how to find the provider's primary key in the document.
 
 
-[`*docstore.Collection`]: https://godoc.org/gocloud.dev/internal/docstore#Collection
+[`*docstore.Collection`]: https://godoc.org/gocloud.dev/docstore#Collection
 
 <!--more-->
 
@@ -37,7 +37,7 @@ both forms for each document store provider.
 ## DynamoDB {#dynamodb}
 
 The
-[`dynamodocstore`](https://godoc.org/gocloud.dev/internal/docstore/dynamodocstore) 
+[`dynamodocstore`](https://godoc.org/gocloud.dev/docstore/dynamodocstore) 
 package supports [Amazon DynamoDB](https://aws.amazon.com/dynamodb).
 A Docstore collection corresponds to a DynamoDB table.
 
@@ -45,7 +45,7 @@ DynamoDB URLs provide the table, partition key field and optionally the sort key
 field for the collection.
 
 {{< goexample
-"gocloud.dev/internal/docstore/dynamodocstore.Example_openCollectionFromURL" >}}
+"gocloud.dev/docstore/dynamodocstore.Example_openCollectionFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`dynamodocstore.URLOpener`][].
@@ -56,15 +56,15 @@ The
 [`dynamodocstore.OpenCollection`][] constructor opens a DynamoDB table as a Docstore collection. You must first
 create an [AWS session][] with the same region as your collection:
 
-{{< goexample "gocloud.dev/internal/docstore/dynamodocstore.ExampleOpenCollection" >}}
+{{< goexample "gocloud.dev/docstore/dynamodocstore.ExampleOpenCollection" >}}
 
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-[`dynamodocstore.OpenCollection`]: https://godoc.org/gocloud.dev/internal/docstore/dynamodocstore#OpenCollection
-[`dynamodocstore.URLOpener`]: https://godoc.org/gocloud.dev/internal/docstore/dynamodocstore#URLOpener
+[`dynamodocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/dynamodocstore#OpenCollection
+[`dynamodocstore.URLOpener`]: https://godoc.org/gocloud.dev/docstore/dynamodocstore#URLOpener
 
 ## Google Cloud Firestore {#firestore}
 
-The [`firedocstore`](https://godoc.org/gocloud.dev/internal/docstore/firedocstore)
+The [`firedocstore`](https://godoc.org/gocloud.dev/docstore/firedocstore)
 package supports [Google Cloud
 Firestore](https://https://cloud.google.com/firestore). Firestore documents
 are uniquely named by paths that are not part of the document content. In
@@ -76,12 +76,12 @@ extract the name from a document.
 Firestore URLs provide the project and collection, as well as the field
 that holds the document name. 
 
-{{< goexample "gocloud.dev/internal/docstore/firedocstore.Example_openCollectionFromURL" >}}
+{{< goexample "gocloud.dev/docstore/firedocstore.Example_openCollectionFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`firedocstore.URLOpener`][].
 
-[`firedocstore.URLOpener`]:  https://godoc.org/gocloud.dev/internal/docstore/firedocstore#URLOpener
+[`firedocstore.URLOpener`]:  https://godoc.org/gocloud.dev/docstore/firedocstore#URLOpener
 
 ### Firestore Constructors {#firestore-ctor}
 
@@ -93,22 +93,22 @@ package. In addition to a client, `OpenCollection` requires a Google Cloud proje
 path to the Firestore collection, and the name of the field that holds
 the document name.
 
-{{< goexample "gocloud.dev/internal/docstore/firedocstore.ExampleOpenCollection" >}}
+{{< goexample "gocloud.dev/docstore/firedocstore.ExampleOpenCollection" >}}
 
 Instead of mapping the document name to a field, you can supply a function to construct the name
 from the document contents with [`firedocstore.OpenCollectionWithNameFunc`][]. 
 This can be useful for documents whose name is the combination of two or more fields. 
 
-{{< goexample "gocloud.dev/internal/docstore/firedocstore.ExampleOpenCollectionWithNameFunc" >}}
+{{< goexample "gocloud.dev/docstore/firedocstore.ExampleOpenCollectionWithNameFunc" >}}
 
 
-[`firedocstore.Dial`]: https://godoc.org/gocloud.dev/internal/docstore/firedocstore#Dial
-[`firedocstore.OpenCollection`]: https://godoc.org/gocloud.dev/internal/docstore/firedocstore#OpenCollection
-[`firedocstore.OpenCollectionWithNameFunc`]: https://godoc.org/gocloud.dev/internal/docstore/firedocstore#OpenCollectionWithNameFunc
+[`firedocstore.Dial`]: https://godoc.org/gocloud.dev/docstore/firedocstore#Dial
+[`firedocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/firedocstore#OpenCollection
+[`firedocstore.OpenCollectionWithNameFunc`]: https://godoc.org/gocloud.dev/docstore/firedocstore#OpenCollectionWithNameFunc
 
 ## MongoDB {#mongo}
 
-The [`mongodocstore`](https://godoc.org/gocloud.dev/internal/docstore/mongodocstore)
+The [`mongodocstore`](https://godoc.org/gocloud.dev/docstore/mongodocstore)
 package supports the popular
 [MongoDB](https://mongodb.org) document store. MongoDB documents
 are uniquely identified by a field called `_id`. In
@@ -119,12 +119,12 @@ MongoDB URLs provide the database and collection, and optionally the field
 that holds the document ID. Specify the Mongo server URL by setting the
 `MONGO_SERVER_URL` environment variable.
 
-{{< goexample "gocloud.dev/internal/docstore/mongodocstore.Example_openCollectionFromURL" >}}
+{{< goexample "gocloud.dev/docstore/mongodocstore.Example_openCollectionFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`mongodocstore.URLOpener`][].
 
-[`mongodocstore.URLOpener`]:  https://godoc.org/gocloud.dev/internal/docstore/mongodocstore#URLOpener
+[`mongodocstore.URLOpener`]:  https://godoc.org/gocloud.dev/docstore/mongodocstore#URLOpener
 
 
 ### MongoDB Constructors {#mongo-ctor}
@@ -137,22 +137,22 @@ Obtain a `*mongo.Collection` from the client with
 `client.Database(dbName).Collection(collName)`. Then pass the result to
 `mongodocstore.OpenCollection` along with the name of the ID field, or `""` to use `_id`.
 
-{{< goexample "gocloud.dev/internal/docstore/mongodocstore.ExampleOpenCollection" >}}
+{{< goexample "gocloud.dev/docstore/mongodocstore.ExampleOpenCollection" >}}
 
 Instead of mapping the document ID to a field, you can supply a function to construct the ID
 from the document contents with [`mongodocstore.OpenCollectionWithIDFunc`][]. 
 This can be useful for documents whose name is the combination of two or more fields. 
 
-{{< goexample "gocloud.dev/internal/docstore/mongodocstore.ExampleOpenCollectionWithIDFunc" >}}
+{{< goexample "gocloud.dev/docstore/mongodocstore.ExampleOpenCollectionWithIDFunc" >}}
 
-[`mongodocstore.Dial`]: https://godoc.org/gocloud.dev/internal/docstore/mongodocstore#Dial
-[`mongodocstore.OpenCollection`]: https://godoc.org/gocloud.dev/internal/docstore/mongodocstore#OpenCollection
-[`mongodocstore.OpenCollectionWithIDFunc`]: https://godoc.org/gocloud.dev/internal/docstore/mongodocstore#OpenCollectionWithIDFunc
+[`mongodocstore.Dial`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#Dial
+[`mongodocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollection
+[`mongodocstore.OpenCollectionWithIDFunc`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollectionWithIDFunc
 
 ## In-Memory Document Store {#mem}
 
 The
-[`memdocstore`](https://godoc.org/gocloud.dev/internal/docstore/mongodocstore)
+[`memdocstore`](https://godoc.org/gocloud.dev/docstore/mongodocstore)
 package implements an in-memory document store suitable for testing and
 development. 
 
@@ -160,28 +160,28 @@ URLs for the in-memory store have a `mem:` scheme and provide the name of the
 document field to use as a primary key. There is no collection name; each call
 to one of the `OpenCollection` functions creates a distinct collection.
 
-{{< goexample "gocloud.dev/internal/docstore/memdocstore.Example_openCollectionFromURL" >}}
+{{< goexample "gocloud.dev/docstore/memdocstore.Example_openCollectionFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`memdocstore.URLOpener`][].
 
-[`memdocstore.URLOpener`]:  https://godoc.org/gocloud.dev/internal/docstore/memdocstore#URLOpener
+[`memdocstore.URLOpener`]:  https://godoc.org/gocloud.dev/docstore/memdocstore#URLOpener
 
 ### Mem Constructors {#mem-ctor}
 
 The [`memdocstore.OpenCollection`][] constructor creates and opens a collection,
 taking the name of the key field.
 
-{{< goexample "gocloud.dev/internal/docstore/memdocstore.ExampleOpenCollection" >}}
+{{< goexample "gocloud.dev/docstore/memdocstore.ExampleOpenCollection" >}}
 
 You can instead supply a function to construct the primary key
 from the document contents with [`memdocstore.OpenCollectionWithKeyFunc`][]. 
 This can be useful for documents whose name is the combination of two or more fields. 
 
-{{< goexample "gocloud.dev/internal/docstore/memdocstore.ExampleOpenCollectionWithKeyFunc" >}}
+{{< goexample "gocloud.dev/docstore/memdocstore.ExampleOpenCollectionWithKeyFunc" >}}
 
-[`memdocstore.OpenCollection`]: https://godoc.org/gocloud.dev/internal/docstore/memdocstore#OpenCollection
-[`memdocstore.OpenCollectionWithKeyFunc`]: https://godoc.org/gocloud.dev/internal/docstore/memdocstore#OpenCollectionWithKeyFunc
+[`memdocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/memdocstore#OpenCollection
+[`memdocstore.OpenCollectionWithKeyFunc`]: https://godoc.org/gocloud.dev/docstore/memdocstore#OpenCollectionWithKeyFunc
 
 
 ## What's Next
