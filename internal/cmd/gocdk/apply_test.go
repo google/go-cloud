@@ -18,7 +18,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -32,10 +31,6 @@ func TestApply(t *testing.T) {
 	// terraform not initialized *
 	// terraform never previously applied
 	// terraform apply repeat
-
-	if _, err := exec.LookPath("terraform"); err != nil {
-		t.Skip("terraform not found:", err)
-	}
 
 	t.Run("TerraformNotInitialized", func(t *testing.T) {
 		ctx := context.Background()
