@@ -68,7 +68,10 @@ func (d Document) GetField(field string) (interface{}, error) {
 		return x, nil
 	} else {
 		v, err := d.structField(field)
-		return v.Interface(), err
+		if err != nil {
+			return nil, err
+		}
+		return v.Interface(), nil
 	}
 }
 
