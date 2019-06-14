@@ -107,3 +107,6 @@ See [the Revisions section of the package
 documentation](https://godoc.org/gocloud.dev/docstore#hdr-Revisions)
 for more on revisions.
 
+## What's Next
+
+Learn how to run [queries on collections]({{< ref "queries.md" >}}).

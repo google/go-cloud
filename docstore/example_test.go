@@ -167,6 +167,31 @@ func ExampleCollection_ErrorAs() {
 }
 
 func ExampleQuery_Get() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var coll *docstore.Collection
+
+	// Ask for all players with scores at least 20.
+	iter := coll.Query().Where("Score", ">=", 20).OrderBy("Score", docstore.Descending).Get(ctx)
+	defer iter.Stop()
+
+	// Query.Get returns an iterator. Call Next on it until io.EOF.
+	for {
+		var p Player
+		err := iter.Next(ctx, &p)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Fatal(err)
+		} else {
+			fmt.Printf("%s: %d\n", p.Name, p.Score)
+		}
+	}
+}
+
+func ExampleQuery_Get_full() {
 	ctx := context.Background()
 	coll, err := memdocstore.OpenCollection("Name", nil)
 	if err != nil {
@@ -207,6 +232,20 @@ func ExampleQuery_Get() {
 }
 
 func ExampleQuery_Delete() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var coll *docstore.Collection
+
+	// Delete all players with scores under 25.
+	err := coll.Query().Where("Score", "<", 25).Delete(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ExampleQuery_Delete_full() {
 	ctx := context.Background()
 	coll, err := memdocstore.OpenCollection("Name", nil)
 	if err != nil {
@@ -251,6 +290,22 @@ func ExampleQuery_Delete() {
 }
 
 func ExampleQuery_Update() {
+	// This example is used in https://gocloud.dev/howto/docstore.
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var coll *docstore.Collection
+
+	// Increment a player's score if it is low.
+	err := coll.Query().
+		Where("Score", "<", 20).
+		Update(ctx, docstore.Mods{"Score": docstore.Increment(15)})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ExampleQuery_Update_full() {
 	ctx := context.Background()
 	coll, err := memdocstore.OpenCollection("Name", nil)
 	if err != nil {

@@ -71,6 +71,18 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n)",
 		"code": "// Create a player.\npat := \u0026Player{Name: \"Pat\", Score: 0}\nif err := coll.Create(ctx, pat); err != nil {\n\treturn err\n}\n\n// Set the score to a new value.\npat2 := \u0026Player{Name: \"Pat\"}\nerr := coll.Actions().Update(pat, docstore.Mods{\"Score\": 15}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}\n\n// Increment the score.\nerr = coll.Actions().Update(pat, docstore.Mods{\"Score\": docstore.Increment(5)}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}"
 	},
+	"gocloud.dev/docstore.ExampleQuery_Delete": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n)",
+		"code": "// Delete all players with scores under 25.\nerr := coll.Query().Where(\"Score\", \"\u003c\", 25).Delete(ctx)\nif err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/docstore.ExampleQuery_Get": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"io\"\n\n\t\"gocloud.dev/docstore\"\n)",
+		"code": "// Ask for all players with scores at least 20.\niter := coll.Query().Where(\"Score\", \"\u003e=\", 20).OrderBy(\"Score\", docstore.Descending).Get(ctx)\ndefer iter.Stop()\n\n// Query.Get returns an iterator. Call Next on it until io.EOF.\nfor {\n\tvar p Player\n\terr := iter.Next(ctx, \u0026p)\n\tif err == io.EOF {\n\t\tbreak\n\t} else if err != nil {\n\t\treturn err\n\t} else {\n\t\tfmt.Printf(\"%s: %d\\n\", p.Name, p.Score)\n\t}\n}"
+	},
+	"gocloud.dev/docstore.ExampleQuery_Update": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n)",
+		"code": "// Increment a player's score if it is low.\nerr := coll.Query().\n\tWhere(\"Score\", \"\u003c\", 20).\n\tUpdate(ctx, docstore.Mods{\"Score\": docstore.Increment(15)})\nif err != nil {\n\treturn err\n}"
+	},
 	"gocloud.dev/docstore.Example_optimisticLocking": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"time\"\n\n\t\"gocloud.dev/docstore/memdocstore\"\n\t\"gocloud.dev/gcerrors\"\n)",
 		"code": "coll, err := memdocstore.OpenCollection(\"Name\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()\n\n// Create a player.\npat := \u0026Player{Name: \"Pat\", Score: 7}\nif err := coll.Create(ctx, pat); err != nil {\n\treturn err\n}\nfmt.Println(pat) // memdocstore revisions are deterministic, so we can check the output.\n\n// Double a player's score. We cannot use Update to multiply, so we use optimistic\n// locking instead.\n\n// We may have to retry a few times; put a time limit on that.\nctx, cancel := context.WithTimeout(ctx, 30*time.Second)\ndefer cancel()\nfor {\n\t// Get the document.\n\tplayer := \u0026Player{Name: \"Pat\"}\n\tif err := coll.Get(ctx, player); err != nil {\n\t\treturn err\n\t}\n\t// player.DocstoreRevision is set to the document's revision.\n\n\t// Modify the document locally.\n\tplayer.Score *= 2\n\n\t// Replace the document. player.DocstoreRevision will be checked against\n\t// the stored document's revision.\n\terr := coll.Replace(ctx, player)\n\tif err != nil {\n\t\tcode := gcerrors.Code(err)\n\t\t// On FailedPrecondition or NotFound, try again.\n\t\tif code == gcerrors.FailedPrecondition || code == gcerrors.NotFound {\n\t\t\tcontinue\n\t\t}\n\t\treturn err\n\t}\n\tfmt.Println(player)\n\tbreak\n}\n\n// Output:\n// \u0026{Pat 7 1}\n// \u0026{Pat 14 2}"
