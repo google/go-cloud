@@ -29,7 +29,7 @@ func TestOpen(t *testing.T) {
 	// terraform apply
 
 	tfOut, err := terraform.ReadOutput(".")
-	if err != nil {
+	if err != nil || len(tfOut) == 0 {
 		t.Skipf("Could not obtain harness info: %v", err)
 	}
 	endpoint, _ := tfOut["endpoint"].Value.(string)
