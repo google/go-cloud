@@ -32,7 +32,7 @@ func TestBiomeAdd(t *testing.T) {
 		}
 		defer cleanup()
 		const newBiome = "foo"
-		if err := biomeAdd(ctx, pctx, newBiome); err != nil {
+		if err := biomeAdd(ctx, pctx, newBiome, "local"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -56,10 +56,10 @@ func TestBiomeAdd(t *testing.T) {
 		}
 
 		// Ensure that there is a biome.json file in the correct directory and
-		// that it contains the correct settings for a non-dev biome.
+		// that it contains the correct settings for a local biome.
 		want := &biomeConfig{
-			ServeEnabled: configBool(false),
-			Launcher:     configString("cloudrun"),
+			ServeEnabled: configBool(true),
+			Launcher:     configString("local"),
 		}
 		got, err := readBiomeConfig(pctx.workdir, newBiome)
 		if err != nil {

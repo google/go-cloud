@@ -15,9 +15,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/spf13/cobra"
+	"gocloud.dev/internal/cmd/gocdk/internal/prompt"
 	"gocloud.dev/internal/cmd/gocdk/internal/static"
 	"golang.org/x/xerrors"
 )
@@ -28,37 +32,105 @@ func registerBiomeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 		Short: "TODO Manage biomes",
 		Long:  "TODO more about biomes",
 	}
+	var launcher string
 	biomeAddCmd := &cobra.Command{
 		Use:   "add BIOME_NAME",
 		Short: "TODO Add BIOME_NAME",
 		Long:  "TODO more about adding biomes",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return biomeAdd(ctx, pctx, args[0])
+			return biomeAdd(ctx, pctx, args[0], launcher)
 		},
 	}
+	// TODO(rvangent): There should be a way to specify answer to launcher-specific
+	// prompts via flags. Maybe a JSON snippet?
+	biomeAddCmd.Flags().StringVar(&launcher, "launcher", "", "the launcher for the new biome")
 	biomeCmd.AddCommand(biomeAddCmd)
 
-	// TODO(rvangent): More biome subcommands.
+	// TODO(rvangent): More biome subcommands: delete, list, ...?
 
 	rootCmd.AddCommand(biomeCmd)
 }
 
-func biomeAdd(ctx context.Context, pctx *processContext, newName string) error {
-	// TODO(clausti) interpolate launcher from one supplied as a flag
-	pctx.Logf("Adding biome %q...", newName)
+// launchSpecifier is used to pass launch specifier key/value pairs to
+// outputs.tf for a new biome.
+type launchSpecifier struct {
+	Key, Value string
+}
+
+// launcherData is passed as template data to biome.json for a new biome.
+type launcherData struct {
+	Launcher     string
+	ServeEnabled bool
+}
+
+func biomeAdd(ctx context.Context, pctx *processContext, biome, launcher string) error {
+	pctx.Logf("Adding biome %q...", biome)
 
 	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("biome add: %w", err)
 	}
 
-	// Create a whole new directory, copied from /biome, into biomes/<newName>.
+	if launcher == "" {
+		var err error
+		// TODO(rvangent): Do this as a selection instead of freeform input?
+		reader := bufio.NewReader(pctx.stdin)
+		launcher, err = prompt.String(reader, pctx.stderr, "Please enter a launcher to use (local, cloudrun)", "local")
+		if err != nil {
+			return err
+		}
+	}
+
+	data := &launcherData{Launcher: launcher}
+	var launchSpecifiers []*launchSpecifier
+	var saveActions []*static.Action
+	switch launcher {
+	case "local":
+		data.ServeEnabled = true
+		launchSpecifiers = append(launchSpecifiers, &launchSpecifier{Key: "host_port", Value: "8080"})
+	case "cloudrun":
+		pctx.Logf("")
+		pctx.Logf("To launch on cloudrun, we need a few pieces of information.")
+		reader := bufio.NewReader(pctx.stdin)
+		projectID, err := prompt.GCPProjectID(reader, pctx.stderr)
+		if err != nil {
+			return xerrors.Errorf("biome add: %w", err)
+		}
+		saveActions = append(saveActions, static.AddLocal(prompt.GCPProjectIDTfLocalName, projectID))
+		// TODO(rvangent): Eventually we should ask for the GCP region; currently
+		// cloudrun is singly homed in us-central1.
+		region := "us-central1"
+		saveActions = append(saveActions, static.AddLocal(prompt.GCPRegionTfLocalName, region))
+		serviceName, err := prompt.String(reader, pctx.stderr, "Please enter a service name", "myservice")
+		if err != nil {
+			return xerrors.Errorf("biome add: %w", err)
+		}
+		launchSpecifiers = append(launchSpecifiers,
+			&launchSpecifier{Key: "project_id", Value: strconv.Quote("${local.gcp_project}")},
+			&launchSpecifier{Key: "location", Value: strconv.Quote("${local.gcp_region}")},
+			&launchSpecifier{Key: "service_name", Value: strconv.Quote(serviceName)},
+		)
+	default:
+		return fmt.Errorf("biome add: %q is not a supported launcher", launcher)
+	}
+
+	// Create the new biome directory, copied from /biome in the static data.
+	// Two files are treated as templates.
 	actions, err := static.CopyDir("/biome")
 	if err != nil {
 		return xerrors.Errorf("biome add: %w", err)
 	}
-	if err := static.Do(biomeDir(moduleRoot, newName), nil, actions...); err != nil {
+	for _, a := range actions {
+		switch a.SourcePath {
+		case "/biome/biome.json":
+			a.TemplateData = data
+		case "/biome/outputs.tf":
+			a.TemplateData = launchSpecifiers
+		}
+	}
+	actions = append(actions, saveActions...)
+	if err := static.Do(biomeDir(moduleRoot, biome), nil, actions...); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
 	pctx.Logf("Success!")

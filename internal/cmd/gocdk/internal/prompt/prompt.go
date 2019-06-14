@@ -99,6 +99,13 @@ func AzureLocationIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir string)
 	return askIfNeeded(biomeDir, "azure_location", prompt)
 }
 
+const (
+	// GCPProjectIDTfLocalName is the name used to store the GCP project ID in main.tf.
+	GCPProjectIDTfLocalName = "gcp_project"
+	// GCPProjectIDTfLocalName is the name used to store the GCP project ID in main.tf.
+	GCPRegionTfLocalName = "gcp_region"
+)
+
 // GCPProjectID prompts the user for a GCP project ID.
 func GCPProjectID(reader *bufio.Reader, out io.Writer) (string, error) {
 	return String(reader, out, `Please enter your Google Cloud project ID (e.g. "example-project-123456")`, "")
@@ -106,7 +113,7 @@ func GCPProjectID(reader *bufio.Reader, out io.Writer) (string, error) {
 
 // GCPProjectIDIfNeeded prompts the user for a GCP project ID if needed.
 func GCPProjectIDIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir string) (string, error) {
-	return askIfNeeded(biomeDir, "gcp_project", func() (string, error) { return GCPProjectID(reader, out) })
+	return askIfNeeded(biomeDir, GCPProjectIDTfLocalName, func() (string, error) { return GCPProjectID(reader, out) })
 }
 
 // GCPStorageLocationIfNeeded prompts the user for a GCP storage location if needed.
@@ -115,4 +122,9 @@ func GCPStorageLocationIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir st
 		return String(reader, out, "Please enter a GCP storage location.\n  See https://cloud.google.com/storage/docs/locations for more information.", "US")
 	}
 	return askIfNeeded(biomeDir, "gcp_storage_location", prompt)
+}
+
+// GCPRegion prompts the user for a GCP region.
+func GCPRegion(reader *bufio.Reader, out io.Writer) (string, error) {
+	return String(reader, out, "Please enter a GCP region.\n  See https://cloud.google.com/about/locations/ for more information.", "us-west1")
 }
