@@ -1,7 +1,7 @@
 # TODO(rvangent): Add comments explaining.
 
 locals {
-  blob_bucket_path    = "${path.cwd}/fileblob_scratchdir"
+  blob_bucket_path    = "${path.root}/fileblob_scratchdir"
   fileblob_bucket_url = "file://${local.blob_bucket_path}"
 }
 

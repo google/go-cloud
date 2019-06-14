@@ -132,8 +132,6 @@ func tfReadOutput(ctx context.Context, dir string, env []string) (map[string]*tf
 
 // tfOutput describes a single output value.
 type tfOutput struct {
-	Type      interface{} `json:"type"`
-	Sensitive bool        `json:"sensitive"`
 	Value     interface{} `json:"value"`
 }
 
