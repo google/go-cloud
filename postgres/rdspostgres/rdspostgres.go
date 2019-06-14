@@ -13,6 +13,17 @@
 // limitations under the License.
 
 // Package rdspostgres provides connections to AWS RDS PostgreSQL instances.
+//
+// URLs
+//
+// For postgres.Open, rdspostgres registers for the scheme "rdspostgres".
+// The default URL opener will create a connection using the default
+// credentials from the environment, as described in
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+//
+// See https://gocloud.dev/concepts/urls/ for background information.
 package rdspostgres // import "gocloud.dev/postgres/rdspostgres"
 
 import (
