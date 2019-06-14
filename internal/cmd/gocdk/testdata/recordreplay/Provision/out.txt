@@ -15,8 +15,15 @@ gocdk: - `gocdk biome add` to configure launch settings
 
 $ cd myproj
 
+$ gocdk provision add dev blob/foo
+gocdk: Adding "blob/foo" to "dev"...
+Error: provision add: "blob/foo" is not a supported type; use 'gocdk provision list' to see available types
+
 $ gocdk provision add dev blob/fileblob
 gocdk: Adding "blob/fileblob" to "dev"...
+gocdk:   added a Terraform provider "local" to "main.tf"
+gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
+gocdk:   added a new file "fileblob.tf"
 gocdk: Success!
 
 $ cd biomes

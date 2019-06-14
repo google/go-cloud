@@ -26,13 +26,13 @@ import (
 	"time"
 
 	"github.com/google/subcommands"
-	"gocloud.dev/internal/docstore"
+	"gocloud.dev/docstore"
 
 	// Import the docstore driver packages we want to be able to open.
-	_ "gocloud.dev/internal/docstore/dynamodocstore"
-	_ "gocloud.dev/internal/docstore/firedocstore"
-	_ "gocloud.dev/internal/docstore/memdocstore"
-	_ "gocloud.dev/internal/docstore/mongodocstore"
+	_ "gocloud.dev/docstore/dynamodocstore"
+	_ "gocloud.dev/docstore/firedocstore"
+	_ "gocloud.dev/docstore/memdocstore"
+	_ "gocloud.dev/docstore/mongodocstore"
 )
 
 const helpSuffix = `

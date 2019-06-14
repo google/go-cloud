@@ -4,6 +4,9 @@ gocdk provision add dev blob/fileblob --> FAIL
 gocdk init myproj
 cd myproj
 
+# Add fails for an invalid type.
+gocdk provision add dev blob/foo --> FAIL
+
 gocdk provision add dev blob/fileblob
 cd biomes
 ls dev
