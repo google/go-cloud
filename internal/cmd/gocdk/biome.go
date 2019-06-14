@@ -101,12 +101,6 @@ func biomeAdd(ctx context.Context, pctx *processContext, biome, launcher string)
 		// TODO(rvangent): Eventually we should ask for the GCP region; currently
 		// cloudrun is singly homed in us-central1.
 		region := "us-central1"
-		/*
-			region, err := prompt.GCPRegion(pctx.stdin, pctx.stderr)
-			if err != nil {
-				return xerrors.Errorf("biome add: %w", err)
-			}
-		*/
 		saveActions = append(saveActions, static.AddLocal(prompt.GCPRegionTfLocalName, region))
 		serviceName, err := prompt.String(reader, pctx.stderr, "Please enter a service name", "myservice")
 		if err != nil {
