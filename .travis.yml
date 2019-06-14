@@ -24,7 +24,7 @@ before_install:
   - unzip /tmp/terraform.zip -d /tmp
   - mkdir -p ~/bin
   - mv /tmp/terraform ~/bin
-  - export PATH="~/bin:$PATH"
+  - export PATH="$HOME/bin:$PATH"
   - terraform -version
 
 install:
