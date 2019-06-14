@@ -27,7 +27,8 @@ import (
 // String prompts the user to input a string. It outputs msg to out, then
 // prompts the user to enter a value. If the user just hits return, the
 // value defaults to dflt.
-// The function only returns an error if the user enters "cancel".
+// The function only returns an error if the user enters "cancel" and on I/O
+// errors.
 // TODO(rvangent): Add support for validation?
 // TODO(rvangent): Ctrl-C doesn't work; maybe replace cancel.
 func String(reader *bufio.Reader, out io.Writer, msg, dflt string) (string, error) {
@@ -43,7 +44,7 @@ func String(reader *bufio.Reader, out io.Writer, msg, dflt string) (string, erro
 		if err != nil {
 			return "", err
 		}
-		s = strings.Replace(s, "\n", "", -1)
+		s = strings.TrimSuffix(s, "\n")
 		if s == "" {
 			s = dflt
 		}
