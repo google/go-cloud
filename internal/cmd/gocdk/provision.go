@@ -24,6 +24,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// TODO(rvangent): Reconsider whether "provision" is the right name for this
+// command; it does not actually provision anything, it just sets things up
+// to be provisioned. Also, "provision add" is two verbs in a row which is
+// weird.
+
 func registerProvisionCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 	provisionCmd := &cobra.Command{
 		Use:   "provision",
