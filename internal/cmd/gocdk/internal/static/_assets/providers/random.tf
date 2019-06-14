@@ -1,3 +1,3 @@
 provider "random" {
-  version = "~> 1.3"
+  version = "~> 2.1"
 }

@@ -4,7 +4,7 @@
 # The launch environment sets environment variables for the running server
 # which can be read inside your program using os.Getenv.
 output "launch_environment" {
-  value {
+  value = {
     # Example:
     # FOO = "BAR"
 
@@ -15,7 +15,7 @@ output "launch_environment" {
 # The launch specifier sets options for the biome's launcher.
 # This is a local launcher, which runs on the local Docker daemon.
 output "launch_specifier" {
-  value {
+  value = {
     host_port    = 8080
     project_id   = ""            # fill this in
     location     = "us-central1"

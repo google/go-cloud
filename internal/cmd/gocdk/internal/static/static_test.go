@@ -34,6 +34,7 @@ func TestListFiles(t *testing.T) {
 		"outputs.tf",
 		"secrets.auto.tfvars",
 		"variables.tf",
+		"versions.tf",
 	}
 
 	// List the files under biome/. They should be returned without the biome/
