@@ -136,6 +136,8 @@ func AddProvider(provider string) *Action {
 // ReadLocal reads a local Terraform variable from main.tf.
 // The local variable was likely added using an Action returned from AddLocal.
 // If the variable is not found, it returns the empty string and no error.
+// TODO(rvangent): This function doesn't feel like it belongs in this package;
+// consider moving it or renaming the package.
 func ReadLocal(biomeDir, key string) (string, error) {
 	tfMainPath := filepath.Join(biomeDir, "main.tf")
 	existing, err := ioutil.ReadFile(tfMainPath)
