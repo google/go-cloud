@@ -43,7 +43,7 @@ Queries support the following methods:
   equal to, greater than, or less than a value. The "not equals" comparison
   isn't supported, because it isn't portable across providers.
 - `OrderBy` specifies the order of the resulting documents, by field and
-  direction. For portability, you can specify at most one `OrderBy`, and it
+  direction. For portability, you can specify at most one `OrderBy`, and its
   field must also be mentioned in a `Where` clause. 
 - `Limit` limits the number of documents in the result.
 
