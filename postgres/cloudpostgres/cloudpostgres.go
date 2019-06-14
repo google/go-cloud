@@ -109,7 +109,7 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	for k := range query {
 		// Only permit parameters that do not conflict with other behavior.
 		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
+			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed", k)
 		}
 	}
 	query.Set("sslmode", "disable")
