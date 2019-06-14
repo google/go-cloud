@@ -15,17 +15,19 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
-	"path"
-	"path/filepath"
-	"strings"
+	"fmt"
+	"sort"
 
 	"github.com/spf13/cobra"
 	"gocloud.dev/internal/cmd/gocdk/internal/static"
 	"golang.org/x/xerrors"
 )
+
+// TODO(rvangent): Reconsider whether "provision" is the right name for this
+// command; it does not actually provision anything, it just sets things up
+// to be provisioned. Also, "provision add" is two verbs in a row which is
+// weird.
 
 func registerProvisionCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 	provisionCmd := &cobra.Command{
@@ -59,40 +61,51 @@ func registerProvisionCmd(ctx context.Context, pctx *processContext, rootCmd *co
 	rootCmd.AddCommand(provisionCmd)
 }
 
-const provisionStaticRootDir = "/provision"
+var (
+	provisionableTypes = map[string][]*static.Action{
+		"blob/azureblob": {
+			static.AddProvider("azurerm"),
+			static.AddProvider("random"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "${local.azureblob_bucket_url}"),
+			static.AddOutputVar("AZURE_STORAGE_ACCOUNT", "${azurerm_storage_account.storage_account.name}"),
+			static.AddOutputVar("AZURE_STORAGE_KEY", "${azurerm_storage_account.storage_account.primary_access_key}"),
+			static.CopyFile("/provision/blob/azureblob.tf", "azureblob.tf"),
+			// TODO(rvangent): Prompt for this if needed.
+			static.AddLocal("azure_location", "westus"),
+		},
+		"blob/fileblob": {
+			static.AddProvider("local"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "${local.fileblob_bucket_url}"),
+			static.CopyFile("/provision/blob/fileblob.tf", "fileblob.tf"),
+		},
+		"blob/gcsblob": {
+			static.AddProvider("google"),
+			static.AddProvider("random"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "${local.gcsblob_bucket_url}"),
+			static.CopyFile("/provision/blob/gcsblob.tf", "gcsblob.tf"),
+			// TODO(rvangent): Prompt for these if needed.
+			static.AddLocal("gcp_project", "go-cloud-test-216917"),
+			static.AddLocal("gcs_bucket_location", "US"),
+		},
+		"blob/s3blob": {
+			static.AddProvider("aws"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "${local.s3blob_bucket_url}"),
+			static.CopyFile("/provision/blob/s3blob.tf", "s3blob.tf"),
+			// TODO(rvangent): Prompt for this if needed.
+			static.AddLocal("aws_region", "us-west-1"),
+		},
+	}
+)
 
 // The "provision list" command.
 func provisionList(pctx *processContext) error {
-	// TODO(rvangent): There must be an easier way to get a listing... add
-	// a helper to static.
-	dir, err := static.Open(provisionStaticRootDir)
-	if err != nil {
-		return xerrors.Errorf("provision list: couldn't open static resources: %w", err)
+	var sorted []string
+	for key := range provisionableTypes {
+		sorted = append(sorted, key)
 	}
-	ptInfos, err := dir.Readdir(-1)
-	if err != nil {
-		return xerrors.Errorf("provision list: couldn't read static resources: %w", err)
-	}
-	// The entries at this level are portable APIs, e.g., "blob".
-	for _, ptInfo := range ptInfos {
-		ptName := ptInfo.Name()
-		if !ptInfo.IsDir() {
-			continue
-		}
-		ptTypeDir, err := static.Open(path.Join(provisionStaticRootDir, ptName))
-		if err != nil {
-			return xerrors.Errorf("provision list: couldn't open static resources: %w", err)
-		}
-		providerInfos, err := ptTypeDir.Readdir(-1)
-		if err != nil {
-			return xerrors.Errorf("provision list: couldn't read static resources: %w", err)
-		}
-		for _, info := range providerInfos {
-			if !info.IsDir() {
-				continue
-			}
-			pctx.Println(path.Join(ptName, info.Name()))
-		}
+	sort.Strings(sorted)
+	for _, a := range sorted {
+		pctx.Println(a)
 	}
 	return nil
 }
@@ -104,119 +117,24 @@ func provisionList(pctx *processContext) error {
 // TODO(rvangent): Modifying Terraform files in place means that we need to run
 //                 "terraform init" again; currently we don't; see
 //                 https://github.com/google/go-cloud/issues/2291.
-// TODO(rvangent): Currently there are a bunch of default values for locals, so
-//                 "terraform apply" works fine. Add the ability to prompt the user
-//                 for things (e.g., GCP project ID), and use those values.
 func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) error {
 	pctx.Logf("Adding %q to %q...", typ, biome)
-
-	typeParts := strings.Split(typ, "/")
-	if len(typeParts) != 2 {
-		return xerrors.Errorf("provision add: %q is not a supported type; use 'gocdk provision list' to see available types", typ)
-	}
 
 	moduleDir, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("provision add: %w", err)
 	}
-	dstPath := biomeDir(moduleDir, biome)
 
-	// TODO(rvangent): Use an explicit allowlist instead of just blindly reading "typ".
-	srcRoot := path.Join(provisionStaticRootDir, typ)
-	srcDir, err := static.Open(srcRoot)
-	if err != nil {
-		return xerrors.Errorf("provision add: %q is not a supported type; use 'gocdk provision list' to see available types", typ)
+	actions := provisionableTypes[typ]
+	if actions == nil {
+		return fmt.Errorf("provision add: %q is not a supported type; use 'gocdk provision list' to see available types", typ)
 	}
-	defer srcDir.Close()
-	srcInfos, err := srcDir.Readdir(-1)
-	if err != nil {
-		return xerrors.Errorf("provision add: couldn't read static resources: %w", err)
+	// Perform the actions for the chosen type, instantiating into the
+	// chosen biome directory.
+	opts := &static.Options{Logger: pctx.errlog}
+	if err := static.Do(biomeDir(moduleDir, biome), opts, actions...); err != nil {
+		return xerrors.Errorf("provision add: %w", err)
 	}
-	for _, srcInfo := range srcInfos {
-		name := srcInfo.Name()
-		if srcInfo.IsDir() {
-			return xerrors.Errorf("provision add: unexpected directory in static resources: %s", name)
-		}
-
-		srcFile, err := static.Open(path.Join(srcRoot, name))
-		if err != nil {
-			return xerrors.Errorf("provision add: couldn't open static resource %q: %w", name, err)
-		}
-		defer srcFile.Close()
-		srcBytes, err := ioutil.ReadAll(srcFile)
-		if err != nil {
-			return xerrors.Errorf("provision add: couldn't read static resource %q: %w", name, err)
-		}
-		// TODO(rvangent): There's a bunch of somewhat arcane logic here
-		// to figure out what to do with each file. There should be a config
-		// file for each directory that tells us what to do with each one.
-		// For example:
-		// -- By default files are just copied to the destination.
-		// -- A config setting that means "treat this as a template".
-		// -- A config setting means "insert into this file after this marker".
-		// -- A config setting means "append to this file".
-		// -- Options for insert/append to tell whether it should be skipped
-		//    (i.e., it's been added already), or whether to error.
-		// "demo add" and materializeTemplateDir could be updated to use this as well.
-		if strings.HasPrefix(name, "main_") {
-			if err := insertIntoFile(filepath.Join(dstPath, "main.tf"), "", srcBytes); err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-		} else if strings.HasPrefix(name, "mainlocal_") {
-			const marker = "# DO NOT REMOVE THIS COMMENT; GO CDK LOCALS WILL BE INSERTED BELOW HERE"
-			if err := insertIntoFile(filepath.Join(dstPath, "main.tf"), marker, srcBytes); err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-		} else if strings.HasPrefix(name, "outputs_") {
-			const marker = "# DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE"
-			if err := insertIntoFile(filepath.Join(dstPath, "outputs.tf"), marker, srcBytes); err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-		} else {
-			// By default, just copy the file.
-			if err := ioutil.WriteFile(filepath.Join(dstPath, name), srcBytes, 0666); err != nil {
-				return xerrors.Errorf("provision add: %w", err)
-			}
-		}
-	}
-
 	pctx.Logf("Success!")
-	return nil
-}
-
-// insertIntoFile inserts toInsert into the file at path.
-// If marker is the empty string, it appends to the file.
-// If marker is not empty, it inserts at the next line after the marker.
-// If toInsert is already in the file at path, insertIntoFile does nothing.
-func insertIntoFile(path, marker string, toInsert []byte) error {
-	existingContent, err := ioutil.ReadFile(path)
-	if err != nil {
-		return xerrors.Errorf("couldn't read %s: %w", path, err)
-	}
-
-	if idx := bytes.Index(existingContent, toInsert); idx != -1 {
-		return nil
-	}
-	var insertIdx int
-	if marker == "" {
-		// Append.
-		insertIdx = len(existingContent)
-	} else {
-		markerBytes := []byte(marker)
-		insertIdx = bytes.Index(existingContent, markerBytes)
-		if insertIdx == -1 {
-			return xerrors.Errorf("couldn't find marker %q in %s", marker, path)
-		}
-		insertIdx += len(markerBytes)
-		for existingContent[insertIdx] == '\n' || existingContent[insertIdx] == '\r' {
-			insertIdx++
-		}
-	}
-	newContent := append(existingContent[:insertIdx], append(toInsert, existingContent[insertIdx:]...)...)
-
-	// TODO(rvangent): Copy os.FileMode from the current file?
-	if err := ioutil.WriteFile(path, newContent, 0666); err != nil {
-		return xerrors.Errorf("couldn't update %s: %w", path, err)
-	}
 	return nil
 }
