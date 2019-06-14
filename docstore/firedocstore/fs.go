@@ -106,9 +106,9 @@ func CollectionResourceID(projectID, collPath string) string {
 // collection, like "States/Wisconsin/Cities".
 // See https://cloud.google.com/firestore/docs/reference/rest/ for more detail.
 //
-// firedocstore requires that a single field, nameField, be designated the
-// primary key. Its values must be strings, and must be unique over all documents in the collection.
-// The primary key must be provided to retrieve a document.
+// firedocstore requires that a single field, nameField, be designated the primary
+// key. Its values must be strings, and must be unique over all documents in the
+// collection. The primary key must be provided to retrieve a document.
 func OpenCollection(client *vkit.Client, collResourceID, nameField string, opts *Options) (*docstore.Collection, error) {
 	c, err := newCollection(client, collResourceID, nameField, nil, opts)
 	if err != nil {
