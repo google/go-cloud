@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/google/subcommands"
+	"github.com/google/uuid"
 	"gocloud.dev/docstore"
 
 	// Import the docstore driver packages we want to be able to open.
@@ -55,15 +56,16 @@ func main() {
 	os.Exit(int(subcommands.Execute(context.Background())))
 }
 
+// A Message is a document entry stored in a collection.
 type Message struct {
+	ID               string // unique ID of each document
 	Date             string
-	Timestamp        string // unique ID of each message
 	Content          string
 	DocstoreRevision interface{}
 }
 
 func (m Message) String() string {
-	return fmt.Sprintf("%s: %s", m.Timestamp, m.Content)
+	return fmt.Sprintf("%s\t%s: %s", m.ID, m.Date, m.Content)
 }
 
 type listCmd struct {
@@ -78,7 +80,7 @@ func (*listCmd) Usage() string {
   List the documents in <collection URL>.
 
   Example:
-    gocdk-docstore ls -d "2006-01-02" "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID"` + helpSuffix
+    gocdk-docstore ls -d "2006-01-02" "mongo://myDB/myCollection?id_field=ID"` + helpSuffix
 }
 
 func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
@@ -131,7 +133,7 @@ func (*putCmd) Usage() string {
   Read from stdin and put an message with the current timestamp in <collection URL>.
 
   Example:
-    gocdk-docstore put "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID" "hello docstore` + helpSuffix
+    gocdk-docstore put "mongo://myDB/myCollection?id_field=ID" "hello docstore"` + helpSuffix
 }
 
 func (*putCmd) SetFlags(_ *flag.FlagSet) {}
@@ -152,15 +154,16 @@ func (*putCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) s
 	}
 	defer collection.Close()
 
-	t := time.Now()
-	if err := collection.Put(ctx, &Message{
-		Date:      t.Format("2006-01-02"),
-		Timestamp: t.Format(time.RFC3339),
-		Content:   content,
-	}); err != nil {
+	msg := &Message{
+		ID:      uuid.New().String(),
+		Date:    time.Now().Format("2006-01-02"),
+		Content: content,
+	}
+	if err := collection.Put(ctx, msg); err != nil {
 		log.Printf("Failed to put message: %v", err)
 		return subcommands.ExitFailure
 	}
+	log.Printf("Put message: %s", msg)
 	return subcommands.ExitSuccess
 }
 
@@ -169,12 +172,12 @@ type updateCmd struct{}
 func (*updateCmd) Name() string     { return "update" }
 func (*updateCmd) Synopsis() string { return "Update an item in a collection" }
 func (*updateCmd) Usage() string {
-	return `update <timestamp> <collection URL> <updated message>
+	return `update <ID> <collection URL> <updated message>
 
-  Update the document at <timestamp> in <collection URL>.
+  Update the document with ID <ID> in <collection URL>.
 
   Example:
-    gocdk-docstore update "2019-06-13T15:57:59.186915-07:00" "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID" "hello again"` + helpSuffix
+    gocdk-docstore update <ID> "mongo://myDB/myCollection?id_field=ID" "hello again"` + helpSuffix
 }
 
 func (*updateCmd) SetFlags(_ *flag.FlagSet) {}
@@ -184,7 +187,7 @@ func (cmd *updateCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	timestamp := f.Arg(0)
+	id := f.Arg(0)
 	collectionURL := f.Arg(1)
 	updated := f.Arg(2)
 
@@ -196,22 +199,13 @@ func (cmd *updateCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 	}
 	defer collection.Close()
 
-	t, err := time.Parse(time.RFC3339, timestamp)
-	if err != nil {
-		log.Fatal("wrong timestamp passed in, use RFC3339 formact, e.g.", time.Now().Format(time.RFC3339))
-	}
-
-	msg := &Message{
-		Date:      t.Format("2006-01-02"),
-		Timestamp: timestamp,
-	}
-	if errs := collection.Actions().Update(msg, docstore.Mods{
-		"Content": updated,
-	}).Get(msg).Do(ctx); errs != nil {
+	msg := &Message{ID: id}
+	mods := docstore.Mods{"Content": updated}
+	if errs := collection.Actions().Update(msg, mods).Get(msg).Do(ctx); errs != nil {
 		log.Printf("Failed to update message: %v", errs)
 		return subcommands.ExitFailure
 	}
-	log.Println("updated:", msg.Timestamp, msg.Content)
+	log.Printf("updated: %s", msg)
 	return subcommands.ExitSuccess
 }
 
@@ -227,7 +221,7 @@ func (*deleteCmd) Usage() string {
   Delete the documents in <collection URL>.
 
   Example:
-    gocdk-docstore delete -d "2006-01-02" "firestore://projects/myproject/databases/(default)/documents/mycollection?name_field=myID"` + helpSuffix
+    gocdk-docstore delete -d "2006-01-02" "mongo://myDB/myCollection?id_field=ID"` + helpSuffix
 }
 
 func (cmd *deleteCmd) SetFlags(f *flag.FlagSet) {
