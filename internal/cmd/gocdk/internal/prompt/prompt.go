@@ -30,7 +30,8 @@ import (
 // The function only returns an error if the user enters "cancel" and on I/O
 // errors.
 // TODO(rvangent): Add support for validation?
-// TODO(rvangent): Ctrl-C doesn't work; maybe replace cancel.
+// TODO(rvangent): Ctrl-C doesn't work; maybe replace cancel; need to take a ctx.
+// TODO(rvangent): Revisit how prompts looks (multi-line, etc.).
 func String(reader *bufio.Reader, out io.Writer, msg, dflt string) (string, error) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, msg)
