@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -49,6 +50,8 @@ func TestAddDemo(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		exePath += ".EXE"
 	}
+	pctx.stdout = os.Stdout
+	pctx.stderr = os.Stderr
 	if err := buildForServe(ctx, pctx, pctx.workdir, exePath); err != nil {
 		t.Fatal("buildForServe(...):", err)
 	}

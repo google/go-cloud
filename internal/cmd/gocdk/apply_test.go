@@ -18,7 +18,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -33,10 +32,6 @@ func TestApply(t *testing.T) {
 	// terraform never previously applied
 	// terraform apply repeat
 
-	if _, err := exec.LookPath("terraform"); err != nil {
-		t.Skip("terraform not found:", err)
-	}
-
 	t.Run("TerraformNotInitialized", func(t *testing.T) {
 		ctx := context.Background()
 		pctx, cleanup, err := newTestProject(ctx)
@@ -44,6 +39,8 @@ func TestApply(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer cleanup()
+		pctx.stderr = os.Stderr
+		pctx.stdout = os.Stdout
 
 		const greeting = "HALLO WORLD"
 		devBiomeDir := biomeDir(pctx.workdir, "dev")

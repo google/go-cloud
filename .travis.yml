@@ -5,7 +5,6 @@ services:
   - docker
 
 before_install:
-  - "df -k"
   # The Bash that comes with OS X is ancient.
   # grep is similar: it's not GNU grep, which means commands aren't portable.
   # Homebrew installs grep as ggrep if you don't build from source, so it needs
@@ -14,6 +13,19 @@ before_install:
       HOMEBREW_NO_AUTO_UPDATE=1 brew install bash grep;
       mv $(brew --prefix)/bin/ggrep $(brew --prefix)/bin/grep;
     fi
+  - echo "INSTALLING TERRAFORM FOR $TRAVIS_OS_NAME"
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      TERRAFORM_OS="darwin";
+    else
+      TERRAFORM_OS="$TRAVIS_OS_NAME";
+    fi
+  - echo "$TERRAFORM_OS"
+  - curl -sLo /tmp/terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_"${TERRAFORM_OS}"_amd64.zip
+  - unzip /tmp/terraform.zip -d /tmp
+  - mkdir -p ~/bin
+  - mv /tmp/terraform ~/bin
+  - export PATH="~/bin:$PATH"
+  - terraform -version
 
 install:
   # Re-checkout files preserving line feeds. This prevents Windows builds from
@@ -35,9 +47,6 @@ env:
 
 jobs:
   include:
-    - go: "1.11.x"
-      os: linux
-      if: branch = master AND type = push
     - go: "1.12.x"
       os: linux
     - go: "1.12.x"
@@ -45,7 +54,6 @@ jobs:
     - go: "1.12.x"
       os: windows
       # Only run Windows build job on master; it's very slow.
-      if: branch = master AND type = push
       # TODO(rvangent): Remove filter_secrets: false once the Travis issue is fixed:
       # https://travis-ci.community/t/current-known-issues-please-read-this-before-posting-a-new-topic/264/10
       filter_secrets: false

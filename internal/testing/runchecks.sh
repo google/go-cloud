@@ -67,7 +67,7 @@ fi
 if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   echo
   echo "Starting local dependencies..."
-  ./internal/testing/start_local_deps.sh
+  # ./internal/testing/start_local_deps.sh
   echo
   echo "Installing Wire..."
   go install -mod=readonly github.com/google/wire/cmd/wire
@@ -102,7 +102,7 @@ while read -r path || [[ -n "$path" ]]; do
     if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && ([[ "$path" == "internal/contributebot" ]] || [[ "$path" == "internal/website" ]]); then
       echo "  Skipping tests on Window"
     else
-      go test -mod=readonly -json -race ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
+      go test -mod=readonly -race ./... || result=1
     fi
   fi
 

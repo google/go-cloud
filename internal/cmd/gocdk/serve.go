@@ -250,6 +250,9 @@ loop:
 // Note that on Windows, exePath must end with .EXE.
 func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string, exePath string) error {
 
+	fmt.Printf("++BUILD FOR SERVE %v vs %v\n", pctx.stderr, os.Stderr)
+	fmt.Printf("++BUILD FOR SERVE %v vs %v\n", pctx.stdout, os.Stdout)
+	defer func() { fmt.Printf("--BUILD FOR SERVE\n") }()
 	if wireExe, err := exec.LookPath("wire"); err == nil {
 		// TODO(light): Only run Wire if needed, but that requires source analysis.
 		wireCmd := pctx.NewCommand(ctx, moduleRoot, wireExe, "./...")
