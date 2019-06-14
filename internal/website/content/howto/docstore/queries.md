@@ -33,7 +33,7 @@ err := iter.Next(ctx, doc)
 
 The iteration is over when `Next` returns `io.EOF`.
 
-{{< goexample "gocloud.dev/internal/docstore.ExampleQuery_Get" >}}
+{{< goexample "gocloud.dev/docstore.ExampleQuery_Get" >}}
 
 You can pass a list of fields to `Get` to reduce the amount of data transmitted.
 
@@ -57,13 +57,13 @@ create an index on the collection.
 Call `Delete` on a `Query` instead of `Get` to delete all the documents in the
 collection that match the conditions. 
 
-{{< goexample "gocloud.dev/internal/docstore.ExampleQuery_Delete" >}}
+{{< goexample "gocloud.dev/docstore.ExampleQuery_Delete" >}}
 
 ## Updating Documents
 
 Calling `Update` on a `Query` and passing in a set of modifications will update
 all the documents that match the criteria. 
 
-{{< goexample "gocloud.dev/internal/docstore.ExampleQuery_Update" >}}
+{{< goexample "gocloud.dev/docstore.ExampleQuery_Update" >}}
 
 
