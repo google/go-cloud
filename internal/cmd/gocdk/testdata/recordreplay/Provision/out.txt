@@ -26,12 +26,19 @@ gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
 gocdk:   added a new file "fileblob.tf"
 gocdk: Success!
 
+$ gocdk provision add dev runtimevar/filevar
+gocdk: Adding "runtimevar/filevar" to "dev"...
+gocdk:   added an output variable "RUNTIMEVAR_VARIABLE_URL" to "outputs.tf"
+gocdk:   added a new file "filevar.tf"
+gocdk: Success!
+
 $ cd biomes
 
 $ ls dev
 dev/
   biome.json
   fileblob.tf
+  filevar.tf
   main.tf
   outputs.tf
   secrets.auto.tfvars
