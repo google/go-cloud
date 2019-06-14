@@ -59,8 +59,7 @@ case "$op" in
     terraform init && terraform apply -var location="centralus" -var resourcegroup="GoCloud" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
-    # TODO: These tests fail with "Error 9999".
-    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
     terraform destroy -var location="centralus" -var resourcegroup="GoCloud" -auto-approve || FAILURES="$FAILURES $TESTDIR"

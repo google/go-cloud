@@ -73,7 +73,7 @@ resource "azurerm_mysql_firewall_rule" "addrule" {
   resource_group_name = "${azurerm_resource_group.mysqlrg.name}"
   server_name         = "${azurerm_mysql_server.mysqlserver.name}"
   start_ip_address    = "0.0.0.0"
-  end_ip_address      = "0.0.0.0"
+  end_ip_address      = "255.255.255.255"
 }
 
 resource "azurerm_mysql_database" "mysqldb" {
@@ -85,7 +85,7 @@ resource "azurerm_mysql_database" "mysqldb" {
 }
 
 output "username" {
-  value       = "gocloudadmin"
+  value       = "${azurerm_mysql_server.mysqlserver.administrator_login}@${azurerm_mysql_server.mysqlserver.name}"
   description = "The MySQL username to connect with."
 }
 

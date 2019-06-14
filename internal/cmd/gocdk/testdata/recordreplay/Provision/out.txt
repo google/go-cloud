@@ -1,5 +1,6 @@
 $ gocdk provision add dev blob/fileblob
-Error: not yet implemented
+gocdk: Adding "blob/fileblob" to "dev"...
+Error: provision add: couldn't find a Go module root at or above [ROOTDIR]
 
 $ gocdk init myproj
 gocdk: Project created at [ROOTDIR]/myproj with:
@@ -14,6 +15,25 @@ gocdk: - `gocdk biome add` to configure launch settings
 
 $ cd myproj
 
+$ gocdk provision add dev blob/foo
+gocdk: Adding "blob/foo" to "dev"...
+Error: provision add: "blob/foo" is not a supported type; use 'gocdk provision list' to see available types
+
 $ gocdk provision add dev blob/fileblob
-Error: not yet implemented
+gocdk: Adding "blob/fileblob" to "dev"...
+gocdk:   added a Terraform provider "local" to "main.tf"
+gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
+gocdk:   added a new file "fileblob.tf"
+gocdk: Success!
+
+$ cd biomes
+
+$ ls dev
+dev/
+  biome.json
+  fileblob.tf
+  main.tf
+  outputs.tf
+  secrets.auto.tfvars
+  variables.tf
 
