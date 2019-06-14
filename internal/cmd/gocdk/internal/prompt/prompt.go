@@ -100,7 +100,7 @@ func AzureLocationIfNeeded(in io.Reader, out io.Writer, biomeDir string) (string
 
 // GCPProjectID prompts the user for a GCP project ID.
 func GCPProjectID(in io.Reader, out io.Writer) (string, error) {
-	return String(in, out, "Please enter your GCP project ID.", "")
+  return String(in, out, "Please enter your Google Cloud project ID (e.g. \"example-project-123456\")"", "")
 }
 
 // GCPProjectIDIfNeeded prompts the user for a GCP project ID if needed.
