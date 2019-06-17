@@ -34,7 +34,7 @@
 //                         or *dynamodb.UpdateItemInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
-//  - Error: awserr.Error
+//  - ErrorAs: awserr.Error
 package dynamodocstore
 
 import (
