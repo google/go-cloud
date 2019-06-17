@@ -136,8 +136,8 @@ func (l *ActionList) add(a *Action) *ActionList {
 // AlreadyExists is returned if it does. (See gocloud.dev/gcerrors for more on error
 // codes.)
 //
-// If the document doesn't have key fields, or the key fields is empty, meaning
-// as 0, a nil interface value, and any empty array or string, key fields with
+// If the document doesn't have key fields, or the key fields are empty, meaning
+// 0, a nil interface value, or any empty array or string, key fields with
 // unique values will be created and doc will be populated with them.
 //
 // The revision field of the document must be absent or nil.
