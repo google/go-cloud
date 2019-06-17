@@ -33,7 +33,7 @@ var DefaultSession = wire.NewSet(
 	SessionConfig,
 	ConfigCredentials,
 	NewDefaultSession,
-	wire.Bind((*client.ConfigProvider)(nil), (*session.Session)(nil)),
+	wire.Bind(new(client.ConfigProvider), new(*session.Session)),
 )
 
 // NewDefaultSession returns a *session.Session using the default options.

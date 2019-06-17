@@ -91,7 +91,7 @@ func init() {
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
 	Dial,
-	URLOpener{},
+	wire.Struct(new(URLOpener), "Client"),
 )
 
 // lazyCredsOpener obtains Application Default Credentials on the first call

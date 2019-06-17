@@ -8,7 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/google/subcommands v1.0.1
 	github.com/google/uuid v1.1.1
-	github.com/google/wire v0.2.2
+	github.com/google/wire v0.3.0-0.20190611223505-93b1ce745f8d
 	github.com/gorilla/mux v1.7.2
 	go.opencensus.io v0.22.0
 	gocloud.dev v0.15.0

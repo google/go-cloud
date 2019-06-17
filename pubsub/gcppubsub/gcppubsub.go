@@ -102,9 +102,9 @@ var Set = wire.NewSet(
 	Dial,
 	PublisherClient,
 	SubscriberClient,
-	SubscriptionOptions{},
-	TopicOptions{},
-	URLOpener{},
+	wire.Struct(new(SubscriptionOptions)),
+	wire.Struct(new(TopicOptions)),
+	wire.Struct(new(URLOpener), "Conn", "TopicOptions", "SubscriptionOptions"),
 )
 
 // lazyCredsOpener obtains Application Default Credentials on the first call

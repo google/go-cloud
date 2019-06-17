@@ -6,7 +6,7 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/google/wire v0.2.2
+	github.com/google/wire v0.3.0-0.20190611223505-93b1ce745f8d
 	go.opencensus.io v0.22.0
 	gocloud.dev v0.15.0
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
