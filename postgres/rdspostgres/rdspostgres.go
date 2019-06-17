@@ -13,6 +13,17 @@
 // limitations under the License.
 
 // Package rdspostgres provides connections to AWS RDS PostgreSQL instances.
+//
+// URLs
+//
+// For postgres.Open, rdspostgres registers for the scheme "rdspostgres".
+// The default URL opener will create a connection using the default
+// credentials from the environment, as described in
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+//
+// See https://gocloud.dev/concepts/urls/ for background information.
 package rdspostgres // import "gocloud.dev/postgres/rdspostgres"
 
 import (
@@ -24,7 +35,6 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"strings"
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
@@ -33,31 +43,12 @@ import (
 	"gocloud.dev/postgres"
 )
 
-// Params specifies how to connect to an RDS database.
-type Params struct {
-	// Endpoint is the host/port of the RDS database, like
-	// "myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432".
-	// If no port is given, then 5432 is assumed.
-	Endpoint string
-
-	// User is the database user to connect as.
-	User string
-	// Password is the database user password to use.
-	Password string
-	// Database is the PostgreSQL database name to connect to.
-	Database string
-
-	// Values sets additional parameters, as documented in
-	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS.
-	Values url.Values
-
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
-}
-
 // URLOpener opens RDS PostgreSQL URLs
 // like "rdspostgres://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb".
 type URLOpener struct {
+	// CertSource specifies how the opener will obtain the RDS Certificate
+	// Authority. If nil, it will use the default *rds.CertFetcher.
+	CertSource rds.CertPoolProvider
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
@@ -72,61 +63,31 @@ func init() {
 
 // OpenPostgresURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	cf := new(rds.CertFetcher)
-
-	database := strings.TrimPrefix(u.EscapedPath(), "/")
-	password, _ := u.User.Password()
-	params := Params{
-		Endpoint:  u.Host,
-		User:      u.User.Username(),
-		Password:  password,
-		Database:  database,
-		Values:    u.Query(),
-		TraceOpts: uo.TraceOpts,
+	source := uo.CertSource
+	if source == nil {
+		source = new(rds.CertFetcher)
 	}
-	db, _, err := Open(ctx, cf, &params)
 
-	return db, err
-}
-
-// Open opens an encrypted connection to an RDS database.
-//
-// The second return value is a Wire cleanup function that calls Close on the
-// database and ignores the error.
-func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*sql.DB, func(), error) {
-	vals := make(url.Values)
-	for k, v := range params.Values {
+	query := u.Query()
+	for k := range query {
 		// Forbid SSL-related parameters.
 		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, nil, fmt.Errorf("rdspostgres: open: parameter %q not allowed; sslmode must be disabled because the underlying dialer is already providing TLS", k)
+			return nil, fmt.Errorf("rdspostgres: open: parameter %q not allowed; sslmode must be disabled because the underlying dialer is already providing TLS", k)
 		}
-		vals[k] = v
 	}
 	// sslmode must be disabled because the underlying dialer is already providing TLS.
-	vals.Set("sslmode", "disable")
+	query.Set("sslmode", "disable")
 
-	var user *url.Userinfo
-	if params.User != "" && params.Password != "" {
-		if params.Password != "" {
-			user = url.UserPassword(params.User, params.Password)
-		} else {
-			user = url.User(params.User)
-		}
-	}
-
-	u := url.URL{
-		Scheme:   "postgres",
-		User:     user,
-		Host:     params.Endpoint,
-		Path:     "/" + params.Database,
-		RawQuery: vals.Encode(),
-	}
+	u2 := new(url.URL)
+	*u2 = *u
+	u2.Scheme = "postgres"
+	u2.RawQuery = query.Encode()
 	db := sql.OpenDB(connector{
-		provider:  provider,
-		pqConn:    u.String(),
-		traceOpts: append([]ocsql.TraceOption(nil), params.TraceOpts...),
+		provider:  source,
+		pqConn:    u2.String(),
+		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
 	})
-	return db, func() { db.Close() }, nil
+	return db, nil
 }
 
 type pqDriver struct {

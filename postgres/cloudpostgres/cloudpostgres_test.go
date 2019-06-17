@@ -16,19 +16,15 @@ package cloudpostgres
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 	"net/url"
-	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"gocloud.dev/gcp"
-	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/internal/testing/terraform"
+	"gocloud.dev/postgres"
 )
 
-func TestOpen(t *testing.T) {
+func TestURLOpener(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
 	// Before running go test, run in this directory:
 	//
@@ -48,127 +44,66 @@ func TestOpen(t *testing.T) {
 	if project == "" || region == "" || instance == "" || username == "" || databaseName == "" {
 		t.Fatalf("Missing one or more required Terraform outputs; got project=%q region=%q instance=%q username=%q database=%q", project, region, instance, username, databaseName)
 	}
-
-	ctx := context.Background()
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client, err := gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
-	if err != nil {
-		t.Fatal(err)
-	}
-	certSource := cloudsql.NewCertSource(client)
-	db, _, err := Open(ctx, certSource, &Params{
-		ProjectID: project,
-		Region:    region,
-		Instance:  instance,
-		Database:  databaseName,
-		User:      username,
-		Password:  password,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.Ping(); err != nil {
-		t.Error("Ping:", err)
-	}
-	if err := db.Close(); err != nil {
-		t.Error("Close:", err)
-	}
-}
-
-func TestOpenBadValue(t *testing.T) {
-	// This test will be skipped unless the project is set up with Terraform.
-
-	tfOut, err := terraform.ReadOutput(".")
-	if err != nil {
-		t.Skipf("Could not obtain harness info: %v", err)
-	}
-	project, _ := tfOut["project"].Value.(string)
-	region, _ := tfOut["region"].Value.(string)
-	instance, _ := tfOut["instance"].Value.(string)
-	username, _ := tfOut["username"].Value.(string)
-	password, _ := tfOut["password"].Value.(string)
-	databaseName, _ := tfOut["database"].Value.(string)
-	if project == "" || region == "" || instance == "" || username == "" || databaseName == "" {
-		t.Fatalf("Missing one or more required Terraform outputs; got project=%q region=%q instance=%q username=%q database=%q", project, region, instance, username, databaseName)
-	}
-
-	ctx := context.Background()
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client, err := gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
-	if err != nil {
-		t.Fatal(err)
-	}
-	certSource := cloudsql.NewCertSource(client)
-
 	tests := []struct {
-		name, value string
+		name    string
+		urlstr  string
+		wantErr bool
 	}{
-		{"user", "foo"},
-		{"password", "foo"},
-		{"dbname", "foo"},
-		{"host", "localhost"},
-		{"port", "1234"},
-		{"sslmode", "require"},
+		{
+			name:   "Success",
+			urlstr: fmt.Sprintf("cloudpostgres://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName),
+		},
+		{
+			name:    "SSLModeForbidden",
+			urlstr:  fmt.Sprintf("cloudpostgres://%s:%s@%s/%s/%s/%s?sslmode=require", username, password, project, region, instance, databaseName),
+			wantErr: true,
+		},
 	}
+
+	ctx := context.Background()
 	for _, test := range tests {
-		t.Run(test.name+"="+test.value, func(t *testing.T) {
-			db, _, err := Open(ctx, certSource, &Params{
-				ProjectID: project,
-				Region:    region,
-				Instance:  instance,
-				Database:  databaseName,
-				User:      username,
-				Password:  password,
-				Values:    url.Values{test.name: {test.value}},
-			})
-			if err == nil || !strings.Contains(err.Error(), test.name) {
-				t.Errorf("error = %v; want to contain %q", err, test.name)
+		t.Run(test.name, func(t *testing.T) {
+			db, err := postgres.Open(ctx, test.urlstr)
+			if err != nil {
+				t.Log(err)
+				if !test.wantErr {
+					t.Fail()
+				}
+				return
 			}
-			if db != nil {
+			if test.wantErr {
 				db.Close()
+				t.Fatal("Open succeeded; want error")
+			}
+			if err := db.Ping(); err != nil {
+				t.Error("Ping:", err)
+			}
+			if err := db.Close(); err != nil {
+				t.Error("Close:", err)
 			}
 		})
 	}
 }
 
-func TestParamsFromURL(t *testing.T) {
+func TestInstanceFromURL(t *testing.T) {
 	tests := []struct {
-		name      string
-		urlString string
-		want      *Params
-		wantErr   bool
+		name         string
+		urlString    string
+		wantInstance string
+		wantDatabase string
+		wantErr      bool
 	}{
 		{
-			name:      "AllValuesSpecified",
-			urlString: "cloudpostgres://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
-			want: &Params{
-				ProjectID: "my-project-id",
-				Region:    "us-central1",
-				Instance:  "my-instance-id",
-				Database:  "my-db",
-				User:      "username",
-				Password:  "password",
-				Values: url.Values{
-					"foo": {"bar"},
-					"baz": {"quux"},
-				},
-			},
+			name:         "AllValuesSpecified",
+			urlString:    "cloudpostgres://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
+			wantInstance: "my-project-id:us-central1:my-instance-id",
+			wantDatabase: "my-db",
 		},
 		{
-			name:      "OptionalValuesOmitted",
-			urlString: "cloudpostgres://my-project-id/us-central1/my-instance-id/my-db",
-			want: &Params{
-				ProjectID: "my-project-id",
-				Region:    "us-central1",
-				Instance:  "my-instance-id",
-				Database:  "my-db",
-			},
+			name:         "OptionalValuesOmitted",
+			urlString:    "cloudpostgres://my-project-id/us-central1/my-instance-id/my-db",
+			wantInstance: "my-project-id:us-central1:my-instance-id",
+			wantDatabase: "my-db",
 		},
 		{
 			name:      "DatabaseNameEmpty",
@@ -191,14 +126,10 @@ func TestParamsFromURL(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:      "DatabaseNameWithSlashes",
-			urlString: "cloudpostgres://my-project-id/us-central1/my-instance-id/foo/bar/baz",
-			want: &Params{
-				ProjectID: "my-project-id",
-				Region:    "us-central1",
-				Instance:  "my-instance-id",
-				Database:  "foo/bar/baz",
-			},
+			name:         "DatabaseNameWithSlashes",
+			urlString:    "cloudpostgres://my-project-id/us-central1/my-instance-id/foo/bar/baz",
+			wantInstance: "my-project-id:us-central1:my-instance-id",
+			wantDatabase: "foo/bar/baz",
 		},
 	}
 	for _, test := range tests {
@@ -207,22 +138,19 @@ func TestParamsFromURL(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse URL %q: %v", test.urlString, err)
 			}
-			got, err := paramsFromURL(u)
+			instance, database, err := instanceFromURL(u)
 			if err != nil {
-				t.Logf("paramsFromURL(url.Parse(%q)): %v", u, err)
+				t.Logf("instanceFromURL(url.Parse(%q)): %v", u, err)
 				if !test.wantErr {
 					t.Fail()
 				}
 				return
 			}
 			if test.wantErr {
-				t.Fatalf("paramsFromURL(url.Parse(%q)) = %#v; want error", test.urlString, got)
+				t.Fatalf("instanceFromURL(url.Parse(%q)) = %q, %q, <nil>; want error", test.urlString, instance, database)
 			}
-			diff := cmp.Diff(test.want, got,
-				cmpopts.IgnoreFields(Params{}, "TraceOpts"),
-				cmpopts.EquateEmpty())
-			if diff != "" {
-				t.Errorf("paramsFromURL(url.Parse(%q)) (-want +got):\n%s", test.urlString, diff)
+			if instance != test.wantInstance || database != test.wantDatabase {
+				t.Errorf("instanceFromURL(url.Parse(%q)) = %q, %q, <nil>; want %q, %q, <nil>", test.urlString, instance, database, test.wantInstance, test.wantDatabase)
 			}
 		})
 	}
