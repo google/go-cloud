@@ -120,8 +120,9 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 
 	gopathEntries := filepath.SplitList(strings.TrimSuffix(string(gopath), "\n"))
 	for _, entry := range gopathEntries {
-		// Check if the projectDir is relative to GOPATH.
-		rel, err := filepath.Rel(entry, projectDir)
+		// Check if the projectDir is relative to $GOPATH/src.
+		srcDir := filepath.Join(entry, "src")
+		rel, err := filepath.Rel(srcDir, projectDir)
 		if err != nil {
 			return "", xerrors.Errorf("infer module path: %w", err)
 		}
