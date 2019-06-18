@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -213,12 +214,25 @@ func TestInferModulePath(t *testing.T) {
 					t.Error(err)
 				}
 			}()
-			gopath, projectDir, cleanup := tc.setup(dir)
+			gopath, initDir, cleanup := tc.setup(dir)
 			defer cleanup()
 
-			pctx := newTestProcessContext(projectDir)
+			pctx := newTestProcessContext(initDir)
 			pctx.env = []string{gopath}
-			err = run(ctx, pctx, []string{"init", "myspecialproject"})
+			projName := "myspecialproject"
+			err = run(ctx, pctx, []string{"init", projName})
+
+			if !tc.wantErr && err == nil {
+				projDir := filepath.Join(initDir, projName)
+				fmt.Println(projDir)
+				cmd := pctx.NewCommand(ctx, projDir, "go", "list", "-m", "-f", "{{.Path}}")
+				cmd.Stdout = nil
+				mod, err := cmd.Output()
+				if err != nil {
+					t.Error(err)
+				}
+				fmt.Println(mod) //whyy is this empty
+			}
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v but wantErr is %v", err, tc.wantErr)
 			}
