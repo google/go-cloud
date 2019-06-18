@@ -149,27 +149,42 @@ func TestInit(t *testing.T) {
 }
 func TestInferModulePath(t *testing.T) {
 	testCases := []struct {
-		name       string
-		testGOPATH func(string) (string, func())
-		wantErr    bool
+		name    string
+		setup   func(string) (string, string, func())
+		wantErr bool
 	}{
 		{
 			"no GOPATH entry",
-			func(dir string) (string, func()) {
-				return "", func() {}
+			func(dir string) (string, string, func()) {
+				return "", dir, func() {}
 			},
 			true,
 		},
 		{
-			"single GOPATH entry",
-			func(dir string) (string, func()) {
-				return "GOPATH=" + dir, func() {}
+			"single GOPATH entry, project GOPATH/src",
+			func(dir string) (string, string, func()) {
+				srcDir := filepath.Join(dir, "src")
+				if err := os.Mkdir(srcDir, 0777); err != nil {
+					t.Error(err)
+				}
+				return "GOPATH=" + dir, srcDir, func() {}
 			},
 			false,
 		},
 		{
-			"multiple GOPATH entries",
-			func(dir string) (string, func()) {
+			"single GOPATH entry, project in GOPATH (no src)",
+			func(dir string) (string, string, func()) {
+				return "GOPATH=" + dir, dir, func() {}
+			},
+			true,
+		},
+		{
+			"multiple GOPATH entries, project in GOPATH/src",
+			func(dir string) (string, string, func()) {
+				srcDir := filepath.Join(dir, "src")
+				if err := os.Mkdir(srcDir, 0777); err != nil {
+					t.Error(err)
+				}
 				dir2, err := ioutil.TempDir("", testTempDirPrefix+"-2")
 				if err != nil {
 					t.Fatal(err)
@@ -180,7 +195,7 @@ func TestInferModulePath(t *testing.T) {
 					}
 				}
 				multiPath := "GOPATH=" + dir + string(filepath.ListSeparator) + dir2
-				return multiPath, cleanup
+				return multiPath, srcDir, cleanup
 			},
 			false,
 		},
@@ -198,15 +213,11 @@ func TestInferModulePath(t *testing.T) {
 					t.Error(err)
 				}
 			}()
-			srcDir := filepath.Join(dir, "src")
-			if err = os.Mkdir(srcDir, 0777); err != nil {
-				t.Error(err)
-			}
-			pctx := newTestProcessContext(srcDir)
-			gopath, cleanup := tc.testGOPATH(dir)
+			gopath, projectDir, cleanup := tc.setup(dir)
 			defer cleanup()
-			pctx.env = []string{gopath}
 
+			pctx := newTestProcessContext(projectDir)
+			pctx.env = []string{gopath}
 			err = run(ctx, pctx, []string{"init", "myspecialproject"})
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v but wantErr is %v", err, tc.wantErr)
