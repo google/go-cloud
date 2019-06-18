@@ -14,6 +14,7 @@
 
 // Package mongodocstore provides an implementation of the docstore API for MongoDB.
 //
+//
 // URLs
 //
 // For docstore.OpenCollection, mongodocstore registers for the scheme "mongo".
