@@ -199,7 +199,9 @@ func TestInferModulePath(t *testing.T) {
 				}
 			}()
 			srcDir := filepath.Join(dir, "src")
-			os.Mkdir(srcDir, 0777)
+			if err = os.Mkdir(srcDir, 0777); err != nil {
+				t.Error(err)
+			}
 			pctx := newTestProcessContext(srcDir)
 			gopath, cleanup := tc.testGOPATH(dir)
 			defer cleanup()
