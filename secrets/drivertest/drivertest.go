@@ -243,9 +243,6 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cmp.Equal(msg, encryptedMsg) {
-		t.Errorf("Got encrypted message %v, want it to differ from original message %v", string(msg), string(encryptedMsg))
-	}
 
 	l := len(encryptedMsg)
 	for _, tc := range []struct {
