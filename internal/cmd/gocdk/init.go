@@ -132,5 +132,5 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 		}
 	}
 	// If the project dir is outside of GOPATH, we can't infer the module import path.
-	return "", xerrors.Errorf("infer module path: %s not in GOPATH", projectDir)
+	return "", xerrors.Errorf("infer module path: %s not in GOPATH/src", projectDir)
 }
