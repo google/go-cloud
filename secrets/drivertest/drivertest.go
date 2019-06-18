@@ -238,8 +238,42 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 	}
 	keeper := secrets.NewKeeper(drv)
 
-	if _, err := keeper.Decrypt(ctx, []byte("malformed cipher message")); err == nil {
-		t.Error("Got nil, want decrypt error")
+	msg := []byte("I'm a secret message!")
+	encryptedMsg, err := keeper.Encrypt(ctx, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cmp.Equal(msg, encryptedMsg) {
+		t.Errorf("Got encrypted message %v, want it to differ from original message %v", string(msg), string(encryptedMsg))
+	}
+
+	l := len(encryptedMsg)
+	for _, tc := range []struct {
+		name      string
+		malformed []byte
+	}{
+		{
+			name:      "wrong first byte",
+			malformed: append([]byte{encryptedMsg[0] + 1}, encryptedMsg[1:]...),
+		},
+		{
+			name:      "missing second byte",
+			malformed: append(encryptedMsg[:1], encryptedMsg[2:]...),
+		},
+		{
+			name:      "wrong last byte",
+			malformed: append(encryptedMsg[:l-2], encryptedMsg[l-1]-1),
+		},
+		{
+			name:      "one more byte",
+			malformed: append(encryptedMsg, 4),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := keeper.Decrypt(ctx, []byte(tc.malformed)); err == nil {
+				t.Error("Got nil, want decrypt error")
+			}
+		})
 	}
 }
 
