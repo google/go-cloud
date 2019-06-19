@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault_test
+package vaultsecrets_test
 
 import (
 	"context"
@@ -20,14 +20,14 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"gocloud.dev/secrets"
-	"gocloud.dev/secrets/vault"
+	"gocloud.dev/secrets/vaultsecrets"
 )
 
 func ExampleOpenKeeper() {
 
 	// Get a client to use with the Vault API.
 	ctx := context.Background()
-	client, err := vault.Dial(ctx, &vault.Config{
+	client, err := vaultsecrets.Dial(ctx, &vaultsecrets.Config{
 		Token: "<Client (Root) Token>",
 		APIConfig: api.Config{
 			Address: "http://127.0.0.1:8200",
@@ -38,7 +38,7 @@ func ExampleOpenKeeper() {
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := vault.OpenKeeper(client, "my-key", nil)
+	keeper := vaultsecrets.OpenKeeper(client, "my-key", nil)
 	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.

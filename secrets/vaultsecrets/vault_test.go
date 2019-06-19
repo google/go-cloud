@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limtations under the License.
 
-package vault
+package vaultsecrets
 
 import (
 	"context"

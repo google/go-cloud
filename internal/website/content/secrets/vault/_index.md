@@ -1,4 +1,4 @@
 ---
-title: gocloud.dev/secrets/vault
+title: gocloud.dev/secrets/vaultsecrets
 type: pkg
 ---

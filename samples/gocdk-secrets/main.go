@@ -32,7 +32,7 @@ import (
 	_ "gocloud.dev/secrets/azurekeyvault"
 	_ "gocloud.dev/secrets/gcpkms"
 	_ "gocloud.dev/secrets/localsecrets"
-	_ "gocloud.dev/secrets/vault"
+	_ "gocloud.dev/secrets/vaultsecrets"
 )
 
 const helpSuffix = `

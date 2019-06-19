@@ -194,7 +194,7 @@ variables `VAULT_SERVER_URL` and `VAULT_SERVER_TOKEN`, respectively.
 ```go
 import (
     "gocloud.dev/secrets"
-    _ "gocloud.dev/secrets/vault"
+    _ "gocloud.dev/secrets/vaultsecrets"
 )
 
 // ...
@@ -211,18 +211,18 @@ defer keeper.Close()
 
 ### HashiCorp Vault Constructor
 
-The [`vault.OpenKeeper`][] constructor opens a transit secrets engine key. You
-must first connect to your Vault instance.
+The [`vaultsecrests.OpenKeeper`][] constructor opens a transit secrets engine
+key. You must first connect to your Vault instance.
 
 ```go
 import (
     "github.com/hashicorp/vault/api"
-    "gocloud.dev/secrets/vault"
+    "gocloud.dev/secrets/vaultsecrets"
 )
 
 // ...
 
-vaultClient, err := vault.Dial(ctx, &vault.Config{
+vaultClient, err := vaultsecrets.Dial(ctx, &vaultsecrets.Config{
     Token: "CLIENT_TOKEN",
     APIConfig: api.Config{
         Address: "http://127.0.0.1:8200",
@@ -231,11 +231,11 @@ vaultClient, err := vault.Dial(ctx, &vault.Config{
 if err != nil {
     return err
 }
-keeper := vault.OpenKeeper(vaultClient, "my-key", nil)
+keeper := vaultsecrets.OpenKeeper(vaultClient, "my-key", nil)
 defer keeper.Close()
 ```
 
-[`vault.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/vault#OpenKeeper
+[`vaultsecrets.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/vaultsecrets#OpenKeeper
 
 ## Local Secrets
 
