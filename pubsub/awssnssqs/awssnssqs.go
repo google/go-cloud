@@ -127,9 +127,7 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	SubscriptionOptions{},
-	TopicOptions{},
-	URLOpener{},
+	wire.Struct(new(URLOpener), "ConfigProvider"),
 )
 
 // lazySessionOpener obtains the AWS session from the environment on the first
