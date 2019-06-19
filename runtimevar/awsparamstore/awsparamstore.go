@@ -59,8 +59,7 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	Options{},
-	URLOpener{},
+	wire.Struct(new(URLOpener), "ConfigProvider"),
 )
 
 // URLOpener opens AWS Paramstore URLs like "awsparamstore://myvar".

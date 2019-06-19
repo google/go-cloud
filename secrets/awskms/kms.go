@@ -56,8 +56,7 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	KeeperOptions{},
-	URLOpener{},
+	wire.Struct(new(URLOpener), "ConfigProvider"),
 	Dial,
 )
 

@@ -36,16 +36,16 @@ var Set = wire.NewSet(
 	server.Set,
 	ServiceSet,
 	NewExporter,
-	wire.Bind((*trace.Exporter)(nil), (*exporter.Exporter)(nil)),
+	wire.Bind(new(trace.Exporter), new(*exporter.Exporter)),
 	NewRequestLogger,
-	wire.Bind((*requestlog.Logger)(nil), (*requestlog.NCSALogger)(nil)),
+	wire.Bind(new(requestlog.Logger), new(*requestlog.NCSALogger)),
 )
 
 // ServiceSet is a Wire provider set that provides the AWS X-Ray service
 // client given an AWS session.
 var ServiceSet = wire.NewSet(
 	NewXRayClient,
-	wire.Bind((*xrayiface.XRayAPI)(nil), (*xray.XRay)(nil)),
+	wire.Bind(new(xrayiface.XRayAPI), new(*xray.XRay)),
 )
 
 // NewExporter returns a new X-Ray exporter.

@@ -12,19 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package azurecloud contains Wire providers for Azure services.
-package azurecloud // import "gocloud.dev/azure/azurecloud"
+module gocloud.dev/docstore/mongodocstore
 
-import (
-	"github.com/google/wire"
-	"gocloud.dev/blob/azureblob"
-	"gocloud.dev/secrets/azurekeyvault"
+require (
+	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
+	github.com/google/go-cmp v0.3.0
+	github.com/tidwall/pretty v1.0.0 // indirect
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
+	github.com/xdg/stringprep v1.0.0 // indirect
+	go.mongodb.org/mongo-driver v1.0.3
+	gocloud.dev v0.15.0
 )
 
-// Azure is a Wire provider set that includes the default wiring for all
-// Microsoft Azure services in this repository, but does not include
-// credentials. Individual services may require additional configuration.
-var Azure = wire.NewSet(
-	azurekeyvault.Set,
-	azureblob.Set,
-)
+replace gocloud.dev => ../../

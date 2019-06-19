@@ -69,7 +69,6 @@ import (
 	"github.com/Azure/azure-amqp-common-go/v2/rpc"
 	"github.com/Azure/azure-amqp-common-go/v2/uuid"
 	servicebus "github.com/Azure/azure-service-bus-go"
-	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/useragent"
@@ -96,13 +95,6 @@ func init() {
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
 	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
 }
-
-// Set holds Wire providers for this package.
-var Set = wire.NewSet(
-	SubscriptionOptions{},
-	TopicOptions{},
-	URLOpener{},
-)
 
 // defaultURLOpener creates an URLOpener with ConnectionString initialized from
 // the environment variable SERVICEBUS_CONNECTION_STRING.

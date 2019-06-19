@@ -73,8 +73,7 @@ func init() {
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
 	Dial,
-	KeeperOptions{},
-	URLOpener{},
+	wire.Struct(new(URLOpener), "Client"),
 )
 
 // defaultDialer dials Azure KeyVault from the environment on the first call to OpenKeeperURL.

@@ -106,8 +106,8 @@ func init() {
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
 	NewPipeline,
-	Options{},
-	URLOpener{},
+	wire.Struct(new(Options), "Credential", "SASToken"),
+	wire.Struct(new(URLOpener), "AccountName", "Pipeline", "Options"),
 )
 
 // lazyCredsOpener obtains credentials from the environment on the first call
@@ -194,7 +194,7 @@ var DefaultIdentity = wire.NewSet(
 	DefaultAccountName,
 	DefaultAccountKey,
 	NewCredential,
-	wire.Bind(new(azblob.Credential), new(azblob.SharedKeyCredential)),
+	wire.Bind(new(azblob.Credential), new(*azblob.SharedKeyCredential)),
 	wire.Value(azblob.PipelineOptions{}),
 )
 
