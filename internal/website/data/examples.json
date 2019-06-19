@@ -262,5 +262,9 @@
 	"gocloud.dev/pubsub/rabbitpubsub.Example_openTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the exchange \"myexchange\".\ntopic, err := pubsub.OpenTopic(ctx, \"rabbit://myexchange\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL host+path form the GCP Runtime Configurator variable key.\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\ndefer v.Close()"
 	}
 }

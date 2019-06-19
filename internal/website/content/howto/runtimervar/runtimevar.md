@@ -13,12 +13,12 @@ Working with runtime variables using the Go CDK takes two steps:
 
 TODO: follow decision per email thread
 
-## GCP Runtime Configurator
+## GCP Runtime Configurator {#rc-ctor}
 
-To open a variable stored in [GCP Runtime Configurator][], you can use the
-`runtimevar.OpenVariable` function as follows:
+To open a variable stored in [GCP Runtime Configurator][] via a URL, you can use
+the `runtimevar.OpenVariable` function as follows:
+
+{{< goexample
+"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL" >}}
 
 [GCP Runtime Configurator]: https://cloud.google.com/deployment-manager/runtime-configurator/
-
-<!-- example here -->
-
