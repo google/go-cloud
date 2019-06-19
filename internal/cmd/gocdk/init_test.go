@@ -219,10 +219,13 @@ func TestInferModulePath(t *testing.T) {
 			pctx := newTestProcessContext(initDir)
 			pctx.env = []string{gopath}
 			projName := "myspecialproject"
-			err = run(ctx, pctx, []string{"init", projName})
 
+			modPath, err := inferModulePath(ctx, pctx, filepath.Join(initDir, projName))
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v but wantErr is %v", err, tc.wantErr)
+			}
+			if !tc.wantErr && (modPath != projName) {
+				t.Errorf("incorrect inferred module path: got %v, want %v", modPath, projName)
 			}
 		})
 	}
