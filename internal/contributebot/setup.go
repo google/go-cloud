@@ -63,7 +63,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		wire.InterfaceValue(new(http.RoundTripper), http.DefaultTransport),
 		wire.InterfaceValue(new(requestlog.Logger), (requestlog.Logger)(nil)),
 		wire.InterfaceValue(new(trace.Exporter), (trace.Exporter)(nil)),
-		workerAndServer{},
+		wire.Struct(new(workerAndServer), "*"),
 		newWorker,
 		wire.InterfaceValue(new(http.Handler), http.HandlerFunc(frontPage)),
 	)

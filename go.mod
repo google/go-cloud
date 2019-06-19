@@ -35,7 +35,7 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/uuid v1.1.1
-	github.com/google/wire v0.2.2
+	github.com/google/wire v0.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/grpc-ecosystem/grpc-gateway v1.9.0 // indirect
 	github.com/lib/pq v1.1.1

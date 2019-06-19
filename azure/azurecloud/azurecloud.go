@@ -18,7 +18,6 @@ package azurecloud // import "gocloud.dev/azure/azurecloud"
 import (
 	"github.com/google/wire"
 	"gocloud.dev/blob/azureblob"
-	"gocloud.dev/pubsub/azuresb"
 	"gocloud.dev/secrets/azurekeyvault"
 )
 
@@ -27,6 +26,5 @@ import (
 // credentials. Individual services may require additional configuration.
 var Azure = wire.NewSet(
 	azurekeyvault.Set,
-	azuresb.Set,
 	azureblob.Set,
 )
