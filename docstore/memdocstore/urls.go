@@ -62,7 +62,7 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 		keyName = keyName[1:]
 	}
 	if keyName == "" || strings.ContainsRune(keyName, '/') {
-		return nil, fmt.Errorf("open collection %v: invalid key name %q (must be non-empty and slash-free)", u, keyName)
+		return nil, fmt.Errorf("open collection %v: invalid key name %q (must be non-empty and have no slashes)", u, keyName)
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
