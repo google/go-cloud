@@ -118,26 +118,6 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 }
 
-func TestOpenCollectionFromURL(t *testing.T) {
-	tests := []struct {
-		URL     string
-		WantErr bool
-	}{
-		// OK.
-		{"mem://_id", false},
-		{"mem://foo.bar", false},
-		{"mem://", true},             // missing key
-		{"mem://?param=value", true}, // invalid parameter
-	}
-	ctx := context.Background()
-	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
-	}
-}
-
 func TestMissingKeyCreateFailsWithKeyFunc(t *testing.T) {
 	dc, err := newCollection("", func(docstore.Document) interface{} { return nil }, nil)
 	if err != nil {

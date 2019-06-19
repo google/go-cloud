@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
+	"sync"
 
 	"gocloud.dev/docstore"
 )
@@ -30,18 +32,55 @@ func init() {
 // docstore.DefaultMux.
 const Scheme = "mem"
 
-// URLOpener opens URLs like "mem://_id".
+// URLOpener opens URLs like "mem://collection/_id".
 //
-// The URL's host is used as the keyField.
-// The URL's path is ignored.
+// The URL's host is the name of the collection.
+// The URL's path is used as the keyField.
 //
 // No query parameters are supported.
-type URLOpener struct{}
+type URLOpener struct {
+	mu          sync.Mutex
+	collections map[string]urlColl
+}
+
+type urlColl struct {
+	keyName string
+	coll    *docstore.Collection
+}
 
 // OpenCollectionURL opens a docstore.Collection based on u.
-func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
 	}
-	return OpenCollection(u.Host, nil)
+	collName := u.Host
+	if collName == "" {
+		return nil, fmt.Errorf("open collection %v: empty collection name", u)
+	}
+	keyName := u.Path
+	if strings.HasPrefix(keyName, "/") {
+		keyName = keyName[1:]
+	}
+	if keyName == "" || strings.ContainsRune(keyName, '/') {
+		return nil, fmt.Errorf("open collection %v: invalid key name %q (must be non-empty and slash-free)", u, keyName)
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.collections == nil {
+		o.collections = map[string]urlColl{}
+	}
+	ucoll, ok := o.collections[collName]
+	if !ok {
+		coll, err := OpenCollection(keyName, nil)
+		if err != nil {
+			return nil, err
+		}
+		o.collections[collName] = urlColl{keyName, coll}
+		return coll, nil
+	}
+	if ucoll.keyName != keyName {
+		return nil, fmt.Errorf("open collection %v: key name %q does not equal existing key name %q",
+			u, keyName, ucoll.keyName)
+	}
+	return ucoll.coll, nil
 }
