@@ -58,15 +58,24 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-url
+
+	// import _ "gocloud.dev/runtimevar/etcdvar"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The default opener connects to an etcd server based on the environment
 	// variable ETCD_SERVER_URL.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	v, err := runtimevar.OpenVariable(ctx, "etcd://myvarname")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer v.Close()
 
+	// Ignore unused variables in example:
 	snapshot, err := v.Latest(ctx)
 	_, _ = snapshot, err
 }

@@ -58,14 +58,44 @@ func ExampleOpenVariable() {
 	_ = cfg
 }
 
+func Example_openVariableHowto() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#ps-ctor
+
+	// Establish an AWS session.
+	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+	sess, err := session.NewSession(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	decoder := runtimevar.StringDecoder
+
+	// Construct a *runtimevar.Variable that watches the variable.
+	// For this example, the Parameter Store variable being referenced
+	// should have a JSON string that decodes into MyConfig.
+	v, err := awsparamstore.OpenVariable(sess, "cfg-variable-name", decoder, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer v.Close()
+}
+
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#ps-url
+
+	// import _ "gocloud.dev/runtimervar/awsparamstore"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	v, err := runtimevar.OpenVariable(ctx, "awsparamstore://myvar?region=us-west-1")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Ignore unused variables in example:
 	snapshot, err := v.Latest(ctx)
 	_, _ = snapshot, err
 }
