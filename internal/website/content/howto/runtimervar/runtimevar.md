@@ -18,12 +18,13 @@ TODO: follow decision per email thread
 ## GCP Runtime Configurator {#rc-url}
 
 To open a variable stored in [GCP Runtime Configurator][] via a URL, you can use
-the `runtimevar.OpenVariable` function as follows. It uses the `string` decoder;
-see section TODO for a discussion of decoders.
+the `runtimevar.OpenVariable` function as follows. It uses the `string`
+[decoder][].
 
 {{< goexample
 "gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL" >}}
 
+[decoder]: https://godoc.org/gocloud.dev/runtimevar#Decoder
 [GCP Runtime Configurator]: https://cloud.google.com/deployment-manager/runtime-configurator/
 
 ## GCP Runtime Configurator Constructor {#rc-ctor}
@@ -36,6 +37,34 @@ variable.
 
 [`gcpruntimeconfig.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig#OpenVariable
 
+## AWS Parameter Store {#ps-url}
+
+To open a variable stored in [AWS Parameter Store][] via a URL, you can use the
+`runtimevar.OpenVariable` function as follows. It uses the `string` [decoder][].
+
+{{< goexample
+"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL" >}}
+
+[AWS Parameter Store]:
+https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
+
+## AWS Parameter Store Constructor {#ps-ctor}
+
+The [`awsparamstore.OpenVariable`][] constructor opens a Parameter Store
+variable.
+
+{{< goexample "gocloud.dev/runtimevar/awsparamstore.Example_openVariableHowto" >}}
+
+[`awsparamstore.OpenVariable`]:
+https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable
+
+## etcd {#etcd-url}
+
+The Go CDK also supports using [etcd][] for storing variables locally or
+remotely. The 
+
+[etcd]: https://etcd.io/
+
 ## Fetching the latest value {#latest}
 
 Once we have an open variable, we can use the [`Variable.Latest`][] method to
@@ -46,5 +75,13 @@ blocking, you can pass an already-`Done` context.
 {{< goexample src="gocloud.dev/runtimevar.Example_latestStringVariableHowto"
 imports="0" >}}
 
+Type [`Variable`][] also has a [`Watch`][] method for obtaining the value of
+a variable; it has different semantics than [`Variable.Latest`][] and may be
+useful in some scenarios. We recommend starting with `Latest` as it's
+conceptually simpler to work with.
+
 [`Variable.Latest`]: https://godoc.org/gocloud.dev/runtimevar#Variable.Latest
+[`Variable`]: https://godoc.org/gocloud.dev/runtimevar#Variable
 [`Snapshot`]: https://godoc.org/gocloud.dev/runtimevar#Snapshot
+[`Watch`]: https://godoc.org/gocloud.dev/runtimevar#Variable.Watch
+

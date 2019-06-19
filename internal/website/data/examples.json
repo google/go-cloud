@@ -267,8 +267,16 @@
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
 		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"
 	},
+	"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/awsparamstore\"\n\t\"gocloud.dev/runtimevar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"awsparamstore://myvar?region=us-west-1\")\nif err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/runtimevar/awsparamstore.Example_openVariableHowto": {
+		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awsparamstore\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\ndecoder := runtimevar.StringDecoder\n\n// Construct a *runtimevar.Variable that watches the variable.\n// For this example, the Parameter Store variable being referenced\n// should have a JSON string that decodes into MyConfig.\nv, err := awsparamstore.OpenVariable(sess, \"cfg-variable-name\", decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
+		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/gcpruntimeconfig\"\n\t\"gocloud.dev/runtimevar\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL host+path form the GCP Runtime Configurator variable key.\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\n\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableHowto": {
