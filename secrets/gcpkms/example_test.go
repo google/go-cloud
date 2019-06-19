@@ -23,8 +23,12 @@ import (
 )
 
 func ExampleOpenKeeper() {
-	// Get a client to use with the KMS API.
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#gcp-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
+	// Get a client to use with the KMS API.
 	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -32,39 +36,30 @@ func ExampleOpenKeeper() {
 	// Close the connection when done.
 	defer done()
 
-	// Construct a *secrets.Keeper.
-	keeper := gcpkms.OpenKeeper(
-		client,
-		// Get the key resource ID.
-		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
-		// information.
-		// You can also use gcpkms.KeyResourceID to construct the string.
-		"projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY",
-		nil,
-	)
-	defer keeper.Close()
+	// You can also use gcpkms.KeyResourceID to construct this string.
+	const keyID = "projects/MYPROJECT/" +
+		"locations/MYLOCATION/" +
+		"keyRings/MYKEYRING/" +
+		"cryptoKeys/MYKEY"
 
-	// Now we can use keeper to encrypt or decrypt.
-	plaintext := []byte("Hello, Secrets!")
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = decrypted
+	// Construct a *secrets.Keeper.
+	keeper := gcpkms.OpenKeeper(client, keyID, nil)
+	defer keeper.Close()
 }
 
 func Example_openFromURL() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#gcp
+
+	// import _ "gocloud.dev/secrets/gcpkms"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
-	// The host + path are the key resourceID; see
-	// https://cloud.google.com/kms/docs/object-hierarchy#key
-	// for more information.
-	keeper, err := secrets.OpenKeeper(ctx, "gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY")
+	keeper, err := secrets.OpenKeeper(ctx,
+		"gcpkms://projects/MYPROJECT/" +
+		"locations/MYLOCATION/" +
+		"keyRings/MYKEYRING/" +
+		"cryptoKeys/MYKEY")
 	if err != nil {
 		log.Fatal(err)
 	}
