@@ -263,8 +263,16 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the exchange \"myexchange\".\ntopic, err := pubsub.OpenTopic(ctx, \"rabbit://myexchange\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/runtimevar.Example_latestStringVariableHowto": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
+		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"
+	},
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
-		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL host+path form the GCP Runtime Configurator variable key.\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\ndefer v.Close()"
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL host+path form the GCP Runtime Configurator variable key.\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\n\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableHowto": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/gcpruntimeconfig\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Connect to the Runtime Configurator service.\nclient, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\nvariableKey := \"projects/myproject/configs/myconfigid/variables/myvar\"\ndecoder := runtimevar.StringDecoder\n\nv, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	}
 }

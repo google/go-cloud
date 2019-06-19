@@ -77,6 +77,20 @@ func ExampleVariable_Latest_stringVariable() {
 	// "hello world"
 }
 
+func Example_latestStringVariableHowto() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#latest
+
+	// Variables set up elsewhere:
+	var v *runtimevar.Variable
+
+	snapshot, err := v.Latest(context.Background())
+	if err != nil {
+		log.Fatalf("Error in retrieving variable: %v", err)
+	}
+	// snapshot.Value will be of type string.
+	fmt.Printf("%q\n", snapshot.Value.(string))
+}
+
 func ExampleSnapshot_As() {
 	// This example is specific to the gcpruntimeconfig implementation; it
 	// demonstrates access to the underlying
