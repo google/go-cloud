@@ -12,6 +12,7 @@ require (
 	github.com/gorilla/mux v1.7.2
 	go.opencensus.io v0.22.0
 	gocloud.dev v0.15.0
+	gocloud.dev/docstore/mongodocstore v0.0.0-00010101000000-000000000000
 	gocloud.dev/pubsub/kafkapubsub v0.15.0
 	gocloud.dev/pubsub/natspubsub v0.15.0
 	gocloud.dev/pubsub/rabbitpubsub v0.15.0
@@ -22,6 +23,8 @@ require (
 )
 
 replace gocloud.dev => ../
+
+replace gocloud.dev/docstore/mongodocstore => ../docstore/mongodocstore
 
 replace gocloud.dev/pubsub/kafkapubsub => ../pubsub/kafkapubsub
 

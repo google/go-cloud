@@ -34,7 +34,7 @@
 //                         or *dynamodb.UpdateItemInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
-//  - Error: awserr.Error
+//  - ErrorAs: awserr.Error
 package dynamodocstore
 
 import (
@@ -566,7 +566,7 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 		// TODO(shantuo): check for invalid field paths
 		fp := expression.Name(strings.Join(m.FieldPath, "."))
 		if inc, ok := m.Value.(driver.IncOp); ok {
-			ub.Add(fp, expression.Value(inc.Amount))
+			ub = ub.Add(fp, expression.Value(inc.Amount))
 		} else if m.Value == nil {
 			ub = ub.Remove(fp)
 		} else {
@@ -627,10 +627,10 @@ func (c *collection) onSuccess(op *writeOp) {
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
-	if _, ok := m[c.partitionKey]; !ok {
+	if v, ok := m[c.partitionKey]; !ok || v.NULL != nil {
 		return c.partitionKey
 	}
-	if _, ok := m[c.sortKey]; !ok && c.sortKey != "" {
+	if v, ok := m[c.sortKey]; (!ok || v.NULL != nil) && c.sortKey != "" {
 		return c.sortKey
 	}
 	return ""
