@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limtations under the License.
 
-// Package vaultsecrets provides a secrets implementation using the Transit Secrets
-// Engine of Vault by Hashicorp.
+// Package vaultsecrets provides a secrets implementation using the Transit
+// Secrets Engine of Vault by Hashicorp.
 // Use OpenKeeper to construct a *secrets.Keeper.
 //
 // URLs
