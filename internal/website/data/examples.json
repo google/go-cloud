@@ -275,6 +275,14 @@
 		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awsparamstore\"\n)",
 		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\ndecoder := runtimevar.StringDecoder\n\n// Construct a *runtimevar.Variable that watches the variable.\n// For this example, the Parameter Store variable being referenced\n// should have a JSON string that decodes into MyConfig.\nv, err := awsparamstore.OpenVariable(sess, \"cfg-variable-name\", decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
+	"gocloud.dev/runtimevar/etcdvar.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/etcdvar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener connects to an etcd server based on the environment\n// variable ETCD_SERVER_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"etcd://myvarname\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/etcdvar.Example_openVariableHowto": {
+		"imports": "import (\n\t\"go.etcd.io/etcd/clientv3\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/etcdvar\"\n)",
+		"code": "// Connect to the etcd server.\nclient, err := clientv3.NewFromURL(\"http://your.etcd.server:9999\")\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\n// The etcd variable being referenced should have a JSON string that\n// decodes into MyConfig.\ndecoder := runtimevar.StringDecoder\nv, err := etcdvar.OpenVariable(client, \"cfg-variable-name\", decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/gcpruntimeconfig\"\n\t\"gocloud.dev/runtimevar\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL host+path form the GCP Runtime Configurator variable key.\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\n\ndefer v.Close()"

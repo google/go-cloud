@@ -9,11 +9,19 @@ Working with runtime variables using the Go CDK takes two steps:
 2. As many times as needed, use the `Latest` or `Watch` methods to fetch the
    value of the variable.
 
-TODO: start with an end-to-end walkthrough
-
 ## Constructors versus URL openers
 
-TODO: follow decision per email thread
+The easiest way to open a variable is using [`runtimevar.OpenVariable`][] and a
+URL pointing to the variabl3. See the [documentation on URLs][] for more
+details. If you need fine-grained control over the connection settings, you can
+call the constructor function in the driver package directly (like
+`awsparamstore.OpenVariable`). This guide will show how to use both forms for
+each storage provider.
+
+[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
+
+[`runtimevar.OpenVariable`]:
+https://godoc.org/gocloud.dev/runtimevar#OpenVariable
 
 ## GCP Runtime Configurator {#rc-url}
 
@@ -60,10 +68,23 @@ https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable
 
 ## etcd {#etcd-url}
 
-The Go CDK also supports using [etcd][] for storing variables locally or
-remotely. The 
+The Go CDK supports using [etcd][] for storing variables locally or
+remotely. To open a variable stored in `etcd` via a URL, you can use the
+`runtimevar.OpenVariable` function as follows.
+
+{{< goexample
+"gocloud.dev/runtimevar/etcdvar.Example_openVariableFromURL" >}}
 
 [etcd]: https://etcd.io/
+
+## etcd Constructor
+
+The [`etcdvar.OpenVariable`][] constructor opens an etcd variable.
+
+[`etcdvar.OpenVariable`]:
+https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable
+
+{{< goexample "gocloud.dev/runtimevar/etcdvar.Example_openVariableHowto" >}}
 
 ## Fetching the latest value {#latest}
 

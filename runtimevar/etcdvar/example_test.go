@@ -57,6 +57,26 @@ func ExampleOpenVariable() {
 	_ = cfg
 }
 
+func Example_openVariableHowto() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-ctor
+
+	// Connect to the etcd server.
+	client, err := clientv3.NewFromURL("http://your.etcd.server:9999")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Construct a *runtimevar.Variable that watches the variable.
+	// The etcd variable being referenced should have a JSON string that
+	// decodes into MyConfig.
+	decoder := runtimevar.StringDecoder
+	v, err := etcdvar.OpenVariable(client, "cfg-variable-name", decoder, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer v.Close()
+}
+
 func Example_openVariableFromURL() {
 	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-url
 
