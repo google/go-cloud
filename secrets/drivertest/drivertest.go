@@ -243,6 +243,9 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	copyEncryptedMsg := func() []byte {
+		return append([]byte{}, encryptedMsg...)
+	}
 
 	l := len(encryptedMsg)
 	for _, tc := range []struct {
@@ -255,11 +258,11 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 		},
 		{
 			name:      "missing second byte",
-			malformed: append(encryptedMsg[:1], encryptedMsg[2:]...),
+			malformed: append(copyEncryptedMsg()[:1], encryptedMsg[2:]...),
 		},
 		{
 			name:      "wrong last byte",
-			malformed: append(encryptedMsg[:l-2], encryptedMsg[l-1]-1),
+			malformed: append(copyEncryptedMsg()[:l-2], encryptedMsg[l-1]-1),
 		},
 		{
 			name:      "one more byte",
