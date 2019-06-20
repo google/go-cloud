@@ -56,10 +56,10 @@ func Example_openFromURL() {
 	ctx := context.Background()
 
 	keeper, err := secrets.OpenKeeper(ctx,
-		"gcpkms://projects/MYPROJECT/" +
-		"locations/MYLOCATION/" +
-		"keyRings/MYKEYRING/" +
-		"cryptoKeys/MYKEY")
+		"gcpkms://projects/MYPROJECT/"+
+			"locations/MYLOCATION/"+
+			"keyRings/MYKEYRING/"+
+			"cryptoKeys/MYKEY")
 	if err != nil {
 		log.Fatal(err)
 	}

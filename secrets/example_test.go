@@ -104,11 +104,11 @@ func ExampleKeeper_Decrypt() {
 	ctx := context.Background()
 	var keeper *secrets.Keeper
 
-  var cipherText []byte // obtained from elsewhere and random-looking
-  plainText, err := keeper.Decrypt(ctx, cipherText)
-  if err != nil {
+	var cipherText []byte // obtained from elsewhere and random-looking
+	plainText, err := keeper.Decrypt(ctx, cipherText)
+	if err != nil {
 		log.Fatal(err)
-  }
+	}
 
 	// Ignore unused variables in example:
 	_ = plainText
