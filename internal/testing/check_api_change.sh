@@ -35,11 +35,12 @@ echo "Checking for incompatible API changes relative to ${UPSTREAM_BRANCH}..."
 
 INSTALL_DIR="$(mktemp -d)"
 MASTER_CLONE_DIR="$(mktemp -d)"
+BRANCH_DIR="$(mktemp -d)"
 PKGINFO_BRANCH=$(mktemp)
 PKGINFO_MASTER=$(mktemp)
 
 function cleanup() {
-  rm -rf "$INSTALL_DIR" "$MASTER_CLONE_DIR"
+  rm -rf "$INSTALL_DIR" "$MASTER_CLONE_DIR" "$BRANCH_DIR"
   rm -f "$PKGINFO_BRANCH" "$PKGINFO_MASTER"
 }
 trap cleanup EXIT
@@ -51,19 +52,18 @@ trap cleanup EXIT
 
 git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 
+# Copy the current branch into the temparory directory to avoid changing go.mod's
+cp -R . "$BRANCH_DIR"
+
+# Run the following checks in the master directory
+cd "$MASTER_CLONE_DIR"
+
 incompatible_change_pkgs=()
 while read -r path || [[ -n "$path" ]]; do
   echo "  checking packages in module $path"
-
-  # pushd doesn't return error when the directory doesn't exist, so check first for deleted module.
-  if [[ ! -d "$path" ]]; then
-      echo "  module ${path} was deleted! Recording as an incompatible change.";
-      incompatible_change_pkgs+=(${path});
-      continue;
-  fi
   pushd "$path" &> /dev/null
 
-  PKGS=$(cd "$MASTER_CLONE_DIR" && cd "$path" && go list ./...)
+  PKGS=$(go list ./...)
   for pkg in $PKGS; do
     if [[ "$pkg" =~ "test" ]] || [[ "$pkg" =~ "internal" ]] || [[ "$pkg" =~ "samples" ]]; then
       continue
@@ -72,7 +72,7 @@ while read -r path || [[ -n "$path" ]]; do
 
     # Compute export data for the current branch.
     package_deleted=0
-    apidiff -w "$PKGINFO_BRANCH" "$pkg" || package_deleted=1
+    (cd "$BRANCH_DIR" && cd "$path" && apidiff -w "$PKGINFO_BRANCH" "$pkg") || package_deleted=1
     if [[ $package_deleted -eq 1 ]]; then
       echo "    package ${pkg} was deleted! Recording as an incompatible change.";
       incompatible_change_pkgs+=(${pkg});
@@ -80,7 +80,7 @@ while read -r path || [[ -n "$path" ]]; do
     fi
 
     # Compute export data for master@HEAD.
-    (cd "$MASTER_CLONE_DIR" && cd "$path" && apidiff -w "$PKGINFO_MASTER" "$pkg")
+    apidiff -w "$PKGINFO_MASTER" "$pkg"
 
     # Print all changes for posterity.
     apidiff "$PKGINFO_MASTER" "$PKGINFO_BRANCH"
@@ -92,7 +92,7 @@ while read -r path || [[ -n "$path" ]]; do
     fi
   done
   popd &> /dev/null
-done < <( sed -e '/^#/d' -e '/^$/d' "$MASTER_CLONE_DIR/allmodules" | awk '{print $1}' )
+done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
 
 if [ ${#incompatible_change_pkgs[@]} -eq 0 ]; then
   # No incompatible changes, we are good.
@@ -109,4 +109,3 @@ fi
 
 echo "FAIL. If this is expected and OK, you can pass this check by adding a commit with BREAKING_CHANGE_OK in the first line of the message."
 exit 1
-
