@@ -171,7 +171,7 @@ func (*uploadCmd) Usage() string {
 
 func (*uploadCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (*uploadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*uploadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) (status subcommands.ExitStatus) {
 	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -193,7 +193,12 @@ func (*uploadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 		log.Printf("Failed to write %q: %v\n", blobKey, err)
 		return subcommands.ExitFailure
 	}
-	defer writer.Close()
+	defer func() {
+		if err := writer.Close(); err != nil && status == subcommands.ExitSuccess {
+			log.Printf("closing the writer: %v", err)
+			status = subcommands.ExitFailure
+		}
+	}()
 
 	// Copy the data.
 	_, err = io.Copy(writer, os.Stdin)
