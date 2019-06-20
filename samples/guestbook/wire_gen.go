@@ -36,6 +36,7 @@ import (
 	"gocloud.dev/server/xrayserver"
 	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"net/http"
+	"net/url"
 )
 
 // Injectors from inject_aws.go:
