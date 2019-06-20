@@ -39,10 +39,8 @@ PKGINFO_BRANCH=$(mktemp)
 PKGINFO_MASTER=$(mktemp)
 
 function cleanup() {
-  rm -rf "$INSTALL_DIR"
-  rm -rf "$MASTER_CLONE_DIR"
-  rm -f "$PKGINFO_BRANCH"
-  rm -f "$PKGINFO_MASTER"
+  rm -rf "$INSTALL_DIR" "$MASTER_CLONE_DIR"
+  rm -f "$PKGINFO_BRANCH" "$PKGINFO_MASTER"
 }
 trap cleanup EXIT
 
@@ -56,11 +54,13 @@ git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 incompatible_change_pkgs=()
 while read -r path || [[ -n "$path" ]]; do
   echo "  checking packages in module $path"
-  if [[ ! -d "$MASTER_CLONE_DIR/$path" ]] && [[ ! "$path" =~ "internal" ]] && [[ ! "$path" =~ "samples" ]]; then
-    incompatible_change_pkgs+=("$path")
-    continue;
-  fi
 
+  # pushd doesn't return error when the directory doesn't exist, so check first for deleted module.
+  if [[ ! -d "$path" ]]; then
+      echo "  module ${path} was deleted! Recording as an incompatible change.";
+      incompatible_change_pkgs+=(${path});
+      continue;
+  fi
   pushd "$path" &> /dev/null
 
   PKGS=$(cd "$MASTER_CLONE_DIR" && cd "$path" && go list ./...)
@@ -92,7 +92,7 @@ while read -r path || [[ -n "$path" ]]; do
     fi
   done
   popd &> /dev/null
-done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
+done < <( sed -e '/^#/d' -e '/^$/d' "$MASTER_CLONE_DIR/allmodules" | awk '{print $1}' )
 
 if [ ${#incompatible_change_pkgs[@]} -eq 0 ]; then
   # No incompatible changes, we are good.
