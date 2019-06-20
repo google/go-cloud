@@ -56,6 +56,11 @@ git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 incompatible_change_pkgs=()
 while read -r path || [[ -n "$path" ]]; do
   echo "  checking packages in module $path"
+  if [[ ! -d "$MASTER_CLONE_DIR/$path" ]] && [[ ! "$path" =~ "internal" ]] && [[ ! "$path" =~ "samples" ]]; then
+    incompatible_change_pkgs+=("$path")
+    continue;
+  fi
+
   pushd "$path" &> /dev/null
 
   PKGS=$(cd "$MASTER_CLONE_DIR" && cd "$path" && go list ./...)
