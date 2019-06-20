@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The cmdtest package simplifies testing of command-line interfaces.
-// It provides a simple, cross-platform shell-like language to express
-// command executions, and will compare actual output with the expected
-// output in the file. It can also update a file with new "golden" output.
+// The cmdtest package simplifies testing of command-line interfaces. It
+// provides a simple, cross-platform, shell-like language to express command
+// execution. It can compare actual output with the expected output in the file,
+// and can also update a file with new "golden" output that is deemed correct.
 //
-// Write a test file with commands and expected output. See the TestFile
-// documentation for the syntax.
+// Start using cmdtest by writing a test file with commands and expected output.
+// See the TestFile documentation for the syntax.
 //
 // To test, first read the file:
 //
@@ -80,8 +80,8 @@ import (
 // otherwise. However, commands that are expected to fail can be marked
 // with a " --> FAIL" suffix.
 //
-// The cases of a test file are executed in order, starting from a freshly created temporary
-// directory.
+// The cases of a test file are executed in order, starting in a freshly
+// created temporary directory.
 //
 // The built-in commands (initial contents of the Commands map) are:
 //
@@ -97,9 +97,16 @@ import (
 // arguments must refer to the current directory; that is, they cannot contain
 // slashes.
 //
-// Environment variable substitution is supported, using the syntax "${VAR}".
-// The environment variable ROOTDIR is set to the temporary directory created to run
-// the test file.
+// If the first word of a command line is not one of the above built-ins, or any
+// additional commands added to the TestFile.Commands map before execution, then
+// cmdtest runs the command using the exec package. Recall that the exec package
+// looks up relative command names using the path environment variable, but does
+// no other shell-like processing.
+//
+// However, cmdtest does its own environment variable substitution, using the
+// syntax "${VAR}". Test execution inherits the full environment of the test
+// binary caller (typically, your shell). The environment variable ROOTDIR is
+// set to the temporary directory created to run the test file.
 type TestFile struct {
 	// If non-nil, this function is called with the root directory after it has been made
 	// the current directory.
@@ -109,25 +116,25 @@ type TestFile struct {
 	// built-ins).
 	Commands map[string]func(args []string) ([]byte, error)
 
-	// Echo each command and its output as it's run
+	// If true, echo each command and its output as it's run.
 	Verbose bool
 
-	// If true, don't delete the test's temporary root directory, and print it out
-	// its name for debugging.
+	// If true, don't delete the test's temporary root directory, and print it
+	// out its name for debugging.
 	KeepRootDir bool
 
 	filename string // full filename of the test file
-	cases    []*TestCase
+	cases    []*testCase
 	suffix   []string // non-output lines after last case
 }
 
-type TestCase struct {
+type testCase struct {
 	before    []string // lines before the commands
 	startLine int      // line of first command
 	// The list of commands to execute.
 	commands []string
 
-	// The STDOUT and STDERR (merged).
+	// The stdout and stderr, merged and split into lines.
 	gotOutput  []string // from execution
 	wantOutput []string // from file
 }
@@ -160,7 +167,7 @@ func Read(filename string) (*TestFile, error) {
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
-	var tc *TestCase
+	var tc *testCase
 	lineno := 0
 	var prefix []string
 	state := beforeFirstCommand
@@ -171,7 +178,7 @@ func Read(filename string) (*TestFile, error) {
 		switch state {
 		case beforeFirstCommand:
 			if isCommand {
-				tc = &TestCase{startLine: lineno, before: prefix}
+				tc = &testCase{startLine: lineno, before: prefix}
 				tc.addCommandLine(line)
 				state = inCommands
 			} else {
@@ -194,7 +201,7 @@ func Read(filename string) (*TestFile, error) {
 		case inOutput:
 			if isCommand { // A command marks the end of the output.
 				prefix = tf.addCase(tc)
-				tc = &TestCase{startLine: lineno, before: prefix}
+				tc = &testCase{startLine: lineno, before: prefix}
 				tc.addCommandLine(line)
 				state = inCommands
 			} else {
@@ -213,11 +220,14 @@ func Read(filename string) (*TestFile, error) {
 	return tf, nil
 }
 
-func (tc *TestCase) addCommandLine(line string) {
+func (tc *testCase) addCommandLine(line string) {
 	tc.commands = append(tc.commands, strings.TrimSpace(line[1:]))
 }
 
-func (tf *TestFile) addCase(tc *TestCase) []string {
+// addCase first splits the collected output for tc into the actual command
+// output, and a suffix consisting of blank lines and comments. It then adds tc
+// to the cases of tf, and returns the suffix.
+func (tf *TestFile) addCase(tc *testCase) []string {
 	// Trim the suffix of output that consists solely of blank lines and comments,
 	// and return it.
 	var i int
@@ -344,7 +354,7 @@ type fatal struct{ error }
 // is saved in tc.gotOutput.
 // An error is returned if: a command that should succeed instead failed; a command that should
 // fail instead succeeded; or if a built-in command was called incorrectly.
-func (tc *TestCase) run(tf *TestFile, rootDir string, verbose bool) error {
+func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
 	const failMarker = " --> FAIL"
 
 	tc.gotOutput = nil
@@ -489,7 +499,7 @@ func (tf *TestFile) write(w io.Writer) error {
 	return writeLines(w, tf.suffix)
 }
 
-func (tc *TestCase) write(w io.Writer) error {
+func (tc *testCase) write(w io.Writer) error {
 	if err := writeLines(w, tc.before); err != nil {
 		return err
 	}
@@ -503,7 +513,7 @@ func (tc *TestCase) write(w io.Writer) error {
 	return writeLines(w, out)
 }
 
-func (tc *TestCase) writeCommands(w io.Writer) error {
+func (tc *testCase) writeCommands(w io.Writer) error {
 	for _, c := range tc.commands {
 		if _, err := fmt.Fprintf(w, "$ %s\n", c); err != nil {
 			return err

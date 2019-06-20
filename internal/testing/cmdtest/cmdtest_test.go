@@ -28,7 +28,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// Build the little program needed to test input redirection.
+	// Build echo-stdin, the little program needed to test input redirection.
 	if err := exec.Command("go", "build", "testdata/echo-stdin.go").Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -40,9 +40,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("PATH", cwd)
 
 	ret := m.Run()
-
-	os.Remove(filepath.Join(cwd, "echo-stdin"))
-
+	_ = os.Remove(filepath.Join(cwd, "echo-stdin"))
 	os.Exit(ret)
 }
 
@@ -54,7 +52,7 @@ func TestRead(t *testing.T) {
 	got.Commands = nil
 	want := &TestFile{
 		filename: "testdata/read.ct",
-		cases: []*TestCase{
+		cases: []*testCase{
 			{
 				before: []string{
 					"# A sample test file.",
@@ -81,7 +79,7 @@ func TestRead(t *testing.T) {
 		},
 		suffix: []string{"", "", "# end"},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(TestFile{}, TestCase{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(TestFile{}, testCase{})); diff != "" {
 		t.Error(diff)
 	}
 
@@ -109,11 +107,11 @@ func TestCompare(t *testing.T) {
 		},
 		{
 			"bad-fail-1",
-			[]string{`testdata/bad-fail-1.ct:2: "echo" succeeded, but it was expected to fail`},
+			[]string{`"echo" succeeded, but it was expected to fail`},
 		},
 		{
 			"bad-fail-2",
-			[]string{`testdata/bad-fail-2.ct:2: "cd foo" failed`},
+			[]string{`"cd foo" failed`},
 		},
 	} {
 		tf := mustReadTestFile(t, test.file)
@@ -126,12 +124,13 @@ func TestCompare(t *testing.T) {
 			}
 		}
 		if failed {
+			// Log full output to aid debugging.
 			t.Logf("output of %s:\n%s", test.file, got)
 		}
 	}
 }
 
-func TestExpand(t *testing.T) {
+func TestExpandVariables(t *testing.T) {
 	lookup := func(name string) (string, bool) {
 		switch name {
 		case "A":
@@ -183,7 +182,7 @@ func TestUpdateToTemp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//defer os.Remove(fname)
+	defer os.Remove(fname)
 	if diff := diffFiles(t, "testdata/good.ct", fname); diff != "" {
 		fmt.Println(fname)
 		t.Errorf("good-without-output.ct: %s", diff)
