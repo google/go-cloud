@@ -46,32 +46,15 @@ import (
 // Set is a Wire provider set that provides a *sql.DB given
 // *Params and an HTTP client.
 var Set = wire.NewSet(
-	Open,
+	wire.Struct(new(URLOpener), "CertSource"),
 	rds.CertFetcherSet,
 )
-
-// Params specifies how to connect to an RDS database.
-type Params struct {
-	// Endpoint is the host/port of the RDS database, like
-	// "myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306".
-	// If no port is given, then 3306 is assumed.
-	Endpoint string
-	// User is the database user to connect as.
-	User string
-	// Password is the database user password to use.
-	Password string
-	// Database is the MySQL database name to connect to.
-	Database string
-
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
-}
 
 // URLOpener opens RDS MySQL URLs
 // like "rdsmysql://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb".
 type URLOpener struct {
-	// CertSource specifies how the opener will obtain authentication information.
-	// CertSource must not be nil.
+	// CertSource specifies how the opener will obtain the RDS Certificate
+	// Authority. If nil, it will use the default *rds.CertFetcher.
 	CertSource rds.CertPoolProvider
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
@@ -87,45 +70,36 @@ func init() {
 
 // OpenMySQLURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	if uo.CertSource == nil {
-		return nil, fmt.Errorf("rdsmysql: URLOpener CertSource is nil")
+	source := uo.CertSource
+	if source == nil {
+		source = new(rds.CertFetcher)
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("open RDS: empty endpoint")
 	}
 	password, _ := u.User.Password()
-	params := &Params{
-		Endpoint:  u.Host,
-		User:      u.User.Username(),
-		Password:  password,
-		Database:  strings.TrimPrefix(u.Path, "/"),
-		TraceOpts: uo.TraceOpts,
-	}
-	db, _, err := Open(ctx, uo.CertSource, params)
-	return db, err
-}
-
-// Open opens an encrypted connection to an RDS MySQL database.
-//
-// The second return value is a Wire cleanup function that calls Close on the
-// database and ignores the error.
-func Open(ctx context.Context, provider CertPoolProvider, params *Params) (*sql.DB, func(), error) {
-	if params.Endpoint == "" {
-		return nil, nil, fmt.Errorf("open RDS: endpoint empty")
-	}
 	c := &connector{
-		provider: provider,
-		params:   *params,
-		sem:      make(chan struct{}, 1),
-		ready:    make(chan struct{}),
+		addr:     u.Host,
+		user:     u.User.Username(),
+		password: password,
+		dbName:   strings.TrimPrefix(u.Path, "/"),
+		// Make a copy of TraceOpts to avoid caller modifying.
+		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
+		provider:  source,
+
+		sem:   make(chan struct{}, 1),
+		ready: make(chan struct{}),
 	}
 	c.sem <- struct{}{}
-	// Make a copy of TraceOpts to avoid caller modifying.
-	c.params.TraceOpts = append([]ocsql.TraceOption(nil), c.params.TraceOpts...)
-
-	db := sql.OpenDB(c)
-	return db, func() { db.Close() }, nil
+	return sql.OpenDB(c), nil
 }
 
 type connector struct {
-	params Params
+	addr      string
+	user      string
+	password  string
+	dbName    string
+	traceOpts []ocsql.TraceOption
 
 	sem      chan struct{} // receive to acquire, send to release
 	provider CertPoolProvider
@@ -157,13 +131,13 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		}
 		cfg := &mysql.Config{
 			Net:                     "tcp",
-			Addr:                    c.params.Endpoint,
-			User:                    c.params.User,
-			Passwd:                  c.params.Password,
+			Addr:                    c.addr,
+			User:                    c.user,
+			Passwd:                  c.password,
 			TLSConfig:               tlsConfigName,
 			AllowCleartextPasswords: true,
 			AllowNativePasswords:    true,
-			DBName:                  c.params.Database,
+			DBName:                  c.dbName,
 		}
 		c.dsn = cfg.FormatDSN()
 		close(c.ready)
@@ -177,7 +151,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c *connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.params.TraceOpts...)
+	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
 var tlsConfigCounter struct {
