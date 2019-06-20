@@ -46,7 +46,7 @@ import (
 // Set is a Wire provider set that provides a *sql.DB given
 // *Params and an HTTP client.
 var Set = wire.NewSet(
-	// DO NOT SUBMIT: This is broken now.
+	wire.Struct(new(URLOpener), "CertSource"),
 	rds.CertFetcherSet,
 )
 
