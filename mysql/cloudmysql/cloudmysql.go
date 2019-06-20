@@ -13,6 +13,18 @@
 // limitations under the License.
 
 // Package cloudmysql provides connections to managed MySQL Cloud SQL instances.
+// See https://cloud.google.com/sql/docs/mysql/ for more information.
+//
+// URLs
+//
+// For mysql.Open, cloudmysql registers for the scheme "cloudmysql".
+// The default URL opener will create a connection using the default
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+//
+// See https://gocloud.dev/concepts/urls/ for background information.
 package cloudmysql // import "gocloud.dev/mysql/cloudmysql"
 
 import (
@@ -20,85 +32,111 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"net/url"
+	"strings"
 	"sync"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
-	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/go-sql-driver/mysql"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
-
-	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
-	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
+	cdkmysql "gocloud.dev/mysql"
 )
 
-// CertSourceSet is a Wire provider set that binds a Cloud SQL proxy
-// certificate source from an GCP-authenticated HTTP client.
-//
-// Deprecated: Use cloudsql.CertSourceSet.
-var CertSourceSet = cloudsql.CertSourceSet
+// Scheme is the URL scheme cloudmysql registers its URLOpener under on
+// mysql.DefaultMux.
+const Scheme = "cloudmysql"
 
-// NewCertSource creates a local certificate source that uses the given
-// HTTP client. The client is assumed to make authenticated requests.
-//
-// Deprecated: Use cloudsql.NewCertSource.
-func NewCertSource(c *gcp.HTTPClient) *certs.RemoteCertSource {
-	return cloudsql.NewCertSource(c)
+func init() {
+	cdkmysql.DefaultURLMux().RegisterMySQL(Scheme, new(lazyCredsOpener))
 }
 
-// Params specifies how to connect to a Cloud SQL database.
-type Params struct {
-	// ProjectID specifies the GCP project associated with the
-	// CloudSQL instance.
-	ProjectID string
+// lazyCredsOpener obtains Application Default Credentials on the first call
+// to OpenMySQLURL.
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
 
-	// Region is the GCP region containing the CloudSQL instance.
-	Region string
+func (o *lazyCredsOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	o.init.Do(func() {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			o.err = err
+			return
+		}
+		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		if err != nil {
+			o.err = err
+			return
+		}
+		certSource := cloudsql.NewCertSource(client)
+		o.opener = &URLOpener{CertSource: certSource}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("cloudmysql open %v: %v", u, o.err)
+	}
+	return o.opener.OpenMySQLURL(ctx, u)
+}
 
-	// Instance is the CloudSQL instance name. See
-	// https://cloud.google.com/sql/docs/mysql/create-instance
-	// for background.
-	Instance string
-
-	// User is the username used to connect to the database.
-	User string
-
-	// Password is the password used to connect to the database.
-	// It may be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
-	Password string
-
-	// Database is the name of the database to connect to.
-	Database string
+// URLOpener opens Cloud MySQL URLs like
+// "cloudmysql://user:password@project/region/instance/dbname".
+type URLOpener struct {
+	// CertSource specifies how the opener will obtain authentication information.
+	// CertSource must not be nil.
+	CertSource proxy.CertSource
 
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
 
-// Open opens a Cloud SQL database. The second return value is a cleanup
-// function that calls Close on the returned database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, func(), error) {
+// OpenMySQLURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
+func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	if uo.CertSource == nil {
+		return nil, fmt.Errorf("cloudmysql: URLOpener CertSource is nil")
+	}
+	instance, dbName, err := instanceFromURL(u)
+	if err != nil {
+		return nil, fmt.Errorf("cloudmysql: open %v: %v", u, err)
+	}
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
 	dialerCounter.mu.Unlock()
 	client := &proxy.Client{
 		Port:  3307,
-		Certs: certSource,
+		Certs: uo.CertSource,
 	}
 	dialerName := fmt.Sprintf("gocloud.dev/mysql/gcpmysql/%d", dialerNum)
 	mysql.RegisterDial(dialerName, client.Dial)
 
+	password, _ := u.User.Password()
 	cfg := &mysql.Config{
 		AllowNativePasswords: true,
 		Net:                  dialerName,
-		Addr:                 params.ProjectID + ":" + params.Region + ":" + params.Instance,
-		User:                 params.User,
-		Passwd:               params.Password,
-		DBName:               params.Database,
+		Addr:                 instance,
+		User:                 u.User.Username(),
+		Passwd:               password,
+		DBName:               dbName,
 	}
-	db := sql.OpenDB(connector{cfg.FormatDSN(), params.TraceOpts})
-	return db, func() { db.Close() }, nil
+	db := sql.OpenDB(connector{cfg.FormatDSN(), uo.TraceOpts})
+	return db, nil
+}
+
+func instanceFromURL(u *url.URL) (instance, db string, _ error) {
+	path := u.Host + u.Path // everything after scheme but before query or fragment
+	parts := strings.SplitN(path, "/", 4)
+	if len(parts) < 4 {
+		return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+	}
+	for _, part := range parts {
+		if part == "" {
+			return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+		}
+	}
+	return parts[0] + ":" + parts[1] + ":" + parts[2], parts[3], nil
 }
 
 var dialerCounter struct {

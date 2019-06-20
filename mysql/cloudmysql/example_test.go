@@ -18,31 +18,18 @@ import (
 	"context"
 	"log"
 
-	"gocloud.dev/gcp"
-	"gocloud.dev/gcp/cloudsql"
-	"gocloud.dev/mysql/cloudmysql"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
+	"gocloud.dev/mysql"
+	_ "gocloud.dev/mysql/cloudmysql"
 )
 
 func Example() {
 	ctx := context.Background()
-	creds, err := google.FindDefaultCredentials(ctx, "https://www.googleapis.com/auth/cloud-platform")
+	// Replace this with your actual settings.
+	db, err := mysql.Open(ctx, "cloudmysql://user:password@example-project/region/my-instance01/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}
-	authClient := gcp.HTTPClient{Client: *oauth2.NewClient(ctx, creds.TokenSource)}
-	db, _, err := cloudmysql.Open(ctx, cloudsql.NewCertSource(&authClient), &cloudmysql.Params{
-		// Replace these with your actual settings.
-		ProjectID: "example-project",
-		Region:    "us-central1",
-		Instance:  "my-instance01",
-		User:      "myrole",
-		Database:  "test",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	defer db.Close()
 
 	// Use database in your program.
 	db.Exec("CREATE TABLE foo (bar INT);")
