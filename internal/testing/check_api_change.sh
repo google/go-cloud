@@ -56,6 +56,7 @@ git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 cp -R . "$BRANCH_DIR"
 
 # Run the following checks in the master directory
+ORIG_DIR=$(pwd)
 cd "$MASTER_CLONE_DIR"
 
 incompatible_change_pkgs=()
@@ -102,6 +103,7 @@ fi
 echo "Found breaking API change(s) in: ${incompatible_change_pkgs[*]}."
 
 # Found incompatible changes; see if they were declared as OK via a commit.
+cd "$ORIG_DIR"
 if git cherry -v master | grep -q "BREAKING_CHANGE_OK"; then
   echo "Allowing them due to a commit message with BREAKING_CHANGE_OK.";
   exit 0;
