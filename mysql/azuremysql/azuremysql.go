@@ -36,8 +36,8 @@ import (
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
-	cdkmysql "gocloud.dev/mysql"
 	"gocloud.dev/azure/azuredb"
+	cdkmysql "gocloud.dev/mysql"
 )
 
 // URLOpener opens Azure MySQL URLs
@@ -69,26 +69,26 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	}
 	password, _ := u.User.Password()
 	c := &connector{
-		addr: u.Host,
-		user: u.User.Username(),
+		addr:     u.Host,
+		user:     u.User.Username(),
 		password: password,
 		dbName:   strings.TrimPrefix(u.Path, "/"),
 		// Make a copy of TraceOpts to avoid caller modifying.
 		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
 		provider:  source,
 
-		sem:      make(chan struct{}, 1),
-		ready:    make(chan struct{}),
+		sem:   make(chan struct{}, 1),
+		ready: make(chan struct{}),
 	}
 	c.sem <- struct{}{}
 	return sql.OpenDB(c), nil
 }
 
 type connector struct {
-	addr string
-	user string
-	password string
-	dbName string
+	addr      string
+	user      string
+	password  string
+	dbName    string
 	traceOpts []ocsql.TraceOption
 
 	sem      chan struct{}    // receive to acquire, send to release
