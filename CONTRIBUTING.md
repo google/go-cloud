@@ -102,8 +102,9 @@ categorized under [`notice`][notice license],
 [`permissive`][permissive license], or [`unencumbered`][unencumbered license]
 in the [Google Open Source Licenses][] documentation. This is enforced with a
 Travis build check that verifies that every module depended on is in the
-[`alldeps` file][]. Do not add new lines to the file unless you have verified
-that the dependency is released under an acceptable license.
+[`alldeps` file][]. Do not add new direct or indirect dependencies to the Go CDK
+unless you have verified that the dependency is released under an acceptable
+license.
 
 [`alldeps` file]: https://github.com/google/go-cloud/blob/master/internal/testing/alldeps
 [notice license]: https://opensource.google.com/docs/thirdparty/licenses/#notice
