@@ -18,7 +18,7 @@ call the constructor function in the driver package directly (like
 `awsparamstore.OpenVariable`). This guide will show how to use both forms for
 each storage provider.
 
-[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
+[Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
 [`runtimevar.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar#OpenVariable
