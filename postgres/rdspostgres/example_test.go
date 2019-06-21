@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudmysql_test
+package rdspostgres_test
 
 import (
 	"context"
 	"log"
 
-	"gocloud.dev/mysql"
-	_ "gocloud.dev/mysql/cloudmysql"
+	"gocloud.dev/postgres"
+	_ "gocloud.dev/postgres/rdspostgres"
 )
 
 func Example() {
-	// This example is used in https://gocloud.dev/howto/sql/#gcp
+	// This example is used in https://gocloud.dev/howto/sql/#aws
 
-	// import _ "gocloud.dev/mysql/cloudmysql"
+	// import _ "gocloud.dev/postgres/rdspostgres"
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// Replace this with your actual settings.
-	db, err := mysql.Open(ctx,
-		"cloudmysql://user:password@example-project/region/my-instance01/testdb")
+	// Replace these with your actual settings.
+	db, err := postgres.Open(ctx,
+		"rdspostgres://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
 	// Use database in your program.
-	db.Exec("CREATE TABLE foo (bar INT);")
+	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
 }

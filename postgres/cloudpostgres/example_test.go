@@ -23,7 +23,13 @@ import (
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/sql/#gcp
+
+	// import _ "gocloud.dev/postgres/cloudpostgres"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	db, err := postgres.Open(ctx,
 		"cloudpostgres://myrole@example-project/us-central1/my-instance01/testdb")
 	if err != nil {

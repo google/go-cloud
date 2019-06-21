@@ -23,7 +23,13 @@ import (
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/sql/#aws
+
+	// import _ "gocloud.dev/mysql/rdsmysql"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	// Replace these with your actual settings.
 	db, err := mysql.Open(ctx,
 		"rdsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb")

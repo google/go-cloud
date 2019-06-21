@@ -131,6 +131,34 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/mongodocstore\"\n)",
 		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mongo://my-db/my-collection?id_field=userID\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
+	"gocloud.dev/mysql.ExampleOpen": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := mysql.Open(ctx, \"mysql://user:password@localhost/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/mysql/azuremysql.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n\t_ \"gocloud.dev/mysql/azuremysql\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := mysql.Open(ctx,\n\t\"azuremysql://user:password@example00.mysql.database.azure.com/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/mysql/cloudmysql.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n\t_ \"gocloud.dev/mysql/cloudmysql\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := mysql.Open(ctx,\n\t\"cloudmysql://user:password@example-project/region/my-instance01/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/mysql/rdsmysql.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n\t_ \"gocloud.dev/mysql/rdsmysql\"\n)",
+		"code": "// Replace these with your actual settings.\ndb, err := mysql.Open(ctx,\n\t\"rdsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.ExecContext(ctx, \"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/postgres.ExampleOpen": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := postgres.Open(ctx, \"postgres://user:password@localhost/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/postgres/cloudpostgres.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/cloudpostgres\"\n)",
+		"code": "db, err := postgres.Open(ctx,\n\t\"cloudpostgres://myrole@example-project/us-central1/my-instance01/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/postgres/rdspostgres.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/rdspostgres\"\n)",
+		"code": "// Replace these with your actual settings.\ndb, err := postgres.Open(ctx,\n\t\"rdspostgres://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.ExecContext(ctx, \"CREATE TABLE foo (bar INT);\")"
+	},
 	"gocloud.dev/pubsub.ExampleSubscription_Receive": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/pubsub\"\n)",
 		"code": "// Loop on received messages.\nfor {\n\tmsg, err := subscription.Receive(ctx)\n\tif err != nil {\n\t\t// Errors from Receive indicate that Receive will no longer succeed.\n\t\tlog.Printf(\"Receiving message: %v\", err)\n\t\tbreak\n\t}\n\t// Do work based on the message, for example:\n\tfmt.Printf(\"Got message: %q\\n\", msg.Body)\n\t// Messages must always be acknowledged with Ack.\n\tmsg.Ack()\n}"
