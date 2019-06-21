@@ -97,19 +97,19 @@ generate new ones to be used by others.
 
 ### Dependencies
 
-The Go CDK has a policy to only depend on code that is under a license that is
-categorized under [`notice`][notice license],
-[`permissive`][permissive license], or [`unencumbered`][unencumbered license]
-in the [Google Open Source Licenses][] documentation. This is enforced with a
-Travis build check that verifies that every module depended on is in the
+The Go CDK has a policy to depend only on code licensed under one of the
+[`notice`][notice licenses], [`permissive`][permissive licenses], or
+[`unencumbered`][unencumbered licenses] categories in the
+[Google Open Source Licenses][] documentation. This is enforced with a
+Travis build check that verifies that every dependency is in the
 [`alldeps` file][]. Do not add new direct or indirect dependencies to the Go CDK
 unless you have verified that the dependency is released under an acceptable
 license.
 
 [`alldeps` file]: https://github.com/google/go-cloud/blob/master/internal/testing/alldeps
-[notice license]: https://opensource.google.com/docs/thirdparty/licenses/#notice
-[permissive license]: https://opensource.google.com/docs/thirdparty/licenses/#permissive
-[unencumbered license]: https://opensource.google.com/docs/thirdparty/licenses/#unencumbered
+[notice licenses]: https://opensource.google.com/docs/thirdparty/licenses/#notice
+[permissive licenses]: https://opensource.google.com/docs/thirdparty/licenses/#permissive
+[unencumbered licenses]: https://opensource.google.com/docs/thirdparty/licenses/#unencumbered
 [Google Open Source Licenses]: https://opensource.google.com/docs/thirdparty/licenses/
 
 ## Making a pull request
