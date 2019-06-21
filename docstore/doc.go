@@ -53,15 +53,64 @@
 //
 // Documents
 //
+// A document is a set of named fields, each with a value. Values can themselves
+// be documents or lists of values.
+//
 // Docstore allows you to represent documents as either map[string]interface{} or
-// struct pointers. Using structs is recommended, because it enforces some structure
-// on your data. Docstore mimics the encoding/json package in its treatment of
+// struct pointers. When you represent a document as a map, the field are map keys
+// and the values are map values. For example, here is a document about a book
+// described as a map:
+//
+//    doc := map[string]interface{}{
+//       "Title": "The Master and Margarita",
+//       "Author": map[string]interface{}{
+//           "First": "Mikhail",
+//           "Last": "Bulgakov",
+//       },
+//       "PublicationYear": 1967,
+//    }
+//
+// Here is the same document represented with structs:
+//
+//    type Book struct {
+//       Title           string
+//       Author          Name
+//       PublicationYear int
+//    }
+//
+//    type Name struct {
+//       First, Last string
+//    }
+//
+//    doc := &Book{
+//       Title: "The Master and Margarita",
+//       Author: Name{
+//          First: "Mikhail",
+//          Last: "Bulgakov",
+//       },
+//       PublicationYear: 1967,
+//    }
+//
+// You must use a pointer to a struct to represent a document, although structs
+// nested inside a document, like the Name struct above, need not be pointers.
+//
+// Maps are best for general-purpose applications where you don't know the structure
+// of the documents. Using structs is preferred because it enforces some structure
+// on your data.
+//
+// Docstore mimics the encoding/json package in its treatment of
 // structs: by default, a struct's exported fields are the fields of the document.
 // You can alter this default mapping by using a struct tag beginning with
 // "docstore:". Docstore struct tags support renaming, omitting fields
 // unconditionally, or omitting them only when they are empty, exactly like
 // encoding/json. Docstore also honors a "json" struct tag if there is no "docstore"
-// tag on the field.
+// tag on the field. For example, this is the Book struct with different field names:
+//
+//    type Book struct {
+//       Title           string `docstore:"title"`
+//       Author          Name   `docstore:"author"`
+//       PublicationYear int    `docstore:"pub_year"`
+//    }
 //
 //
 // Representing Data
