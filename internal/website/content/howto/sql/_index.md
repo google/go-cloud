@@ -4,9 +4,12 @@ date: 2019-06-21T09:26:56-07:00
 showInSidenav: true
 ---
 
-Connecting to cloud providers' hosted database services require additional steps
-to ensure the security of the connection. The Go CDK makes opening these
-connections easier while still using the standard [`*sql.DB`][] type.
+Connecting to cloud providers' hosted database services requires additional
+steps to ensure the security of the connection. For example, each of AWS,
+GCP, and Azure require the use of custom certificate authorities to be
+configured in the client. GCP requires a custom proxy with authentication
+credentials. The Go CDK makes opening these connections easier while still
+using the standard [`*sql.DB`][] type.
 
 [`*sql.DB`]: https://godoc.org/database/sql#DB
 
