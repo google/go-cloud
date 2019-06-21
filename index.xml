@@ -37,6 +37,17 @@ your application&amp;rsquo;s core logic from the details of the services it is u
     </item>
     
     <item>
+      <title>Open a Secret Keeper</title>
+      <link>https://gocloud.dev/howto/secrets/open-keeper/</link>
+      <pubDate>Thu, 21 Mar 2019 17:43:54 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/howto/secrets/open-keeper/</guid>
+      <description>&lt;p&gt;The first step in working with your secrets is establishing your
+secret keeper provider. Every secret keeper provider is a little different, but the Go CDK
+lets you interact with all of them using the &lt;a href=&#34;https://godoc.org/gocloud.dev/secrets#Keeper&#34;&gt;&lt;code&gt;*secrets.Keeper&lt;/code&gt; type&lt;/a&gt;.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
       <title>Open a Bucket</title>
       <link>https://gocloud.dev/howto/blob/open-bucket/</link>
       <pubDate>Wed, 20 Mar 2019 14:51:29 -0700</pubDate>
@@ -89,6 +100,16 @@ using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&
 after completing any work related to the message. This will prevent the
 message from being redelivered.&lt;/li&gt;
 &lt;/ol&gt;</description>
+    </item>
+    
+    <item>
+      <title>Encrypt &amp; Decrypt Data</title>
+      <link>https://gocloud.dev/howto/secrets/crypt/</link>
+      <pubDate>Thu, 21 Mar 2019 17:44:28 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/howto/secrets/crypt/</guid>
+      <description>&lt;p&gt;Once you have &lt;a href=&#34;https://gocloud.dev/howto/secrets/open-keeper/&#34;&gt;opened a secrets keeper&lt;/a&gt; for the secrets provider you want,
+you can encrypt and decrypt small messages using the keeper.&lt;/p&gt;</description>
     </item>
     
     <item>
