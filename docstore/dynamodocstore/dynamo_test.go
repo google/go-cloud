@@ -19,15 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
-	"sort"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
-	gcaws "gocloud.dev/aws"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"
@@ -88,40 +85,8 @@ func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
 
 func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
 	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{
-		AllowScans: true,
-		RunQueryFallback: func(ctx context.Context, q *driver.Query, run RunQueryFunc) (driver.DocumentIterator, error) {
-			// If the query failed because it needs to do a scan and there is an OrderBy clause,
-			// then do the scan and sort the results locally.
-			// This isn't always the recommended approach for production code, but it can
-			// work if the collection is small.
-			if q.OrderByField == "" {
-				return nil, errors.New("RunQueryFallback cannot handle query")
-			}
-			var less func(int, int) bool
-			var hs []*drivertest.HighScore
-			switch q.OrderByField {
-			case "Player":
-				if q.OrderAscending {
-					less = func(i, j int) bool { return hs[i].Player < hs[j].Player }
-				} else {
-					less = func(i, j int) bool { return hs[i].Player > hs[j].Player }
-				}
-			default:
-				return nil, fmt.Errorf("RunQueryFallback cannot handle OrderByField %q", q.OrderByField)
-			}
-			q.OrderByField = ""
-			iter, err := run(ctx, q)
-			if err != nil {
-				return nil, err
-			}
-			defer iter.Stop()
-			hs, err = collectHighScores(ctx, iter)
-			if err != nil {
-				return nil, err
-			}
-			sort.Slice(hs, less)
-			return &highScoreSliceIterator{hs, 0}, nil
-		},
+		AllowScans:       true,
+		RunQueryFallback: InMemorySortFallback(func() interface{} { return new(drivertest.HighScore) }),
 	})
 }
 
@@ -242,43 +207,5 @@ func TestQueryErrors(t *testing.T) {
 	err = iter.Next(ctx, &h)
 	if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
 		t.Errorf("got %v (code %s, type %T), want InvalidArgument", err, c, err)
-	}
-}
-
-func TestProcessURL(t *testing.T) {
-	tests := []struct {
-		URL     string
-		WantErr bool
-	}{
-		// OK.
-		{"dynamodb://docstore-test?partition_key=_kind", false},
-		// OK.
-		{"dynamodb://docstore-test?partition_key=_kind&sort_key=_id", false},
-		// OK, overriding region.
-		{"dynamodb://docstore-test?partition_key=_kind&region=" + region, false},
-		// OK, allow_scans.
-		{"dynamodb://docstore-test?partition_key=_kind&allow_scans=true" + region, false},
-		// Unknown parameter.
-		{"dynamodb://docstore-test?partition_key=_kind&param=value", true},
-		// With path.
-		{"dynamodb://docstore-test/subcoll?partition_key=_kind", true},
-		// Missing partition_key.
-		{"dynamodb://docstore-test?sort_key=_id", true},
-	}
-
-	sess, err := gcaws.NewDefaultSession()
-	if err != nil {
-		t.Fatal(err)
-	}
-	o := &URLOpener{ConfigProvider: sess}
-	for _, test := range tests {
-		u, err := url.Parse(test.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, _, _, _, _, err = o.processURL(u)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
 	}
 }

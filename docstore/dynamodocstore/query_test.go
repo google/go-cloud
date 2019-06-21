@@ -18,11 +18,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/docstore/driver"
+	"gocloud.dev/docstore/drivertest"
 )
 
 func TestPlanQuery(t *testing.T) {
@@ -515,5 +517,80 @@ func TestGlobalFieldsIncluded(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func TestCompare(t *testing.T) {
+	tm := time.Now()
+	for _, test := range []struct {
+		a, b interface{}
+		want int
+	}{
+		{1, 1, 0},
+		{1, 2, -1},
+		{2, 1, 1},
+		{1.5, 2, -1},
+		{2.5, 2.1, 1},
+		{3.8, 3.8, 0},
+		{"x", "x", 0},
+		{"x", "xx", -1},
+		{"x", "a", 1},
+		{tm, tm, 0},
+		{tm, tm.Add(1), -1},
+		{tm, tm.Add(-1), 1},
+		{[]byte("x"), []byte("x"), 0},
+		{[]byte("x"), []byte("xx"), -1},
+		{[]byte("x"), []byte("a"), 1},
+	} {
+		got := compare(test.a, test.b)
+		if got != test.want {
+			t.Errorf("compare(%v, %v) = %d, want %d", test.a, test.b, got, test.want)
+		}
+	}
+}
+
+func TestCopyTopLevel(t *testing.T) {
+	type E struct{ C int }
+	type S struct {
+		A int
+		B int
+		E
+	}
+
+	s := &S{A: 1, B: 2, E: E{C: 3}}
+	m := map[string]interface{}{"A": 1, "B": 2, "C": 3}
+	for _, test := range []struct {
+		dest, src interface{}
+		want      interface{}
+	}{
+		{
+			dest: map[string]interface{}{},
+			src:  m,
+			want: m,
+		},
+		{
+			dest: &S{},
+			src:  s,
+			want: s,
+		},
+		{
+			dest: map[string]interface{}{},
+			src:  s,
+			want: m,
+		},
+		{
+			dest: &S{},
+			src:  m,
+			want: s,
+		},
+	} {
+		dest := drivertest.MustDocument(test.dest)
+		src := drivertest.MustDocument(test.src)
+		if err := copyTopLevel(dest, src); err != nil {
+			t.Fatalf("src=%+v: %v", test.src, err)
+		}
+		if !cmp.Equal(test.dest, test.want) {
+			t.Errorf("src=%+v: got %v, want %v", test.src, test.dest, test.want)
+		}
 	}
 }

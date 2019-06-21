@@ -39,128 +39,18 @@ package dynamodocstore
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/url"
 	"strings"
-	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
-	gcaws "gocloud.dev/aws"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 )
-
-func init() {
-	docstore.DefaultURLMux().RegisterCollection(Scheme, new(lazySessionOpener))
-}
-
-type lazySessionOpener struct {
-	init   sync.Once
-	opener *URLOpener
-	err    error
-}
-
-func (o *lazySessionOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
-	o.init.Do(func() {
-		sess, err := gcaws.NewDefaultSession()
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{
-			ConfigProvider: sess,
-		}
-	})
-	if o.err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
-	}
-	return o.opener.OpenCollectionURL(ctx, u)
-}
-
-// Scheme is the URL scheme dynamodb registers its URLOpener under on
-// docstore.DefaultMux.
-const Scheme = "dynamodb"
-
-// URLOpener opens dynamodb URLs like
-// "dynamodb://mytable?partition_key=partkey&sort_key=sortkey".
-//
-// The URL Host is used as the table name. See
-// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
-// for more details.
-//
-// The following query parameters are supported:
-//
-//   - partition_key (required): the path to the partition key of a table or an index.
-//   - sort_key: the path to the sort key of a table or an index.
-//   - allow_scans: if "true", allow table scans to be used for queries
-//
-// See https://godoc.org/gocloud.dev/aws#ConfigFromURLParams for supported query
-// parameters for overriding the aws.Session from the URL.
-type URLOpener struct {
-	// ConfigProvider must be set to a non-nil value.
-	ConfigProvider client.ConfigProvider
-}
-
-// OpenCollectionURL opens the collection at the URL's path. See the package doc for more details.
-func (o *URLOpener) OpenCollectionURL(_ context.Context, u *url.URL) (*docstore.Collection, error) {
-	db, tableName, partitionKey, sortKey, opts, err := o.processURL(u)
-	if err != nil {
-		return nil, err
-	}
-	return OpenCollection(db, tableName, partitionKey, sortKey, opts)
-}
-
-func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options, err error) {
-	q := u.Query()
-
-	partitionKey = q.Get("partition_key")
-	if partitionKey == "" {
-		return nil, "", "", "", nil, fmt.Errorf("open collection %s: partition_key is required to open a table", u)
-	}
-	q.Del("partition_key")
-	sortKey = q.Get("sort_key")
-	q.Del("sort_key")
-	allowScans := q.Get("allow_scans")
-	q.Del("allow_scans")
-	opts = &Options{AllowScans: allowScans == "true"}
-
-	tableName = u.Host
-	if tableName == "" {
-		return nil, "", "", "", nil, fmt.Errorf("open collection %s: URL's host cannot be empty (the table name)", u)
-	}
-	if u.Path != "" {
-		return nil, "", "", "", nil, fmt.Errorf("open collection %s: URL path must be empty, only the host is needed", u)
-	}
-
-	configProvider := &gcaws.ConfigOverrider{
-		Base: o.ConfigProvider,
-	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(q)
-	if err != nil {
-		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
-	}
-	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	db, err = Dial(configProvider)
-	if err != nil {
-		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
-	}
-	return db, tableName, partitionKey, sortKey, opts, nil
-}
-
-// Dial gets an AWS DynamoDB service client.
-func Dial(p client.ConfigProvider) (*dyn.DynamoDB, error) {
-	if p == nil {
-		return nil, errors.New("getting Dynamo service: no AWS session provided")
-	}
-	return dyn.New(p), nil
-}
 
 type collection struct {
 	db           *dyn.DynamoDB
@@ -170,6 +60,10 @@ type collection struct {
 	description  *dyn.TableDescription
 	opts         *Options
 }
+
+// FallbackFunc is a function for executing queries that cannot be run by the built-in
+// dynamodocstore logic. See Options.RunQueryFunc for details.
+type FallbackFunc func(context.Context, *driver.Query, RunQueryFunc) (driver.DocumentIterator, error)
 
 type Options struct {
 	// If false, queries that can only be executed by scanning the entire table
@@ -189,7 +83,7 @@ type Options struct {
 	//
 	// If RunQueryFallback is nil, queries that cannot be executed will fail with a
 	// error that has code Unimplemented.
-	RunQueryFallback func(context.Context, *driver.Query, RunQueryFunc) (driver.DocumentIterator, error)
+	RunQueryFallback FallbackFunc
 
 	// The maximum number of concurrent goroutines started for a single call to
 	// ActionList.Do. If less than 1, there is no limit.
