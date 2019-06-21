@@ -1,5 +1,5 @@
 ---
-title: "Runtime Variables"
+title: "Runtime Configuration"
 date: 2019-06-18T14:51:12-07:00
 showInSidenav: true
 ---
