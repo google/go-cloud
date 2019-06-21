@@ -15,7 +15,7 @@ The easiest way to open a variable is using [`runtimevar.OpenVariable`][] and a
 URL pointing to the variable. See [Concepts: URLs][] for more
 details. If you need fine-grained control over the connection settings, you can
 call the constructor function in the driver package directly (like
-`awsparamstore.OpenVariable`). This guide will show how to use both forms for
+`awsparamstore.OpenVariable`). This guide shows how to use both forms for
 each storage provider.
 
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
