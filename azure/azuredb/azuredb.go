@@ -23,67 +23,32 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"golang.org/x/net/context/ctxhttp"
 )
 
-const (
-	defaultBundleURI = "https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem"
-)
+const caBundleURL = "https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem"
 
 // A CertPoolProvider returns a certificate pool that contains the Azure CA certificate.
 type CertPoolProvider interface {
-	GetCertPool(context.Context) (*x509.CertPool, error)
+	AzureCertPool(context.Context) (*x509.CertPool, error)
 }
 
-// AzureCertFetcher is a default CertPoolProvider that can fetch CA certificates from
-// any publicly accessible URI or File.
-type AzureCertFetcher struct {
+// CertFetcher pulls the Azure CA certificates from Digicert's servers. The zero
+// value will fetch certificates using the default HTTP client.
+type CertFetcher struct {
+	// Client is the HTTP client used to make requests. If nil, then
+	// http.DefaultClient is used.
 	Client *http.Client
-	// certLocation can be a remote endpoint or a file path
-	certLocation string
-	useHTTP      bool
 }
 
-// NewAzureCertFetcher constructs a new *AzureCertFetcher.
-// See https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl.
-func NewAzureCertFetcher(caBundleLocation string) (*AzureCertFetcher, error) {
-	if caBundleLocation == "" {
-		return nil, fmt.Errorf("invalid argument caBundleLocation")
-	}
-	useHTTP := strings.HasPrefix(caBundleLocation, "http")
-	return &AzureCertFetcher{
-		certLocation: caBundleLocation,
-		useHTTP:      useHTTP,
-	}, nil
-}
-
-// NewAzureCertFetcherWithDefault constructs a new *AzureCertFetcher with default
-// location URI as per below documentation.
-// See https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl.
-func NewAzureCertFetcherWithDefault() (*AzureCertFetcher, error) {
-	return &AzureCertFetcher{
-		certLocation: defaultBundleURI,
-		useHTTP:      true,
-	}, nil
-}
-
-// GetCertPool fetches the Azure CA certificate from a remote URL.
-func (acf *AzureCertFetcher) GetCertPool(ctx context.Context) (*x509.CertPool, error) {
-	var certs []*x509.Certificate
-	var err error
-
-	// Fetch or Load the CA certificate.
-	if acf.useHTTP {
-		certs, err = acf.fetch(ctx)
-	} else {
-		certs, err = acf.load(ctx)
-	}
+// AzureCertPool fetches the Azure CA certificates and places them into a pool.
+// It is safe to call from multiple goroutines.
+func (cf *CertFetcher) AzureCertPool(ctx context.Context) (*x509.CertPool, error) {
+	certs, err := cf.Fetch(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	certPool := x509.NewCertPool()
 	for _, c := range certs {
 		certPool.AddCert(c)
@@ -91,20 +56,13 @@ func (acf *AzureCertFetcher) GetCertPool(ctx context.Context) (*x509.CertPool, e
 	return certPool, nil
 }
 
-func (acf *AzureCertFetcher) load(ctx context.Context) ([]*x509.Certificate, error) {
-	pemData, err := ioutil.ReadFile(acf.certLocation)
-	if err != nil {
-		return nil, fmt.Errorf("load Azure certificates: %v", err)
-	}
-	return acf.loadPem(pemData)
-}
-
-func (acf *AzureCertFetcher) fetch(ctx context.Context) ([]*x509.Certificate, error) {
-	client := acf.Client
+// Fetch fetches the Azure CA certificates. It is safe to call from multiple goroutines.
+func (cf *CertFetcher) Fetch(ctx context.Context) ([]*x509.Certificate, error) {
+	client := cf.Client
 	if client == nil {
 		client = http.DefaultClient
 	}
-	resp, err := ctxhttp.Get(ctx, client, acf.certLocation)
+	resp, err := ctxhttp.Get(ctx, client, caBundleURL)
 	if err != nil {
 		return nil, fmt.Errorf("fetch Azure certificates: %v", err)
 	}
@@ -116,10 +74,6 @@ func (acf *AzureCertFetcher) fetch(ctx context.Context) ([]*x509.Certificate, er
 	if err != nil {
 		return nil, fmt.Errorf("fetch Azure certificates: %v", err)
 	}
-	return acf.loadPem(pemData)
-}
-
-func (acf *AzureCertFetcher) loadPem(pemData []byte) ([]*x509.Certificate, error) {
 	var certs []*x509.Certificate
 	for len(pemData) > 0 {
 		var block *pem.Block
