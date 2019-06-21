@@ -272,7 +272,7 @@
 		"code": "plainText := []byte(\"Secrets secrets...\")\ncipherText, err := keeper.Encrypt(ctx, plainText)\nif err != nil {\n\treturn err\n}"
 	},
 	"gocloud.dev/secrets/awskms.ExampleOpenKeeper": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/secrets/awskms\"\n)",
+		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/secrets/awskms\"\n)",
 		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\n// Get a client to use with the KMS API.\nclient, err := awskms.Dial(sess)\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper := awskms.OpenKeeper(client, \"alias/test-secrets\", nil)\ndefer keeper.Close()"
 	},
 	"gocloud.dev/secrets/awskms.Example_openFromURL": {

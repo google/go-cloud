@@ -26,9 +26,6 @@ import (
 func ExampleOpenKeeper() {
 	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#aws-ctor
 
-	// Variables set up elsewhere:
-	ctx := context.Background()
-
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	sess, err := session.NewSession(nil)
