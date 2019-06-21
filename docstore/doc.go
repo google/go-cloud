@@ -51,7 +51,7 @@
 // information.
 //
 //
-// Documents
+// Representing Documents
 //
 // A document is a set of named fields, each with a value. Values can themselves
 // be documents or lists of values.
