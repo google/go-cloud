@@ -108,16 +108,19 @@ https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 ## Minimize Global State
 
 As a library, the Go CDK should not introduce global state. Global state is
-difficult to reason about in large codebases, where it can be necessary for
-different parts of the application to use different states. Instead of adding
-global state, push responsibility to the application to inject the state where
-it is needed.
+[difficult to reason about in large codebases][Singletons Considered Harmful],
+where it can be necessary for different parts of the application to use
+different states. Instead of adding global state, push responsibility to the
+application to inject the state where it is needed.
 
 The exception we permit is URL scheme registration as documented under
 [URLs](#urls). The amount of boilerplate setup code required for URL muxes for
 multiple providers without use of a tool like Wire is an unreasonable burden for
-users of Go CDK. A global registry is acceptable as long as its use is not
-mandatory, but the burden is to prove the benefit over the cost.
+users of Go CDK. We want the Go CDK to be usable both with and without Wire. A
+global registry is acceptable as long as its use is not mandatory, but the
+burden is to prove the benefit over the cost.
+
+[Singletons Considered Harmful]: http://www.object-oriented-security.org/lets-argue/singletons
 
 ## Package Naming Conventions
 
