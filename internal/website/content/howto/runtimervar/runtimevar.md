@@ -23,7 +23,7 @@ each storage provider.
 [`runtimevar.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar#OpenVariable
 
-## GCP Runtime Configurator {#rc-url}
+## GCP Runtime Configurator {#gcp-url}
 
 To open a variable stored in [GCP Runtime Configurator][] via a URL, you can use
 the `runtimevar.OpenVariable` function as follows. It uses the `string`
