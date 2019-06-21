@@ -16,7 +16,6 @@ package localsecrets_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"gocloud.dev/secrets"
