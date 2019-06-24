@@ -14,6 +14,7 @@
 
 // Package mongodocstore provides an implementation of the docstore API for MongoDB.
 //
+//
 // URLs
 //
 // For docstore.OpenCollection, mongodocstore registers for the scheme "mongo".
@@ -32,7 +33,7 @@
 // to the BeforeDo function exposes the following types:
 // - Gets: *options.FindOptions
 // - writes: []mongo.WriteModel and *options.BulkWriteOptions
-
+//
 // As
 //
 // mongodocstore exposes the following types for As:

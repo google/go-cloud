@@ -24,7 +24,10 @@ import (
 
 // A Collection is a set of documents.
 type Collection interface {
-	// Key returns the document key, or nil if the document doesn't have one.
+	// Key returns the document key, or nil if the document doesn't have one, which
+	// means it is absent or zero value, such as 0, a nil interface value, and any
+	// empty array or string.
+	//
 	// If the collection is able to generate a key for a Create action, then
 	// it should not return an error if the key is missing. If the collection
 	// can't generate a missing key, it should return an error.

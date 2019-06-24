@@ -31,8 +31,8 @@ import (
 // CertFetcherSet is a Wire provider set that provides the RDS certificate pool
 // by pulling from Amazon's servers.
 var CertFetcherSet = wire.NewSet(
-	CertFetcher{},
-	wire.Bind((*CertPoolProvider)(nil), (*CertFetcher)(nil)),
+	wire.Struct(new(CertFetcher), "Client"),
+	wire.Bind(new(CertPoolProvider), new(*CertFetcher)),
 )
 
 // A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.

@@ -16,9 +16,11 @@ package rdsmysql
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"gocloud.dev/internal/testing/terraform"
+	"gocloud.dev/mysql"
 )
 
 func TestOpen(t *testing.T) {
@@ -41,13 +43,9 @@ func TestOpen(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	cf := new(CertFetcher)
-	db, _, err := Open(ctx, cf, &Params{
-		Endpoint: endpoint,
-		User:     username,
-		Password: password,
-		Database: databaseName,
-	})
+	urlstr := fmt.Sprintf("rdsmysql://%s:%s@%s/%s", username, password, endpoint, databaseName)
+	t.Log("Connecting to:", urlstr)
+	db, err := mysql.Open(ctx, urlstr)
 	if err != nil {
 		t.Fatal(err)
 	}

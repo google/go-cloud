@@ -52,7 +52,7 @@ import (
 const Scheme = "cloudpostgres"
 
 func init() {
-	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
+	postgres.DefaultURLMux().RegisterPostgres(Scheme, new(lazyCredsOpener))
 }
 
 // lazyCredsOpener obtains Application Default Credentials on the first call
@@ -100,100 +100,50 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("cloudpostgres: URLOpener CertSource is nil")
 	}
-	params, err := paramsFromURL(u)
+	instance, dbName, err := instanceFromURL(u)
 	if err != nil {
 		return nil, fmt.Errorf("cloudpostgres: open %v: %v", u, err)
 	}
-	params.TraceOpts = uo.TraceOpts
-	db, _, err := Open(ctx, uo.CertSource, params)
-	return db, err
-}
 
-func paramsFromURL(u *url.URL) (*Params, error) {
-	path := u.Host + u.Path // everything after scheme but before query or fragment
-	parts := strings.SplitN(path, "/", 4)
-	if len(parts) < 4 {
-		return nil, fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
-	}
-	for _, part := range parts {
-		if part == "" {
-			return nil, fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
-		}
-	}
-	password, _ := u.User.Password()
-	return &Params{
-		ProjectID: parts[0],
-		Region:    parts[1],
-		Instance:  parts[2],
-		Database:  parts[3],
-		User:      u.User.Username(),
-		Password:  password,
-		Values:    u.Query(),
-	}, nil
-}
-
-// Params specifies how to connect to a Cloud SQL database.
-type Params struct {
-	// ProjectID is the project the instance is located in.
-	ProjectID string
-	// Region is the region the instance is located in.
-	Region string
-	// Instance is the name of the instance.
-	Instance string
-
-	// User is the database user to connect as.
-	User string
-	// Password is the database user password to use.
-	Password string
-	// Database is the PostgreSQL database name to connect to.
-	Database string
-
-	// Values sets additional parameters, as documented in
-	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS.
-	Values url.Values
-
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
-}
-
-// Open opens a Cloud SQL database. The second return value is a cleanup
-// function that calls Close on the returned database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, func(), error) {
-	vals := make(url.Values)
-	for k, v := range params.Values {
+	query := u.Query()
+	for k := range query {
 		// Only permit parameters that do not conflict with other behavior.
-		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
+		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
+			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed", k)
 		}
-		vals[k] = v
 	}
-	vals.Set("sslmode", "disable")
+	query.Set("sslmode", "disable")
 
-	var user *url.Userinfo
-	if params.User != "" && params.Password != "" {
-		if params.Password != "" {
-			user = url.UserPassword(params.User, params.Password)
-		} else {
-			user = url.User(params.User)
-		}
-	}
-	u := url.URL{
-		Scheme:   "postgres",
-		User:     user,
-		Host:     "cloudsql",
-		Path:     "/" + params.Database,
-		RawQuery: vals.Encode(),
-	}
+	u2 := new(url.URL)
+	*u2 = *u
+	u2.Scheme = "postgres"
+	u2.Host = "cloudsql"
+	u2.Path = "/" + dbName
+	u2.RawQuery = query.Encode()
 	db := sql.OpenDB(connector{
 		client: &proxy.Client{
 			Port:  3307,
-			Certs: certSource,
+			Certs: uo.CertSource,
 		},
-		instance:  params.ProjectID + ":" + params.Region + ":" + params.Instance,
-		pqConn:    u.String(),
-		traceOpts: append([]ocsql.TraceOption(nil), params.TraceOpts...),
+		instance:  instance,
+		pqConn:    u2.String(),
+		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
 	})
-	return db, func() { db.Close() }, nil
+	return db, nil
+}
+
+func instanceFromURL(u *url.URL) (instance, db string, _ error) {
+	path := u.Host + u.Path // everything after scheme but before query or fragment
+	parts := strings.SplitN(path, "/", 4)
+	if len(parts) < 4 {
+		return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+	}
+	for _, part := range parts {
+		if part == "" {
+			return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+		}
+	}
+	return parts[0] + ":" + parts[1] + ":" + parts[2], parts[3], nil
 }
 
 type pqDriver struct {

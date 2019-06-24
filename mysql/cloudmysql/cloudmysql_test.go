@@ -16,29 +16,13 @@ package cloudmysql
 
 import (
 	"context"
-	"net/http"
+	"fmt"
+	"net/url"
 	"testing"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
-	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/terraform"
+	"gocloud.dev/mysql"
 )
-
-func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
-	ctx := context.Background()
-	_, _, err := Open(ctx, nil, &Params{})
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-}
-
-func TestTraceOptionsCanBeGiven(t *testing.T) {
-	ctx := context.Background()
-	_, _, err := Open(ctx, nil, &Params{TraceOpts: []ocsql.TraceOption{ocsql.WithAllTraceOptions()}})
-	if err != nil {
-		t.Errorf("%v", err)
-	}
-}
 
 func TestOpen(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
@@ -62,23 +46,9 @@ func TestOpen(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client, err := gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
-	if err != nil {
-		t.Fatal(err)
-	}
-	certSource := NewCertSource(client)
-	db, _, err := Open(ctx, certSource, &Params{
-		ProjectID: project,
-		Region:    region,
-		Instance:  instance,
-		User:      username,
-		Password:  password,
-		Database:  databaseName,
-	})
+	urlstr := fmt.Sprintf("cloudmysql://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName)
+	t.Log("Connecting to", urlstr)
+	db, err := mysql.Open(ctx, urlstr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,5 +57,76 @@ func TestOpen(t *testing.T) {
 	}
 	if err := db.Close(); err != nil {
 		t.Error("Close:", err)
+	}
+}
+
+func TestInstanceFromURL(t *testing.T) {
+	tests := []struct {
+		name         string
+		urlString    string
+		wantInstance string
+		wantDatabase string
+		wantErr      bool
+	}{
+		{
+			name:         "AllValuesSpecified",
+			urlString:    "cloudmysql://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
+			wantInstance: "my-project-id:us-central1:my-instance-id",
+			wantDatabase: "my-db",
+		},
+		{
+			name:         "OptionalValuesOmitted",
+			urlString:    "cloudmysql://my-project-id/us-central1/my-instance-id/my-db",
+			wantInstance: "my-project-id:us-central1:my-instance-id",
+			wantDatabase: "my-db",
+		},
+		{
+			name:      "DatabaseNameEmpty",
+			urlString: "cloudmysql://my-project-id/us-central1/my-instance-id/",
+			wantErr:   true,
+		},
+		{
+			name:      "InstanceEmpty",
+			urlString: "cloudmysql://my-project-id/us-central1//my-db",
+			wantErr:   true,
+		},
+		{
+			name:      "RegionEmpty",
+			urlString: "cloudmysql://my-project-id//my-instance-id/my-db",
+			wantErr:   true,
+		},
+		{
+			name:      "ProjectEmpty",
+			urlString: "cloudmysql:///us-central1/my-instance-id/my-db",
+			wantErr:   true,
+		},
+		{
+			name:         "DatabaseNameWithSlashes",
+			urlString:    "cloudmysql://my-project-id/us-central1/my-instance-id/foo/bar/baz",
+			wantInstance: "my-project-id:us-central1:my-instance-id",
+			wantDatabase: "foo/bar/baz",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			u, err := url.Parse(test.urlString)
+			if err != nil {
+				t.Fatalf("failed to parse URL %q: %v", test.urlString, err)
+			}
+			instance, database, err := instanceFromURL(u)
+			if err != nil {
+				t.Logf("instanceFromURL(url.Parse(%q)): %v", u, err)
+				if !test.wantErr {
+					t.Fail()
+				}
+				return
+			}
+			if test.wantErr {
+				t.Fatalf("instanceFromURL(url.Parse(%q)) = %q, %q, <nil>; want error", test.urlString, instance, database)
+			}
+			if instance != test.wantInstance || database != test.wantDatabase {
+				t.Errorf("instanceFromURL(url.Parse(%q)) = %q, %q, <nil>; want %q, %q, <nil>", test.urlString, instance, database, test.wantInstance, test.wantDatabase)
+			}
+		})
 	}
 }

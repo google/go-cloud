@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rdsmysql_test
+module gocloud.dev/docstore/mongodocstore
 
-import (
-	"context"
-	"log"
-
-	"gocloud.dev/mysql"
-	_ "gocloud.dev/mysql/rdsmysql"
+require (
+	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/golang/snappy v0.0.1 // indirect
+	github.com/google/go-cmp v0.3.0
+	github.com/tidwall/pretty v1.0.0 // indirect
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
+	github.com/xdg/stringprep v1.0.0 // indirect
+	go.mongodb.org/mongo-driver v1.0.3
+	gocloud.dev v0.15.0
 )
 
-func Example() {
-	ctx := context.Background()
-	// Replace these with your actual settings.
-	db, err := mysql.Open(ctx,
-		"rdsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	// Use database in your program.
-	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
-}
+replace gocloud.dev => ../../

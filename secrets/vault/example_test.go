@@ -24,11 +24,16 @@ import (
 )
 
 func ExampleOpenKeeper() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault-ctor
+
+	// import _ "gocloud.dev/secrets/vault"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
 
 	// Get a client to use with the Vault API.
-	ctx := context.Background()
 	client, err := vault.Dial(ctx, &vault.Config{
-		Token: "<Client (Root) Token>",
+		Token: "CLIENT_TOKEN",
 		APIConfig: api.Config{
 			Address: "http://127.0.0.1:8200",
 		},
@@ -40,26 +45,16 @@ func ExampleOpenKeeper() {
 	// Construct a *secrets.Keeper.
 	keeper := vault.OpenKeeper(client, "my-key", nil)
 	defer keeper.Close()
-
-	// Now we can use keeper to encrypt or decrypt.
-	plaintext := []byte("Hello, Secrets!")
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = decrypted
 }
 
 func Example_openFromURL() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault
+
+	// import _ "gocloud.dev/secrets/vault"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
-	// The default opener dials a default Vault server based on the environment
-	// variables VAULT_SERVER_URL and VAULT_SERVER_TOKEN.
 	keeper, err := secrets.OpenKeeper(ctx, "vault://mykey")
 	if err != nil {
 		log.Fatal(err)

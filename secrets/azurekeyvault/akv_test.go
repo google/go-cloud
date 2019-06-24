@@ -35,13 +35,18 @@ import (
 //
 // 1. Sign-in to your Azure Subscription at http://portal.azure.com.
 //
-// 2. Create a KeyVault, see https://docs.microsoft.com/en-us/azure/key-vault/quick-create-portal.
+// 2. Create a KeyVault, see
+// https://docs.microsoft.com/en-us/azure/key-vault/quick-create-portal.
 //
-// 3. Choose an authentication model. This test uses Service Principal, see https://docs.microsoft.com/en-us/rest/api/azure/index#register-your-client-application-with-azure-ad.
-// For documentation on acceptable auth models, see https://docs.microsoft.com/en-us/azure/key-vault/key-vault-whatis.
+// 3. Choose an authentication model. This test uses Service Principal, see
+// https://docs.microsoft.com/en-us/rest/api/azure/index#register-your-client-application-with-azure-ad.
+// For documentation on acceptable auth models, see
+// https://docs.microsoft.com/en-us/azure/key-vault/key-vault-whatis.
 //
-// 4. Set your environment variables depending on the auth model selection. Modify helper initEnv() as needed.
-// For Service Principal, please set the following, see https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization.
+// 4. Set your environment variables depending on the auth model selection.
+// Modify helper initEnv() as needed.
+// For Service Principal, please set the following, see
+// https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization.
 //
 // - AZURE_TENANT_ID: Go to "Azure Active Directory", then "Properties". The
 //     "Directory ID" property is your AZURE_TENANT_ID.
