@@ -87,7 +87,7 @@ variables `VAULT_SERVER_URL` and `VAULT_SERVER_TOKEN`, respectively.
 
 ### HashiCorp Vault Constructor {#vault-ctor}
 
-The [`vaultsecrests.OpenKeeper`][] constructor opens a transit secrets engine
+The [`hashivault.OpenKeeper`][] constructor opens a transit secrets engine
 key. You must first connect to your Vault instance.
 
 {{< goexample "gocloud.dev/secrets/hashivault.ExampleOpenKeeper" >}}
