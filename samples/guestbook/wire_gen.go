@@ -9,6 +9,7 @@ import (
 	"context"
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"database/sql"
+	"fmt"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -36,6 +37,7 @@ import (
 	"gocloud.dev/server/xrayserver"
 	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"net/http"
+	"net/url"
 )
 
 // Injectors from inject_aws.go:
@@ -45,8 +47,10 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	certFetcher := &rds.CertFetcher{
 		Client: client,
 	}
-	params := awsSQLParams(flags)
-	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params)
+	urlOpener := &rdsmysql.URLOpener{
+		CertSource: certFetcher,
+	}
+	db, cleanup, err := openAWSDatabase(ctx, urlOpener, flags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -172,12 +176,14 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		return nil, nil, err
 	}
 	remoteCertSource := cloudsql.NewCertSource(httpClient)
+	urlOpener := &cloudmysql.URLOpener{
+		CertSource: remoteCertSource,
+	}
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		return nil, nil, err
 	}
-	params := gcpSQLParams(projectID, flags)
-	db, cleanup, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	db, cleanup, err := openGCPDatabase(ctx, urlOpener, projectID, flags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -286,16 +292,19 @@ func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (
 	return b, func() { b.Close() }, nil
 }
 
-// awsSQLParams is a Wire provider function that returns the RDS SQL connection
-// parameters based on the command-line flags. Other providers inside
-// awscloud.AWS use the parameters to construct a *sql.DB.
-func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
-	return &rdsmysql.Params{
-		Endpoint: flags.dbHost,
-		Database: flags.dbName,
-		User:     flags.dbUser,
-		Password: flags.dbPassword,
+// openAWSDatabase is a Wire provider function that connects to RDS based on
+// the command-line flags.
+func openAWSDatabase(ctx context.Context, opener *rdsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
+	db, err := opener.OpenMySQLURL(ctx, &url.URL{
+		Scheme: "rdsmysql",
+		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
+		Host:   flags.dbHost,
+		Path:   "/" + flags.dbName,
+	})
+	if err != nil {
+		return nil, nil, err
 	}
+	return db, func() { db.Close() }, nil
 }
 
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
@@ -338,18 +347,19 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*
 	return b, func() { b.Close() }, nil
 }
 
-// gcpSQLParams is a Wire provider function that returns the Cloud SQL
-// connection parameters based on the command-line flags. Other providers inside
-// gcpcloud.GCP use the parameters to construct a *sql.DB.
-func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
-	return &cloudmysql.Params{
-		ProjectID: string(id),
-		Region:    flags.cloudSQLRegion,
-		Instance:  flags.dbHost,
-		Database:  flags.dbName,
-		User:      flags.dbUser,
-		Password:  flags.dbPassword,
+// openGCPDatabase is a Wire provider function that connects to Cloud SQL
+// based on the command-line flags.
+func openGCPDatabase(ctx context.Context, opener *cloudmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
+	db, err := opener.OpenMySQLURL(ctx, &url.URL{
+		Scheme: "cloudmysql",
+		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
+		Host:   string(id),
+		Path:   fmt.Sprintf("/%s/%s/%s", flags.cloudSQLRegion, flags.dbHost, flags.dbName),
+	})
+	if err != nil {
+		return nil, nil, err
 	}
+	return db, func() { db.Close() }, nil
 }
 
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day

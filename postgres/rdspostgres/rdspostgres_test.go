@@ -17,16 +17,13 @@ package rdspostgres
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 	"testing"
 
-	"gocloud.dev/aws/rds"
 	"gocloud.dev/internal/testing/terraform"
 	"gocloud.dev/postgres"
 )
 
-func TestOpen(t *testing.T) {
+func TestURLOpener(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
 	// Before running go test, run in this directory:
 	//
@@ -44,46 +41,6 @@ func TestOpen(t *testing.T) {
 	if endpoint == "" || username == "" || databaseName == "" {
 		t.Fatalf("Missing one or more required Terraform outputs; got endpoint=%q username=%q database=%q", endpoint, username, databaseName)
 	}
-
-	ctx := context.Background()
-	cf := new(rds.CertFetcher)
-	db, _, err := Open(ctx, cf, &Params{
-		Endpoint: endpoint,
-		User:     username,
-		Password: password,
-		Database: databaseName,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.Ping(); err != nil {
-		t.Error("Ping:", err)
-	}
-	if err := db.Close(); err != nil {
-		t.Error("Close:", err)
-	}
-}
-
-func TestOpenWithURL(t *testing.T) {
-	// This test will be skipped unless the project is set up with Terraform.
-	// Before running go test, run in this directory:
-	//
-	// terraform init
-	// terraform apply
-
-	tfOut, err := terraform.ReadOutput(".")
-	if err != nil || len(tfOut) == 0 {
-		t.Skipf("Could not obtain harness info: %v", err)
-	}
-	endpoint, _ := tfOut["endpoint"].Value.(string)
-	username, _ := tfOut["username"].Value.(string)
-	password, _ := tfOut["password"].Value.(string)
-	databaseName, _ := tfOut["database"].Value.(string)
-	if endpoint == "" || username == "" || databaseName == "" {
-		t.Fatalf("Missing one or more required Terraform outputs; got endpoint=%q username=%q database=%q", endpoint, username, databaseName)
-	}
-
-	ctx := context.Background()
 
 	tests := []struct {
 		urlstr      string
@@ -104,6 +61,7 @@ func TestOpenWithURL(t *testing.T) {
 		{fmt.Sprintf("rdspostgres://%s:%s@%s/wrongdbname", username, password, endpoint), false, true},
 		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?foo=bar", username, password, endpoint, databaseName), false, true},
 	}
+	ctx := context.Background()
 	for _, test := range tests {
 		t.Run(test.urlstr, func(t *testing.T) {
 			db, err := postgres.Open(ctx, test.urlstr)
@@ -121,50 +79,6 @@ func TestOpenWithURL(t *testing.T) {
 			err = db.Ping()
 			if err != nil != test.wantPingErr {
 				t.Errorf("ping got err %v, wanted error? %v", err, test.wantPingErr)
-			}
-		})
-	}
-}
-
-func TestOpenBadValues(t *testing.T) {
-	// This test will be skipped unless the project is set up with Terraform.
-
-	tfOut, err := terraform.ReadOutput(".")
-	if err != nil || len(tfOut) == 0 {
-		t.Skipf("Could not obtain harness info: %v", err)
-	}
-	endpoint, _ := tfOut["endpoint"].Value.(string)
-	username, _ := tfOut["username"].Value.(string)
-	password, _ := tfOut["password"].Value.(string)
-	databaseName, _ := tfOut["database"].Value.(string)
-	if endpoint == "" || username == "" || databaseName == "" {
-		t.Fatalf("Missing one or more required Terraform outputs; got endpoint=%q username=%q database=%q", endpoint, username, databaseName)
-	}
-
-	ctx := context.Background()
-	cf := new(rds.CertFetcher)
-	tests := []struct {
-		name, value string
-	}{
-		{"sslmode", "require"},
-		{"sslcert", "foo"},
-		{"sslkey", "foo"},
-		{"sslrootcert", "foo"},
-	}
-	for _, test := range tests {
-		t.Run(test.name+"="+test.value, func(t *testing.T) {
-			db, _, err := Open(ctx, cf, &Params{
-				Endpoint: endpoint,
-				User:     username,
-				Password: password,
-				Database: databaseName,
-				Values:   url.Values{test.name: {test.value}},
-			})
-			if err == nil || !strings.Contains(err.Error(), test.name) {
-				t.Errorf("error = %v; want to contain %q", err, test.name)
-			}
-			if db != nil {
-				db.Close()
 			}
 		})
 	}

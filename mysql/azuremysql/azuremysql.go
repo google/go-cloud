@@ -14,6 +14,14 @@
 
 // Package azuremysql provides connections to Azure Database for MySQL.
 // See https://docs.microsoft.com/en-us/azure/mysql.
+//
+// URLs
+//
+// For mysql.Open, azuremysql registers for the scheme "azuremysql".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+//
+// See https://gocloud.dev/concepts/urls/ for background information.
 package azuremysql // import "gocloud.dev/mysql/azuremysql"
 
 import (
@@ -22,67 +30,66 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"net/url"
+	"strings"
+	"sync"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
-
 	"gocloud.dev/azure/azuredb"
+	cdkmysql "gocloud.dev/mysql"
 )
 
-const (
-	defaultPort    = 3306
-	endpointSuffix = "mysql.database.azure.com"
-)
-
-// Params specifies how to connect to an Azure Database for MySQL.
-type Params struct {
-	// ServerName is the MYSQL instance name without domain suffix. Example: gocloud
-	ServerName string
-	// User is the database user to connect as.
-	User string
-	// Password is the database user password to use.
-	Password string
-	// Database is the MYSQL database name to connect to.
-	Database string
+// URLOpener opens Azure MySQL URLs
+// like "azuremysql://user:password@myinstance.mysql.database.azure.com/mydb".
+type URLOpener struct {
+	// CertSource specifies how the opener will obtain the Azure Certificate
+	// Authority. If nil, it will use the default *azuredb.CertFetcher.
+	CertSource azuredb.CertPoolProvider
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
 
-// GetFQDN constructs the FQDN for Azure Database for MySQL.
-func (p *Params) GetFQDN() string {
-	fqdn := fmt.Sprintf("%s.%s:%v", p.ServerName, endpointSuffix, defaultPort)
-	return fqdn
+// Scheme is the URL scheme azuremysql registers its URLOpener under on
+// mysql.DefaultMux.
+const Scheme = "azuremysql"
+
+func init() {
+	cdkmysql.DefaultURLMux().RegisterMySQL(Scheme, &URLOpener{})
 }
 
-// Validate ensures all required parameters are set.
-func (p *Params) Validate() error {
-	if p.ServerName == "" || p.User == "" || p.Database == "" {
-		return fmt.Errorf("Missing one or more required params; got servername=%q username=%q database=%q", p.ServerName, p.User, p.Database)
+// OpenMySQLURL opens an encrypted connection to an Azure MySQL database.
+func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	source := uo.CertSource
+	if source == nil {
+		source = new(azuredb.CertFetcher)
 	}
-	return nil
-}
-
-// Open opens an encrypted connection to an Azure Database for MySql database.
-func Open(ctx context.Context, cp CertPoolProvider, params *Params) (*sql.DB, func(), error) {
-	if e := params.Validate(); e != nil {
-		return nil, nil, e
+	if u.Host == "" {
+		return nil, fmt.Errorf("open Azure database: empty endpoint")
 	}
+	password, _ := u.User.Password()
 	c := &connector{
-		provider: cp,
-		params:   *params,
-		sem:      make(chan struct{}, 1),
-		ready:    make(chan struct{}),
+		addr:     u.Host,
+		user:     u.User.Username(),
+		password: password,
+		dbName:   strings.TrimPrefix(u.Path, "/"),
+		// Make a copy of TraceOpts to avoid caller modifying.
+		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
+		provider:  source,
+
+		sem:   make(chan struct{}, 1),
+		ready: make(chan struct{}),
 	}
 	c.sem <- struct{}{}
-	// Make a copy of TraceOpts to avoid caller modifying.
-	c.params.TraceOpts = append([]ocsql.TraceOption(nil), c.params.TraceOpts...)
-
-	db := sql.OpenDB(c)
-	return db, func() { db.Close() }, nil
+	return sql.OpenDB(c), nil
 }
 
 type connector struct {
-	params Params
+	addr      string
+	user      string
+	password  string
+	dbName    string
+	traceOpts []ocsql.TraceOption
 
 	sem      chan struct{}    // receive to acquire, send to release
 	provider CertPoolProvider // provides the CA certificate pool
@@ -94,13 +101,18 @@ type connector struct {
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	select {
 	case <-c.sem:
-		certPool, err := c.provider.GetCertPool(ctx)
+		certPool, err := c.provider.AzureCertPool(ctx)
 		if err != nil {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect Azure MySql: %v", err)
 		}
 
-		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/azuresql/%s", c.params.ServerName)
+		// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
+		tlsConfigCounter.mu.Lock()
+		tlsConfigNum := tlsConfigCounter.n
+		tlsConfigCounter.n++
+		tlsConfigCounter.mu.Unlock()
+		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/rdsmysql/%d", tlsConfigNum)
 		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
 			RootCAs: certPool,
 		})
@@ -110,13 +122,13 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		}
 		cfg := &mysql.Config{
 			Net:                     "tcp",
-			Addr:                    c.params.GetFQDN(),
-			User:                    c.params.User,
-			Passwd:                  c.params.Password,
+			Addr:                    c.addr,
+			User:                    c.user,
+			Passwd:                  c.password,
 			TLSConfig:               tlsConfigName,
 			AllowCleartextPasswords: true,
 			AllowNativePasswords:    true,
-			DBName:                  c.params.Database,
+			DBName:                  c.dbName,
 		}
 		c.dsn = cfg.FormatDSN()
 		close(c.ready)
@@ -130,7 +142,12 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c *connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.params.TraceOpts...)
+	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+}
+
+var tlsConfigCounter struct {
+	mu sync.Mutex
+	n  int
 }
 
 // A CertPoolProvider obtains a certificate pool that contains the Azure CA certificate.
@@ -138,4 +155,4 @@ type CertPoolProvider = azuredb.CertPoolProvider
 
 // CertFetcher is a default CertPoolProvider that can fetch CA certificates from
 // any publicly accessible URI or File.
-type CertFetcher = azuredb.AzureCertFetcher
+type CertFetcher = azuredb.CertFetcher

@@ -39,9 +39,9 @@ var Set = wire.NewSet(
 	server.Set,
 	NewExporter,
 	monitoredresource.Autodetect,
-	wire.Bind((*trace.Exporter)(nil), (*stackdriver.Exporter)(nil)),
+	wire.Bind(new(trace.Exporter), new(*stackdriver.Exporter)),
 	NewRequestLogger,
-	wire.Bind((*requestlog.Logger)(nil), (*requestlog.StackdriverLogger)(nil)),
+	wire.Bind(new(requestlog.Logger), new(*requestlog.StackdriverLogger)),
 )
 
 // NewExporter returns a new OpenCensus Stackdriver exporter.

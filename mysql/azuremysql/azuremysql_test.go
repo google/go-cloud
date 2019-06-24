@@ -21,13 +21,14 @@ package azuremysql
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
-	"gocloud.dev/azure/azuredb"
 	"gocloud.dev/internal/testing/terraform"
+	"gocloud.dev/mysql"
 )
 
-func TestOpen(t *testing.T) {
+func TestURLOpener(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
 	// Before running go test:
 	//
@@ -47,15 +48,7 @@ func TestOpen(t *testing.T) {
 	databaseName, _ := tfOut["database"].Value.(string)
 
 	ctx := context.Background()
-	acp, _ := azuredb.NewAzureCertFetcherWithDefault()
-	p := &Params{
-		ServerName: serverName,
-		User:       username,
-		Password:   password,
-		Database:   databaseName,
-	}
-
-	db, _, err := Open(ctx, acp, p)
+	db, err := mysql.Open(ctx, fmt.Sprintf("azuremysql://%s:%s@%s/%s", username, password, serverName, databaseName))
 	if err != nil {
 		t.Fatal(err)
 	}

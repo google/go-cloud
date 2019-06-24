@@ -27,7 +27,7 @@ import (
 // certificate source from an GCP-authenticated HTTP client.
 var CertSourceSet = wire.NewSet(
 	NewCertSource,
-	wire.Bind((*proxy.CertSource)(nil), (*certs.RemoteCertSource)(nil)))
+	wire.Bind(new(proxy.CertSource), new(*certs.RemoteCertSource)))
 
 // NewCertSource creates a local certificate source that uses the given
 // HTTP client. The client is assumed to make authenticated requests.

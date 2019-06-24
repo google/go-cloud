@@ -244,42 +244,131 @@ const AlternateRevisionField = "Etag"
 
 type docmap = map[string]interface{}
 
+func newDoc(doc interface{}) interface{} {
+	switch v := doc.(type) {
+	case docmap:
+		return docmap{KeyField: v[KeyField]}
+	case *docstruct:
+		return &docstruct{Name: v.Name}
+	}
+	return nil
+}
+
+func key(doc interface{}) interface{} {
+	switch d := doc.(type) {
+	case docmap:
+		return d[KeyField]
+	case *docstruct:
+		return d.Name
+	}
+	return nil
+}
+
+func setKey(doc, key interface{}) {
+	switch d := doc.(type) {
+	case docmap:
+		d[KeyField] = key
+	case *docstruct:
+		d.Name = key
+	}
+}
+
+func revision(doc interface{}, revField string) interface{} {
+	switch d := doc.(type) {
+	case docmap:
+		return d[revField]
+	case *docstruct:
+		if revField == docstore.DefaultRevisionField {
+			return d.DocstoreRevision
+		}
+		return d.Etag
+	}
+	return nil
+}
+
+func setRevision(doc, rev interface{}, revField string) {
+	switch d := doc.(type) {
+	case docmap:
+		d[revField] = rev
+	case *docstruct:
+		if revField == docstore.DefaultRevisionField {
+			d.DocstoreRevision = rev
+		} else {
+			d.Etag = rev
+		}
+	}
+}
+
+type docstruct struct {
+	Name             interface{} `docstore:"name"`
+	DocstoreRevision interface{}
+	Etag             interface{}
+
+	I  int                    `docstore:"i"`
+	U  uint                   `docstore:"u"`
+	F  float64                `docstore:"f"`
+	St string                 `docstore:"st"`
+	B  bool                   `docstore:"b"`
+	M  map[string]interface{} `docstore:"m"`
+}
+
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
 
-// TODO(jba): test structs
 func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
-	named := docmap{KeyField: "testCreate1", "b": true}
-	unnamed := docmap{"b": false}
-	createThenGet := func(doc docmap) {
-		t.Helper()
-		checkNoRevisionField(t, doc, revField)
-		if err := coll.Create(ctx, doc); err != nil {
-			t.Fatalf("Create: %v", err)
-		}
-		checkHasRevisionField(t, doc, revField)
-		got := docmap{KeyField: doc[KeyField]}
-		if err := coll.Get(ctx, got); err != nil {
-			t.Fatalf("Get: %v", err)
-		}
-		if diff := cmpDiff(got, doc); diff != "" {
-			t.Fatal(diff)
-		}
+	for _, tc := range []struct {
+		name    string
+		doc     interface{}
+		wantErr gcerrors.ErrorCode
+	}{
+		{
+			name: "named map",
+			doc:  docmap{KeyField: "testCreateMap", "b": true},
+		},
+		{
+			name:    "existing",
+			doc:     docmap{KeyField: "testCreateMap"},
+			wantErr: gcerrors.AlreadyExists,
+		},
+		{
+			name: "unnamed map",
+			doc:  docmap{"b": true},
+		},
+		{
+			name: "named struct",
+			doc:  &docstruct{Name: "testCreateStruct", B: true},
+		},
+		{
+			name: "unnamed struct",
+			doc:  &docstruct{B: true},
+		},
+		{
+			name:    "with revision",
+			doc:     docmap{KeyField: "testCreate2", revField: 0},
+			wantErr: gcerrors.InvalidArgument,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.wantErr == gcerrors.OK {
+				checkNoRevisionField(t, tc.doc, revField)
+				if err := coll.Create(ctx, tc.doc); err != nil {
+					t.Fatalf("Create: %v", err)
+				}
+				checkHasRevisionField(t, tc.doc, revField)
+
+				got := newDoc(tc.doc)
+				if err := coll.Get(ctx, got); err != nil {
+					t.Fatalf("Get: %v", err)
+				}
+				if diff := cmpDiff(got, tc.doc); diff != "" {
+					t.Fatal(diff)
+				}
+			} else {
+				err := coll.Create(ctx, tc.doc)
+				checkCode(t, err, tc.wantErr)
+			}
+		})
 	}
-
-	createThenGet(named)
-	createThenGet(unnamed)
-	if unnamed[KeyField] == nil {
-		t.Error("unnamed[KeyField]: got nil, want a generated key")
-	}
-
-	// Can't create an existing doc.
-	err := coll.Create(ctx, docmap{KeyField: named[KeyField]})
-	checkCode(t, err, gcerrors.AlreadyExists)
-
-	// Can't create a doc with a revision field.
-	err = coll.Create(ctx, docmap{KeyField: "testCreate2", revField: 0})
-	checkCode(t, err, gcerrors.InvalidArgument)
 }
 
 func testPut(t *testing.T, coll *ds.Collection, revField string) {
@@ -290,39 +379,82 @@ func testPut(t *testing.T, coll *ds.Collection, revField string) {
 			t.Fatal(err)
 		}
 	}
+	var maprev, strmap interface{}
 
-	named := docmap{KeyField: "testPut1", "b": true}
-	// Create a new doc.
-	checkNoRevisionField(t, named, revField)
-	must(coll.Put(ctx, named))
-	checkHasRevisionField(t, named, revField)
-	got := docmap{KeyField: named[KeyField]}
-	must(coll.Get(ctx, got))
-	if diff := cmpDiff(got, named); diff != "" {
-		t.Fatalf(diff)
+	for _, tc := range []struct {
+		name string
+		doc  interface{}
+		rev  bool
+	}{
+		{
+			name: "create map",
+			doc:  docmap{KeyField: "testPutMap", "b": true},
+		},
+		{
+			name: "create struct",
+			doc:  &docstruct{Name: "testPutStruct", B: true},
+		},
+		{
+			name: "replace map",
+			doc:  docmap{KeyField: "testPutMap", "b": false},
+			rev:  true,
+		},
+		{
+			name: "replace struct",
+			doc:  &docstruct{Name: "testPutStruct", B: false},
+			rev:  true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			checkNoRevisionField(t, tc.doc, revField)
+			must(coll.Put(ctx, tc.doc))
+			checkHasRevisionField(t, tc.doc, revField)
+			got := newDoc(tc.doc)
+			must(coll.Get(ctx, got))
+			if diff := cmpDiff(got, tc.doc); diff != "" {
+				t.Fatalf(diff)
+			}
+			if tc.rev {
+				switch v := tc.doc.(type) {
+				case docmap:
+					maprev = v[revField]
+				case *docstruct:
+					if revField == docstore.DefaultRevisionField {
+						strmap = v.DocstoreRevision
+					} else {
+						strmap = v.Etag
+					}
+				}
+			}
+		})
 	}
 
-	// Replace an existing doc.
-	named["b"] = false
-	named[revField] = nil
-	checkNoRevisionField(t, named, revField)
-	must(coll.Put(ctx, named))
-	checkHasRevisionField(t, named, revField)
-	rev := named[revField]
-	must(coll.Get(ctx, got))
-	if diff := cmpDiff(got, named); diff != "" {
-		t.Fatalf(diff)
-	}
-
-	// Putting a doc with a revision field is the same as Replace, meaning
+	// Putting a doc with a revision field is the same as replace, meaning
 	// it will fail if the document doesn't exist.
-	err := coll.Put(ctx, docmap{KeyField: "testPut2", revField: rev})
-	if c := gcerrors.Code(err); c != gcerrors.NotFound && c != gcerrors.FailedPrecondition {
-		t.Errorf("got %v, want NotFound or FailedPrecondition", err)
+	for _, tc := range []struct {
+		name string
+		doc  interface{}
+	}{
+		{
+			name: "replace map wrong key",
+			doc:  docmap{KeyField: "testPutMap2", revField: maprev},
+		},
+		{
+			name: "replace struct wrong key",
+			doc:  &docstruct{Name: "testPutStruct2", DocstoreRevision: strmap, Etag: strmap},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := coll.Put(ctx, tc.doc)
+			if c := gcerrors.Code(err); c != gcerrors.NotFound && c != gcerrors.FailedPrecondition {
+				t.Errorf("got %v, want NotFound or FailedPrecondition", err)
+			}
+		})
 	}
+
 	t.Run("revision", func(t *testing.T) {
-		testRevisionField(t, coll, revField, func(dm docmap) error {
-			return coll.Put(ctx, dm)
+		testRevisionField(t, coll, revField, func(doc interface{}) error {
+			return coll.Put(ctx, doc)
 		})
 	})
 }
@@ -336,27 +468,42 @@ func testReplace(t *testing.T, coll *ds.Collection, revField string) {
 		}
 	}
 
-	doc1 := docmap{KeyField: "testReplace", "s": "a"}
-	must(coll.Put(ctx, doc1))
-	doc1["s"] = "b"
-	doc1[revField] = nil
-	checkNoRevisionField(t, doc1, revField)
-	must(coll.Replace(ctx, doc1))
-	checkHasRevisionField(t, doc1, revField)
-	got := docmap{KeyField: doc1[KeyField]}
-	must(coll.Get(ctx, got))
-	if diff := cmpDiff(got, doc1); diff != "" {
-		t.Fatalf(diff)
+	for _, tc := range []struct {
+		name       string
+		doc1, doc2 interface{}
+	}{
+		{
+			name: "replace map",
+			doc1: docmap{KeyField: "testReplaceMap", "s": "a"},
+			doc2: docmap{KeyField: "testReplaceMap", "s": "b"},
+		},
+		{
+			name: "replace struct",
+			doc1: &docstruct{Name: "testReplaceStruct", St: "a"},
+			doc2: &docstruct{Name: "testReplaceStruct", St: "b"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			must(coll.Put(ctx, tc.doc1))
+			checkNoRevisionField(t, tc.doc2, revField)
+			must(coll.Replace(ctx, tc.doc2))
+			checkHasRevisionField(t, tc.doc2, revField)
+			got := newDoc(tc.doc2)
+			must(coll.Get(ctx, got))
+			if diff := cmpDiff(got, tc.doc2); diff != "" {
+				t.Fatalf(diff)
+			}
+		})
 	}
+
 	// Can't replace a nonexistent doc.
 	checkCode(t, coll.Replace(ctx, nonexistentDoc()), gcerrors.NotFound)
 
 	t.Run("revision", func(t *testing.T) {
-		testRevisionField(t, coll, revField, func(dm docmap) error {
-			return coll.Replace(ctx, dm)
+		testRevisionField(t, coll, revField, func(doc interface{}) error {
+			return coll.Replace(ctx, doc)
 		})
 	})
-
 }
 
 // Check that doc does not have a revision field (or has a nil one).
@@ -392,32 +539,79 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 		}
 	}
 
-	doc := docmap{
-		KeyField: "testGet1",
-		"s":      "a string",
-		"i":      int64(95),
-		"f":      32.3,
-		"m":      map[string]interface{}{"a": "one", "b": "two"},
-	}
-	must(coll.Put(ctx, doc))
-	// If Get is called with no field paths, the full document is populated.
-	got := docmap{KeyField: doc[KeyField]}
-	must(coll.Get(ctx, got))
-	if diff := cmpDiff(got, doc); diff != "" {
-		t.Error(diff)
-	}
-
-	// If Get is called with field paths, the resulting document has only those fields.
-	got = docmap{KeyField: doc[KeyField]}
-	must(coll.Get(ctx, got, "f", "m.b"))
-	want := docmap{
-		KeyField: doc[KeyField],
-		"f":      32.3,
-		"m":      docmap{"b": "two"},
-		revField: doc[revField],
-	}
-	if diff := cmpDiff(got, want); diff != "" {
-		t.Error("Get with field paths:\n", diff)
+	for _, tc := range []struct {
+		name string
+		doc  interface{}
+		fps  []docstore.FieldPath
+		want interface{}
+	}{
+		// If Get is called with no field paths, the full document is populated.
+		{
+			name: "get map",
+			doc: docmap{
+				KeyField: "testGetMap",
+				"s":      "a string",
+				"i":      int64(95),
+				"f":      32.3,
+				"m":      map[string]interface{}{"a": "one", "b": "two"},
+			},
+		},
+		{
+			name: "get struct",
+			doc: &docstruct{
+				Name: "testGetStruct",
+				St:   "a string",
+				I:    95,
+				F:    32.3,
+				M:    map[string]interface{}{"a": "one", "b": "two"},
+			},
+		},
+		// If Get is called with field paths, the resulting document has only those fields.
+		{
+			name: "get map with field path",
+			doc: docmap{
+				KeyField: "testGetMapFP",
+				"s":      "a string",
+				"i":      int64(95),
+				"f":      32.3,
+				"m":      map[string]interface{}{"a": "one", "b": "two"},
+			},
+			fps: []docstore.FieldPath{"f", "m.b"},
+			want: docmap{
+				KeyField: "testGetMapFP",
+				"f":      32.3,
+				"m":      map[string]interface{}{"b": "two"},
+			},
+		},
+		{
+			name: "get struct with field path",
+			doc: &docstruct{
+				Name: "testGetStruct",
+				St:   "a string",
+				I:    95,
+				F:    32.3,
+				M:    map[string]interface{}{"a": "one", "b": "two"},
+			},
+			fps: []docstore.FieldPath{"st", "m.a"},
+			want: &docstruct{
+				Name: "testGetStruct",
+				St:   "a string",
+				M:    map[string]interface{}{"a": "one"},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			must(coll.Put(ctx, tc.doc))
+			got := newDoc(tc.doc)
+			must(coll.Get(ctx, got, tc.fps...))
+			if tc.want == nil {
+				tc.want = tc.doc
+			}
+			setRevision(tc.want, revision(got, revField), revField)
+			if diff := cmpDiff(got, tc.want); diff != "" {
+				t.Error("Get with field paths:\n", diff)
+			}
+		})
 	}
 
 	err := coll.Get(ctx, nonexistentDoc())
@@ -426,68 +620,108 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 
 func testDelete(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
-	doc := docmap{KeyField: "testDelete"}
-	if err := coll.Put(ctx, doc); err != nil {
-		t.Fatal(err)
-	}
-	if errs := coll.Actions().Delete(doc).Do(ctx); errs != nil {
-		t.Fatal(errs)
-	}
-	// The document should no longer exist.
-	if err := coll.Get(ctx, doc); err == nil {
-		t.Error("want error, got nil")
+	var rev interface{}
+
+	for _, tc := range []struct {
+		name    string
+		doc     interface{}
+		wantErr gcerrors.ErrorCode
+	}{
+		{
+			name: "delete map",
+			doc:  docmap{KeyField: "testDeleteMap"},
+		},
+		{
+			name:    "delete map wrong rev",
+			doc:     docmap{KeyField: "testDeleteMap", "b": true},
+			wantErr: gcerrors.FailedPrecondition,
+		},
+		{
+			name: "delete struct",
+			doc:  &docstruct{Name: "testDeleteStruct"},
+		},
+		{
+			name:    "delete struct wrong rev",
+			doc:     &docstruct{Name: "testDeleteStruct", B: true},
+			wantErr: gcerrors.FailedPrecondition,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := coll.Put(ctx, tc.doc); err != nil {
+				t.Fatal(err)
+			}
+			if tc.wantErr == gcerrors.OK {
+				rev = revision(tc.doc, revField)
+				if err := coll.Delete(ctx, tc.doc); err != nil {
+					t.Fatal(err)
+				}
+				// The document should no longer exist.
+				if err := coll.Get(ctx, tc.doc); err == nil {
+					t.Error("want error, got nil")
+				}
+			} else {
+				setRevision(tc.doc, rev, revField)
+				checkCode(t, coll.Delete(ctx, tc.doc), gcerrors.FailedPrecondition)
+			}
+		})
 	}
 	// Delete doesn't fail if the doc doesn't exist.
 	if err := coll.Delete(ctx, nonexistentDoc()); err != nil {
 		t.Errorf("delete nonexistent doc: want nil, got %v", err)
 	}
-
-	// Delete will fail if the revision field is mismatched.
-	got := docmap{KeyField: doc[KeyField]}
-	doc[revField] = nil
-	if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
-		t.Fatal(errs)
-	}
-	doc["x"] = "y"
-	if err := coll.Put(ctx, doc); err != nil {
-		t.Fatal(err)
-	}
-	checkCode(t, coll.Delete(ctx, got), gcerrors.FailedPrecondition)
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 	// TODO(jba): test an increment-only update.
 	ctx := context.Background()
-	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B", "n": 3.5, "i": 1}
-	if err := coll.Put(ctx, doc); err != nil {
-		t.Fatal(err)
-	}
-	doc[revField] = nil
-	got := docmap{KeyField: doc[KeyField]}
-	checkNoRevisionField(t, doc, revField)
-	errs := coll.Actions().Update(doc, ds.Mods{
-		"a": "X",
-		"b": nil,
-		"c": "C",
-		"n": docstore.Increment(-1),
-		"i": docstore.Increment(2.5), // incrementing an integer with a float works
-		"m": docstore.Increment(3),   // increment of a nonexistent field is like set
-	}).Get(got).Do(ctx)
-	if errs != nil {
-		t.Fatal(errs)
-	}
-	checkHasRevisionField(t, doc, revField)
-	want := docmap{
-		KeyField: doc[KeyField],
-		revField: got[revField],
-		"a":      "X",
-		"c":      "C",
-		"n":      2.5,
-		"i":      3.5,
-		"m":      int64(3),
-	}
-	if !cmp.Equal(got, want) {
-		t.Errorf("got %v, want %v", got, want)
+	for _, tc := range []struct {
+		name string
+		doc  interface{}
+		mods ds.Mods
+		want interface{}
+	}{
+		{
+			name: "update map",
+			doc:  docmap{KeyField: "testUpdateMap", "a": "A", "b": "B", "n": 3.5, "i": 1},
+			mods: ds.Mods{
+				"a": "X",
+				"b": nil,
+				"c": "C",
+				"n": docstore.Increment(-1),
+				"i": docstore.Increment(2.5),
+				"m": docstore.Increment(3),
+			},
+			want: docmap{KeyField: "testUpdateMap", "a": "X", "c": "C", "n": 2.5, "i": 3.5, "m": int64(3)},
+		},
+		{
+			name: "update struct",
+			doc:  &docstruct{Name: "testUpdateStruct", St: "st", I: 1, F: 3.5},
+			mods: ds.Mods{
+				"st": "str",
+				"i":  nil,
+				"u":  docstore.Increment(4),
+				"f":  docstore.Increment(-3),
+			},
+			want: &docstruct{Name: "testUpdateStruct", St: "str", U: 4, F: 0.5},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := coll.Put(ctx, tc.doc); err != nil {
+				t.Fatal(err)
+			}
+			setRevision(tc.doc, nil, revField)
+			got := newDoc(tc.doc)
+			checkNoRevisionField(t, tc.doc, revField)
+			errs := coll.Actions().Update(tc.doc, tc.mods).Get(got).Do(ctx)
+			if errs != nil {
+				t.Fatal(errs)
+			}
+			checkHasRevisionField(t, tc.doc, revField)
+			setRevision(tc.want, revision(got, revField), revField)
+			if diff := cmp.Diff(got, tc.want); diff != "" {
+				t.Error(diff)
+			}
+		})
 	}
 
 	// Can't update a nonexistent doc.
@@ -496,12 +730,12 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 	}
 
 	// Bad increment value.
-	err := coll.Update(ctx, doc, ds.Mods{"x": ds.Increment("3")})
+	err := coll.Update(ctx, docmap{KeyField: "update invalid"}, ds.Mods{"x": ds.Increment("3")})
 	checkCode(t, err, gcerrors.InvalidArgument)
 
 	t.Run("revision", func(t *testing.T) {
-		testRevisionField(t, coll, revField, func(dm docmap) error {
-			return coll.Update(ctx, dm, ds.Mods{"s": "c"})
+		testRevisionField(t, coll, revField, func(doc interface{}) error {
+			return coll.Update(ctx, doc, ds.Mods{"s": "c"})
 		})
 	})
 }
@@ -509,7 +743,7 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 // Test that:
 // - Writing a document with a revision field succeeds if the document hasn't changed.
 // - Writing a document with a revision field fails if the document has changed.
-func testRevisionField(t *testing.T, coll *ds.Collection, revField string, write func(docmap) error) {
+func testRevisionField(t *testing.T, coll *ds.Collection, revField string, write func(interface{}) error) {
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -517,23 +751,37 @@ func testRevisionField(t *testing.T, coll *ds.Collection, revField string, write
 			t.Fatal(err)
 		}
 	}
-	key := "testRevisionField"
-	doc1 := docmap{KeyField: key, "s": "a"}
-	must(coll.Put(ctx, doc1))
-	got := docmap{KeyField: key}
-	must(coll.Get(ctx, got))
-	rev, ok := got[revField]
-	if !ok || rev == nil {
-		t.Fatal("missing revision field")
-	}
-	// A write should succeed, because the document hasn't changed since it was gotten.
-	if err := write(docmap{KeyField: key, "s": "b", revField: rev}); err != nil {
-		t.Fatalf("write with revision field got %v, want nil", err)
-	}
-	// This write should fail: got's revision field hasn't changed, but the stored document has.
-	err := write(got)
-	if c := gcerrors.Code(err); c != gcerrors.FailedPrecondition && c != gcerrors.NotFound {
-		t.Errorf("write with old revision field: got %v, wanted FailedPrecondition or NotFound", err)
+	for _, tc := range []struct {
+		name string
+		doc  interface{}
+	}{
+		{
+			name: "map revision",
+			doc:  docmap{KeyField: "testRevisionMap", "s": "a"},
+		},
+		{
+			name: "struct revision",
+			doc:  &docstruct{Name: "testRevisionStruct", St: "a"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			must(coll.Put(ctx, tc.doc))
+			got := newDoc(tc.doc)
+			must(coll.Get(ctx, got))
+			rev := revision(got, revField)
+			if rev == nil {
+				t.Fatal("missing revision field")
+			}
+			// A write should succeed, because the document hasn't changed since it was gotten.
+			if err := write(tc.doc); err != nil {
+				t.Fatalf("write with revision field got %v, want nil", err)
+			}
+			// This write should fail: got's revision field hasn't changed, but the stored document has.
+			err := write(got)
+			if c := gcerrors.Code(err); c != gcerrors.FailedPrecondition && c != gcerrors.NotFound {
+				t.Errorf("write with old revision field: got %v, wanted FailedPrecondition or NotFound", err)
+			}
+		})
 	}
 }
 
