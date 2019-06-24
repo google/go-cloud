@@ -52,7 +52,7 @@ trap cleanup EXIT
 git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 
 # Run the following checks in the master directory
-ORIG_DIR=$(pwd)
+ORIG_DIR="$(pwd)"
 cd "$MASTER_CLONE_DIR"
 
 incompatible_change_pkgs=()
