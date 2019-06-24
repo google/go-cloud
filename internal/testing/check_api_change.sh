@@ -35,12 +35,11 @@ echo "Checking for incompatible API changes relative to ${UPSTREAM_BRANCH}..."
 
 INSTALL_DIR="$(mktemp -d)"
 MASTER_CLONE_DIR="$(mktemp -d)"
-BRANCH_DIR="$(mktemp -d)"
 PKGINFO_BRANCH=$(mktemp)
 PKGINFO_MASTER=$(mktemp)
 
 function cleanup() {
-  rm -rf "$INSTALL_DIR" "$MASTER_CLONE_DIR" "$BRANCH_DIR"
+  rm -rf "$INSTALL_DIR" "$MASTER_CLONE_DIR"
   rm -f "$PKGINFO_BRANCH" "$PKGINFO_MASTER"
 }
 trap cleanup EXIT
@@ -51,9 +50,6 @@ trap cleanup EXIT
 ( cd "$INSTALL_DIR" && exec go install golang.org/x/exp/cmd/apidiff )
 
 git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
-
-# Copy the current branch into the temparory directory to avoid changing go.mod's
-cp -R . "$BRANCH_DIR"
 
 # Run the following checks in the master directory
 ORIG_DIR=$(pwd)
@@ -73,10 +69,10 @@ while read -r path || [[ -n "$path" ]]; do
 
     # Compute export data for the current branch.
     package_deleted=0
-    (cd "$BRANCH_DIR" && cd "$path" && apidiff -w "$PKGINFO_BRANCH" "$pkg") || package_deleted=1
+    (cd "$ORIG_DIR/$path" && apidiff -w "$PKGINFO_BRANCH" "$pkg") || package_deleted=1
     if [[ $package_deleted -eq 1 ]]; then
       echo "    package ${pkg} was deleted! Recording as an incompatible change.";
-      incompatible_change_pkgs+=(${pkg});
+      incompatible_change_pkgs+=("${pkg}");
       continue;
     fi
 
@@ -88,7 +84,7 @@ while read -r path || [[ -n "$path" ]]; do
 
     # Note if there's an incompatible change.
     ic=$(apidiff -incompatible "$PKGINFO_MASTER" "$PKGINFO_BRANCH")
-    if [ ! -z "$ic" ]; then
+    if [ -n "$ic" ]; then
       incompatible_change_pkgs+=("$pkg");
     fi
   done
