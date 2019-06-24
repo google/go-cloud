@@ -74,7 +74,6 @@ import (
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
-	"golang.org/x/sync/errgroup"
 	"pack.ag/amqp"
 )
 
@@ -535,14 +534,26 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 		}
 	}
 
-	// Update all partitions in parallel.
-	g, ctx := errgroup.WithContext(ctx)
+	// Update partitions in parallel.
+	const maxConcurrency = 5
+	sem := make(chan struct{}, maxConcurrency)
+	var mu sync.Mutex
+	var lastErr error
 	for _, lockTokens := range partitions {
-		g.Go(func() error {
-			return s.updateMessageDispositionsInPartition(ctx, lockTokens, disposition)
-		})
+		sem <- struct{}{}
+		go func() {
+			defer func() { <-sem }() // Release the semaphore.
+			if err := s.updateMessageDispositionsInPartition(ctx, lockTokens, disposition); err != nil {
+				mu.Lock()
+				defer mu.Unlock()
+				lastErr = err
+			}
+		}()
 	}
-	return g.Wait()
+	for n := 0; n < maxConcurrency; n-- {
+		sem <- struct{}{}
+	}
+	return lastErr
 }
 
 // updateMessageDispositionsInPartition assumes lockTokens are all from the
