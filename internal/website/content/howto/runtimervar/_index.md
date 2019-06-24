@@ -7,8 +7,7 @@ showInSidenav: true
 Working with runtime variables using the Go CDK takes two steps:
 
 1. Open the variable with the `runtimevar` provider of your choice.
-2. As many times as needed, use the `Latest` or `Watch` methods to fetch the
-   value of the variable.
+2. Use the `Latest` method to fetch the value of the variable.
 
 ## Constructors versus URL openers
 
@@ -17,7 +16,7 @@ URL pointing to the variable. See [Concepts: URLs][] for more
 details. If you need fine-grained control over the connection settings, you can
 call the constructor function in the driver package directly (like
 `awsparamstore.OpenVariable`). This guide shows how to use both forms for
-each storage provider.
+each provider.
 
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
@@ -91,7 +90,7 @@ https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable
 
 Once we have an open variable, we can use the [`Variable.Latest`][] method to
 fetch its latest value. This method returns the latest good [`Snapshot`][] of
-the variable value, blocking if no good value has ever been received. To avoid
+the variable value, blocking if no good value has *ever* been received. To avoid
 blocking, you can pass an already-`Done` context.
 
 {{< goexample src="gocloud.dev/runtimevar.Example_latestStringVariableHowto"
