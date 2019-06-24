@@ -287,6 +287,14 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/gcpkms\"\n)",
 		"code": "keeper, err := secrets.OpenKeeper(ctx,\n\t\"gcpkms://projects/MYPROJECT/\"+\n\t\t\"locations/MYLOCATION/\"+\n\t\t\"keyRings/MYKEYRING/\"+\n\t\t\"cryptoKeys/MYKEY\")\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
 	},
+	"gocloud.dev/secrets/hashivault.ExampleOpenKeeper": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/hashicorp/vault/api\"\n\t\"gocloud.dev/secrets/hashivault\"\n)",
+		"code": "// Get a client to use with the Vault API.\nclient, err := hashivault.Dial(ctx, \u0026hashivault.Config{\n\tToken: \"CLIENT_TOKEN\",\n\tAPIConfig: api.Config{\n\t\tAddress: \"http://127.0.0.1:8200\",\n\t},\n})\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper := hashivault.OpenKeeper(client, \"my-key\", nil)\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/hashivault.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/hashivault\"\n)",
+		"code": "keeper, err := secrets.OpenKeeper(ctx, \"hashivault://mykey\")\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
+	},
 	"gocloud.dev/secrets/localsecrets.ExampleNewKeeper": {
 		"imports": "import \"gocloud.dev/secrets/localsecrets\"",
 		"code": "secretKey, err := localsecrets.NewRandomKey()\nif err != nil {\n\treturn err\n}\nkeeper := localsecrets.NewKeeper(secretKey)\ndefer keeper.Close()"
@@ -294,13 +302,5 @@
 	"gocloud.dev/secrets/localsecrets.Example_openFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/localsecrets\"\n)",
 		"code": "// Using \"base64key://\", a new random key will be generated.\nrandomKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://\")\nif err != nil {\n\treturn err\n}\ndefer randomKeyKeeper.Close()\n\n// Otherwise, the URL hostname must be a base64-encoded key, of length 32 bytes when decoded.\nsavedKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=\")\nif err != nil {\n\treturn err\n}\ndefer savedKeyKeeper.Close()"
-	},
-	"gocloud.dev/secrets/vault.ExampleOpenKeeper": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/hashicorp/vault/api\"\n\t\"gocloud.dev/secrets/vault\"\n)",
-		"code": "// Get a client to use with the Vault API.\nclient, err := vault.Dial(ctx, \u0026vault.Config{\n\tToken: \"CLIENT_TOKEN\",\n\tAPIConfig: api.Config{\n\t\tAddress: \"http://127.0.0.1:8200\",\n\t},\n})\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper := vault.OpenKeeper(client, \"my-key\", nil)\ndefer keeper.Close()"
-	},
-	"gocloud.dev/secrets/vault.Example_openFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/vault\"\n)",
-		"code": "keeper, err := secrets.OpenKeeper(ctx, \"vault://mykey\")\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
 	}
 }

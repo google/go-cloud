@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limtations under the License.
 
-// Package vault provides a secrets implementation using the Transit Secrets
-// Engine of Vault by Hashicorp.
+// Package hashivault provides a secrets implementation using the Transit
+// Secrets Engine of Vault by Hashicorp.
 // Use OpenKeeper to construct a *secrets.Keeper.
 //
 // URLs
 //
-// For secrets.OpenKeeper, vault registers for the scheme "vault".
+// For secrets.OpenKeeper, hashivault registers for the scheme "hashivault".
 // The default URL opener will dial a Vault server using the environment
 // variables "VAULT_SERVER_URL" and "VAULT_SERVER_TOKEN".
 // To customize the URL opener, or for more details on the URL format,
@@ -27,8 +27,8 @@
 //
 // As
 //
-// vault does not support any types for As.
-package vault
+// hashivault does not support any types for As.
+package hashivault
 
 import (
 	"context"
@@ -104,10 +104,10 @@ func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets
 	return o.opener.OpenKeeperURL(ctx, u)
 }
 
-// Scheme is the URL scheme vault registers its URLOpener under on secrets.DefaultMux.
-const Scheme = "vault"
+// Scheme is the URL scheme hashivault registers its URLOpener under on secrets.DefaultMux.
+const Scheme = "hashivault"
 
-// URLOpener opens Vault URLs like "vault://mykey".
+// URLOpener opens Vault URLs like "hashivault://mykey".
 //
 // The URL Host + Path are used as the keyID.
 //
