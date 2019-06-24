@@ -55,7 +55,7 @@ func Example_openFromURL() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	keeper, err := secrets.OpenKeeper(ctx, "vault://mykey")
+	keeper, err := secrets.OpenKeeper(ctx, "hashivault://mykey")
 	if err != nil {
 		log.Fatal(err)
 	}

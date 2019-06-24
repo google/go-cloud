@@ -18,7 +18,7 @@
 //
 // URLs
 //
-// For secrets.OpenKeeper, hashivault registers for the scheme "vault".
+// For secrets.OpenKeeper, hashivault registers for the scheme "hashivault".
 // The default URL opener will dial a Vault server using the environment
 // variables "VAULT_SERVER_URL" and "VAULT_SERVER_TOKEN".
 // To customize the URL opener, or for more details on the URL format,
@@ -104,10 +104,10 @@ func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets
 	return o.opener.OpenKeeperURL(ctx, u)
 }
 
-// Scheme is the URL scheme vault registers its URLOpener under on secrets.DefaultMux.
-const Scheme = "vault"
+// Scheme is the URL scheme hashivault registers its URLOpener under on secrets.DefaultMux.
+const Scheme = "hashivault"
 
-// URLOpener opens Vault URLs like "vault://mykey".
+// URLOpener opens Vault URLs like "hashivault://mykey".
 //
 // The URL Host + Path are used as the keyID.
 //
