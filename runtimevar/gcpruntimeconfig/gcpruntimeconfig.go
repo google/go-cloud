@@ -294,9 +294,7 @@ type watcher struct {
 // WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	// Get the variable from the backend.
-	fmt.Printf("++WatchVariable prev %v\n", prev)
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
-	fmt.Printf("--> %v/%v\n", vpb, err)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
