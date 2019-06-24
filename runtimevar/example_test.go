@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func ExampleVariable_Latest_jsonVariable() {
+func Example_constantvarJsonVariable() {
 	// DBConfig is the sample config struct we're going to parse our JSON into.
 	type DBConfig struct {
 		Host     string
@@ -58,7 +58,7 @@ func ExampleVariable_Latest_jsonVariable() {
 	// Config: {Host:gocloud.dev Port:8080 Username:testuser}
 }
 
-func ExampleVariable_Latest_stringVariable() {
+func Example_constantvarStringVariable() {
 	// Construct a *Variable using a constructor from one of the
 	// runtimevar subpackages. This example uses constantvar.
 	// The variable value is of type string, so we use StringDecoder.
@@ -77,7 +77,7 @@ func ExampleVariable_Latest_stringVariable() {
 	// "hello world"
 }
 
-func Example_latestStringVariableHowto() {
+func ExampleVariable_Latest() {
 	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#latest
 
 	// Variables set up elsewhere:

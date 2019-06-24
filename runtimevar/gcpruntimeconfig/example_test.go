@@ -30,10 +30,14 @@ type MyConfig struct {
 }
 
 func ExampleOpenVariable() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#rc-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -61,45 +65,6 @@ func ExampleOpenVariable() {
 	variableKey := gcpruntimeconfig.VariableKey("gcp-project-id", "config-id", "variable-name")
 
 	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer v.Close()
-
-	// We can now read the current value of the variable from v.
-	snapshot, err := v.Latest(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := snapshot.Value.(MyConfig)
-	_ = cfg
-}
-
-func Example_openVariableHowto() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#rc-ctor
-
-	// Variables set up elsewhere:
-	ctx := context.Background()
-
-	// Your GCP credentials.
-	// See https://cloud.google.com/docs/authentication/production
-	// for more info on alternatives.
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Connect to the Runtime Configurator service.
-	client, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer cleanup()
-
-	variableKey := "projects/myproject/configs/myconfigid/variables/myvar"
-	decoder := runtimevar.StringDecoder
-
 	v, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)
 	if err != nil {
 		log.Fatal(err)

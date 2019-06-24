@@ -30,35 +30,6 @@ type MyConfig struct {
 }
 
 func ExampleOpenVariable() {
-	// Establish an AWS session.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	sess, err := session.NewSession(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a decoder for decoding JSON strings into MyConfig.
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
-
-	// Construct a *runtimevar.Variable that watches the variable.
-	// For this example, the Parameter Store variable being referenced
-	// should have a JSON string that decodes into MyConfig.
-	v, err := awsparamstore.OpenVariable(sess, "cfg-variable-name", decoder, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer v.Close()
-
-	// We can now read the current value of the variable from v.
-	snapshot, err := v.Latest(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := snapshot.Value.(MyConfig)
-	_ = cfg
-}
-
-func Example_openVariableHowto() {
 	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#ps-ctor
 
 	// Establish an AWS session.
@@ -68,7 +39,8 @@ func Example_openVariableHowto() {
 		log.Fatal(err)
 	}
 
-	decoder := runtimevar.StringDecoder
+	// Create a decoder for decoding JSON strings into MyConfig.
+	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
 	// Construct a *runtimevar.Variable that watches the variable.
 	// For this example, the Parameter Store variable being referenced

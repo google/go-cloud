@@ -6,8 +6,13 @@ showInSidenav: true
 
 Working with runtime variables using the Go CDK takes two steps:
 
-1. Open the variable with the `runtimevar` provider of your choice.
+1. Open the variable with the `runtimevar` provider of your choice. You can
+   provide a [decoder][] parameter to specify how the value stored in the
+   variable is interpreted.
 2. Use the `Latest` method to fetch the value of the variable.
+
+[decoder]: https://godoc.org/gocloud.dev/runtimevar#Decoder
+[GCP Runtime Configurator]: https://cloud.google.com/deployment-manager/runtime-configurator/
 
 ## Constructors versus URL openers
 
@@ -26,14 +31,10 @@ https://godoc.org/gocloud.dev/runtimevar#OpenVariable
 ## GCP Runtime Configurator {#gcp-url}
 
 To open a variable stored in [GCP Runtime Configurator][] via a URL, you can use
-the `runtimevar.OpenVariable` function as follows. It uses the `string`
-[decoder][].
+the `runtimevar.OpenVariable` function as follows.
 
 {{< goexample
 "gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL" >}}
-
-[decoder]: https://godoc.org/gocloud.dev/runtimevar#Decoder
-[GCP Runtime Configurator]: https://cloud.google.com/deployment-manager/runtime-configurator/
 
 ## GCP Runtime Configurator Constructor {#rc-ctor}
 
@@ -41,14 +42,14 @@ The [`gcpruntimeconfig.OpenVariable`][] constructor opens a Runtime Configurator
 variable.
 
 {{< goexample
-"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableHowto" >}}
+"gocloud.dev/runtimevar/gcpruntimeconfig.ExampleOpenVariable" >}}
 
 [`gcpruntimeconfig.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig#OpenVariable
 
 ## AWS Parameter Store {#ps-url}
 
 To open a variable stored in [AWS Parameter Store][] via a URL, you can use the
-`runtimevar.OpenVariable` function as follows. It uses the `string` [decoder][].
+`runtimevar.OpenVariable` function as follows.
 
 {{< goexample
 "gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL" >}}
@@ -61,7 +62,7 @@ https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-par
 The [`awsparamstore.OpenVariable`][] constructor opens a Parameter Store
 variable.
 
-{{< goexample "gocloud.dev/runtimevar/awsparamstore.Example_openVariableHowto" >}}
+{{< goexample "gocloud.dev/runtimevar/awsparamstore.ExampleOpenVariable" >}}
 
 [`awsparamstore.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable
@@ -84,7 +85,7 @@ The [`etcdvar.OpenVariable`][] constructor opens an etcd variable.
 [`etcdvar.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable
 
-{{< goexample "gocloud.dev/runtimevar/etcdvar.Example_openVariableHowto" >}}
+{{< goexample "gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable" >}}
 
 ## Fetching the latest value {#latest}
 
@@ -93,8 +94,10 @@ fetch its latest value. This method returns the latest good [`Snapshot`][] of
 the variable value, blocking if no good value has *ever* been received. To avoid
 blocking, you can pass an already-`Done` context.
 
-{{< goexample src="gocloud.dev/runtimevar.Example_latestStringVariableHowto"
+{{< goexample src="gocloud.dev/runtimevar.ExampleVariable_Latest"
 imports="0" >}}
+
+## Watch {#watch}
 
 Type [`Variable`][] also has a [`Watch`][] method for obtaining the value of
 a variable; it has different semantics than [`Variable.Latest`][] and may be
