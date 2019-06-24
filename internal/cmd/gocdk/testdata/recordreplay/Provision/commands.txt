@@ -7,6 +7,10 @@ cd myproj
 # Add fails for an invalid type.
 gocdk provision add dev blob/foo --> FAIL
 
+# Provision types that don't need any stdin.
+# TODO(rvangent): Add the other types once they work without input.
 gocdk provision add dev blob/fileblob
+gocdk provision add dev runtimevar/filevar
+
 cd biomes
 ls dev

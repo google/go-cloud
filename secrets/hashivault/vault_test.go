@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limtations under the License.
 
-package vault
+package hashivault
 
 import (
 	"context"
@@ -153,9 +153,9 @@ func TestOpenKeeper(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"vault://mykey", false},
+		{"hashivault://mykey", false},
 		// Invalid parameter.
-		{"vault://mykey?param=value", true},
+		{"hashivault://mykey?param=value", true},
 	}
 
 	ctx := context.Background()

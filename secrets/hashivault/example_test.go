@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault_test
+package hashivault_test
 
 import (
 	"context"
@@ -20,19 +20,19 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"gocloud.dev/secrets"
-	"gocloud.dev/secrets/vault"
+	"gocloud.dev/secrets/hashivault"
 )
 
 func ExampleOpenKeeper() {
 	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault-ctor
 
-	// import _ "gocloud.dev/secrets/vault"
+	// import _ "gocloud.dev/secrets/hashivault"
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// Get a client to use with the Vault API.
-	client, err := vault.Dial(ctx, &vault.Config{
+	client, err := hashivault.Dial(ctx, &hashivault.Config{
 		Token: "CLIENT_TOKEN",
 		APIConfig: api.Config{
 			Address: "http://127.0.0.1:8200",
@@ -43,19 +43,19 @@ func ExampleOpenKeeper() {
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := vault.OpenKeeper(client, "my-key", nil)
+	keeper := hashivault.OpenKeeper(client, "my-key", nil)
 	defer keeper.Close()
 }
 
 func Example_openFromURL() {
 	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault
 
-	// import _ "gocloud.dev/secrets/vault"
+	// import _ "gocloud.dev/secrets/hashivault"
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	keeper, err := secrets.OpenKeeper(ctx, "vault://mykey")
+	keeper, err := secrets.OpenKeeper(ctx, "hashivault://mykey")
 	if err != nil {
 		log.Fatal(err)
 	}
