@@ -9,20 +9,32 @@ The Go CDK's `server` package provides a pre-configured HTTP server with diagnos
 
 ## Starting up the server
 
+- options struct is a thing
 
 ### Adding a request logger
 
+- default behavior
+- how to specify something
 
 ### Adding health checks
 
+- default behavior
+- how to specify something
 
 ### Trace exporting with OpenCensus
 
+- default behavior
+- how to specify something
 
 ### Specifying the `http.Handler` (or router)
 
+- default behavior
+- how to specify something
 
 ### ListenAndServe
 
+- call with an address
 
 ## Shutting down the server
+
+- cleanup?
