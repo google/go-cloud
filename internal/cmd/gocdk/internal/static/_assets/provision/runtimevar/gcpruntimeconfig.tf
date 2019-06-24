@@ -1,7 +1,7 @@
 # TODO(rvangent): Add comments explaining.
 
 locals {
-  gcpruntimeconfig_url  = "gcpruntimeconfig://projects/${local.gcp_project}/configs/${google_runtimeconfig_config.config.name}/variables/${google_runtimeconfig_variable.var.name}?decoder=string"
+  gcpruntimeconfig_url  = "gcpruntimeconfig://projects/${data.google_project.project.project_id}/configs/${google_runtimeconfig_config.config.name}/variables/${google_runtimeconfig_variable.var.name}?decoder=string"
 }
 
 resource "random_string" "gcpruntimeconfig_suffix" {
