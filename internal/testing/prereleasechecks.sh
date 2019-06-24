@@ -74,12 +74,10 @@ echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
-    # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
+    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
-    # TODO: This fails, probably because of the Terraform error above.
-    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
     terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
@@ -112,12 +110,10 @@ echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
-    # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
+    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
-    # TODO: This fails, probably because of the Terraform error above.
-    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
     terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
