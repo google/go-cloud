@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limtations under the License.
 
-// Package vaultsecrets provides a secrets implementation using the Transit
+// Package hashivault provides a secrets implementation using the Transit
 // Secrets Engine of Vault by Hashicorp.
 // Use OpenKeeper to construct a *secrets.Keeper.
 //
 // URLs
 //
-// For secrets.OpenKeeper, vaultsecrets registers for the scheme "vault".
+// For secrets.OpenKeeper, hashivault registers for the scheme "vault".
 // The default URL opener will dial a Vault server using the environment
 // variables "VAULT_SERVER_URL" and "VAULT_SERVER_TOKEN".
 // To customize the URL opener, or for more details on the URL format,
@@ -27,8 +27,8 @@
 //
 // As
 //
-// vaultsecrets does not support any types for As.
-package vaultsecrets
+// hashivault does not support any types for As.
+package hashivault
 
 import (
 	"context"

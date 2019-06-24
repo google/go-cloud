@@ -53,7 +53,7 @@ To do a release:
 
     ```bash
     $ git tag v0.x.0
-    $ git tag secrets/vaultsecrets/v0.x.0
+    $ git tag secrets/hashivault/v0.x.0
     $ git tag runtimevar/etcdvar/v0.x.0
     ...
     ```

@@ -80,7 +80,7 @@ information secret. Vault URLs only specify the key ID. The Vault server
 endpoint and authentication token are specified using the environment
 variables `VAULT_SERVER_URL` and `VAULT_SERVER_TOKEN`, respectively.
 
-{{< goexample "gocloud.dev/secrets/vaultsecrets.Example_openFromURL" >}}
+{{< goexample "gocloud.dev/secrets/hashivault.Example_openFromURL" >}}
 
 [Vault]: https://www.vaultproject.io/
 [transit secrets engine]: https://www.vaultproject.io/docs/secrets/transit/index.html
@@ -90,9 +90,9 @@ variables `VAULT_SERVER_URL` and `VAULT_SERVER_TOKEN`, respectively.
 The [`vaultsecrests.OpenKeeper`][] constructor opens a transit secrets engine
 key. You must first connect to your Vault instance.
 
-{{< goexample "gocloud.dev/secrets/vaultsecrets.ExampleOpenKeeper" >}}
+{{< goexample "gocloud.dev/secrets/hashivault.ExampleOpenKeeper" >}}
 
-[`vaultsecrets.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/vaultsecrets#OpenKeeper
+[`hashivault.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/hashivault#OpenKeeper
 
 ## Local Secrets {#local}
 

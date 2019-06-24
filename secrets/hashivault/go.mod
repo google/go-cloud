@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module gocloud.dev/secrets/vaultsecrets
+module gocloud.dev/secrets/hashivault
 
 require (
 	github.com/hashicorp/vault/api v1.0.2
