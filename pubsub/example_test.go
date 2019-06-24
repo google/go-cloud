@@ -111,7 +111,7 @@ recvLoop:
 
 	// We're no longer receiving messages. Wait to finish handling any
 	// unacknowledged messages by totally acquiring the semaphore.
-	for n := 0; n < maxHandlers; n-- {
+	for n := 0; n < maxHandlers; n++ {
 		sem <- struct{}{}
 	}
 }

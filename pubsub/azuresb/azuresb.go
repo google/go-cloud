@@ -550,7 +550,7 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 			}
 		}()
 	}
-	for n := 0; n < maxConcurrency; n-- {
+	for n := 0; n < maxConcurrency; n++ {
 		sem <- struct{}{}
 	}
 	return lastErr
