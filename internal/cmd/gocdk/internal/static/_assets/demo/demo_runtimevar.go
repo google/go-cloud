@@ -7,8 +7,12 @@ import (
 	"os"
 
 	"gocloud.dev/runtimevar"
+	_ "gocloud.dev/runtimevar/awsparamstore"
+	_ "gocloud.dev/runtimevar/blobvar"
 	_ "gocloud.dev/runtimevar/constantvar"
 	_ "gocloud.dev/runtimevar/filevar"
+	_ "gocloud.dev/runtimevar/gcpruntimeconfig"
+	_ "gocloud.dev/runtimevar/httpvar"
 )
 
 // TODO(rvangent): This file is user-visible, add many comments explaining
