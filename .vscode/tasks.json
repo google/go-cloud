@@ -6,7 +6,7 @@
         {
             "label": "Test",
             "type": "shell",
-            "command": "go test ./...",
+            "command": "internal/testing/runchecks.sh",
             "group": {
               "kind": "test",
               "isDefault": true

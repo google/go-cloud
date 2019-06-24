@@ -116,8 +116,9 @@ it is needed.
 The exception we permit is URL scheme registration as documented under
 [URLs](#urls). The amount of boilerplate setup code required for URL muxes for
 multiple providers without use of a tool like Wire is an unreasonable burden for
-users of Go CDK. A global registry is acceptable as long as its use is not
-mandatory, but the burden is to prove the benefit over the cost.
+users of Go CDK. We want the Go CDK to be usable both with and without Wire. A
+global registry is acceptable as long as its use is not mandatory, but the
+burden is to prove the benefit over the cost.
 
 ## Package Naming Conventions
 

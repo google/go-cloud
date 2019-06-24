@@ -290,5 +290,45 @@
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableHowto": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/gcpruntimeconfig\"\n)",
 		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Connect to the Runtime Configurator service.\nclient, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\nvariableKey := \"projects/myproject/configs/myconfigid/variables/myvar\"\ndecoder := runtimevar.StringDecoder\n\nv, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/secrets.ExampleKeeper_Decrypt": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n)",
+		"code": "var cipherText []byte // obtained from elsewhere and random-looking\nplainText, err := keeper.Decrypt(ctx, cipherText)\nif err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/secrets.ExampleKeeper_Encrypt": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n)",
+		"code": "plainText := []byte(\"Secrets secrets...\")\ncipherText, err := keeper.Encrypt(ctx, plainText)\nif err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/secrets/awskms.ExampleOpenKeeper": {
+		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/secrets/awskms\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\n// Get a client to use with the KMS API.\nclient, err := awskms.Dial(sess)\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper := awskms.OpenKeeper(client, \"alias/test-secrets\", nil)\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/awskms.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/awskms\"\n)",
+		"code": "// Use one of the following:\n\n// 1. By ID.\nkeeperByID, err := secrets.OpenKeeper(ctx,\n\t\"awskms://1234abcd-12ab-34cd-56ef-1234567890ab?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByID.Close()\n\n// 2. By alias.\nkeeperByAlias, err := secrets.OpenKeeper(ctx,\n\t\"awskms://alias/ExampleAlias?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByAlias.Close()\n\n// 3. By ARN.\nconst arn = \"arn:aws:kms:us-east-1:111122223333:key/\" +\n\t\"1234abcd-12ab-34bc-56ef-1234567890ab\"\nkeeperByARN, err := secrets.OpenKeeper(ctx,\n\t\"awskms://\"+arn+\"?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByARN.Close()"
+	},
+	"gocloud.dev/secrets/gcpkms.ExampleOpenKeeper": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets/gcpkms\"\n)",
+		"code": "// Get a client to use with the KMS API.\nclient, done, err := gcpkms.Dial(ctx, nil)\nif err != nil {\n\treturn err\n}\n// Close the connection when done.\ndefer done()\n\n// You can also use gcpkms.KeyResourceID to construct this string.\nconst keyID = \"projects/MYPROJECT/\" +\n\t\"locations/MYLOCATION/\" +\n\t\"keyRings/MYKEYRING/\" +\n\t\"cryptoKeys/MYKEY\"\n\n// Construct a *secrets.Keeper.\nkeeper := gcpkms.OpenKeeper(client, keyID, nil)\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/gcpkms.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/gcpkms\"\n)",
+		"code": "keeper, err := secrets.OpenKeeper(ctx,\n\t\"gcpkms://projects/MYPROJECT/\"+\n\t\t\"locations/MYLOCATION/\"+\n\t\t\"keyRings/MYKEYRING/\"+\n\t\t\"cryptoKeys/MYKEY\")\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/localsecrets.ExampleNewKeeper": {
+		"imports": "import \"gocloud.dev/secrets/localsecrets\"",
+		"code": "secretKey, err := localsecrets.NewRandomKey()\nif err != nil {\n\treturn err\n}\nkeeper := localsecrets.NewKeeper(secretKey)\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/localsecrets.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/localsecrets\"\n)",
+		"code": "// Using \"base64key://\", a new random key will be generated.\nrandomKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://\")\nif err != nil {\n\treturn err\n}\ndefer randomKeyKeeper.Close()\n\n// Otherwise, the URL hostname must be a base64-encoded key, of length 32 bytes when decoded.\nsavedKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=\")\nif err != nil {\n\treturn err\n}\ndefer savedKeyKeeper.Close()"
+	},
+	"gocloud.dev/secrets/vault.ExampleOpenKeeper": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/hashicorp/vault/api\"\n\t\"gocloud.dev/secrets/vault\"\n)",
+		"code": "// Get a client to use with the Vault API.\nclient, err := vault.Dial(ctx, \u0026vault.Config{\n\tToken: \"CLIENT_TOKEN\",\n\tAPIConfig: api.Config{\n\t\tAddress: \"http://127.0.0.1:8200\",\n\t},\n})\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper := vault.OpenKeeper(client, \"my-key\", nil)\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/vault.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/vault\"\n)",
+		"code": "keeper, err := secrets.OpenKeeper(ctx, \"vault://mykey\")\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
 	}
 }
