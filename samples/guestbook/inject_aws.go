@@ -18,6 +18,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"net/url"
 
 	awsclient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/google/wire"
@@ -41,11 +43,11 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	// wire.Build.
 	wire.Build(
 		awscloud.AWS,
-		rdsmysql.Open,
+		wire.Struct(new(rdsmysql.URLOpener), "CertSource"),
 		applicationSet,
 		awsBucket,
 		awsMOTDVar,
-		awsSQLParams,
+		openAWSDatabase,
 	)
 	return nil, nil, nil
 }
@@ -60,16 +62,19 @@ func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags
 	return b, func() { b.Close() }, nil
 }
 
-// awsSQLParams is a Wire provider function that returns the RDS SQL connection
-// parameters based on the command-line flags. Other providers inside
-// awscloud.AWS use the parameters to construct a *sql.DB.
-func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
-	return &rdsmysql.Params{
-		Endpoint: flags.dbHost,
-		Database: flags.dbName,
-		User:     flags.dbUser,
-		Password: flags.dbPassword,
+// openAWSDatabase is a Wire provider function that connects to RDS based on
+// the command-line flags.
+func openAWSDatabase(ctx context.Context, opener *rdsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
+	db, err := opener.OpenMySQLURL(ctx, &url.URL{
+		Scheme: "rdsmysql",
+		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
+		Host:   flags.dbHost,
+		Path:   "/" + flags.dbName,
+	})
+	if err != nil {
+		return nil, nil, err
 	}
+	return db, func() { db.Close() }, nil
 }
 
 // awsMOTDVar is a Wire provider function that returns the Message of the Day

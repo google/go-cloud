@@ -64,6 +64,8 @@ func registerProvisionCmd(ctx context.Context, pctx *processContext, rootCmd *co
 }
 
 var provisionableTypes = map[string]func(*processContext, string) ([]*static.Action, error){
+
+	// BLOB
 	"blob/azureblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
 		reader := bufio.NewReader(pctx.stdin)
 		_, err := prompt.AzureLocationIfNeeded(reader, pctx.stderr, biomeDir)
@@ -113,6 +115,41 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 			static.AddProvider("aws"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.s3blob_bucket_url}"),
 			static.CopyFile("/provision/blob/s3blob.tf", "s3blob.tf"),
+		}, nil
+	},
+
+	// RUNTIMEVAR
+	"runtimevar/awsparamstore": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AWSRegionIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("aws"),
+			static.AddProvider("random"),
+			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.awsparamstore_url}"),
+			static.CopyFile("/provision/runtimevar/awsparamstore.tf", "awsparamstore.tf"),
+		}, nil
+	},
+	"runtimevar/filevar": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		return []*static.Action{
+			static.AddProvider("local"),
+			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.filevar_url}"),
+			static.CopyFile("/provision/runtimevar/filevar.tf", "filevar.tf"),
+		}, nil
+	},
+	"runtimevar/gcpruntimeconfig": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.GCPProjectIDIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("google"),
+			static.AddProvider("random"),
+			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.gcpruntimeconfig_url}"),
+			static.CopyFile("/provision/runtimevar/gcpruntimeconfig.tf", "gcpruntimeconfig.tf"),
 		}, nil
 	},
 }

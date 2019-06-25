@@ -79,6 +79,7 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer bucket.Close()
 	reader, err := bucket.NewReader(r.Context(), objKey, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -235,6 +236,9 @@ func TestOpenBucketFromURL(t *testing.T) {
 	ctx := context.Background()
 	for _, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
+		if b != nil {
+			defer b.Close()
+		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}

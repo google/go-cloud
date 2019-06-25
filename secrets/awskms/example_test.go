@@ -24,6 +24,8 @@ import (
 )
 
 func ExampleOpenKeeper() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#aws-ctor
+
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	sess, err := session.NewSession(nil)
@@ -38,40 +40,43 @@ func ExampleOpenKeeper() {
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := awskms.OpenKeeper(
-		client,
-		// Get the key ID. Here is an example of using an alias. See
-		// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-		// for more details.
-		"alias/test-secrets",
-		nil,
-	)
+	keeper := awskms.OpenKeeper(client, "alias/test-secrets", nil)
 	defer keeper.Close()
-
-	// Now we can use keeper to encrypt or decrypt.
-	ctx := context.Background()
-	plaintext := []byte("Hello, Secrets!")
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = decrypted
 }
 
 func Example_openFromURL() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#aws
+
+	// import _ "gocloud.dev/secrets/awskms"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
-	// The host + path are the key ID; this example uses an alias. See
-	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-	// for more details.
-	keeper, err := secrets.OpenKeeper(ctx, "awskms://alias/my-key")
+	// Use one of the following:
+
+	// 1. By ID.
+	keeperByID, err := secrets.OpenKeeper(ctx,
+		"awskms://1234abcd-12ab-34cd-56ef-1234567890ab?region=us-east-1")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeper.Close()
+	defer keeperByID.Close()
+
+	// 2. By alias.
+	keeperByAlias, err := secrets.OpenKeeper(ctx,
+		"awskms://alias/ExampleAlias?region=us-east-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeperByAlias.Close()
+
+	// 3. By ARN.
+	const arn = "arn:aws:kms:us-east-1:111122223333:key/" +
+		"1234abcd-12ab-34bc-56ef-1234567890ab"
+	keeperByARN, err := secrets.OpenKeeper(ctx,
+		"awskms://"+arn+"?region=us-east-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeperByARN.Close()
 }

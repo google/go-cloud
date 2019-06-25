@@ -16,23 +16,21 @@ package rdsmysql_test
 
 import (
 	"context"
+	"log"
 
-	"gocloud.dev/mysql/rdsmysql"
+	"gocloud.dev/mysql"
+	_ "gocloud.dev/mysql/rdsmysql"
 )
 
 func Example() {
 	ctx := context.Background()
-	db, cleanup, err := rdsmysql.Open(ctx, new(rdsmysql.CertFetcher), &rdsmysql.Params{
-		// Replace these with your actual settings.
-		Endpoint: "example01.xyzzy.us-west-1.rds.amazonaws.com",
-		User:     "myrole",
-		Password: "swordfish",
-		Database: "test",
-	})
+	// Replace these with your actual settings.
+	db, err := mysql.Open(ctx,
+		"rdsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	defer cleanup()
+	defer db.Close()
 
 	// Use database in your program.
 	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")

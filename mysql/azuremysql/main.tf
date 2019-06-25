@@ -96,8 +96,8 @@ output "password" {
 }
 
 output "servername" {
-  value       = "${azurerm_mysql_server.mysqlserver.name}"
-  description = "The servername of the Azure Database for MySQL instance."
+  value       = "${azurerm_mysql_server.mysqlserver.fqdn}"
+  description = "The host name of the Azure Database for MySQL instance."
 }
 
 output "database" {

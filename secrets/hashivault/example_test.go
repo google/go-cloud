@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault_test
+package hashivault_test
 
 import (
 	"context"
@@ -20,15 +20,20 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"gocloud.dev/secrets"
-	"gocloud.dev/secrets/vault"
+	"gocloud.dev/secrets/hashivault"
 )
 
 func ExampleOpenKeeper() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault-ctor
+
+	// import _ "gocloud.dev/secrets/hashivault"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
 
 	// Get a client to use with the Vault API.
-	ctx := context.Background()
-	client, err := vault.Dial(ctx, &vault.Config{
-		Token: "<Client (Root) Token>",
+	client, err := hashivault.Dial(ctx, &hashivault.Config{
+		Token: "CLIENT_TOKEN",
 		APIConfig: api.Config{
 			Address: "http://127.0.0.1:8200",
 		},
@@ -38,29 +43,19 @@ func ExampleOpenKeeper() {
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := vault.OpenKeeper(client, "my-key", nil)
+	keeper := hashivault.OpenKeeper(client, "my-key", nil)
 	defer keeper.Close()
-
-	// Now we can use keeper to encrypt or decrypt.
-	plaintext := []byte("Hello, Secrets!")
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = decrypted
 }
 
 func Example_openFromURL() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault
+
+	// import _ "gocloud.dev/secrets/hashivault"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
-	// The default opener dials a default Vault server based on the environment
-	// variables VAULT_SERVER_URL and VAULT_SERVER_TOKEN.
-	keeper, err := secrets.OpenKeeper(ctx, "vault://mykey")
+	keeper, err := secrets.OpenKeeper(ctx, "hashivault://mykey")
 	if err != nil {
 		log.Fatal(err)
 	}
