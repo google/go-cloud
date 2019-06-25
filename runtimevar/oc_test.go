@@ -31,6 +31,7 @@ func TestOpenCensus(t *testing.T) {
 	defer te.Unregister()
 
 	v := constantvar.New(1)
+	defer v.Close()
 	if _, err := v.Watch(ctx); err != nil {
 		t.Fatal(err)
 	}

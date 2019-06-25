@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob"
@@ -36,7 +37,9 @@ func init() {
 	if bucketURL == "" {
 		bucketURL = "mem://"
 	}
-	bucket, bucketErr = blob.OpenBucket(context.Background(), bucketURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	bucket, bucketErr = blob.OpenBucket(ctx, bucketURL)
 }
 
 // TODO(rvangent): This is pretty raw HTML. Should we have a common style sheet/etc. for demos?
