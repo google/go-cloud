@@ -1,16 +1,16 @@
 # Add fails when we're not in a module.
-gocdk provision add dev blob/fileblob --> FAIL
+gocdk resource add dev blob/fileblob --> FAIL
 
 gocdk init myproj
 cd myproj
 
 # Add fails for an invalid type.
-gocdk provision add dev blob/foo --> FAIL
+gocdk resource add dev blob/foo --> FAIL
 
 # Provision types that don't need any stdin.
 # TODO(rvangent): Add the other types once they work without input.
-gocdk provision add dev blob/fileblob
-gocdk provision add dev runtimevar/filevar
+gocdk resource add dev blob/fileblob
+gocdk resource add dev runtimevar/filevar
 
 cd biomes
 ls dev
