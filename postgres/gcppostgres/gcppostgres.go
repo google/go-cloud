@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cloudpostgres provides connections to managed PostgreSQL Cloud SQL instances.
+// Package gcppostgres provides connections to managed PostgreSQL Cloud SQL instances.
 // See https://cloud.google.com/sql/docs/postgres/ for more information.
 //
 // URLs
 //
-// For postgres.Open, cloudpostgres registers for the scheme "cloudpostgres".
+// For postgres.Open, gcppostgres registers for the scheme "gcppostgres".
 // The default URL opener will create a connection using the default
 // credentials from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
@@ -25,7 +25,7 @@
 // see URLOpener.
 //
 // See https://gocloud.dev/concepts/urls/ for background information.
-package cloudpostgres // import "gocloud.dev/postgres/cloudpostgres"
+package gcppostgres // import "gocloud.dev/postgres/gcppostgres"
 
 import (
 	"context"
@@ -47,9 +47,9 @@ import (
 	"gocloud.dev/postgres"
 )
 
-// Scheme is the URL scheme cloudpostgres registers its URLOpener under on
+// Scheme is the URL scheme gcppostgres registers its URLOpener under on
 // postgres.DefaultMux.
-const Scheme = "cloudpostgres"
+const Scheme = "gcppostgres"
 
 func init() {
 	postgres.DefaultURLMux().RegisterPostgres(Scheme, new(lazyCredsOpener))
@@ -79,13 +79,13 @@ func (o *lazyCredsOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql
 		o.opener = &URLOpener{CertSource: certSource}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("cloudpostgres open %v: %v", u, o.err)
+		return nil, fmt.Errorf("gcppostgres open %v: %v", u, o.err)
 	}
 	return o.opener.OpenPostgresURL(ctx, u)
 }
 
 // URLOpener opens GCP PostgreSQL URLs
-// like "cloudpostgres://user:password@myproject/us-central1/instanceId/mydb".
+// like "gcppostgres://user:password@myproject/us-central1/instanceId/mydb".
 type URLOpener struct {
 	// CertSource specifies how the opener will obtain authentication information.
 	// CertSource must not be nil.
@@ -98,18 +98,18 @@ type URLOpener struct {
 // OpenPostgresURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	if uo.CertSource == nil {
-		return nil, fmt.Errorf("cloudpostgres: URLOpener CertSource is nil")
+		return nil, fmt.Errorf("gcppostgres: URLOpener CertSource is nil")
 	}
 	instance, dbName, err := instanceFromURL(u)
 	if err != nil {
-		return nil, fmt.Errorf("cloudpostgres: open %v: %v", u, err)
+		return nil, fmt.Errorf("gcppostgres: open %v: %v", u, err)
 	}
 
 	query := u.Query()
 	for k := range query {
 		// Only permit parameters that do not conflict with other behavior.
 		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed", k)
+			return nil, fmt.Errorf("gcppostgres: open: extra parameter %s not allowed", k)
 		}
 	}
 	query.Set("sslmode", "disable")
@@ -190,5 +190,5 @@ func (d dialer) Dial(network, address string) (net.Conn, error) {
 }
 
 func (d dialer) DialTimeout(network, address string, timeout time.Duration) (net.Conn, error) {
-	return nil, errors.New("cloudpostgres: DialTimeout not supported")
+	return nil, errors.New("gcppostgres: DialTimeout not supported")
 }

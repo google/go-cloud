@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cloudmysql provides connections to managed MySQL Cloud SQL instances.
+// Package gcpmysql provides connections to managed MySQL Cloud SQL instances.
 // See https://cloud.google.com/sql/docs/mysql/ for more information.
 //
 // URLs
 //
-// For mysql.Open, cloudmysql registers for the scheme "cloudmysql".
+// For mysql.Open, gcpmysql registers for the scheme "gcpmysql".
 // The default URL opener will create a connection using the default
 // credentials from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
@@ -25,7 +25,7 @@
 // see URLOpener.
 //
 // See https://gocloud.dev/concepts/urls/ for background information.
-package cloudmysql // import "gocloud.dev/mysql/cloudmysql"
+package gcpmysql // import "gocloud.dev/mysql/gcpmysql"
 
 import (
 	"context"
@@ -44,9 +44,9 @@ import (
 	cdkmysql "gocloud.dev/mysql"
 )
 
-// Scheme is the URL scheme cloudmysql registers its URLOpener under on
+// Scheme is the URL scheme gcpmysql registers its URLOpener under on
 // mysql.DefaultMux.
-const Scheme = "cloudmysql"
+const Scheme = "gcpmysql"
 
 func init() {
 	cdkmysql.DefaultURLMux().RegisterMySQL(Scheme, new(lazyCredsOpener))
@@ -76,13 +76,13 @@ func (o *lazyCredsOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB
 		o.opener = &URLOpener{CertSource: certSource}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("cloudmysql open %v: %v", u, o.err)
+		return nil, fmt.Errorf("gcpmysql open %v: %v", u, o.err)
 	}
 	return o.opener.OpenMySQLURL(ctx, u)
 }
 
 // URLOpener opens Cloud MySQL URLs like
-// "cloudmysql://user:password@project/region/instance/dbname".
+// "gcpmysql://user:password@project/region/instance/dbname".
 type URLOpener struct {
 	// CertSource specifies how the opener will obtain authentication information.
 	// CertSource must not be nil.
@@ -95,11 +95,11 @@ type URLOpener struct {
 // OpenMySQLURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	if uo.CertSource == nil {
-		return nil, fmt.Errorf("cloudmysql: URLOpener CertSource is nil")
+		return nil, fmt.Errorf("gcpmysql: URLOpener CertSource is nil")
 	}
 	instance, dbName, err := instanceFromURL(u)
 	if err != nil {
-		return nil, fmt.Errorf("cloudmysql: open %v: %v", u, err)
+		return nil, fmt.Errorf("gcpmysql: open %v: %v", u, err)
 	}
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()

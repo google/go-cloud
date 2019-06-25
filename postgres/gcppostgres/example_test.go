@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudmysql_test
+package gcppostgres_test
 
 import (
 	"context"
 	"log"
 
-	"gocloud.dev/mysql"
-	_ "gocloud.dev/mysql/cloudmysql"
+	"gocloud.dev/postgres"
+	_ "gocloud.dev/postgres/gcppostgres"
 )
 
 func Example() {
 	ctx := context.Background()
-	// Replace this with your actual settings.
-	db, err := mysql.Open(ctx, "cloudmysql://user:password@example-project/region/my-instance01/testdb")
+	db, err := postgres.Open(ctx,
+		"gcppostgres://myrole@example-project/us-central1/my-instance01/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}

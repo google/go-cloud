@@ -25,14 +25,15 @@ https://godoc.org/gocloud.dev/postgres.
 
 For MySQL:
 
-* [GCP Cloud SQL](https://godoc.org/gocloud.dev/mysql/cloudmysql)
-* [AWS RDS](https://godoc.org/gocloud.dev/mysql/rdsmysql)
+* [GCP Cloud SQL](https://godoc.org/gocloud.dev/mysql/gcpmysql)
+* [AWS RDS](https://godoc.org/gocloud.dev/mysql/awsmysql)
+* [Azure Database](https://godoc.org/gocloud.dev/mysql/azuremysql)
 * [On-Premise](https://godoc.org/gocloud.dev/mysql) (or locally hosted)
 
 For PostgreSQL:
 
-* [GCP Cloud SQL](https://godoc.org/gocloud.dev/postgres/cloudpostgres)
-* [AWS RDS](https://godoc.org/gocloud.dev/postgres/rdspostgres)
+* [GCP Cloud SQL](https://godoc.org/gocloud.dev/postgres/gcppostgres)
+* [AWS RDS](https://godoc.org/gocloud.dev/postgres/awspostgres)
 * [On-Premise](https://godoc.org/gocloud.dev/postgres) (or locally hosted)
 
 ## Usage Samples

@@ -27,7 +27,7 @@ import (
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/gcpcloud"
-	"gocloud.dev/mysql/cloudmysql"
+	"gocloud.dev/mysql/gcpmysql"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/gcpruntimeconfig"
 	"gocloud.dev/server"
@@ -45,7 +45,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	// wire.Build.
 	wire.Build(
 		gcpcloud.GCP,
-		wire.Struct(new(cloudmysql.URLOpener), "CertSource"),
+		wire.Struct(new(gcpmysql.URLOpener), "CertSource"),
 		applicationSet,
 		gcpBucket,
 		gcpMOTDVar,
@@ -66,9 +66,9 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*b
 
 // openGCPDatabase is a Wire provider function that connects to Cloud SQL
 // based on the command-line flags.
-func openGCPDatabase(ctx context.Context, opener *cloudmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
+func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
-		Scheme: "cloudmysql",
+		Scheme: "gcpmysql",
 		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
 		Host:   string(id),
 		Path:   fmt.Sprintf("/%s/%s/%s", flags.cloudSQLRegion, flags.dbHost, flags.dbName),
