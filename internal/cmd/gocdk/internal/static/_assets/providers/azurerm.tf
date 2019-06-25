@@ -3,7 +3,6 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "resource_group" {
-  # The name can't have "-" in it.
-  name     = "${replace(local.gocdk_random_name, "-", "")}"
+  name     = "${local.gocdk_random_name}"
   location = "${local.azure_location}"
 }
