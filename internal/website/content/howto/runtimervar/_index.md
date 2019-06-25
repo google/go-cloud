@@ -7,8 +7,8 @@ showInSidenav: true
 Working with runtime variables using the Go CDK takes two steps:
 
 1. Open the variable with the `runtimevar` provider of your choice. You can
-   provide a [decoder][] parameter to specify how the value stored in the
-   variable is interpreted.
+   provide a [decoder][] parameter to specify whether the raw value stored
+   in the variable is interpreted as a `string`, a `[]byte` or as JSON.
 2. Use the `Latest` method to fetch the value of the variable.
 
 [decoder]: https://godoc.org/gocloud.dev/runtimevar#Decoder
@@ -91,8 +91,11 @@ https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable
 
 Once we have an open variable, we can use the [`Variable.Latest`][] method to
 fetch its latest value. This method returns the latest good [`Snapshot`][] of
-the variable value, blocking if no good value has *ever* been received. To avoid
-blocking, you can pass an already-`Done` context.
+the variable value, blocking if no good value has *ever* been received. The
+dynamic type of `Snapshot.Value` depends on the decoder you provided when
+creating the `Variable`.
+
+To avoid blocking, you can pass an already-`Done` context.
 
 {{< goexample src="gocloud.dev/runtimevar.ExampleVariable_Latest"
 imports="0" >}}
