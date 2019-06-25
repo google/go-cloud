@@ -288,7 +288,10 @@ func TestOpenBucket(t *testing.T) {
 				t.Errorf("got %q want %q", drv.name, test.want)
 			}
 			// Create portable type.
-			_, err = OpenBucket(ctx, p, test.accountName, test.containerName, nil)
+			b, err := OpenBucket(ctx, p, test.accountName, test.containerName, nil)
+			if b != nil {
+				defer b.Close()
+			}
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -373,7 +376,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := blob.OpenBucket(ctx, test.URL)
+		b, err := blob.OpenBucket(ctx, test.URL)
+		if b != nil {
+			defer b.Close()
+		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}

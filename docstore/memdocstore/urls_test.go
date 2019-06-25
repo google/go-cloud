@@ -37,7 +37,10 @@ func TestOpenCollectionFromURL(t *testing.T) {
 	}
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
+		d, err := docstore.OpenCollection(ctx, test.URL)
+		if d != nil {
+			defer d.Close()
+		}
 		if (err != nil) != test.wantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.wantErr)
 		}
