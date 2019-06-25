@@ -26,41 +26,36 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// TODO(rvangent): Reconsider whether "provision" is the right name for this
-// command; it does not actually provision anything, it just sets things up
-// to be provisioned. Also, "provision add" is two verbs in a row which is
-// weird.
-
-func registerProvisionCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
-	provisionCmd := &cobra.Command{
-		Use:   "provision",
-		Short: "TODO Provision resources",
-		Long:  "TODO more about provisioning",
+func registerResourceCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	resourceCmd := &cobra.Command{
+		Use:   "resource",
+		Short: "TODO Resources",
+		Long:  "TODO more about provisioning resources",
 	}
 
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "TODO provision list ",
-		Long:  "TODO more about provisioning",
+		Short: "TODO resource list ",
+		Long:  "TODO more about provisioning resources",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return provisionList(pctx)
+			return resourceList(pctx)
 		},
 	}
-	provisionCmd.AddCommand(listCmd)
+	resourceCmd.AddCommand(listCmd)
 
 	addCmd := &cobra.Command{
 		Use:   "add BIOME_NAME TYPE",
-		Short: "TODO provision add BIOME_NAME TYPE",
-		Long:  "TODO more about provisioning",
+		Short: "TODO resource add BIOME_NAME TYPE",
+		Long:  "TODO more about provisioning resources",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return provisionAdd(ctx, pctx, args[0], args[1])
+			return resourceAdd(ctx, pctx, args[0], args[1])
 		},
 	}
-	provisionCmd.AddCommand(addCmd)
+	resourceCmd.AddCommand(addCmd)
 
-	rootCmd.AddCommand(provisionCmd)
+	rootCmd.AddCommand(resourceCmd)
 }
 
 var provisionableTypes = map[string]func(*processContext, string) ([]*static.Action, error){
@@ -78,14 +73,14 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.azureblob_bucket_url}"),
 			static.AddOutputVar("AZURE_STORAGE_ACCOUNT", "${azurerm_storage_account.storage_account.name}"),
 			static.AddOutputVar("AZURE_STORAGE_KEY", "${azurerm_storage_account.storage_account.primary_access_key}"),
-			static.CopyFile("/provision/blob/azureblob.tf", "azureblob.tf"),
+			static.CopyFile("/resource/blob/azureblob.tf", "azureblob.tf"),
 		}, nil
 	},
 	"blob/fileblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
 		return []*static.Action{
 			static.AddProvider("local"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.fileblob_bucket_url}"),
-			static.CopyFile("/provision/blob/fileblob.tf", "fileblob.tf"),
+			static.CopyFile("/resource/blob/fileblob.tf", "fileblob.tf"),
 		}, nil
 	},
 	"blob/gcsblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
@@ -102,7 +97,7 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 			static.AddProvider("google"),
 			static.AddProvider("random"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.gcsblob_bucket_url}"),
-			static.CopyFile("/provision/blob/gcsblob.tf", "gcsblob.tf"),
+			static.CopyFile("/resource/blob/gcsblob.tf", "gcsblob.tf"),
 		}, nil
 	},
 	"blob/s3blob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
@@ -114,7 +109,7 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		return []*static.Action{
 			static.AddProvider("aws"),
 			static.AddOutputVar("BLOB_BUCKET_URL", "${local.s3blob_bucket_url}"),
-			static.CopyFile("/provision/blob/s3blob.tf", "s3blob.tf"),
+			static.CopyFile("/resource/blob/s3blob.tf", "s3blob.tf"),
 		}, nil
 	},
 
@@ -129,14 +124,14 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 			static.AddProvider("aws"),
 			static.AddProvider("random"),
 			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.awsparamstore_url}"),
-			static.CopyFile("/provision/runtimevar/awsparamstore.tf", "awsparamstore.tf"),
+			static.CopyFile("/resource/runtimevar/awsparamstore.tf", "awsparamstore.tf"),
 		}, nil
 	},
 	"runtimevar/filevar": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
 		return []*static.Action{
 			static.AddProvider("local"),
 			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.filevar_url}"),
-			static.CopyFile("/provision/runtimevar/filevar.tf", "filevar.tf"),
+			static.CopyFile("/resource/runtimevar/filevar.tf", "filevar.tf"),
 		}, nil
 	},
 	"runtimevar/gcpruntimeconfig": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
@@ -149,13 +144,13 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 			static.AddProvider("google"),
 			static.AddProvider("random"),
 			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.gcpruntimeconfig_url}"),
-			static.CopyFile("/provision/runtimevar/gcpruntimeconfig.tf", "gcpruntimeconfig.tf"),
+			static.CopyFile("/resource/runtimevar/gcpruntimeconfig.tf", "gcpruntimeconfig.tf"),
 		}, nil
 	},
 }
 
-// The "provision list" command.
-func provisionList(pctx *processContext) error {
+// The "resource list" command.
+func resourceList(pctx *processContext) error {
 	var sorted []string
 	for key := range provisionableTypes {
 		sorted = append(sorted, key)
@@ -167,37 +162,37 @@ func provisionList(pctx *processContext) error {
 	return nil
 }
 
-// The "provision add" command.
+// The "resource add" command.
 // TODO(rvangent): Can we support adding a particular type more than once?
 // TODO(rvangent): If things fail in the middle, we are in an undefined state.
 //                 Unclear how to handle that....
 // TODO(rvangent): Modifying Terraform files in place means that we need to run
 //                 "terraform init" again; currently we don't; see
 //                 https://github.com/google/go-cloud/issues/2291.
-func provisionAdd(ctx context.Context, pctx *processContext, biome, typ string) error {
+func resourceAdd(ctx context.Context, pctx *processContext, biome, typ string) error {
 	pctx.Logf("Adding %q to %q...", typ, biome)
 
 	moduleDir, err := pctx.ModuleRoot(ctx)
 	if err != nil {
-		return xerrors.Errorf("provision add: %w", err)
+		return xerrors.Errorf("resource add: %w", err)
 	}
 	destBiomeDir := biomeDir(moduleDir, biome)
 
-	doProvision := provisionableTypes[typ]
-	if doProvision == nil {
-		return fmt.Errorf("provision add: %q is not a supported type; use 'gocdk provision list' to see available types", typ)
+	do := provisionableTypes[typ]
+	if do == nil {
+		return fmt.Errorf("resource add: %q is not a supported type; use 'gocdk resource list' to see available types", typ)
 	}
 
 	// Do the prompts for the chosen type.
-	actions, err := doProvision(pctx, destBiomeDir)
+	actions, err := do(pctx, destBiomeDir)
 	if err != nil {
-		return xerrors.Errorf("provision add: %w", err)
+		return xerrors.Errorf("resource add: %w", err)
 	}
 	// Perform the actions for the chosen type, instantiating into the
 	// chosen biome directory.
 	opts := &static.Options{Logger: pctx.errlog}
 	if err := static.Do(destBiomeDir, opts, actions...); err != nil {
-		return xerrors.Errorf("provision add: %w", err)
+		return xerrors.Errorf("resource add: %w", err)
 	}
 	pctx.Logf("Success!")
 	return nil

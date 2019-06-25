@@ -108,6 +108,7 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
+	defer keeper.Close()
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg, err := keeper.Encrypt(ctx, msg)
@@ -142,6 +143,7 @@ func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
+	defer keeper.Close()
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg1, err := keeper.Encrypt(ctx, msg)
@@ -186,7 +188,9 @@ func testMultipleKeys(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper1 := secrets.NewKeeper(drv1)
+	defer keeper1.Close()
 	keeper2 := secrets.NewKeeper(drv2)
+	defer keeper2.Close()
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg1, err := keeper1.Encrypt(ctx, msg)
@@ -237,6 +241,7 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
+	defer keeper.Close()
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg, err := keeper.Encrypt(ctx, msg)
@@ -290,6 +295,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, tc AsTest) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
+	defer keeper.Close()
 
 	_, gotErr := keeper.Decrypt(ctx, []byte("malformed cipher message"))
 	if gotErr == nil {
