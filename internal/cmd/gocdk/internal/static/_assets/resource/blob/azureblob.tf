@@ -5,7 +5,7 @@ locals {
 }
 
 resource "azurerm_storage_account" "storage_account" {
-  # The name can't have "-" in it.
+  # The storage account name can't have "-" in it.
   name                     = "${replace(local.gocdk_random_name, "-", "")}"
   resource_group_name      = "${azurerm_resource_group.resource_group.name}"
   location                 = "${azurerm_resource_group.resource_group.location}"
