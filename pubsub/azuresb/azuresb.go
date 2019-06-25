@@ -538,7 +538,7 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 	const maxConcurrency = 5
 	sem := make(chan struct{}, maxConcurrency)
 	var mu sync.Mutex
-	var lastErr error
+	var errs []string
 	for _, lockTokens := range partitions {
 		sem <- struct{}{}
 		go func() {
@@ -546,14 +546,17 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 			if err := s.updateMessageDispositionsInPartition(ctx, lockTokens, disposition); err != nil {
 				mu.Lock()
 				defer mu.Unlock()
-				lastErr = err
+				errs = append(errs, err.Error())
 			}
 		}()
 	}
 	for n := 0; n < maxConcurrency; n++ {
 		sem <- struct{}{}
 	}
-	return lastErr
+	if len(errs) == 0 {
+		return nil
+	}
+	return fmt.Errorf("Ack/Nack failed: %s", strings.Join(errs, ", "))
 }
 
 // updateMessageDispositionsInPartition assumes lockTokens are all from the
