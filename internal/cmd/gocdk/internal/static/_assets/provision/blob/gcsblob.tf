@@ -4,10 +4,6 @@ locals {
   gcsblob_bucket_url  = "gs://${google_storage_bucket.bucket.id}"
 }
 
-resource "random_id" "gcsblob_bucket_name_suffix" {
-  byte_length = 16
-}
-
 resource "google_project_service" "storage" {
   service            = "storage-component.googleapis.com"
   disable_on_destroy = false
@@ -19,7 +15,7 @@ resource "google_project_service" "storage_api" {
 }
 
 resource "google_storage_bucket" "bucket" {
-  name     = "gocdk-${random_id.gcsblob_bucket_name_suffix.hex}"
+  name     = "${local.gocdk_random_name}"
   location = "${local.gcp_storage_location}"
 
   depends_on = [

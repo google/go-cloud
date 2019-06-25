@@ -5,7 +5,7 @@ locals {
 }
 
 resource "azurerm_storage_account" "storage_account" {
-  name                     = "gocdk${random_string.azure_suffix.result}"
+  name                     = "${azurerm_resource_group.resource_group.name}"
   resource_group_name      = "${azurerm_resource_group.resource_group.name}"
   location                 = "${azurerm_resource_group.resource_group.location}"
   account_tier             = "Standard"
@@ -13,7 +13,7 @@ resource "azurerm_storage_account" "storage_account" {
 }
 
 resource "azurerm_storage_container" "bucket" {
-  name                 = "gocdk-${random_string.azure_suffix.result}"
+  name                 = "${local.gocdk_random_name}"
   resource_group_name  = "${azurerm_resource_group.resource_group.name}"
   storage_account_name = "${azurerm_storage_account.storage_account.name}"
 }
