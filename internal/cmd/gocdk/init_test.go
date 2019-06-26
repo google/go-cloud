@@ -182,11 +182,11 @@ func TestInferModulePath(t *testing.T) {
 			"multiple GOPATH entries, project in GOPATH/src",
 			func(dir string) (string, string) {
 				goPath1 := filepath.Join(dir, "goPath1")
-				if err := os.Mkdir(srcDir, 0777); err != nil {
+				if err := os.Mkdir(goPath1, 0777); err != nil {
 					t.Error(err)
 				}
 				goPath2 := filepath.Join(dir, "goPath2")
-				if err := os.Mkdir(srcDir, 0777); err != nil {
+				if err := os.Mkdir(goPath2, 0777); err != nil {
 					t.Error(err)
 				}
 				srcDir := filepath.Join(goPath2, "src")
