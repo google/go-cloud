@@ -1,5 +1,5 @@
 ---
-title: "MySQL/Postgres"
+title: "MySQL/PostgreSQL"
 date: 2019-03-11T10:02:56-07:00
 aliases:
 - /pages/sql/
