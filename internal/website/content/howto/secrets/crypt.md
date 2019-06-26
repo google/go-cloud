@@ -1,7 +1,6 @@
 ---
 title: "Encrypt & Decrypt Data"
 date: 2019-03-21T17:44:28-07:00
-draft: true
 weight: 2
 ---
 
@@ -10,36 +9,24 @@ you can encrypt and decrypt small messages using the keeper.
 
 [opened a secrets keeper]: {{< ref "./open-keeper.md" >}}
 
-## Encrypting data
+<!--more-->
+
+## Encrypting data {#encrypt}
 
 To encrypt data with a keeper, you call `Encrypt` with the byte slice you
 want to encrypt.
 
-```go
-plainText := []byte("Secrets secrets...")
-cipherText, err := keeper.Encrypt(ctx, plainText)
-if err != nil {
-    return err
-}
-```
+{{< goexample src="gocloud.dev/secrets.ExampleKeeper_Encrypt" imports="0" >}}
 
-## Decrypting data
+## Decrypting data {#decrypt}
 
 To decrypt data with a keeper, you call `Decrypt` with the byte slice you
 want to decrypt. This should be data that you obtained from a previous call
 to `Encrypt` with a keeper that uses the same secret material (e.g. two AWS
 KMS keepers created with the same customer master key ID). The `Decrypt`
-method will return an error if the input data did not come from the same
-secret keeper (**TODO(light)**: verify with @clausti and @shantuo that this
-is correct).
+method will return an error if the input data is corrupted.
 
-```go
-var cipherText []byte // obtained from elsewhere and random-looking
-plainText, err := keeper.Decrypt(ctx, cipherText)
-if err != nil {
-    return err
-}
-```
+{{< goexample src="gocloud.dev/secrets.ExampleKeeper_Decrypt" imports="0" >}}
 
 ## Large Messages
 

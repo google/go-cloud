@@ -36,26 +36,26 @@ And the portable function for PostgreSQL is [`postgres.Open`][]:
 
 ## AWS {#aws}
 
-Users of [AWS RDS for MySQL][] should import the `gocloud.dev/mysql/rdsmysql` package:
+Users of [AWS RDS for MySQL][] should import the `gocloud.dev/mysql/awsmysql` package:
 
-{{< goexample "gocloud.dev/mysql/rdsmysql.Example" >}}
+{{< goexample "gocloud.dev/mysql/awsmysql.Example" >}}
 
-Users of [AWS RDS for PostgreSQL][] should import the `gocloud.dev/postgres/rdspostgres` package:
+Users of [AWS RDS for PostgreSQL][] should import the `gocloud.dev/postgres/awspostgres` package:
 
-{{< goexample "gocloud.dev/postgres/rdspostgres.Example" >}}
+{{< goexample "gocloud.dev/postgres/awspostgres.Example" >}}
 
 [AWS RDS for MySQL]: https://aws.amazon.com/rds/mysql/
 [AWS RDS for PostgreSQL]: https://aws.amazon.com/rds/postgresql/
 
 ## GCP {#gcp}
 
-Users of [GCP Cloud SQL for MySQL][] should import the `gocloud.dev/mysql/cloudmysql` package:
+Users of [GCP Cloud SQL for MySQL][] should import the `gocloud.dev/mysql/gcpmysql` package:
 
-{{< goexample "gocloud.dev/mysql/cloudmysql.Example" >}}
+{{< goexample "gocloud.dev/mysql/gcpmysql.Example" >}}
 
-Users of [GCP Cloud SQL for PostgreSQL][] should import the `gocloud.dev/mysql/cloudpostgres` package:
+Users of [GCP Cloud SQL for PostgreSQL][] should import the `gocloud.dev/mysql/gcppostgres` package:
 
-{{< goexample "gocloud.dev/postgres/cloudpostgres.Example" >}}
+{{< goexample "gocloud.dev/postgres/gcppostgres.Example" >}}
 
 [GCP Cloud SQL for MySQL]: https://cloud.google.com/sql/docs/mysql/
 [GCP Cloud SQL for PostgreSQL]: https://cloud.google.com/sql/docs/postgres/

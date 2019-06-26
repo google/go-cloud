@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"time"
 
 	"gocloud.dev/secrets"
 	_ "gocloud.dev/secrets/localsecrets"
@@ -31,7 +32,9 @@ func init() {
 		// TODO(rvangent): Remove default later.
 		keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
 	}
-	keeper, keeperErr = secrets.OpenKeeper(context.Background(), keeperURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	keeper, keeperErr = secrets.OpenKeeper(ctx, keeperURL)
 }
 
 type secretsData struct {

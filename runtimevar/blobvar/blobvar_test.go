@@ -151,11 +151,19 @@ func TestOpenVariable(t *testing.T) {
 			os.Setenv("BLOBVAR_BUCKET_URL", test.BucketURL)
 
 			opener := &defaultOpener{}
+			defer func() {
+				if opener.opener != nil && opener.opener.Bucket != nil {
+					opener.opener.Bucket.Close()
+				}
+			}()
 			u, err := url.Parse(test.URL)
 			if err != nil {
 				t.Error(err)
 			}
 			v, err := opener.OpenVariableURL(ctx, u)
+			if v != nil {
+				defer v.Close()
+			}
 			if (err != nil) != test.WantErr {
 				t.Errorf("BucketURL %s URL %s: got error %v, want error %v", test.BucketURL, test.URL, err, test.WantErr)
 			}

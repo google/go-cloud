@@ -66,6 +66,7 @@ func TestExists(t *testing.T) {
 		t.Run(test.Description, func(t *testing.T) {
 			drv := &fakeAttributes{attributesErr: test.Err}
 			b := NewBucket(drv)
+			defer b.Close()
 			got, gotErr := b.Exists(context.Background(), "key")
 			if got != test.Want {
 				t.Errorf("got %v want %v", got, test.Want)
@@ -98,6 +99,8 @@ func (b *fakeAttributes) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerrors.Unknown
 }
 
+func (b *fakeAttributes) Close() error { return nil }
+
 // Verify that ListIterator works even if driver.ListPaged returns empty pages.
 func TestListIterator(t *testing.T) {
 	ctx := context.Background()
@@ -111,6 +114,7 @@ func TestListIterator(t *testing.T) {
 		{},
 	}}
 	b := NewBucket(db)
+	defer b.Close()
 	iter := b.List(nil)
 	var got []string
 	for {
@@ -147,6 +151,8 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 	}
 	return &driver.ListPage{Objects: objs, NextPageToken: []byte{1}}, nil
 }
+
+func (b *fakeLister) Close() error { return nil }
 
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.

@@ -2,7 +2,6 @@
 title: "Secrets"
 date: 2019-03-21T17:42:18-07:00
 showInSidenav: true
-draft: true
 ---
 
 Cloud applications frequently need to store sensitive information like web
@@ -15,6 +14,8 @@ encrypt the data, but then you need to worry about rotating the encryption
 keys and distributing them securely to all of your application servers.
 Most cloud providers include a key management service to perform these tasks,
 usually with hardware-level security and audit logging.
+
+<!--more-->
 
 The Go CDK provides access to key management providers in a portable way
 called "secret keepers". These guides show how to work with secret keepers in

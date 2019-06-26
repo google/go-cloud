@@ -404,6 +404,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 
 		// Insert a key "0a" in the middle of the page we already retrieved.
 		b := blob.NewBucket(drv)
+		defer b.Close()
 		key := page.Objects[0].Key + "a"
 		if err := b.WriteAll(ctx, key, content, nil); err != nil {
 			t.Fatal(err)
@@ -449,6 +450,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 
 		// Delete key "1".
 		b := blob.NewBucket(drv)
+		defer b.Close()
 		key := page.Objects[1].Key
 		if err := b.Delete(ctx, key); err != nil {
 			t.Fatal(err)
@@ -1264,16 +1266,15 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			b := blob.NewBucket(drv)
+			defer b.Close()
 
 			// If the test wants the blob to already exist, write it.
 			if tc.exists {
 				if err := b.WriteAll(ctx, key, []byte(existingContent), nil); err != nil {
-					b.Close()
 					t.Fatal(err)
 				}
 				defer func() {
 					_ = b.Delete(ctx, key)
-					b.Close()
 				}()
 			}
 

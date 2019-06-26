@@ -25,4 +25,4 @@ set -euo pipefail
 ./pubsub/rabbitpubsub/localrabbit.sh
 ./runtimevar/etcdvar/localetcd.sh
 ./docstore/mongodocstore/localmongo.sh
-./secrets/vault/localvault.sh
+./secrets/hashivault/localvault.sh

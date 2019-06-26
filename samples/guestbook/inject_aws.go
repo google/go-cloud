@@ -26,7 +26,7 @@ import (
 	"gocloud.dev/aws/awscloud"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/s3blob"
-	"gocloud.dev/mysql/rdsmysql"
+	"gocloud.dev/mysql/awsmysql"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/awsparamstore"
 	"gocloud.dev/server"
@@ -43,7 +43,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	// wire.Build.
 	wire.Build(
 		awscloud.AWS,
-		wire.Struct(new(rdsmysql.URLOpener), "CertSource"),
+		wire.Struct(new(awsmysql.URLOpener), "CertSource"),
 		applicationSet,
 		awsBucket,
 		awsMOTDVar,
@@ -62,11 +62,11 @@ func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags
 	return b, func() { b.Close() }, nil
 }
 
-// openAWSDatabase is a Wire provider function that connects to RDS based on
-// the command-line flags.
-func openAWSDatabase(ctx context.Context, opener *rdsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
+// openAWSDatabase is a Wire provider function that connects to an AWS RDS
+// MySQL database based on the command-line flags.
+func openAWSDatabase(ctx context.Context, opener *awsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
-		Scheme: "rdsmysql",
+		Scheme: "awsmysql",
 		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
 		Host:   flags.dbHost,
 		Path:   "/" + flags.dbName,
