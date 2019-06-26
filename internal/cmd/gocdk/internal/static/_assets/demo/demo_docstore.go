@@ -41,8 +41,8 @@ func init() {
 }
 
 type MyDocument struct {
-	Key              string
-	Value            string
+	Key   string
+	Value string
 	// TODO(rvangent): Rename this field to demonstrate setting it once
 	// https://github.com/google/go-cloud/issues/2413 is fixed.
 	DocstoreRevision interface{}
