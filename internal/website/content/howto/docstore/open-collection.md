@@ -22,7 +22,7 @@ you specify how to find the provider's primary key in the document.
 
 ## Constructors versus URL openers
 
-The easiest way to open a subscription is using [`docstore.OpenCollection`][]
+The easiest way to open a collection is using [`docstore.OpenCollection`][]
 and a URL pointing to the topic. See [Concepts: URLs][] for more details. If you
 need fine-grained control over the connection settings, you can call the
 constructor function in the driver package directly (like
