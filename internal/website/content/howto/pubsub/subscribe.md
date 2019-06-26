@@ -35,17 +35,16 @@ a subscription for your chosen Pub/Sub provider.
 
 ## Constructors versus URL openers
 
-If you know that your program is always going to use a particular Pub/Sub
-provider or you need fine-grained control over the connection settings, you
-should call the constructor function in the driver package directly (like
-`gcppubsub.OpenSubscription`). However, if you want to change providers based
-on configuration, you can use `pubsub.OpenSubscription`, making sure you
-["blank import"][] the driver package to link it in. See the
-[documentation on URLs][] for more details. This guide will show how to use
-both forms for each pub/sub provider.
+The easiest way to open a subscription is using [`pubsub.OpenSubscription`][]
+and a URL pointing to the topic. See [Concepts: URLs][] for more details. If you
+need fine-grained control over the connection settings, you can call the
+constructor function in the driver package directly (like
+`gcppubsub.OpenSubscription`). This guide will show how to use both forms for
+each pub/sub provider.
 
-["blank import"]: https://golang.org/doc/effective_go.html#blank_import
-[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
+[`pubsub.OpenSubscription`]:
+https://godoc.org/gocloud.dev/pubsub#OpenTopic
+[Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
 ## Amazon Simple Queueing Service {#sqs}
 

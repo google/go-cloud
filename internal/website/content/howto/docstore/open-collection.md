@@ -7,7 +7,7 @@ weight: 1
 
 The first step in using Docstore is connecting to your
 document store provider. Every document store provider is a little different, but the Go CDK
-lets you interact with all of them using the [`*docstore.Collection`][] type. 
+lets you interact with all of them using the [`*docstore.Collection`][] type.
 
 While every provider has the concept of a primary key that uniquely
 distinguishes a document in a collection, each one specifies that key in its own
@@ -22,22 +22,21 @@ you specify how to find the provider's primary key in the document.
 
 ## Constructors versus URL openers
 
-If you know that your program is always going to use a particular 
-provider or you need fine-grained control over the connection settings, you
-should call the constructor function in the driver package directly (like
-`mongodocstore.OpenCollection`). However, if you want to change providers based on
-configuration, you can use `docstore.OpenCollection`, making sure you ["blank
-import"][] the driver package to link it in. See the
-[documentation on URLs][] for more details. This guide will show how to use
-both forms for each document store provider.
+The easiest way to open a subscription is using [`docstore.OpenCollection`][]
+and a URL pointing to the topic. See [Concepts: URLs][] for more details. If you
+need fine-grained control over the connection settings, you can call the
+constructor function in the driver package directly (like
+`mongodocstore.OpenCollection`). This guide will show how to use both forms for
+each document store provider.
 
-["blank import"]: https://golang.org/doc/effective_go.html#blank_import
-[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
+[`docstore.OpenCollection`]:
+https://godoc.org/gocloud.dev/docstore#OpenCollection
+[Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
 ## DynamoDB {#dynamodb}
 
 The
-[`dynamodocstore`](https://godoc.org/gocloud.dev/docstore/dynamodocstore) 
+[`dynamodocstore`](https://godoc.org/gocloud.dev/docstore/dynamodocstore)
 package supports [Amazon DynamoDB](https://aws.amazon.com/dynamodb).
 A Docstore collection corresponds to a DynamoDB table.
 
@@ -74,7 +73,7 @@ specifying a document field that holds the name, or by providing a function to
 extract the name from a document.
 
 Firestore URLs provide the project and collection, as well as the field
-that holds the document name. 
+that holds the document name.
 
 {{< goexample "gocloud.dev/docstore/firedocstore.Example_openCollectionFromURL" >}}
 
@@ -96,8 +95,8 @@ the document name.
 {{< goexample "gocloud.dev/docstore/firedocstore.ExampleOpenCollection" >}}
 
 Instead of mapping the document name to a field, you can supply a function to construct the name
-from the document contents with [`firedocstore.OpenCollectionWithNameFunc`][]. 
-This can be useful for documents whose name is the combination of two or more fields. 
+from the document contents with [`firedocstore.OpenCollectionWithNameFunc`][].
+This can be useful for documents whose name is the combination of two or more fields.
 
 {{< goexample "gocloud.dev/docstore/firedocstore.ExampleOpenCollectionWithNameFunc" >}}
 
@@ -140,8 +139,8 @@ Obtain a `*mongo.Collection` from the client with
 {{< goexample "gocloud.dev/docstore/mongodocstore.ExampleOpenCollection" >}}
 
 Instead of mapping the document ID to a field, you can supply a function to construct the ID
-from the document contents with [`mongodocstore.OpenCollectionWithIDFunc`][]. 
-This can be useful for documents whose name is the combination of two or more fields. 
+from the document contents with [`mongodocstore.OpenCollectionWithIDFunc`][].
+This can be useful for documents whose name is the combination of two or more fields.
 
 {{< goexample "gocloud.dev/docstore/mongodocstore.ExampleOpenCollectionWithIDFunc" >}}
 
@@ -154,7 +153,7 @@ This can be useful for documents whose name is the combination of two or more fi
 The
 [`memdocstore`](https://godoc.org/gocloud.dev/docstore/mongodocstore)
 package implements an in-memory document store suitable for testing and
-development. 
+development.
 
 URLs for the in-memory store have a `mem:` scheme and provide the name of the
 document field to use as a primary key. There is no collection name; each call
@@ -175,8 +174,8 @@ taking the name of the key field.
 {{< goexample "gocloud.dev/docstore/memdocstore.ExampleOpenCollection" >}}
 
 You can instead supply a function to construct the primary key
-from the document contents with [`memdocstore.OpenCollectionWithKeyFunc`][]. 
-This can be useful for documents whose name is the combination of two or more fields. 
+from the document contents with [`memdocstore.OpenCollectionWithKeyFunc`][].
+This can be useful for documents whose name is the combination of two or more fields.
 
 {{< goexample "gocloud.dev/docstore/memdocstore.ExampleOpenCollectionWithKeyFunc" >}}
 

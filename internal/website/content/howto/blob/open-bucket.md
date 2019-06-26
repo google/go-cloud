@@ -14,17 +14,16 @@ lets you interact with all of them using the [`*blob.Bucket` type][].
 
 ## Constructors versus URL openers
 
-If you know that your program is always going to use a particular storage
-provider or you need fine-grained control over the connection settings, you
-should call the constructor function in the driver package directly (like
-`s3blob.OpenBucket`). However, if you want to change providers based on
-configuration, you can use `blob.OpenBucket`, making sure you ["blank
-import"][] the driver package to link it in. See the
-[documentation on URLs][] for more details. This guide will show how to use
-both forms for each storage provider.
+The easiest way to open a blob is using [`blob.OpenBucket`][] and a URL
+pointing to the blob. See [Concepts: URLs][] for more details. If you need
+fine-grained control over the connection settings, you can call the constructor
+function in the driver package directly (like `s3blob.OpenBucket`). This guide
+shows how to use both forms for each provider.
 
-["blank import"]: https://golang.org/doc/effective_go.html#blank_import
-[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
+[`blob.OpenBucket`]:
+https://godoc.org/gocloud.dev/blob#OpenBucket
+
+[Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
 ### Prefixed Buckets {#prefix}
 
