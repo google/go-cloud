@@ -98,7 +98,7 @@ you can start multiple goroutines:</p>
 
 <span class="c1">// We&#39;re no longer receiving messages. Wait to finish handling any
 </span><span class="c1">// unacknowledged messages by totally acquiring the semaphore.
-</span><span class="c1"></span><span class="k">for</span> <span class="nx">n</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">n</span> <span class="p">&lt;</span> <span class="nx">maxHandlers</span><span class="p">;</span> <span class="nx">n</span><span class="o">--</span> <span class="p">{</span>
+</span><span class="c1"></span><span class="k">for</span> <span class="nx">n</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">n</span> <span class="p">&lt;</span> <span class="nx">maxHandlers</span><span class="p">;</span> <span class="nx">n</span><span class="o">++</span> <span class="p">{</span>
 	<span class="nx">sem</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
 <span class="p">}</span>
 </code></pre></div>
