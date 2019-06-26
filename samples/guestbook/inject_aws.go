@@ -62,8 +62,8 @@ func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags
 	return b, func() { b.Close() }, nil
 }
 
-// openAWSDatabase is a Wire provider function that connects to RDS based on
-// the command-line flags.
+// openAWSDatabase is a Wire provider function that connects to an AWS RDS
+// MySQL database based on the command-line flags.
 func openAWSDatabase(ctx context.Context, opener *awsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
 		Scheme: "awsmysql",

@@ -292,8 +292,8 @@ func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (
 	return b, func() { b.Close() }, nil
 }
 
-// openAWSDatabase is a Wire provider function that connects to RDS based on
-// the command-line flags.
+// openAWSDatabase is a Wire provider function that connects to an AWS RDS
+// MySQL database based on the command-line flags.
 func openAWSDatabase(ctx context.Context, opener *awsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
 		Scheme: "awsmysql",
@@ -347,8 +347,8 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*
 	return b, func() { b.Close() }, nil
 }
 
-// openGCPDatabase is a Wire provider function that connects to Cloud SQL
-// based on the command-line flags.
+// openGCPDatabase is a Wire provider function that connects to a GCP Cloud SQL
+// MySQL database based on the command-line flags.
 func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
 		Scheme: "gcpmysql",

@@ -64,8 +64,8 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*b
 	return b, func() { b.Close() }, nil
 }
 
-// openGCPDatabase is a Wire provider function that connects to Cloud SQL
-// based on the command-line flags.
+// openGCPDatabase is a Wire provider function that connects to a GCP Cloud SQL
+// MySQL database based on the command-line flags.
 func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
 		Scheme: "gcpmysql",
