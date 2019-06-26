@@ -84,7 +84,7 @@ type Options struct {
 	// to run.
 	AllowLocalFilters bool
 	// The name of the field holding the document revision.
-	// Defaults to docstore.RevisionField.
+	// Defaults to docstore.DefaultRevisionField.
 	RevisionField string
 
 	// The maximum number of RPCs that can be in progress for a single call to

@@ -115,7 +115,7 @@ type Options struct {
 	// go.mongodb.org/mongo-driver/mongo, which lowercases field names.
 	LowercaseFields bool
 	// The name of the field holding the document revision.
-	// Defaults to docstore.RevisionField.
+	// Defaults to docstore.DefaultRevisionField.
 	RevisionField string
 }
 
