@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 )
 
 func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
@@ -27,14 +28,34 @@ func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra
 		Long:  "TODO more about deploy",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
+			// Precompute snapshot tag and pass into build and launch.
+			moduleRoot, err := pctx.ModuleRoot(ctx)
+			if err != nil {
+				return xerrors.Errorf("gocdk deploy: %w", err)
+			}
+			imageName, err := moduleDockerImageName(moduleRoot)
+			if err != nil {
+				return xerrors.Errorf("gocdk deploy: %w", err)
+			}
+			tag, err := generateTag()
+			if err != nil {
+				return xerrors.Errorf("gocdk deploy: %w", err)
+			}
+			snapshotRef := imageName + ":" + tag
+			buildRefs := []string{
+				imageName + defaultDockerTag,
+				snapshotRef,
+			}
+
+			// Run build, apply, and launch.
 			biome := args[0]
-			if err := build(ctx, pctx, defaultDockerTag); err != nil {
+			if err := build(ctx, pctx, buildRefs); err != nil {
 				return err
 			}
 			if err := apply(ctx, pctx, biome, true); err != nil {
 				return err
 			}
-			if err := launch(ctx, pctx, biome, defaultDockerTag); err != nil {
+			if err := launch(ctx, pctx, biome, snapshotRef); err != nil {
 				return err
 			}
 			return nil
