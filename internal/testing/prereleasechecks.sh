@@ -68,7 +68,7 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="mysql/cloudmysql"
+TESTDIR="mysql/gcpmysql"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
@@ -86,7 +86,7 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="mysql/rdsmysql"
+TESTDIR="mysql/awsmysql"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
@@ -104,7 +104,7 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="postgres/cloudpostgres"
+TESTDIR="postgres/gcppostgres"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
@@ -122,7 +122,7 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="postgres/rdspostgres"
+TESTDIR="postgres/awspostgres"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null

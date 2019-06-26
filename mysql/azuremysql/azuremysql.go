@@ -112,7 +112,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		tlsConfigNum := tlsConfigCounter.n
 		tlsConfigCounter.n++
 		tlsConfigCounter.mu.Unlock()
-		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/rdsmysql/%d", tlsConfigNum)
+		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/azuremysql/%d", tlsConfigNum)
 		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
 			RootCAs: certPool,
 		})

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package rdspostgres provides connections to AWS RDS PostgreSQL instances.
+// Package awspostgres provides connections to AWS RDS PostgreSQL instances.
 //
 // URLs
 //
-// For postgres.Open, rdspostgres registers for the scheme "rdspostgres".
+// For postgres.Open, awspostgres registers for the scheme "awspostgres".
 // The default URL opener will create a connection using the default
 // credentials from the environment, as described in
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
@@ -24,7 +24,7 @@
 // see URLOpener.
 //
 // See https://gocloud.dev/concepts/urls/ for background information.
-package rdspostgres // import "gocloud.dev/postgres/rdspostgres"
+package awspostgres // import "gocloud.dev/postgres/awspostgres"
 
 import (
 	"context"
@@ -44,7 +44,7 @@ import (
 )
 
 // URLOpener opens RDS PostgreSQL URLs
-// like "rdspostgres://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb".
+// like "awspostgres://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb".
 type URLOpener struct {
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
@@ -53,9 +53,9 @@ type URLOpener struct {
 	TraceOpts []ocsql.TraceOption
 }
 
-// Scheme is the URL scheme rdspostgres registers its URLOpener under on
+// Scheme is the URL scheme awspostgres registers its URLOpener under on
 // postgres.DefaultMux.
-const Scheme = "rdspostgres"
+const Scheme = "awspostgres"
 
 func init() {
 	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
@@ -72,7 +72,7 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	for k := range query {
 		// Forbid SSL-related parameters.
 		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, fmt.Errorf("rdspostgres: open: parameter %q not allowed; sslmode must be disabled because the underlying dialer is already providing TLS", k)
+			return nil, fmt.Errorf("awspostgres: open: parameter %q not allowed; sslmode must be disabled because the underlying dialer is already providing TLS", k)
 		}
 	}
 	// sslmode must be disabled because the underlying dialer is already providing TLS.
@@ -129,7 +129,7 @@ type dialer struct {
 func (d dialer) dial(ctx context.Context, network, address string) (net.Conn, error) {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, fmt.Errorf("rdspostgres: parse address: %v", err)
+		return nil, fmt.Errorf("awspostgres: parse address: %v", err)
 	}
 	certPool, err := d.provider.RDSCertPool(ctx)
 	if err != nil {

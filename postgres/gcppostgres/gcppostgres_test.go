@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudpostgres
+package gcppostgres
 
 import (
 	"context"
@@ -51,11 +51,11 @@ func TestURLOpener(t *testing.T) {
 	}{
 		{
 			name:   "Success",
-			urlstr: fmt.Sprintf("cloudpostgres://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName),
+			urlstr: fmt.Sprintf("gcppostgres://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName),
 		},
 		{
 			name:    "SSLModeForbidden",
-			urlstr:  fmt.Sprintf("cloudpostgres://%s:%s@%s/%s/%s/%s?sslmode=require", username, password, project, region, instance, databaseName),
+			urlstr:  fmt.Sprintf("gcppostgres://%s:%s@%s/%s/%s/%s?sslmode=require", username, password, project, region, instance, databaseName),
 			wantErr: true,
 		},
 	}
@@ -95,39 +95,39 @@ func TestInstanceFromURL(t *testing.T) {
 	}{
 		{
 			name:         "AllValuesSpecified",
-			urlString:    "cloudpostgres://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
+			urlString:    "gcppostgres://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "my-db",
 		},
 		{
 			name:         "OptionalValuesOmitted",
-			urlString:    "cloudpostgres://my-project-id/us-central1/my-instance-id/my-db",
+			urlString:    "gcppostgres://my-project-id/us-central1/my-instance-id/my-db",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "my-db",
 		},
 		{
 			name:      "DatabaseNameEmpty",
-			urlString: "cloudpostgres://my-project-id/us-central1/my-instance-id/",
+			urlString: "gcppostgres://my-project-id/us-central1/my-instance-id/",
 			wantErr:   true,
 		},
 		{
 			name:      "InstanceEmpty",
-			urlString: "cloudpostgres://my-project-id/us-central1//my-db",
+			urlString: "gcppostgres://my-project-id/us-central1//my-db",
 			wantErr:   true,
 		},
 		{
 			name:      "RegionEmpty",
-			urlString: "cloudpostgres://my-project-id//my-instance-id/my-db",
+			urlString: "gcppostgres://my-project-id//my-instance-id/my-db",
 			wantErr:   true,
 		},
 		{
 			name:      "ProjectEmpty",
-			urlString: "cloudpostgres:///us-central1/my-instance-id/my-db",
+			urlString: "gcppostgres:///us-central1/my-instance-id/my-db",
 			wantErr:   true,
 		},
 		{
 			name:         "DatabaseNameWithSlashes",
-			urlString:    "cloudpostgres://my-project-id/us-central1/my-instance-id/foo/bar/baz",
+			urlString:    "gcppostgres://my-project-id/us-central1/my-instance-id/foo/bar/baz",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "foo/bar/baz",
 		},

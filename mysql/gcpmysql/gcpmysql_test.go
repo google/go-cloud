@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudmysql
+package gcpmysql
 
 import (
 	"context"
@@ -46,7 +46,7 @@ func TestOpen(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	urlstr := fmt.Sprintf("cloudmysql://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName)
+	urlstr := fmt.Sprintf("gcpmysql://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName)
 	t.Log("Connecting to", urlstr)
 	db, err := mysql.Open(ctx, urlstr)
 	if err != nil {
@@ -70,39 +70,39 @@ func TestInstanceFromURL(t *testing.T) {
 	}{
 		{
 			name:         "AllValuesSpecified",
-			urlString:    "cloudmysql://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
+			urlString:    "gcpmysql://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "my-db",
 		},
 		{
 			name:         "OptionalValuesOmitted",
-			urlString:    "cloudmysql://my-project-id/us-central1/my-instance-id/my-db",
+			urlString:    "gcpmysql://my-project-id/us-central1/my-instance-id/my-db",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "my-db",
 		},
 		{
 			name:      "DatabaseNameEmpty",
-			urlString: "cloudmysql://my-project-id/us-central1/my-instance-id/",
+			urlString: "gcpmysql://my-project-id/us-central1/my-instance-id/",
 			wantErr:   true,
 		},
 		{
 			name:      "InstanceEmpty",
-			urlString: "cloudmysql://my-project-id/us-central1//my-db",
+			urlString: "gcpmysql://my-project-id/us-central1//my-db",
 			wantErr:   true,
 		},
 		{
 			name:      "RegionEmpty",
-			urlString: "cloudmysql://my-project-id//my-instance-id/my-db",
+			urlString: "gcpmysql://my-project-id//my-instance-id/my-db",
 			wantErr:   true,
 		},
 		{
 			name:      "ProjectEmpty",
-			urlString: "cloudmysql:///us-central1/my-instance-id/my-db",
+			urlString: "gcpmysql:///us-central1/my-instance-id/my-db",
 			wantErr:   true,
 		},
 		{
 			name:         "DatabaseNameWithSlashes",
-			urlString:    "cloudmysql://my-project-id/us-central1/my-instance-id/foo/bar/baz",
+			urlString:    "gcpmysql://my-project-id/us-central1/my-instance-id/foo/bar/baz",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "foo/bar/baz",
 		},
