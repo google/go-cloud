@@ -149,38 +149,52 @@ func TestInit(t *testing.T) {
 }
 func TestInferModulePath(t *testing.T) {
 	testCases := []struct {
-		name       string
-		testGOPATH func(string) (string, func())
-		wantErr    bool
+		name    string
+		setup   func(string) (gopath string, initDir string)
+		wantErr bool
 	}{
 		{
 			"no GOPATH entry",
-			func(dir string) (string, func()) {
-				return "", func() {}
+			func(dir string) (string, string) {
+				return "", dir
 			},
 			true,
 		},
 		{
-			"single GOPATH entry",
-			func(dir string) (string, func()) {
-				return "GOPATH=" + dir, func() {}
+			"single GOPATH entry, project GOPATH/src",
+			func(dir string) (string, string) {
+				srcDir := filepath.Join(dir, "src")
+				if err := os.Mkdir(srcDir, 0777); err != nil {
+					t.Error(err)
+				}
+				return "GOPATH=" + dir, srcDir
 			},
 			false,
 		},
 		{
-			"multiple GOPATH entries",
-			func(dir string) (string, func()) {
-				dir2, err := ioutil.TempDir("", testTempDirPrefix+"-2")
-				if err != nil {
-					t.Fatal(err)
+			"single GOPATH entry, project in GOPATH (no src)",
+			func(dir string) (string, string) {
+				return "GOPATH=" + dir, dir
+			},
+			true,
+		},
+		{
+			"multiple GOPATH entries, project in GOPATH/src",
+			func(dir string) (string, string) {
+				goPath1 := filepath.Join(dir, "goPath1")
+				if err := os.Mkdir(goPath1, 0777); err != nil {
+					t.Error(err)
 				}
-				cleanup := func() {
-					if err := os.RemoveAll(dir2); err != nil {
-						t.Error(err)
-					}
+				goPath2 := filepath.Join(dir, "goPath2")
+				if err := os.Mkdir(goPath2, 0777); err != nil {
+					t.Error(err)
 				}
-				multiPath := "GOPATH=" + dir + string(filepath.ListSeparator) + dir2
-				return multiPath, cleanup
+				srcDir := filepath.Join(goPath2, "src")
+				if err := os.Mkdir(srcDir, 0777); err != nil {
+					t.Error(err)
+				}
+				multiPath := "GOPATH=" + goPath2 + string(filepath.ListSeparator) + goPath2
+				return multiPath, srcDir
 			},
 			false,
 		},
@@ -198,15 +212,18 @@ func TestInferModulePath(t *testing.T) {
 					t.Error(err)
 				}
 			}()
+			gopath, initDir := tc.setup(dir)
 
-			pctx := newTestProcessContext(dir)
-			gopath, cleanup := tc.testGOPATH(dir)
-			defer cleanup()
+			pctx := newTestProcessContext(initDir)
 			pctx.env = []string{gopath}
+			projName := "myspecialproject"
 
-			err = run(ctx, pctx, []string{"init", "myspecialproject"})
+			modPath, err := inferModulePath(ctx, pctx, filepath.Join(initDir, projName))
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v but wantErr is %v", err, tc.wantErr)
+			}
+			if !tc.wantErr && (modPath != projName) {
+				t.Errorf("incorrect inferred module path: got %v, want %v", modPath, projName)
 			}
 		})
 	}
