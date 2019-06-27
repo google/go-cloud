@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func ExampleNewKeeper() {
+func Example() {
 	ctx := context.Background()
 
 	// Construct a *secrets.Keeper from one of the secrets subpackages.
@@ -78,4 +78,38 @@ func Example_errorAs() {
 			fmt.Println(s.Code())
 		}
 	}
+}
+
+func ExampleKeeper_Encrypt() {
+	// This example is used in https://gocloud.dev/howto/secrets/crypt/
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var keeper *secrets.Keeper
+
+	plainText := []byte("Secrets secrets...")
+	cipherText, err := keeper.Encrypt(ctx, plainText)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Ignore unused variables in example:
+	_ = cipherText
+}
+
+func ExampleKeeper_Decrypt() {
+	// This example is used in https://gocloud.dev/howto/secrets/crypt/
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var keeper *secrets.Keeper
+
+	var cipherText []byte // obtained from elsewhere and random-looking
+	plainText, err := keeper.Decrypt(ctx, cipherText)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Ignore unused variables in example:
+	_ = plainText
 }

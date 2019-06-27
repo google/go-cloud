@@ -71,7 +71,7 @@ type Options struct {
 	AllowScans bool
 
 	// The name of the field holding the document revision.
-	// Defaults to docstore.RevisionField.
+	// Defaults to docstore.DefaultRevisionField.
 	RevisionField string
 
 	// If set, call this function on queries that we cannot execute at all (for

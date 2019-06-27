@@ -22,7 +22,7 @@ import (
 	"gocloud.dev/internal/testing/setup"
 )
 
-func TestOpenCollection(t *testing.T) {
+func TestOpenCollectionFromURL(t *testing.T) {
 	cleanup := setup.FakeGCPDefaultCredentials(t)
 	defer cleanup()
 
@@ -46,7 +46,10 @@ func TestOpenCollection(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
+		d, err := docstore.OpenCollection(ctx, test.URL)
+		if d != nil {
+			defer d.Close()
+		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}

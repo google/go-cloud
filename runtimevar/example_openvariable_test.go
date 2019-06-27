@@ -37,6 +37,7 @@ func Example_openVariableFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer v.Close()
 
 	// Now we can use the Variable as normal.
 	snapshot, err := v.Latest(ctx)

@@ -24,8 +24,8 @@ import (
 	"gocloud.dev/blob/s3blob"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
-	"gocloud.dev/mysql/cloudmysql"
-	"gocloud.dev/mysql/rdsmysql"
+	"gocloud.dev/mysql/awsmysql"
+	"gocloud.dev/mysql/gcpmysql"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/awsparamstore"
@@ -47,7 +47,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	certFetcher := &rds.CertFetcher{
 		Client: client,
 	}
-	urlOpener := &rdsmysql.URLOpener{
+	urlOpener := &awsmysql.URLOpener{
 		CertSource: certFetcher,
 	}
 	db, cleanup, err := openAWSDatabase(ctx, urlOpener, flags)
@@ -176,7 +176,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		return nil, nil, err
 	}
 	remoteCertSource := cloudsql.NewCertSource(httpClient)
-	urlOpener := &cloudmysql.URLOpener{
+	urlOpener := &gcpmysql.URLOpener{
 		CertSource: remoteCertSource,
 	}
 	projectID, err := gcp.DefaultProjectID(credentials)
@@ -292,11 +292,11 @@ func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (
 	return b, func() { b.Close() }, nil
 }
 
-// openAWSDatabase is a Wire provider function that connects to RDS based on
-// the command-line flags.
-func openAWSDatabase(ctx context.Context, opener *rdsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
+// openAWSDatabase is a Wire provider function that connects to an AWS RDS
+// MySQL database based on the command-line flags.
+func openAWSDatabase(ctx context.Context, opener *awsmysql.URLOpener, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
-		Scheme: "rdsmysql",
+		Scheme: "awsmysql",
 		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
 		Host:   flags.dbHost,
 		Path:   "/" + flags.dbName,
@@ -347,11 +347,11 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*
 	return b, func() { b.Close() }, nil
 }
 
-// openGCPDatabase is a Wire provider function that connects to Cloud SQL
-// based on the command-line flags.
-func openGCPDatabase(ctx context.Context, opener *cloudmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
+// openGCPDatabase is a Wire provider function that connects to a GCP Cloud SQL
+// MySQL database based on the command-line flags.
+func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
-		Scheme: "cloudmysql",
+		Scheme: "gcpmysql",
 		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
 		Host:   string(id),
 		Path:   fmt.Sprintf("/%s/%s/%s", flags.cloudSQLRegion, flags.dbHost, flags.dbName),

@@ -39,10 +39,8 @@ PKGINFO_BRANCH=$(mktemp)
 PKGINFO_MASTER=$(mktemp)
 
 function cleanup() {
-  rm -rf "$INSTALL_DIR"
-  rm -rf "$MASTER_CLONE_DIR"
-  rm -f "$PKGINFO_BRANCH"
-  rm -f "$PKGINFO_MASTER"
+  rm -rf "$INSTALL_DIR" "$MASTER_CLONE_DIR"
+  rm -f "$PKGINFO_BRANCH" "$PKGINFO_MASTER"
 }
 trap cleanup EXIT
 
@@ -53,12 +51,16 @@ trap cleanup EXIT
 
 git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR" &> /dev/null
 
+# Run the following checks in the master directory
+ORIG_DIR="$(pwd)"
+cd "$MASTER_CLONE_DIR"
+
 incompatible_change_pkgs=()
 while read -r path || [[ -n "$path" ]]; do
   echo "  checking packages in module $path"
   pushd "$path" &> /dev/null
 
-  PKGS=$(cd "$MASTER_CLONE_DIR" && cd "$path" && go list ./...)
+  PKGS=$(go list ./...)
   for pkg in $PKGS; do
     if [[ "$pkg" =~ "test" ]] || [[ "$pkg" =~ "internal" ]] || [[ "$pkg" =~ "samples" ]]; then
       continue
@@ -67,22 +69,22 @@ while read -r path || [[ -n "$path" ]]; do
 
     # Compute export data for the current branch.
     package_deleted=0
-    apidiff -w "$PKGINFO_BRANCH" "$pkg" || package_deleted=1
+    (cd "$ORIG_DIR/$path" && apidiff -w "$PKGINFO_BRANCH" "$pkg") || package_deleted=1
     if [[ $package_deleted -eq 1 ]]; then
       echo "    package ${pkg} was deleted! Recording as an incompatible change.";
-      incompatible_change_pkgs+=(${pkg});
+      incompatible_change_pkgs+=("${pkg}");
       continue;
     fi
 
     # Compute export data for master@HEAD.
-    (cd "$MASTER_CLONE_DIR" && cd "$path" && apidiff -w "$PKGINFO_MASTER" "$pkg")
+    apidiff -w "$PKGINFO_MASTER" "$pkg"
 
     # Print all changes for posterity.
     apidiff "$PKGINFO_MASTER" "$PKGINFO_BRANCH"
 
     # Note if there's an incompatible change.
     ic=$(apidiff -incompatible "$PKGINFO_MASTER" "$PKGINFO_BRANCH")
-    if [ ! -z "$ic" ]; then
+    if [ -n "$ic" ]; then
       incompatible_change_pkgs+=("$pkg");
     fi
   done
@@ -97,6 +99,7 @@ fi
 echo "Found breaking API change(s) in: ${incompatible_change_pkgs[*]}."
 
 # Found incompatible changes; see if they were declared as OK via a commit.
+cd "$ORIG_DIR"
 if git cherry -v master | grep -q "BREAKING_CHANGE_OK"; then
   echo "Allowing them due to a commit message with BREAKING_CHANGE_OK.";
   exit 0;
@@ -104,4 +107,3 @@ fi
 
 echo "FAIL. If this is expected and OK, you can pass this check by adding a commit with BREAKING_CHANGE_OK in the first line of the message."
 exit 1
-

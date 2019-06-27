@@ -16,7 +16,6 @@ package localsecrets_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"gocloud.dev/secrets"
@@ -24,48 +23,35 @@ import (
 )
 
 func ExampleNewKeeper() {
-	// localsecrets.Keeper utilizes the golang.org/x/crypto/nacl/secretbox package
-	// for the crypto implementation, and secretbox requires a secret key
-	// that is a [32]byte. localsecrets
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#local-ctor
+
 	secretKey, err := localsecrets.NewRandomKey()
 	if err != nil {
 		log.Fatal(err)
 	}
 	keeper := localsecrets.NewKeeper(secretKey)
 	defer keeper.Close()
-
-	// Now we can use keeper to encrypt or decrypt.
-	plaintext := []byte("Hello, Secrets!")
-	ctx := context.Background()
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(decrypted))
-
-	// Output:
-	// Hello, Secrets!
 }
 
 func Example_openFromURL() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#local
+
+	// import _ "gocloud.dev/secrets/localsecrets"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
 	// Using "base64key://", a new random key will be generated.
-	keeper, err := secrets.OpenKeeper(ctx, "base64key://")
+	randomKeyKeeper, err := secrets.OpenKeeper(ctx, "base64key://")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeper.Close()
+	defer randomKeyKeeper.Close()
 
-	// The URL hostname must be a base64-encoded key, of length 32 bytes when decoded.
-	keeper, err = secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=")
+	// Otherwise, the URL hostname must be a base64-encoded key, of length 32 bytes when decoded.
+	savedKeyKeeper, err := secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeper.Close()
+	defer savedKeyKeeper.Close()
 }

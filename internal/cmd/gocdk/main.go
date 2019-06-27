@@ -69,7 +69,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	registerServeCmd(ctx, pctx, rootCmd)
 	registerDemoCmd(ctx, pctx, rootCmd)
 	registerBiomeCmd(ctx, pctx, rootCmd)
-	registerProvisionCmd(ctx, pctx, rootCmd)
+	registerResourceCmd(ctx, pctx, rootCmd)
 	registerDeployCmd(ctx, pctx, rootCmd)
 	registerBuildCmd(ctx, pctx, rootCmd)
 	registerApplyCmd(ctx, pctx, rootCmd)

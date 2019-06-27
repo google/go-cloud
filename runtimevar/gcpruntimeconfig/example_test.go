@@ -30,10 +30,14 @@ type MyConfig struct {
 }
 
 func ExampleOpenVariable() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#rc-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -66,21 +70,30 @@ func ExampleOpenVariable() {
 		log.Fatal(err)
 	}
 	defer v.Close()
-
-	// We can now read the current value of the variable from v.
-	snapshot, err := v.Latest(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := snapshot.Value.(MyConfig)
-	_ = cfg
 }
 
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#rc-url
+
+	// import _ "gocloud.dev/runtimervar/gcpruntimeconfig"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The URL host+path form the GCP Runtime Configurator variable key.
 	// See https://cloud.google.com/deployment-manager/runtime-configurator/
 	// for more details.
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer v.Close()
+}
+
+func Example_openVariableFromURLAndCallLatest() {
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string")
 	if err != nil {
