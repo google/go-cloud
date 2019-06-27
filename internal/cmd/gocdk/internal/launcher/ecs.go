@@ -82,11 +82,10 @@ func (l *ECS) Launch(ctx context.Context, input *Input) (*url.URL, error) {
 	if err != nil {
 		return nil, xerrors.Errorf("ECS launch: %w", err)
 	}
-	if len(runTaskOutput.Tasks) == 0 {
+	if n := len(runTaskOutput.Tasks); n == 0 {
 		return nil, xerrors.Errorf("ECS launch: could not create task. Your cluster may be at capacity, try stopping old tasks.")
-	}
-	if len(runTaskOutput.Tasks) > 1 {
-		return nil, xerrors.Errorf("ECS launch: found %d tasks (sent 1)", len(runTaskOutput.Tasks))
+	} else if n > 1 {
+		return nil, xerrors.Errorf("ECS launch: found %d tasks (sent 1)", n)
 	}
 	task := runTaskOutput.Tasks[0]
 	ec2Client := ec2.New(config)
@@ -191,8 +190,8 @@ func (l *ECS) instanceIP(ctx context.Context, ecsClient *ecs.ECS, ec2Client *ec2
 	if err != nil {
 		return "", xerrors.Errorf("find ECS container instance IP: %w", err)
 	}
-	if len(containerInstanceOutput.ContainerInstances) != 1 {
-		return "", xerrors.Errorf("find ECS container instance IP: found %d container instance (want 1)", len(containerInstanceOutput.ContainerInstances))
+	if n := len(containerInstanceOutput.ContainerInstances); n != 1 {
+		return "", xerrors.Errorf("find ECS container instance IP: found %d container instance (want 1)", n)
 	}
 	containerInstance := containerInstanceOutput.ContainerInstances[0]
 	ec2InstanceID := aws.StringValue(containerInstance.Ec2InstanceId)
@@ -201,6 +200,12 @@ func (l *ECS) instanceIP(ctx context.Context, ecsClient *ecs.ECS, ec2Client *ec2
 	})
 	if err != nil {
 		return "", xerrors.Errorf("find ECS container instance IP: %w", err)
+	}
+	if n := len(instanceOutput.Reservations); n != 1 {
+		return "", xerrors.Errorf("find ECS container instance IP: found %d EC2 reservations (want 1)", n)
+	}
+	if n := len(instanceOutput.Reservations[0].Instances); n != 1 {
+		return "", xerrors.Errorf("find ECS container instance IP: found %d EC2 instances (want 1)", n)
 	}
 	publicIP := aws.StringValue(instanceOutput.Reservations[0].Instances[0].PublicIpAddress)
 	return publicIP, nil
