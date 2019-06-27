@@ -17,14 +17,14 @@ Working with runtime variables using the Go CDK takes two steps:
 ## Constructors versus URL openers
 
 The easiest way to open a variable is using [`runtimevar.OpenVariable`][] and a
-URL pointing to the variable. See [Concepts: URLs][] for more
-details. If you need fine-grained control over the connection settings, you can
-call the constructor function in the driver package directly (like
-`awsparamstore.OpenVariable`). This guide shows how to use both forms for
-each provider.
+URL pointing to the variable, making sure you ["blank import"][] the driver
+package to link it in. See [Concepts: URLs][] for more details. If you need
+fine-grained control over the connection settings, you can call the constructor
+function in the driver package directly (like `awsparamstore.OpenVariable`).
+This guide shows how to use both forms for each provider.
 
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
-
+["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [`runtimevar.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar#OpenVariable
 
