@@ -170,20 +170,32 @@ and Gopher logo.&lt;/p&gt;</description>
     </item>
     
     <item>
-      <title>MySQL/Postgres</title>
-      <link>https://gocloud.dev/ref/sql/</link>
-      <pubDate>Mon, 11 Mar 2019 10:02:56 -0700</pubDate>
+      <title>postgres</title>
+      <link>https://gocloud.dev/ref/postgres/</link>
+      <pubDate>Thu, 27 Jun 2019 13:03:45 -0700</pubDate>
       
-      <guid>https://gocloud.dev/ref/sql/</guid>
-      <description>&lt;p&gt;The &lt;code&gt;mysql&lt;/code&gt; and &lt;code&gt;postgres&lt;/code&gt; packages provide functions for connecting to
-&lt;a href=&#34;https://www.mysql.com/&#34;&gt;MySQL&lt;/a&gt; and &lt;a href=&#34;https://www.postgresql.org/&#34;&gt;PostgreSQL&lt;/a&gt; databases for both on-premise and cloud-provided
-instances using the &lt;a href=&#34;https://godoc.org/database/sql#DB&#34;&gt;&lt;code&gt;*sql.DB&lt;/code&gt;&lt;/a&gt; type from the Go standard library. Database
-connections opened using these packages will automatically collect diagnostic
-information via &lt;a href=&#34;https://opencensus.io/&#34;&gt;OpenCensus&lt;/a&gt;.&lt;/p&gt;</description>
+      <guid>https://gocloud.dev/ref/postgres/</guid>
+      <description>&lt;p&gt;The &lt;code&gt;postgres&lt;/code&gt; package provides functions for connecting to &lt;a href=&#34;https://www.postgresql.org/&#34;&gt;PostgreSQL&lt;/a&gt;
+databases for both on-premise and cloud-provided instances using the
+&lt;a href=&#34;https://godoc.org/database/sql#DB&#34;&gt;&lt;code&gt;*sql.DB&lt;/code&gt;&lt;/a&gt; type from the Go standard library. Database connections opened
+using this package will automatically collect diagnostic information via
+&lt;a href=&#34;https://opencensus.io/&#34;&gt;OpenCensus&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
     <item>
-      <title>Secrets</title>
+      <title>mysql</title>
+      <link>https://gocloud.dev/ref/mysql/</link>
+      <pubDate>Mon, 11 Mar 2019 10:02:56 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/ref/mysql/</guid>
+      <description>&lt;p&gt;The &lt;code&gt;mysql&lt;/code&gt; package provides functions for connecting to &lt;a href=&#34;https://www.mysql.com/&#34;&gt;MySQL&lt;/a&gt; databases
+for both on-premise and cloud-provided instances using the &lt;a href=&#34;https://godoc.org/database/sql#DB&#34;&gt;&lt;code&gt;*sql.DB&lt;/code&gt;&lt;/a&gt; type
+from the Go standard library. Database connections opened using this package
+will automatically collect diagnostic information via &lt;a href=&#34;https://opencensus.io/&#34;&gt;OpenCensus&lt;/a&gt;.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>secrets</title>
       <link>https://gocloud.dev/ref/secrets/</link>
       <pubDate>Fri, 22 Feb 2019 13:03:06 -0800</pubDate>
       
@@ -200,7 +212,7 @@ activites.&lt;/p&gt;</description>
     </item>
     
     <item>
-      <title>Blob</title>
+      <title>blob</title>
       <link>https://gocloud.dev/ref/blob/</link>
       <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
       
@@ -215,7 +227,7 @@ listing blobs in a bucket.&lt;/p&gt;</description>
     </item>
     
     <item>
-      <title>Pubsub</title>
+      <title>pubsub</title>
       <link>https://gocloud.dev/ref/pubsub/</link>
       <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
       
@@ -231,7 +243,7 @@ delivery&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
     <item>
-      <title>Runtimevar</title>
+      <title>runtimevar</title>
       <link>https://gocloud.dev/ref/runtimevar/</link>
       <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
       
@@ -241,7 +253,7 @@ remote configuration variables.&lt;/p&gt;</description>
     </item>
     
     <item>
-      <title>Server</title>
+      <title>server</title>
       <link>https://gocloud.dev/ref/server/</link>
       <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
       

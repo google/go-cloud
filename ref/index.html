@@ -37,17 +37,58 @@ at <a href="https://godoc.org/gocloud.dev">godoc.org</a>.</p>
 
 <div class="PageList">
   <article class="PageList-item">
-  <a href="/ref/sql/"><h2 class="PageList-itemTitle">MySQL/Postgres</h2></a>
-  <div class="PageList-summary"><p>The <code>mysql</code> and <code>postgres</code> packages provide functions for connecting to
-<a href="https://www.mysql.com/">MySQL</a> and <a href="https://www.postgresql.org/">PostgreSQL</a> databases for both on-premise and cloud-provided
-instances using the <a href="https://godoc.org/database/sql#DB"><code>*sql.DB</code></a> type from the Go standard library. Database
-connections opened using these packages will automatically collect diagnostic
-information via <a href="https://opencensus.io/">OpenCensus</a>.</p></div>
-  <div class="PageList-readMore"><a href="/ref/sql/">Read more&hellip;</a></div>
+  <a href="/ref/blob/"><h2 class="PageList-itemTitle">blob</h2></a>
+  <div class="PageList-summary"><p>Blobs are a common abstraction for storing unstructured data on cloud storage
+providers and accessing them via HTTP.</p>
+
+<p>Package <code>blob</code> provides an easy and portable way to interact with blobs within a
+storage location (&ldquo;bucket&rdquo;). It supports operations like reading and writing
+blobs (using standard interfaces from the <code>io</code> package), deleting blobs, and
+listing blobs in a bucket.</p></div>
+  <div class="PageList-readMore"><a href="/ref/blob/">Read more&hellip;</a></div>
 </article>
 
   <article class="PageList-item">
-  <a href="/ref/secrets/"><h2 class="PageList-itemTitle">Secrets</h2></a>
+  <a href="/ref/mysql/"><h2 class="PageList-itemTitle">mysql</h2></a>
+  <div class="PageList-summary"><p>The <code>mysql</code> package provides functions for connecting to <a href="https://www.mysql.com/">MySQL</a> databases
+for both on-premise and cloud-provided instances using the <a href="https://godoc.org/database/sql#DB"><code>*sql.DB</code></a> type
+from the Go standard library. Database connections opened using this package
+will automatically collect diagnostic information via <a href="https://opencensus.io/">OpenCensus</a>.</p></div>
+  <div class="PageList-readMore"><a href="/ref/mysql/">Read more&hellip;</a></div>
+</article>
+
+  <article class="PageList-item">
+  <a href="/ref/postgres/"><h2 class="PageList-itemTitle">postgres</h2></a>
+  <div class="PageList-summary"><p>The <code>postgres</code> package provides functions for connecting to <a href="https://www.postgresql.org/">PostgreSQL</a>
+databases for both on-premise and cloud-provided instances using the
+<a href="https://godoc.org/database/sql#DB"><code>*sql.DB</code></a> type from the Go standard library. Database connections opened
+using this package will automatically collect diagnostic information via
+<a href="https://opencensus.io/">OpenCensus</a>.</p></div>
+  <div class="PageList-readMore"><a href="/ref/postgres/">Read more&hellip;</a></div>
+</article>
+
+  <article class="PageList-item">
+  <a href="/ref/pubsub/"><h2 class="PageList-itemTitle">pubsub</h2></a>
+  <div class="PageList-summary"><p>Pub/Sub refers to implementations of the <a href="https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern">publish-subscribe
+pattern</a>,
+wherein clients connect to a cloud service to subscribe to topics or publish
+messages that could be delivered to subscribers.</p>
+
+<p>Package <code>pubsub</code> provides an easy and portable way to interact with
+publish/subscribe systems that have <a href="https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overview">at-least-once
+delivery</a>.</p></div>
+  <div class="PageList-readMore"><a href="/ref/pubsub/">Read more&hellip;</a></div>
+</article>
+
+  <article class="PageList-item">
+  <a href="/ref/runtimevar/"><h2 class="PageList-itemTitle">runtimevar</h2></a>
+  <div class="PageList-summary"><p>Package <code>runtimevar</code> provides easy and portable access to the latest value of
+remote configuration variables.</p></div>
+  <div class="PageList-readMore"><a href="/ref/runtimevar/">Read more&hellip;</a></div>
+</article>
+
+  <article class="PageList-item">
+  <a href="/ref/secrets/"><h2 class="PageList-itemTitle">secrets</h2></a>
   <div class="PageList-summary"><p>Package <code>secrets</code> provides an easy and portable way to encrypt and decrypt
 messages.</p>
 
@@ -61,39 +102,7 @@ activites.</p></div>
 </article>
 
   <article class="PageList-item">
-  <a href="/ref/blob/"><h2 class="PageList-itemTitle">Blob</h2></a>
-  <div class="PageList-summary"><p>Blobs are a common abstraction for storing unstructured data on cloud storage
-providers and accessing them via HTTP.</p>
-
-<p>Package <code>blob</code> provides an easy and portable way to interact with blobs within a
-storage location (&ldquo;bucket&rdquo;). It supports operations like reading and writing
-blobs (using standard interfaces from the <code>io</code> package), deleting blobs, and
-listing blobs in a bucket.</p></div>
-  <div class="PageList-readMore"><a href="/ref/blob/">Read more&hellip;</a></div>
-</article>
-
-  <article class="PageList-item">
-  <a href="/ref/pubsub/"><h2 class="PageList-itemTitle">Pubsub</h2></a>
-  <div class="PageList-summary"><p>Pub/Sub refers to implementations of the <a href="https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern">publish-subscribe
-pattern</a>,
-wherein clients connect to a cloud service to subscribe to topics or publish
-messages that could be delivered to subscribers.</p>
-
-<p>Package <code>pubsub</code> provides an easy and portable way to interact with
-publish/subscribe systems that have <a href="https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overview">at-least-once
-delivery</a>.</p></div>
-  <div class="PageList-readMore"><a href="/ref/pubsub/">Read more&hellip;</a></div>
-</article>
-
-  <article class="PageList-item">
-  <a href="/ref/runtimevar/"><h2 class="PageList-itemTitle">Runtimevar</h2></a>
-  <div class="PageList-summary"><p>Package <code>runtimevar</code> provides easy and portable access to the latest value of
-remote configuration variables.</p></div>
-  <div class="PageList-readMore"><a href="/ref/runtimevar/">Read more&hellip;</a></div>
-</article>
-
-  <article class="PageList-item">
-  <a href="/ref/server/"><h2 class="PageList-itemTitle">Server</h2></a>
+  <a href="/ref/server/"><h2 class="PageList-itemTitle">server</h2></a>
   <div class="PageList-summary"><p>Package <code>server</code> provides a preconfigured HTTP server with diagnostic hooks.</p></div>
   <div class="PageList-readMore"><a href="/ref/server/">Read more&hellip;</a></div>
 </article>
@@ -148,23 +157,26 @@ remote configuration variables.</p></div>
         <li class="Sidenav-section">
           <a href="/ref/" class="Sidenav-sectionLink">Reference</a>
             <ul class="Sidenav-pageList">
-              <li class="Sidenav-page">
-                <a href="/ref/blob/" class="Sidenav-pageLink">Blob</a>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/blob/" class="Sidenav-pageLink">blob</a>
               </li>
-              <li class="Sidenav-page">
-                <a href="/ref/sql/" class="Sidenav-pageLink">MySQL/Postgres</a>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/mysql/" class="Sidenav-pageLink">mysql</a>
               </li>
-              <li class="Sidenav-page">
-                <a href="/ref/pubsub/" class="Sidenav-pageLink">Pubsub</a>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/postgres/" class="Sidenav-pageLink">postgres</a>
               </li>
-              <li class="Sidenav-page">
-                <a href="/ref/runtimevar/" class="Sidenav-pageLink">Runtimevar</a>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/pubsub/" class="Sidenav-pageLink">pubsub</a>
               </li>
-              <li class="Sidenav-page">
-                <a href="/ref/secrets/" class="Sidenav-pageLink">Secrets</a>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/runtimevar/" class="Sidenav-pageLink">runtimevar</a>
               </li>
-              <li class="Sidenav-page">
-                <a href="/ref/server/" class="Sidenav-pageLink">Server</a>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/secrets/" class="Sidenav-pageLink">secrets</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/server/" class="Sidenav-pageLink">server</a>
               </li>
               
             </ul>
