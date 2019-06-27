@@ -45,11 +45,11 @@ in the variable is interpreted as a <code>string</code>, a <code>[]byte</code> o
 <h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
 
 <p>The easiest way to open a variable is using <a href="https://godoc.org/gocloud.dev/runtimevar#OpenVariable"><code>runtimevar.OpenVariable</code></a> and a
-URL pointing to the variable. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more
-details. If you need fine-grained control over the connection settings, you can
-call the constructor function in the driver package directly (like
-<code>awsparamstore.OpenVariable</code>). This guide shows how to use both forms for
-each provider.</p>
+URL pointing to the variable, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver
+package to link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need
+fine-grained control over the connection settings, you can call the constructor
+function in the driver package directly (like <code>awsparamstore.OpenVariable</code>).
+This guide shows how to use both forms for each provider.</p>
 
 <h2 id="gcp-url"> GCP Runtime Configurator<a class="anchor" href="#gcp-url" aria-label="Link to Section">🔗</a></h2>
 

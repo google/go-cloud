@@ -63,14 +63,12 @@ a topic for your chosen Pub/Sub provider.</p>
 
 <h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
 
-<p>If you know that your program is always going to use a particular Pub/Sub
-provider or you need fine-grained control over the connection settings, you
-should call the constructor function in the driver package directly (like
-<code>gcppubsub.OpenTopic</code>). However, if you want to change providers based on
-configuration, you can use <code>pubsub.OpenTopic</code>, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank
-import&rdquo;</a> the driver package to link it in. See the
-<a href="https://gocloud.dev/concepts/urls/">documentation on URLs</a> for more details. This guide will show how to use
-both forms for each pub/sub provider.</p>
+<p>The easiest way to open a topic is using <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenTopic</code></a> and a URL
+pointing to the topic, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to
+link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need fine-grained
+control over the connection settings, you can call the constructor function in
+the driver package directly (like <code>gcppubsub.OpenTopic</code>). This guide will show
+how to use both forms for each pub/sub provider.</p>
 
 <h2 id="sns"> Amazon Simple Notification Service<a class="anchor" href="#sns" aria-label="Link to Section">🔗</a></h2>
 
