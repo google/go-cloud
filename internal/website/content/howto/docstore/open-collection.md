@@ -22,15 +22,16 @@ you specify how to find the provider's primary key in the document.
 
 ## Constructors versus URL openers
 
-The easiest way to open a collection is using [`docstore.OpenCollection`][]
-and a URL pointing to the topic. See [Concepts: URLs][] for more details. If you
-need fine-grained control over the connection settings, you can call the
-constructor function in the driver package directly (like
-`mongodocstore.OpenCollection`). This guide will show how to use both forms for
-each document store provider.
+The easiest way to open a collection is using [`docstore.OpenCollection`][] and
+a URL pointing to the topic, making sure you ["blank import"][] the driver
+package to link it in. See [Concepts: URLs][] for more details. If you need
+fine-grained control over the connection settings, you can call the constructor
+function in the driver package directly (like `mongodocstore.OpenCollection`).
+This guide will show how to use both forms for each document store provider.
 
 [`docstore.OpenCollection`]:
 https://godoc.org/gocloud.dev/docstore#OpenCollection
+["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
 ## DynamoDB {#dynamodb}
