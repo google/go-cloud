@@ -6,7 +6,7 @@ date: 2019-06-27T13:03:45-07:00
 The `postgres` package provides functions for connecting to [PostgreSQL][]
 databases for both on-premise and cloud-provided instances using the
 [`*sql.DB`][] type from the Go standard library. Database connections opened
-using these packages will automatically collect diagnostic information via
+using this package will automatically collect diagnostic information via
 [OpenCensus][].
 
 <!--more-->

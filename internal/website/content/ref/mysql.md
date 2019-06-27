@@ -6,11 +6,10 @@ aliases:
 - /pages/sql/
 ---
 
-The `mysql` packages provide functions for connecting to [MySQL][] databases
+The `mysql` package provides functions for connecting to [MySQL][] databases
 for both on-premise and cloud-provided instances using the [`*sql.DB`][] type
-from the Go standard library. Database connections opened using these
-packages will automatically collect diagnostic information via
-[OpenCensus][].
+from the Go standard library. Database connections opened using this package
+will automatically collect diagnostic information via [OpenCensus][].
 
 <!--more-->
 
