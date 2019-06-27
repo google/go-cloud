@@ -78,6 +78,12 @@ func Example_openCollectionFromURL() {
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.
+	// MongoDB requires a unique ID key in each document. If the default
+	// key _id is not available, you'll need to provide a field name in the
+	// id_field URL parameter.
+	// Note that if you use structs to represent documents, you cannot have
+	// a _id field, so you'll have to provide a custom field.
+
 	coll, err := docstore.OpenCollection(ctx, "mongo://my-db/my-collection?id_field=userID")
 	if err != nil {
 		log.Fatal(err)
