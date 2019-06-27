@@ -23,9 +23,16 @@ import (
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/sql/#gcp
+
+	// import _ "gocloud.dev/mysql/gcpmysql"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	// Replace this with your actual settings.
-	db, err := mysql.Open(ctx, "gcpmysql://user:password@example-project/region/my-instance01/testdb")
+	db, err := mysql.Open(ctx,
+		"gcpmysql://user:password@example-project/region/my-instance01/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}

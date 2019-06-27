@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package awsmysql_test
+package mysql_test
 
 import (
 	"context"
 	"log"
 
 	"gocloud.dev/mysql"
-	_ "gocloud.dev/mysql/awsmysql"
 )
 
-func Example() {
-	// This example is used in https://gocloud.dev/howto/sql/#aws
-
-	// import _ "gocloud.dev/mysql/awsmysql"
+func ExampleOpen() {
+	// This example is used in https://gocloud.dev/howto/sql/#local
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// Replace these with your actual settings.
-	db, err := mysql.Open(ctx,
-		"awsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb")
+	// Replace this with your actual settings.
+	db, err := mysql.Open(ctx, "mysql://user:password@localhost/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
 	// Use database in your program.
-	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
+	db.Exec("CREATE TABLE foo (bar INT);")
 }
