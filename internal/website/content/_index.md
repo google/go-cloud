@@ -48,17 +48,6 @@ Using the Go CDK you can write your application code once using these idiomatic
 APIs, test locally using the local versions, and then deploy to a cloud provider
 with only minimal setup-time changes.
 
-Please check out the linked pages for a detailed description of each API and
-examples of how to use it:
-
-* Unstructured binary storage ([blob]({{< ref "/ref/blob.md" >}}))
-* Publisher/Subscriber ([pubsub]({{< ref "/ref/pubsub.md" >}}))
-* Variables that change at runtime ([runtimevar]({{< ref "/ref/runtimevar.md" >}}))
-* HTTP server with request logging, tracing and health checking
-  ([server]({{< ref "/ref/server.md" >}}))
-* Secret management, encryption and decryption ([secrets]({{< ref "/ref/secrets.md" >}}))
-* Connecting to hosted SQL services ([mysql/postgres]({{< ref "/ref/sql.md" >}}))
-
 ## Project status
 
 We're looking for early adopters to help us validate the APIs before releasing

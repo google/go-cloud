@@ -1,5 +1,5 @@
 ---
-title: "Secrets"
+title: "secrets"
 date: 2019-02-22T13:03:06-08:00
 aliases:
 - /pages/secrets/
