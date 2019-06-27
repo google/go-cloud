@@ -24,10 +24,10 @@
 // certain criteria.
 //
 // Subpackages contain distinct implementations ("drivers") of docstore for various
-// providers, including MongoDB, Google Cloud Firestore, and Amazon DynamoDB. You can
-// use Azure Cosmos and Amazon DocumentDB via the MongoDB driver. There is also
-// memdocstore, an in-process, in-memory implementation suitable for testing and
-// development.
+// providers, including MongoDB, Google Cloud Firestore, and Amazon DynamoDB.
+// You can use Azure Cosmos DB and Amazon DocumentDB via the MongoDB driver.
+// There is also memdocstore, an in-process, in-memory implementation suitable
+// for testing and development.
 //
 // Your application should import one of these provider-specific subpackages and use
 // its exported functions to create a *Collection; do not use the NewCollection
@@ -93,13 +93,13 @@
 //
 // When you open a collection using one of the subpackages' OpenCollection methods or
 // a URL, you specify how to extract the key from a document.
-// Usually, you provide the name of the key field, as in the example above:
+// Usually, you provide the name of the key field, as in the example below:
 //
-//   coll, err := memdocstore.OpenBucket("SSN", nil)
+//   coll, err := memdocstore.OpenCollection("SSN", nil)
 //
 // Here, the "SSN" field of the document is used as the key. Some providers let you
 // supply a function to extract the key from the document, which can be useful if the
-// key is composed of more than field.
+// key is composed of more than one field.
 //
 //
 // Actions
@@ -131,8 +131,8 @@
 // Docstore supports document revisions to distinguish different versions of a
 // document and enable optimistic locking. By default, Docstore stores the revision
 // in the field named "DocstoreRevision" (stored in the constant
-// docstore.DefaultRevisionField). Providers give you the option of changing
-// that field name.
+// DefaultRevisionField). Providers give you the option of changing that field
+// name.
 //
 // Docstore gives every document a revision when it is created, and changes that
 // revision whenever the document is modified. If a struct doesn't have a revision
@@ -200,9 +200,9 @@
 // The Code function from gocloud.dev/gcerrors will return an error code, also
 // defined in that package, when invoked on an error.
 //
-// The Collection.ErrorAs method can retrieve the driver error underlying the returned
-// error.
-// TODO(shantuo): implement ErrorAs.
+// The Collection.ErrorAs method can retrieve the underlying driver error from
+// the returned error. See the specific driver's package doc for the supported
+// types.
 //
 //
 // OpenCensus Integration
