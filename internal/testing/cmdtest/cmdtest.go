@@ -349,7 +349,7 @@ type fatal struct{ error }
 // Run the test case by executing the commands. The concatenated output from all commands
 // is saved in tc.gotOutput.
 // An error is returned if: a command that should succeed instead failed; a command that should
-// fail instead succeeded; or if a built-in command was called incorrectly.
+// fail instead succeeded; or a built-in command was called incorrectly.
 func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
 	const failMarker = " --> FAIL"
 
@@ -427,16 +427,7 @@ func execute(name string, args []string, infile string) ([]byte, error) {
 			return nil, err
 		}
 		defer f.Close()
-		inpipe, err := ecmd.StdinPipe()
-		if err != nil {
-			return nil, err
-		}
-		errc = make(chan error, 1)
-		go func() {
-			defer inpipe.Close()
-			_, err := io.Copy(inpipe, f)
-			errc <- err
-		}()
+		ecmd.Stdin = f
 	}
 	out, err := ecmd.CombinedOutput()
 	if err != nil {
@@ -457,6 +448,10 @@ var varRegexp = regexp.MustCompile(`\$\{([^${}]+)\}`)
 // lookup is called on a variable's name to find its value. Its second return value
 // is false if the variable doesn't exist.
 // expandVariables fails if s contains a reference to a non-existent variable.
+//
+// This function differs from os.Expand in two ways. First, it does not expand $var,
+// only ${var}. The former is fragile. Second, an undefined variable results in an error,
+// rather than expanding to some string. We want to fail if a variable is undefined.
 func expandVariables(s string, lookup func(string) (string, bool)) (string, error) {
 	var sb strings.Builder
 	for {
@@ -520,7 +515,10 @@ func (tc *testCase) writeCommands(w io.Writer) error {
 
 func writeLines(w io.Writer, lines []string) error {
 	for _, l := range lines {
-		if _, err := fmt.Fprintf(w, "%s\n", l); err != nil {
+		if _, err := io.WriteString(w, l); err != nil {
+			return err
+		}
+		if _, err := w.Write([]byte{'\n'}); err != nil {
 			return err
 		}
 	}
@@ -605,7 +603,7 @@ func setenvCmd(args []string) ([]byte, error) {
 }
 
 func checkPath(path string) error {
-	if strings.ContainsRune(path, '/') {
+	if strings.ContainsRune(path, '/') || strings.ContainsRune(path, '\\') {
 		return fatal{fmt.Errorf("argument must be in the current directory (%q has a '/')", path)}
 	}
 	return nil
