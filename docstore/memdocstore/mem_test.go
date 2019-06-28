@@ -167,7 +167,7 @@ func TestSortDocs(t *testing.T) {
 }
 
 func TestExampleInDoc(t *testing.T) {
-	// This is the document used as an example in ../docstore/doc.go.a
+	// This is the document used as an example in ../docstore/doc.go.
 	doc := map[string]interface{}{
 		"Title": "The Master and Margarita",
 		"Author": map[string]interface{}{

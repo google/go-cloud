@@ -17,6 +17,7 @@ package firedocstore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
@@ -214,4 +215,31 @@ func TestResourceIDRegexp(t *testing.T) {
 			t.Errorf("%q matched but should not have", bad)
 		}
 	}
+}
+
+func TestCase(t *testing.T) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dc, err := h.MakeCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+
+	type MyDoc struct {
+		Key              string `docstore:"name"`
+		Value            string
+		DocstoreRevision interface{}
+	}
+	if err := coll.Put(ctx, &MyDoc{Key: "k", Value: "v"}); err != nil {
+		t.Fatal(err)
+	}
+	got := MyDoc{Key: "k"}
+	if err := coll.Get(ctx, &got, "value"); err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%+v\n", got)
 }

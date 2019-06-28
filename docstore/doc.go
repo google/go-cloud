@@ -76,8 +76,8 @@
 // Here is the same document represented with structs:
 //
 //    type Book struct {
-//       Title           string
-//       Author          Name
+//       Title            string
+//       Author           Name
 //       PublicationYears []int
 //    }
 //
@@ -97,9 +97,9 @@
 // You must use a pointer to a struct to represent a document, although structs
 // nested inside a document, like the Name struct above, need not be pointers.
 //
-// Maps are best for general-purpose applications where you don't know the structure
-// of the documents. Using structs is preferred because it enforces some structure
-// on your data.
+// Maps are best for applications where you don't know the structure of the
+// documents. Using structs is preferred because it enforces some structure on your
+// data.
 //
 // Docstore mimics the encoding/json package in its treatment of
 // structs: by default, a struct's exported fields are the fields of the document.
