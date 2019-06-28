@@ -53,6 +53,18 @@ func TestParseImageNameFromDockerfile(t *testing.T) {
 				"# gocdk-image: hello-world\n",
 			want: "hello-world",
 		},
+		{
+			name: "ImageContainsTag",
+			dockerfile: "# gocdk-image: hello-world:bar\n" +
+				"FROM scratch\n",
+			wantErr: true,
+		},
+		{
+			name: "ImageCustomRegistry",
+			dockerfile: "# gocdk-image: example.com:8080/hello-world\n" +
+				"FROM scratch\n",
+			want: "example.com:8080/hello-world",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

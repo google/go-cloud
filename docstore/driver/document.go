@@ -150,6 +150,21 @@ func (d Document) SetField(field string, value interface{}) error {
 	return nil
 }
 
+// FieldNames returns names of the top-level fields of d.
+func (d Document) FieldNames() []string {
+	var names []string
+	if d.m != nil {
+		for k := range d.m {
+			names = append(names, k)
+		}
+	} else {
+		for _, f := range d.fields {
+			names = append(names, f.Name)
+		}
+	}
+	return names
+}
+
 // Encode encodes the document using the given Encoder.
 func (d Document) Encode(e Encoder) error {
 	if d.m != nil {

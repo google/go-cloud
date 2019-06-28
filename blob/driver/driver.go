@@ -29,7 +29,7 @@ import (
 // ReaderOptions controls Reader behaviors.
 type ReaderOptions struct {
 	// BeforeRead is a callback that must be called exactly once before
-	// any data is read, unless NewRangedReader returns an error before then, in
+	// any data is read, unless NewRangeReader returns an error before then, in
 	// which case it should not be called at all.
 	// asFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.

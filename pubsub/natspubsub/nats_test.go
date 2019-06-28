@@ -181,6 +181,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer pt.Shutdown(ctx)
 	nsub, _ := conn.SubscribeSync(topic)
 	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
 		t.Fatal(err)
@@ -198,6 +199,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer ps.Shutdown(ctx)
 	if err := conn.Publish(topic, body); err != nil {
 		t.Fatal(err)
 	}
@@ -292,6 +294,7 @@ func TestBadSubjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer sub.Shutdown(ctx)
 	if _, err = sub.Receive(ctx); err == nil {
 		t.Fatal("Expected an error with bad subject")
 	}
@@ -300,6 +303,7 @@ func TestBadSubjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer pt.Shutdown(ctx)
 	if err = pt.Send(ctx, &pubsub.Message{}); err == nil {
 		t.Fatal("Expected an error with bad subject")
 	}

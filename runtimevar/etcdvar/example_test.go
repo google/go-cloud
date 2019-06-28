@@ -30,6 +30,8 @@ type MyConfig struct {
 }
 
 func ExampleOpenVariable() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-ctor
+
 	// Connect to the etcd server.
 	client, err := clientv3.NewFromURL("http://your.etcd.server:9999")
 	if err != nil {
@@ -47,26 +49,27 @@ func ExampleOpenVariable() {
 		log.Fatal(err)
 	}
 	defer v.Close()
-
-	// We can now read the current value of the variable from v.
-	snapshot, err := v.Latest(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := snapshot.Value.(MyConfig)
-	_ = cfg
 }
 
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-url
+
+	// import _ "gocloud.dev/runtimevar/etcdvar"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The default opener connects to an etcd server based on the environment
 	// variable ETCD_SERVER_URL.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	v, err := runtimevar.OpenVariable(ctx, "etcd://myvarname")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer v.Close()
 
+	// Ignore unused variables in example:
 	snapshot, err := v.Latest(ctx)
 	_, _ = snapshot, err
 }

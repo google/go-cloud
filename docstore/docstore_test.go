@@ -123,7 +123,7 @@ func TestToDriverActionsErrors(t *testing.T) {
 func TestClosedErrors(t *testing.T) {
 	// Check that all collection methods return errClosed if the collection is closed.
 	ctx := context.Background()
-	c := &Collection{driver: fakeDriverCollection{}}
+	c := newCollection(fakeDriverCollection{})
 	if err := c.Close(); err != nil {
 		t.Fatalf("got %v, want nil", err)
 	}
@@ -154,7 +154,7 @@ func TestClosedErrors(t *testing.T) {
 
 	// Check that DocumentIterator.Next returns errClosed if Close is called
 	// in the middle of the iteration.
-	c = &Collection{driver: fakeDriverCollection{}}
+	c = newCollection(fakeDriverCollection{})
 	iter = c.Query().Get(ctx)
 	c.Close()
 	check(iter.Next(ctx, doc))

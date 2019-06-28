@@ -422,6 +422,18 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
+// partitionAckID is used as the driver.AckID.
+//
+// We use a batch API to ack/nack messages via the LockToken, but AzureSB
+// doesn't support updating messages from different partitions in the same
+// request. We store the PartitionID (which will default to 0 if partitioning
+// isn't enabled) along with the LockToken so that we can group by it during
+// Ack/Nack.
+type partitionAckID struct {
+	PartitionID int16
+	LockToken   *uuid.UUID
+}
+
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	if s.linkErr != nil {
@@ -442,10 +454,16 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 					metadata[key] = strVal
 				}
 			}
+			// partitionID is only available if partitioning is enabled; otherwise,
+			// it defaults to 0.
+			var partitionID int16
+			if sbmsg.SystemProperties != nil && sbmsg.SystemProperties.PartitionID != nil {
+				partitionID = *sbmsg.SystemProperties.PartitionID
+			}
 			messages = append(messages, &driver.Message{
 				Body:     sbmsg.Data,
 				Metadata: metadata,
-				AckID:    sbmsg.LockToken,
+				AckID:    &partitionAckID{partitionID, sbmsg.LockToken},
 				AsFunc:   messageAsFunc(sbmsg),
 			})
 			if len(messages) >= maxMessages {
@@ -506,16 +524,47 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 		return nil
 	}
 
-	lockIds := []amqp.UUID{}
-	for _, mid := range ids {
-		if id, ok := mid.(*uuid.UUID); ok {
-			lockTokenBytes := [16]byte(*id)
-			lockIds = append(lockIds, amqp.UUID(lockTokenBytes))
+	// Group by partitionID; AzureSB doesn't support updating dispositions for
+	// messages from different partitions.
+	partitions := map[int16][]amqp.UUID{}
+	for _, ackID := range ids {
+		if pid, ok := ackID.(*partitionAckID); ok {
+			lockTokenBytes := [16]byte(*pid.LockToken)
+			partitions[pid.PartitionID] = append(partitions[pid.PartitionID], amqp.UUID(lockTokenBytes))
 		}
 	}
+
+	// Update partitions in parallel.
+	const maxConcurrency = 5
+	sem := make(chan struct{}, maxConcurrency)
+	var mu sync.Mutex
+	var errs []string
+	for _, lockTokens := range partitions {
+		sem <- struct{}{}
+		go func() {
+			defer func() { <-sem }() // Release the semaphore.
+			if err := s.updateMessageDispositionsInPartition(ctx, lockTokens, disposition); err != nil {
+				mu.Lock()
+				defer mu.Unlock()
+				errs = append(errs, err.Error())
+			}
+		}()
+	}
+	for n := 0; n < maxConcurrency; n++ {
+		sem <- struct{}{}
+	}
+	if len(errs) == 0 {
+		return nil
+	}
+	return fmt.Errorf("Ack/Nack failed: %s", strings.Join(errs, ", "))
+}
+
+// updateMessageDispositionsInPartition assumes lockTokens are all from the
+// same AzureSB partition.
+func (s *subscription) updateMessageDispositionsInPartition(ctx context.Context, lockTokens []amqp.UUID, disposition string) error {
 	value := map[string]interface{}{
 		"disposition-status": disposition,
-		"lock-tokens":        lockIds,
+		"lock-tokens":        lockTokens,
 	}
 	msg := &amqp.Message{
 		ApplicationProperties: map[string]interface{}{
@@ -539,11 +588,11 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 	// It's a "not found" error, probably due to the message already being
 	// deleted on the server. If we're just acking 1 message, we can just
 	// swallow the error, but otherwise we'll need to retry one by one.
-	if len(ids) == 1 {
+	if len(lockTokens) == 1 {
 		return nil
 	}
-	for _, lockID := range lockIds {
-		value["lock-tokens"] = []amqp.UUID{lockID}
+	for _, lockToken := range lockTokens {
+		value["lock-tokens"] = []amqp.UUID{lockToken}
 		if _, err := s.amqpLink.RetryableRPC(ctx, 1, 0, msg); err != nil && !isNotFoundErr(err) {
 			return err
 		}

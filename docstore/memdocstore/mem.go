@@ -52,7 +52,7 @@ import (
 // Options are optional arguments to the OpenCollection functions.
 type Options struct {
 	// The name of the field holding the document revision.
-	// Defaults to docstore.RevisionField.
+	// Defaults to docstore.DefaultRevisionField.
 	RevisionField string
 
 	// The maximum number of concurrent goroutines started for a single call to
