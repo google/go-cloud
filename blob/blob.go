@@ -606,7 +606,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 	}, nil
 }
 
-// NewReader is a shortcut for NewRangedReader with offset=0 and length=-1.
+// NewReader is a shortcut for NewRangeReader with offset=0 and length=-1.
 func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions) (*Reader, error) {
 	return b.newRangeReader(ctx, key, 0, -1, opts)
 }
@@ -912,7 +912,7 @@ type SignedURLOptions struct {
 	Expiry time.Duration
 }
 
-// ReaderOptions sets options for NewReader and NewRangedReader.
+// ReaderOptions sets options for NewReader and NewRangeReader.
 type ReaderOptions struct {
 	// BeforeRead is a callback that will be called exactly once, before
 	// any data is read (unless NewReader returns an error before then, in which
