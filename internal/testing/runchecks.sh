@@ -25,6 +25,10 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
+echo "--- git cherry -v master ---"
+git cherry -v master
+echo "----------------------------"
+
 # The following logic lets us skip the (lengthy) installation process and tests
 # in some cases where the PR carries trivial changes that don't affect the code
 # (such as documentation-only).
