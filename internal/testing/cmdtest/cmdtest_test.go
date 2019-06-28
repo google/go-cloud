@@ -21,13 +21,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestMain(m *testing.M) {
+var once sync.Once
+
+func setup() {
 	// Build echo-stdin, the little program needed to test input redirection.
 	if err := exec.Command("go", "build", "testdata/echo-stdin.go").Run(); err != nil {
 		log.Fatal(err)
@@ -38,9 +42,19 @@ func TestMain(m *testing.M) {
 	}
 	// Set PATH to the current directory so test files can find echo-stdin.
 	os.Setenv("PATH", cwd)
+}
 
+func TestMain(m *testing.M) {
 	ret := m.Run()
-	_ = os.Remove(filepath.Join(cwd, "echo-stdin"))
+	// Clean up the echo-stdin binary if we can. (No big deal if we can't.)
+	cwd, err := os.Getwd()
+	if err == nil {
+		name := "echo-stdin"
+		if runtime.GOOS == "windows" {
+			name += ".exe"
+		}
+		_ = os.Remove(filepath.Join(cwd, name))
+	}
 	os.Exit(ret)
 }
 
@@ -86,6 +100,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
+	once.Do(setup)
 	tf := mustReadTestFile(t, "good")
 	if diff := tf.Compare(); diff != "" {
 		t.Errorf("got\n%s\nwant empty", diff)
@@ -167,6 +182,7 @@ func TestExpandVariables(t *testing.T) {
 }
 
 func TestUpdateToTemp(t *testing.T) {
+	once.Do(setup)
 	tf := mustReadTestFile(t, "good")
 	fname, err := tf.updateToTemp()
 	if err != nil {

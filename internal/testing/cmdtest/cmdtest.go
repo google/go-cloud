@@ -250,11 +250,12 @@ func (tf *TestFile) addCase(tc *testCase) []string {
 // Compare runs the commands in the test file and compares their output with the
 // output in the file. The comparison is done line by line. Before comparing,
 // occurrences of the root directory in the output are replaced by ${ROOTDIR}.
+// The returned string is empty if there are no differences.
 func (tf *TestFile) Compare() string {
 	if err := tf.run(); err != nil {
 		return err.Error()
 	}
-	buf := &bytes.Buffer{}
+	buf := new(bytes.Buffer)
 	for _, c := range tf.cases {
 		if diff := cmp.Diff(c.gotOutput, c.wantOutput); diff != "" {
 			fmt.Fprintf(buf, "%s:%d: got=-, want=+\n", tf.filename, c.startLine)
@@ -290,18 +291,13 @@ func (tf *TestFile) updateToTemp() (fname string, err error) {
 	if err != nil {
 		return "", err
 	}
-	w := bufio.NewWriter(f)
 	defer func() {
-		err2 := w.Flush()
-		if err == nil {
-			err = err2
-		}
-		err2 = f.Close()
+		err2 := f.Close()
 		if err == nil {
 			err = err2
 		}
 	}()
-	if err := tf.write(w); err != nil {
+	if err := tf.write(f); err != nil {
 		return "", err
 	}
 	return f.Name(), nil
@@ -313,7 +309,7 @@ func (tf *TestFile) run() error {
 		return fmt.Errorf("%s: %v", tf.filename, err)
 	}
 	if tf.KeepRootDir {
-		fmt.Printf("test root directory: %s\n", rootDir)
+		fmt.Printf("%s: test root directory: %s\n", tf.filename, rootDir)
 	} else {
 		defer os.RemoveAll(rootDir)
 	}
