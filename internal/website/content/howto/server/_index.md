@@ -11,14 +11,15 @@ The Go CDK's `server` package provides a pre-configured HTTP server with diagnos
 
 The GO CDK Server constructor takes an `http.Handler` and an `Options` struct. The simplest way to start the server is to use the `http.DefaultServeMux` and pass `nil` for the options.
 
-{{< goexample src="gocloud.dev/server.ExampleServer_New" imports="0" >}}
-
-The `Options` Struct 
+{{< goexample src="gocloud.dev/server.ExampleServer_New" >}}
 
 ### Adding a request logger
 
-- default behavior
-- how to specify something
+You can use the `server.Options` struct to specify a request logger.
+
+The example is shown with the Go CDK [`requestlog`](https://godoc.org/gocloud.dev/requestlog) package's `NCSALogger`; you could also use `NewStackdriverLogger`.
+
+{{< goexample src="gocloud.dev/server.ExampleServer_RequestLogger" >}}
 
 ### Adding health checks
 
@@ -30,14 +31,6 @@ The `Options` Struct
 - default behavior
 - how to specify something
 
-### Specifying the `http.Handler` (or router)
-
-- default behavior
-- how to specify something
-
-### ListenAndServe
-
-- call with an address
 
 ## Shutting down the server
 

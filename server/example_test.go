@@ -17,15 +17,16 @@ package server_test
 import (
 	"fmt"
 	"net/http"
+	"os"
 
-	"github.com/google/go-cloud/server"
-	_ "gocloud.dev/secrets/gcpkms"
+	"gocloud.dev/requestlog"
+	"gocloud.dev/server"
 )
 
-func Example() {
+func ExampleServer_New() {
 	// This example is used in https://gocloud.dev/howto/server/
 
-	// The Server constructor takes an http.Handler and an Options struct.
+	// Use the constructor function to create the server.
 	srv := server.New(http.DefaultServeMux, nil)
 
 	// Register a route.
@@ -37,6 +38,26 @@ func Example() {
 	srv.ListenAndServe(":8080")
 }
 
-// func ExampleServer_() {
-// 	// This example is used in https://gocloud.dev/howto/server/
-// }
+func ExampleServer_RequestLogger() {
+	// This example is used in https://gocloud.dev/howto/server/
+
+	// Create a logger, and assign it to the RequestLogger field of a
+	// server.Options struct.
+	srvOptions := &server.Options{
+		RequestLogger: requestlog.NewNCSALogger(os.Stdout, func(error) {}),
+	}
+
+	// Pass the options to the Server constructor.
+	srv := server.New(http.DefaultServeMux, srvOptions)
+
+	// Register a route.
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, World!")
+	})
+
+	// Start the server. You will see requests logged to STDOUT.
+	if err := srv.ListenAndServe(":8080"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}

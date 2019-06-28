@@ -361,6 +361,10 @@
 	},
 	"gocloud.dev/server.ExampleServer_New": {
 		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\n\t\"gocloud.dev/server\"\n)",
-		"code": "// The Server constructor takes an http.Handler and an Options struct.\nsrv := server.New(http.DefaultServeMux, nil)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server.\nsrv.ListenAndServe(\":8080\")"
+		"code": "// Use the constructor function to create the server.\nsrv := server.New(http.DefaultServeMux, nil)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server.\nsrv.ListenAndServe(\":8080\")"
+	},
+	"gocloud.dev/server.ExampleServer_RequestLogger": {
+		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\t\"os\"\n\n\t\"gocloud.dev/requestlog\"\n\t\"gocloud.dev/server\"\n)",
+		"code": "// Create a logger, and assign it to the RequestLogger field of a\n// server.Options struct.\nsrvOptions := \u0026server.Options{\n\tRequestLogger: requestlog.NewNCSALogger(os.Stdout, func(error) {}),\n}\n\n// Pass the options to the Server constructor.\nsrv := server.New(http.DefaultServeMux, srvOptions)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. You will see requests logged to STDOUT.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tfmt.Fprintln(os.Stderr, err)\n\tos.Exit(1)\n}"
 	}
 }
