@@ -9,7 +9,11 @@ The Go CDK's `server` package provides a pre-configured HTTP server with diagnos
 
 ## Starting up the server
 
-- options struct is a thing
+The GO CDK Server constructor takes an `http.Handler` and an `Options` struct. The simplest way to start the server is to use the `http.DefaultServeMux` and pass `nil` for the options.
+
+{{< goexample src="gocloud.dev/server.ExampleServer_New" imports="0" >}}
+
+The `Options` Struct 
 
 ### Adding a request logger
 

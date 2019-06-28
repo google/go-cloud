@@ -358,5 +358,9 @@
 	"gocloud.dev/secrets/localsecrets.Example_openFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/localsecrets\"\n)",
 		"code": "// Using \"base64key://\", a new random key will be generated.\nrandomKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://\")\nif err != nil {\n\treturn err\n}\ndefer randomKeyKeeper.Close()\n\n// Otherwise, the URL hostname must be a base64-encoded key, of length 32 bytes when decoded.\nsavedKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=\")\nif err != nil {\n\treturn err\n}\ndefer savedKeyKeeper.Close()"
+	},
+	"gocloud.dev/server.ExampleServer_New": {
+		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\n\t\"gocloud.dev/server\"\n)",
+		"code": "// The Server constructor takes an http.Handler and an Options struct.\nsrv := server.New(http.DefaultServeMux, nil)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server.\nsrv.ListenAndServe(\":8080\")"
 	}
 }
