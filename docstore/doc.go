@@ -110,17 +110,16 @@
 // tag on the field. For example, this is the Book struct with different field names:
 //
 //    type Book struct {
-//       Title           string `docstore:"title"`
-//       Author          Name   `docstore:"author"`
+//       Title            string `docstore:"title"`
+//       Author           Name   `docstore:"author"`
 //       PublicationYears []int `docstore:"pub_years,omitempty"`
-//       // Title in lower case.
-//       LowerTitle      string `docstore:"-"`
+//       PublicationCount string `docstore:"-"` // number of publications
 //    }
 //
 // This struct describes a document with field names "title", "author" and
 // "pub_years". The pub_years field is omitted from the stored document if it has
-// length zero. The LowerTitle field is never stored, because it can easily be
-// computed from the Title field.
+// length zero. The PublicationCount field is never stored because it can easily be
+// computed from the PublicationYears field.
 //
 //
 // Representing Data
