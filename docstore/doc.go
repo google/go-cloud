@@ -53,13 +53,13 @@
 //
 // Representing Documents
 //
-// A document is a set of named fields, each with a value. Values can be scalars,
-// lists, or documents themselves.
+// A document is a set of named fields, each with a value. A field's value can be a scalar,
+// a list, or a nested document.
 //
 // Docstore allows you to represent documents as either map[string]interface{} or
 // struct pointers. When you represent a document as a map, the fields are map keys
-// and the values are map values. For example, here is a document about a book
-// described as a map:
+// and the values are map values. Lists are represented with slices. For example,
+// here is a document about a book described as a map:
 //
 //    doc := map[string]interface{}{
 //       "Title": "The Master and Margarita",
@@ -67,17 +67,18 @@
 //           "First": "Mikhail",
 //           "Last": "Bulgakov",
 //       },
-//       "PublicationYear": 1967,
+//       "PublicationYears": []int{1967, 1973},
 //    }
 //
-// Note that the value of "Author" is itself a document.
+// Note that the value of "PublicationYears" is a list, and the value of "Author" is
+// itself a document.
 //
 // Here is the same document represented with structs:
 //
 //    type Book struct {
 //       Title           string
 //       Author          Name
-//       PublicationYear int
+//       PublicationYears []int
 //    }
 //
 //    type Name struct {
@@ -90,7 +91,7 @@
 //          First: "Mikhail",
 //          Last: "Bulgakov",
 //       },
-//       PublicationYear: 1967,
+//       PublicationYears: []int{1967, 1973},
 //    }
 //
 // You must use a pointer to a struct to represent a document, although structs
@@ -111,11 +112,15 @@
 //    type Book struct {
 //       Title           string `docstore:"title"`
 //       Author          Name   `docstore:"author"`
-//       PublicationYear int    `docstore:"pub_year,omitempty"`
+//       PublicationYears []int `docstore:"pub_years,omitempty"`
+//       // Title in lower case.
+//       LowerTitle      string `docstore:"-"`
 //    }
 //
-// This struct describes a document with field names "title", "author" and "pub_year".
-// The pub_year field is omitted from the stored document if it is zero.
+// This struct describes a document with field names "title", "author" and
+// "pub_years". The pub_years field is omitted from the stored document if it has
+// length zero. The LowerTitle field is never stored, because it can easily be
+// computed from the Title field.
 //
 //
 // Representing Data
