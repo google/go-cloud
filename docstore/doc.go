@@ -53,11 +53,11 @@
 //
 // Representing Documents
 //
-// A document is a set of named fields, each with a value. Values can themselves
-// be documents or lists of values.
+// A document is a set of named fields, each with a value. Values can be scalars,
+// lists, or documents themselves.
 //
 // Docstore allows you to represent documents as either map[string]interface{} or
-// struct pointers. When you represent a document as a map, the field are map keys
+// struct pointers. When you represent a document as a map, the fields are map keys
 // and the values are map values. For example, here is a document about a book
 // described as a map:
 //
@@ -69,6 +69,8 @@
 //       },
 //       "PublicationYear": 1967,
 //    }
+//
+// Note that the value of "Author" is itself a document.
 //
 // Here is the same document represented with structs:
 //
@@ -109,8 +111,11 @@
 //    type Book struct {
 //       Title           string `docstore:"title"`
 //       Author          Name   `docstore:"author"`
-//       PublicationYear int    `docstore:"pub_year"`
+//       PublicationYear int    `docstore:"pub_year,omitempty"`
 //    }
+//
+// This struct describes a document with field names "title", "author" and "pub_year".
+// The pub_year field is omitted from the stored document if it is zero.
 //
 //
 // Representing Data
