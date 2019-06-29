@@ -51,17 +51,75 @@
 // information.
 //
 //
-// Documents
+// Representing Documents
+//
+// A document is a set of named fields, each with a value. A field's value can be a scalar,
+// a list, or a nested document.
 //
 // Docstore allows you to represent documents as either map[string]interface{} or
-// struct pointers. Using structs is recommended, because it enforces some structure
-// on your data. Docstore mimics the encoding/json package in its treatment of
+// struct pointers. When you represent a document as a map, the fields are map keys
+// and the values are map values. Lists are represented with slices. For example,
+// here is a document about a book described as a map:
+//
+//    doc := map[string]interface{}{
+//       "Title": "The Master and Margarita",
+//       "Author": map[string]interface{}{
+//           "First": "Mikhail",
+//           "Last": "Bulgakov",
+//       },
+//       "PublicationYears": []int{1967, 1973},
+//    }
+//
+// Note that the value of "PublicationYears" is a list, and the value of "Author" is
+// itself a document.
+//
+// Here is the same document represented with structs:
+//
+//    type Book struct {
+//       Title            string
+//       Author           Name
+//       PublicationYears []int
+//    }
+//
+//    type Name struct {
+//       First, Last string
+//    }
+//
+//    doc := &Book{
+//       Title: "The Master and Margarita",
+//       Author: Name{
+//          First: "Mikhail",
+//          Last: "Bulgakov",
+//       },
+//       PublicationYears: []int{1967, 1973},
+//    }
+//
+// You must use a pointer to a struct to represent a document, although structs
+// nested inside a document, like the Name struct above, need not be pointers.
+//
+// Maps are best for applications where you don't know the structure of the
+// documents. Using structs is preferred because it enforces some structure on your
+// data.
+//
+// Docstore mimics the encoding/json package in its treatment of
 // structs: by default, a struct's exported fields are the fields of the document.
 // You can alter this default mapping by using a struct tag beginning with
 // "docstore:". Docstore struct tags support renaming, omitting fields
 // unconditionally, or omitting them only when they are empty, exactly like
 // encoding/json. Docstore also honors a "json" struct tag if there is no "docstore"
-// tag on the field.
+// tag on the field. For example, this is the Book struct with different field names:
+//
+//    type Book struct {
+//       Title            string `docstore:"title"`
+//       Author           Name   `docstore:"author"`
+//       PublicationYears []int `docstore:"pub_years,omitempty"`
+//       PublicationCount string `docstore:"-"` // number of publications
+//    }
+//
+// This struct describes a document with field names "title", "author" and
+// "pub_years". The pub_years field is omitted from the stored document if it has
+// length zero. The PublicationCount field is never stored because it can easily be
+// computed from the PublicationYears field.
 //
 //
 // Representing Data
