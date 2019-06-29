@@ -46,6 +46,8 @@ func TestOpenCollectionURL(t *testing.T) {
 		{"mongo://mydb/", true},
 		// Passing id_field parameter.
 		{"mongo://mydb/mycollection?id_field=foo", false},
+		// Passing revision field.
+		{"mongo://mydb/mycollection?id_field=foo&revision=123", false},
 		// Invalid parameter.
 		{"mongo://mydb/mycollection?param=value", true},
 	}

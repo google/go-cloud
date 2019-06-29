@@ -97,9 +97,12 @@ func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partiti
 	q.Del("partition_key")
 	sortKey = q.Get("sort_key")
 	q.Del("sort_key")
-	allowScans := q.Get("allow_scans")
+	opts = &Options{
+		AllowScans:    q.Get("allow_scans") == "true",
+		RevisionField: q.Get("revision"),
+	}
 	q.Del("allow_scans")
-	opts = &Options{AllowScans: allowScans == "true"}
+	q.Del("revision")
 
 	tableName = u.Host
 	if tableName == "" {

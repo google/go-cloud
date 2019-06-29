@@ -34,6 +34,8 @@ func TestProcessURL(t *testing.T) {
 		{"dynamodb://docstore-test?partition_key=_kind&region=" + region, false},
 		// OK, allow_scans.
 		{"dynamodb://docstore-test?partition_key=_kind&allow_scans=true" + region, false},
+		// Passing revision field.
+		{"dynamodb://docstore-test?partition_key=_kind&revision=123", false},
 		// Unknown parameter.
 		{"dynamodb://docstore-test?partition_key=_kind&param=value", true},
 		// With path.
