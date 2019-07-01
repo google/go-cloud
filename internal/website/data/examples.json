@@ -131,13 +131,41 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/mongodocstore\"\n)",
 		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mongo://my-db/my-collection?id_field=userID\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
+	"gocloud.dev/mysql.ExampleOpen": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := mysql.Open(ctx, \"mysql://user:password@localhost/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/mysql/awsmysql.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n\t_ \"gocloud.dev/mysql/awsmysql\"\n)",
+		"code": "// Replace these with your actual settings.\ndb, err := mysql.Open(ctx,\n\t\"awsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.ExecContext(ctx, \"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/mysql/azuremysql.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n\t_ \"gocloud.dev/mysql/azuremysql\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := mysql.Open(ctx,\n\t\"azuremysql://user:password@example00.mysql.database.azure.com/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/mysql/gcpmysql.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/mysql\"\n\t_ \"gocloud.dev/mysql/gcpmysql\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := mysql.Open(ctx,\n\t\"gcpmysql://user:password@example-project/region/my-instance01/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/postgres.ExampleOpen": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n)",
+		"code": "// Replace this with your actual settings.\ndb, err := postgres.Open(ctx, \"postgres://user:password@localhost/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/postgres/awspostgres.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/awspostgres\"\n)",
+		"code": "// Replace these with your actual settings.\ndb, err := postgres.Open(ctx,\n\t\"awspostgres://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.ExecContext(ctx, \"CREATE TABLE foo (bar INT);\")"
+	},
+	"gocloud.dev/postgres/gcppostgres.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/gcppostgres\"\n)",
+		"code": "db, err := postgres.Open(ctx,\n\t\"gcppostgres://myrole@example-project/us-central1/my-instance01/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+	},
 	"gocloud.dev/pubsub.ExampleSubscription_Receive": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/pubsub\"\n)",
 		"code": "// Loop on received messages.\nfor {\n\tmsg, err := subscription.Receive(ctx)\n\tif err != nil {\n\t\t// Errors from Receive indicate that Receive will no longer succeed.\n\t\tlog.Printf(\"Receiving message: %v\", err)\n\t\tbreak\n\t}\n\t// Do work based on the message, for example:\n\tfmt.Printf(\"Got message: %q\\n\", msg.Body)\n\t// Messages must always be acknowledged with Ack.\n\tmsg.Ack()\n}"
 	},
 	"gocloud.dev/pubsub.ExampleSubscription_Receive_concurrent": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/pubsub\"\n)",
-		"code": "// Loop on received messages. We can use a channel as a semaphore to limit how\n// many goroutines we have active at a time as well as wait on the goroutines\n// to finish before exiting.\nconst maxHandlers = 10\nsem := make(chan struct{}, maxHandlers)\nrecvLoop:\nfor {\n\tmsg, err := subscription.Receive(ctx)\n\tif err != nil {\n\t\t// Errors from Receive indicate that Receive will no longer succeed.\n\t\tlog.Printf(\"Receiving message: %v\", err)\n\t\tbreak\n\t}\n\n\t// Wait if there are too many active handle goroutines and acquire the\n\t// semaphore. If the context is canceled, stop waiting and start shutting\n\t// down.\n\tselect {\n\tcase sem \u003c- struct{}{}:\n\tcase \u003c-ctx.Done():\n\t\tbreak recvLoop\n\t}\n\n\t// Handle the message in a new goroutine.\n\tgo func() {\n\t\tdefer func() { \u003c-sem }() // Release the semaphore.\n\t\tdefer msg.Ack()          // Messages must always be acknowledged with Ack.\n\n\t\t// Do work based on the message, for example:\n\t\tfmt.Printf(\"Got message: %q\\n\", msg.Body)\n\t}()\n}\n\n// We're no longer receiving messages. Wait to finish handling any\n// unacknowledged messages by totally acquiring the semaphore.\nfor n := 0; n \u003c maxHandlers; n-- {\n\tsem \u003c- struct{}{}\n}"
+		"code": "// Loop on received messages. We can use a channel as a semaphore to limit how\n// many goroutines we have active at a time as well as wait on the goroutines\n// to finish before exiting.\nconst maxHandlers = 10\nsem := make(chan struct{}, maxHandlers)\nrecvLoop:\nfor {\n\tmsg, err := subscription.Receive(ctx)\n\tif err != nil {\n\t\t// Errors from Receive indicate that Receive will no longer succeed.\n\t\tlog.Printf(\"Receiving message: %v\", err)\n\t\tbreak\n\t}\n\n\t// Wait if there are too many active handle goroutines and acquire the\n\t// semaphore. If the context is canceled, stop waiting and start shutting\n\t// down.\n\tselect {\n\tcase sem \u003c- struct{}{}:\n\tcase \u003c-ctx.Done():\n\t\tbreak recvLoop\n\t}\n\n\t// Handle the message in a new goroutine.\n\tgo func() {\n\t\tdefer func() { \u003c-sem }() // Release the semaphore.\n\t\tdefer msg.Ack()          // Messages must always be acknowledged with Ack.\n\n\t\t// Do work based on the message, for example:\n\t\tfmt.Printf(\"Got message: %q\\n\", msg.Body)\n\t}()\n}\n\n// We're no longer receiving messages. Wait to finish handling any\n// unacknowledged messages by totally acquiring the semaphore.\nfor n := 0; n \u003c maxHandlers; n++ {\n\tsem \u003c- struct{}{}\n}"
 	},
 	"gocloud.dev/pubsub.ExampleTopic_Send": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n)",
@@ -262,6 +290,34 @@
 	"gocloud.dev/pubsub/rabbitpubsub.Example_openTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the exchange \"myexchange\".\ntopic, err := pubsub.OpenTopic(ctx, \"rabbit://myexchange\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/runtimevar.ExampleVariable_Latest": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
+		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"
+	},
+	"gocloud.dev/runtimevar/awsparamstore.ExampleOpenVariable": {
+		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awsparamstore\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\n// Create a decoder for decoding JSON strings into MyConfig.\ndecoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)\n\n// Construct a *runtimevar.Variable that watches the variable.\n// For this example, the Parameter Store variable being referenced\n// should have a JSON string that decodes into MyConfig.\nv, err := awsparamstore.OpenVariable(sess, \"cfg-variable-name\", decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/awsparamstore\"\n\t\"gocloud.dev/runtimevar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"awsparamstore://myvar?region=us-west-1\")\nif err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable": {
+		"imports": "import (\n\t\"go.etcd.io/etcd/clientv3\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/etcdvar\"\n)",
+		"code": "// Connect to the etcd server.\nclient, err := clientv3.NewFromURL(\"http://your.etcd.server:9999\")\nif err != nil {\n\treturn err\n}\n\n// Create a decoder for decoding JSON strings into MyConfig.\ndecoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)\n\n// Construct a *runtimevar.Variable that watches the variable.\n// The etcd variable being referenced should have a JSON string that\n// decodes into MyConfig.\nv, err := etcdvar.OpenVariable(client, \"cfg-variable-name\", decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/etcdvar.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/etcdvar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener connects to an etcd server based on the environment\n// variable ETCD_SERVER_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"etcd://myvarname\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/gcpruntimeconfig.ExampleOpenVariable": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/gcpruntimeconfig\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Connect to the Runtime Configurator service.\nclient, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// Create a decoder for decoding JSON strings into MyConfig.\ndecoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)\n\n// You can use the VariableKey helper to construct a Variable key from\n// your project ID, config ID, and the variable name; alternatively,\n// you can construct the full string yourself (e.g.,\n// \"projects/gcp-project-id/configs/config-id/variables/variable-name\").\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n//\n// For this example, the GCP Cloud Runtime Configurator variable being\n// referenced should have a JSON string that decodes into MyConfig.\nvariableKey := gcpruntimeconfig.VariableKey(\"gcp-project-id\", \"config-id\", \"variable-name\")\n\n// Construct a *runtimevar.Variable that watches the variable.\nv, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/gcpruntimeconfig\"\n\t\"gocloud.dev/runtimevar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL host+path form the GCP Runtime Configurator variable key.\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\n\ndefer v.Close()"
 	},
 	"gocloud.dev/secrets.ExampleKeeper_Decrypt": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n)",

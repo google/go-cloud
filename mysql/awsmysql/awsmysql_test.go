@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rdsmysql
+package awsmysql
 
 import (
 	"context"
@@ -43,7 +43,7 @@ func TestOpen(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	urlstr := fmt.Sprintf("rdsmysql://%s:%s@%s/%s", username, password, endpoint, databaseName)
+	urlstr := fmt.Sprintf("awsmysql://%s:%s@%s/%s", username, password, endpoint, databaseName)
 	t.Log("Connecting to:", urlstr)
 	db, err := mysql.Open(ctx, urlstr)
 	if err != nil {

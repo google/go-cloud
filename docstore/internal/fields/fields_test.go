@@ -459,7 +459,35 @@ type S4 struct {
 	Y   int `json:"Abc"` // ignored because of top-level Abc
 }
 
-func TestMatchingField(t *testing.T) {
+func TestMatchExact(t *testing.T) {
+	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S3{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name string
+		want *Field
+	}{
+		// Exact match wins.
+		{"Abc", field("Abc", int(0), 1)},
+		{"AbC", field("AbC", int(0), 2)},
+		{"ABc", field("ABc", int(0), 0, 0)},
+		// Matches must be exact.
+		{"abc", nil},
+		// Tag name takes precedence over untagged field of the same name.
+		{"Tag", tfield("Tag", int(0), 4)},
+		// Unexported fields disappear.
+		{"unexported", nil},
+		// Untagged embedded structs disappear.
+		{"S4", nil},
+	} {
+		if got := fields.MatchExact(test.name); !fieldsEqual(got, test.want) {
+			t.Errorf("match %q:\ngot  %+v\nwant %+v", test.name, got, test.want)
+		}
+	}
+}
+
+func TestMatchFold(t *testing.T) {
 	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S3{}))
 	if err != nil {
 		t.Fatal(err)
@@ -484,7 +512,7 @@ func TestMatchingField(t *testing.T) {
 		// Untagged embedded structs disappear.
 		{"S4", nil},
 	} {
-		if got := fields.Match(test.name); !fieldsEqual(got, test.want) {
+		if got := fields.MatchFold(test.name); !fieldsEqual(got, test.want) {
 			t.Errorf("match %q:\ngot  %+v\nwant %+v", test.name, got, test.want)
 		}
 	}
@@ -516,7 +544,7 @@ func TestAgainstJSONMatchingField(t *testing.T) {
 		{"abc", 1},
 		{"Tag", 6},
 	} {
-		f := fields.Match(test.name)
+		f := fields.MatchFold(test.name)
 		if f == nil {
 			t.Fatalf("%s: no match", test.name)
 		}

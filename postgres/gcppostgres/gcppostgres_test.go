@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudmysql
+package gcppostgres
 
 import (
 	"context"
@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"gocloud.dev/internal/testing/terraform"
-	"gocloud.dev/mysql"
+	"gocloud.dev/postgres"
 )
 
-func TestOpen(t *testing.T) {
+func TestURLOpener(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
 	// Before running go test, run in this directory:
 	//
@@ -44,19 +44,44 @@ func TestOpen(t *testing.T) {
 	if project == "" || region == "" || instance == "" || username == "" || databaseName == "" {
 		t.Fatalf("Missing one or more required Terraform outputs; got project=%q region=%q instance=%q username=%q database=%q", project, region, instance, username, databaseName)
 	}
+	tests := []struct {
+		name    string
+		urlstr  string
+		wantErr bool
+	}{
+		{
+			name:   "Success",
+			urlstr: fmt.Sprintf("gcppostgres://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName),
+		},
+		{
+			name:    "SSLModeForbidden",
+			urlstr:  fmt.Sprintf("gcppostgres://%s:%s@%s/%s/%s/%s?sslmode=require", username, password, project, region, instance, databaseName),
+			wantErr: true,
+		},
+	}
 
 	ctx := context.Background()
-	urlstr := fmt.Sprintf("cloudmysql://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName)
-	t.Log("Connecting to", urlstr)
-	db, err := mysql.Open(ctx, urlstr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := db.Ping(); err != nil {
-		t.Error("Ping:", err)
-	}
-	if err := db.Close(); err != nil {
-		t.Error("Close:", err)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			db, err := postgres.Open(ctx, test.urlstr)
+			if err != nil {
+				t.Log(err)
+				if !test.wantErr {
+					t.Fail()
+				}
+				return
+			}
+			if test.wantErr {
+				db.Close()
+				t.Fatal("Open succeeded; want error")
+			}
+			if err := db.Ping(); err != nil {
+				t.Error("Ping:", err)
+			}
+			if err := db.Close(); err != nil {
+				t.Error("Close:", err)
+			}
+		})
 	}
 }
 
@@ -70,39 +95,39 @@ func TestInstanceFromURL(t *testing.T) {
 	}{
 		{
 			name:         "AllValuesSpecified",
-			urlString:    "cloudmysql://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
+			urlString:    "gcppostgres://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "my-db",
 		},
 		{
 			name:         "OptionalValuesOmitted",
-			urlString:    "cloudmysql://my-project-id/us-central1/my-instance-id/my-db",
+			urlString:    "gcppostgres://my-project-id/us-central1/my-instance-id/my-db",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "my-db",
 		},
 		{
 			name:      "DatabaseNameEmpty",
-			urlString: "cloudmysql://my-project-id/us-central1/my-instance-id/",
+			urlString: "gcppostgres://my-project-id/us-central1/my-instance-id/",
 			wantErr:   true,
 		},
 		{
 			name:      "InstanceEmpty",
-			urlString: "cloudmysql://my-project-id/us-central1//my-db",
+			urlString: "gcppostgres://my-project-id/us-central1//my-db",
 			wantErr:   true,
 		},
 		{
 			name:      "RegionEmpty",
-			urlString: "cloudmysql://my-project-id//my-instance-id/my-db",
+			urlString: "gcppostgres://my-project-id//my-instance-id/my-db",
 			wantErr:   true,
 		},
 		{
 			name:      "ProjectEmpty",
-			urlString: "cloudmysql:///us-central1/my-instance-id/my-db",
+			urlString: "gcppostgres:///us-central1/my-instance-id/my-db",
 			wantErr:   true,
 		},
 		{
 			name:         "DatabaseNameWithSlashes",
-			urlString:    "cloudmysql://my-project-id/us-central1/my-instance-id/foo/bar/baz",
+			urlString:    "gcppostgres://my-project-id/us-central1/my-instance-id/foo/bar/baz",
 			wantInstance: "my-project-id:us-central1:my-instance-id",
 			wantDatabase: "foo/bar/baz",
 		},

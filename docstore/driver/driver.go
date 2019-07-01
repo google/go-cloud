@@ -39,7 +39,7 @@ type Collection interface {
 	Key(Document) (interface{}, error)
 
 	// RevisionField returns the name of the field used to hold revisions.
-	// If the empty string is returned, docstore.RevisionField will be used.
+	// If the empty string is returned, docstore.DefaultRevisionField will be used.
 	RevisionField() string
 
 	// RunActions executes a slice of actions.

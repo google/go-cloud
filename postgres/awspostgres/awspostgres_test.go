@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rdspostgres
+package awspostgres
 
 import (
 	"context"
@@ -48,18 +48,18 @@ func TestURLOpener(t *testing.T) {
 		wantPingErr bool
 	}{
 		// OK.
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s", username, password, endpoint, databaseName), false, false},
+		{fmt.Sprintf("awspostgres://%s:%s@%s/%s", username, password, endpoint, databaseName), false, false},
 		// Invalid URL parameters: db creation fails.
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslcert=foo", username, password, endpoint, databaseName), true, false},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslkey=foo", username, password, endpoint, databaseName), true, false},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslrootcert=foo", username, password, endpoint, databaseName), true, false},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?sslmode=require", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("awspostgres://%s:%s@%s/%s?sslcert=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("awspostgres://%s:%s@%s/%s?sslkey=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("awspostgres://%s:%s@%s/%s?sslrootcert=foo", username, password, endpoint, databaseName), true, false},
+		{fmt.Sprintf("awspostgres://%s:%s@%s/%s?sslmode=require", username, password, endpoint, databaseName), true, false},
 		// Invalid connection info: db is created, but Ping fails.
-		{fmt.Sprintf("rdspostgres://%s:badpwd@%s/%s", username, endpoint, databaseName), false, true},
-		{fmt.Sprintf("rdspostgres://badusername:%s@%s/%s", password, endpoint, databaseName), false, true},
-		{fmt.Sprintf("rdspostgres://%s:%s@localhost:9999/%s", username, password, databaseName), false, true},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/wrongdbname", username, password, endpoint), false, true},
-		{fmt.Sprintf("rdspostgres://%s:%s@%s/%s?foo=bar", username, password, endpoint, databaseName), false, true},
+		{fmt.Sprintf("awspostgres://%s:badpwd@%s/%s", username, endpoint, databaseName), false, true},
+		{fmt.Sprintf("awspostgres://badusername:%s@%s/%s", password, endpoint, databaseName), false, true},
+		{fmt.Sprintf("awspostgres://%s:%s@localhost:9999/%s", username, password, databaseName), false, true},
+		{fmt.Sprintf("awspostgres://%s:%s@%s/wrongdbname", username, password, endpoint), false, true},
+		{fmt.Sprintf("awspostgres://%s:%s@%s/%s?foo=bar", username, password, endpoint, databaseName), false, true},
 	}
 	ctx := context.Background()
 	for _, test := range tests {

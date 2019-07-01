@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package rdsmysql provides connections to AWS RDS MySQL instances.
+// Package awsmysql provides connections to AWS RDS MySQL instances.
 //
 // URLs
 //
-// For mysql.Open, rdsmysql registers for the scheme "rdsmysql".
+// For mysql.Open, awsmysql registers for the scheme "awsmysql".
 // The default URL opener will create a connection using the default
 // credentials from the environment, as described in
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
@@ -24,7 +24,7 @@
 // see URLOpener.
 //
 // See https://gocloud.dev/concepts/urls/ for background information.
-package rdsmysql // import "gocloud.dev/mysql/rdsmysql"
+package awsmysql // import "gocloud.dev/mysql/awsmysql"
 
 import (
 	"context"
@@ -51,7 +51,7 @@ var Set = wire.NewSet(
 )
 
 // URLOpener opens RDS MySQL URLs
-// like "rdsmysql://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb".
+// like "awsmysql://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb".
 type URLOpener struct {
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
@@ -60,9 +60,9 @@ type URLOpener struct {
 	TraceOpts []ocsql.TraceOption
 }
 
-// Scheme is the URL scheme rdsmysql registers its URLOpener under on
+// Scheme is the URL scheme awsmysql registers its URLOpener under on
 // mysql.DefaultMux.
-const Scheme = "rdsmysql"
+const Scheme = "awsmysql"
 
 func init() {
 	gcmysql.DefaultURLMux().RegisterMySQL(Scheme, &URLOpener{})
@@ -121,7 +121,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		tlsConfigNum := tlsConfigCounter.n
 		tlsConfigCounter.n++
 		tlsConfigCounter.mu.Unlock()
-		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/rdsmysql/%d", tlsConfigNum)
+		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/awsmysql/%d", tlsConfigNum)
 		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
 			RootCAs: certPool,
 		})

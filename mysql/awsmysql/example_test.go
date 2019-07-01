@@ -12,21 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rdsmysql_test
+package awsmysql_test
 
 import (
 	"context"
 	"log"
 
 	"gocloud.dev/mysql"
-	_ "gocloud.dev/mysql/rdsmysql"
+	_ "gocloud.dev/mysql/awsmysql"
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/sql/#aws
+
+	// import _ "gocloud.dev/mysql/awsmysql"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	// Replace these with your actual settings.
 	db, err := mysql.Open(ctx,
-		"rdsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb")
+		"awsmysql://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}

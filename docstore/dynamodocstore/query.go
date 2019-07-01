@@ -15,10 +15,16 @@
 package dynamodocstore
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"math/big"
+	"reflect"
+	"sort"
 	"strings"
+	"time"
 
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
@@ -547,3 +553,190 @@ func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, mods [
 	}
 	return docstore.ActionListError(alerr)
 }
+
+// InMemorySortFallback returns a query fallback function for Options.RunQueryFallback.
+// The function accepts a query with an OrderBy clause. It runs the query without that clause,
+// reading all documents into memory, then sorts the documents according to the OrderBy clause.
+//
+// Only string, numeric, time and binary ([]byte) fields can be sorted.
+//
+// createDocument should create an empty document to be passed to DocumentIterator.Next.
+// The DocumentIterator returned by the FallbackFunc will also expect the same type of document.
+// If nil, then a map[string]interface{} will be used.
+func InMemorySortFallback(createDocument func() interface{}) FallbackFunc {
+	if createDocument == nil {
+		createDocument = func() interface{} { return map[string]interface{}{} }
+	}
+	return func(ctx context.Context, q *driver.Query, run RunQueryFunc) (driver.DocumentIterator, error) {
+		if q.OrderByField == "" {
+			return nil, errors.New("InMemorySortFallback expects an OrderBy query")
+		}
+		// Run the query without the OrderBy.
+		orderByField := q.OrderByField
+		q.OrderByField = ""
+		iter, err := run(ctx, q)
+		if err != nil {
+			return nil, err
+		}
+		defer iter.Stop()
+		// Collect the results into a slice.
+		var docs []driver.Document
+		for {
+			doc, err := driver.NewDocument(createDocument())
+			if err != nil {
+				return nil, err
+			}
+			err = iter.Next(ctx, doc)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			docs = append(docs, doc)
+		}
+		// Sort the documents.
+		// OrderByField is a single field, not a field path.
+		// First, put the field values in another slice, so we can
+		// return on error.
+		sortValues := make([]interface{}, len(docs))
+		for i, doc := range docs {
+			v, err := doc.GetField(orderByField)
+			if err != nil {
+				return nil, err
+			}
+			sortValues[i] = v
+		}
+		sort.Sort(docsForSorting{docs, sortValues, q.OrderAscending})
+		return &sliceIterator{docs: docs}, nil
+	}
+}
+
+type docsForSorting struct {
+	docs      []driver.Document
+	vals      []interface{}
+	ascending bool
+}
+
+func (d docsForSorting) Len() int { return len(d.docs) }
+
+func (d docsForSorting) Swap(i, j int) {
+	d.docs[i], d.docs[j] = d.docs[j], d.docs[i]
+	d.vals[i], d.vals[j] = d.vals[j], d.vals[i]
+}
+
+func (d docsForSorting) Less(i, j int) bool {
+	c := compare(d.vals[i], d.vals[j])
+	if d.ascending {
+		return c < 0
+	} else {
+		return c > 0
+	}
+}
+
+// compare returns -1 if v1 < v2, 0 if v1 == v2 and 1 if v1 > v2.
+//
+// Arbitrarily decide that strings < times < []byte < numbers.
+// TODO(jba): find and use the actual sort order that DynamoDB uses.
+func compare(v1, v2 interface{}) int {
+	switch v1 := v1.(type) {
+	case string:
+		if v2, ok := v2.(string); ok {
+			return strings.Compare(v1, v2)
+		}
+		return -1
+
+	case time.Time:
+		if v2, ok := v2.(time.Time); ok {
+			return compareTimes(v1, v2)
+		}
+		if _, ok := v2.(string); ok {
+			return 1
+		}
+		return -1
+
+	case []byte:
+		if v2, ok := v2.([]byte); ok {
+			return bytes.Compare(v1, v2)
+		}
+		if _, ok := v2.(string); ok {
+			return 1
+		}
+		if _, ok := v2.(time.Time); ok {
+			return 1
+		}
+		return -1
+
+	default:
+		b1 := toBigFloat(reflect.ValueOf(v1))
+		b2 := toBigFloat(reflect.ValueOf(v2))
+		if b1 == nil && b2 != nil {
+			return -1
+		}
+		if b1 != nil && b2 == nil {
+			return 1
+		}
+		return b1.Cmp(b2)
+	}
+}
+
+// Copied from firedocstore.
+// TODO(jba): dedup, probably by having a general driver.Compare function that implements
+// comparison portably.
+func compareTimes(t1, t2 time.Time) int {
+	switch {
+	case t1.Before(t2):
+		return -1
+	case t1.After(t2):
+		return 1
+	default:
+		return 0
+	}
+}
+
+// Copied from firedocstore.
+// TODO(jba): dedup
+func toBigFloat(x reflect.Value) *big.Float {
+	var f big.Float
+	switch x.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		f.SetInt64(x.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		f.SetUint64(x.Uint())
+	case reflect.Float32, reflect.Float64:
+		f.SetFloat64(x.Float())
+	default:
+		return nil
+	}
+	return &f
+}
+
+type sliceIterator struct {
+	docs []driver.Document
+	next int
+}
+
+func (it *sliceIterator) Next(ctx context.Context, doc driver.Document) error {
+	if it.next >= len(it.docs) {
+		return io.EOF
+	}
+	it.next++
+	return copyTopLevel(doc, it.docs[it.next-1])
+}
+
+// Copy the top-level fields of src into dest.
+func copyTopLevel(dest, src driver.Document) error {
+	for _, f := range src.FieldNames() {
+		v, err := src.GetField(f)
+		if err != nil {
+			return err
+		}
+		if err := dest.SetField(f, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (*sliceIterator) Stop()               {}
+func (*sliceIterator) As(interface{}) bool { return false }

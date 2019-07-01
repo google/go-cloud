@@ -202,7 +202,11 @@ func TestRecordReplay(t *testing.T) {
 			defer os.RemoveAll(rootDir)
 
 			var out bytes.Buffer
-			curDir := rootDir
+			srcDir := filepath.Join(rootDir, "src")
+			if err := os.Mkdir(srcDir, 0777); err != nil {
+				t.Error(err)
+			}
+			curDir := srcDir
 			pctx := newProcessContext(curDir, strings.NewReader(""), &out, &out)
 			pctx.env = append(pctx.env, "GOPATH="+rootDir)
 			for i, command := range tc.commands {
@@ -250,7 +254,7 @@ func TestRecordReplay(t *testing.T) {
 				fmt.Fprintln(&out)
 			}
 
-			got := scrub(rootDir, out.Bytes())
+			got := scrub(srcDir, out.Bytes())
 			if *record {
 				if err := ioutil.WriteFile(filepath.Join(tc.dir, "out.txt"), got, 0666); err != nil {
 					t.Fatalf("failed to record out.txt to testdata: %v", err)

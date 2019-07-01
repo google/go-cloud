@@ -124,5 +124,8 @@ func parseImageNameFromDockerfile(dockerfile []byte) (string, error) {
 		lenName = len(dockerfile) - nameStart
 	}
 	name := string(dockerfile[nameStart : nameStart+lenName])
+	if _, tag, digest := docker.ParseImageRef(name); tag != "" || digest != "" {
+		return "", xerrors.Errorf("image name %q must not contain a tag or digest")
+	}
 	return strings.TrimSpace(name), nil
 }

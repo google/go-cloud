@@ -56,6 +56,7 @@ func TestAddDemo(t *testing.T) {
 	// Update the environment to use local implementations for each portable API.
 	pctx.env = overrideEnv(pctx.env,
 		"BLOB_BUCKET_URL=mem://",
+		"DOCSTORE_COLLECTION_URL=mem://mycollection/Key",
 		"PUBSUB_TOPIC_URL=mem://testtopic",
 		"PUBSUB_SUBSCRIPTION_URL=mem://testtopic",
 		"RUNTIMEVAR_VARIABLE_URL=constant://?val=test-variable-value&decoder=string",
@@ -214,6 +215,133 @@ func TestAddDemo(t *testing.T) {
 			op:          "GET",
 			stringsToFind: []string{
 				"key2 contents",
+			},
+		},
+		// DOCSTORE TESTS.
+		{
+			demo:        "docstore",
+			description: "base",
+			urlPaths:    []string{"/demo/docstore", "/demo/docstore/"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"This page demonstrates the use",
+				"https://godoc.org/gocloud.dev/docstore",
+				`<a href="./list">List</a>`,
+				`<a href="./edit?create=true">Create</a>`,
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "list: empty collection",
+			urlPaths:    []string{"/demo/docstore/list"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"no documents in collection",
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "create: empty form",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			urlQuery:    "create=true",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				`<input type="submit" value="Write It!">`, // form is shown
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "create: empty key",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			op:          "POST",
+			urlValues:   map[string][]string{"create": {"true"}, "value": {"foo"}},
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"<strong>enter a non-empty key</strong>",
+				"foo",                                     // previous entry for value field is carried over
+				`<input type="submit" value="Write It!">`, // form is shown
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "create: success",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			op:          "POST",
+			urlValues:   map[string][]string{"create": {"true"}, "key": {"key1"}, "value": {"initial value"}},
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"Write succeeded!",
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "list: no longer empty",
+			urlPaths:    []string{"/demo/docstore/list"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				`<a href="./edit?key=key1">key1</a>`,
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "edit: initial form",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			urlQuery:    "key=key1",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"key1",
+				"initial value", // value is shown
+				`<input type="submit" value="Write It!">`, // form is shown
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "edit: initial form missing key",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"<strong>key must be provided to edit</strong>",
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "edit: initial form invalid key",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			urlQuery:    "key=invalid",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"<strong>failed to get document",
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "edit: success",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			op:          "POST",
+			urlValues:   map[string][]string{"key": {"key1"}, "value": {"updated value"}},
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"Write succeeded!",
+			},
+		},
+		{
+			demo:        "docstore",
+			description: "edit: showing updated value",
+			urlPaths:    []string{"/demo/docstore/edit"},
+			urlQuery:    "key=key1",
+			op:          "GET",
+			stringsToFind: []string{
+				"<title>gocloud.dev/docstore demo</title>",
+				"key1",
+				"updated value", // updated value is shown
+				`<input type="submit" value="Write It!">`, // form is shown
 			},
 		},
 		// PUBSUB TESTS.

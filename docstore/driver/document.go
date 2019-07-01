@@ -110,7 +110,7 @@ func (d Document) Get(fp []string) (interface{}, error) {
 }
 
 func (d Document) structField(name string) (reflect.Value, error) {
-	f := d.fields.Match(name)
+	f := d.fields.MatchFold(name)
 	if f == nil {
 		return reflect.Value{}, gcerr.Newf(gcerr.NotFound, nil, "field %q not found in struct type %s", name, d.s.Type())
 	}
@@ -148,6 +148,21 @@ func (d Document) SetField(field string, value interface{}) error {
 	}
 	v.Set(reflect.ValueOf(value))
 	return nil
+}
+
+// FieldNames returns names of the top-level fields of d.
+func (d Document) FieldNames() []string {
+	var names []string
+	if d.m != nil {
+		for k := range d.m {
+			names = append(names, k)
+		}
+	} else {
+		for _, f := range d.fields {
+			names = append(names, f.Name)
+		}
+	}
+	return names
 }
 
 // Encode encodes the document using the given Encoder.
