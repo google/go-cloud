@@ -23,9 +23,10 @@ type Order struct {
 	ID               string    // unique ID, randomly generated
 	Email            string    // email address of customer
 	InImage          string    // name of input image
-	OutImage         string    // name of output image
+	OutImage         string    // name of output image; empty if there was an error
 	CreateTime       time.Time // time the order was created
 	FinishTime       time.Time // time the order was finished
+	Note             string    // note to the customer from the processor, describing success or error
 	DocstoreRevision interface{}
 }
 
@@ -38,10 +39,9 @@ type OrderRequest struct {
 	CreateTime time.Time
 }
 
-// OrderResponse describes the result of an order. It is the contents of the
-// messages sent to the response topic.
+// OrderResponse is the contents of the messages sent to the response topic. It
+// is sent when an order is finished. It contains just the ID of the order; the
+// receiver must look up the Order in the database to learn more.
 type OrderResponse struct {
-	ID       string
-	OutImage string // if empty, error; Note contains the problem
-	Note     string // for the customer
+	ID string
 }

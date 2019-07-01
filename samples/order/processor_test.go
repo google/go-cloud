@@ -28,86 +28,98 @@ import (
 	_ "gocloud.dev/pubsub/mempubsub"
 )
 
-func TestProcessor(t *testing.T) {
-	ctx := context.Background()
-	f, p, cleanup, err := setup()
+func TestProcessorRun(t *testing.T) {
+	f, p, cleanup, err := setup(testConfig("ProcessorRun"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	t.Run("Run", func(t *testing.T) {
-		if err := copyFileToBucket("testdata/cat1", p.bucket); err != nil {
-			t.Fatal(err)
-		}
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		go func() {
-			if err := p.run(ctx); err != nil {
-				if err != context.Canceled {
-					t.Errorf("run: %v", err)
-					cancel()
-				}
-			}
-		}()
 
-		req := &OrderRequest{
-			ID:      "x",
-			InImage: "cat1",
-			Email:   "robin@example.com",
+	ctx := context.Background()
+	if err := copyFileToBucket("testdata/cat1", p.bucket); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		if err := p.run(ctx); err != nil {
+			if err != context.Canceled {
+				t.Errorf("run: %v", err)
+				cancel()
+			}
 		}
-		bytes, err := json.Marshal(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := f.requestTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
-			t.Fatal(err)
-		}
-		msg, err := f.responseSub.Receive(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var got OrderResponse
-		if err := json.Unmarshal(msg.Body, &got); err != nil {
-			t.Fatal(err)
-		}
-		msg.Ack()
-		want := OrderResponse{
-			ID:       "x",
-			OutImage: "cat1-out.png",
-			Note:     "converted from jpeg to png",
-		}
-		if !cmp.Equal(got, want) {
-			t.Errorf("\ngot  %+v\nwant %+v", got, want)
-		}
-	})
+	}()
 
-	t.Run("HandleOrder", func(t *testing.T) {
-		for _, test := range []struct {
-			filename string
-			want     *OrderResponse
-		}{
-			{
-				"cat1",
-				&OrderResponse{ID: "cat1", OutImage: "cat1-out.png", Note: "converted from jpeg to png"},
+	req := &OrderRequest{ID: "x"}
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.requestTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
+		t.Fatal(err)
+	}
+	msg, err := f.responseSub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got OrderResponse
+	if err := json.Unmarshal(msg.Body, &got); err != nil {
+		t.Fatal(err)
+	}
+	msg.Ack()
+	want := OrderResponse{ID: "x"}
+	if !cmp.Equal(got, want) {
+		t.Errorf("got  %+v, want %+v", got, want)
+	}
+}
+
+func TestProcessOrder(t *testing.T) {
+	_, p, cleanup, err := setup(testConfig("ProcessOrder"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	ctx := context.Background()
+	for _, test := range []struct {
+		filename string
+		want     *Order
+		wantErr  bool
+	}{
+		{
+			"cat1",
+			&Order{
+				ID:       "cat1",
+				Email:    "joe@example.com",
+				InImage:  "cat1",
+				OutImage: "cat1-out.png",
+				Note:     "converted from jpeg to png",
 			},
-			{
-				"bad-image",
-				&OrderResponse{ID: "bad-image", Note: "processing failed: image: unknown format"},
-			},
-			{
-				"cat1",
-				nil, // duplicate order
-			},
-		} {
-			if err := copyFileToBucket("testdata/"+test.filename, p.bucket); err != nil {
-				t.Fatal(err)
-			}
-			got := p.handleOrder(ctx, &OrderRequest{ID: test.filename, InImage: test.filename})
-			if !cmp.Equal(got, test.want) {
-				t.Errorf("%s:\ngot  %+v\nwant %+v", test.filename, got, test.want)
-			}
+			false,
+		},
+		{
+			"bad-image",
+			nil,
+			true,
+		},
+	} {
+		if err := copyFileToBucket("testdata/"+test.filename, p.bucket); err != nil {
+			t.Fatal(err)
 		}
-	})
+		got := &Order{
+			ID:      test.filename,
+			Email:   "joe@example.com",
+			InImage: test.filename,
+		}
+		err := p.processOrder(ctx, got)
+		if err == nil && test.wantErr {
+			t.Errorf("%s: got nil, want error", test.filename)
+		} else if err != nil && !test.wantErr {
+			t.Errorf("%s: got error %v, want nil", test.filename, err)
+		} else if err == nil && !cmp.Equal(got, test.want) {
+			t.Errorf("%s:\ngot  %+v\nwant %+v", test.filename, got, test.want)
+		}
+	}
 }
 
 func copyFileToBucket(filename string, bucket *blob.Bucket) (err error) {
