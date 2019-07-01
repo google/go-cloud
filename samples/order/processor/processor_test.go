@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -26,7 +27,7 @@ import (
 	"gocloud.dev/docstore"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
-	"gocloud.dev/samples/order/common"
+	"gocloud.dev/samples/order/internal/common"
 )
 
 func TestRun(t *testing.T) {
@@ -141,11 +142,24 @@ func TestHandleOrder(t *testing.T) {
 	}
 }
 
-func copyFileToBucket(filename string, bucket *blob.Bucket) error {
+func copyFileToBucket(filename string, bucket *blob.Bucket) (err error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return common.CopyToBucket(context.Background(), bucket, filepath.Base(filename), f)
+
+	w, err := bucket.NewWriter(context.Background(), filepath.Base(filename), nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err2 := w.Close()
+		if err == nil {
+			err = err2
+		}
+	}()
+
+	_, err = io.Copy(w, f)
+	return err
 }

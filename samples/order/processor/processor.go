@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// A processor processes the images in orders. It receives requests by
+// A processor processes images in orders. It receives requests by
 // subscribing to the requests topic, and writes responses to the response
 // topic.
 //
@@ -37,7 +37,7 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
-	"gocloud.dev/samples/order/common"
+	"gocloud.dev/samples/order/internal/common"
 )
 
 var (
@@ -105,23 +105,37 @@ func newProcessor(ctx context.Context, subURL, topicURL, bucketURL, collURL stri
 
 func (p *processor) run(ctx context.Context) error {
 	for {
-		var req common.OrderRequest
-		msg, err := receiveJSON(ctx, p.requestSub, &req)
-		if err != nil {
+		if err := p.handleRequest(ctx); err != nil {
 			return err
 		}
-		log.Printf("received %+v", req)
-		res := p.handleOrder(ctx, &req)
-		if res == nil {
-			log.Printf("duplicate finished order %v", req.ID)
-			continue
-		}
-		if err := sendJSON(ctx, p.responseTopic, res); err != nil {
-			return err
-		}
-		log.Printf("sent %+v", res)
-		msg.Ack()
 	}
+	return nil
+}
+
+func (p *processor) handleRequest(ctx context.Context) error {
+	var req common.OrderRequest
+	msg, err := receiveJSON(ctx, p.requestSub, &req)
+	// Ack the message because we handled it, even on error.
+	defer func() {
+		if msg != nil {
+			msg.Ack()
+		}
+	}()
+	if err != nil {
+		return err
+	}
+	log.Printf("received %+v", req)
+	res := p.handleOrder(ctx, &req)
+	if res == nil {
+		log.Printf("duplicate finished order %v", req.ID)
+		return nil
+	}
+	if err := sendJSON(ctx, p.responseTopic, res); err != nil {
+		// TODO(jba): should we really ack in this case? Not clear.
+		return err
+	}
+	log.Printf("sent %+v", res)
+	return nil
 }
 
 // handleOrder processes the order request. A processing error is a kind of response.
@@ -166,6 +180,7 @@ func (p *processor) processOrder(ctx context.Context, req *common.OrderRequest) 
 		// We simply ignore it.
 		return nil, nil
 	}
+	// At this point, there is an unfinished Order with ID == req.ID in the database.
 
 	defer func() {
 		// Mark the order complete by updating the finish time.
@@ -220,7 +235,9 @@ func sendJSON(ctx context.Context, topic *pubsub.Topic, msg interface{}) error {
 	return topic.Send(ctx, &pubsub.Message{Body: bytes})
 }
 
-// Receive a message from sub and unmarshal it to JSON.
+// Receive a message from sub and unmarshal it from JSON.
+// The returned message may be non-nil even if the returned error is non-nil, so that the caller
+// can ack it.
 func receiveJSON(ctx context.Context, sub *pubsub.Subscription, pmsg interface{}) (*pubsub.Message, error) {
 	msg, err := sub.Receive(ctx)
 	if err != nil {
@@ -228,8 +245,7 @@ func receiveJSON(ctx context.Context, sub *pubsub.Subscription, pmsg interface{}
 	}
 
 	if err := json.Unmarshal(msg.Body, pmsg); err != nil {
-		msg.Ack()
-		return nil, err
+		return msg, err
 	}
 	return msg, nil
 }

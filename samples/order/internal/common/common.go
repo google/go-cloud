@@ -17,11 +17,7 @@
 package common
 
 import (
-	"context"
-	"io"
 	"time"
-
-	"gocloud.dev/blob"
 )
 
 // Order represents an order for a single picture operation.
@@ -50,17 +46,4 @@ type OrderResponse struct {
 	ID       string
 	OutImage string // if empty, error; Note contains the problem
 	Note     string // for the customer
-}
-
-// CopyToBucket copies r to bucket under the given name.
-func CopyToBucket(ctx context.Context, bucket *blob.Bucket, name string, r io.Reader) error {
-	w, err := bucket.NewWriter(ctx, name, nil)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(w, r); err != nil {
-		w.Close() // We must close the writer, but we don't care about the error.
-		return err
-	}
-	return w.Close()
 }
