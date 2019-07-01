@@ -82,7 +82,7 @@ type URLOpener struct {
 func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
 	q := u.Query()
 	options := &Options{
-		RevisionField: q.Get("revision"),
+		RevisionField: q.Get("revision_field"),
 	}
 
 	nameField := q.Get("name_field")
@@ -90,7 +90,7 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 		return nil, errors.New("open collection %s: name_field is required to open a collection")
 	}
 	q.Del("name_field")
-	q.Del("revision")
+	q.Del("revision_field")
 	for param := range q {
 		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
 	}

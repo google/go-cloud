@@ -52,9 +52,9 @@ type urlColl struct {
 func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
 	q := u.Query()
 	options := &Options{
-		RevisionField: q.Get("revision"),
+		RevisionField: q.Get("revision_field"),
 	}
-	q.Del("revision")
+	q.Del("revision_field")
 	for param := range q {
 		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
 	}

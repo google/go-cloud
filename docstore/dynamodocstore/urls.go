@@ -99,10 +99,10 @@ func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partiti
 	q.Del("sort_key")
 	opts = &Options{
 		AllowScans:    q.Get("allow_scans") == "true",
-		RevisionField: q.Get("revision"),
+		RevisionField: q.Get("revision_field"),
 	}
 	q.Del("allow_scans")
-	q.Del("revision")
+	q.Del("revision_field")
 
 	tableName = u.Host
 	if tableName == "" {

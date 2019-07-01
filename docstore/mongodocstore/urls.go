@@ -87,8 +87,8 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	q := u.Query()
 	idField := q.Get("id_field")
 	q.Del("id_field")
-	o.Options.RevisionField = q.Get("revision")
-	q.Del("revision")
+	o.Options.RevisionField = q.Get("revision_field")
+	q.Del("revision_field")
 
 	for param := range q {
 		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)

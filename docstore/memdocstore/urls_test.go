@@ -38,7 +38,7 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		// Key with slash.
 		{"mem://coll/my/key", true},
 		// Passing revision field.
-		{"mem://coll/_id?revision=123", false},
+		{"mem://coll/_id?revision_field=123", false},
 		// Invalid parameter.
 		{"mem://coll/key?param=value", true},
 	}
