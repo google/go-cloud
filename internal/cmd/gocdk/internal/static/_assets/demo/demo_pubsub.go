@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"gocloud.dev/pubsub"
+	_ "gocloud.dev/pubsub/awssnssqs"
+	_ "gocloud.dev/pubsub/azuresb"
+	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
 )
 
@@ -32,8 +35,7 @@ var subscription *pubsub.Subscription
 var subscriptionErr error
 
 func init() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	topicURL = os.Getenv("PUBSUB_TOPIC_URL")
 	if topicURL == "" {
