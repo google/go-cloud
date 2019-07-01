@@ -658,7 +658,7 @@ func decodeStruct(v reflect.Value, d Decoder) error {
 		if err != nil {
 			return false
 		}
-		f := fields.Match(key)
+		f := fields.MatchFold(key)
 		if f == nil {
 			err = gcerr.Newf(gcerr.InvalidArgument, nil, "no field matching %q in %s", key, v.Type())
 			return false
