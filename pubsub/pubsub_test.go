@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -31,7 +30,6 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/mempubsub"
-	"golang.org/x/sync/errgroup"
 )
 
 type driverTopic struct {
