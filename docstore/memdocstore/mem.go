@@ -54,6 +54,10 @@ type Options struct {
 	// The name of the field holding the document revision.
 	// Defaults to docstore.DefaultRevisionField.
 	RevisionField string
+
+	// The maximum number of concurrent goroutines started for a single call to
+	// ActionList.Do. If less than 1, there is no limit.
+	MaxOutstandingActions int
 }
 
 // TODO(jba): make this package thread-safe.
@@ -136,9 +140,9 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
 
-	// Run the actions concurrently with each other, with a max of 10.
+	// Run the actions concurrently with each other.
 	run := func(as []*driver.Action) {
-		t := driver.NewThrottle(10)
+		t := driver.NewThrottle(c.opts.MaxOutstandingActions)
 		for _, a := range as {
 			a := a
 			t.Acquire()
