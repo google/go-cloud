@@ -24,10 +24,10 @@
 // certain criteria.
 //
 // Subpackages contain distinct implementations ("drivers") of docstore for various
-// providers, including MongoDB, Google Cloud Firestore, and Amazon DynamoDB. You can
-// use Azure Cosmos and Amazon DocumentDB via the MongoDB driver. There is also
-// memdocstore, an in-process, in-memory implementation suitable for testing and
-// development.
+// providers, including MongoDB, Google Cloud Firestore, and Amazon DynamoDB.
+// You can use Azure Cosmos DB and Amazon DocumentDB via the MongoDB driver.
+// There is also memdocstore, an in-process, in-memory implementation suitable
+// for testing and development.
 //
 // Your application should import one of these provider-specific subpackages and use
 // its exported functions to create a *Collection; do not use the NewCollection
@@ -51,17 +51,75 @@
 // information.
 //
 //
-// Documents
+// Representing Documents
+//
+// A document is a set of named fields, each with a value. A field's value can be a scalar,
+// a list, or a nested document.
 //
 // Docstore allows you to represent documents as either map[string]interface{} or
-// struct pointers. Using structs is recommended, because it enforces some structure
-// on your data. Docstore mimics the encoding/json package in its treatment of
+// struct pointers. When you represent a document as a map, the fields are map keys
+// and the values are map values. Lists are represented with slices. For example,
+// here is a document about a book described as a map:
+//
+//    doc := map[string]interface{}{
+//       "Title": "The Master and Margarita",
+//       "Author": map[string]interface{}{
+//           "First": "Mikhail",
+//           "Last": "Bulgakov",
+//       },
+//       "PublicationYears": []int{1967, 1973},
+//    }
+//
+// Note that the value of "PublicationYears" is a list, and the value of "Author" is
+// itself a document.
+//
+// Here is the same document represented with structs:
+//
+//    type Book struct {
+//       Title            string
+//       Author           Name
+//       PublicationYears []int
+//    }
+//
+//    type Name struct {
+//       First, Last string
+//    }
+//
+//    doc := &Book{
+//       Title: "The Master and Margarita",
+//       Author: Name{
+//          First: "Mikhail",
+//          Last: "Bulgakov",
+//       },
+//       PublicationYears: []int{1967, 1973},
+//    }
+//
+// You must use a pointer to a struct to represent a document, although structs
+// nested inside a document, like the Name struct above, need not be pointers.
+//
+// Maps are best for applications where you don't know the structure of the
+// documents. Using structs is preferred because it enforces some structure on your
+// data.
+//
+// Docstore mimics the encoding/json package in its treatment of
 // structs: by default, a struct's exported fields are the fields of the document.
 // You can alter this default mapping by using a struct tag beginning with
 // "docstore:". Docstore struct tags support renaming, omitting fields
 // unconditionally, or omitting them only when they are empty, exactly like
 // encoding/json. Docstore also honors a "json" struct tag if there is no "docstore"
-// tag on the field.
+// tag on the field. For example, this is the Book struct with different field names:
+//
+//    type Book struct {
+//       Title            string `docstore:"title"`
+//       Author           Name   `docstore:"author"`
+//       PublicationYears []int `docstore:"pub_years,omitempty"`
+//       PublicationCount string `docstore:"-"` // number of publications
+//    }
+//
+// This struct describes a document with field names "title", "author" and
+// "pub_years". The pub_years field is omitted from the stored document if it has
+// length zero. The PublicationCount field is never stored because it can easily be
+// computed from the PublicationYears field.
 //
 //
 // Representing Data
@@ -93,13 +151,13 @@
 //
 // When you open a collection using one of the subpackages' OpenCollection methods or
 // a URL, you specify how to extract the key from a document.
-// Usually, you provide the name of the key field, as in the example above:
+// Usually, you provide the name of the key field, as in the example below:
 //
-//   coll, err := memdocstore.OpenBucket("SSN", nil)
+//   coll, err := memdocstore.OpenCollection("SSN", nil)
 //
 // Here, the "SSN" field of the document is used as the key. Some providers let you
 // supply a function to extract the key from the document, which can be useful if the
-// key is composed of more than field.
+// key is composed of more than one field.
 //
 //
 // Actions
@@ -131,8 +189,8 @@
 // Docstore supports document revisions to distinguish different versions of a
 // document and enable optimistic locking. By default, Docstore stores the revision
 // in the field named "DocstoreRevision" (stored in the constant
-// docstore.DefaultRevisionField). Providers give you the option of changing
-// that field name.
+// DefaultRevisionField). Providers give you the option of changing that field
+// name.
 //
 // Docstore gives every document a revision when it is created, and changes that
 // revision whenever the document is modified. If a struct doesn't have a revision
@@ -200,9 +258,9 @@
 // The Code function from gocloud.dev/gcerrors will return an error code, also
 // defined in that package, when invoked on an error.
 //
-// The Collection.ErrorAs method can retrieve the driver error underlying the returned
-// error.
-// TODO(shantuo): implement ErrorAs.
+// The Collection.ErrorAs method can retrieve the underlying driver error from
+// the returned error. See the specific driver's package doc for the supported
+// types.
 //
 //
 // OpenCensus Integration

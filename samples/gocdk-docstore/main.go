@@ -39,8 +39,8 @@ import (
 const helpSuffix = `
 
   See https://gocloud.dev/concepts/urls/ for more background on
-  Go CDK URLs, and sub-packages under gocloud.dev/internal/docstore
-  (https://godoc.org/gocloud.dev/internal/docstore#pkg-subdirectories)
+  Go CDK URLs, and sub-packages under gocloud.dev/docstore
+  (https://godoc.org/gocloud.dev/docstore#pkg-subdirectories)
   for details on the docstore.Collection URL format.
 `
 

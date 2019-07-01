@@ -1,5 +1,5 @@
 ---
-title: "Server"
+title: "server"
 date: 2019-02-21T16:21:29-08:00
 aliases:
 - /pages/server/

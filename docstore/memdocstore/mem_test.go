@@ -165,3 +165,42 @@ func TestSortDocs(t *testing.T) {
 		}
 	}
 }
+
+func TestExampleInDoc(t *testing.T) {
+	// This is the document used as an example in ../docstore/doc.go.
+	doc := map[string]interface{}{
+		"Title": "The Master and Margarita",
+		"Author": map[string]interface{}{
+			"First": "Mikhail",
+			"Last":  "Bulgakov",
+		},
+		"PublicationYears": []int{1967, 1973},
+	}
+
+	dc, err := newCollection("Title", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	defer coll.Close()
+	ctx := context.Background()
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]interface{}{"Title": "The Master and Margarita"}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]interface{}{
+		"Title": "The Master and Margarita",
+		"Author": map[string]interface{}{
+			"First": "Mikhail",
+			"Last":  "Bulgakov",
+		},
+		"PublicationYears": []interface{}{int64(1967), int64(1973)},
+		"DocstoreRevision": int64(1),
+	}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error(diff)
+	}
+}

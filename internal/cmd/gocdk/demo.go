@@ -26,7 +26,7 @@ import (
 )
 
 // In sorted order.
-var allDemos = []string{"blob", "pubsub", "runtimevar", "secrets"}
+var allDemos = []string{"blob", "docstore", "pubsub", "runtimevar", "secrets"}
 
 func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 

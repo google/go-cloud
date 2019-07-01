@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/cmd/gocdk/internal/docker"
@@ -125,6 +126,16 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 			Logger:       pctx.errlog,
 			Client:       runService,
 			DockerClient: docker.New(pctx.env),
+		}, nil
+	case "ecs":
+		sess, err := session.NewSession()
+		if err != nil {
+			return nil, xerrors.Errorf("prepare ecs launcher: %w", err)
+		}
+		return &launcher.ECS{
+			Logger:         pctx.errlog,
+			ConfigProvider: sess,
+			DockerClient:   docker.New(pctx.env),
 		}, nil
 	default:
 		return nil, xerrors.Errorf("prepare launcher: unknown launcher %q", launcherName)

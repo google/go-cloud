@@ -156,7 +156,7 @@ func (b *fakeLister) Close() error { return nil }
 
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
-// In addition, when passed the key "work", NewRangedReader and NewTypedWriter
+// In addition, when passed the key "work", NewRangeReader and NewTypedWriter
 // will return a Reader/Writer respectively, that always return errFake
 // from Read/Write and Close.
 type erroringBucket struct {
