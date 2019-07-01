@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package dynamodocstore provides a docstore implementation backed by AWS
+// Package awsdynamodb provides a docstore implementation backed by AWS
 // DynamoDB.
 // Use OpenCollection to construct a *docstore.Collection.
 //
 // URLs
 //
-// For docstore.OpenCollection, dynamodocstore registers for the scheme
+// For docstore.OpenCollection, awsdynamodb registers for the scheme
 // "dynamodb". The default URL opener will use an AWS session with the default
 // credentials and configuration; see
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more details.
@@ -28,14 +28,14 @@
 //
 // As
 //
-// dynamodocstore exposes the following types for As:
+// awsdynamodb exposes the following types for As:
 //  - Collection.As: *dynamodb.DynamoDB
 //  - ActionList.BeforeDo: *dynamodb.BatchGetItemInput or *dynamodb.PutItemInput or *dynamodb.DeleteItemInput
 //                         or *dynamodb.UpdateItemInput
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 //  - ErrorAs: awserr.Error
-package dynamodocstore
+package awsdynamodb
 
 import (
 	"context"
@@ -62,7 +62,7 @@ type collection struct {
 }
 
 // FallbackFunc is a function for executing queries that cannot be run by the built-in
-// dynamodocstore logic. See Options.RunQueryFunc for details.
+// awsdynamodb logic. See Options.RunQueryFunc for details.
 type FallbackFunc func(context.Context, *driver.Query, RunQueryFunc) (driver.DocumentIterator, error)
 
 type Options struct {

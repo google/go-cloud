@@ -37,7 +37,7 @@ https://godoc.org/gocloud.dev/docstore#OpenCollection
 ## DynamoDB {#dynamodb}
 
 The
-[`dynamodocstore`](https://godoc.org/gocloud.dev/docstore/dynamodocstore)
+[`awsdynamodb`](https://godoc.org/gocloud.dev/docstore/awsdynamodb)
 package supports [Amazon DynamoDB](https://aws.amazon.com/dynamodb).
 A Docstore collection corresponds to a DynamoDB table.
 
@@ -45,26 +45,26 @@ DynamoDB URLs provide the table, partition key field and optionally the sort key
 field for the collection.
 
 {{< goexample
-"gocloud.dev/docstore/dynamodocstore.Example_openCollectionFromURL" >}}
+"gocloud.dev/docstore/awsdynamodb.Example_openCollectionFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
-[`dynamodocstore.URLOpener`][].
+[`awsdynamodb.URLOpener`][].
 
 ### DynamoDB Constructor {#dynamodb-ctor}
 
 The
-[`dynamodocstore.OpenCollection`][] constructor opens a DynamoDB table as a Docstore collection. You must first
+[`awsdynamodb.OpenCollection`][] constructor opens a DynamoDB table as a Docstore collection. You must first
 create an [AWS session][] with the same region as your collection:
 
-{{< goexample "gocloud.dev/docstore/dynamodocstore.ExampleOpenCollection" >}}
+{{< goexample "gocloud.dev/docstore/awsdynamodb.ExampleOpenCollection" >}}
 
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-[`dynamodocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/dynamodocstore#OpenCollection
-[`dynamodocstore.URLOpener`]: https://godoc.org/gocloud.dev/docstore/dynamodocstore#URLOpener
+[`awsdynamodb.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#OpenCollection
+[`awsdynamodb.URLOpener`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#URLOpener
 
 ## Google Cloud Firestore {#firestore}
 
-The [`firedocstore`](https://godoc.org/gocloud.dev/docstore/firedocstore)
+The [`gcpfirestore`](https://godoc.org/gocloud.dev/docstore/gcpfirestore)
 package supports [Google Cloud
 Firestore](https://https://cloud.google.com/firestore). Firestore documents
 are uniquely named by paths that are not part of the document content. In
@@ -76,35 +76,35 @@ extract the name from a document.
 Firestore URLs provide the project and collection, as well as the field
 that holds the document name.
 
-{{< goexample "gocloud.dev/docstore/firedocstore.Example_openCollectionFromURL" >}}
+{{< goexample "gocloud.dev/docstore/gcpfirestore.Example_openCollectionFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
-[`firedocstore.URLOpener`][].
+[`gcpfirestore.URLOpener`][].
 
-[`firedocstore.URLOpener`]:  https://godoc.org/gocloud.dev/docstore/firedocstore#URLOpener
+[`gcpfirestore.URLOpener`]:  https://godoc.org/gocloud.dev/docstore/gcpfirestore#URLOpener
 
 ### Firestore Constructors {#firestore-ctor}
 
-The [`firedocstore.OpenCollection`][] constructor opens a Cloud Firestore collection
+The [`gcpfirestore.OpenCollection`][] constructor opens a Cloud Firestore collection
 as a Docstore collection. You must first connect a Firestore client using
-[`firedocstore.Dial`][] or the
+[`gcpfirestore.Dial`][] or the
 [`cloud.google.com/go/firestore/apiv1`](https://godoc.org/cloud.google.com/go/firestore/apiv1)
 package. In addition to a client, `OpenCollection` requires a Google Cloud project ID, the
 path to the Firestore collection, and the name of the field that holds
 the document name.
 
-{{< goexample "gocloud.dev/docstore/firedocstore.ExampleOpenCollection" >}}
+{{< goexample "gocloud.dev/docstore/gcpfirestore.ExampleOpenCollection" >}}
 
 Instead of mapping the document name to a field, you can supply a function to construct the name
-from the document contents with [`firedocstore.OpenCollectionWithNameFunc`][].
+from the document contents with [`gcpfirestore.OpenCollectionWithNameFunc`][].
 This can be useful for documents whose name is the combination of two or more fields.
 
-{{< goexample "gocloud.dev/docstore/firedocstore.ExampleOpenCollectionWithNameFunc" >}}
+{{< goexample "gocloud.dev/docstore/gcpfirestore.ExampleOpenCollectionWithNameFunc" >}}
 
 
-[`firedocstore.Dial`]: https://godoc.org/gocloud.dev/docstore/firedocstore#Dial
-[`firedocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/firedocstore#OpenCollection
-[`firedocstore.OpenCollectionWithNameFunc`]: https://godoc.org/gocloud.dev/docstore/firedocstore#OpenCollectionWithNameFunc
+[`gcpfirestore.Dial`]: https://godoc.org/gocloud.dev/docstore/gcpfirestore#Dial
+[`gcpfirestore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/gcpfirestore#OpenCollection
+[`gcpfirestore.OpenCollectionWithNameFunc`]: https://godoc.org/gocloud.dev/docstore/gcpfirestore#OpenCollectionWithNameFunc
 
 ## MongoDB {#mongo}
 

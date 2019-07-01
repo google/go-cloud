@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package firedocstore_test
+package gcpfirestore_test
 
 import (
 	"context"
 	"log"
 
 	"gocloud.dev/docstore"
-	"gocloud.dev/docstore/firedocstore"
+	"gocloud.dev/docstore/gcpfirestore"
 	"gocloud.dev/gcp"
 )
 
@@ -33,12 +33,12 @@ func ExampleOpenCollection() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client, _, err := firedocstore.Dial(ctx, creds.TokenSource)
+	client, _, err := gcpfirestore.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
 	}
-	resourceID := firedocstore.CollectionResourceID("my-project", "my-collection")
-	coll, err := firedocstore.OpenCollection(client, resourceID, "userID", nil)
+	resourceID := gcpfirestore.CollectionResourceID("my-project", "my-collection")
+	coll, err := gcpfirestore.OpenCollection(client, resourceID, "userID", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func ExampleOpenCollectionWithNameFunc() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client, _, err := firedocstore.Dial(ctx, creds.TokenSource)
+	client, _, err := gcpfirestore.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,8 +70,8 @@ func ExampleOpenCollectionWithNameFunc() {
 		return hs.Game + "|" + hs.Player
 	}
 
-	resourceID := firedocstore.CollectionResourceID("my-project", "my-collection")
-	coll, err := firedocstore.OpenCollectionWithNameFunc(client, resourceID, nameFromDocument, nil)
+	resourceID := gcpfirestore.CollectionResourceID("my-project", "my-collection")
+	coll, err := gcpfirestore.OpenCollectionWithNameFunc(client, resourceID, nameFromDocument, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func ExampleOpenCollectionWithNameFunc() {
 func Example_openCollectionFromURL() {
 	// This example is used in https://gocloud.dev/howto/docstore.
 
-	// import _ "gocloud.dev/docstore/firedocstore"
+	// import _ "gocloud.dev/docstore/gcpfirestore"
 
 	// Variables set up elsewhere:
 	ctx := context.Background()

@@ -30,8 +30,8 @@ import (
 	"gocloud.dev/docstore"
 
 	// Import the docstore driver packages we want to be able to open.
-	_ "gocloud.dev/docstore/dynamodocstore"
-	_ "gocloud.dev/docstore/firedocstore"
+	_ "gocloud.dev/docstore/awsdynamodb"
+	_ "gocloud.dev/docstore/gcpfirestore"
 	_ "gocloud.dev/docstore/memdocstore"
 	_ "gocloud.dev/docstore/mongodocstore"
 )

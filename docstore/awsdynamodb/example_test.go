@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamodocstore_test
+package awsdynamodb_test
 
 import (
 	"context"
@@ -21,19 +21,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"gocloud.dev/docstore"
-	"gocloud.dev/docstore/dynamodocstore"
+	"gocloud.dev/docstore/awsdynamodb"
 )
 
 func ExampleOpenCollection() {
 	// This example is used in https://gocloud.dev/howto/docstore.
 
-	// import _ "gocloud.dev/docstore/dynamodocstore"
+	// import _ "gocloud.dev/docstore/awsdynamodb"
 
 	sess, err := session.NewSession()
 	if err != nil {
 		log.Fatal(err)
 	}
-	coll, err := dynamodocstore.OpenCollection(
+	coll, err := awsdynamodb.OpenCollection(
 		dynamodb.New(sess), "docstore-test", "partitionKeyField", "", nil)
 	if err != nil {
 		log.Fatal(err)
@@ -44,7 +44,7 @@ func ExampleOpenCollection() {
 func Example_openCollectionFromURL() {
 	// This example is used in https://gocloud.dev/howto/docstore.
 
-	// import _ "gocloud.dev/docstore/dynamodocstore"
+	// import _ "gocloud.dev/docstore/awsdynamodb"
 
 	// Variables set up elsewhere:
 	ctx := context.Background()

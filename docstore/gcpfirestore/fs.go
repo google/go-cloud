@@ -12,13 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package firedocstore provides a docstore implementation backed by GCP
+// Package gcpfirestore provides a docstore implementation backed by GCP
 // Firestore.
 // Use OpenCollection to construct a *docstore.Collection.
 //
+// Docstore types not supported by the Go firestore client, cloud.google.com/go/firestore:
+// - unsigned integers: encoded is int64s
+// - arrays: encoded as Firestore array values
+//
+// Firestore types not supported by Docstore:
+// - Document reference (a pointer to another Firestore document)
+// TODO(jba): figure out how to support this
+//
+//
 // URLs
 //
-// For docstore.OpenCollection, firedocstore registers for the scheme
+// For docstore.OpenCollection, gcpfirestore registers for the scheme
 // "firestore".
 // The default URL opener will create a connection using default credentials
 // from the environment, as described in
@@ -30,7 +39,7 @@
 //
 // As
 //
-// firedocstore exposes the following types for as functions.
+// gcpfirestore exposes the following types for as functions.
 // The pb package is google.golang.org/genproto/googleapis/firestore/v1.
 // The firestore  package is cloud.google.com/go/firestore/apiv1.
 // - Collection.As: *firestore.Client
@@ -38,7 +47,24 @@
 // - Query.BeforeQuery: *pb.RunQueryRequest
 // - DocumentIterator: firestore.Firestore_RunQueryClient
 // - Error: *google.golang.org/grpc/status.Status
-package firedocstore
+//
+//
+// Queries
+//
+// Firestore allows only one field in a query to be compared with an inequality
+// operator (one other than "="). This driver selects the first field in a Where
+// clause with an inequality to pass to Firestore and handles the rest locally. For
+// example, if the query specifies the three clauses A > 1, B > 2 and A < 3, then
+// A > 1 and A < 3 will be sent to Firestore, and the results will be filtered by
+// B > 2 in this driver.
+//
+// Firestore requires a composite index if a query contains both an equality and an
+// inequality comparison. This driver returns an error if the necessary index does
+// not exist. You must create the index manually. See
+// https://cloud.google.com/firestore/docs/query-data/indexing for details.
+//
+// See https://cloud.google.com/firestore/docs/query-data/queries for more information on Firestore queries.
+package gcpfirestore // import "gocloud.dev/docstore/gcpfirestore"
 
 import (
 	"bytes"
@@ -106,7 +132,7 @@ func CollectionResourceID(projectID, collPath string) string {
 // collection, like "States/Wisconsin/Cities".
 // See https://cloud.google.com/firestore/docs/reference/rest/ for more detail.
 //
-// firedocstore requires that a single field, nameField, be designated the primary
+// gcpfirestore requires that a single field, nameField, be designated the primary
 // key. Its values must be strings, and must be unique over all documents in the
 // collection. The primary key must be provided to retrieve a document.
 func OpenCollection(client *vkit.Client, collResourceID, nameField string, opts *Options) (*docstore.Collection, error) {

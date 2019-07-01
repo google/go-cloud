@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamodocstore
+package awsdynamodb
 
 import (
 	"errors"
@@ -321,7 +321,7 @@ func toGoValue(av *dyn.AttributeValue) (interface{}, error) {
 		return m, nil
 
 	default:
-		return nil, fmt.Errorf("dynamodocstore: AttributeValue %s not supported", av)
+		return nil, fmt.Errorf("awsdynamodb: AttributeValue %s not supported", av)
 	}
 }
 

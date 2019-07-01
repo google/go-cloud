@@ -15,7 +15,7 @@
 // TODO(jba): figure out how to get filters with uints to work: since they are represented as
 // int64s, the sign is wrong.
 
-package firedocstore
+package gcpfirestore
 
 import (
 	"context"

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package firedocstore
+package gcpfirestore
 
 import (
 	"context"
@@ -68,7 +68,7 @@ const Scheme = "firestore"
 //
 // The following query parameters are supported:
 //
-//   - name_field (required): firedocstore requires that a single string field,
+//   - name_field (required): gcpfirestore requires that a single string field,
 // name_field, be designated the primary key. Its values must be unique over all
 // documents in the collection, and the primary key must be provided to retrieve
 // a document.
