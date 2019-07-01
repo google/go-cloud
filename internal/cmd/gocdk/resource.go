@@ -113,6 +113,50 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		}, nil
 	},
 
+	// PUBSUB
+	"pubsub/awssnssqs": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AWSRegionIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("aws"),
+			static.AddOutputVar("PUBSUB_SUBSCRIPTION_URL", "${local.awssqs_subscription_url}"),
+			static.AddOutputVar("PUBSUB_TOPIC_URL", "${local.awssns_topic_url}"),
+			static.CopyFile("/resource/pubsub/awssnssqs.tf", "awssnssqs.tf"),
+		}, nil
+	},
+	"pubsub/azuresb": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AzureLocationIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("azurerm"),
+			static.AddProvider("random"),
+			static.AddOutputVar("PUBSUB_SUBSCRIPTION_URL", "${local.azuresb_subscription_url}"),
+			static.AddOutputVar("PUBSUB_TOPIC_URL", "${local.azuresb_topic_url}"),
+			static.AddOutputVar("SERVICEBUS_CONNECTION_STRING", "${azurerm_servicebus_namespace.namespace.default_primary_connection_string}"),
+			static.CopyFile("/resource/pubsub/azuresb.tf", "azuresb.tf"),
+		}, nil
+	},
+	"pubsub/gcppubsub": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.GCPProjectIDIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("google"),
+			static.AddProvider("random"),
+			static.AddOutputVar("PUBSUB_SUBSCRIPTION_URL", "${local.gcppubsub_subscription_url}"),
+			static.AddOutputVar("PUBSUB_TOPIC_URL", "${local.gcppubsub_topic_url}"),
+			static.CopyFile("/resource/pubsub/gcppubsub.tf", "gcppubsub.tf"),
+		}, nil
+	},
+
 	// RUNTIMEVAR
 	"runtimevar/awsparamstore": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
 		reader := bufio.NewReader(pctx.stdin)
