@@ -40,6 +40,8 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		{"firestore://projects/myproject/", true},
 		// Missing name field.
 		{"firestore://projects/myproject/databases/(default)/documents/mycoll", true},
+		// Passing revision field.
+		{"firestore://projects/myproject/databases/(default)/documents/mycoll?name_field=_id&revision_field=123", false},
 		// Invalid param.
 		{"firestore://projects/myproject/databases/(default)/documents/mycoll?name_field=_id&param=value", true},
 	}
