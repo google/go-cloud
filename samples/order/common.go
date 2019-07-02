@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package common holds types and functions that are used by both the processor
-// and the frontend programs.
-package common
+package main
 
 import (
 	"time"

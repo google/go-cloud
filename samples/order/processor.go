@@ -22,13 +22,11 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"image"
 	_ "image/jpeg"
 	"image/png"
 	"log"
-	"os"
 	"time"
 
 	"gocloud.dev/blob"
@@ -38,68 +36,13 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
-	"gocloud.dev/samples/order/internal/common"
 )
-
-// To use the default values of the flags, the following environment variables must be set:
-//
-// RABBIT_SERVER_URL to the URL of a running RabbitMQ server
-// MONGO_SERVER_URL to the URL of a running MongoDB server
-//
-// Also, the RabbitMQ instance must have an order-requests exchange with an order-responses queue
-// bound to it.
-var (
-	requestSubURL    = flag.String("request-sub", "rabbit://order-requests", "gocloud.dev/pubsub URL for request subscription")
-	responseTopicURL = flag.String("response-topic", "rabbit://order-responses", "gocloud.dev/pubsub URL for response topic")
-	bucketURL        = flag.String("bucket", "", "gocloud.dev/blob URL for image bucket")
-	collectionURL    = flag.String("collection", "mongo://order-sample/orders?id_field=ID", "gocloud.dev/docstore URL for order collection")
-)
-
-func main() {
-	flag.Parse()
-	if *bucketURL == "" {
-		*bucketURL = "file://" + os.TempDir()
-	}
-	ctx := context.Background()
-	p, err := newProcessor(ctx, *requestSubURL, *responseTopicURL, *bucketURL, *collectionURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := p.run(ctx); err != nil {
-		log.Fatal(err)
-	}
-}
 
 type processor struct {
 	requestSub    *pubsub.Subscription
 	responseTopic *pubsub.Topic
 	bucket        *blob.Bucket
 	coll          *docstore.Collection
-}
-
-func newProcessor(ctx context.Context, subURL, topicURL, bucketURL, collURL string) (*processor, error) {
-	reqSub, err := pubsub.OpenSubscription(ctx, subURL)
-	if err != nil {
-		return nil, err
-	}
-	resTopic, err := pubsub.OpenTopic(ctx, topicURL)
-	if err != nil {
-		return nil, err
-	}
-	bucket, err := blob.OpenBucket(ctx, bucketURL)
-	if err != nil {
-		return nil, err
-	}
-	coll, err := docstore.OpenCollection(ctx, collURL)
-	if err != nil {
-		return nil, err
-	}
-	return &processor{
-		requestSub:    reqSub,
-		responseTopic: resTopic,
-		bucket:        bucket,
-		coll:          coll,
-	}, nil
 }
 
 func (p *processor) run(ctx context.Context) error {
@@ -119,7 +62,7 @@ func (p *processor) handleRequest(ctx context.Context) error {
 	// Ack the message because we handled it, even on error.
 	defer msg.Ack()
 
-	var req common.OrderRequest
+	var req OrderRequest
 	if err := json.Unmarshal(msg.Body, &req); err != nil {
 		return err
 	}
@@ -141,11 +84,11 @@ func (p *processor) handleRequest(ctx context.Context) error {
 }
 
 // handleOrder processes the order request. A processing error is a kind of response.
-func (p *processor) handleOrder(ctx context.Context, req *common.OrderRequest) *common.OrderResponse {
+func (p *processor) handleOrder(ctx context.Context, req *OrderRequest) *OrderResponse {
 	res, err := p.processOrder(ctx, req)
 	if err != nil {
 		// TODO(jba): record error metric
-		res = &common.OrderResponse{
+		res = &OrderResponse{
 			ID:   req.ID,
 			Note: fmt.Sprintf("processing failed: %v", err),
 		}
@@ -153,14 +96,14 @@ func (p *processor) handleOrder(ctx context.Context, req *common.OrderRequest) *
 	return res
 }
 
-func (p *processor) processOrder(ctx context.Context, req *common.OrderRequest) (res *common.OrderResponse, err error) {
+func (p *processor) processOrder(ctx context.Context, req *OrderRequest) (res *OrderResponse, err error) {
 	// See if there is already a document for this order.
-	order := &common.Order{ID: req.ID}
+	order := &Order{ID: req.ID}
 	err = p.coll.Get(ctx, order)
 	switch {
 	case gcerrors.Code(err) == gcerrors.NotFound:
 		// Normal case: the order hasn't been created yet. Do so.
-		order = &common.Order{
+		order = &Order{
 			ID:         req.ID,
 			Email:      req.Email,
 			InImage:    req.InImage,
@@ -221,7 +164,7 @@ func (p *processor) processOrder(ctx context.Context, req *common.OrderRequest) 
 		return nil, err
 	}
 
-	return &common.OrderResponse{
+	return &OrderResponse{
 		ID:       req.ID,
 		OutImage: order.OutImage,
 		Note:     fmt.Sprintf("converted from %s to png", format),
