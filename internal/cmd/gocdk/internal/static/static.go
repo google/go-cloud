@@ -154,7 +154,7 @@ func ReadLocal(biomeDir, key string) (string, error) {
 }
 
 // AddLocal returns an Action that will add a Terraform variable to the "locals"
-// section in main.tf.
+// section in main.tf. val is expected to be a constant string and is therefore quoted.
 // The value can later be read using ReadLocal.
 func AddLocal(key, val string) *Action {
 	return &Action{
@@ -167,10 +167,10 @@ func AddLocal(key, val string) *Action {
 }
 
 // AddOutputVar returns an Action that will add a Terraform output variable to
-// outputs.tf.
+// outputs.tf. val is expected to be an expression and is therefore not quoted.
 func AddOutputVar(key, val string) *Action {
 	return &Action{
-		SourceContent: []byte(fmt.Sprintf("    %s = %q\n", key, val)),
+		SourceContent: []byte(fmt.Sprintf("    %s = %s\n", key, val)),
 		DestRelPath:   "outputs.tf",
 		DestExists:    true,
 		InsertMarker:  "# DO NOT REMOVE THIS COMMENT; GO CDK DEMO URLs WILL BE INSERTED BELOW HERE",
