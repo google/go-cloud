@@ -149,9 +149,14 @@ func (c *Client) Start(ctx context.Context, imageRef string, opts *RunOptions) (
 }
 
 // Build builds a Docker image from a source directory, optionally tagging it
-// with the given image reference. Output is streamed to the buildOutput writer.
-func (c *Client) Build(ctx context.Context, imageRef string, dir string, buildOutput io.Writer) error {
-	cmd := exec.CommandContext(ctx, "docker", "build", "-t="+imageRef, "--", dir)
+// with the given image references. Output is streamed to the buildOutput writer.
+func (c *Client) Build(ctx context.Context, imageRefs []string, dir string, buildOutput io.Writer) error {
+	args := []string{"build"}
+	for _, r := range imageRefs {
+		args = append(args, "-t="+r)
+	}
+	args = append(args, "--", dir)
+	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdout = buildOutput
 	cmd.Stderr = buildOutput
 	cmd.Env = c.env

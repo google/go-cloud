@@ -81,3 +81,41 @@ func TestParseImageNameFromDockerfile(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateTag(t *testing.T) {
+	seen := make(map[string]bool)
+	for i := 0; i < 10; i++ {
+		tag, err := generateTag()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !isValidDockerTag(tag) {
+			t.Errorf("generateTag() = %q, <nil>; want valid Docker tag", tag)
+			continue
+		}
+		if seen[tag] {
+			t.Errorf("generateTag() = %q, <nil>; already seen", tag)
+		}
+		seen[tag] = true
+	}
+}
+
+func isValidDockerTag(tag string) bool {
+	// Following https://godoc.org/github.com/docker/distribution/reference
+	if len(tag) == 0 || len(tag) > 128 || !isWordChar(tag[0]) {
+		return false
+	}
+	for i := 1; i < len(tag); i++ {
+		if !isWordChar(tag[i]) && tag[i] != '.' && tag[i] != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+func isWordChar(b byte) bool {
+	return '0' <= b && b <= '9' ||
+		'A' <= b && b <= 'Z' ||
+		'a' <= b && b <= 'z' ||
+		b == '_'
+}
