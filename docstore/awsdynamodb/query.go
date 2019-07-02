@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamodocstore
+package awsdynamodb
 
 import (
 	"bytes"
@@ -680,7 +680,7 @@ func compare(v1, v2 interface{}) int {
 	}
 }
 
-// Copied from firedocstore.
+// Copied from gcpfirestore.
 // TODO(jba): dedup, probably by having a general driver.Compare function that implements
 // comparison portably.
 func compareTimes(t1, t2 time.Time) int {
@@ -694,7 +694,7 @@ func compareTimes(t1, t2 time.Time) int {
 	}
 }
 
-// Copied from firedocstore.
+// Copied from gcpfirestore.
 // TODO(jba): dedup
 func toBigFloat(x reflect.Value) *big.Float {
 	var f big.Float
