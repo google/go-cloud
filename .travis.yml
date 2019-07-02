@@ -20,7 +20,7 @@ before_install:
     else
       TERRAFORM_OS="$TRAVIS_OS_NAME";
     fi
-  - curl -sLo /tmp/terraform.zip https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11_"${TERRAFORM_OS}"_amd64.zip
+  - curl -sLo /tmp/terraform.zip https://releases.hashicorp.com/terraform/0.12.2/terraform_0.12.2_"${TERRAFORM_OS}"_amd64.zip
   - unzip /tmp/terraform.zip -d /tmp
   - mkdir -p ~/bin
   - mv /tmp/terraform ~/bin

@@ -1,5 +1,5 @@
 provider "random" {
-  version = "~> 1.3"
+  version = "~> 2.1"
 }
 
 resource "random_string" "gocdk_suffix" {
@@ -11,3 +11,4 @@ resource "random_string" "gocdk_suffix" {
 locals {
   gocdk_random_name = "gocdk-${random_string.gocdk_suffix.result}"
 }
+

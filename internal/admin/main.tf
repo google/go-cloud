@@ -17,17 +17,17 @@ terraform {
     bucket = "go-cloud-tfstate"
   }
 
-  required_version = "~>0.11"
+  required_version = "~>0.12"
 }
 
 provider "github" {
-  version      = "~> 1.3"
+  version      = "~> 2.0"
   organization = "google"
-  token        = "${var.github_token}"
+  token        = var.github_token
 }
 
 provider "google" {
-  version = "~> 1.15"
+  version = "~> 2.5"
 }
 
 module "go_cloud_repo" {
@@ -51,9 +51,9 @@ module "go_cloud_repo" {
 }
 
 module "wire_repo" {
-  source       = "./repository"
-  name         = "wire"
-  description  = "Compile-time Dependency Injection for Go"
+  source      = "./repository"
+  name        = "wire"
+  description = "Compile-time Dependency Injection for Go"
 
   topics = [
     "go",
@@ -63,3 +63,4 @@ module "wire_repo" {
     "initialization",
   ]
 }
+

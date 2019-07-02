@@ -4,7 +4,7 @@
 # The launch environment sets environment variables for the running server
 # which can be read inside your program using os.Getenv.
 output "launch_environment" {
-  value {
+  value = {
     # Example:
     # FOO = "BAR"
 
@@ -14,7 +14,7 @@ output "launch_environment" {
 
 # The launch specifier sets options for the biome's launcher.
 output "launch_specifier" {
-  value {
+  value = {
     {{ range . -}}
     {{ .Key }} = {{ .Value }}
     {{ end -}}

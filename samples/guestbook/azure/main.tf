@@ -12,63 +12,68 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+terraform {
+  required_version = "~>0.12"
+}
+
 provider "azurerm" {
-  version = "~> 1.21.0"
+  version = "~> 1.27.0"
 }
 
 provider "random" {
-  version = "~> 1.3"
+  version = "~> 2.1"
 }
 
 resource "random_string" "suffix" {
   special = false
-  upper = false
+  upper   = false
   length  = 7
 }
 
 # Create a resource group
 resource "azurerm_resource_group" "guestbook" {
   name     = "guestbook${random_string.suffix.result}"
-  location = "${var.location}"
+  location = var.location
 }
 
 # Create a Storage Account, container, and two blobs.
 
 resource "azurerm_storage_account" "guestbook" {
   name                     = "guestbook${random_string.suffix.result}"
-  resource_group_name      = "${azurerm_resource_group.guestbook.name}"
-  location                 = "${var.location}"
+  resource_group_name      = azurerm_resource_group.guestbook.name
+  location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "GRS"
 }
 
 resource "azurerm_storage_container" "guestbook" {
   name                  = "guestbook${random_string.suffix.result}"
-  resource_group_name   = "${azurerm_resource_group.guestbook.name}"
-  storage_account_name  = "${azurerm_storage_account.guestbook.name}"
+  resource_group_name   = azurerm_resource_group.guestbook.name
+  storage_account_name  = azurerm_storage_account.guestbook.name
   container_access_type = "private"
 }
 
 resource "azurerm_storage_blob" "gopher" {
   name = "azure.png"
 
-  resource_group_name    = "${azurerm_resource_group.guestbook.name}"
-  storage_account_name   = "${azurerm_storage_account.guestbook.name}"
-  storage_container_name = "${azurerm_storage_container.guestbook.name}"
+  resource_group_name    = azurerm_resource_group.guestbook.name
+  storage_account_name   = azurerm_storage_account.guestbook.name
+  storage_container_name = azurerm_storage_container.guestbook.name
 
-  type = "block"
+  type         = "block"
   content_type = "image/png"
-  source = "${path.module}/../blobs/azure.png"
+  source       = "${path.module}/../blobs/azure.png"
 }
 
 resource "azurerm_storage_blob" "motd" {
   name = "motd"
 
-  resource_group_name    = "${azurerm_resource_group.guestbook.name}"
-  storage_account_name   = "${azurerm_storage_account.guestbook.name}"
-  storage_container_name = "${azurerm_storage_container.guestbook.name}"
+  resource_group_name    = azurerm_resource_group.guestbook.name
+  storage_account_name   = azurerm_storage_account.guestbook.name
+  storage_container_name = azurerm_storage_container.guestbook.name
 
-  type = "block"
+  type         = "block"
   content_type = "text/plain"
-  source = "${path.module}/../blobs/motd.txt"
+  source       = "${path.module}/../blobs/motd.txt"
 }
+
