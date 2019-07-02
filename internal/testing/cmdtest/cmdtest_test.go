@@ -15,7 +15,6 @@
 package cmdtest
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -36,12 +35,6 @@ func setup() {
 	if err := exec.Command("go", "build", "testdata/echo-stdin.go").Run(); err != nil {
 		log.Fatal(err)
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Set PATH to the current directory so test files can find echo-stdin.
-	os.Setenv("PATH", cwd)
 }
 
 func TestMain(m *testing.M) {
@@ -102,8 +95,9 @@ func TestRead(t *testing.T) {
 func TestCompare(t *testing.T) {
 	once.Do(setup)
 	tf := mustReadTestFile(t, "good")
-	if diff := tf.Compare(); diff != "" {
-		t.Errorf("got\n%s\nwant empty", diff)
+	tf.Commands["echo-stdin"] = Program("echo-stdin")
+	if err := tf.Compare(); err != nil {
+		t.Error(err)
 	}
 
 	// Test errors.
@@ -130,7 +124,11 @@ func TestCompare(t *testing.T) {
 		},
 	} {
 		tf := mustReadTestFile(t, test.file)
-		got := tf.Compare()
+		err := tf.Compare()
+		var got string
+		if err != nil {
+			got = err.Error()
+		}
 		failed := false
 		for _, w := range test.wants {
 			if !strings.Contains(got, w) {
@@ -183,25 +181,17 @@ func TestExpandVariables(t *testing.T) {
 
 func TestUpdateToTemp(t *testing.T) {
 	once.Do(setup)
-	tf := mustReadTestFile(t, "good")
-	fname, err := tf.updateToTemp()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(fname)
-	if diff := diffFiles(t, "testdata/good.ct", fname); diff != "" {
-		t.Errorf("good.ct: %s", diff)
-	}
-
-	tf = mustReadTestFile(t, "good-without-output")
-	fname, err = tf.updateToTemp()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(fname)
-	if diff := diffFiles(t, "testdata/good.ct", fname); diff != "" {
-		fmt.Println(fname)
-		t.Errorf("good-without-output.ct: %s", diff)
+	for _, tfname := range []string{"good", "good-without-output"} {
+		tf := mustReadTestFile(t, tfname)
+		tf.Commands["echo-stdin"] = Program("echo-stdin")
+		fname, err := tf.updateToTemp()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(fname)
+		if diff := diffFiles(t, "testdata/good.ct", fname); diff != "" {
+			t.Errorf("%s: %s", tfname, diff)
+		}
 	}
 }
 

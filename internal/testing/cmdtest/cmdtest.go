@@ -25,17 +25,12 @@
 //    tf, err := cmdtest.Read("test.ct")
 //
 // Then configure the resulting TestFile by adding commands or enabling
-// debugging features. Lastly, call TestFile.Compare:
+// debugging features. Lastly, call TestFile.Run with false to compare
+// or true to update. Typically, this boolean will be the value of a flag:
 //
-//    diff := tf.Compare()
-//
-// The string returned by Compare will be non-empty if there were any
-// errors or differences in output.
-//
-// After confirming that the output differences are intentional, you can
-// update the original file by calling TestFile.Update:
-//
-//    err := tf.Update()
+//    var update = flag.Bool("update", false, "update test files with results")
+//    ...
+//    err := tf.Run(*update)
 package cmdtest
 
 import (
@@ -69,12 +64,11 @@ import (
 // beginning with '#' are ignored. (Because of these rules, cmdtest cannot
 // distinguish trailing blank lines in the output.)
 //
-// Syntax of a line beginning with '$':
-// A sequence of space-separated words (no quoting is supported). The first word is
-// the command, the rest are its args. If the next-to-last word is '<', the last word
-// is interpreted as a file and becomes the standard input to the command. This input
-// redirection is only supported for commands run with exec.Command, not those in the
-// Commands map.
+// Syntax of a line beginning with '$': A sequence of space-separated words (no
+// quoting is supported). The first word is the command, the rest are its args.
+// If the next-to-last word is '<', the last word is interpreted as a file and
+// becomes the standard input to the command. None of the built-in commands (see
+// below) support input redirection, but commands defined with Program do.
 //
 // By default, commands are expected to succeed, and the test will fail
 // otherwise. However, commands that are expected to fail can be marked
@@ -97,12 +91,6 @@ import (
 // arguments must refer to the current directory; that is, they cannot contain
 // slashes.
 //
-// If the first word of a command line is not one of the above built-ins, or any
-// additional commands added to the TestFile.Commands map before execution, then
-// cmdtest runs the command using the exec package. Recall that the exec package
-// looks up relative command names using the path environment variable, but does
-// no other shell-like processing.
-//
 // However, cmdtest does its own environment variable substitution, using the
 // syntax "${VAR}". Test execution inherits the full environment of the test
 // binary caller (typically, your shell). The environment variable ROOTDIR is
@@ -112,9 +100,9 @@ type TestFile struct {
 	// the current directory.
 	Setup func(string) error
 
-	// Special commands that are not executed via exec.Command (like shell
-	// built-ins).
-	Commands map[string]func(args []string) ([]byte, error)
+	// The commands that can be executed (that is, whose names can occur as the
+	// first word of a command line).
+	Commands map[string]CommandFunc
 
 	// If true, echo each command and its output as it's run.
 	Verbose bool
@@ -127,6 +115,12 @@ type TestFile struct {
 	cases    []*testCase
 	suffix   []string // non-output lines after last case
 }
+
+// CommandFunc is the signature of a command function. The function takes the
+// subsequent words on the command line (so that arg[0] is the first argument),
+// as well as the name of a file to use for input redirection. It returns the
+// command's output.
+type CommandFunc func(args []string, inputFile string) ([]byte, error)
 
 type testCase struct {
 	before    []string // lines before the commands
@@ -151,13 +145,13 @@ func Read(filename string) (*TestFile, error) {
 
 	tf := &TestFile{
 		filename: filename,
-		Commands: map[string]func([]string) ([]byte, error){
-			"cat":    catCmd,
-			"cd":     cdCmd,
+		Commands: map[string]CommandFunc{
+			"cat":    fixedArgBuiltin(1, catCmd),
+			"cd":     fixedArgBuiltin(1, cdCmd),
 			"echo":   echoCmd,
 			"echof":  echofCmd,
-			"mkdir":  mkdirCmd,
-			"setenv": setenvCmd,
+			"mkdir":  fixedArgBuiltin(1, mkdirCmd),
+			"setenv": fixedArgBuiltin(2, setenvCmd),
 		},
 	}
 	f, err := os.Open(filename)
@@ -247,13 +241,23 @@ func (tf *TestFile) addCase(tc *testCase) []string {
 	return suffix
 }
 
+// Run runs Compare or Update, depending on the value of the argument.
+func (tf *TestFile) Run(update bool) error {
+	if update {
+		return tf.Update()
+	} else {
+		return tf.Compare()
+	}
+}
+
 // Compare runs the commands in the test file and compares their output with the
 // output in the file. The comparison is done line by line. Before comparing,
 // occurrences of the root directory in the output are replaced by ${ROOTDIR}.
-// The returned string is empty if there are no differences.
-func (tf *TestFile) Compare() string {
+// Compare returns a non-nil error if there are differences, or it could not
+// run the TestFile.
+func (tf *TestFile) Compare() error {
 	if err := tf.run(); err != nil {
-		return err.Error()
+		return err
 	}
 	buf := new(bytes.Buffer)
 	for _, c := range tf.cases {
@@ -264,10 +268,10 @@ func (tf *TestFile) Compare() string {
 		}
 	}
 	s := buf.String()
-	if len(s) > 0 {
-		s = "\n" + s
+	if s == "" {
+		return nil
 	}
-	return s
+	return errors.New(s)
 }
 
 // Update runs the commands in the test file and writes their output back to the
@@ -380,18 +384,10 @@ func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
 			args = args[:len(args)-2]
 		}
 		f := tf.Commands[name]
-		var (
-			out []byte
-			err error
-		)
-		if f != nil {
-			if infile != "" {
-				return fmt.Errorf("%d: command %q does not support input redirection", tc.startLine+i, cmd)
-			}
-			out, err = f(args)
-		} else {
-			out, err = execute(name, args, infile)
+		if f == nil {
+			return fmt.Errorf("%d: no such command %q", tc.startLine+i, name)
 		}
+		out, err := f(args, infile)
 		if _, ok := err.(fatal); ok {
 			return fmt.Errorf("%d: command %q failed fatally with %v", tc.startLine+i, cmd, err)
 		}
@@ -413,6 +409,23 @@ func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
 		tc.gotOutput = strings.Split(s, "\n")
 	}
 	return nil
+}
+
+// Program defines a command function that will run the executable at path using
+// the exec.Command package and return its combined output. If path is relative,
+// it is converted to an absolute path using the current directory at the time
+// Program is called.
+//
+// In the unlikely event that Program cannot obtain the current directory, it
+// panics.
+func Program(path string) CommandFunc {
+	abspath, err := filepath.Abs(path)
+	if err != nil {
+		panic(fmt.Sprintf("Program(%q): %v", path, err))
+	}
+	return func(args []string, inputFile string) ([]byte, error) {
+		return execute(abspath, args, inputFile)
+	}
 }
 
 // execute uses exec.Command to run the named program with the given args. The
@@ -525,12 +538,21 @@ func writeLines(w io.Writer, lines []string) error {
 	return nil
 }
 
+func fixedArgBuiltin(nargs int, f func([]string) ([]byte, error)) CommandFunc {
+	return func(args []string, inputFile string) ([]byte, error) {
+		if len(args) != nargs {
+			return nil, fatal{fmt.Errorf("need exactly %d arguments", nargs)}
+		}
+		if inputFile != "" {
+			return nil, fatal{errors.New("input redirection not supported")}
+		}
+		return f(args)
+	}
+}
+
 // cd DIR
 // change directory
 func cdCmd(args []string) ([]byte, error) {
-	if len(args) != 1 {
-		return nil, fatal{errors.New("need exactly 1 argument")}
-	}
 	if err := checkPath(args[0]); err != nil {
 		return nil, err
 	}
@@ -543,15 +565,21 @@ func cdCmd(args []string) ([]byte, error) {
 
 // echo ARG1 ARG2 ...
 // write args to stdout
-func echoCmd(args []string) ([]byte, error) {
+func echoCmd(args []string, inputFile string) ([]byte, error) {
+	if inputFile != "" {
+		return nil, fatal{errors.New("input redirection not supported")}
+	}
 	return []byte(strings.Join(args, " ") + "\n"), nil
 }
 
 // echof FILE ARG1 ARG2 ...
 // write args to FILE
-func echofCmd(args []string) ([]byte, error) {
+func echofCmd(args []string, inputFile string) ([]byte, error) {
 	if len(args) < 1 {
 		return nil, fatal{errors.New("need at least 1 argument")}
+	}
+	if inputFile != "" {
+		return nil, fatal{errors.New("input redirection not supported")}
 	}
 	if err := checkPath(args[0]); err != nil {
 		return nil, err
@@ -562,9 +590,6 @@ func echofCmd(args []string) ([]byte, error) {
 // cat FILE
 // copy file to stdout
 func catCmd(args []string) ([]byte, error) {
-	if len(args) != 1 {
-		return nil, fatal{errors.New("need exactly 1 argument")}
-	}
 	if err := checkPath(args[0]); err != nil {
 		return nil, err
 	}
@@ -584,9 +609,6 @@ func catCmd(args []string) ([]byte, error) {
 // mkdir DIR
 // create directory
 func mkdirCmd(args []string) ([]byte, error) {
-	if len(args) != 1 {
-		return nil, fatal{errors.New("need exactly 1 argument")}
-	}
 	if err := checkPath(args[0]); err != nil {
 		return nil, err
 	}
@@ -596,9 +618,6 @@ func mkdirCmd(args []string) ([]byte, error) {
 // setenv VAR VALUE
 // set environment variable
 func setenvCmd(args []string) ([]byte, error) {
-	if len(args) != 2 {
-		return nil, fatal{errors.New("need exactly 2 arguments")}
-	}
 	return nil, os.Setenv(args[0], args[1])
 }
 
