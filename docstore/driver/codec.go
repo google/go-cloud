@@ -343,7 +343,7 @@ type Decoder interface {
 
 	// DecodeMap iterates over the fields of the value being decoded, invoke the
 	// callback on each with field name, a Decoder for the field value, and a bool
-	// to indicate whether or not to use exact match for the field names. It should
+	// to indicate whether or not to use exact match for the field names. It will
 	// be called when MapLen returns true or decoding a struct. If the callback
 	// returns false, DecodeMap should return immediately.
 	DecodeMap(func(string, Decoder, bool) bool)
@@ -571,6 +571,7 @@ func prepareLength(v reflect.Value, wantLen int) error {
 // new element for each corresponding map key. Existing values of v are overwritten.
 // This happens even if the map value is something like a pointer to a struct, where
 // we could in theory populate the existing struct value instead of discarding it.
+// This behavior matches encoding/json.
 func decodeMap(v reflect.Value, d Decoder) error {
 	mapLen, ok := d.MapLen()
 	if !ok {
@@ -583,7 +584,7 @@ func decodeMap(v reflect.Value, d Decoder) error {
 	et := t.Elem()
 	var err error
 	kt := v.Type().Key()
-	d.DecodeMap(func(key string, vd Decoder, exactMatch bool) bool {
+	d.DecodeMap(func(key string, vd Decoder, _ bool) bool {
 		if err != nil {
 			return false
 		}
