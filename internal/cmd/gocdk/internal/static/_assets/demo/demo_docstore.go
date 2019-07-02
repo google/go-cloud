@@ -148,8 +148,8 @@ var (
 )
 
 func docstoreBaseHandler(w http.ResponseWriter, req *http.Request) {
-	input := &docstoreBaseData{URL: collectionURL}
-	if err := docstoreBaseTmpl.Execute(w, input); err != nil {
+	data := &docstoreBaseData{URL: collectionURL}
+	if err := docstoreBaseTmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -158,15 +158,15 @@ func docstoreBaseHandler(w http.ResponseWriter, req *http.Request) {
 // query parameter. Each listed directory is a link to list that directory,
 // and each non-directory is a link to view that file.
 func docstoreListHandler(w http.ResponseWriter, req *http.Request) {
-	input := &docstoreListData{URL: collectionURL}
+	data := &docstoreListData{URL: collectionURL}
 	defer func() {
-		if err := docstoreListTmpl.Execute(w, input); err != nil {
+		if err := docstoreListTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if collectionErr != nil {
-		input.Err = collectionErr
+		data.Err = collectionErr
 		return
 	}
 	// TODO(rvangent): The 1000 limit is arbitrary. Give an error if it is
@@ -182,65 +182,65 @@ func docstoreListHandler(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 		if err != nil {
-			input.Err = fmt.Errorf("failed to iterate to next docstore.Collection key: %v", err)
+			data.Err = fmt.Errorf("failed to iterate to next docstore.Collection key: %v", err)
 			return
 		}
-		input.Keys = append(input.Keys, doc.Key)
+		data.Keys = append(data.Keys, doc.Key)
 	}
-	if len(input.Keys) == 0 {
-		input.Err = errors.New("no documents in collection")
+	if len(data.Keys) == 0 {
+		data.Err = errors.New("no documents in collection")
 	}
 }
 
 func docstoreEditHandler(w http.ResponseWriter, req *http.Request) {
-	input := &docstoreEditData{
+	data := &docstoreEditData{
 		URL:    collectionURL,
 		Create: req.FormValue("create") == "true",
 		Key:    req.FormValue("key"),
 		Value:  req.FormValue("value"),
 	}
 	defer func() {
-		if err := docstoreEditTmpl.Execute(w, input); err != nil {
+		if err := docstoreEditTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if collectionErr != nil {
-		input.Err = collectionErr
+		data.Err = collectionErr
 		return
 	}
 
 	if req.Method != "POST" {
 		// Just preparing the form. For create, nothing to do; for edit,
 		// load the existing document.
-		if input.Create {
+		if data.Create {
 			return
 		}
-		if input.Key == "" {
-			input.Err = errors.New("key must be provided to edit")
+		if data.Key == "" {
+			data.Err = errors.New("key must be provided to edit")
 			return
 		}
-		doc := MyDocument{Key: input.Key}
+		doc := MyDocument{Key: data.Key}
 		err := collection.Get(req.Context(), &doc)
 		if err != nil {
-			input.Err = fmt.Errorf("failed to get document: %v", err)
+			data.Err = fmt.Errorf("failed to get document: %v", err)
 			return
 		}
-		input.Value = doc.Value
-		input.Revision = fmt.Sprintf("%v", doc.DocstoreRevision)
+		data.Value = doc.Value
+		data.Revision = fmt.Sprintf("%v", doc.DocstoreRevision)
 		return
 	}
 
 	// POST
-	if input.Key == "" {
-		input.Err = errors.New("enter a non-empty key")
+	if data.Key == "" {
+		data.Err = errors.New("enter a non-empty key")
 		return
 	}
-	doc := MyDocument{Key: input.Key, Value: input.Value}
-	if input.Create {
+	doc := MyDocument{Key: data.Key, Value: data.Value}
+	if data.Create {
 		// Creating a new document.
 		if err := collection.Create(req.Context(), &doc); err != nil {
-			input.Err = fmt.Errorf("document creation failed: %v", err)
+			data.Err = fmt.Errorf("document creation failed: %v", err)
 			return
 		}
 	} else {
@@ -248,9 +248,9 @@ func docstoreEditHandler(w http.ResponseWriter, req *http.Request) {
 		// TODO(rvangent): I am not sure why this works without a revision;
 		// see https://github.com/google/go-cloud/issues/2417.
 		if err := collection.Replace(req.Context(), &doc); err != nil {
-			input.Err = fmt.Errorf("document put failed: %v", err)
+			data.Err = fmt.Errorf("document put failed: %v", err)
 			return
 		}
 	}
-	input.WriteSuccess = true
+	data.WriteSuccess = true
 }

@@ -14,13 +14,13 @@ resource "aws_sqs_queue" "queue" {
 }
 
 resource "aws_sns_topic_subscription" "topic_to_queue" {
-  topic_arn = "${aws_sns_topic.topic.arn}"
+  topic_arn = aws_sns_topic.topic.arn
   protocol  = "sqs"
-  endpoint  = "${aws_sqs_queue.queue.arn}"
+  endpoint  = aws_sqs_queue.queue.arn
 }
 
 resource "aws_sqs_queue_policy" "queue_policy" {
-  queue_url = "${aws_sqs_queue.queue.id}"
+  queue_url = aws_sqs_queue.queue.id
 
   policy = <<POLICY
 {
@@ -42,4 +42,6 @@ resource "aws_sqs_queue_policy" "queue_policy" {
   ]
 }
 POLICY
+
 }
+

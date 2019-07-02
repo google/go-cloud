@@ -15,20 +15,20 @@
 # Harness for MySQL tests.
 
 terraform {
-  required_version = "~>0.11"
+  required_version = "~>0.12"
 }
 
 provider "aws" {
-  version = "~> 1.22"
-  region  = "${var.region}"
+  version = "~> 2.7"
+  region  = var.region
 }
 
 provider "random" {
-  version = "~> 1.3"
+  version = "~> 2.1"
 }
 
 variable "region" {
-  type        = "string"
+  type        = string
   description = "Region to create resources in. See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for valid values."
 }
 
@@ -55,7 +55,7 @@ resource "aws_security_group" "main" {
 
 resource "random_string" "db_password" {
   keepers = {
-    region = "${var.region}"
+    region = var.region
   }
 
   special = false
@@ -69,15 +69,15 @@ resource "aws_db_instance" "main" {
   instance_class         = "db.t2.micro"
   allocated_storage      = 20
   username               = "root"
-  password               = "${random_string.db_password.result}"
+  password               = random_string.db_password.result
   name                   = "testdb"
   publicly_accessible    = true
-  vpc_security_group_ids = ["${aws_security_group.main.id}"]
+  vpc_security_group_ids = [aws_security_group.main.id]
   skip_final_snapshot    = true
 }
 
 output "endpoint" {
-  value       = "${aws_db_instance.main.endpoint}"
+  value       = aws_db_instance.main.endpoint
   description = "The RDS instance's host/port."
 }
 
@@ -87,7 +87,7 @@ output "username" {
 }
 
 output "password" {
-  value       = "${random_string.db_password.result}"
+  value       = random_string.db_password.result
   sensitive   = true
   description = "The RDS instance password for the user."
 }
@@ -96,3 +96,4 @@ output "database" {
   value       = "testdb"
   description = "The name of the database inside the RDS instance."
 }
+

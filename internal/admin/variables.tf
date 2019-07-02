@@ -13,6 +13,7 @@
 # limitations under the License.
 
 variable "github_token" {
-  type        = "string"
+  type        = string
   description = "An OAuth token to connect to GitHub with"
 }
+
