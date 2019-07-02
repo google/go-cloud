@@ -15,10 +15,12 @@
 package server_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 
+	"gocloud.dev/health"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
 )
@@ -60,4 +62,47 @@ func ExampleServer_RequestLogger() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func ExampleServer_HealthChecks() {
+	// This example is used in https://gocloud.dev/howto/server/
+
+	// Create a logger, and assign it to the HealthChecks field of a
+	// server.Options struct.
+	srvOptions := &server.Options{
+		HealthChecks: []health.Checker{healthCheck}, // this is cribbed from samples/server, but needs custom types
+	}
+
+	// Pass the options to the Server constructor.
+	srv := server.New(http.DefaultServeMux, srvOptions)
+
+	// Register a route.
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, World!")
+	})
+
+	// Start the server. You will see requests logged to STDOUT.
+	if err := srv.ListenAndServe(":8080"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func ExampleServer_Shutdown() {
+	// This example is used in https://gocloud.dev/howto/server/
+
+	// OPTIONAL: Specify a driver in the options for the constructor.
+	// NewDefaultDriver will be used by default if it is not explicitly set, and
+	// uses http.Server with read, write, and idle timeouts set.
+	srvOptions := &server.Options{
+		Driver: NewDefaultDriver(),
+	}
+
+	// Pass the options to the Server constructor.
+	srv := server.New(http.DefaultServeMux, srvOptions)
+
+	// Register routes, call ListenAndServe.
+
+	// Shutdown the server gracefully without interrupting any active connections.
+	srv.Shutdown(context.Background())
 }
