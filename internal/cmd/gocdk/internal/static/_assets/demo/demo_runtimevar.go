@@ -28,16 +28,13 @@ var variable *runtimevar.Variable
 var variableErr error
 
 func init() {
+	ctx := context.Background()
+
 	variableURL = os.Getenv("RUNTIMEVAR_VARIABLE_URL")
 	if variableURL == "" {
 		variableURL = "constant://?val=my-variable&decoder=string"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	variable, variableErr = runtimevar.OpenVariable(ctx, variableURL)
-	if variableErr != nil {
-		_, variableErr = variable.Latest(ctx)
-	}
 }
 
 type runtimevarData struct {
@@ -98,7 +95,9 @@ func runtimevarHandler(w http.ResponseWriter, req *http.Request) {
 		input.Err = variableErr
 		return
 	}
-	snapshot, err := variable.Latest(req.Context())
+	ctx, cancel := context.WithTimeout(req.Context(), 100*time.Millisecond)
+	defer cancel()
+	snapshot, err := variable.Latest(ctx)
 	if err != nil {
 		input.Err = err
 		return
