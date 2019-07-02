@@ -41,7 +41,7 @@ type OrderRequest struct {
 }
 
 // OrderResponse describes the result of an order. It is the contents of the
-// messages sent to response topic.
+// messages sent to the response topic.
 type OrderResponse struct {
 	ID       string
 	OutImage string // if empty, error; Note contains the problem

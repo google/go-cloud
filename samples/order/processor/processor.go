@@ -28,6 +28,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"log"
+	"os"
 	"time"
 
 	"gocloud.dev/blob"
@@ -40,26 +41,24 @@ import (
 	"gocloud.dev/samples/order/internal/common"
 )
 
+// To use the default values of the flags, the following environment variables must be set:
+//
+// RABBIT_SERVER_URL to the URL of a running RabbitMQ server
+// MONGO_SERVER_URL to the URL of a running MongoDB server
+//
+// Also, the RabbitMQ instance must have an order-requests exchange with an order-responses queue
+// bound to it.
 var (
-	requestSubURL    = flag.String("request-sub", "", "URL for request pub/sub subscription")
-	responseTopicURL = flag.String("response-topic", "", "URL for response pub/sub topic")
-	bucketURL        = flag.String("bucket", "", "URL for image bucket")
-	collectionURL    = flag.String("collection", "", "URL for order collection")
+	requestSubURL    = flag.String("request-sub", "rabbit://order-requests", "gocloud.dev/pubsub URL for request subscription")
+	responseTopicURL = flag.String("response-topic", "rabbit://order-responses", "gocloud.dev/pubsub URL for response topic")
+	bucketURL        = flag.String("bucket", "", "gocloud.dev/blob URL for image bucket")
+	collectionURL    = flag.String("collection", "mongo://order-sample/orders?id_field=ID", "gocloud.dev/docstore URL for order collection")
 )
 
 func main() {
 	flag.Parse()
-	if *requestSubURL == "" {
-		log.Fatal("missing -request-sub")
-	}
-	if *responseTopicURL == "" {
-		log.Fatal("missing -response-topic")
-	}
 	if *bucketURL == "" {
-		log.Fatal("missing -bucket")
-	}
-	if *collectionURL == "" {
-		log.Fatal("missing -collection")
+		*bucketURL = "file://" + os.TempDir()
 	}
 	ctx := context.Background()
 	p, err := newProcessor(ctx, *requestSubURL, *responseTopicURL, *bucketURL, *collectionURL)
@@ -113,15 +112,15 @@ func (p *processor) run(ctx context.Context) error {
 }
 
 func (p *processor) handleRequest(ctx context.Context) error {
-	var req common.OrderRequest
-	msg, err := receiveJSON(ctx, p.requestSub, &req)
-	// Ack the message because we handled it, even on error.
-	defer func() {
-		if msg != nil {
-			msg.Ack()
-		}
-	}()
+	msg, err := p.requestSub.Receive(ctx)
 	if err != nil {
+		return err
+	}
+	// Ack the message because we handled it, even on error.
+	defer msg.Ack()
+
+	var req common.OrderRequest
+	if err := json.Unmarshal(msg.Body, &req); err != nil {
 		return err
 	}
 	log.Printf("received %+v", req)
@@ -130,8 +129,11 @@ func (p *processor) handleRequest(ctx context.Context) error {
 		log.Printf("duplicate finished order %v", req.ID)
 		return nil
 	}
-	if err := sendJSON(ctx, p.responseTopic, res); err != nil {
-		// TODO(jba): should we really ack in this case? Not clear.
+	bytes, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+	if err := p.responseTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
 		return err
 	}
 	log.Printf("sent %+v", res)
@@ -224,28 +226,4 @@ func (p *processor) processOrder(ctx context.Context, req *common.OrderRequest) 
 		OutImage: order.OutImage,
 		Note:     fmt.Sprintf("converted from %s to png", format),
 	}, nil
-}
-
-// Marshal msg to JSON and send it over topic.
-func sendJSON(ctx context.Context, topic *pubsub.Topic, msg interface{}) error {
-	bytes, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-	return topic.Send(ctx, &pubsub.Message{Body: bytes})
-}
-
-// Receive a message from sub and unmarshal it from JSON.
-// The returned message may be non-nil even if the returned error is non-nil, so that the caller
-// can ack it.
-func receiveJSON(ctx context.Context, sub *pubsub.Subscription, pmsg interface{}) (*pubsub.Message, error) {
-	msg, err := sub.Receive(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(msg.Body, pmsg); err != nil {
-		return msg, err
-	}
-	return msg, nil
 }

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
@@ -77,12 +78,19 @@ func TestRun(t *testing.T) {
 		InImage: "cat1",
 		Email:   "robin@example.com",
 	}
-	if err := sendJSON(ctx, reqTopic, req); err != nil {
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reqTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
+		t.Fatal(err)
+	}
+	msg, err := resSub.Receive(ctx)
+	if err != nil {
 		t.Fatal(err)
 	}
 	var got common.OrderResponse
-	msg, err := receiveJSON(ctx, resSub, &got)
-	if err != nil {
+	if err := json.Unmarshal(msg.Body, &got); err != nil {
 		t.Fatal(err)
 	}
 	msg.Ack()
