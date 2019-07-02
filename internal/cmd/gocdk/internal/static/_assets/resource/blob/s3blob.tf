@@ -6,4 +6,6 @@ locals {
 
 resource "aws_s3_bucket" "bucket" {
   bucket_prefix = "gocdk-"
+  force_destroy = true
 }
+

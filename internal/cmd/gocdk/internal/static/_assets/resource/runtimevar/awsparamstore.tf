@@ -5,8 +5,9 @@ locals {
 }
 
 resource "aws_ssm_parameter" "config" {
-  name      = "${local.gocdk_random_name}"
+  name      = local.gocdk_random_name
   type      = "String"
   value     = "initial value of AWS Parameter Store config variable"
   overwrite = "true"
 }
+

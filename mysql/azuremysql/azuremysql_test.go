@@ -38,7 +38,7 @@ func TestURLOpener(t *testing.T) {
 	// 4. terraform apply
 
 	tfOut, err := terraform.ReadOutput(".")
-	if err != nil {
+	if err != nil || len(tfOut) == 0 {
 		t.Skipf("Could not obtain harness info: %v", err)
 	}
 

@@ -13,57 +13,58 @@
 # limitations under the License.
 
 output "project" {
-  value       = "${var.project}"
+  value       = var.project
   description = "The GCP project ID."
 }
 
 output "server_service_account" {
-  value       = "${google_service_account.server.email}"
+  value       = google_service_account.server.email
   description = "The service account email that will be used for the server running inside the GKE cluster."
 }
 
 output "db_access_service_account" {
-  value       = "${google_service_account.db_access.email}"
+  value       = google_service_account.db_access.email
   description = "The service account email that was used for provisioning the database."
 }
 
 output "cluster_name" {
-  value       = "${var.cluster_name}"
+  value       = var.cluster_name
   description = "GKE cluster name."
 }
 
 output "cluster_zone" {
-  value       = "${google_container_cluster.guestbook.zone}"
+  value       = google_container_cluster.guestbook.zone
   description = "GCP zone that the GKE cluster is in."
 }
 
 output "bucket" {
-  value       = "${local.bucket_name}"
+  value       = local.bucket_name
   description = "Name of the GCS bucket created to store images."
 }
 
 output "database_instance" {
-  value       = "${google_sql_database_instance.guestbook.name}"
+  value       = google_sql_database_instance.guestbook.name
   description = "Cloud SQL instance name."
 }
 
 output "database_root_password" {
-  value       = "${random_string.db_password.result}"
+  value       = random_string.db_password.result
   sensitive   = true
   description = "The Cloud SQL instance password for root."
 }
 
 output "database_region" {
-  value       = "${var.region}"
+  value       = var.region
   description = "The Cloud SQL instance region."
 }
 
 output "motd_var_config" {
-  value       = "${google_runtimeconfig_config.guestbook.name}"
+  value       = google_runtimeconfig_config.guestbook.name
   description = "The name of the Runtime Configurator config resource that contains the Message of the Day variable."
 }
 
 output "motd_var_name" {
-  value       = "${google_runtimeconfig_variable.motd.name}"
+  value       = google_runtimeconfig_variable.motd.name
   description = "The name of the Runtime Configurator variable inside the config resource that contains the Message of the Day."
 }
+

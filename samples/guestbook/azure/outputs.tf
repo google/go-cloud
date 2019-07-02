@@ -13,16 +13,17 @@
 # limitations under the License.
 
 output "storage_account" {
-  value       = "${azurerm_storage_account.guestbook.name}"
+  value       = azurerm_storage_account.guestbook.name
   description = "Name of the Storage Account created to store images."
 }
 
 output "storage_container" {
-  value       = "${azurerm_storage_container.guestbook.name}"
+  value       = azurerm_storage_container.guestbook.name
   description = "Name of the storage container created to store images."
 }
 
 output "access_key" {
-  value       = "${azurerm_storage_account.guestbook.primary_access_key}"
+  value       = azurerm_storage_account.guestbook.primary_access_key
   description = "The primary access key for the Storage Account."
 }
+
