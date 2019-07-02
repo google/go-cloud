@@ -10,13 +10,14 @@ resource "google_project_service" "runtimeconfig" {
 }
 
 resource "google_runtimeconfig_config" "config" {
-  name = "${local.gocdk_random_name}"
+  name = local.gocdk_random_name
 
-  depends_on = ["google_project_service.runtimeconfig"]
+  depends_on = [google_project_service.runtimeconfig]
 }
 
 resource "google_runtimeconfig_variable" "var" {
-  name   = "${local.gocdk_random_name}"
-  parent = "${google_runtimeconfig_config.config.name}"
+  name   = local.gocdk_random_name
+  parent = google_runtimeconfig_config.config.name
   text   = "initial value of GCP Runtimeconfigurator config variable"
 }
+

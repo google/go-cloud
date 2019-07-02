@@ -2,7 +2,7 @@
 # See https://learn.hashicorp.com/terraform/ for an intro.
 
 terraform {
-  required_version = "~> 0.11"
+  required_version = "~> 0.12"
 }
 
 locals {

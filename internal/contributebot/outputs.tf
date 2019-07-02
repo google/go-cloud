@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "project" {
-  value       = "${var.project}"
+  value       = var.project
   description = "The GCP project ID."
 }
 
@@ -23,21 +23,22 @@ output "github_events_topic" {
 }
 
 output "github_events_worker_subscription" {
-  value       = "${google_pubsub_subscription.worker.path}"
+  value       = google_pubsub_subscription.worker.path
   description = "The fully qualified name of the event worker's subscription."
 }
 
 output "worker_service_account" {
-  value       = "${google_service_account.worker.email}"
+  value       = google_service_account.worker.email
   description = "The service account email that will be used for the worker running inside the GKE cluster."
 }
 
 output "cluster_name" {
-  value       = "${google_container_cluster.contributebot.name}"
+  value       = google_container_cluster.contributebot.name
   description = "GKE cluster name."
 }
 
 output "cluster_zone" {
-  value       = "${var.zone}"
+  value       = var.zone
   description = "GCP zone that the GKE cluster is in."
 }
+

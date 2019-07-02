@@ -13,6 +13,7 @@
 # limitations under the License.
 
 variable "location" {
-  type        = "string"
+  type        = string
   description = "Location to create resources in. See https://azure.microsoft.com/en-us/global-infrastructure/locations/ for valid values."
 }
+
