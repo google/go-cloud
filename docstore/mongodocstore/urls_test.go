@@ -46,13 +46,18 @@ func TestOpenCollectionURL(t *testing.T) {
 		{"mongo://mydb/", true},
 		// Passing id_field parameter.
 		{"mongo://mydb/mycollection?id_field=foo", false},
+		// Passing revision field.
+		{"mongo://mydb/mycollection?id_field=foo&revision_field=123", false},
 		// Invalid parameter.
 		{"mongo://mydb/mycollection?param=value", true},
 	}
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
+		d, err := docstore.OpenCollection(ctx, test.URL)
+		if d != nil {
+			defer d.Close()
+		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}

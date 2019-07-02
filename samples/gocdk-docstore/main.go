@@ -30,8 +30,8 @@ import (
 	"gocloud.dev/docstore"
 
 	// Import the docstore driver packages we want to be able to open.
-	_ "gocloud.dev/docstore/dynamodocstore"
-	_ "gocloud.dev/docstore/firedocstore"
+	_ "gocloud.dev/docstore/awsdynamodb"
+	_ "gocloud.dev/docstore/gcpfirestore"
 	_ "gocloud.dev/docstore/memdocstore"
 	_ "gocloud.dev/docstore/mongodocstore"
 )
@@ -39,8 +39,8 @@ import (
 const helpSuffix = `
 
   See https://gocloud.dev/concepts/urls/ for more background on
-  Go CDK URLs, and sub-packages under gocloud.dev/internal/docstore
-  (https://godoc.org/gocloud.dev/internal/docstore#pkg-subdirectories)
+  Go CDK URLs, and sub-packages under gocloud.dev/docstore
+  (https://godoc.org/gocloud.dev/docstore#pkg-subdirectories)
   for details on the docstore.Collection URL format.
 `
 

@@ -5,10 +5,15 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"time"
 
 	"gocloud.dev/runtimevar"
+	_ "gocloud.dev/runtimevar/awsparamstore"
+	_ "gocloud.dev/runtimevar/blobvar"
 	_ "gocloud.dev/runtimevar/constantvar"
 	_ "gocloud.dev/runtimevar/filevar"
+	_ "gocloud.dev/runtimevar/gcpruntimeconfig"
+	_ "gocloud.dev/runtimevar/httpvar"
 )
 
 // TODO(rvangent): This file is user-visible, add many comments explaining
@@ -27,7 +32,12 @@ func init() {
 	if variableURL == "" {
 		variableURL = "constant://?val=my-variable&decoder=string"
 	}
-	variable, variableErr = runtimevar.OpenVariable(context.Background(), variableURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	variable, variableErr = runtimevar.OpenVariable(ctx, variableURL)
+	if variableErr != nil {
+		_, variableErr = variable.Latest(ctx)
+	}
 }
 
 type runtimevarData struct {

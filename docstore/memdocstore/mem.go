@@ -52,12 +52,12 @@ import (
 // Options are optional arguments to the OpenCollection functions.
 type Options struct {
 	// The name of the field holding the document revision.
-	// Defaults to docstore.RevisionField.
+	// Defaults to docstore.DefaultRevisionField.
 	RevisionField string
 
 	// The maximum number of concurrent goroutines started for a single call to
 	// ActionList.Do. If less than 1, there is no limit.
-	MaxOutstandingActionRPCs int
+	MaxOutstandingActions int
 }
 
 // TODO(jba): make this package thread-safe.
@@ -142,7 +142,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 
 	// Run the actions concurrently with each other.
 	run := func(as []*driver.Action) {
-		t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
+		t := driver.NewThrottle(c.opts.MaxOutstandingActions)
 		for _, a := range as {
 			a := a
 			t.Acquire()

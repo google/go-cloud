@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"gocloud.dev/pubsub"
+	_ "gocloud.dev/pubsub/awssnssqs"
+	_ "gocloud.dev/pubsub/azuresb"
+	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
 )
 
@@ -32,17 +35,19 @@ var subscription *pubsub.Subscription
 var subscriptionErr error
 
 func init() {
+	ctx := context.Background()
+
 	topicURL = os.Getenv("PUBSUB_TOPIC_URL")
 	if topicURL == "" {
 		topicURL = "mem://mytopic"
 	}
-	topic, topicErr = pubsub.OpenTopic(context.Background(), topicURL)
+	topic, topicErr = pubsub.OpenTopic(ctx, topicURL)
 
 	subscriptionURL = os.Getenv("PUBSUB_SUBSCRIPTION_URL")
 	if subscriptionURL == "" {
 		subscriptionURL = "mem://mytopic"
 	}
-	subscription, subscriptionErr = pubsub.OpenSubscription(context.Background(), subscriptionURL)
+	subscription, subscriptionErr = pubsub.OpenSubscription(ctx, subscriptionURL)
 }
 
 type pubsubData struct {

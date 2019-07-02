@@ -28,16 +28,26 @@ func TestOpenCollectionFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"mem://coll/_id", false},
-		{"mem://coll/foo.bar", true}, // "coll" already has key "_id"
+		// "coll" already has key "_id".
+		{"mem://coll/foo.bar", true},
 		{"mem://coll2/foo.bar", false},
-		{"mem://", true},                     // missing collection
-		{"mem://coll", true},                 // missing key
-		{"mem://coll/my/key", true},          // key with slash
-		{"mem://coll/key?param=value", true}, // invalid parameter
+		// Missing collection.
+		{"mem://", true},
+		// Missing key.
+		{"mem://coll", true},
+		// Key with slash.
+		{"mem://coll/my/key", true},
+		// Passing revision field.
+		{"mem://coll/_id?revision_field=123", false},
+		// Invalid parameter.
+		{"mem://coll/key?param=value", true},
 	}
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
+		d, err := docstore.OpenCollection(ctx, test.URL)
+		if d != nil {
+			defer d.Close()
+		}
 		if (err != nil) != test.wantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.wantErr)
 		}

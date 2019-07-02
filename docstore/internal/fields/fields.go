@@ -178,16 +178,32 @@ func (c *Cache) Fields(t reflect.Type) (List, error) {
 // A List is a list of Fields.
 type List []Field
 
-// Match returns the field in the list whose name best matches the supplied
+// MatchExact returns the field in the list with the given name, or nil if there is
+// none.
+func (l List) MatchExact(name string) *Field {
+	return l.MatchExactBytes([]byte(name))
+}
+
+// MatchExactBytes is identical to MatchExact, except that the argument is a byte slice.
+func (l List) MatchExactBytes(name []byte) *Field {
+	for _, f := range l {
+		if bytes.Equal(f.nameBytes, name) {
+			return &f
+		}
+	}
+	return nil
+}
+
+// MatchFold returns the field in the list whose name best matches the supplied
 // name, nor nil if no field does. If there is a field with the exact name, it
 // is returned. Otherwise the first field (sorted by index) whose name matches
 // case-insensitively is returned.
-func (l List) Match(name string) *Field {
-	return l.MatchBytes([]byte(name))
+func (l List) MatchFold(name string) *Field {
+	return l.MatchFoldBytes([]byte(name))
 }
 
-// MatchBytes is identical to Match, except that the argument is a byte slice.
-func (l List) MatchBytes(name []byte) *Field {
+// MatchFoldBytes is identical to MatchFold, except that the argument is a byte slice.
+func (l List) MatchFoldBytes(name []byte) *Field {
 	var f *Field
 	for i := range l {
 		ff := &l[i]

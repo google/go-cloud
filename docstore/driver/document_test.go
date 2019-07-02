@@ -16,6 +16,7 @@ package driver
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -176,5 +177,40 @@ func TestGetField(t *testing.T) {
 				t.Fatalf("got %v, want NotFound", err)
 			}
 		})
+	}
+}
+
+func TestFieldNames(t *testing.T) {
+	type E struct {
+		C int
+	}
+	type S struct {
+		A int `docstore:"a"`
+		B int
+		E
+	}
+
+	for _, test := range []struct {
+		in   interface{}
+		want []string
+	}{
+		{
+			map[string]interface{}{"a": 1, "b": map[string]interface{}{"c": 2}},
+			[]string{"a", "b"},
+		},
+		{
+			&S{},
+			[]string{"B", "C", "a"},
+		},
+	} {
+		doc, err := NewDocument(test.in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := doc.FieldNames()
+		sort.Strings(got)
+		if !cmp.Equal(got, test.want) {
+			t.Errorf("%v: got %v, want %v", test.in, got, test.want)
+		}
 	}
 }

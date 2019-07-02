@@ -68,18 +68,16 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="mysql/cloudmysql"
+TESTDIR="mysql/gcpmysql"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
-    # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
+    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
-    # TODO: This fails, probably because of the Terraform error above.
-    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
     terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
@@ -88,7 +86,7 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="mysql/rdsmysql"
+TESTDIR="mysql/awsmysql"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
@@ -106,18 +104,16 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="postgres/cloudpostgres"
+TESTDIR="postgres/gcppostgres"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
 case "$op" in
   init)
-    # TODO: This fails with "Error 403: The caller does not have permission, forbidden".
-    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || echo "[KNOWN FAILURE]"
+    terraform init && terraform apply -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
     ;;
   run)
-    # TODO: This fails, probably because of the Terraform error above.
-    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || echo "[KNOWN FAILURE]"
+    go test -mod=readonly -race -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
     ;;
   cleanup)
     terraform destroy -var project="go-cloud-test-216917" -auto-approve || FAILURES="$FAILURES $TESTDIR"
@@ -126,7 +122,7 @@ esac
 popd &> /dev/null
 
 
-TESTDIR="postgres/rdspostgres"
+TESTDIR="postgres/awspostgres"
 echo
 echo "***** $TESTDIR *****"
 pushd "$TESTDIR" &> /dev/null
