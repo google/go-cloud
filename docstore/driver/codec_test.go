@@ -76,11 +76,9 @@ type MyStruct struct {
 	*Embed2
 	embed3
 	*embed4
-	Omit         int `docstore:"-"`
-	OmitEmpty    int `docstore:",omitempty"`
-	Rename       int `docstore:"rename"`
-	DocstoreWins int `json:"j" docstore:"winning"`
-	JsonWorks    int `json:"jason"`
+	Omit      int `docstore:"-"`
+	OmitEmpty int `docstore:",omitempty"`
+	Rename    int `docstore:"rename"`
 }
 
 func TestEncode(t *testing.T) {
@@ -151,20 +149,18 @@ func TestEncode(t *testing.T) {
 		},
 		{
 			MyStruct{
-				A:            1,
-				B:            &tru,
-				C:            []*te{{'T'}},
-				D:            []time.Time{tm},
-				T:            ts,
-				Embed1:       Embed1{E1: "E1"},
-				Embed2:       &Embed2{E2: "E2"},
-				embed3:       embed3{E3: "E3"},
-				embed4:       &embed4{E4: "E4"},
-				Omit:         3,
-				OmitEmpty:    4,
-				Rename:       5,
-				DocstoreWins: 6,
-				JsonWorks:    7,
+				A:         1,
+				B:         &tru,
+				C:         []*te{{'T'}},
+				D:         []time.Time{tm},
+				T:         ts,
+				Embed1:    Embed1{E1: "E1"},
+				Embed2:    &Embed2{E2: "E2"},
+				embed3:    embed3{E3: "E3"},
+				embed4:    &embed4{E4: "E4"},
+				Omit:      3,
+				OmitEmpty: 4,
+				Rename:    5,
 			},
 			map[string]interface{}{
 				"A":         int64(1),
@@ -178,23 +174,19 @@ func TestEncode(t *testing.T) {
 				"E4":        "E4",
 				"OmitEmpty": int64(4),
 				"rename":    int64(5),
-				"winning":   int64(6),
-				"jason":     int64(7),
 			},
 		},
 		{
 			MyStruct{},
 			map[string]interface{}{
-				"A":       int64(0),
-				"B":       nil,
-				"C":       nil,
-				"D":       nil,
-				"T":       nil,
-				"E1":      "",
-				"E3":      "",
-				"rename":  int64(0),
-				"winning": int64(0),
-				"jason":   int64(0),
+				"A":      int64(0),
+				"B":      nil,
+				"C":      nil,
+				"D":      nil,
+				"T":      nil,
+				"E1":     "",
+				"E3":     "",
+				"rename": int64(0),
 			},
 		},
 	} {
@@ -316,49 +308,55 @@ func TestDecode(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		in   interface{} // pointer that will be set
-		val  interface{} // value to set it to
-		want interface{}
+		in         interface{} // pointer that will be set
+		val        interface{} // value to set it to
+		want       interface{}
+		exactMatch bool
 	}{
-		{new(interface{}), nil, nil},
-		{new(int), int64(7), int(7)},
-		{new(uint8), uint64(250), uint8(250)},
-		{new(bool), true, true},
-		{new(string), "x", "x"},
-		{new(float32), 4.25, float32(4.25)},
-		{new(*int), int64(2), &two},
-		{new(*int), nil, (*int)(nil)},
-		{new([]byte), []byte("foo"), []byte("foo")},
-		{new([]string), []interface{}{"a", "b"}, []string{"a", "b"}},
-		{new([]**bool), []interface{}{true, false}, []**bool{&ptru, &pfa}},
-		{&[1]int{1}, []interface{}{2}, [1]int{2}},
-		{&[2]int{1, 2}, []interface{}{3}, [2]int{3, 0}}, // zero extra elements
-		{&[]int{1, 2}, []interface{}{3}, []int{3}},      // truncate slice
+		{new(interface{}), nil, nil, true},
+		{new(int), int64(7), int(7), true},
+		{new(uint8), uint64(250), uint8(250), true},
+		{new(bool), true, true, true},
+		{new(string), "x", "x", true},
+		{new(float32), 4.25, float32(4.25), true},
+		{new(*int), int64(2), &two, true},
+		{new(*int), nil, (*int)(nil), true},
+		{new([]byte), []byte("foo"), []byte("foo"), true},
+		{new([]string), []interface{}{"a", "b"}, []string{"a", "b"}, true},
+		{new([]**bool), []interface{}{true, false}, []**bool{&ptru, &pfa}, true},
+		{&[1]int{1}, []interface{}{2}, [1]int{2}, true},
+		{&[2]int{1, 2}, []interface{}{3}, [2]int{3, 0}, true}, // zero extra elements
+		{&[]int{1, 2}, []interface{}{3}, []int{3}, true},      // truncate slice
 		{
 			// extend slice
 			func() *[]int { s := make([]int, 1, 2); return &s }(),
 			[]interface{}{5, 6},
 			[]int{5, 6},
+			true,
 		},
 		{
 			new(map[string]string),
 			map[string]interface{}{"a": "b"},
 			map[string]string{"a": "b"},
+			true,
 		},
 		{
 			new(map[int]bool),
 			map[string]interface{}{"17": true},
 			map[int]bool{17: true},
+			true,
 		},
 		{
 			new(map[te]bool),
 			map[string]interface{}{"B": true},
 			map[te]bool{{'B'}: true},
+			true,
 		},
 		{
 			new(map[interface{}]bool),
 			map[string]interface{}{"B": true},
 			map[interface{}]bool{"B": true},
+			true,
 		},
 		{
 			new(map[string][]bool),
@@ -370,38 +368,42 @@ func TestDecode(t *testing.T) {
 				"a": {true, false},
 				"b": {false, true},
 			},
+			true,
 		},
-		{new(special), 17, special(17)},
-		{new(myString), "x", myString("x")},
-		{new([]myString), []interface{}{"x"}, []myString{"x"}},
-		{new(time.Time), tmb, tm},
-		{new(*time.Time), tmb, &tm},
-		{new(*tspb.Timestamp), tsb, ts},
-		{new([]time.Time), []interface{}{tmb}, []time.Time{tm}},
-		{new([]*time.Time), []interface{}{tmb}, []*time.Time{&tm}},
+		{new(special), 17, special(17), true},
+		{new(myString), "x", myString("x"), true},
+		{new([]myString), []interface{}{"x"}, []myString{"x"}, true},
+		{new(time.Time), tmb, tm, true},
+		{new(*time.Time), tmb, &tm, true},
+		{new(*tspb.Timestamp), tsb, ts, true},
+		{new([]time.Time), []interface{}{tmb}, []time.Time{tm}, true},
+		{new([]*time.Time), []interface{}{tmb}, []*time.Time{&tm}, true},
 		{
 			new(map[myString]myString),
 			map[string]interface{}{"a": "x"},
 			map[myString]myString{"a": "x"},
+			true,
 		},
 		{
 			new(map[string]time.Time),
 			map[string]interface{}{"t": tmb},
 			map[string]time.Time{"t": tm},
+			true,
 		},
 		{
 			new(map[string]*time.Time),
 			map[string]interface{}{"t": tmb},
 			map[string]*time.Time{"t": &tm},
+			true,
 		},
-		{new(te), "A", te{'A'}},
-		{new(**te), "B", func() **te { x := &te{'B'}; return &x }()},
+		{new(te), "A", te{'A'}, true},
+		{new(**te), "B", func() **te { x := &te{'B'}; return &x }(), true},
 
 		{
 			&MyStruct{embed4: &embed4{}},
 			map[string]interface{}{
-				"a":  int64(1),
-				"b":  true,
+				"A":  int64(1),
+				"B":  true,
 				"C":  []interface{}{"T"},
 				"D":  []interface{}{tmb},
 				"T":  tsb,
@@ -416,9 +418,31 @@ func TestDecode(t *testing.T) {
 				embed3: embed3{E3: "E3"},
 				embed4: &embed4{E4: "E4"},
 			},
+			true,
+		},
+		{
+			&MyStruct{embed4: &embed4{}},
+			map[string]interface{}{
+				"a":  int64(1),
+				"b":  true,
+				"c":  []interface{}{"T"},
+				"d":  []interface{}{tmb},
+				"t":  tsb,
+				"e1": "E1",
+				"e2": "E2",
+				"e3": "E3",
+				"e4": "E4",
+			},
+			MyStruct{A: 1, B: &tru, C: []*te{{'T'}}, D: []time.Time{tm}, T: ts,
+				Embed1: Embed1{E1: "E1"},
+				Embed2: &Embed2{E2: "E2"},
+				embed3: embed3{E3: "E3"},
+				embed4: &embed4{E4: "E4"},
+			},
+			false,
 		},
 	} {
-		dec := &testDecoder{test.val}
+		dec := &testDecoder{test.val, test.exactMatch}
 		if err := Decode(reflect.ValueOf(test.in).Elem(), dec); err != nil {
 			t.Fatalf("%T: %v", test.in, err)
 		}
@@ -535,8 +559,18 @@ func TestDecodeErrors(t *testing.T) {
 			new(map[uint8]int),
 			map[string]interface{}{"256": 1},
 		},
+		{
+			"case mismatch when decoding with exact match",
+			&MyStruct{embed4: &embed4{}},
+			map[string]interface{}{
+				"a":  int64(1),
+				"b":  true,
+				"e1": "E1",
+				"e2": "E2",
+			},
+		},
 	} {
-		dec := &testDecoder{test.val}
+		dec := &testDecoder{test.val, true}
 		err := Decode(reflect.ValueOf(test.in).Elem(), dec)
 		if e, ok := err.(*gcerr.Error); !ok || err == nil || e.Code != gcerr.InvalidArgument {
 			t.Errorf("%s: got %v, want InvalidArgument Error", test.desc, err)
@@ -559,7 +593,8 @@ func TestDecodeFail(t *testing.T) {
 }
 
 type testDecoder struct {
-	val interface{} // assume encoded by testEncoder.
+	val        interface{} // assume encoded by testEncoder.
+	exactMatch bool
 }
 
 func (d testDecoder) String() string {
@@ -608,7 +643,7 @@ func (d testDecoder) ListLen() (int, bool) {
 
 func (d testDecoder) DecodeList(f func(i int, vd Decoder) bool) {
 	for i, v := range d.val.([]interface{}) {
-		if !f(i, testDecoder{v}) {
+		if !f(i, testDecoder{v, d.exactMatch}) {
 			break
 		}
 	}
@@ -620,9 +655,9 @@ func (d testDecoder) MapLen() (int, bool) {
 	return 0, false
 }
 
-func (d testDecoder) DecodeMap(f func(key string, vd Decoder) bool) {
+func (d testDecoder) DecodeMap(f func(key string, vd Decoder, exactMatch bool) bool) {
 	for k, v := range d.val.(map[string]interface{}) {
-		if !f(k, testDecoder{v}) {
+		if !f(k, testDecoder{v, d.exactMatch}, d.exactMatch) {
 			break
 		}
 	}
@@ -656,6 +691,6 @@ func (failDecoder) AsBytes() ([]byte, bool)                              { retur
 func (failDecoder) ListLen() (int, bool)                                 { return 0, false }
 func (failDecoder) DecodeList(func(i int, vd Decoder) bool)              { panic("impossible") }
 func (failDecoder) MapLen() (int, bool)                                  { return 0, false }
-func (failDecoder) DecodeMap(func(key string, vd Decoder) bool)          { panic("impossible") }
+func (failDecoder) DecodeMap(func(string, Decoder, bool) bool)           { panic("impossible") }
 func (failDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) { return false, nil, nil }
 func (failDecoder) AsInterface() (interface{}, error)                    { return nil, errors.New("fail") }

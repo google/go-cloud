@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+terraform {
+  required_version = "~>0.12"
+}
+
 locals {
   appengine_service_account = "${var.project}@appspot.gserviceaccount.com"
 }
 
 resource "google_project_service" "cloudbuild" {
   service            = "cloudbuild.googleapis.com"
-  project            = "${var.project}"
+  project            = var.project
   disable_on_destroy = false
 }
 
@@ -26,25 +30,25 @@ resource "google_project_service" "cloudbuild" {
 
 resource "google_service_account" "worker" {
   account_id   = "contributebot"
-  project      = "${var.project}"
+  project      = var.project
   display_name = "Contribute Bot Server"
 }
 
 resource "google_service_account_key" "worker" {
-  service_account_id = "${google_service_account.worker.name}"
+  service_account_id = google_service_account.worker.name
 }
 
 # Stackdriver Tracing
 
 resource "google_project_service" "trace" {
   service            = "cloudtrace.googleapis.com"
-  project            = "${var.project}"
+  project            = var.project
   disable_on_destroy = false
 }
 
 resource "google_project_iam_member" "worker_trace" {
   role    = "roles/cloudtrace.agent"
-  project = "${var.project}"
+  project = var.project
   member  = "serviceAccount:${google_service_account.worker.email}"
 }
 
@@ -52,7 +56,7 @@ resource "google_project_iam_member" "worker_trace" {
 
 resource "google_pubsub_topic" "github_events" {
   name    = "contributebot-github-events"
-  project = "${var.project}"
+  project = var.project
 }
 
 data "google_iam_policy" "github_events" {
@@ -74,15 +78,15 @@ data "google_iam_policy" "github_events" {
 }
 
 resource "google_pubsub_topic_iam_policy" "github_events" {
-  topic       = "${google_pubsub_topic.github_events.name}"
-  project     = "${var.project}"
-  policy_data = "${data.google_iam_policy.github_events.policy_data}"
+  topic       = google_pubsub_topic.github_events.name
+  project     = var.project
+  policy_data = data.google_iam_policy.github_events.policy_data
 }
 
 resource "google_pubsub_subscription" "worker" {
   name    = "contributebot-github-events"
-  topic   = "${google_pubsub_topic.github_events.id}"
-  project = "${var.project}"
+  topic   = google_pubsub_topic.github_events.id
+  project = var.project
 }
 
 data "google_iam_policy" "worker_subscription" {
@@ -104,9 +108,9 @@ data "google_iam_policy" "worker_subscription" {
 }
 
 resource "google_pubsub_subscription_iam_policy" "worker" {
-  subscription = "${google_pubsub_subscription.worker.id}"
-  project      = "${var.project}"
-  policy_data  = "${data.google_iam_policy.worker_subscription.policy_data}"
+  subscription = google_pubsub_subscription.worker.id
+  project      = var.project
+  policy_data  = data.google_iam_policy.worker_subscription.policy_data
 }
 
 # Kubernetes Engine
@@ -118,8 +122,8 @@ resource "google_project_service" "container" {
 
 resource "google_container_cluster" "contributebot" {
   name               = "contributebot-cluster"
-  project            = "${var.project}"
-  zone               = "${var.zone}"
+  project            = var.project
+  zone               = var.zone
   initial_node_count = 3
 
   node_config {
@@ -137,7 +141,7 @@ resource "google_container_cluster" "contributebot" {
   # Needed for Kubernetes provider below.
   enable_legacy_abac = true
 
-  depends_on = ["google_project_service.container"]
+  depends_on = [google_project_service.container]
 }
 
 provider "kubernetes" {
@@ -145,9 +149,15 @@ provider "kubernetes" {
 
   host = "https://${google_container_cluster.contributebot.endpoint}"
 
-  client_certificate     = "${base64decode(google_container_cluster.contributebot.master_auth.0.client_certificate)}"
-  client_key             = "${base64decode(google_container_cluster.contributebot.master_auth.0.client_key)}"
-  cluster_ca_certificate = "${base64decode(google_container_cluster.contributebot.master_auth.0.cluster_ca_certificate)}"
+  client_certificate = base64decode(
+    google_container_cluster.contributebot.master_auth[0].client_certificate,
+  )
+  client_key = base64decode(
+    google_container_cluster.contributebot.master_auth[0].client_key,
+  )
+  cluster_ca_certificate = base64decode(
+    google_container_cluster.contributebot.master_auth[0].cluster_ca_certificate,
+  )
 }
 
 resource "kubernetes_secret" "worker_service_account" {
@@ -155,8 +165,8 @@ resource "kubernetes_secret" "worker_service_account" {
     name = "worker-service-account"
   }
 
-  data {
-    key.json = "${base64decode(google_service_account_key.worker.private_key)}"
+  data = {
+    "key.json" = base64decode(google_service_account_key.worker.private_key)
   }
 }
 
@@ -165,7 +175,8 @@ resource "kubernetes_secret" "github_app_key" {
     name = "github-app-key"
   }
 
-  data {
-    key.pem = "${var.github_app_key}"
+  data = {
+    "key.pem" = var.github_app_key
   }
 }
+

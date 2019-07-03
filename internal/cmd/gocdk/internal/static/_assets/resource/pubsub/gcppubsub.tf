@@ -11,12 +11,13 @@ resource "google_project_service" "pubsub" {
 }
 
 resource "google_pubsub_topic" "topic" {
-  name = "${local.gocdk_random_name}"
+  name = local.gocdk_random_name
 
-  depends_on = ["google_project_service.pubsub"]
+  depends_on = [google_project_service.pubsub]
 }
 
 resource "google_pubsub_subscription" "subscription" {
-  name  = "${local.gocdk_random_name}"
-  topic = "${google_pubsub_topic.topic.name}"
+  name  = local.gocdk_random_name
+  topic = google_pubsub_topic.topic.name
 }
+

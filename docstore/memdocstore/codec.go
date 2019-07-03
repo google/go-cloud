@@ -19,6 +19,8 @@ import (
 	"reflect"
 	"time"
 
+	"gocloud.dev/gcerrors"
+
 	"gocloud.dev/docstore/driver"
 )
 
@@ -104,6 +106,9 @@ func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string, r
 		for _, fp := range fps {
 			val, err := getAtFieldPath(m, fp)
 			if err != nil {
+				if gcerrors.Code(err) == gcerrors.NotFound {
+					continue
+				}
 				return err
 			}
 			if err := setAtFieldPath(m2, fp, val); err != nil {
@@ -182,9 +187,9 @@ func (d decoder) MapLen() (int, bool) {
 	return 0, false
 }
 
-func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder) bool) {
+func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder, exactMatch bool) bool) {
 	for k, v := range d.val.(map[string]interface{}) {
-		if !f(k, decoder{v}) {
+		if !f(k, decoder{v}, true) {
 			return
 		}
 	}

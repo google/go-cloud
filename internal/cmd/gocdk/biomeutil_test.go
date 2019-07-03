@@ -73,7 +73,6 @@ func TestLaunchEnv(t *testing.T) {
 			name: "EmptyMap",
 			tfOutput: map[string]*tfOutput{
 				"launch_environment": {
-					Type:  "map",
 					Value: map[string]interface{}{},
 				},
 			},
@@ -83,7 +82,6 @@ func TestLaunchEnv(t *testing.T) {
 			name: "MultipleEntries",
 			tfOutput: map[string]*tfOutput{
 				"launch_environment": {
-					Type: "map",
 					Value: map[string]interface{}{
 						"FOO": "BAR",
 						"BAZ": "QUUX",
@@ -97,7 +95,6 @@ func TestLaunchEnv(t *testing.T) {
 			name: "Port",
 			tfOutput: map[string]*tfOutput{
 				"launch_environment": {
-					Type: "map",
 					Value: map[string]interface{}{
 						"PORT": "8080",
 					},
@@ -109,7 +106,6 @@ func TestLaunchEnv(t *testing.T) {
 			name: "NonStringValue",
 			tfOutput: map[string]*tfOutput{
 				"launch_environment": {
-					Type: "map",
 					Value: map[string]interface{}{
 						"FOO": 8080,
 					},

@@ -113,7 +113,7 @@ func (e *mapEncoder) MapKey(k string) {
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(m map[string]interface{}, ddoc driver.Document, idField string) error {
+func decodeDoc(m map[string]interface{}, ddoc driver.Document, idField string, lowercaseFields bool) error {
 	switch idField {
 	case mongoIDField: // do nothing
 	case "": // user uses idFunc
@@ -122,11 +122,12 @@ func decodeDoc(m map[string]interface{}, ddoc driver.Document, idField string) e
 		m[idField] = m[mongoIDField]
 		delete(m, mongoIDField)
 	}
-	return ddoc.Decode(decoder{m})
+	return ddoc.Decode(decoder{val: m, lowercaseFields: lowercaseFields})
 }
 
 type decoder struct {
-	val interface{}
+	val             interface{}
+	lowercaseFields bool
 }
 
 func (d decoder) String() string {
@@ -223,7 +224,7 @@ func (d decoder) ListLen() (int, bool) {
 
 func (d decoder) DecodeList(f func(i int, d2 driver.Decoder) bool) {
 	for i, e := range d.val.(primitive.A) {
-		if !f(i, decoder{e}) {
+		if !f(i, decoder{e, d.lowercaseFields}) {
 			return
 		}
 	}
@@ -236,9 +237,9 @@ func (d decoder) MapLen() (int, bool) {
 	return 0, false
 }
 
-func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder) bool) {
+func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder, exactMatch bool) bool) {
 	for k, v := range d.val.(map[string]interface{}) {
-		if !f(k, decoder{v}) {
+		if !f(k, decoder{v, d.lowercaseFields}, !d.lowercaseFields) {
 			return
 		}
 	}

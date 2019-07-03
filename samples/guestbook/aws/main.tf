@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+terraform {
+  required_version = "~>0.12"
+}
+
 provider "aws" {
-  version = "~> 1.22"
-  region  = "${var.region}"
+  version = "~> 2.7"
+  region  = var.region
 }
 
 provider "random" {
-  version = "~> 1.3"
+  version = "~> 2.1"
 }
 
 # Firewalls
@@ -74,10 +78,10 @@ resource "aws_db_instance" "guestbook" {
   instance_class         = "db.t2.micro"
   allocated_storage      = 20
   username               = "root"
-  password               = "${random_string.db_password.result}"
+  password               = random_string.db_password.result
   name                   = "guestbook"
   publicly_accessible    = true
-  vpc_security_group_ids = ["${aws_security_group.guestbook.id}"]
+  vpc_security_group_ids = [aws_security_group.guestbook.id]
   skip_final_snapshot    = true
 
   provisioner "local-exec" {
@@ -93,32 +97,32 @@ resource "aws_s3_bucket" "guestbook" {
 }
 
 resource "aws_s3_bucket_object" "aws" {
-  bucket = "${aws_s3_bucket.guestbook.bucket}"
-  key = "aws.png"
+  bucket       = aws_s3_bucket.guestbook.bucket
+  key          = "aws.png"
   content_type = "image/png"
-  source = "${path.module}/../blobs/aws.png"
+  source       = "${path.module}/../blobs/aws.png"
 }
 
 resource "aws_s3_bucket_object" "gcp" {
-  bucket = "${aws_s3_bucket.guestbook.bucket}"
-  key = "gcp.png"
+  bucket       = aws_s3_bucket.guestbook.bucket
+  key          = "gcp.png"
   content_type = "image/png"
-  source = "${path.module}/../blobs/gcp.png"
+  source       = "${path.module}/../blobs/gcp.png"
 }
 
 resource "aws_s3_bucket_object" "gophers" {
-  bucket = "${aws_s3_bucket.guestbook.bucket}"
-  key = "gophers.jpg"
+  bucket       = aws_s3_bucket.guestbook.bucket
+  key          = "gophers.jpg"
   content_type = "image/jpeg"
-  source = "${path.module}/../blobs/gophers.jpg"
+  source       = "${path.module}/../blobs/gophers.jpg"
 }
 
 # Paramstore (SSM)
 
 resource "aws_ssm_parameter" "motd" {
-  name  = "${var.paramstore_var}"
-  type  = "String"
-  value = "ohai from AWS"
+  name      = var.paramstore_var
+  type      = "String"
+  value     = "ohai from AWS"
   overwrite = "true"
 }
 
@@ -137,11 +141,12 @@ resource "aws_iam_role" "guestbook" {
   }
 }
 EOF
+
 }
 
 resource "aws_iam_role_policy" "guestbook" {
   name_prefix = "Guestbook-Policy"
-  role        = "${aws_iam_role.guestbook.id}"
+  role = aws_iam_role.guestbook.id
 
   policy = <<EOF
 {
@@ -160,11 +165,12 @@ resource "aws_iam_role_policy" "guestbook" {
   }
 }
 EOF
+
 }
 
 resource "aws_iam_instance_profile" "guestbook" {
   name_prefix = "guestbook"
-  role        = "${aws_iam_role.guestbook.name}"
+  role        = aws_iam_role.guestbook.name
 }
 
 data "aws_ami" "debian" {
@@ -190,17 +196,18 @@ data "aws_ami" "debian" {
 
 resource "aws_key_pair" "guestbook" {
   key_name_prefix = "guestbook"
-  public_key      = "${var.ssh_public_key}"
+  public_key      = var.ssh_public_key
 }
 
 resource "aws_instance" "guestbook" {
-  ami                    = "${data.aws_ami.debian.id}"
+  ami                    = data.aws_ami.debian.id
   instance_type          = "t2.micro"
-  vpc_security_group_ids = ["${aws_security_group.guestbook.id}"]
-  iam_instance_profile   = "${aws_iam_instance_profile.guestbook.id}"
-  key_name               = "${aws_key_pair.guestbook.key_name}"
+  vpc_security_group_ids = [aws_security_group.guestbook.id]
+  iam_instance_profile   = aws_iam_instance_profile.guestbook.id
+  key_name               = aws_key_pair.guestbook.key_name
 
   connection {
+    host = coalesce(self.public_ip, self.private_ip)
     type = "ssh"
     user = "admin"
   }
@@ -214,3 +221,4 @@ resource "aws_instance" "guestbook" {
     inline = ["chmod +x /home/admin/guestbook"]
   }
 }
+
