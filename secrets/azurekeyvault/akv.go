@@ -20,7 +20,10 @@
 //
 // For secrets.OpenKeeper, azurekeyvault registers for the scheme "azurekeyvault".
 // The default URL opener will use Dial, which gets default credentials from the
-// environment.
+// environment, unless the AZURE_KEYVAULT_AUTH_VIA_CLI environment variable is
+// set to true, in which case it uses DialUsingCLIAuth to get credentials from the
+// "az" command line.
+//
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -36,8 +39,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -85,7 +90,20 @@ type defaultDialer struct {
 
 func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
 	o.init.Do(func() {
-		client, err := Dial()
+		// Determine the dialer to use. The default one gets
+		// credentials from the environment, but an alternative is
+		// to get credentials from the az CLI.
+		dialer := Dial
+		useCLIStr := os.Getenv("AZURE_KEYVAULT_AUTH_VIA_CLI")
+		if useCLIStr != "" {
+			if b, err := strconv.ParseBool(useCLIStr); err != nil {
+				o.err = fmt.Errorf("invalid value %q for environment variable AZURE_KEYVAULT_AUTH_VIA_CLI: %v", useCLIStr, err)
+				return
+			} else if b {
+				dialer = DialUsingCLIAuth
+			}
+		}
+		client, err := dialer()
 		if err != nil {
 			o.err = err
 			return
@@ -153,13 +171,40 @@ type KeeperOptions struct {
 	Algorithm keyvault.JSONWebKeyEncryptionAlgorithm
 }
 
-// Dial gets a new *keyvault.BaseClient, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
+// Dial gets a new *keyvault.BaseClient using authorization from the environment.
+// See https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
+// and
+// https://godoc.org/github.com/Azure/go-autorest/autorest/azure/auth#NewAuthorizerFromEnvironment.
 func Dial() (*keyvault.BaseClient, error) {
-	auth, err := auth.NewAuthorizerFromEnvironment()
+	return dial(false)
+}
+
+// DialUsingCLIAuth gets a new *keyvault.BaseClient using authorization from the "az" CLI.
+// See https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
+// and
+// https://godoc.org/github.com/Azure/go-autorest/autorest/azure/auth#NewAuthorizerFromCLI.
+func DialUsingCLIAuth() (*keyvault.BaseClient, error) {
+	return dial(true)
+}
+
+// dial is a helper for Dial and DialUsingCLIAuth.
+func dial(useCLI bool) (*keyvault.BaseClient, error) {
+	// Set the resource explicitly, because the default is the "resource manager endpoint"
+	// instead of the keyvault endpoint.
+	// https://azidentity.azurewebsites.net/post/2018/11/30/azure-key-vault-oauth-resource-value-https-vault-azure-net-no-slash
+	// has some discussion.
+	resource := os.Getenv("AZURE_AD_RESOURCE")
+	if resource == "" {
+		resource = "https://vault.azure.net"
+	}
+	authorizer := auth.NewAuthorizerFromEnvironmentWithResource
+	if useCLI {
+		authorizer = auth.NewAuthorizerFromCLIWithResource
+	}
+	auth, err := authorizer(resource)
 	if err != nil {
 		return nil, err
 	}
-
 	client := keyvault.NewWithoutDefaults()
 	client.Authorizer = auth
 	client.Sender = autorest.NewClientWithUserAgent(useragent.AzureUserAgentPrefix("secrets"))
@@ -200,7 +245,7 @@ func openKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) 
 	}
 	// matches[0] is the whole keyID, [1] is the keyVaultURI, and [2] is the key or the key/version.
 	keyVaultURI := matches[1]
-	parts := strings.SplitN(matches[2], "/", 1)
+	parts := strings.SplitN(matches[2], "/", 2)
 	keyName := parts[0]
 	var keyVersion string
 	if len(parts) > 1 {
@@ -219,13 +264,12 @@ func openKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) 
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	b64Text := base64.StdEncoding.EncodeToString(plaintext)
 	keyOpsResult, err := k.client.Encrypt(ctx, k.keyVaultURI, k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
-		Algorithm: keyvault.JSONWebKeyEncryptionAlgorithm(k.options.Algorithm),
+		Algorithm: k.options.Algorithm,
 		Value:     &b64Text,
 	})
 	if err != nil {
 		return nil, err
 	}
-
 	return []byte(*keyOpsResult.Result), nil
 }
 
@@ -233,13 +277,12 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	cipherval := string(ciphertext)
 	keyOpsResult, err := k.client.Decrypt(ctx, k.keyVaultURI, k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
-		Algorithm: keyvault.JSONWebKeyEncryptionAlgorithm(k.options.Algorithm),
+		Algorithm: k.options.Algorithm,
 		Value:     &cipherval,
 	})
 	if err != nil {
 		return nil, err
 	}
-
 	return base64.StdEncoding.DecodeString(*keyOpsResult.Result)
 }
 
