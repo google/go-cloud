@@ -340,6 +340,7 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 
 	// Receive the messages via the subscription.
 	got := make(chan struct{})
+	done := make(chan struct{})
 	read := func(ctx context.Context, sub *pubsub.Subscription) {
 		for {
 			m, err := sub.Receive(ctx)
@@ -352,15 +353,17 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 			got <- struct{}{}
 			m.Ack()
 		}
+		done <- struct{}{}
 	}
 	// The test will hang here if the messages aren't available, so use a shorter
 	// timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
 	go read(ctx2, sub)
 	for i := 0; i < nMessages; i++ {
 		<-got
 	}
+	cancel()
+	<-done
 
 	// Add another subscription to the same group. Kafka will rebalance the
 	// consumer group, causing the Cleanup/Setup/ConsumeClaim loop. Each of the
@@ -381,12 +384,13 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 
 	// The test will hang here if the message isn't available, so use a shorter timeout.
 	ctx3, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
 	go read(ctx3, sub)
 	go read(ctx3, sub2)
 	for i := 0; i < nMessages; i++ {
 		<-got
 	}
+	cancel()
+	<-done
 }
 
 func sanitize(testName string) string {
