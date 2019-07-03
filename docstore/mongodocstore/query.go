@@ -66,7 +66,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 	if err != nil {
 		return nil, err
 	}
-	return &docIterator{cursor: cursor, idField: c.idField, ctx: ctx}, nil
+	return &docIterator{cursor: cursor, idField: c.idField, ctx: ctx, lowercaseFields: c.opts.LowercaseFields}, nil
 }
 
 var mongoQueryOps = map[string]string{
@@ -113,9 +113,10 @@ func (c *collection) filterToBSON(f driver.Filter) (bson.E, error) {
 }
 
 type docIterator struct {
-	cursor  *mongo.Cursor
-	idField string
-	ctx     context.Context // remember for Stop
+	cursor          *mongo.Cursor
+	idField         string
+	ctx             context.Context // remember for Stop
+	lowercaseFields bool
 }
 
 func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
@@ -123,7 +124,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 	if err != nil {
 		return err
 	}
-	return decodeDoc(m, doc, it.idField)
+	return decodeDoc(m, doc, it.idField, it.lowercaseFields)
 }
 
 func (it *docIterator) nextMap(ctx context.Context) (map[string]interface{}, error) {
