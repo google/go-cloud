@@ -52,6 +52,7 @@ func main() {
 }
 
 func setup() (_ *frontend, _ *processor, cleanup func(), err error) {
+	// TODO(jba): simplify cleanup logic
 	var cleanups []func()
 	defer func() {
 		// Clean up on error; return cleanup func on success.

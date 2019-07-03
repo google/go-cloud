@@ -46,7 +46,7 @@ type processor struct {
 	coll          *docstore.Collection
 }
 
-// run handles requests until the context is done or there is an error.
+// run handles requests until the context is done or there is a fatal error.
 func (p *processor) run(ctx context.Context) error {
 	for {
 		if err := p.handleRequest(ctx); err != nil {
