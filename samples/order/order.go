@@ -33,7 +33,8 @@ var (
 	responseSubURL   = flag.String("response-sub", "mem://responses", "gocloud.dev/pubsub URL for response subscription")
 	bucketURL        = flag.String("bucket", "", "gocloud.dev/blob URL for image bucket")
 	collectionURL    = flag.String("collection", "mem://orders/ID", "gocloud.dev/docstore URL for order collection")
-	runProcessor     = flag.Bool("processor", true, "run the image processor")
+	// TODO(jba): uncomment after adding frontend
+	// runProcessor     = flag.Bool("processor", true, "run the image processor")
 )
 
 func main() {
@@ -51,45 +52,68 @@ func main() {
 }
 
 func setup() (_ *frontend, _ *processor, cleanup func(), err error) {
-	cleanup = func() {}
+	var cleanups []func()
+	defer func() {
+		// Clean up on error; return cleanup func on success.
+		f := func() {
+			for _, c := range cleanups {
+				c()
+			}
+		}
+		if err != nil {
+			f()
+			cleanup = nil
+		} else {
+			cleanup = f
+		}
+	}()
 
 	ctx := context.Background()
 	reqTopic, err := pubsub.OpenTopic(ctx, *requestTopicURL)
 	if err != nil {
-		return nil, nil, cleanup, err
+		return nil, nil, nil, err
 	}
+	cleanups = append(cleanups, func() { reqTopic.Shutdown(ctx) })
+
 	reqSub, err := pubsub.OpenSubscription(ctx, *requestSubURL)
 	if err != nil {
-		return nil, nil, cleanup, err
+		return nil, nil, nil, err
 	}
+	cleanups = append(cleanups, func() { reqSub.Shutdown(ctx) })
+
 	resTopic, err := pubsub.OpenTopic(ctx, *responseTopicURL)
 	if err != nil {
-		return nil, nil, cleanup, err
+		return nil, nil, nil, err
 	}
+	cleanups = append(cleanups, func() { resTopic.Shutdown(ctx) })
+
 	resSub, err := pubsub.OpenSubscription(ctx, *responseSubURL)
 	if err != nil {
-		return nil, nil, cleanup, err
+		return nil, nil, nil, err
 	}
+	cleanups = append(cleanups, func() { resSub.Shutdown(ctx) })
 
 	burl := *bucketURL
 	if burl == "" {
 		dir, err := ioutil.TempDir("", "gocdk-order")
 		if err != nil {
-			return nil, nil, cleanup, err
+			return nil, nil, nil, err
 		}
 		burl = "file://" + dir
-		cleanup = func() { os.Remove(dir) }
+		cleanups = append(cleanups, func() { os.Remove(dir) })
 	}
 	bucket, err := blob.OpenBucket(ctx, burl)
 	if err != nil {
-		cleanup()
 		return nil, nil, nil, err
 	}
+	cleanups = append(cleanups, func() { bucket.Close() })
+
 	coll, err := docstore.OpenCollection(ctx, *collectionURL)
 	if err != nil {
-		cleanup()
 		return nil, nil, nil, err
 	}
+	cleanups = append(cleanups, func() { coll.Close() })
+
 	f := &frontend{
 		requestTopic: reqTopic,
 		responseSub:  resSub,
@@ -102,5 +126,5 @@ func setup() (_ *frontend, _ *processor, cleanup func(), err error) {
 		bucket:        bucket,
 		coll:          coll,
 	}
-	return f, p, cleanup, nil
+	return f, p, nil, nil
 }

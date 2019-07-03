@@ -38,6 +38,7 @@ import (
 	_ "gocloud.dev/pubsub/mempubsub"
 )
 
+// A processor holds the state for processing images.
 type processor struct {
 	requestSub    *pubsub.Subscription
 	responseTopic *pubsub.Topic
@@ -45,6 +46,7 @@ type processor struct {
 	coll          *docstore.Collection
 }
 
+// run handles requests until the context is done or there is an error.
 func (p *processor) run(ctx context.Context) error {
 	for {
 		if err := p.handleRequest(ctx); err != nil {
@@ -54,36 +56,57 @@ func (p *processor) run(ctx context.Context) error {
 	return nil
 }
 
+// handleRequest handles one image-processing request.
+// A non-nil error from handleRequest will end request processing.
 func (p *processor) handleRequest(ctx context.Context) error {
 	msg, err := p.requestSub.Receive(ctx)
 	if err != nil {
+		// If we can't receive messages, we should stop processing.
 		return err
 	}
-	// Ack the message because we handled it, even on error.
-	defer msg.Ack()
 
 	var req OrderRequest
 	if err := json.Unmarshal(msg.Body, &req); err != nil {
-		return err
+		// We can't unmarshal the message body. That could be due to a bug or
+		// change in the frontend, or maybe some other program is sending
+		// malformed messages.
+
+		// Ack the message, because if we can't unmarshal it then no one else can either.
+		msg.Ack()
+		// Don't terminate processing; maybe this is just one bad message.
+		log.Printf("unmarshaling request: %v", err)
+		return nil
 	}
 	log.Printf("received %+v", req)
 	res := p.handleOrder(ctx, &req)
 	if res == nil {
 		log.Printf("duplicate finished order %v", req.ID)
+		// We've already processed this order, so ack the message.
+		msg.Ack()
 		return nil
 	}
 	bytes, err := json.Marshal(res)
 	if err != nil {
+		// If we constructed a response that we can't marshal, then we are
+		// buggy. Ack the message because trying it again won't help: it will
+		// fail the same way on all processors.
+		msg.Ack()
+		// Return an error to terminate processing.
 		return err
 	}
 	if err := p.responseTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
+		// We failed to send, perhaps for network reasons.
+		// It's unlikely that Ack (or Nack) would even work, so don't bother.
+		// Return an error to terminate processing.
 		return err
 	}
+	// We've successfully processed the image and sent the response.
+	msg.Ack()
 	log.Printf("sent %+v", res)
 	return nil
 }
 
-// handleOrder processes the order request. A processing error is a kind of response.
+// handleOrder processes the order request, converting errors into special responses.
 func (p *processor) handleOrder(ctx context.Context, req *OrderRequest) *OrderResponse {
 	res, err := p.processOrder(ctx, req)
 	if err != nil {
@@ -96,13 +119,17 @@ func (p *processor) handleOrder(ctx context.Context, req *OrderRequest) *OrderRe
 	return res
 }
 
+// processOrder process the order request.
 func (p *processor) processOrder(ctx context.Context, req *OrderRequest) (res *OrderResponse, err error) {
 	// See if there is already a document for this order.
 	order := &Order{ID: req.ID}
 	err = p.coll.Get(ctx, order)
-	switch {
-	case gcerrors.Code(err) == gcerrors.NotFound:
-		// Normal case: the order hasn't been created yet. Do so.
+	if err != nil {
+		if gcerrors.Code(err) != gcerrors.NotFound {
+			return nil, err
+		}
+		// Normal case: the order wasn't found, because it hasn't been created
+		// yet. Create it.
 		order = &Order{
 			ID:         req.ID,
 			Email:      req.Email,
@@ -113,20 +140,17 @@ func (p *processor) processOrder(ctx context.Context, req *OrderRequest) (res *O
 		if err := p.coll.Create(ctx, order); err != nil {
 			return nil, err
 		}
-
-	case err == nil && order.FinishTime.IsZero():
+	} else if order.FinishTime.IsZero() {
 		// The order exists, but was not finished. Either it was abandoned by the processor that
 		// was working on it (probably because the processor died), or it is in progress. Assume
 		// that it was abandoned, and process it.
 		// There is nothing to do here, since all the existing order fields are valid.
-
-	case err == nil && !order.FinishTime.IsZero():
+	} else {
 		// The order exists and was finished. This is most likely the result of a pubsub redelivery.
 		// We simply ignore it.
 		return nil, nil
 	}
 	// At this point, there is an unfinished Order with ID == req.ID in the database.
-
 	defer func() {
 		// Mark the order complete by updating the finish time.
 		err2 := p.coll.Update(ctx, order, docstore.Mods{"FinishTime": time.Now()})

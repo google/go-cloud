@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-// Order represents an order for a single picture operation.
+// Order represents an order for a single image operation.
 type Order struct {
 	ID               string    // unique ID, randomly generated
 	Email            string    // email address of customer
