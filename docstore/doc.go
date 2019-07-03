@@ -29,7 +29,7 @@
 // documents by key, and you can query a collection to retrieve documents that match
 // certain criteria.
 //
-// Your application should import one of these service-specific subpackages and use
+// Your application should import one of the service-specific subpackages and use
 // its exported functions to create a *Collection; do not use the NewCollection
 // function in this package. For example:
 //
@@ -113,7 +113,7 @@
 //       Title            string `docstore:"title"`
 //       Author           Name   `docstore:"author"`
 //       PublicationYears []int  `docstore:"pub_years,omitempty"`
-//       NumPublications  string `docstore:"-"`
+//       NumPublications  int    `docstore:"-"`
 //   }
 //
 // This struct describes a document with field names "title", "author" and
@@ -146,10 +146,10 @@
 // The key of a docstore document is some function of its contents, usually a field.
 // Keys never appear alone in the docstore API, only as part of a document. For
 // instance, to retrieve a document by key, you pass the Collection.Get method
-// a document struct or map with the key field populated, and docstore
+// a document as a struct pointer or map with the key field populated, and docstore
 // populates the rest of that argument with the stored contents.
 //
-// When you open a collection using OpenCollection method of the service-specific driver or
+// When you open a collection using the OpenCollection method of the service-specific driver or
 // a URL, you specify how to extract the key from a document.
 // Usually, you provide the name of the key field, as in the example below:
 //
@@ -166,7 +166,7 @@
 //   - Get retrieves a document.
 //   - Create creates a new document.
 //   - Replace replaces an existing document.
-//   - Put puts a document into a collection, replacing it if already present.
+//   - Put puts a document into a collection, replacing it if it is already present.
 //   - Update applies a set of modifications to a document.
 //   - Delete deletes a document.
 //
