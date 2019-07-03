@@ -90,7 +90,7 @@ func (h *customHealthCheck) CheckHealth() error {
 func ExampleServer_HealthChecks() {
 	// This example is used in https://gocloud.dev/howto/server/
 
-	// Create a health.Checker from the type we definied for our application.
+	// Create a health.Checker from the type we defined for our application.
 	// In this example, healthCheck will report the server is unhealthy for 10 seconds
 	// after startup, and as healthy henceforth. Check the /healthz/readiness
 	// HTTP path to see readiness.
@@ -110,7 +110,16 @@ func ExampleServer_HealthChecks() {
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
 
-	// Register routes and start the server.
+	// Register a route.
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, World!")
+	})
+
+	// Start the server. You will see requests logged to STDOUT.
+	if err := srv.ListenAndServe(":8080"); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 func ExampleServer_Shutdown() {

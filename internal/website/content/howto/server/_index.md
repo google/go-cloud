@@ -7,7 +7,7 @@ showInSidenav: true
 
 The Go CDK's `server` package provides a pre-configured HTTP server with 
 diagnostic hooks for request logging, health checks, and trace exporting via 
-OpenCensus. These guides will show you how to start up and shut down the server,
+OpenCensus. This guide will show you how to start up and shut down the server,
 as well as how to work with the request logging and health checks.
 
 The Go CDK includes a server package because??
@@ -37,7 +37,6 @@ of `NewNCSALogger`.
 The Go CDK `server` package affords a hook for you to define health checks for
 your application and see the results at `/healthz/readiness`. Health checks are
 an imortant part of application monitoring.
-
 
 Because each application may have a different definition of what it means to be
 "healthy", you will need to define a concrete type to implment the `health.Checker`
