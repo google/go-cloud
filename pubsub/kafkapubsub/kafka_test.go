@@ -59,7 +59,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{uniqueID: rand.Int()}, nil
 }
 
-func createKafkaTopic(topicName string) (func(), error) {
+func createKafkaTopic(topicName string, partitions int32) (func(), error) {
 	// Create the topic.
 	config := MinimalConfig()
 	admin, err := sarama.NewClusterAdmin(localBrokerAddrs, config)
@@ -69,7 +69,7 @@ func createKafkaTopic(topicName string) (func(), error) {
 	close1 := func() { admin.Close() }
 
 	topicDetail := &sarama.TopicDetail{
-		NumPartitions:     1,
+		NumPartitions:     partitions,
 		ReplicationFactor: 1,
 	}
 	if err := admin.CreateTopic(topicName, topicDetail, false); err != nil {
@@ -84,7 +84,7 @@ func createKafkaTopic(topicName string) (func(), error) {
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (driver.Topic, func(), error) {
 	topicName := fmt.Sprintf("%s-topic-%d-%d", sanitize(testName), h.uniqueID, atomic.AddUint32(&h.numTopics, 1))
-	cleanup, err := createKafkaTopic(topicName)
+	cleanup, err := createKafkaTopic(topicName, 1)
 	if err != nil {
 		return nil, cleanup, err
 	}
@@ -196,7 +196,7 @@ func TestKafkaKey(t *testing.T) {
 	ctx := context.Background()
 
 	topicName := fmt.Sprintf("%s-topic-%d", sanitize(t.Name()), uniqueID)
-	topicCleanup, err := createKafkaTopic(topicName)
+	topicCleanup, err := createKafkaTopic(topicName, 1)
 	defer topicCleanup()
 	if err != nil {
 		t.Fatal(err)
@@ -276,6 +276,119 @@ func TestKafkaKey(t *testing.T) {
 	}
 }
 
+// TestMultiplePartionsWithRebalancing tests use of a topic with multiple
+// partitions, including the rebalancing that happens when a new consumer
+// appears in the group.
+func TestMultiplePartionsWithRebalancing(t *testing.T) {
+	if !setup.HasDockerTestEnvironment() {
+		t.Skip("Skipping Kafka tests since the Kafka server is not available")
+	}
+	const (
+		keyName   = "kafkakey"
+		nMessages = 50
+	)
+	uniqueID := rand.Int()
+	ctx := context.Background()
+
+	// Create a topic with 10 partitions. Using 10 instead of just 2 because
+	// that also tests having multiple claims.
+	topicName := fmt.Sprintf("%s-topic-%d", sanitize(t.Name()), uniqueID)
+	topicCleanup, err := createKafkaTopic(topicName, 10)
+	defer topicCleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	topic, err := OpenTopic(localBrokerAddrs, MinimalConfig(), topicName, &TopicOptions{KeyName: keyName})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := topic.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	// Open a subscription.
+	groupID := fmt.Sprintf("%s-sub-%d", sanitize(t.Name()), uniqueID)
+	subOpts := *subscriptionOptions
+	subOpts.KeyName = keyName
+	sub, err := OpenSubscription(localBrokerAddrs, MinimalConfig(), groupID, []string{topicName}, &subOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := sub.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	// Send some messages.
+	send := func() {
+		for i := 0; i < nMessages; i++ {
+			m := &pubsub.Message{
+				Metadata: map[string]string{
+					keyName: fmt.Sprintf("key%d", i),
+				},
+				Body: []byte("hello world"),
+			}
+			if err := topic.Send(ctx, m); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	send()
+
+	// Receive the messages via the subscription.
+	got := make(chan struct{})
+	read := func(ctx context.Context, sub *pubsub.Subscription) {
+		for {
+			m, err := sub.Receive(ctx)
+			if err == context.Canceled {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			got <- struct{}{}
+			m.Ack()
+		}
+	}
+	// The test will hang here if the messages aren't available, so use a shorter
+	// timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	go read(ctx2, sub)
+	for i := 0; i < nMessages; i++ {
+		<-got
+	}
+
+	// Add another subscription to the same group. Kafka will rebalance the
+	// consumer group, causing the Cleanup/Setup/ConsumeClaim loop. Each of the
+	// two subscriptions should get claims for 50% of the partitions.
+	sub2, err := OpenSubscription(localBrokerAddrs, MinimalConfig(), groupID, []string{topicName}, &subOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := sub2.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	// Send and receive some messages.
+	// Now both subscriptions should get some messages.
+	send()
+
+	// The test will hang here if the message isn't available, so use a shorter timeout.
+	ctx3, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	go read(ctx3, sub)
+	go read(ctx3, sub2)
+	for i := 0; i < nMessages; i++ {
+		<-got
+	}
+}
+
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
 }
@@ -286,7 +399,7 @@ func BenchmarkKafka(b *testing.B) {
 
 	// Create the topic.
 	topicName := fmt.Sprintf("%s-topic-%d", b.Name(), uniqueID)
-	cleanup, err := createKafkaTopic(topicName)
+	cleanup, err := createKafkaTopic(topicName, 1)
 	defer cleanup()
 	if err != nil {
 		b.Fatal(err)
