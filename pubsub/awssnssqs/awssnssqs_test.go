@@ -133,7 +133,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 		if err != nil {
 			return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
 		}
-		ds = openSubscription(ctx, sess, qURL)
+		ds = openSubscription(ctx, sess, qURL, nil)
 
 		snsTopicARN := dt.(*snsTopic).arn
 		snsClient := sns.New(sess)
@@ -159,7 +159,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 		// The SQS queue already exists; we created it for the topic. Re-use it
 		// for the subscription.
 		qURL := dt.(*sqsTopic).qURL
-		return openSubscription(ctx, sess, qURL), func() {}, nil
+		return openSubscription(ctx, sess, qURL, nil), func() {}, nil
 	default:
 		panic("unreachable")
 	}
@@ -209,7 +209,7 @@ func createSQSQueue(ctx context.Context, sqsClient *sqs.SQS, topicName string) (
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
 	const fakeSubscriptionQueueURL = "https://" + region + ".amazonaws.com/" + accountNumber + "/nonexistent-subscription"
-	return openSubscription(ctx, h.sess, fakeSubscriptionQueueURL), nil
+	return openSubscription(ctx, h.sess, fakeSubscriptionQueueURL, nil), nil
 }
 
 func (h *harness) Close() {
@@ -439,6 +439,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue", false},
 		// OK, setting region.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?region=us-east-2", false},
+		// OK, setting raw.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=true", false},
+		// OK, setting raw.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=1", false},
+		// Invalid raw.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=foo", true},
 		// Invalid parameter.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?param=value", true},
 	}
