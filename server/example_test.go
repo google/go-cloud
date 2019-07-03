@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -33,14 +34,18 @@ func ExampleServer_New() {
 
 	// Use the constructor function to create the server.
 	srv := server.New(http.DefaultServeMux, nil)
+	// Don't forget to shut down the server.
+	defer srv.Shutdown()
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Hello, World!")
 	})
 
-	// Start the server.
-	srv.ListenAndServe(":8080")
+	// Start the server. If ListenAndServe returns an error, print it and exit.
+	if err := srv.ListenAndServe(":8080"); err != nil {
+		log.Fatalf(err)
+	}
 }
 
 func ExampleServer_RequestLogger() {
@@ -54,6 +59,8 @@ func ExampleServer_RequestLogger() {
 
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
+	// Don't forget to shut down the server.
+	defer srv.Shutdown()
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -62,8 +69,7 @@ func ExampleServer_RequestLogger() {
 
 	// Start the server. You will see requests logged to STDOUT.
 	if err := srv.ListenAndServe(":8080"); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.Fatalf(err)
 	}
 }
 
@@ -101,7 +107,7 @@ func ExampleServer_HealthChecks() {
 		healthCheck.healthy = true
 	})
 
-	// The server.Options struct takes a collection of health checks, because you
+	// The server.Options struct takes a slice of health checks, because you
 	// may need to check several things.
 	srvOptions := &server.Options{
 		HealthChecks: []health.Checker{healthCheck},
@@ -109,6 +115,8 @@ func ExampleServer_HealthChecks() {
 
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
+	// Don't forget to shut down the server.
+	defer srv.Shutdown()
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -117,8 +125,7 @@ func ExampleServer_HealthChecks() {
 
 	// Start the server. You will see requests logged to STDOUT.
 	if err := srv.ListenAndServe(":8080"); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.Fatalf(err)
 	}
 }
 
@@ -129,7 +136,7 @@ func ExampleServer_Shutdown() {
 	// NewDefaultDriver will be used by default if it is not explicitly set, and
 	// uses http.Server with read, write, and idle timeouts set.
 	srvOptions := &server.Options{
-		Driver: NewDefaultDriver(),
+		Driver: server.NewDefaultDriver(),
 	}
 
 	// Pass the options to the Server constructor.

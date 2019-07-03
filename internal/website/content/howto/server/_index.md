@@ -10,9 +10,9 @@ diagnostic hooks for request logging, health checks, and trace exporting via
 OpenCensus. This guide will show you how to start up and shut down the server,
 as well as how to work with the request logging and health checks.
 
-The Go CDK includes a server package because??
-  from RBG: not only to provide some reasonable defaults (timeouts, logger), but
-  also to show people what they *could* do eg healthchecks.
+The Go CDK includes a server package to provide some reasonable defaults, such
+as timeouts, or the Apache standard format logger, and also to share best
+practices like health checks.
 
 ## Starting up the server
 
@@ -39,7 +39,7 @@ your application and see the results at `/healthz/readiness`. Health checks are
 an imortant part of application monitoring.
 
 Because each application may have a different definition of what it means to be
-"healthy", you will need to define a concrete type to implment the `health.Checker`
+"healthy", you will need to define a concrete type to implement the `health.Checker`
 interface and define a `CheckHealth` method specific to your application.
 ```go
 // customHealthCheck is an example health check. It implements the
@@ -67,10 +67,8 @@ func (h *customHealthCheck) CheckHealth() error {
 
 ## Shutting down the server
 
-Like all Go CDK [portable types](https://gocloud.dev/concepts/structure/#portable-types-and-drivers), `server.Server`  has a `driver` field with an 
-interface type (in this case, `driver.Server`). By default, the `server`package
-uses `http.Server` to satisfy its [driver interface](https://godoc.org/gocloud.dev/server/driver), but you can use other 
-implementations if you prefer. Calling `Shutdown` on the server calls the driver's
-`Shutdown` method.
+Calling `Shutdown` on the server calls the driver's `Shutdown` method. By default,
+the `server`package uses `http.Server` to satisfy its [driver interface](https://godoc.org/gocloud.dev/server/driver), but 
+you can use other implementations if you prefer.
 
 {{< goexample src="gocloud.dev/server.ExampleServer_Shutdown" >}}
