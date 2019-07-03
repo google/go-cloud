@@ -18,8 +18,8 @@
 // See https://en.wikipedia.org/wiki/Document-oriented_database for more information.
 //
 // Subpackages contain distinct implementations ("drivers") of docstore for public
-// cloud services like Google Cloud Firestore and Amazon DynamoDB as well as any
-// MongoDB service hosted by a cloud provider or on-premise. For example, you can
+// cloud services like Google Cloud Firestore and Amazon DynamoDB as well as any MongoDB
+// or MongoDB-compatible service hosted by a cloud provider or on-premise. For example, you can
 // use Azure Cosmos DB and Amazon DocumentDB via the MongoDB driver. There is also
 // memdocstore, an in-process, in-memory implementation suitable for testing and
 // development.
@@ -47,7 +47,7 @@
 // for managing your initialization code.
 //
 // Alternatively, you can construct a *Collection via a URL and the
-// docstore.OpenCollection function. See https://gocloud.dev/concepts/urls for more
+// OpenCollection function. See https://gocloud.dev/concepts/urls for more
 // information.
 //
 //
