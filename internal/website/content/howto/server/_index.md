@@ -8,6 +8,7 @@ showInSidenav: true
 The Go CDK's `server` package provides a pre-configured HTTP server with diagnostic hooks for request logging, health checks, and trace exporting via OpenCensus. These guides will show you how to start up and shut down the server, as well as how to work with the request logging, health checks, and trace exporting.
 
 The Go CDK includes a server package because??
+  from RBG: not only to provide some reasonable defaults (timeouts, logger), but also to show people what they *could* do eg healthchecks.
 
 ## Starting up the server
 
@@ -25,8 +26,30 @@ The example is shown with the Go CDK [`requestlog`](https://godoc.org/gocloud.de
 
 ### Adding health checks
 
-- default behavior
-- how to specify something
+The Go CDK `server` package affords a hook for you to define health checks for your application and see the results at `/healthz/readiness`. Health checks are an imortant part of application monitoring.
+
+
+Because each application may have a different definition of what it means to be "healthy", you will need to define a concrete type to implment the `health.Checker` interface and define a `CheckHealth` method specific to your application.
+```go
+// customHealthCheck is an example health check. It implements the
+// health.Checker interface and reports the server is healthy when the healthy
+// field is set to true.
+type customHealthCheck struct {
+	mu      sync.RWMutex
+	healthy bool
+}
+
+// customHealthCheck implements the health.Checker interface because it has a
+// CheckHealth method.
+func (h *customHealthCheck) CheckHealth() error {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if !h.healthy {
+		return errors.New("not ready yet!")
+	}
+	return nil
+}
+```
 
 {{< goexample src="gocloud.dev/server.ExampleServer_HealthChecks" >}}
 

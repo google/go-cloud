@@ -16,9 +16,12 @@ package server_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"gocloud.dev/health"
 	"gocloud.dev/requestlog"
@@ -64,28 +67,50 @@ func ExampleServer_RequestLogger() {
 	}
 }
 
+// customHealthCheck is an example health check. It implements the
+// health.Checker interface and reports the server is healthy when the healthy
+// field is set to true.
+type customHealthCheck struct {
+	mu      sync.RWMutex
+	healthy bool
+}
+
+// customHealthCheck implements the health.Checker interface because it has a
+// CheckHealth method. Because each application may have a different definition
+// of what it means to be "healthy", you will need to define a CheckHealth method
+// specific to your application.
+func (h *customHealthCheck) CheckHealth() error {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if !h.healthy {
+		return errors.New("not ready yet!")
+	}
+	return nil
+}
 func ExampleServer_HealthChecks() {
 	// This example is used in https://gocloud.dev/howto/server/
 
-	// Create a logger, and assign it to the HealthChecks field of a
-	// server.Options struct.
+	// Create a health.Checker from the type we definied for our application.
+	// In this example, healthCheck will report the server is unhealthy for 10 seconds
+	// after startup, and as healthy henceforth. Check the /healthz/readiness
+	// HTTP path to see readiness.
+	healthCheck := new(customHealthCheck)
+	time.AfterFunc(10*time.Second, func() {
+		healthCheck.mu.Lock()
+		defer healthCheck.mu.Unlock()
+		healthCheck.healthy = true
+	})
+
+	// The server.Options struct takes a collection of health checks, because you
+	// may need to check several things.
 	srvOptions := &server.Options{
-		HealthChecks: []health.Checker{healthCheck}, // this is cribbed from samples/server, but needs custom types
+		HealthChecks: []health.Checker{healthCheck},
 	}
 
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
 
-	// Register a route.
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, World!")
-	})
-
-	// Start the server. You will see requests logged to STDOUT.
-	if err := srv.ListenAndServe(":8080"); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	// Register routes and start the server.
 }
 
 func ExampleServer_Shutdown() {
