@@ -331,8 +331,7 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 				},
 				Body: []byte("hello world"),
 			}
-			err = topic.Send(ctx, m)
-			if err != nil {
+			if err := topic.Send(ctx, m); err != nil {
 				t.Fatal(err)
 			}
 		}
