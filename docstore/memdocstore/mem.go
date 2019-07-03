@@ -364,7 +364,11 @@ func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) 
 	if err != nil {
 		return nil, err
 	}
-	return m2[fp[len(fp)-1]], nil
+	v, ok := m2[fp[len(fp)-1]]
+	if ok {
+		return v, nil
+	}
+	return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", fp)
 }
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as

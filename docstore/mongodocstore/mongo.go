@@ -264,7 +264,7 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 			continue
 		}
 		a := idToAction[m[mongoIDField]]
-		errs[a.Index] = decodeDoc(m, a.Doc, c.idField)
+		errs[a.Index] = decodeDoc(m, a.Doc, c.idField, c.opts.LowercaseFields)
 		found[a] = true
 	}
 	for _, a := range gets {

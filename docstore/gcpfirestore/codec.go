@@ -292,9 +292,9 @@ func (d decoder) MapLen() (int, bool) {
 	}
 	return len(m.Fields), true
 }
-func (d decoder) DecodeMap(f func(string, driver.Decoder) bool) {
+func (d decoder) DecodeMap(f func(string, driver.Decoder, bool) bool) {
 	for k, v := range d.pv.GetMapValue().Fields {
-		if !f(k, decoder{v}) {
+		if !f(k, decoder{v}, true) {
 			return
 		}
 	}
