@@ -14,23 +14,24 @@
 
 // The cmdtest package simplifies testing of command-line interfaces. It
 // provides a simple, cross-platform, shell-like language to express command
-// execution. It can compare actual output with the expected output in the file,
-// and can also update a file with new "golden" output that is deemed correct.
+// execution. It can compare actual output with the expected output, and can
+// also update a file with new "golden" output that is deemed correct.
 //
-// Start using cmdtest by writing a test file with commands and expected output.
-// See the TestFile documentation for the syntax.
+// Start using cmdtest by writing a test file with commands and expected output,
+// giving it the extension ".ct". All test files in the same directory make up a
+// test suite. See the TestSuite documentation for the syntax of test files.
 //
-// To test, first read the file:
+// To test, first read the suite:
 //
-//    tf, err := cmdtest.Read("test.ct")
+//    ts, err := cmdtest.Read("testdata")
 //
-// Then configure the resulting TestFile by adding commands or enabling
-// debugging features. Lastly, call TestFile.Run with false to compare
+// Then configure the resulting TestSuite by adding commands or enabling
+// debugging features. Lastly, call TestSuite.Run with false to compare
 // or true to update. Typically, this boolean will be the value of a flag:
 //
 //    var update = flag.Bool("update", false, "update test files with results")
 //    ...
-//    err := tf.Run(*update)
+//    err := ts.Run(*update)
 package cmdtest
 
 import (
@@ -49,8 +50,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// A TestFile describes a single file that may contain multiple test cases.
-// File format:
+// A TestSuite contains a set of test files, each of which may contain multiple
+// test cases. Use Read to build a TestSuite from all the test files in a
+// directory. Then configure it and call Run.
+//
+// Format of a test file:
 //
 // Before the first line starting with a '$', empty lines and lines beginning with
 // "#" are ignored.
@@ -95,32 +99,31 @@ import (
 // syntax "${VAR}". Test execution inherits the full environment of the test
 // binary caller (typically, your shell). The environment variable ROOTDIR is
 // set to the temporary directory created to run the test file.
-type TestFile struct {
-	// If non-nil, this function is called with the root directory after it has been made
-	// the current directory.
+type TestSuite struct {
+	// If non-nil, this function is called for each test. It is passed the root
+	// directory after it has been made the current directory.
 	Setup func(string) error
 
 	// The commands that can be executed (that is, whose names can occur as the
 	// first word of a command line).
 	Commands map[string]CommandFunc
 
-	// If true, echo each command and its output as it's run.
+	// If true, echo each command and its output as it is run.
 	Verbose bool
 
-	// If true, don't delete the test's temporary root directory, and print it
-	// out its name for debugging.
-	KeepRootDir bool
+	// If true, don't delete the temporary root directories for each test file,
+	// and print out their names for debugging.
+	KeepRootDirs bool
 
+	files []*testFile
+}
+
+type testFile struct {
+	suite    *TestSuite
 	filename string // full filename of the test file
 	cases    []*testCase
 	suffix   []string // non-output lines after last case
 }
-
-// CommandFunc is the signature of a command function. The function takes the
-// subsequent words on the command line (so that arg[0] is the first argument),
-// as well as the name of a file to use for input redirection. It returns the
-// command's output.
-type CommandFunc func(args []string, inputFile string) ([]byte, error)
 
 type testCase struct {
 	before    []string // lines before the commands
@@ -133,18 +136,20 @@ type testCase struct {
 	wantOutput []string // from file
 }
 
-// Read reads filename and parses it as a TestFile. See the TestFile documentation
-// for syntax.
-func Read(filename string) (*TestFile, error) {
-	// parse states
-	const (
-		beforeFirstCommand = iota
-		inCommands
-		inOutput
-	)
+// CommandFunc is the signature of a command function. The function takes the
+// subsequent words on the command line (so that arg[0] is the first argument),
+// as well as the name of a file to use for input redirection. It returns the
+// command's output.
+type CommandFunc func(args []string, inputFile string) ([]byte, error)
 
-	tf := &TestFile{
-		filename: filename,
+// Read reads all the files in dir with extension ".ct" and returns a TestSuite
+// containing them. See the TestSuite documentation for syntax.
+func Read(dir string) (*TestSuite, error) {
+	filenames, err := filepath.Glob(filepath.Join(dir, "*.ct"))
+	if err != nil {
+		return nil, err
+	}
+	ts := &TestSuite{
 		Commands: map[string]CommandFunc{
 			"cat":    fixedArgBuiltin(1, catCmd),
 			"cd":     fixedArgBuiltin(1, cdCmd),
@@ -153,6 +158,28 @@ func Read(filename string) (*TestFile, error) {
 			"mkdir":  fixedArgBuiltin(1, mkdirCmd),
 			"setenv": fixedArgBuiltin(2, setenvCmd),
 		},
+	}
+	for _, fn := range filenames {
+		tf, err := readFile(fn)
+		if err != nil {
+			return nil, err
+		}
+		tf.suite = ts
+		ts.files = append(ts.files, tf)
+	}
+	return ts, nil
+}
+
+func readFile(filename string) (*testFile, error) {
+	// parse states
+	const (
+		beforeFirstCommand = iota
+		inCommands
+		inOutput
+	)
+
+	tf := &testFile{
+		filename: filename,
 	}
 	f, err := os.Open(filename)
 	if err != nil {
@@ -221,7 +248,7 @@ func (tc *testCase) addCommandLine(line string) {
 // addCase first splits the collected output for tc into the actual command
 // output, and a suffix consisting of blank lines and comments. It then adds tc
 // to the cases of tf, and returns the suffix.
-func (tf *TestFile) addCase(tc *testCase) []string {
+func (tf *testFile) addCase(tc *testCase) []string {
 	// Trim the suffix of output that consists solely of blank lines and comments,
 	// and return it.
 	var i int
@@ -242,22 +269,36 @@ func (tf *TestFile) addCase(tc *testCase) []string {
 }
 
 // Run runs Compare or Update, depending on the value of the argument.
-func (tf *TestFile) Run(update bool) error {
+func (ts *TestSuite) Run(update bool) error {
 	if update {
-		return tf.Update()
+		return ts.Update()
 	} else {
-		return tf.Compare()
+		return ts.Compare()
 	}
 }
 
-// Compare runs the commands in the test file and compares their output with the
-// output in the file. The comparison is done line by line. Before comparing,
-// occurrences of the root directory in the output are replaced by ${ROOTDIR}.
-// Compare returns a non-nil error if there are differences, or it could not
-// run the TestFile.
-func (tf *TestFile) Compare() error {
-	if err := tf.run(); err != nil {
-		return err
+// Compare runs the commands in each file in the test suite and compares their
+// output with the output in the file. The comparison is done line by line.
+// Before comparing, occurrences of the root directory in the output are
+// replaced by ${ROOTDIR}. Compare returns a non-nil error if there are
+// differences, or it could not execute the TestSuite.
+func (ts *TestSuite) Compare() error {
+	var ss []string
+	for _, tf := range ts.files {
+		s := tf.compare()
+		if s != "" {
+			ss = append(ss, s)
+		}
+	}
+	if len(ss) > 0 {
+		return errors.New(strings.Join(ss, ""))
+	}
+	return nil
+}
+
+func (tf *testFile) compare() string {
+	if err := tf.execute(); err != nil {
+		return fmt.Sprintf("%v\n", err)
 	}
 	buf := new(bytes.Buffer)
 	for _, c := range tf.cases {
@@ -267,27 +308,29 @@ func (tf *TestFile) Compare() error {
 			fmt.Fprintf(buf, "%s\n", diff)
 		}
 	}
-	s := buf.String()
-	if s == "" {
-		return nil
-	}
-	return errors.New(s)
+	return buf.String()
 }
 
-// Update runs the commands in the test file and writes their output back to the
-// file, overwriting the previous output. Occurrences of the root directory in the
-// output are replaced by ${ROOTDIR}.
-func (tf *TestFile) Update() error {
-	tmpfilename, err := tf.updateToTemp()
-	if err != nil {
-		os.Remove(tmpfilename)
-		return err
+// Update runs the commands in each file in the test suite and writes their
+// output back to the file, overwriting the previous output. Occurrences of the
+// root directory in the output are replaced by ${ROOTDIR}.
+func (ts *TestSuite) Update() error {
+	for _, tf := range ts.files {
+		tmpfile, err := tf.updateToTemp()
+		if err != nil {
+			return err
+		}
+		if err := os.Rename(tmpfile, tf.filename); err != nil {
+			return err
+		}
 	}
-	return os.Rename(tmpfilename, tf.filename)
+	return nil
 }
 
-func (tf *TestFile) updateToTemp() (fname string, err error) {
-	if err := tf.run(); err != nil {
+// updateToTemp executes tf and writes the output to a temporary file.
+// It returns the name of the temporary file.
+func (tf *testFile) updateToTemp() (fname string, err error) {
+	if err := tf.execute(); err != nil {
 		return "", err
 	}
 
@@ -300,6 +343,9 @@ func (tf *TestFile) updateToTemp() (fname string, err error) {
 		if err == nil {
 			err = err2
 		}
+		if err != nil {
+			os.Remove(f.Name())
+		}
 	}()
 	if err := tf.write(f); err != nil {
 		return "", err
@@ -307,24 +353,27 @@ func (tf *TestFile) updateToTemp() (fname string, err error) {
 	return f.Name(), nil
 }
 
-func (tf *TestFile) run() error {
+func (tf *testFile) execute() error {
+	if tf.suite.Verbose {
+		fmt.Printf("-- %s --\n", tf.filename)
+	}
 	rootDir, err := ioutil.TempDir("", "cmdtest")
 	if err != nil {
 		return fmt.Errorf("%s: %v", tf.filename, err)
 	}
-	if tf.KeepRootDir {
+	if tf.suite.KeepRootDirs {
 		fmt.Printf("%s: test root directory: %s\n", tf.filename, rootDir)
 	} else {
 		defer os.RemoveAll(rootDir)
 	}
 
 	if err := os.Setenv("ROOTDIR", rootDir); err != nil {
-		return err
+		return fmt.Errorf("%s: %v", tf.filename, err)
 	}
 	defer os.Unsetenv("ROOTDIR")
 	cwd, err := os.Getwd()
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %v", tf.filename, err)
 	}
 
 	if err := os.Chdir(rootDir); err != nil {
@@ -332,17 +381,15 @@ func (tf *TestFile) run() error {
 	}
 	defer func() { _ = os.Chdir(cwd) }()
 
-	if tf.Setup != nil {
-		if err := tf.Setup(rootDir); err != nil {
+	if tf.suite.Setup != nil {
+		if err := tf.suite.Setup(rootDir); err != nil {
 			return fmt.Errorf("%s: calling Setup: %v", tf.filename, err)
 		}
 	}
-
 	for _, tc := range tf.cases {
-		if err := tc.run(tf, rootDir, tf.Verbose); err != nil {
+		if err := tc.execute(tf.suite, rootDir); err != nil {
 			return fmt.Errorf("%s:%v", tf.filename, err) // no space after :, for line number
 		}
-
 	}
 	return nil
 }
@@ -354,7 +401,7 @@ type fatal struct{ error }
 // is saved in tc.gotOutput.
 // An error is returned if: a command that should succeed instead failed; a command that should
 // fail instead succeeded; or a built-in command was called incorrectly.
-func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
+func (tc *testCase) execute(ts *TestSuite, rootDir string) error {
 	const failMarker = " --> FAIL"
 
 	tc.gotOutput = nil
@@ -373,7 +420,7 @@ func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
 				return err
 			}
 		}
-		if verbose {
+		if ts.Verbose {
 			fmt.Printf("$ %s\n", strings.Join(args, " "))
 		}
 		name := args[0]
@@ -383,7 +430,7 @@ func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
 			infile = args[len(args)-1]
 			args = args[:len(args)-2]
 		}
-		f := tf.Commands[name]
+		f := ts.Commands[name]
 		if f == nil {
 			return fmt.Errorf("%d: no such command %q", tc.startLine+i, name)
 		}
@@ -397,7 +444,7 @@ func (tc *testCase) run(tf *TestFile, rootDir string, verbose bool) error {
 		if err != nil && !wantFail {
 			return fmt.Errorf("%d: %q failed with %v. Output:\n%s", tc.startLine+i, cmd, err, out)
 		}
-		if verbose {
+		if ts.Verbose {
 			fmt.Println(string(out))
 		}
 		allout = append(allout, out...)
@@ -494,7 +541,7 @@ func scrub(rootDir string, b []byte) []byte {
 	return b
 }
 
-func (tf *TestFile) write(w io.Writer) error {
+func (tf *testFile) write(w io.Writer) error {
 	for _, c := range tf.cases {
 		if err := c.write(w); err != nil {
 			return err

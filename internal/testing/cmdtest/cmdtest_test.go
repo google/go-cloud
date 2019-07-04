@@ -20,8 +20,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
-	"strings"
 	"sync"
 	"testing"
 
@@ -52,41 +52,46 @@ func TestMain(m *testing.M) {
 }
 
 func TestRead(t *testing.T) {
-	got, err := Read("testdata/read.ct")
+	got, err := Read("testdata/read")
 	if err != nil {
 		t.Fatal(err)
 	}
 	got.Commands = nil
-	want := &TestFile{
-		filename: "testdata/read.ct",
-		cases: []*testCase{
+	got.files[0].suite = nil
+	want := &TestSuite{
+		files: []*testFile{
 			{
-				before: []string{
-					"# A sample test file.",
-					"",
-					"#   Prefix stuff.",
-					"",
+				filename: "testdata/read/read.ct",
+				cases: []*testCase{
+					{
+						before: []string{
+							"# A sample test file.",
+							"",
+							"#   Prefix stuff.",
+							"",
+						},
+						startLine:  5,
+						commands:   []string{"command arg1 arg2", "cmd2"},
+						wantOutput: []string{"out1", "out2"},
+					},
+					{
+						before:     []string{"", "# start of the next case"},
+						startLine:  11,
+						commands:   []string{"c3"},
+						wantOutput: nil,
+					},
+					{
+						before:     []string{"", "# start of the third", ""},
+						startLine:  15,
+						commands:   []string{"c4 --> FAIL"},
+						wantOutput: []string{"out3"},
+					},
 				},
-				startLine:  5,
-				commands:   []string{"command arg1 arg2", "cmd2"},
-				wantOutput: []string{"out1", "out2"},
-			},
-			{
-				before:     []string{"", "# start of the next case"},
-				startLine:  11,
-				commands:   []string{"c3"},
-				wantOutput: nil,
-			},
-			{
-				before:     []string{"", "# start of the third", ""},
-				startLine:  15,
-				commands:   []string{"c4 --> FAIL"},
-				wantOutput: []string{"out3"},
+				suffix: []string{"", "", "# end"},
 			},
 		},
-		suffix: []string{"", "", "# end"},
 	}
-	if diff := cmp.Diff(got, want, cmp.AllowUnexported(TestFile{}, testCase{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmp.AllowUnexported(TestSuite{}, testFile{}, testCase{})); diff != "" {
 		t.Error(diff)
 	}
 
@@ -94,52 +99,43 @@ func TestRead(t *testing.T) {
 
 func TestCompare(t *testing.T) {
 	once.Do(setup)
-	tf := mustReadTestFile(t, "good")
-	tf.Commands["echo-stdin"] = Program("echo-stdin")
-	if err := tf.Compare(); err != nil {
+	ts := mustReadTestSuite(t, "good")
+	ts.Commands["echo-stdin"] = Program("echo-stdin")
+	if err := ts.Compare(); err != nil {
 		t.Error(err)
 	}
 
 	// Test errors.
-	// Since the output of cmp.Diff is unstable, we search for strings we expect
+	// Since the output of cmp.Diff is unstable, we search for regexps we expect
 	// to find there, rather than checking an exact match.
-	for _, test := range []struct {
-		file  string
-		wants []string // substrings that should be present
-	}{
-		{
-			"bad-output",
-			[]string{
-				"testdata/bad-output.ct:2: got=-, want=+",
-				"testdata/bad-output.ct:6: got=-, want=+",
-			},
-		},
-		{
-			"bad-fail-1",
-			[]string{`"echo" succeeded, but it was expected to fail`},
-		},
-		{
-			"bad-fail-2",
-			[]string{`"cd foo" failed`},
-		},
-	} {
-		tf := mustReadTestFile(t, test.file)
-		err := tf.Compare()
-		var got string
+	ts = mustReadTestSuite(t, "bad")
+	ts.Commands["echo-stdin"] = Program("echo-stdin")
+	err := ts.Compare()
+	if err == nil {
+		t.Fatal("got nil, want error")
+	}
+	got := err.Error()
+	wants := []string{
+		"testdata/bad/bad-output.ct:2: got=-, want=+",
+		"testdata/bad/bad-output.ct:6: got=-, want=+",
+		`testdata/bad/bad-fail-1.ct:4: "echo" succeeded, but it was expected to fail`,
+		`testdata/bad/bad-fail-2.ct:4: "cd foo" failed with chdir`,
+	}
+	failed := false
+	_ = failed
+	for _, w := range wants {
+		match, err := regexp.MatchString(w, got)
 		if err != nil {
-			got = err.Error()
+			t.Fatal(err)
 		}
-		failed := false
-		for _, w := range test.wants {
-			if !strings.Contains(got, w) {
-				t.Errorf("%s: output does not contain %q", test.file, w)
-				failed = true
-			}
+		if !match {
+			t.Errorf(`output does not match "%s"`, w)
+			failed = true
 		}
-		if failed {
-			// Log full output to aid debugging.
-			t.Logf("output of %s:\n%s", test.file, got)
-		}
+	}
+	if failed {
+		// Log full output to aid debugging.
+		t.Logf("output:\n%s", got)
 	}
 }
 
@@ -181,16 +177,16 @@ func TestExpandVariables(t *testing.T) {
 
 func TestUpdateToTemp(t *testing.T) {
 	once.Do(setup)
-	for _, tfname := range []string{"good", "good-without-output"} {
-		tf := mustReadTestFile(t, tfname)
-		tf.Commands["echo-stdin"] = Program("echo-stdin")
-		fname, err := tf.updateToTemp()
+	for _, dir := range []string{"good", "good-without-output"} {
+		ts := mustReadTestSuite(t, dir)
+		ts.Commands["echo-stdin"] = Program("echo-stdin")
+		fname, err := ts.files[0].updateToTemp()
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer os.Remove(fname)
-		if diff := diffFiles(t, "testdata/good.ct", fname); diff != "" {
-			t.Errorf("%s: %s", tfname, diff)
+		if diff := diffFiles(t, "testdata/good/good.ct", fname); diff != "" {
+			t.Errorf("%s: %s", dir, diff)
 		}
 	}
 }
@@ -207,11 +203,11 @@ func diffFiles(t *testing.T, gotFile, wantFile string) string {
 	return cmp.Diff(string(got), string(want))
 }
 
-func mustReadTestFile(t *testing.T, basename string) *TestFile {
+func mustReadTestSuite(t *testing.T, dir string) *TestSuite {
 	t.Helper()
-	tf, err := Read("testdata/" + basename + ".ct")
+	ts, err := Read(filepath.Join("testdata", dir))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return tf
+	return ts
 }
