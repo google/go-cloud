@@ -145,6 +145,12 @@ variables or your AWS CLI configuration.</p>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
+<p>If your messages are being sent to SQS directly, or if they are being delivered
+via an SNS topic with <code>RawMessageDelivery</code> enabled, set a <code>raw=true</code> query
+parameter in your URL, or set <code>SubscriberOptions.Raw</code> to <code>true</code> if you&rsquo;re using
+the constructors. By default, the subscription will use heuristics to identify
+whether the message bodies are raw or <a href="https://aws.amazon.com/sns/faqs/#Raw_message_delivery">SNS JSON</a>.</p>
+
 <p>Messages with a <code>base64encoded</code> message attribute will be automatically
 <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> decoded before being returned. See the <a href="https://gocloud.dev/howto/pubsub/publish/#sns">SNS publishing guide</a>
 or the [SQS publshing guide][] for more details.</p>
