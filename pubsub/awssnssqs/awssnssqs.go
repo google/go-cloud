@@ -622,40 +622,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	}
 	var ms []*driver.Message
 	for _, m := range output.Messages {
-		bodyStr := aws.StringValue(m.Body)
-		rawAttrs := map[string]string{}
-
-		// If the user told us that message bodies are raw, or if there are
-		// top-level MessageAttributes, then it's raw.
-		raw := s.opts.Raw || len(m.MessageAttributes) > 0
-		if raw {
-			for k, v := range m.MessageAttributes {
-				rawAttrs[k] = aws.StringValue(v.StringValue)
-			}
-		} else {
-			// Try to parse the raw body as SNS JSON.
-			// https://aws.amazon.com/sns/faqs/#Raw_message_delivery
-			var bodyJSON struct {
-				MessageId         string
-				Message           string
-				MessageAttributes map[string]struct{ Value string }
-			}
-			// If the raw body parses as JSON and has a MessageId field,
-			// then assume it's SNS JSON.
-			if err := json.Unmarshal([]byte(bodyStr), &bodyJSON); err == nil && bodyJSON.MessageId != "" {
-				// It looks like SNS JSON. Get attributes from the decoded struct,
-				// and update the body to be the JSON Message field.
-				for k, v := range bodyJSON.MessageAttributes {
-					rawAttrs[k] = v.Value
-				}
-				bodyStr = bodyJSON.Message
-			} else {
-				// It doesn't look like SNS JSON, either because it
-				// isn't JSON or because the JSON doesn't have a MessageId
-				// field.
-				// Leave bodyStr alone; there can't be any attributes.
-			}
-		}
+		bodyStr, rawAttrs := extractBody(m, s.opts.Raw)
 
 		decodeIt := false
 		attrs := map[string]string{}
@@ -704,6 +671,50 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		time.Sleep(noMessagesPollDuration)
 	}
 	return ms, nil
+}
+
+func extractBody(m *sqs.Message, raw bool) (body string, attributes map[string]string) {
+	bodyStr := aws.StringValue(m.Body)
+	rawAttrs := map[string]string{}
+
+	// If the user told us that message bodies are raw, or if there are
+	// top-level MessageAttributes, then it's raw.
+	// (SNS JSON message can have attributes, but they are encoded in
+	// the JSON instead of being at the top level).
+	raw = raw || len(m.MessageAttributes) > 0
+	if raw {
+		// For raw messages, the attributes are at the top level
+		// and we leave bodyStr alone.
+		for k, v := range m.MessageAttributes {
+			rawAttrs[k] = aws.StringValue(v.StringValue)
+		}
+		return bodyStr, rawAttrs
+	}
+
+	// It might be SNS JSON; try to parse the raw body as such.
+	// https://aws.amazon.com/sns/faqs/#Raw_message_delivery
+	// If it parses as JSON and has a TopicArn field, assume it's SNS JSON.
+	var bodyJSON struct {
+		TopicArn          string
+		Message           string
+		MessageAttributes map[string]struct{ Value string }
+	}
+	if err := json.Unmarshal([]byte(bodyStr), &bodyJSON); err == nil && bodyJSON.TopicArn != "" {
+		// It looks like SNS JSON. Get attributes from the decoded struct,
+		// and update the body to be the JSON Message field.
+		for k, v := range bodyJSON.MessageAttributes {
+			rawAttrs[k] = v.Value
+		}
+		return bodyJSON.Message, rawAttrs
+	}
+	// It doesn't look like SNS JSON, either because it
+	// isn't JSON or because the JSON doesn't have a TopicArn
+	// field. Treat it as raw.
+	//
+	// As above in the other "raw" case, we leave bodyStr
+	// alone. There can't be any top-level attributes (because
+	// then we would have known it was raw earlier).
+	return bodyStr, rawAttrs
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
