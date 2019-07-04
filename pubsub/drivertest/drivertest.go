@@ -166,14 +166,15 @@ func (verifyAsFailsOnNil) BeforeSend(as func(interface{}) bool) error {
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
-		"TestSendReceive":              testSendReceive,
-		"TestSendReceiveTwo":           testSendReceiveTwo,
-		"TestNack":                     testNack,
-		"TestBatching":                 testBatching,
-		"TestDoubleAck":                testDoubleAck,
-		"TestErrorOnSendToClosedTopic": testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription":                   testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive":                                      testCancelSendReceive,
+		"TestSendReceive":                          testSendReceive,
+		"TestSendReceiveTwo":                       testSendReceiveTwo,
+		"TestSendReceiveJSON":                      testSendReceiveJSON,
+		"TestNack":                                 testNack,
+		"TestBatching":                             testBatching,
+		"TestDoubleAck":                            testDoubleAck,
+		"TestErrorOnSendToClosedTopic":             testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription": testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                    testCancelSendReceive,
 		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":           testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive": testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive,
 		"TestMetadata":           testMetadata,
@@ -332,6 +333,37 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		if diff := diffMessageSets(got, want); diff != "" {
 			t.Errorf("sub #%d: %s", i, diff)
 		}
+	}
+}
+
+func testSendReceiveJSON(t *testing.T, newHarness HarnessMaker) {
+	const json = `{"Foo": "Bar"}`
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	topic, sub, cleanup, err := makePair(ctx, t, h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	sendM := &pubsub.Message{Body: []byte(json)}
+	if err := topic.Send(ctx, sendM); err != nil {
+		t.Fatal(err)
+	}
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	receiveM, err := sub.Receive(ctx2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiveM.Ack()
+	if diff := cmp.Diff(receiveM, sendM, cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
+		t.Error(diff)
 	}
 }
 
