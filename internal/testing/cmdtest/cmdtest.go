@@ -95,10 +95,10 @@ import (
 // arguments must refer to the current directory; that is, they cannot contain
 // slashes.
 //
-// However, cmdtest does its own environment variable substitution, using the
-// syntax "${VAR}". Test execution inherits the full environment of the test
-// binary caller (typically, your shell). The environment variable ROOTDIR is
-// set to the temporary directory created to run the test file.
+// cmdtest does its own environment variable substitution, using the syntax
+// "${VAR}". Test execution inherits the full environment of the test binary
+// caller (typically, your shell). The environment variable ROOTDIR is set to
+// the temporary directory created to run the test file.
 type TestSuite struct {
 	// If non-nil, this function is called for each test. It is passed the root
 	// directory after it has been made the current directory.
