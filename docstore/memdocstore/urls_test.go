@@ -39,6 +39,8 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		{"mem://coll/my/key", true},
 		// Passing revision field.
 		{"mem://coll/_id?revision_field=123", false},
+		// Passing filename.
+		{"mem://coll/_id?filename=foo.out", false},
 		// Invalid parameter.
 		{"mem://coll/key?param=value", true},
 	}
