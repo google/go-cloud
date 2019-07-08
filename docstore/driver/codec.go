@@ -341,11 +341,12 @@ type Decoder interface {
 	// (0, false).
 	MapLen() (int, bool)
 
-	// If MapLen returned true, the DecodeMap will be called. It should iterate over
-	// the fields of the value being decoded, invoking the callback on each with the
-	// field name and a Decoder for the field value. If the callback returns false,
-	// DecodeMap should return immediately.
-	DecodeMap(func(string, Decoder) bool)
+	// DecodeMap iterates over the fields of the value being decoded, invoke the
+	// callback on each with field name, a Decoder for the field value, and a bool
+	// to indicate whether or not to use exact match for the field names. It will
+	// be called when MapLen returns true or decoding a struct. If the callback
+	// returns false, DecodeMap should return immediately.
+	DecodeMap(func(string, Decoder, bool) bool)
 
 	// AsInterface should decode the value into the Go value that best represents it.
 	AsInterface() (interface{}, error)
@@ -361,8 +362,8 @@ type Decoder interface {
 
 // Decode decodes the value held in the Decoder d into v.
 // Decode creates slices, maps and pointer elements as needed.
-// It treats values that implement encoding.BinaryUnmarshaler, encoding.TextUnmarshaler
-// and proto.Message specially; see Encode.
+// It treats values that implement encoding.BinaryUnmarshaler,
+// encoding.TextUnmarshaler and proto.Message specially; see Encode.
 func Decode(v reflect.Value, d Decoder) error {
 	return wrap(decode(v, d), gcerr.InvalidArgument)
 }
@@ -583,7 +584,7 @@ func decodeMap(v reflect.Value, d Decoder) error {
 	et := t.Elem()
 	var err error
 	kt := v.Type().Key()
-	d.DecodeMap(func(key string, vd Decoder) bool {
+	d.DecodeMap(func(key string, vd Decoder, _ bool) bool {
 		if err != nil {
 			return false
 		}
@@ -650,15 +651,20 @@ func unstringifyMapKey(key string, keyType reflect.Type) (reflect.Value, error) 
 }
 
 func decodeStruct(v reflect.Value, d Decoder) error {
-	fields, err := fieldCache.Fields(v.Type())
+	fs, err := fieldCache.Fields(v.Type())
 	if err != nil {
 		return err
 	}
-	d.DecodeMap(func(key string, d2 Decoder) bool {
+	d.DecodeMap(func(key string, d2 Decoder, exactMatch bool) bool {
 		if err != nil {
 			return false
 		}
-		f := fields.MatchFold(key)
+		var f *fields.Field
+		if exactMatch {
+			f = fs.MatchExact(key)
+		} else {
+			f = fs.MatchFold(key)
+		}
 		if f == nil {
 			err = gcerr.Newf(gcerr.InvalidArgument, nil, "no field matching %q in %s", key, v.Type())
 			return false
@@ -741,11 +747,7 @@ type tagOptions struct {
 // parseTag interprets docstore struct field tags.
 func parseTag(t reflect.StructTag) (name string, keep bool, other interface{}, err error) {
 	var opts []string
-	if _, ok := t.Lookup("docstore"); ok {
-		name, keep, opts = fields.ParseStandardTag("docstore", t)
-	} else {
-		name, keep, opts = fields.ParseStandardTag("json", t)
-	}
+	name, keep, opts = fields.ParseStandardTag("docstore", t)
 	tagOpts := tagOptions{}
 	for _, opt := range opts {
 		switch opt {

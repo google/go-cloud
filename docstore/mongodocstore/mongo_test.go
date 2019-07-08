@@ -103,7 +103,7 @@ func (codecTester) DocstoreDecode(value, dest interface{}) error {
 	if err := bson.Unmarshal(value.([]byte), &m); err != nil {
 		return err
 	}
-	return decodeDoc(m, drivertest.MustDocument(dest), mongoIDField)
+	return decodeDoc(m, drivertest.MustDocument(dest), mongoIDField, true)
 }
 
 func (codecTester) NativeEncode(x interface{}) (interface{}, error) {

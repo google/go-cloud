@@ -260,9 +260,9 @@ func (d decoder) MapLen() (int, bool) {
 	return len(d.av.M), true
 }
 
-func (d decoder) DecodeMap(f func(key string, vd driver.Decoder) bool) {
+func (d decoder) DecodeMap(f func(key string, vd driver.Decoder, exactMatch bool) bool) {
 	for k, av := range d.av.M {
-		if !f(k, decoder{av}) {
+		if !f(k, decoder{av}, true) {
 			break
 		}
 	}

@@ -304,12 +304,12 @@ type docstruct struct {
 	DocstoreRevision interface{}
 	Etag             interface{}
 
-	I  int                    `docstore:"i"`
-	U  uint                   `docstore:"u"`
-	F  float64                `docstore:"f"`
-	St string                 `docstore:"st"`
-	B  bool                   `docstore:"b"`
-	M  map[string]interface{} `docstore:"m"`
+	I  int
+	U  uint
+	F  float64
+	St string
+	B  bool
+	M  map[string]interface{}
 }
 
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
@@ -586,7 +586,23 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 		{
 			name: "get struct with field path",
 			doc: &docstruct{
-				Name: "testGetStruct",
+				Name: "testGetStructFP",
+				St:   "a string",
+				I:    95,
+				F:    32.3,
+				M:    map[string]interface{}{"a": "one", "b": "two"},
+			},
+			fps: []docstore.FieldPath{"St", "M.a"},
+			want: &docstruct{
+				Name: "testGetStructFP",
+				St:   "a string",
+				M:    map[string]interface{}{"a": "one"},
+			},
+		},
+		{
+			name: "get struct wrong case",
+			doc: &docstruct{
+				Name: "testGetStructWC",
 				St:   "a string",
 				I:    95,
 				F:    32.3,
@@ -594,9 +610,7 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 			},
 			fps: []docstore.FieldPath{"st", "m.a"},
 			want: &docstruct{
-				Name: "testGetStruct",
-				St:   "a string",
-				M:    map[string]interface{}{"a": "one"},
+				Name: "testGetStructWC",
 			},
 		},
 	} {
@@ -697,10 +711,10 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 			name: "update struct",
 			doc:  &docstruct{Name: "testUpdateStruct", St: "st", I: 1, F: 3.5},
 			mods: ds.Mods{
-				"st": "str",
-				"i":  nil,
-				"u":  docstore.Increment(4),
-				"f":  docstore.Increment(-3),
+				"St": "str",
+				"I":  nil,
+				"U":  docstore.Increment(4),
+				"F":  docstore.Increment(-3),
 			},
 			want: &docstruct{Name: "testUpdateStruct", St: "str", U: 4, F: 0.5},
 		},
