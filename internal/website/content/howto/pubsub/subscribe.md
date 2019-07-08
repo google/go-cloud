@@ -58,6 +58,12 @@ variables or your AWS CLI configuration.
 
 {{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSubscriptionFromURL" >}}
 
+If your messages are being sent to SQS directly, or if they are being delivered
+via an SNS topic with `RawMessageDelivery` enabled, set a `raw=true` query
+parameter in your URL, or set `SubscriberOptions.Raw` to `true` if you're using
+the constructors. By default, the subscription will use heuristics to identify
+whether the message bodies are raw or [SNS JSON][].
+
 Messages with a `base64encoded` message attribute will be automatically
 [Base64][] decoded before being returned. See the [SNS publishing guide][]
 or the [SQS publshing guide][] for more details.
@@ -65,6 +71,7 @@ or the [SQS publshing guide][] for more details.
 [Base64]: https://en.wikipedia.org/wiki/Base64
 [SNS publishing guide]: {{< ref "./publish.md#sns" >}}
 [SQS publishing guide]: {{< ref "./publish.md#sqs" >}}
+[SNS JSON]: https://aws.amazon.com/sns/faqs/#Raw_message_delivery
 [SQS]: https://aws.amazon.com/sqs/
 
 ### Amazon Simple Queueing Service Constructor {#sqs-ctor}
