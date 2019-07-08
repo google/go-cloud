@@ -1,0 +1,38 @@
+# Initial comments go here.
+
+# Fails because there is no subdirectory "foo".
+$ cd foo --> FAIL
+
+$ echo hello world
+hello world
+
+$ echo now
+$ echo is
+$ echo the time
+now
+is
+the time
+
+# Let's make a directory.
+
+$ mkdir foo
+$ cd foo
+$ echo the ${ROOTDIR} is what it is
+the ${ROOTDIR} is what it is
+
+$ echof bar line one
+$ cat bar
+line one
+
+$ echof bar line two
+$ cat bar
+line two
+
+$ setenv foo bar
+$ echo foo equals "${foo}"
+foo equals "bar"
+
+# Input redirection.
+$ echo-stdin < bar
+Here is stdin:
+line two

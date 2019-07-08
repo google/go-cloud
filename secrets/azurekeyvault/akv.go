@@ -172,17 +172,12 @@ type KeeperOptions struct {
 }
 
 // Dial gets a new *keyvault.BaseClient using authorization from the environment.
-// See https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
-// and
-// https://godoc.org/github.com/Azure/go-autorest/autorest/azure/auth#NewAuthorizerFromEnvironment.
+// See https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization#use-environment-based-authentication.
 func Dial() (*keyvault.BaseClient, error) {
 	return dial(false)
 }
 
 // DialUsingCLIAuth gets a new *keyvault.BaseClient using authorization from the "az" CLI.
-// See https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
-// and
-// https://godoc.org/github.com/Azure/go-autorest/autorest/azure/auth#NewAuthorizerFromCLI.
 func DialUsingCLIAuth() (*keyvault.BaseClient, error) {
 	return dial(true)
 }

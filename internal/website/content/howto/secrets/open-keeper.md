@@ -73,6 +73,30 @@ obtain [GCP credentials][] and then create a gRPC connection to GCP KMS.
 [GCP credentials]: https://cloud.google.com/docs/authentication/production
 [`gcpkms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/gcpkms#OpenKeeper
 
+## Azure KeyVault {#azure}
+
+The Go CDK can use keys from [Azure KeyVault][] to keep information secret.
+`secrets.OpenKeeper` will use [default credentials from the environment][Azure
+Environment Auth], unless you set the environment variable
+`AZURE_KEYVAULT_AUTH_VIA_CLI` to `true`, in which case it will use
+credentials from the `az` command line.
+
+Azure KeyVault URLs are based on the [Azure Key object identifer][Azure Key ID]:
+
+{{< goexample "gocloud.dev/secrets/azurekeyvault.Example_openFromURL" >}}
+
+[Azure KeyVault]: https://azure.microsoft.com/en-us/services/key-vault/
+[Azure Environment Auth]: https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization#use-environment-based-authentication
+[Azure Key ID]: https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates
+
+### Azure KeyVault Constructor {#azure-ctor}
+
+The [`azurekeyvault.OpenKeeper`][] constructor opens an Azure KeyVault key.
+
+{{< goexample "gocloud.dev/secrets/azurekeyvault.ExampleOpenKeeper" >}}
+
+[`azurekeyvault.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/azurekeyvault#OpenKeeper
+
 ## HashiCorp Vault {#vault}
 
 The Go CDK can use the [transit secrets engine][] in [Vault][] to keep

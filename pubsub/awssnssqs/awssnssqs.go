@@ -186,7 +186,12 @@ const SQSScheme = "awssqs"
 // For SQS topics and subscriptions, the URL's host+path is prefixed with
 // "https://" to create the queue URL.
 //
-// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// The following query parameters are supported:
+//
+//   - raw (for "awssqs" Subscriptions only): sets SubscriberOptions.Raw. The
+//     value must be parseable by `strconv.ParseBool`.
+//
+// See gocloud.dev/aws/ConfigFromURLParams for other query parameters
 // that affect the default AWS session.
 type URLOpener struct {
 	// ConfigProvider configures the connection to AWS.
@@ -225,13 +230,24 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	configProvider := &gcaws.ConfigOverrider{
 		Base: o.ConfigProvider,
 	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
+	// Clone the options since we might override Raw.
+	opts := o.SubscriptionOptions
+	q := u.Query()
+	if rawStr := q.Get("raw"); rawStr != "" {
+		var err error
+		opts.Raw, err = strconv.ParseBool(rawStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for raw: %v", rawStr, err)
+		}
+		q.Del("raw")
+	}
+	overrideCfg, err := gcaws.ConfigFromURLParams(q)
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	qURL := "https://" + path.Join(u.Host, u.Path)
-	return OpenSubscription(ctx, configProvider, qURL, &o.SubscriptionOptions), nil
+	return OpenSubscription(ctx, configProvider, qURL, &opts), nil
 }
 
 type snsTopic struct {
@@ -560,21 +576,38 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 type subscription struct {
 	client *sqs.SQS
 	qURL   string
+	opts   *SubscriptionOptions
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
-type SubscriptionOptions struct{}
+type SubscriptionOptions struct {
+	// Raw determines how the Subscription will process message bodies.
+	//
+	// If the subscription is expected to process messages sent directly to
+	// SQS, or messages from SNS topics configured to use "raw" delivery,
+	// set this to true. Message bodies will be passed through untouched.
+	//
+	// If false, the Subscription will use best-effort heuristics to
+	// identify whether message bodies are raw or SNS JSON; this may be
+	// inefficient for raw messages.
+	//
+	// See https://aws.amazon.com/sns/faqs/#Raw_message_delivery.
+	Raw bool
+}
 
 // OpenSubscription opens a subscription based on AWS SQS for the given SQS
 // queue URL. The queue is assumed to be subscribed to some SNS topic, though
 // there is no check for this.
 func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, sess, qURL), recvBatcherOpts, ackBatcherOpts)
+	return pubsub.NewSubscription(openSubscription(ctx, sess, qURL, opts), recvBatcherOpts, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, sess client.ConfigProvider, qURL string) driver.Subscription {
-	return &subscription{client: sqs.New(sess), qURL: qURL}
+func openSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) driver.Subscription {
+	if opts == nil {
+		opts = &SubscriptionOptions{}
+	}
+	return &subscription{client: sqs.New(sess), qURL: qURL, opts: opts}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
@@ -589,40 +622,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	}
 	var ms []*driver.Message
 	for _, m := range output.Messages {
-		// By default, messages from SNS come with everything in a JSON-encoded Body.
-		// For example, message attributes are not in m.MessageAttributes, but
-		// are rather in a MessageAttributes field in the JSON-encoded body.
-		// If RawMessageDelivery is enabled as part of the SQS queue subscription
-		// to the SNS topic, then body is in Body and attributes are in
-		// MessageAttributes. Same deal if you send directly to the SQS queue.
-		//
-		// If it looks like the body might be JSON, we try decoding it. If it
-		// doesn't look like JSON, or if the JSON decode fails, we use the raw
-		// data from m.
-		bodyStr := aws.StringValue(m.Body)
-		rawAttrs := map[string]string{}
-		useJSON := len(m.MessageAttributes) == 0 // if we got attributes, it's raw
-		if useJSON {
-			var bodyJSON struct {
-				Message           string
-				MessageAttributes map[string]struct{ Value string }
-			}
-			if err := json.Unmarshal([]byte(bodyStr), &bodyJSON); err == nil {
-				// JSON decode succeeded; get attributes from the decoded struct,
-				// and update the body to be the JSON Message field.
-				for k, v := range bodyJSON.MessageAttributes {
-					rawAttrs[k] = v.Value
-				}
-				bodyStr = bodyJSON.Message
-			} else {
-				// JSON decode failed; leave bodyStr alone. There can't be any
-				// attributes.
-			}
-		} else {
-			for k, v := range m.MessageAttributes {
-				rawAttrs[k] = aws.StringValue(v.StringValue)
-			}
-		}
+		bodyStr, rawAttrs := extractBody(m, s.opts.Raw)
 
 		decodeIt := false
 		attrs := map[string]string{}
@@ -671,6 +671,50 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		time.Sleep(noMessagesPollDuration)
 	}
 	return ms, nil
+}
+
+func extractBody(m *sqs.Message, raw bool) (body string, attributes map[string]string) {
+	bodyStr := aws.StringValue(m.Body)
+	rawAttrs := map[string]string{}
+
+	// If the user told us that message bodies are raw, or if there are
+	// top-level MessageAttributes, then it's raw.
+	// (SNS JSON message can have attributes, but they are encoded in
+	// the JSON instead of being at the top level).
+	raw = raw || len(m.MessageAttributes) > 0
+	if raw {
+		// For raw messages, the attributes are at the top level
+		// and we leave bodyStr alone.
+		for k, v := range m.MessageAttributes {
+			rawAttrs[k] = aws.StringValue(v.StringValue)
+		}
+		return bodyStr, rawAttrs
+	}
+
+	// It might be SNS JSON; try to parse the raw body as such.
+	// https://aws.amazon.com/sns/faqs/#Raw_message_delivery
+	// If it parses as JSON and has a TopicArn field, assume it's SNS JSON.
+	var bodyJSON struct {
+		TopicArn          string
+		Message           string
+		MessageAttributes map[string]struct{ Value string }
+	}
+	if err := json.Unmarshal([]byte(bodyStr), &bodyJSON); err == nil && bodyJSON.TopicArn != "" {
+		// It looks like SNS JSON. Get attributes from the decoded struct,
+		// and update the body to be the JSON Message field.
+		for k, v := range bodyJSON.MessageAttributes {
+			rawAttrs[k] = v.Value
+		}
+		return bodyJSON.Message, rawAttrs
+	}
+	// It doesn't look like SNS JSON, either because it
+	// isn't JSON or because the JSON doesn't have a TopicArn
+	// field. Treat it as raw.
+	//
+	// As above in the other "raw" case, we leave bodyStr
+	// alone. There can't be any top-level attributes (because
+	// then we would have known it was raw earlier).
+	return bodyStr, rawAttrs
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
