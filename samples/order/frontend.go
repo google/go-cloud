@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO(jba): use the response subscription to dynamically update a "My Orders" page.
-
 package main
 
 import (

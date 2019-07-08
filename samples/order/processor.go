@@ -27,6 +27,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"log"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -185,6 +186,10 @@ func (p *processor) processOrder(ctx context.Context, order *Order) error {
 	if err := w.Close(); err != nil {
 		return err
 	}
+
+	// Pretend that the conversion takes some time.
+	time.Sleep(time.Duration(rand.Intn(5)+2) * time.Second)
+
 	order.Note = fmt.Sprintf("converted from %s to png", format)
 	return nil
 }
