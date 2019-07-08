@@ -53,9 +53,9 @@ var (
 // run starts the server on port and runs it indefinitely.
 func (f *frontend) run(ctx context.Context, port int) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "index.html") })
-	http.HandleFunc("/orders/", wrap(f.listOrders))
-	http.HandleFunc("/orders/new", wrap(f.orderForm))
-	http.HandleFunc("/createOrder", wrap(f.createOrder))
+	http.HandleFunc("/orders/", wrapHTTPError(f.listOrders))
+	http.HandleFunc("/orders/new", wrapHTTPError(f.orderForm))
+	http.HandleFunc("/createOrder", wrapHTTPError(f.createOrder))
 
 	rl := requestlog.NewNCSALogger(os.Stdout, func(err error) { fmt.Fprintf(os.Stderr, "%v\n", err) })
 	s := server.New(nil, &server.Options{
@@ -64,9 +64,9 @@ func (f *frontend) run(ctx context.Context, port int) error {
 	return s.ListenAndServe(fmt.Sprintf(":%d", port))
 }
 
-// wrap turns handlers that return error into ordinary http.Handlers, by calling http.Error on non-nil
-// errors.
-func wrap(f func(http.ResponseWriter, *http.Request) error) func(http.ResponseWriter, *http.Request) {
+// wrapHTTPError turns handlers that return error into ordinary http.Handlers,
+// by calling http.Error on non-nil errors.
+func wrapHTTPError(f func(http.ResponseWriter, *http.Request) error) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -107,7 +107,11 @@ func (f *frontend) createOrder(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// doCreateOrder returns the order ID it generates, for testing.
+// doCreateOrder creates a new order.
+// It is passed the customer's email address, an io.Reader for reading the input
+// image, and the current time.
+// It creates an Order in the database and sends an OrderRequest over the pub/sub topic.
+// It returns the order ID it generates, for testing.
 func (f *frontend) doCreateOrder(ctx context.Context, email string, file io.Reader, now time.Time) (id string, err error) {
 	// Assign an ID for the order here, rather than in the processor.
 	// That allows the processor to detect duplicate pub/sub messages.
