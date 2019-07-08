@@ -37,11 +37,10 @@ const Scheme = "mem"
 // The URL's host is the name of the collection.
 // The URL's path is used as the keyField.
 //
-// The revision_field query parameter specifies the name of the revision field.
-// See Options.RevisionField for details.
+// The following query parameters are supported:
 //
-// The filename query parameter specifies a filename to use when opening
-// and closing the collection. See Options.Filename for details.
+//  - revision_field (optional): the name of the revision field.
+//  - filename (optional): the filename to store the collection in.
 type URLOpener struct {
 	mu          sync.Mutex
 	collections map[string]urlColl

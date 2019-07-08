@@ -64,7 +64,7 @@ type Options struct {
 	// The filename associated with this collection.
 	// When a collection is opened with a non-nil filename, the collection
 	// is loaded from the file if it exists. Otherwise, an empty collection is created.
-	// When the collection is closed, is contents are saved to the file.
+	// When the collection is closed, its contents are saved to the file.
 	Filename string
 }
 
@@ -431,8 +431,8 @@ func (c *collection) As(i interface{}) bool { return false }
 func (c *collection) ErrorAs(err error, i interface{}) bool { return false }
 
 // Close implements driver.Collection.Close.
-// If the collection was created with  Filename option, Close writes the collection's
-// documents to the file.
+// If the collection was created with a Filename option, Close writes the
+// collection's documents to the file.
 func (c *collection) Close() error {
 	return saveDocs(c.opts.Filename, c.docs)
 }
