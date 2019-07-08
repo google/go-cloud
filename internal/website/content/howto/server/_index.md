@@ -17,7 +17,7 @@ practices like health checks.
 ## Starting up the server
 
 The GO CDK Server constructor takes an `http.Handler` and an `Options` struct. 
-The simplest way to start the server is to use the `http.DefaultServeMux` and
+The simplest way to start the server is to use `http.DefaultServeMux` and
 pass `nil` for the options.
 
 {{< goexample src="gocloud.dev/server.ExampleServer_New" >}}
@@ -41,6 +41,7 @@ an imortant part of application monitoring.
 Because each application may have a different definition of what it means to be
 "healthy", you will need to define a concrete type to implement the `health.Checker`
 interface and define a `CheckHealth` method specific to your application.
+
 ```go
 // customHealthCheck is an example health check. It implements the
 // health.Checker interface and reports the server is healthy when the healthy
