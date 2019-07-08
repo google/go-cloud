@@ -36,7 +36,7 @@ var (
 	bucketURL        = flag.String("bucket", "", "gocloud.dev/blob URL for image bucket")
 	collectionURL    = flag.String("collection", "mem://orders/ID", "gocloud.dev/docstore URL for order collection")
 
-	port         = flag.Int("port", 10538, "port for frontend")
+	port         = flag.Int("port", 10538, "HTTP port for frontend")
 	runFrontend  = flag.Bool("frontend", true, "run the frontend")
 	runProcessor = flag.Bool("processor", true, "run the image processor")
 )
@@ -57,6 +57,10 @@ func main() {
 	}
 	defer cleanup()
 
+	// Run the frontend, or the processor, or both.
+	// When we want to run both, one of them has to run in a goroutine.
+	// So it's easier to run both in goroutines, even if we only need
+	// to run one.
 	errc := make(chan error, 2)
 	if *runFrontend {
 		go func() { errc <- frontend.run(context.Background(), *port) }()
@@ -69,6 +73,7 @@ func main() {
 	} else {
 		errc <- nil
 	}
+	// Each of the goroutines will send once to errc, so receive two values.
 	for i := 0; i < 2; i++ {
 		if err := <-errc; err != nil {
 			log.Fatal(err)

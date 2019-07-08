@@ -126,15 +126,12 @@ func (f *frontend) doCreateOrder(ctx context.Context, email string, file io.Read
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		err2 := w.Close()
-		if err == nil {
-			err = err2
-		}
-	}()
-
 	_, err = io.Copy(w, file)
 	if err != nil {
+		_ = w.Close() // ignore error
+		return "", err
+	}
+	if err := w.Close(); err != nil {
 		return "", err
 	}
 
@@ -161,6 +158,8 @@ func (f *frontend) doCreateOrder(ctx context.Context, email string, file io.Read
 
 // listOrders lists all the orders in the database.
 func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
+	// TODO(jba): use Bucket.SignedURL to add a link to the output images.
+
 	if r.Method != "GET" {
 		http.Error(w, "bad method for listOrders: want GET", http.StatusBadRequest)
 		return nil
