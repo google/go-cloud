@@ -30,6 +30,7 @@ $ gocdk-blob download file://${ROOTDIR}/bucket hw
 hello world
 
 # Error downloading a bucket that doesn't exist.
-$ gocdk-blob download file://${ROOTDIR}/bucket noexist --> FAIL
-gocdk-blob: Failed to read "noexist": blob (code=NotFound): stat ${ROOTDIR}/bucket/noexist: no such file or directory
+# For now we can't use this test case, because the output won't be the same across operating systems.
+#$ gocdk-blob download file://${ROOTDIR}/bucket noexist --> FAIL
+#gocdk-blob: Failed to read "noexist": blob (code=NotFound): stat ${ROOTDIR}/bucket/noexist: no such file or directory
 
