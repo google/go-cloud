@@ -63,12 +63,3 @@ func (h *customHealthCheck) CheckHealth() error {
 ```
 
 {{< goexample src="gocloud.dev/server.ExampleServer_HealthChecks" >}}
-
-
-## Shutting down the server
-
-Calling `Shutdown` on the server calls the driver's `Shutdown` method. By default,
-the `server`package uses `http.Server` to satisfy its [driver interface](https://godoc.org/gocloud.dev/server/driver), but 
-you can use other implementations if you prefer.
-
-{{< goexample src="gocloud.dev/server.ExampleServer_Shutdown" >}}

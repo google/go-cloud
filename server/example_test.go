@@ -15,7 +15,6 @@
 package server_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -127,23 +126,4 @@ func ExampleServer_HealthChecks() {
 	if err := srv.ListenAndServe(":8080"); err != nil {
 		log.Fatalf(err)
 	}
-}
-
-func ExampleServer_Shutdown() {
-	// This example is used in https://gocloud.dev/howto/server/
-
-	// OPTIONAL: Specify a driver in the options for the constructor.
-	// NewDefaultDriver will be used by default if it is not explicitly set, and
-	// uses http.Server with read, write, and idle timeouts set.
-	srvOptions := &server.Options{
-		Driver: server.NewDefaultDriver(),
-	}
-
-	// Pass the options to the Server constructor.
-	srv := server.New(http.DefaultServeMux, srvOptions)
-
-	// Register routes, call ListenAndServe.
-
-	// Shutdown the server gracefully without interrupting any active connections.
-	srv.Shutdown(context.Background())
 }
