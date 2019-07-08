@@ -41,8 +41,20 @@ func biomesRootDir(moduleRoot string) string {
 	return filepath.Join(moduleRoot, "biomes")
 }
 
-// biomeDir returns the path to the named biome.
-func biomeDir(moduleRoot, name string) string {
+// biomeDir returns the path to the named biome. It returns an error if the
+// named biome does not exist.
+func biomeDir(moduleRoot, name string) (string, error) {
+	dir := filepath.Join(biomesRootDir(moduleRoot), name)
+	if _, err := os.Stat(filepath.Join(dir, biomeConfigFileName)); err != nil {
+		// TODO(light): Wrap error for formatting chain but not unwrap chain.
+		return "", &biomeNotFoundError{moduleRoot: moduleRoot, biome: name, frame: xerrors.Caller(0), detail: err}
+	}
+	return dir, nil
+}
+
+// newBiomeDir returns the path to the named biome, without checking to see
+// if the biome exists.
+func newBiomeDir(moduleRoot, name string) string {
 	return filepath.Join(biomesRootDir(moduleRoot), name)
 }
 
@@ -50,18 +62,11 @@ func biomeDir(moduleRoot, name string) string {
 // If the configuration file could not be found, readBiomeConfig returns an
 // error for which xerrors.As(err, new(*biomeNotFoundError)) returns true.
 func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
-	configPath := filepath.Join(biomeDir(moduleRoot, biome), biomeConfigFileName)
-	data, err := ioutil.ReadFile(configPath)
-	if os.IsNotExist(err) {
-		// TODO(light): Wrap error for formatting chain but not unwrap chain.
-		notFound := &biomeNotFoundError{
-			moduleRoot: moduleRoot,
-			biome:      biome,
-			frame:      xerrors.Caller(0),
-			detail:     err,
-		}
-		return nil, xerrors.Errorf("read biome %s configuration: %w", biome, notFound)
+	dir, err := biomeDir(moduleRoot, biome)
+	if err != nil {
+		return nil, err
 	}
+	data, err := ioutil.ReadFile(filepath.Join(dir, biomeConfigFileName))
 	if err != nil {
 		return nil, xerrors.Errorf("read biome %s configuration: %w", err)
 	}
@@ -76,7 +81,11 @@ func readBiomeConfig(moduleRoot, biome string) (*biomeConfig, error) {
 // the outputs.
 func refreshBiome(ctx context.Context, moduleRoot, biome string, env []string) error {
 	c := exec.CommandContext(ctx, "terraform", "refresh", "-input=false")
-	c.Dir = biomeDir(moduleRoot, biome)
+	var err error
+	c.Dir, err = biomeDir(moduleRoot, biome)
+	if err != nil {
+		return err
+	}
 	c.Env = overrideEnv(env, "TF_IN_AUTOMATION=1")
 	out, err := c.CombinedOutput()
 	if err != nil {
@@ -170,7 +179,7 @@ func (e *biomeNotFoundError) FormatError(p xerrors.Printer) error {
 	if !p.Detail() {
 		return nil
 	}
-	p.Printf("biome = %q", biomeDir(e.moduleRoot, e.biome))
+	p.Printf("biome = %q", newBiomeDir(e.moduleRoot, e.biome))
 	e.frame.Format(p)
 	return e.detail
 }

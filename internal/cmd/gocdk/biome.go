@@ -130,7 +130,7 @@ func biomeAdd(ctx context.Context, pctx *processContext, biome, launcher string)
 		}
 	}
 	actions = append(actions, saveActions...)
-	if err := static.Do(biomeDir(moduleRoot, biome), nil, actions...); err != nil {
+	if err := static.Do(newBiomeDir(moduleRoot, biome), nil, actions...); err != nil {
 		return xerrors.Errorf("gocdk biome add: %w", err)
 	}
 	pctx.Logf("Success!")
