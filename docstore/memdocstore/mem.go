@@ -42,6 +42,7 @@ import (
 	"encoding/gob"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -422,6 +423,20 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 		}
 	}
 	return m, nil
+}
+
+// RevisionToBytes implements driver.RevisionToBytes.
+func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
+	r, ok := rev.(int64)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not an int64", rev)
+	}
+	return strconv.AppendInt(nil, r, 10), nil
+}
+
+// BytesToRevision implements driver.BytesToRevision.
+func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
+	return strconv.ParseInt(string(b), 10, 64)
 }
 
 // As implements driver.As.
