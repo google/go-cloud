@@ -43,6 +43,10 @@ const helpSuffix = `
 `
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&downloadCmd{}, "")
 	subcommands.Register(&listCmd{}, "")
@@ -50,7 +54,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("gocdk-blob: ")
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	return int(subcommands.Execute(context.Background()))
 }
 
 type downloadCmd struct{}
