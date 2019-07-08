@@ -413,22 +413,18 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 	return m, nil
 }
 
-// RevisionToString implements driver.RevisionToString.
-func (c *collection) RevisionToString(rev interface{}) (string, error) {
+// RevisionToBytes implements driver.RevisionToBytes.
+func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 	r, ok := rev.(int64)
 	if !ok {
-		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not an int64", rev)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not an int64", rev)
 	}
-	return strconv.FormatInt(r, 10), nil
+	return strconv.AppendInt(nil, r, 10), nil
 }
 
-// StringToRevision implements driver.StringToRevision.
-func (c *collection) StringToRevision(s string) (interface{}, error) {
-	rev, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return rev, nil
+// BytesToRevision implements driver.BytesToRevision.
+func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
+	return strconv.ParseInt(string(b), 10, 64)
 }
 
 // As implements driver.As.

@@ -712,23 +712,19 @@ func withResourceHeader(ctx context.Context, resource string) context.Context {
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
-// RevisionToString implements driver.RevisionToString.
-func (c *collection) RevisionToString(rev interface{}) (string, error) {
+// RevisionToBytes implements driver.RevisionToBytes.
+func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 	r, ok := rev.(*tspb.Timestamp)
 	if !ok {
-		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not a  proto Timestamp", rev)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not a  proto Timestamp", rev)
 	}
-	bytes, err := proto.Marshal(r)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
+	return proto.Marshal(r)
 }
 
-// StringToRevision implements driver.StringToRevision.
-func (c *collection) StringToRevision(s string) (interface{}, error) {
+// BytesToRevision implements driver.BytesToRevision.
+func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
 	var ts tspb.Timestamp
-	if err := proto.Unmarshal([]byte(s), &ts); err != nil {
+	if err := proto.Unmarshal(b, &ts); err != nil {
 		return nil, err
 	}
 	return &ts, nil

@@ -71,11 +71,11 @@ type Collection interface {
 	// QueryPlan returns the plan for the query.
 	QueryPlan(*Query) (string, error)
 
-	// RevisionToString converts a revision to a string.
-	RevisionToString(interface{}) (string, error)
+	// RevisionToBytes converts a revision to a byte slice.
+	RevisionToBytes(interface{}) ([]byte, error)
 
-	// StringToRevision converts a string to a revision.
-	StringToRevision(string) (interface{}, error)
+	// BytesToRevision converts a []byte to a revision.
+	BytesToRevision([]byte) (interface{}, error)
 
 	// As converts i to provider-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
