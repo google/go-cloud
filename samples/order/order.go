@@ -153,15 +153,13 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 
 	f := &frontend{
 		requestTopic: reqTopic,
-		responseSub:  resSub,
 		bucket:       bucket,
 		coll:         coll,
 	}
 	p := &processor{
-		requestSub:    reqSub,
-		responseTopic: resTopic,
-		bucket:        bucket,
-		coll:          coll,
+		requestSub: reqSub,
+		bucket:     bucket,
+		coll:       coll,
 	}
 	return f, p, nil, nil
 }

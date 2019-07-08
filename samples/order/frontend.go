@@ -41,7 +41,6 @@ import (
 // A frontend is a web server that takes image-processing orders.
 type frontend struct {
 	requestTopic *pubsub.Topic
-	responseSub  *pubsub.Subscription
 	bucket       *blob.Bucket
 	coll         *docstore.Collection
 }

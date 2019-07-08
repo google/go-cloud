@@ -38,10 +38,3 @@ type OrderRequest struct {
 	InImage    string
 	CreateTime time.Time
 }
-
-// OrderResponse is the contents of the messages sent to the response topic. It
-// is sent when an order is finished. It contains just the ID of the order; the
-// receiver must look up the Order in the database to learn more.
-type OrderResponse struct {
-	ID string
-}

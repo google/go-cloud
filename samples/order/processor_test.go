@@ -28,7 +28,7 @@ import (
 	_ "gocloud.dev/pubsub/mempubsub"
 )
 
-func TestProcessorRun(t *testing.T) {
+func TestHandleRequest(t *testing.T) {
 	f, p, cleanup, err := setup(testConfig("ProcessorRun"))
 	if err != nil {
 		t.Fatal(err)
@@ -36,20 +36,6 @@ func TestProcessorRun(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	if err := copyFileToBucket("testdata/cat1", p.bucket); err != nil {
-		t.Fatal(err)
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	go func() {
-		if err := p.run(ctx); err != nil {
-			if err != context.Canceled {
-				t.Errorf("run: %v", err)
-				cancel()
-			}
-		}
-	}()
-
 	req := &OrderRequest{ID: "x"}
 	bytes, err := json.Marshal(req)
 	if err != nil {
@@ -58,19 +44,15 @@ func TestProcessorRun(t *testing.T) {
 	if err := f.requestTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
 		t.Fatal(err)
 	}
-	msg, err := f.responseSub.Receive(ctx)
-	if err != nil {
+	if err := p.handleRequest(ctx); err != nil {
 		t.Fatal(err)
 	}
-	var got OrderResponse
-	if err := json.Unmarshal(msg.Body, &got); err != nil {
+	// Just verify that there is an order "x" in the collection.
+	order := &Order{ID: "x"}
+	if err := p.coll.Get(ctx, order); err != nil {
 		t.Fatal(err)
 	}
-	msg.Ack()
-	want := OrderResponse{ID: "x"}
-	if !cmp.Equal(got, want) {
-		t.Errorf("got  %+v, want %+v", got, want)
-	}
+
 }
 
 func TestProcessOrder(t *testing.T) {

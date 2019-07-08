@@ -41,10 +41,9 @@ import (
 
 // A processor holds the state for processing images.
 type processor struct {
-	requestSub    *pubsub.Subscription
-	responseTopic *pubsub.Topic
-	bucket        *blob.Bucket
-	coll          *docstore.Collection
+	requestSub *pubsub.Subscription
+	bucket     *blob.Bucket
+	coll       *docstore.Collection
 }
 
 // run handles requests until the context is done or there is a fatal error.
@@ -118,23 +117,7 @@ func (p *processor) handleRequest(ctx context.Context) error {
 		// Assume the database error is permanent: terminate processing.
 		return err
 	}
-
-	bytes, err := json.Marshal(OrderResponse{ID: req.ID})
-	if err != nil {
-		// If we constructed a response that we can't marshal, then we are
-		// buggy. Ack the message because trying it again won't help: it will
-		// fail the same way on all processors.
-		msg.Ack()
-		// Return an error to terminate processing.
-		return err
-	}
-	if err := p.responseTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
-		// We failed to send, perhaps for network reasons.
-		// It's unlikely that Ack (or Nack) would even work, so don't bother.
-		// Return an error to terminate processing.
-		return err
-	}
-	// We've successfully processed the image and sent the response.
+	// We've successfully processed the image.
 	msg.Ack()
 	return nil
 }
