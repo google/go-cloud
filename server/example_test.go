@@ -15,6 +15,7 @@
 package server_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -34,7 +35,7 @@ func ExampleServer_New() {
 	// Use the constructor function to create the server.
 	srv := server.New(http.DefaultServeMux, nil)
 	// Don't forget to shut down the server.
-	defer srv.Shutdown()
+	defer srv.Shutdown(context.Background())
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +44,7 @@ func ExampleServer_New() {
 
 	// Start the server. If ListenAndServe returns an error, print it and exit.
 	if err := srv.ListenAndServe(":8080"); err != nil {
-		log.Fatalf(err)
+		log.Fatalf("%v", err)
 	}
 }
 
@@ -59,7 +60,7 @@ func ExampleServer_RequestLogger() {
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
 	// Don't forget to shut down the server.
-	defer srv.Shutdown()
+	defer srv.Shutdown(context.Background())
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +69,7 @@ func ExampleServer_RequestLogger() {
 
 	// Start the server. You will see requests logged to STDOUT.
 	if err := srv.ListenAndServe(":8080"); err != nil {
-		log.Fatalf(err)
+		log.Fatalf("%v", err)
 	}
 }
 
@@ -115,7 +116,7 @@ func ExampleServer_HealthChecks() {
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
 	// Don't forget to shut down the server.
-	defer srv.Shutdown()
+	defer srv.Shutdown(context.Background())
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +125,6 @@ func ExampleServer_HealthChecks() {
 
 	// Start the server. You will see requests logged to STDOUT.
 	if err := srv.ListenAndServe(":8080"); err != nil {
-		log.Fatalf(err)
+		log.Fatalf("%v", err)
 	}
 }
