@@ -40,6 +40,7 @@ package memdocstore // import "gocloud.dev/docstore/memdocstore"
 import (
 	"context"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -410,6 +411,24 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 		}
 	}
 	return m, nil
+}
+
+// RevisionToString implements driver.RevisionToString.
+func (c *collection) RevisionToString(rev interface{}) (string, error) {
+	r, ok := rev.(int64)
+	if !ok {
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not an int64", rev)
+	}
+	return strconv.FormatInt(r, 10), nil
+}
+
+// StringToRevision implements driver.StringToRevision.
+func (c *collection) StringToRevision(s string) (interface{}, error) {
+	rev, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return rev, nil
 }
 
 // As implements driver.As.

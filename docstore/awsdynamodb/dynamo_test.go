@@ -75,6 +75,10 @@ func (*harness) BeforeQueryTypes() []interface{} {
 	return []interface{}{&dyn.QueryInput{}, &dyn.ScanInput{}}
 }
 
+func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool {
+	return rev1 == rev2
+}
+
 func (h *harness) Close() {
 	h.closer()
 }

@@ -82,6 +82,10 @@ func (*harness) BeforeQueryTypes() []interface{} {
 	return []interface{}{&options.FindOptions{}, bson.D{}}
 }
 
+func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool {
+	return rev1 == rev2
+}
+
 func (*harness) Close() {}
 
 type codecTester struct{}

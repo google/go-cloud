@@ -572,6 +572,26 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 	return parts, nil
 }
 
+// RevisionToString converts a document revision to a string. The string can be
+// converted back to a revision with Collection.StringToRevision.
+func (c *Collection) RevisionToString(rev interface{}) (string, error) {
+	s, err := c.driver.RevisionToString(rev)
+	if err != nil {
+		return "", wrapError(c.driver, err)
+	}
+	return s, nil
+}
+
+// StringToRevision converts a string obtained with RevisionToString
+// to a revision.
+func (c *Collection) StringToRevision(s string) (interface{}, error) {
+	rev, err := c.driver.StringToRevision(s)
+	if err != nil {
+		return "", wrapError(c.driver, err)
+	}
+	return rev, nil
+}
+
 // As converts i to provider-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the provider-specific package

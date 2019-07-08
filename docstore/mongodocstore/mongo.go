@@ -602,6 +602,20 @@ func (c *collection) newUpdateModel(a *driver.Action) (*mongo.UpdateOneModel, st
 	return &mongo.UpdateOneModel{Filter: filter, Update: updateDoc}, rev, nil
 }
 
+// RevisionToString implements driver.RevisionToString.
+func (c *collection) RevisionToString(rev interface{}) (string, error) {
+	s, ok := rev.(string)
+	if !ok {
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not a string", rev)
+	}
+	return s, nil
+}
+
+// StringToRevision implements driver.StringToRevision.
+func (c *collection) StringToRevision(s string) (interface{}, error) {
+	return s, nil
+}
+
 // As implements driver.As.
 func (c *collection) As(i interface{}) bool {
 	p, ok := i.(**mongo.Collection)

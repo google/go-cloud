@@ -76,6 +76,7 @@ import (
 	"strings"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
+	"github.com/golang/protobuf/proto"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
@@ -709,6 +710,28 @@ func withResourceHeader(ctx context.Context, resource string) context.Context {
 	md = md.Copy()
 	md[resourcePrefixHeader] = []string{resource}
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+// RevisionToString implements driver.RevisionToString.
+func (c *collection) RevisionToString(rev interface{}) (string, error) {
+	r, ok := rev.(*tspb.Timestamp)
+	if !ok {
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not a  proto Timestamp", rev)
+	}
+	bytes, err := proto.Marshal(r)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+// StringToRevision implements driver.StringToRevision.
+func (c *collection) StringToRevision(s string) (interface{}, error) {
+	var ts tspb.Timestamp
+	if err := proto.Unmarshal([]byte(s), &ts); err != nil {
+		return nil, err
+	}
+	return &ts, nil
 }
 
 func (c *collection) As(i interface{}) bool {
