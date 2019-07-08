@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/docstore"
@@ -136,7 +137,7 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		burl = "file://" + dir
+		burl = "file://" + filepath.ToSlash(dir)
 		cleanups = append(cleanups, func() { os.Remove(dir) })
 	}
 	bucket, err := blob.OpenBucket(ctx, burl)
