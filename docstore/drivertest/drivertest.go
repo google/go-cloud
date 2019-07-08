@@ -358,6 +358,7 @@ func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 				if err := coll.Create(ctx, tc.doc); err != nil {
 					t.Fatalf("Create: %v", err)
 				}
+				checkHasRevisionField(t, tc.doc, revField)
 
 				got := newDoc(tc.doc)
 				if err := coll.Get(ctx, got); err != nil {

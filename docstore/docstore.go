@@ -572,9 +572,14 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 	return parts, nil
 }
 
-// RevisionToString converts a document revision to a string. The string can be
-// converted back to a revision with Collection.StringToRevision.
+// RevisionToString converts a document revision to a string. The returned
+// string should be treated as opaque; its only use is to provide a serialized
+// form that can be passed around (e.g., as a hidden field on a web form)
+// and then turned back into a revision using StringToRevision.
 func (c *Collection) RevisionToString(rev interface{}) (string, error) {
+	if rev == nil {
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "RevisionToString: nil revision")
+	}
 	s, err := c.driver.RevisionToString(rev)
 	if err != nil {
 		return "", wrapError(c.driver, err)
@@ -585,6 +590,9 @@ func (c *Collection) RevisionToString(rev interface{}) (string, error) {
 // StringToRevision converts a string obtained with RevisionToString
 // to a revision.
 func (c *Collection) StringToRevision(s string) (interface{}, error) {
+	if s == "" {
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "StringToRevision: empty string")
+	}
 	rev, err := c.driver.StringToRevision(s)
 	if err != nil {
 		return "", wrapError(c.driver, err)
