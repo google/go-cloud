@@ -16,6 +16,8 @@ package memdocstore
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -202,5 +204,27 @@ func TestExampleInDoc(t *testing.T) {
 	}
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Error(diff)
+	}
+}
+
+func TestSaveAndLoad(t *testing.T) {
+	f, err := ioutil.TempFile("", "testSaveAndLoad")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	docs := map[interface{}]map[string]interface{}{
+		"k1": {"key": "k1", "a": 1},
+		"k2": {"key": "k2", "b": 2},
+	}
+	if err := saveDocs(f.Name(), docs); err != nil {
+		t.Fatal(err)
+	}
+	got, err := loadDocs(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(got, docs) {
+		t.Errorf("\ngot  %v\nwant %v", got, docs)
 	}
 }

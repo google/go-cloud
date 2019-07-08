@@ -39,6 +39,8 @@ package memdocstore // import "gocloud.dev/docstore/memdocstore"
 
 import (
 	"context"
+	"encoding/gob"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -58,6 +60,12 @@ type Options struct {
 	// The maximum number of concurrent goroutines started for a single call to
 	// ActionList.Do. If less than 1, there is no limit.
 	MaxOutstandingActions int
+
+	// The filename associated with this collection.
+	// When a collection is opened with a non-nil filename, the collection
+	// is loaded from the file if it exists. Otherwise, an empty collection is created.
+	// When the collection is closed, its contents are saved to the file.
+	Filename string
 }
 
 // TODO(jba): make this package thread-safe.
@@ -94,11 +102,15 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{},
 	if opts.RevisionField == "" {
 		opts.RevisionField = docstore.DefaultRevisionField
 	}
+	docs, err := loadDocs(opts.Filename)
+	if err != nil {
+		return nil, err
+	}
 	return &collection{
 		keyField:    keyField,
 		keyFunc:     keyFunc,
+		docs:        docs,
 		opts:        opts,
-		docs:        map[interface{}]map[string]interface{}{},
 		curRevision: 0,
 	}, nil
 }
@@ -419,4 +431,48 @@ func (c *collection) As(i interface{}) bool { return false }
 func (c *collection) ErrorAs(err error, i interface{}) bool { return false }
 
 // Close implements driver.Collection.Close.
-func (c *collection) Close() error { return nil }
+// If the collection was created with a Filename option, Close writes the
+// collection's documents to the file.
+func (c *collection) Close() error {
+	return saveDocs(c.opts.Filename, c.docs)
+}
+
+type mapOfDocs = map[interface{}]map[string]interface{}
+
+// Read a map from the filename if is is not empty and the file exists.
+// Otherwise return an empty (not nil) map.
+func loadDocs(filename string) (mapOfDocs, error) {
+	if filename == "" {
+		return mapOfDocs{}, nil
+	}
+	f, err := os.Open(filename)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		// If the file doesn't exist, return an empty map without error.
+		return mapOfDocs{}, nil
+	}
+	defer f.Close()
+	var m mapOfDocs
+	if err := gob.NewDecoder(f).Decode(&m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// saveDocs saves m to filename if filename is not empty.
+func saveDocs(filename string, m mapOfDocs) error {
+	if filename == "" {
+		return nil
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	if err := gob.NewEncoder(f).Encode(m); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
+}
