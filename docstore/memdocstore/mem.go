@@ -417,7 +417,7 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 	r, ok := rev.(int64)
 	if !ok {
-		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not an int64", rev)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not an int64", rev)
 	}
 	return strconv.AppendInt(nil, r, 10), nil
 }

@@ -606,7 +606,7 @@ func (c *collection) newUpdateModel(a *driver.Action) (*mongo.UpdateOneModel, st
 func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 	s, ok := rev.(string)
 	if !ok {
-		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not a string", rev)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a string", rev)
 	}
 	return []byte(s), nil
 }

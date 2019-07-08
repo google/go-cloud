@@ -716,7 +716,7 @@ func withResourceHeader(ctx context.Context, resource string) context.Context {
 func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 	r, ok := rev.(*tspb.Timestamp)
 	if !ok {
-		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v is not a  proto Timestamp", rev)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a proto Timestamp", rev)
 	}
 	return proto.Marshal(r)
 }
