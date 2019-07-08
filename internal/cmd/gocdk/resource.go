@@ -113,6 +113,47 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		}, nil
 	},
 
+	// DOCSTORE
+	"docstore/awsdynamodb": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AWSRegionIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("aws"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "${local.awsdynamodb_url}"),
+			static.CopyFile("/resource/docstore/awsdynamodb.tf", "awsdynamodb.tf"),
+		}, nil
+	},
+	"docstore/azurecosmos": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AzureLocationIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("azurerm"),
+			static.AddProvider("random"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "${local.azurecosmos_url}"),
+			static.AddOutputVar("MONGO_SERVER_URL", "${local.azurecosmos_mongo_url}"),
+			static.CopyFile("/resource/docstore/azurecosmos.tf", "azurecosmos.tf"),
+		}, nil
+	},
+	"docstore/gcpfirestore": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.GCPProjectIDIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("google"),
+			static.AddProvider("random"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "${local.gcpfirestore_url}"),
+			static.CopyFile("/resource/docstore/gcpfirestore.tf", "gcpfirestore.tf"),
+		}, nil
+	},
+
 	// PUBSUB
 	"pubsub/awssnssqs": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
 		reader := bufio.NewReader(pctx.stdin)
