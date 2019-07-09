@@ -385,7 +385,6 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 	}
 	defer func() {
 		if err := sub2.Shutdown(ctx); err != nil {
-			fmt.Printf("shutting down sub2\n")
 			t.Error(err)
 		}
 	}()
