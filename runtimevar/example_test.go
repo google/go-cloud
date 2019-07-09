@@ -21,6 +21,7 @@ import (
 
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/constantvar"
+	"gocloud.dev/secrets"
 
 	_ "gocloud.dev/runtimevar/gcpruntimeconfig"
 	runtimeconfig "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
@@ -171,4 +172,17 @@ func ExampleVariable_Watch() {
 			}
 		}
 	}()
+}
+
+func ExampleDecryptDecode() {
+	// This example is used in https://gocloud.dev/howto/secrets/runtimevar/
+
+	// Variables set up elsewhere:
+	var keeper *secrets.Keeper
+
+	decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode)
+	decoder := runtimevar.NewDecoder("", decodeFunc)
+
+	// Ignore unused variables in example:
+	_ = decoder
 }
