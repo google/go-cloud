@@ -37,7 +37,10 @@ const Scheme = "mem"
 // The URL's host is the name of the collection.
 // The URL's path is used as the keyField.
 //
-// No query parameters are supported.
+// The following query parameters are supported:
+//
+//  - revision_field (optional): the name of the revision field.
+//  - filename (optional): the filename to store the collection in.
 type URLOpener struct {
 	mu          sync.Mutex
 	collections map[string]urlColl
@@ -53,8 +56,10 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	q := u.Query()
 	options := &Options{
 		RevisionField: q.Get("revision_field"),
+		Filename:      q.Get("filename"),
 	}
 	q.Del("revision_field")
+	q.Del("filename")
 	for param := range q {
 		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
 	}

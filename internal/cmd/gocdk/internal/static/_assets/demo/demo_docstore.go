@@ -136,7 +136,9 @@ const (
       <br/>
       <input type="text" name="value" value="{{ .Value }}">
     </label></p>
-    <p>Revision: {{ .Revision }}</p>
+    {{if not .Create}}
+      <p>Revision: {{ .Revision }}</p>
+    {{end}}
     <input type="submit" value="Write It!">
     </form>
   {{end}}` + docstoreTemplateSuffix
