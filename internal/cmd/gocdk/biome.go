@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -185,10 +186,15 @@ func biomeList(ctx context.Context, pctx *processContext) error {
 	if err != nil {
 		return xerrors.Errorf("biome list: %w", err)
 	}
+	var biomes []string
 	for _, entry := range entries {
 		if entry.IsDir() {
-			pctx.Println(entry.Name())
+			biomes = append(biomes, entry.Name())
 		}
+	}
+	sort.Strings(biomes)
+	for _, biome := range biomes {
+		pctx.Println(biome)
 	}
 	return nil
 }
