@@ -158,7 +158,7 @@ while read -r TESTDIR; do
       ;;
   esac
   popd &> /dev/null
-done < <( find . -name testdata -printf "%h\n" )
+done < <( find . -name testdata -printf "%h\\n" )
 
 echo
 echo

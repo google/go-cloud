@@ -74,47 +74,48 @@ if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
 fi
 
 result=0
-
 rootdir="$(pwd)"
+
+# Build the test-summary app, which is used inside the loop to summarize results
+# from Go tests.
+(cd internal/testing/test-summary && go build)
 while read -r path || [[ -n "$path" ]]; do
   echo
   echo "******************************"
-  echo "* Checking module: $path"
+  echo "* Running Go tests for module: $path"
   echo "******************************"
   echo
-  pushd "$path" &> /dev/null
 
-  # Run Go tests.
+  # TODO(rvangent): Special case modules to skip for Windows. Perhaps
+  # this should be data-driven by allmodules?
+  # (https://github.com/google/go-cloud/issues/2111).
+  if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && ([[ "$path" == "internal/contributebot" ]] || [[ "$path" == "internal/website" ]]); then
+    echo "  Skipping on Windows"
+    continue
+  fi
+
+  gotestflags=("-mod=readonly" "-json" "-race")
+  testsummaryflags=("-progress")
+
+  # Enable verbose output for kafka; it seems to stall a lot.
+  # TODO(rvangent): Remove this after the stalls are resolved.
+  if [[ "${path}" == "pubsub/kafkapubsub" ]]; then
+    gotestflags+=("-v")
+    testsummaryflags+=("-verbose")
+  fi
+
   # Only do coverage for the Linux build on Travis because it is slow, and
   # codecov will only save the last one anyway.
   if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
-    echo "Running Go tests with coverage..."
-    go test -mod=readonly -json -race -coverpkg=./... -coverprofile=modcoverage.out ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
-    if [ -f modcoverage.out ] && [ $result -eq 0 ]; then
-      cat modcoverage.out >> "$rootdir"/coverage.out
-      rm modcoverage.out
-    fi
-  else
-    echo "Running Go tests..."
-    # TODO(rvangent): Special case modules to skip for Windows. Perhaps
-    # this should be data-driven by allmodules?
-    # (https://github.com/google/go-cloud/issues/2111).
-    if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && ([[ "$path" == "internal/contributebot" ]] || [[ "$path" == "internal/website" ]]); then
-      echo "  Skipping tests on Window"
-    else
-      go test -mod=readonly -json -race ./... | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || result=1
-    fi
+    gotestflags+=("-coverpkg=./..." "-coverprofile=$rootdir/modcoverage.out")
   fi
 
-  # Do these additional checks for the Linux build on Travis, or when running
-  # locally.
-  if [[ "${TRAVIS_OS_NAME:-linux}" == "linux" ]]; then
-    echo "Running go mod tidy:"
-    ( "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
-    echo "Running wire diff:"
-    ( wire diff ./... && echo "  OK" ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+  # Run the tests.
+  (cd "$path" && go test "${gotestflags[@]}" ./...) | ./internal/testing/test-summary/test-summary "${testsummaryflags[@]}" || result=1
+  if [ -f modcoverage.out ] && [ $result -eq 0 ]; then
+    cat modcoverage.out >> coverage.out
+    rm modcoverage.out
   fi
-  popd &> /dev/null
 done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
 # The above filters out comments and empty lines from allmodules and only takes
 # the first (whitespace-separated) field from each line.
@@ -133,6 +134,33 @@ fi
 if [[ "${TRAVIS_OS_NAME:-linux}" != "linux" ]]; then
   exit $result
 fi
+
+
+echo
+echo "************************"
+echo "* Checking go mod tidy"
+echo "************************"
+echo
+while read -r path || [[ -n "$path" ]]; do
+  echo "Module: $path"
+  ( cd "$path" && "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
+done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
+# The above filters out comments and empty lines from allmodules and only takes
+# the first (whitespace-separated) field from each line.
+
+
+echo
+echo "**********************"
+echo "* Checking wire diff"
+echo "**********************"
+echo
+while read -r path || [[ -n "$path" ]]; do
+  echo "Module: $path"
+  ( cd "$path" && wire diff ./... && echo "  OK" ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
+# The above filters out comments and empty lines from allmodules and only takes
+# the first (whitespace-separated) field from each line.
+
 
 echo
 echo "******************************"
@@ -157,12 +185,10 @@ function cleanupstaticgo() {
   rm -rf "$tmpvfsdatago"
 }
 trap cleanupstaticgo EXIT
-pushd internal/cmd/gocdk/ &> /dev/null
-go run -mod=readonly generate_static.go -- "$tmpvfsdatago" &> /dev/null
-( diff -u internal/static/vfsdata.go - < "$tmpvfsdatago" && echo "  OK" ) || {
-  echo "FAIL: gocdk compiled assets are out of date; please run go generate in internal/cmd/gocdk and commit the updated internal/static/vfsdata.go" && result=1
+(cd internal/cmd/gocdk && go run -mod=readonly generate_static.go -- "$tmpvfsdatago") &> /dev/null
+( diff -u internal/cmd/gocdk/internal/static/vfsdata.go - < "$tmpvfsdatago" && echo "  OK" ) || {
+  echo "FAIL: gocdk compiled assets are out of date; please run go generate in internal/cmd/gocdk and commit the updated internal/cmd/gocdk/internal/static/vfsdata.go" && result=1
 }
-popd &> /dev/null
 
 
 if [[ $(go version) == *go1\.12* ]]; then
