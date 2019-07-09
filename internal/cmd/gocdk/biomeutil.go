@@ -41,21 +41,17 @@ func biomesRootDir(moduleRoot string) string {
 	return filepath.Join(moduleRoot, "biomes")
 }
 
-// biomeDir returns the path to the named biome. It returns an error if the
-// named biome does not exist.
+// biomeDir returns the path to the named biome.
+//
+// It returns an error if the named biome does not exist, but still returns
+// the path; the caller may ignore the error.
 func biomeDir(moduleRoot, name string) (string, error) {
 	dir := filepath.Join(biomesRootDir(moduleRoot), name)
 	if _, err := os.Stat(filepath.Join(dir, biomeConfigFileName)); err != nil {
 		// TODO(light): Wrap error for formatting chain but not unwrap chain.
-		return "", &biomeNotFoundError{moduleRoot: moduleRoot, biome: name, frame: xerrors.Caller(0), detail: err}
+		return dir, &biomeNotFoundError{moduleRoot: moduleRoot, biome: name, frame: xerrors.Caller(0), detail: err}
 	}
 	return dir, nil
-}
-
-// newBiomeDir returns the path to the named biome, without checking to see
-// if the biome exists.
-func newBiomeDir(moduleRoot, name string) string {
-	return filepath.Join(biomesRootDir(moduleRoot), name)
 }
 
 // readBiomeConfig reads and parses the biome configuration from the filesystem.
@@ -179,7 +175,7 @@ func (e *biomeNotFoundError) FormatError(p xerrors.Printer) error {
 	if !p.Detail() {
 		return nil
 	}
-	p.Printf("biome = %q", newBiomeDir(e.moduleRoot, e.biome))
+	p.Printf("biome = %q", filepath.Join(biomesRootDir(e.moduleRoot), e.biome))
 	e.frame.Format(p)
 	return e.detail
 }
