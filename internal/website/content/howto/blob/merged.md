@@ -1,18 +1,22 @@
 ---
-title: "Open a Bucket"
-date: 2019-03-20T14:51:29-07:00
-weight: 1
+title: "Blob"
+date: 2019-07-09T16:46:29-07:00
+showInSidenav: true
 ---
+
+Blobs are a common abstraction for storing unstructured data on cloud storage
+providers and accessing them via HTTP. These guides show how to work with
+blobs in the Go CDK.
+
+<!--more-->
+
+## Opening a Bucket {#opening}
 
 The first step in interacting with unstructured storage is connecting to your
 storage provider. Every storage provider is a little different, but the Go CDK
 lets you interact with all of them using the [`*blob.Bucket` type][].
 
 [`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
-
-<!--more-->
-
-## Opening a Bucket {#opening}
 
 The easiest way to open a blob is using [`blob.OpenBucket`][] and a URL
 pointing to the blob, making sure you ["blank import"][] the driver package to
