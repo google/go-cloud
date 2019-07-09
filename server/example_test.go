@@ -15,15 +15,18 @@
 package server_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
 	"time"
 
 	"gocloud.dev/server"
+
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/requestlog"
 )
@@ -117,6 +120,45 @@ func ExampleServer_HealthChecks() {
 	})
 
 	// Start the server. You will see requests logged to STDOUT.
+	if err := srv.ListenAndServe(":8080"); err != nil {
+		log.Fatalf("%v", err)
+	}
+}
+
+func ExampleServer_Shutdown() {
+	// OPTIONAL: Specify a driver in the options for the constructor.
+	// NewDefaultDriver will be used by default if it is not explicitly set, and
+	// uses http.Server with read, write, and idle timeouts set. When Shutdown
+	// is called on the server, it is called on the driver.
+	srvOptions := &server.Options{
+		Driver: server.NewDefaultDriver(),
+	}
+
+	// Pass the options to the Server constructor.
+	srv := server.New(http.DefaultServeMux, srvOptions)
+
+	// If your application will be behind a load balancer that handles graceful
+	// shutdown of requests, you may not need to call Shutdown on the server
+	// directly. If you need to ensure graceful shutdown directly, it is important
+	// to have a separate goroutine, because ListenAndServe blocks indefinitely.
+	go func() {
+		interrupt := make(chan os.Signal, 1)
+		signal.Notify(interrupt, os.Interrupt)
+		// Receive off the chanel in a loop, because the interrupt could be sent
+		// before ListenAndServe starts.
+		for {
+			<-interrupt
+			srv.Shutdown(context.Background())
+		}
+	}()
+
+	// Register a route.
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, World!")
+	})
+
+	// Start the server. You will see requests logged to STDOUT.
+	// In the absence of an error, ListenAndServe blocks forever.
 	if err := srv.ListenAndServe(":8080"); err != nil {
 		log.Fatalf("%v", err)
 	}
