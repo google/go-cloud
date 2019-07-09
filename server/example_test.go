@@ -15,7 +15,6 @@
 package server_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -34,8 +33,6 @@ func ExampleServer_New() {
 
 	// Use the constructor function to create the server.
 	srv := server.New(http.DefaultServeMux, nil)
-	// Don't forget to shut down the server.
-	defer srv.Shutdown(context.Background())
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -59,8 +56,6 @@ func ExampleServer_RequestLogger() {
 
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
-	// Don't forget to shut down the server.
-	defer srv.Shutdown(context.Background())
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -115,8 +110,6 @@ func ExampleServer_HealthChecks() {
 
 	// Pass the options to the Server constructor.
 	srv := server.New(http.DefaultServeMux, srvOptions)
-	// Don't forget to shut down the server.
-	defer srv.Shutdown(context.Background())
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
