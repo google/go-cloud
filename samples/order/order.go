@@ -17,9 +17,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/docstore"
@@ -33,25 +35,64 @@ var (
 	responseSubURL   = flag.String("response-sub", "mem://responses", "gocloud.dev/pubsub URL for response subscription")
 	bucketURL        = flag.String("bucket", "", "gocloud.dev/blob URL for image bucket")
 	collectionURL    = flag.String("collection", "mem://orders/ID", "gocloud.dev/docstore URL for order collection")
-	// TODO(jba): uncomment after adding frontend
-	// runProcessor     = flag.Bool("processor", true, "run the image processor")
+
+	port         = flag.Int("port", 10538, "HTTP port for frontend")
+	runFrontend  = flag.Bool("frontend", true, "run the frontend")
+	runProcessor = flag.Bool("processor", true, "run the image processor")
 )
 
 func main() {
-
-	// TODO(jba): add frontend
 	flag.Parse()
-	_, processor, cleanup, err := setup()
+	conf := config{
+		requestTopicURL:  *requestTopicURL,
+		requestSubURL:    *requestSubURL,
+		responseTopicURL: *responseTopicURL,
+		responseSubURL:   *responseSubURL,
+		bucketURL:        *bucketURL,
+		collectionURL:    *collectionURL,
+	}
+	frontend, processor, cleanup, err := setup(conf)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer cleanup()
-	if err := processor.run(context.Background()); err != nil {
-		log.Fatal(err)
+
+	// Run the frontend, or the processor, or both.
+	// When we want to run both, one of them has to run in a goroutine.
+	// So it's easier to run both in goroutines, even if we only need
+	// to run one.
+	errc := make(chan error, 2)
+	if *runFrontend {
+		go func() { errc <- frontend.run(context.Background(), *port) }()
+		fmt.Printf("listening on port %d\n", *port)
+	} else {
+		errc <- nil
+	}
+	if *runProcessor {
+		go func() { errc <- processor.run(context.Background()) }()
+	} else {
+		errc <- nil
+	}
+	// Each of the goroutines will send once to errc, so receive two values.
+	for i := 0; i < 2; i++ {
+		if err := <-errc; err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
-func setup() (_ *frontend, _ *processor, cleanup func(), err error) {
+// config describes the URLs for the resources used by the order application.
+type config struct {
+	requestTopicURL  string
+	requestSubURL    string
+	responseTopicURL string
+	responseSubURL   string
+	bucketURL        string
+	collectionURL    string
+}
+
+// setup opens all the necessary resources for the application.
+func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 	// TODO(jba): simplify cleanup logic
 	var cleanups []func()
 	defer func() {
@@ -70,37 +111,38 @@ func setup() (_ *frontend, _ *processor, cleanup func(), err error) {
 	}()
 
 	ctx := context.Background()
-	reqTopic, err := pubsub.OpenTopic(ctx, *requestTopicURL)
+	// TODO(jba): This application assumes at-least-once processing. Enforce that here if possible.
+	reqTopic, err := pubsub.OpenTopic(ctx, conf.requestTopicURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	cleanups = append(cleanups, func() { reqTopic.Shutdown(ctx) })
 
-	reqSub, err := pubsub.OpenSubscription(ctx, *requestSubURL)
+	reqSub, err := pubsub.OpenSubscription(ctx, conf.requestSubURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	cleanups = append(cleanups, func() { reqSub.Shutdown(ctx) })
 
-	resTopic, err := pubsub.OpenTopic(ctx, *responseTopicURL)
+	resTopic, err := pubsub.OpenTopic(ctx, conf.responseTopicURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	cleanups = append(cleanups, func() { resTopic.Shutdown(ctx) })
 
-	resSub, err := pubsub.OpenSubscription(ctx, *responseSubURL)
+	resSub, err := pubsub.OpenSubscription(ctx, conf.responseSubURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	cleanups = append(cleanups, func() { resSub.Shutdown(ctx) })
 
-	burl := *bucketURL
+	burl := conf.bucketURL
 	if burl == "" {
 		dir, err := ioutil.TempDir("", "gocdk-order")
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		burl = "file://" + dir
+		burl = "file://" + filepath.ToSlash(dir)
 		cleanups = append(cleanups, func() { os.Remove(dir) })
 	}
 	bucket, err := blob.OpenBucket(ctx, burl)
@@ -109,7 +151,7 @@ func setup() (_ *frontend, _ *processor, cleanup func(), err error) {
 	}
 	cleanups = append(cleanups, func() { bucket.Close() })
 
-	coll, err := docstore.OpenCollection(ctx, *collectionURL)
+	coll, err := docstore.OpenCollection(ctx, conf.collectionURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -117,15 +159,13 @@ func setup() (_ *frontend, _ *processor, cleanup func(), err error) {
 
 	f := &frontend{
 		requestTopic: reqTopic,
-		responseSub:  resSub,
 		bucket:       bucket,
 		coll:         coll,
 	}
 	p := &processor{
-		requestSub:    reqSub,
-		responseTopic: resTopic,
-		bucket:        bucket,
-		coll:          coll,
+		requestSub: reqSub,
+		bucket:     bucket,
+		coll:       coll,
 	}
 	return f, p, nil, nil
 }

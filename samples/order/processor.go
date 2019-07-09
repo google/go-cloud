@@ -27,6 +27,8 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"log"
+	"math/rand"
+	"strings"
 	"time"
 
 	"gocloud.dev/blob"
@@ -40,10 +42,9 @@ import (
 
 // A processor holds the state for processing images.
 type processor struct {
-	requestSub    *pubsub.Subscription
-	responseTopic *pubsub.Topic
-	bucket        *blob.Bucket
-	coll          *docstore.Collection
+	requestSub *pubsub.Subscription
+	bucket     *blob.Bucket
+	coll       *docstore.Collection
 }
 
 // run handles requests until the context is done or there is a fatal error.
@@ -78,52 +79,58 @@ func (p *processor) handleRequest(ctx context.Context) error {
 		return nil
 	}
 	log.Printf("received %+v", req)
-	res := p.handleOrder(ctx, &req)
-	if res == nil {
+	order, err := createOrFindOrder(ctx, p.coll, &req)
+	if err != nil {
+		// There was a problem with the database, perhaps due to the network.
+		// Nack the message; perhaps another processor can succeed.
+		if msg.Nackable() {
+			msg.Nack()
+		}
+		// Assume the database error is permanent: terminate processing.
+		return err
+	}
+	if order == nil {
 		log.Printf("duplicate finished order %v", req.ID)
 		// We've already processed this order, so ack the message.
 		msg.Ack()
 		return nil
 	}
-	bytes, err := json.Marshal(res)
+	// At this point, order is an unfinished order in the database.
+	// Process it.
+	err = p.processOrder(ctx, order)
+	// Any processing errors are saved as notes in the order.
 	if err != nil {
-		// If we constructed a response that we can't marshal, then we are
-		// buggy. Ack the message because trying it again won't help: it will
-		// fail the same way on all processors.
-		msg.Ack()
-		// Return an error to terminate processing.
+		order.Note = fmt.Sprintf("processing failed: %v", err)
+		order.OutImage = ""
+	}
+	// Save the finished order to the database.
+	err = p.coll.Update(ctx, order, docstore.Mods{
+		"OutImage":   order.OutImage,
+		"Note":       order.Note,
+		"FinishTime": time.Now(),
+	})
+	if err != nil {
+		// We couldn't save the order to the database.
+		// Nack the message; perhaps another processor can succeed.
+		if msg.Nackable() {
+			msg.Nack()
+		}
+		// Assume the database error is permanent: terminate processing.
 		return err
 	}
-	if err := p.responseTopic.Send(ctx, &pubsub.Message{Body: bytes}); err != nil {
-		// We failed to send, perhaps for network reasons.
-		// It's unlikely that Ack (or Nack) would even work, so don't bother.
-		// Return an error to terminate processing.
-		return err
-	}
-	// We've successfully processed the image and sent the response.
+	// We've successfully processed the image.
 	msg.Ack()
-	log.Printf("sent %+v", res)
 	return nil
 }
 
-// handleOrder processes the order request, converting errors into special responses.
-func (p *processor) handleOrder(ctx context.Context, req *OrderRequest) *OrderResponse {
-	res, err := p.processOrder(ctx, req)
-	if err != nil {
-		// TODO(jba): record error metric
-		res = &OrderResponse{
-			ID:   req.ID,
-			Note: fmt.Sprintf("processing failed: %v", err),
-		}
-	}
-	return res
-}
-
-// processOrder process the order request.
-func (p *processor) processOrder(ctx context.Context, req *OrderRequest) (res *OrderResponse, err error) {
+// createOrFindOrder either creates a new order from req (the usual case), or returns an
+// existing unfinished order. It returns a nil *Order if the order exists and is
+// finished, that is, this request message is a duplicate.
+// createOrFindOrder returns a non-nil error only for database problems.
+func createOrFindOrder(ctx context.Context, coll *docstore.Collection, req *OrderRequest) (*Order, error) {
 	// See if there is already a document for this order.
 	order := &Order{ID: req.ID}
-	err = p.coll.Get(ctx, order)
+	err := coll.Get(ctx, order)
 	if err != nil {
 		if gcerrors.Code(err) != gcerrors.NotFound {
 			return nil, err
@@ -134,63 +141,55 @@ func (p *processor) processOrder(ctx context.Context, req *OrderRequest) (res *O
 			ID:         req.ID,
 			Email:      req.Email,
 			InImage:    req.InImage,
-			OutImage:   fmt.Sprintf("%s-out.png", req.InImage),
 			CreateTime: req.CreateTime,
 		}
-		if err := p.coll.Create(ctx, order); err != nil {
+		if err := coll.Create(ctx, order); err != nil {
 			return nil, err
 		}
-	} else if order.FinishTime.IsZero() {
+		return order, nil
+	}
+	if order.FinishTime.IsZero() {
 		// The order exists, but was not finished. Either it was abandoned by the processor that
 		// was working on it (probably because the processor died), or it is in progress. Assume
 		// that it was abandoned, and process it.
-		// There is nothing to do here, since all the existing order fields are valid.
-	} else {
-		// The order exists and was finished. This is most likely the result of a pubsub redelivery.
-		// We simply ignore it.
-		return nil, nil
+		return order, nil
 	}
-	// At this point, there is an unfinished Order with ID == req.ID in the database.
-	defer func() {
-		// Mark the order complete by updating the finish time.
-		err2 := p.coll.Update(ctx, order, docstore.Mods{"FinishTime": time.Now()})
-		if err2 != nil {
-			if err == nil {
-				err = err2
-			} else {
-				err = fmt.Errorf("%v and %v", err, err2)
-			}
-		}
-	}()
+	// The order exists and was finished. This is most likely the result of a pubsub redelivery.
+	// We simply ignore it.
+	return nil, nil
+}
 
+// processOrder processes the order request.
+func (p *processor) processOrder(ctx context.Context, order *Order) error {
 	// Read the input image from the bucket.
-	r, err := p.bucket.NewReader(ctx, req.InImage, nil)
+	r, err := p.bucket.NewReader(ctx, order.InImage, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer r.Close()
 	img, format, err := image.Decode(r)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Process and write the output image.
+	order.OutImage = fmt.Sprintf("%s-out.png", strings.TrimSuffix(order.InImage, "-in"))
 	w, err := p.bucket.NewWriter(ctx, order.OutImage, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if err := png.Encode(w, img); err != nil {
 		w.Close()
-		return nil, err
+		return err
 	}
 	if err := w.Close(); err != nil {
-		return nil, err
+		return err
 	}
 
-	return &OrderResponse{
-		ID:       req.ID,
-		OutImage: order.OutImage,
-		Note:     fmt.Sprintf("converted from %s to png", format),
-	}, nil
+	// Pretend that the conversion takes some time.
+	time.Sleep(time.Duration(rand.Intn(5)+2) * time.Second)
+
+	order.Note = fmt.Sprintf("converted from %s to png", format)
+	return nil
 }
