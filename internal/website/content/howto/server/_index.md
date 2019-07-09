@@ -10,13 +10,9 @@ diagnostic hooks for request logging, health checks, and trace exporting via
 OpenCensus. This guide will show you how to start up and shut down the server,
 as well as how to work with the request logging and health checks.
 
-The Go CDK includes a server package to provide some reasonable defaults, such
-as timeouts, or the Apache standard format logger, and also to share best
-practices like health checks.
-
 ## Starting up the server
 
-The GO CDK Server constructor takes an `http.Handler` and an `Options` struct. 
+The Go CDK Server constructor takes an `http.Handler` and an `Options` struct. 
 The simplest way to start the server is to use `http.DefaultServeMux` and
 pass `nil` for the options.
 
@@ -36,7 +32,7 @@ of `NewNCSALogger`.
 
 The Go CDK `server` package affords a hook for you to define health checks for
 your application and see the results at `/healthz/readiness`. Health checks are
-an imortant part of application monitoring.
+an important part of application monitoring.
 
 Because each application may have a different definition of what it means to be
 "healthy", you will need to define a concrete type to implement the `health.Checker`
