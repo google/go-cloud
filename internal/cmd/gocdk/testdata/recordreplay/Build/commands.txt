@@ -1,0 +1,7 @@
+# Build fails when we're not in a module.
+gocdk build --> FAIL
+
+gocdk init myproj
+cd myproj
+
+gocdk build --list

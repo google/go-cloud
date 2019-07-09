@@ -1,3 +1,21 @@
+$ gocdk resource list
+blob/azureblob
+blob/fileblob
+blob/gcsblob
+blob/s3blob
+docstore/awsdynamodb
+docstore/azurecosmos
+docstore/gcpfirestore
+pubsub/awssnssqs
+pubsub/azuresb
+pubsub/gcppubsub
+runtimevar/awsparamstore
+runtimevar/filevar
+runtimevar/gcpruntimeconfig
+secrets/awskms
+secrets/azurekeyvault
+secrets/gcpkms
+
 $ gocdk resource add dev blob/fileblob
 gocdk: Adding "blob/fileblob" to "dev"...
 Error: resource add: couldn't find a Go module root at or above [ROOTDIR]

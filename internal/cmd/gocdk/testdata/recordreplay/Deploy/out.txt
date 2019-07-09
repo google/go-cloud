@@ -1,0 +1,11 @@
+$ gocdk deploy
+Error: accepts 1 arg(s), received 0
+Usage:
+  gocdk deploy BIOME [flags]
+
+Flags:
+      --apply biome apply   whether to run biome apply before deploying (default true)
+  -h, --help                help for deploy
+      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to generate a tag (default ":latest")
+
+

@@ -79,6 +79,9 @@ func (c *Client) ListImages(ctx context.Context, filterRef string) ([]*Image, er
 	out = bytes.TrimSuffix(out, lf)
 	var images []*Image
 	for _, line := range bytes.Split(out, lf) {
+		if len(line) == 0 {
+			continue
+		}
 		var img struct {
 			ID         string
 			Repository string
