@@ -108,10 +108,10 @@ type Options struct {
 	// MongoDB document field "F". This setting matches the behavior of other
 	// docstore providers, making code portable across providers.
 	//
-	// If true, struct fields correspond to lower-cased MongoDB document fields. The
-	// struct field F will correspond to the MongoDB document field "f", for
-	// instance. Use this to make code that uses this package interoperate with code
-	// that uses the official Go client for MongoDB,
+	// If true, all fields correspond to lower-cased MongoDB document fields. The
+	// field name F will correspond to the MongoDB document field "f", for
+	// instance. Use this to make code that uses this package interoperate with
+	// code that uses the official Go client for MongoDB,
 	// go.mongodb.org/mongo-driver/mongo, which lowercases field names.
 	LowercaseFields bool
 	// The name of the field holding the document revision.
