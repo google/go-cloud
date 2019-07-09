@@ -122,7 +122,8 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		}
 		return []*static.Action{
 			static.AddProvider("aws"),
-			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "${local.awsdynamodb_url}"),
+			static.AddProvider("random"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "local.awsdynamodb_url"),
 			static.CopyFile("/resource/docstore/awsdynamodb.tf", "awsdynamodb.tf"),
 		}, nil
 	},
@@ -135,8 +136,8 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		return []*static.Action{
 			static.AddProvider("azurerm"),
 			static.AddProvider("random"),
-			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "${local.azurecosmos_url}"),
-			static.AddOutputVar("MONGO_SERVER_URL", "${local.azurecosmos_mongo_url}"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "local.azurecosmos_url"),
+			static.AddOutputVar("MONGO_SERVER_URL", "local.azurecosmos_mongo_url"),
 			static.CopyFile("/resource/docstore/azurecosmos.tf", "azurecosmos.tf"),
 		}, nil
 	},
@@ -149,7 +150,7 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		return []*static.Action{
 			static.AddProvider("google"),
 			static.AddProvider("random"),
-			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "${local.gcpfirestore_url}"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "local.gcpfirestore_url"),
 			static.CopyFile("/resource/docstore/gcpfirestore.tf", "gcpfirestore.tf"),
 		}, nil
 	},
