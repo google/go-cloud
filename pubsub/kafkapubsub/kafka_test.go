@@ -391,6 +391,7 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 	}
 	cancel()
 	<-done
+	<-done
 }
 
 func sanitize(testName string) string {
