@@ -634,6 +634,20 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 	}
 }
 
+// RevisionToBytes implements driver.RevisionToBytes.
+func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
+	s, ok := rev.(string)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a string", rev)
+	}
+	return []byte(s), nil
+}
+
+// BytesToRevision implements driver.BytesToRevision.
+func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
+	return string(b), nil
+}
+
 func (c *collection) As(i interface{}) bool {
 	p, ok := i.(**dyn.DynamoDB)
 	if !ok {
