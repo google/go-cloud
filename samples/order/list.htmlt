@@ -11,11 +11,11 @@
         <tr><th>ID</th><th>Email</th><th>In</th><th>Out</th><th>Created</th><th>Finished</th><th>Note</th></tr>
         {{range .}}
           <tr>
-            <td>{{.Order.ID}}</td><td>{{.Order.Email}}</td><td>{{.Order.InImage}}</td>
-            <td>{{if .OutURL}}<a href="{{.OutURL}}">{{.Order.OutImage}}</a>{{end}}</td>
-            <td>{{with .Order.CreateTime}}{{.Format "2006-01-02 03:04 AM"}}{{end}}</td>
-            <td>{{with .Order.FinishTime}}{{.Format "2006-01-02 03:04 AM"}}{{end}}</td>
-            <td>{{.Order.Note}}</td>
+            <td>{{.ID}}</td><td>{{.Email}}</td><td>{{.InImage}}</td>
+            <td>{{if .OutImage}}<a href="/show/{{.OutImage}}">{{.OutImage}}</a>{{end}}</td>
+            <td>{{with .CreateTime}}{{.Format "2006-01-02 03:04 AM"}}{{end}}</td>
+            <td>{{with .FinishTime}}{{.Format "2006-01-02 03:04 AM"}}{{end}}</td>
+            <td>{{.Note}}</td>
           </tr>
         {{end}}
       </table>

@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"gocloud.dev/blob"
@@ -53,16 +54,11 @@ var (
 
 // run starts the server on port and runs it indefinitely.
 func (f *frontend) run(ctx context.Context, port int) error {
-	// Test URL signing first.
-	if _, err := f.signedURL("foo"); err != nil {
-		return fmt.Errorf("frontend cannot generate signed URLs: %v", err)
-	}
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "index.html") })
 	http.HandleFunc("/orders/", wrapHTTPError(f.listOrders))
 	http.HandleFunc("/orders/new", wrapHTTPError(f.orderForm))
 	http.HandleFunc("/createOrder", wrapHTTPError(f.createOrder))
-	http.HandleFunc("/show", wrapHTTPError(f.showImage))
+	http.HandleFunc("/show/", wrapHTTPError(f.showImage))
 
 	rl := requestlog.NewNCSALogger(os.Stdout, func(err error) { fmt.Fprintf(os.Stderr, "%v\n", err) })
 	s := server.New(nil, &server.Options{
@@ -173,7 +169,7 @@ func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	iter := f.coll.Query().Get(ctx)
-	var infos []orderInfo
+	var orders []*Order
 	for {
 		var ord Order
 		err := iter.Next(ctx, &ord)
@@ -183,28 +179,14 @@ func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		var url string
-		if ord.OutImage != "" {
-			url, err = f.signedURL(ord.OutImage)
-			if err != nil {
-				return err
-			}
-		}
-		infos = append(infos, orderInfo{&ord, url})
+		orders = append(orders, &ord)
 	}
-	return executeTemplate(listTemplate, infos, w)
-}
-
-type orderInfo struct {
-	Order  *Order
-	OutURL string // URL for the output image
+	return executeTemplate(listTemplate, orders, w)
 }
 
 func (f *frontend) showImage(w http.ResponseWriter, r *http.Request) error {
-	objKey, err := f.keyFromURL(r.Context(), r.URL)
-	if err != nil {
-		return err
-	}
+	objKey := strings.TrimPrefix(r.URL.Path, "/show/")
+	log.Printf("objKey = %q", objKey)
 	reader, err := f.bucket.NewReader(r.Context(), objKey, nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("file %q not found", objKey), http.StatusNotFound)
@@ -224,10 +206,6 @@ func (f *frontend) showImage(w http.ResponseWriter, r *http.Request) error {
 // reset to the past, resulting in duplicates.
 func (f *frontend) newID() string {
 	return time.Now().Format("060102-150405")
-}
-
-func (f *frontend) signedURL(blobKey string) (string, error) {
-	return f.bucket.SignedURL(context.Background(), blobKey, nil)
 }
 
 // executeTemplate executes t into a buffer using data, and if that succeeds it

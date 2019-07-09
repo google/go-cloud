@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http/httptest"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -138,14 +137,9 @@ func TestListOrders(t *testing.T) {
 			t.Errorf("got %q, should contain %q", got, ord.Email)
 		}
 	}
-	// Look for a /show URL for "a-out".
-	re := `<a href="/show\?.*">a-out</a>`
-	match, err := regexp.MatchString(re, got)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !match {
-		t.Errorf("got %q, should match %s", got, re)
+	url := `<a href="/show/a-out">a-out</a>`
+	if !strings.Contains(got, url) {
+		t.Errorf("got %q, should contain %q", got, url)
 	}
 }
 
