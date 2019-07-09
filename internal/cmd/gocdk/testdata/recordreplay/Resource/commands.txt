@@ -4,6 +4,9 @@ gocdk resource add dev blob/fileblob --> FAIL
 gocdk init myproj
 cd myproj
 
+# Add fails for an invalid biome.
+gocdk resource add foo blob/fileblob --> FAIL
+
 # Add fails for an invalid type.
 gocdk resource add dev blob/foo --> FAIL
 
