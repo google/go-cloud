@@ -12,13 +12,13 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
-	"gocloud.dev/health"
 	pubsub2 "gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/gcppubsub"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/filevar"
 	"gocloud.dev/server"
+	"gocloud.dev/server/health"
+	"gocloud.dev/server/requestlog"
 	"net/http"
 )
 

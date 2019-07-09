@@ -27,13 +27,13 @@ import (
 	"github.com/google/wire"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
-	"gocloud.dev/health"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/gcppubsub"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/filevar"
 	"gocloud.dev/server"
+	"gocloud.dev/server/health"
+	"gocloud.dev/server/requestlog"
 )
 
 func setup(ctx context.Context, cfg flagConfig) (*worker, *server.Server, func(), error) {

@@ -21,7 +21,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gocloud.dev/requestlog"
+	"gocloud.dev/server/requestlog"
 )
 
 func TestListenAndServe(t *testing.T) {
