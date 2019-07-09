@@ -31,12 +31,17 @@ of `NewNCSALogger`.
 ### Adding health checks
 
 The Go CDK `server` package affords a hook for you to define health checks for
-your application and see the results at `/healthz/readiness`. Health checks are
-an important part of application monitoring.
+your application and see the results at `/healthz/readiness`. The server also
+runs an endpoint at `/healthz/liveness` which will always return `HTTP 200` if
+the server is up, which is also the endpoint Kubernetes will use to check liveness.
 
-Because each application may have a different definition of what it means to be
-"healthy", you will need to define a concrete type to implement the `health.Checker`
-interface and define a `CheckHealth` method specific to your application.
+Health checks are an important part of application monitoring, and readiness
+checks are subtly different than liveness checks. The liveness check will always
+and simply return `200 OK` if the server can serve requests. But because each
+application may have a different definition of what it means to be "healthy",
+(perhaps your application has a dependency on a back end service) you will need
+to define a concrete type to implement the `health.Checker` interface and define
+a `CheckHealth` method specific to your application for readiness checks.
 
 ```go
 // customHealthCheck is an example health check. It implements the
