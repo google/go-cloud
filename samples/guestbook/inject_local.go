@@ -25,10 +25,10 @@ import (
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/filevar"
 	"gocloud.dev/server"
+	"gocloud.dev/server/requestlog"
 )
 
 // This file wires the generic interfaces up to local implementations. It won't
