@@ -305,7 +305,10 @@ func resourceAdd(ctx context.Context, pctx *processContext, biome, typ string) e
 	if err != nil {
 		return xerrors.Errorf("resource add: %w", err)
 	}
-	destBiomeDir := biomeDir(moduleDir, biome)
+	destBiomeDir, err := biomeDir(moduleDir, biome)
+	if err != nil {
+		return xerrors.Errorf("resource add: %w", err)
+	}
 
 	do := provisionableTypes[typ]
 	if do == nil {

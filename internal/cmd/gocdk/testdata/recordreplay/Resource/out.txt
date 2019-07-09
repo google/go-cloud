@@ -15,6 +15,10 @@ gocdk: - `gocdk biome add` to configure launch settings
 
 $ cd myproj
 
+$ gocdk resource add foo blob/fileblob
+gocdk: Adding "blob/fileblob" to "foo"...
+Error: resource add: biome foo not found
+
 $ gocdk resource add dev blob/foo
 gocdk: Adding "blob/foo" to "dev"...
 Error: resource add: "blob/foo" is not a supported type; use 'gocdk resource list' to see available types
