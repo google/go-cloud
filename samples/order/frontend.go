@@ -32,8 +32,8 @@ import (
 	_ "gocloud.dev/docstore/memdocstore"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
+	"gocloud.dev/server/requestlog"
 )
 
 // A frontend is a web server that takes image-processing orders.
