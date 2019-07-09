@@ -21,6 +21,7 @@ import (
 
 	"github.com/streadway/amqp"
 	"gocloud.dev/internal/testing/cmdtest"
+	"gocloud.dev/internal/testing/setup"
 )
 
 // Requires rabbit to be running. Run pubsub/rabbitpubsub/localrabbit.sh.
@@ -28,6 +29,9 @@ import (
 var update = flag.Bool("update", false, "replace test file contents with output")
 
 func Test(t *testing.T) {
+	if !setup.HasDockerTestEnvironment() {
+		t.Skip("do not have docker test environment")
+	}
 	ts, err := cmdtest.Read(".")
 	if err != nil {
 		t.Fatal(err)

@@ -39,7 +39,7 @@ func setup() {
 	}
 }
 
-// echoStdin contains the same code as the main functio of
+// echoStdin contains the same code as the main function of
 // testdata/echo-stdin.go, except that it returns the exit code instead of
 // calling os.Exit. It is for testing InProcessProgram.
 func echoStdin() int {
