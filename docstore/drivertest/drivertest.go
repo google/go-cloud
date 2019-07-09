@@ -65,6 +65,9 @@ type Harness interface {
 	// function given to BeforeQuery.
 	BeforeQueryTypes() []interface{}
 
+	// RevisionsEqual reports whether two revisions are equal.
+	RevisionsEqual(rev1, rev2 interface{}) bool
+
 	// Close closes resources used by the harness.
 	Close()
 }
@@ -162,6 +165,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
+	t.Run("SerializeRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testSerializeRevision) })
 
 	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
@@ -520,6 +524,7 @@ func checkNoRevisionField(t *testing.T, doc interface{}, revField string) {
 
 // Check that doc has a non-nil revision field.
 func checkHasRevisionField(t *testing.T, doc interface{}, revField string) {
+
 	t.Helper()
 	ddoc, err := driver.NewDocument(doc)
 	if err != nil {
@@ -796,6 +801,29 @@ func testRevisionField(t *testing.T, coll *ds.Collection, revField string, write
 				t.Errorf("write with old revision field: got %v, wanted FailedPrecondition or NotFound", err)
 			}
 		})
+	}
+}
+
+// Verify that the driver can serialize and deserialize revisions.
+func testSerializeRevision(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
+	doc := docmap{KeyField: "testSerializeRevision", "x": 1}
+	if err := coll.Create(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	want := doc[docstore.DefaultRevisionField]
+	if want == nil {
+		t.Fatal("nil revision")
+	}
+	s, err := coll.RevisionToString(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := coll.StringToRevision(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !h.RevisionsEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
 	}
 }
 

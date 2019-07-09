@@ -16,6 +16,7 @@ package docstore
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"reflect"
@@ -570,6 +571,39 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 		}
 	}
 	return parts, nil
+}
+
+// RevisionToString converts a document revision to a string. The returned
+// string should be treated as opaque; its only use is to provide a serialized
+// form that can be passed around (e.g., as a hidden field on a web form)
+// and then turned back into a revision using StringToRevision. The string is safe
+// for use in URLs and HTTP forms.
+func (c *Collection) RevisionToString(rev interface{}) (string, error) {
+	if rev == nil {
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "RevisionToString: nil revision")
+	}
+	bytes, err := c.driver.RevisionToBytes(rev)
+	if err != nil {
+		return "", wrapError(c.driver, err)
+	}
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+// StringToRevision converts a string obtained with RevisionToString
+// to a revision.
+func (c *Collection) StringToRevision(s string) (interface{}, error) {
+	if s == "" {
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "StringToRevision: empty string")
+	}
+	bytes, err := base64.RawURLEncoding.DecodeString(s)
+	if err != nil {
+		return nil, err
+	}
+	rev, err := c.driver.BytesToRevision(bytes)
+	if err != nil {
+		return "", wrapError(c.driver, err)
+	}
+	return rev, nil
 }
 
 // As converts i to provider-specific types.

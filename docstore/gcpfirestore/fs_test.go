@@ -21,6 +21,7 @@ import (
 
 	vkit "cloud.google.com/go/firestore/apiv1"
 	"github.com/golang/protobuf/proto"
+	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"
@@ -76,6 +77,10 @@ func (*harness) BeforeDoTypes() []interface{} {
 
 func (*harness) BeforeQueryTypes() []interface{} {
 	return []interface{}{&pb.RunQueryRequest{}}
+}
+
+func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool {
+	return proto.Equal(rev1.(*tspb.Timestamp), rev2.(*tspb.Timestamp))
 }
 
 func (h *harness) Close() {
