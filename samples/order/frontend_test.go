@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -101,7 +102,8 @@ func TestListOrders(t *testing.T) {
 		t.Fatal(err)
 	}
 	orders := []*Order{
-		{ID: "a", Email: "pat@example.com", InImage: "a-in", CreateTime: time.Now()},
+		{ID: "a", Email: "pat@example.com", InImage: "a-in", OutImage: "a-out",
+			CreateTime: time.Now().Add(-18 * time.Second), FinishTime: time.Now()},
 		{ID: "b", Email: "mel@example.com", InImage: "b-in", CreateTime: time.Now()},
 	}
 	actions := f.coll.Actions()
@@ -135,6 +137,15 @@ func TestListOrders(t *testing.T) {
 		if !strings.Contains(got, ord.Email) {
 			t.Errorf("got %q, should contain %q", got, ord.Email)
 		}
+	}
+	// Look for a /show URL for "a-out".
+	re := `<a href="/show\?.*">a-out</a>`
+	match, err := regexp.MatchString(re, got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !match {
+		t.Errorf("got %q, should match %s", got, re)
 	}
 }
 

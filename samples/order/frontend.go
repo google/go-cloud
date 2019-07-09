@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -41,6 +42,8 @@ type frontend struct {
 	requestTopic *pubsub.Topic
 	bucket       *blob.Bucket
 	coll         *docstore.Collection
+	// function to recover an object key from a URL
+	keyFromURL func(ctx context.Context, sURL *url.URL) (string, error)
 }
 
 var (
@@ -50,10 +53,16 @@ var (
 
 // run starts the server on port and runs it indefinitely.
 func (f *frontend) run(ctx context.Context, port int) error {
+	// Test URL signing first.
+	if _, err := f.signedURL("foo"); err != nil {
+		return fmt.Errorf("frontend cannot generate signed URLs: %v", err)
+	}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "index.html") })
 	http.HandleFunc("/orders/", wrapHTTPError(f.listOrders))
 	http.HandleFunc("/orders/new", wrapHTTPError(f.orderForm))
 	http.HandleFunc("/createOrder", wrapHTTPError(f.createOrder))
+	http.HandleFunc("/show", wrapHTTPError(f.showImage))
 
 	rl := requestlog.NewNCSALogger(os.Stdout, func(err error) { fmt.Fprintf(os.Stderr, "%v\n", err) })
 	s := server.New(nil, &server.Options{
@@ -158,15 +167,13 @@ func (f *frontend) doCreateOrder(ctx context.Context, email string, file io.Read
 
 // listOrders lists all the orders in the database.
 func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
-	// TODO(jba): use Bucket.SignedURL to add a link to the output images.
-
 	if r.Method != "GET" {
 		http.Error(w, "bad method for listOrders: want GET", http.StatusBadRequest)
 		return nil
 	}
 	ctx := r.Context()
 	iter := f.coll.Query().Get(ctx)
-	var orders []*Order
+	var infos []orderInfo
 	for {
 		var ord Order
 		err := iter.Next(ctx, &ord)
@@ -176,9 +183,38 @@ func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		orders = append(orders, &ord)
+		var url string
+		if ord.OutImage != "" {
+			url, err = f.signedURL(ord.OutImage)
+			if err != nil {
+				return err
+			}
+		}
+		infos = append(infos, orderInfo{&ord, url})
 	}
-	return executeTemplate(listTemplate, orders, w)
+	return executeTemplate(listTemplate, infos, w)
+}
+
+type orderInfo struct {
+	Order  *Order
+	OutURL string // URL for the output image
+}
+
+func (f *frontend) showImage(w http.ResponseWriter, r *http.Request) error {
+	objKey, err := f.keyFromURL(r.Context(), r.URL)
+	if err != nil {
+		return err
+	}
+	reader, err := f.bucket.NewReader(r.Context(), objKey, nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("file %q not found", objKey), http.StatusNotFound)
+		return nil
+	}
+	defer reader.Close()
+	if _, err := io.Copy(w, reader); err != nil {
+		log.Printf("copy from %q failed: %v", objKey, err)
+	}
+	return nil
 }
 
 // newID creates a new unique ID for an incoming order. It uses the current
@@ -188,6 +224,10 @@ func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
 // reset to the past, resulting in duplicates.
 func (f *frontend) newID() string {
 	return time.Now().Format("060102-150405")
+}
+
+func (f *frontend) signedURL(blobKey string) (string, error) {
+	return f.bucket.SignedURL(context.Background(), blobKey, nil)
 }
 
 // executeTemplate executes t into a buffer using data, and if that succeeds it
