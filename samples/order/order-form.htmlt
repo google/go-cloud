@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  </head>
+  <body>
+    <form action="/createOrder" method="post" enctype="multipart/form-data">
+      Email: <input type="email" name="email"><br>
+      Files: <input type="file" name="file"><br><br>
+      <input type="submit" value="Submit">
+    </form>
+  </body>
+</html>
