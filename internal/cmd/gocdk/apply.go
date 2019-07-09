@@ -16,8 +16,6 @@ package main
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -50,38 +48,17 @@ func apply(ctx context.Context, pctx *processContext, biome string, input bool) 
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
-	if err := ensureTerraformInit(ctx, pctx, biomePath, input); err != nil {
+	c := pctx.NewCommand(ctx, biomePath, "terraform", "init", "-input="+strconv.FormatBool(input))
+	if err := c.Run(); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
 	// TODO(#1821): take over steps (plan, confirm, apply) so we can
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
-	c := pctx.NewCommand(ctx, biomePath, "terraform", "apply", "-input="+strconv.FormatBool(input))
+	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", "-input="+strconv.FormatBool(input))
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
-	}
-	return nil
-}
-
-// ensureTerraformInit checks for a .terraform directory at the biome root.
-// If one doesn't exist, ensureTerraformInit runs terraform init.
-func ensureTerraformInit(ctx context.Context, pctx *processContext, biomePath string, input bool) error {
-	// Check for .terraform directory.
-	_, err := os.Stat(filepath.Join(biomePath, ".terraform"))
-	if err == nil {
-		// .terraform exists, no op.
-		return nil
-	}
-	if !os.IsNotExist(err) {
-		// Some other error occurred.
-		return xerrors.Errorf("ensure terraform init: %w", err)
-	}
-
-	// Biome exists but not initialized. Need to run terraform init.
-	c := pctx.NewCommand(ctx, biomePath, "terraform", "init", "-input="+strconv.FormatBool(input))
-	if err := c.Run(); err != nil {
-		return xerrors.Errorf("ensure terraform init: %w", err)
 	}
 	return nil
 }
