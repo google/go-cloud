@@ -76,8 +76,9 @@ fi
 result=0
 rootdir="$(pwd)"
 
-# Run Go tests.
-(cd internal/testing/test-summary && go build) || result=1
+# Build the test-summary app, which is used inside the loop to summarize results
+# from Go tests.
+(cd internal/testing/test-summary && go build)
 while read -r path || [[ -n "$path" ]]; do
   echo
   echo "******************************"
