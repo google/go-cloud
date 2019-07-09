@@ -12,7 +12,7 @@ lets you interact with all of them using the [`*blob.Bucket` type][].
 
 <!--more-->
 
-## Constructors versus URL openers
+## Opening a Bucket {#opening}
 
 The easiest way to open a blob is using [`blob.OpenBucket`][] and a URL
 pointing to the blob, making sure you ["blank import"][] the driver package to
@@ -20,6 +20,9 @@ link it in. See [Concepts: URLs][] for more details. If you need
 fine-grained control over the connection settings, you can call the constructor
 function in the driver package directly (like `s3blob.OpenBucket`). This guide
 shows how to use both forms for each provider.
+
+Once you have opened a bucket for the storage provider you want, you can
+store and access data from it using the standard Go I/O patterns.
 
 [`blob.OpenBucket`]:
 https://godoc.org/gocloud.dev/blob#OpenBucket
@@ -38,7 +41,62 @@ URL:
 
 {{< goexample "gocloud.dev/blob.Example_openFromURLWithPrefix" >}}
 
-## S3 {#s3}
+## Writing Data to a Bucket {#writing}
+
+To write data to a bucket, you create a writer, write data to it, and then
+close the writer. Closing the writer commits the write to the provider,
+flushing any buffers, and releases any resources used while writing, so you
+must always check the error of `Close`.
+
+The writer implements [`io.Writer`][], so you can use any functions that take
+an `io.Writer` like `io.Copy` or `fmt.Fprintln`.
+
+{{< goexample src="gocloud.dev/blob.ExampleBucket_NewWriter" imports="0" >}}
+
+In some cases, you may want to cancel an in-progress write to avoid the blob
+being created or overwritten. A typical reason for wanting to cancel a write
+is encountering an error in the stream your program is copying from. To abort
+a write, you cancel the `Context` you pass to the writer. Again, you must
+always `Close` the writer to release the resources, but in this case you can
+ignore the error because the write's failure is expected.
+
+{{< goexample src="gocloud.dev/blob.ExampleBucket_NewWriter_cancel" imports="0" >}}
+
+[`io.Writer`]: https://golang.org/pkg/io/#Writer
+
+## Reading Data from a Bucket {#reading}
+
+Once you have written data to a bucket, you can read it back by creating a
+reader. The reader implements [`io.Reader`][], so you can use any functions
+that take an `io.Reader` like `io.Copy` or `io/ioutil.ReadAll`. You must
+always close a reader after using it to avoid leaking resources.
+
+{{< goexample src="gocloud.dev/blob.ExampleBucket_NewReader" imports="0" >}}
+
+Many storage providers provide efficient random-access to data in buckets. To
+start reading from an arbitrary offset in the blob, use `NewRangeReader`.
+
+{{< goexample src="gocloud.dev/blob.ExampleBucket_NewRangeReader" imports="0" >}}
+
+[`io.Reader`]: https://golang.org/pkg/io/#Reader
+
+## Deleting Blobs {#deleting}
+
+You can delete blobs using the `Bucket.Delete` method.
+
+{{< goexample src="gocloud.dev/blob.ExampleBucket_Delete" imports="0" >}}
+
+## Other Operations {#other}
+
+These are the most common operations you will need to use with a bucket.
+Other operations like listing and reading metadata are documented in the
+[`blob` package documentation][].
+
+[`blob` package documentation]: https://godoc.org/gocloud.dev/blob
+
+## Service-Specific Initialization
+
+### S3 {#s3}
 
 S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
 You can specify the `region` query parameter to ensure your application connects
@@ -52,7 +110,7 @@ Full details about acceptable URLs can be found under the API reference for
 
 [`s3blob.URLOpener`]: https://godoc.org/gocloud.dev/blob/s3blob#URLOpener
 
-### S3 Constructor {#s3-ctor}
+#### S3 Constructor {#s3-ctor}
 
 The [`s3blob.OpenBucket`][] constructor opens an [S3][] bucket. You must first
 create an [AWS session][] with the same region as your bucket:
@@ -63,7 +121,7 @@ create an [AWS session][] with the same region as your bucket:
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 [S3]: https://aws.amazon.com/s3/
 
-### S3-compatible storage servers {#s3-compatible}
+#### S3-compatible storage servers {#s3-compatible}
 
 The Go CDK can also interact with [S3-compatible storage servers][] that
 recognize the same REST HTTP endpoints as S3, like [Minio][], [Ceph][], or
@@ -88,7 +146,7 @@ See [`aws.ConfigFromURLParams`][] for more details on supported URL options for 
 [SeaweedFS]: https://github.com/chrislusf/seaweedfs
 [S3-compatible storage servers]: https://en.wikipedia.org/wiki/Amazon_S3#S3_API_and_competing_services
 
-## Google Cloud Storage {#gcs}
+### Google Cloud Storage {#gcs}
 
 [Google Cloud Storage][] (GCS) URLs in the Go CDK closely resemble the URLs
 you would see in the `gsutil` CLI. `blob.OpenBucket` will use [Application
@@ -102,7 +160,7 @@ Full details about acceptable URLs can be found under the API reference for
 [Google Cloud Storage]: https://cloud.google.com/storage/
 [`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
 
-### Google Cloud Storage Constructor {#gcs-ctor}
+#### Google Cloud Storage Constructor {#gcs-ctor}
 
 The [`gcsblob.OpenBucket`][] constructor opens a GCS bucket. You must first
 create a `*net/http.Client` that sends requests authorized by [Google Cloud
@@ -116,7 +174,7 @@ other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
 [`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
 [`gocloud.dev/gcp`]: https://godoc.org/gocloud.dev/gcp
 
-## Azure Storage {#azure}
+### Azure Storage {#azure}
 
 Azure Storage URLs in the Go CDK allow you to identify [Azure Storage][] containers
 when opening a bucket with `blob.OpenBucket`. Go CDK uses the environment
@@ -132,7 +190,7 @@ Full details about acceptable URLs can be found under the API reference for
 [Azure Storage]: https://azure.microsoft.com/en-us/services/storage/
 [`azureblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/azureblob#URLOpener
 
-### Azure Storage Constructor {#azure-ctor}
+#### Azure Storage Constructor {#azure-ctor}
 
 The [`azureblob.OpenBucket`][] constructor opens an Azure Storage container.
 `azureblob` operates on [Azure Storage Block Blobs][]. You must first create
@@ -144,7 +202,7 @@ you can open a container.
 [Azure Storage Block Blobs]: https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs
 [`azureblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket
 
-## Local Storage {#local}
+### Local Storage {#local}
 
 The Go CDK provides blob drivers for storing data in memory and on the local
 filesystem. These are primarily intended for testing and local development,
@@ -178,7 +236,7 @@ if err != nil {
 defer bucket2.Close()
 ```
 
-### Local Storage Constructors {#local-ctor}
+#### Local Storage Constructors {#local-ctor}
 
 You can create an in-memory bucket with [`memblob.OpenBucket`][]:
 
@@ -190,10 +248,3 @@ You can use a local filesystem directory with [`fileblob.OpenBucket`][]:
 
 [`fileblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/fileblob#OpenBucket
 [`memblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/memblob#OpenBucket
-
-## What's Next
-
-Now that you have opened a bucket, you can [store data in and access data
-from][] the bucket using portable operations.
-
-[store data in and access data from]: {{< ref "./data.md" >}}
