@@ -23,9 +23,9 @@ import (
 	"sync"
 	"time"
 
-	"gocloud.dev/health"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
+	"gocloud.dev/server/health"
+	"gocloud.dev/server/requestlog"
 )
 
 func ExampleServer_New() {

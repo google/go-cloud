@@ -22,7 +22,7 @@ pass `nil` for the options.
 
 You can use the `server.Options` struct to specify a request logger.
 
-The example is shown with the Go CDK [`requestlog`](https://godoc.org/gocloud.dev/requestlog) package's `NCSALogger`.
+The example is shown with the Go CDK [`requestlog`](https://godoc.org/gocloud.dev/server/requestlog) package's `NCSALogger`.
 To get logs in the Stackdriver JSON format, use `NewStackdriverLogger` in place
 of `NewNCSALogger`.
 
