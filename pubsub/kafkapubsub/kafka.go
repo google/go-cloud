@@ -315,10 +315,11 @@ type subscription struct {
 	closeErr      error         // fatal error detected by the background consumer
 	consumerGroup sarama.ConsumerGroup
 
-	mu      sync.Mutex
-	unacked []*ackInfo
-	sess    sarama.ConsumerGroupSession // current session, if any, used for marking offset updates
-	claims  []sarama.ConsumerGroupClaim // claims in the current session
+	mu             sync.Mutex
+	unacked        []*ackInfo
+	sess           sarama.ConsumerGroupSession // current session, if any, used for marking offset updates
+	expectedClaims int                         // # of expected claims for the current session, they should be added via ConsumeClaim
+	claims         []sarama.ConsumerGroupClaim // claims in the current session
 }
 
 // ackInfo stores info about a message and whether it has been acked.
@@ -410,15 +411,14 @@ func openSubscription(brokers []string, config *sarama.Config, group string, top
 // Setup implements sarama.ConsumerGroupHandler.Setup. It is called whenever
 // a new session with the broker is starting.
 func (s *subscription) Setup(sess sarama.ConsumerGroupSession) error {
-	// The first time, close joinCh to (possibly) wake up OpenSubscription.
-	if s.joinCh != nil {
-		close(s.joinCh)
-		s.joinCh = nil
-	}
 	// Record the current session.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sess = sess
+	s.expectedClaims = 0
+	for _, claims := range sess.Claims() {
+		s.expectedClaims += len(claims)
+	}
 	return nil
 }
 
@@ -428,6 +428,7 @@ func (s *subscription) Cleanup(sarama.ConsumerGroupSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sess = nil
+	s.expectedClaims = 0
 	s.claims = nil
 	return nil
 }
@@ -437,6 +438,11 @@ func (s *subscription) Cleanup(sarama.ConsumerGroupSession) error {
 func (s *subscription) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	s.mu.Lock()
 	s.claims = append(s.claims, claim)
+	// Once all of the expected claims have registered, close joinCh to (possibly) wake up OpenSubscription.
+	if s.joinCh != nil && len(s.claims) == s.expectedClaims {
+		close(s.joinCh)
+		s.joinCh = nil
+	}
 	s.mu.Unlock()
 	<-sess.Context().Done()
 	return nil
