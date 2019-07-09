@@ -16,6 +16,8 @@ package memdocstore
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -44,6 +46,8 @@ func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.
 
 func (*harness) BeforeDoTypes() []interface{}    { return nil }
 func (*harness) BeforeQueryTypes() []interface{} { return nil }
+
+func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool { return rev1 == rev2 }
 
 func (*harness) Close() {}
 
@@ -163,5 +167,66 @@ func TestSortDocs(t *testing.T) {
 		if diff := cmp.Diff(got, test.want); diff != "" {
 			t.Errorf("%q, asc=%t:\n%s", test.field, test.ascending, diff)
 		}
+	}
+}
+
+func TestExampleInDoc(t *testing.T) {
+	// This is the document used as an example in ../docstore/doc.go.
+	doc := map[string]interface{}{
+		"Title": "The Master and Margarita",
+		"Author": map[string]interface{}{
+			"First": "Mikhail",
+			"Last":  "Bulgakov",
+		},
+		"PublicationYears": []int{1967, 1973},
+	}
+
+	dc, err := newCollection("Title", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	defer coll.Close()
+	ctx := context.Background()
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]interface{}{"Title": "The Master and Margarita"}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]interface{}{
+		"Title": "The Master and Margarita",
+		"Author": map[string]interface{}{
+			"First": "Mikhail",
+			"Last":  "Bulgakov",
+		},
+		"PublicationYears": []interface{}{int64(1967), int64(1973)},
+		"DocstoreRevision": int64(1),
+	}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func TestSaveAndLoad(t *testing.T) {
+	f, err := ioutil.TempFile("", "testSaveAndLoad")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	docs := map[interface{}]map[string]interface{}{
+		"k1": {"key": "k1", "a": 1},
+		"k2": {"key": "k2", "b": 2},
+	}
+	if err := saveDocs(f.Name(), docs); err != nil {
+		t.Fatal(err)
+	}
+	got, err := loadDocs(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(got, docs) {
+		t.Errorf("\ngot  %v\nwant %v", got, docs)
 	}
 }

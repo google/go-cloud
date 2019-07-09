@@ -264,7 +264,7 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 			continue
 		}
 		a := idToAction[m[mongoIDField]]
-		errs[a.Index] = decodeDoc(m, a.Doc, c.idField)
+		errs[a.Index] = decodeDoc(m, a.Doc, c.idField, c.opts.LowercaseFields)
 		found[a] = true
 	}
 	for _, a := range gets {
@@ -600,6 +600,20 @@ func (c *collection) newUpdateModel(a *driver.Action) (*mongo.UpdateOneModel, st
 		return nil, "", nil
 	}
 	return &mongo.UpdateOneModel{Filter: filter, Update: updateDoc}, rev, nil
+}
+
+// RevisionToBytes implements driver.RevisionToBytes.
+func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
+	s, ok := rev.(string)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a string", rev)
+	}
+	return []byte(s), nil
+}
+
+// BytesToRevision implements driver.BytesToRevision.
+func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
+	return string(b), nil
 }
 
 // As implements driver.As.

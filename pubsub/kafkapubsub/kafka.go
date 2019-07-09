@@ -387,9 +387,14 @@ func openSubscription(brokers []string, config *sarama.Config, group string, top
 	// repeatedly as the consumer group is rebalanced.
 	// See https://godoc.org/github.com/Shopify/sarama#ConsumerGroup.
 	go func() {
-		ds.closeErr = consumerGroup.Consume(ctx, topics, ds)
-		consumerGroup.Close()
-		close(ds.closeCh)
+		for {
+			ds.closeErr = consumerGroup.Consume(ctx, topics, ds)
+			if ds.closeErr != nil || ctx.Err() != nil {
+				consumerGroup.Close()
+				close(ds.closeCh)
+				break
+			}
+		}
 	}()
 	if opts.WaitForJoin > 0 {
 		// Best effort wait for first consumer group session.

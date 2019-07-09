@@ -28,8 +28,8 @@ import (
 
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
-	"gocloud.dev/health"
 	"gocloud.dev/server"
+	"gocloud.dev/server/health"
 	"gocloud.dev/server/sdserver"
 )
 

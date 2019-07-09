@@ -87,24 +87,24 @@
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"time\"\n\n\t\"gocloud.dev/docstore/memdocstore\"\n\t\"gocloud.dev/gcerrors\"\n)",
 		"code": "coll, err := memdocstore.OpenCollection(\"Name\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()\n\n// Create a player.\npat := \u0026Player{Name: \"Pat\", Score: 7}\nif err := coll.Create(ctx, pat); err != nil {\n\treturn err\n}\nfmt.Println(pat) // memdocstore revisions are deterministic, so we can check the output.\n\n// Double a player's score. We cannot use Update to multiply, so we use optimistic\n// locking instead.\n\n// We may have to retry a few times; put a time limit on that.\nctx, cancel := context.WithTimeout(ctx, 30*time.Second)\ndefer cancel()\nfor {\n\t// Get the document.\n\tplayer := \u0026Player{Name: \"Pat\"}\n\tif err := coll.Get(ctx, player); err != nil {\n\t\treturn err\n\t}\n\t// player.DocstoreRevision is set to the document's revision.\n\n\t// Modify the document locally.\n\tplayer.Score *= 2\n\n\t// Replace the document. player.DocstoreRevision will be checked against\n\t// the stored document's revision.\n\terr := coll.Replace(ctx, player)\n\tif err != nil {\n\t\tcode := gcerrors.Code(err)\n\t\t// On FailedPrecondition or NotFound, try again.\n\t\tif code == gcerrors.FailedPrecondition || code == gcerrors.NotFound {\n\t\t\tcontinue\n\t\t}\n\t\treturn err\n\t}\n\tfmt.Println(player)\n\tbreak\n}\n\n// Output:\n// \u0026{Pat 7 1}\n// \u0026{Pat 14 2}"
 	},
-	"gocloud.dev/docstore/dynamodocstore.ExampleOpenCollection": {
-		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"github.com/aws/aws-sdk-go/service/dynamodb\"\n\t\"gocloud.dev/docstore/dynamodocstore\"\n)",
-		"code": "sess, err := session.NewSession()\nif err != nil {\n\treturn err\n}\ncoll, err := dynamodocstore.OpenCollection(\n\tdynamodb.New(sess), \"docstore-test\", \"partitionKeyField\", \"\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+	"gocloud.dev/docstore/awsdynamodb.ExampleOpenCollection": {
+		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"github.com/aws/aws-sdk-go/service/dynamodb\"\n\t\"gocloud.dev/docstore/awsdynamodb\"\n)",
+		"code": "sess, err := session.NewSession()\nif err != nil {\n\treturn err\n}\ncoll, err := awsdynamodb.OpenCollection(\n\tdynamodb.New(sess), \"docstore-test\", \"partitionKeyField\", \"\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
-	"gocloud.dev/docstore/dynamodocstore.Example_openCollectionFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/dynamodocstore\"\n)",
+	"gocloud.dev/docstore/awsdynamodb.Example_openCollectionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/awsdynamodb\"\n)",
 		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"dynamodb://my-table?partition_key=name\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
-	"gocloud.dev/docstore/firedocstore.ExampleOpenCollection": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore/firedocstore\"\n\t\"gocloud.dev/gcp\"\n)",
-		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := firedocstore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\nresourceID := firedocstore.CollectionResourceID(\"my-project\", \"my-collection\")\ncoll, err := firedocstore.OpenCollection(client, resourceID, \"userID\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+	"gocloud.dev/docstore/gcpfirestore.ExampleOpenCollection": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore/gcpfirestore\"\n\t\"gocloud.dev/gcp\"\n)",
+		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := gcpfirestore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\nresourceID := gcpfirestore.CollectionResourceID(\"my-project\", \"my-collection\")\ncoll, err := gcpfirestore.OpenCollection(client, resourceID, \"userID\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
-	"gocloud.dev/docstore/firedocstore.ExampleOpenCollectionWithNameFunc": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t\"gocloud.dev/docstore/firedocstore\"\n\t\"gocloud.dev/gcp\"\n)",
-		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := firedocstore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\n\n// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) string {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\nresourceID := firedocstore.CollectionResourceID(\"my-project\", \"my-collection\")\ncoll, err := firedocstore.OpenCollectionWithNameFunc(client, resourceID, nameFromDocument, nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+	"gocloud.dev/docstore/gcpfirestore.ExampleOpenCollectionWithNameFunc": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t\"gocloud.dev/docstore/gcpfirestore\"\n\t\"gocloud.dev/gcp\"\n)",
+		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := gcpfirestore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\n\n// The name of a document is constructed from the Game and Player fields.\nnameFromDocument := func(doc docstore.Document) string {\n\ths := doc.(*HighScore)\n\treturn hs.Game + \"|\" + hs.Player\n}\n\nresourceID := gcpfirestore.CollectionResourceID(\"my-project\", \"my-collection\")\ncoll, err := gcpfirestore.OpenCollectionWithNameFunc(client, resourceID, nameFromDocument, nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
-	"gocloud.dev/docstore/firedocstore.Example_openCollectionFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/firedocstore\"\n)",
+	"gocloud.dev/docstore/gcpfirestore.Example_openCollectionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/gcpfirestore\"\n)",
 		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\nconst url = \"firestore://projects/my-project/databases/(default)/documents/my-collection?name_field=userID\"\ncoll, err := docstore.OpenCollection(ctx, url)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/docstore/memdocstore.ExampleOpenCollection": {
@@ -291,6 +291,10 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the exchange \"myexchange\".\ntopic, err := pubsub.OpenTopic(ctx, \"rabbit://myexchange\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/runtimevar.ExampleDecryptDecode": {
+		"imports": "import (\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/secrets\"\n)",
+		"code": "decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode)\ndecoder := runtimevar.NewDecoder(\"\", decodeFunc)"
+	},
 	"gocloud.dev/runtimevar.ExampleVariable_Latest": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
 		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"
@@ -334,6 +338,14 @@
 	"gocloud.dev/secrets/awskms.Example_openFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/awskms\"\n)",
 		"code": "// Use one of the following:\n\n// 1. By ID.\nkeeperByID, err := secrets.OpenKeeper(ctx,\n\t\"awskms://1234abcd-12ab-34cd-56ef-1234567890ab?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByID.Close()\n\n// 2. By alias.\nkeeperByAlias, err := secrets.OpenKeeper(ctx,\n\t\"awskms://alias/ExampleAlias?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByAlias.Close()\n\n// 3. By ARN.\nconst arn = \"arn:aws:kms:us-east-1:111122223333:key/\" +\n\t\"1234abcd-12ab-34bc-56ef-1234567890ab\"\nkeeperByARN, err := secrets.OpenKeeper(ctx,\n\t\"awskms://\"+arn+\"?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByARN.Close()"
+	},
+	"gocloud.dev/secrets/azurekeyvault.ExampleOpenKeeper": {
+		"imports": "import \"gocloud.dev/secrets/azurekeyvault\"",
+		"code": "// Get a client to use with the Azure KeyVault API, using default\n// authorization from the environment.\n//\n// You can alternatively use DialUsingCLIAuth to use auth from the\n// \"az\" CLI.\nclient, err := azurekeyvault.Dial()\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper, err := azurekeyvault.OpenKeeper(client, \"https://mykeyvaultname.vault.azure.net/keys/mykeyname\", nil)\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/azurekeyvault.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/azurekeyvault\"\n)",
+		"code": "// The \"azurekeyvault\" URL scheme is replaced with \"https\" to construct an Azure\n// Key Vault keyID, as described in https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates.\n// You can add an optional \"/{key-version}\" to the path to use a specific\n// version of the key; it defaults to the latest version.\nkeeper, err := secrets.OpenKeeper(ctx, \"azurekeyvault://mykeyvaultname.vault.azure.net/keys/mykeyname\")\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
 	},
 	"gocloud.dev/secrets/gcpkms.ExampleOpenKeeper": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets/gcpkms\"\n)",

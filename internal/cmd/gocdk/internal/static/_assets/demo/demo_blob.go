@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob"
@@ -33,12 +32,12 @@ var bucket *blob.Bucket
 var bucketErr error
 
 func init() {
+	ctx := context.Background()
+
 	bucketURL = os.Getenv("BLOB_BUCKET_URL")
 	if bucketURL == "" {
 		bucketURL = "mem://"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	bucket, bucketErr = blob.OpenBucket(ctx, bucketURL)
 }
 
@@ -163,8 +162,8 @@ var (
 )
 
 func blobBaseHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobBaseData{URL: bucketURL}
-	if err := blobBaseTmpl.Execute(w, input); err != nil {
+	data := &blobBaseData{URL: bucketURL}
+	if err := blobBaseTmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -173,15 +172,15 @@ func blobBaseHandler(w http.ResponseWriter, req *http.Request) {
 // query parameter. Each listed directory is a link to list that directory,
 // and each non-directory is a link to view that file.
 func blobListHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobListData{URL: bucketURL}
+	data := &blobListData{URL: bucketURL}
 	defer func() {
-		if err := blobListTmpl.Execute(w, input); err != nil {
+		if err := blobListTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if bucketErr != nil {
-		input.Err = bucketErr
+		data.Err = bucketErr
 		return
 	}
 	opts := &blob.ListOptions{
@@ -195,35 +194,35 @@ func blobListHandler(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 		if err != nil {
-			input.Err = fmt.Errorf("Failed to iterate to next blob.Bucket key: %v", err)
+			data.Err = fmt.Errorf("Failed to iterate to next blob.Bucket key: %v", err)
 			return
 		}
-		input.ListObjects = append(input.ListObjects, obj)
+		data.ListObjects = append(data.ListObjects, obj)
 	}
-	if len(input.ListObjects) == 0 {
-		input.Err = errors.New("no blobs in bucket")
+	if len(data.ListObjects) == 0 {
+		data.Err = errors.New("no blobs in bucket")
 	}
 }
 
 func blobViewHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobViewData{
+	data := &blobViewData{
 		URL: bucketURL,
 		Key: req.FormValue("key"),
 	}
 	skipTemplate := false
 	defer func() {
 		if !skipTemplate {
-			if err := blobViewTmpl.Execute(w, input); err != nil {
+			if err := blobViewTmpl.Execute(w, data); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		}
 	}()
 
 	if bucketErr != nil {
-		input.Err = bucketErr
+		data.Err = bucketErr
 		return
 	}
-	if input.Key == "" {
+	if data.Key == "" {
 		// No key selected. Render a form with a dropdown to choose one.
 		iter := bucket.List(nil)
 		for {
@@ -232,20 +231,20 @@ func blobViewHandler(w http.ResponseWriter, req *http.Request) {
 				break
 			}
 			if err != nil {
-				input.Err = fmt.Errorf("failed to iterate to next blob.Bucket key: %v", err)
+				data.Err = fmt.Errorf("failed to iterate to next blob.Bucket key: %v", err)
 				return
 			}
-			input.ListObjects = append(input.ListObjects, obj)
+			data.ListObjects = append(data.ListObjects, obj)
 		}
-		if len(input.ListObjects) == 0 {
-			input.Err = errors.New("no blobs in bucket")
+		if len(data.ListObjects) == 0 {
+			data.Err = errors.New("no blobs in bucket")
 		}
 	} else {
 		// A key was provided. Download the blob for that key.
 		skipTemplate = true
-		reader, err := bucket.NewReader(req.Context(), input.Key, nil)
+		reader, err := bucket.NewReader(req.Context(), data.Key, nil)
 		if err != nil {
-			input.Err = fmt.Errorf("failed to create Reader: %v", err)
+			data.Err = fmt.Errorf("failed to create Reader: %v", err)
 			return
 		}
 		defer reader.Close()
@@ -255,35 +254,35 @@ func blobViewHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func blobWriteHandler(w http.ResponseWriter, req *http.Request) {
-	input := &blobWriteData{
+	data := &blobWriteData{
 		URL:           bucketURL,
 		Key:           req.FormValue("key"),
 		WriteContents: req.FormValue("contents"),
 	}
 	defer func() {
-		if err := blobWriteTmpl.Execute(w, input); err != nil {
+		if err := blobWriteTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if bucketErr != nil {
-		input.Err = bucketErr
+		data.Err = bucketErr
 		return
 	}
-	if input.Key == "" && input.WriteContents == "" {
+	if data.Key == "" && data.WriteContents == "" {
 		return
 	}
-	if input.Key == "" {
-		input.Err = errors.New("enter a non-empty key to write to")
+	if data.Key == "" {
+		data.Err = errors.New("enter a non-empty key to write to")
 		return
 	}
-	if input.WriteContents == "" {
-		input.Err = errors.New("enter some content to write")
+	if data.WriteContents == "" {
+		data.Err = errors.New("enter some content to write")
 		return
 	}
-	if err := bucket.WriteAll(req.Context(), input.Key, []byte(input.WriteContents), nil); err != nil {
-		input.Err = fmt.Errorf("write failed: %v", err)
+	if err := bucket.WriteAll(req.Context(), data.Key, []byte(data.WriteContents), nil); err != nil {
+		data.Err = fmt.Errorf("write failed: %v", err)
 	} else {
-		input.WriteSuccess = true
+		data.WriteSuccess = true
 	}
 }

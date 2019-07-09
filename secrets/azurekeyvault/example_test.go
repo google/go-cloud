@@ -19,43 +19,38 @@ import (
 	"log"
 
 	"gocloud.dev/secrets"
-	akv "gocloud.dev/secrets/azurekeyvault"
+	"gocloud.dev/secrets/azurekeyvault"
 )
 
 func ExampleOpenKeeper() {
-	// Get a client to use with the Azure KeyVault API.
-	// See API docs for Authentication options.
-	// https://github.com/Azure/azure-sdk-for-go
-	client, err := akv.Dial()
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#azure-ctor
+
+	// Get a client to use with the Azure KeyVault API, using default
+	// authorization from the environment.
+	//
+	// You can alternatively use DialUsingCLIAuth to use auth from the
+	// "az" CLI.
+	client, err := azurekeyvault.Dial()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper, err := akv.OpenKeeper(client, "https://mykeyvaultname.vault.azure.net/keys/mykeyname", nil)
+	keeper, err := azurekeyvault.OpenKeeper(client, "https://mykeyvaultname.vault.azure.net/keys/mykeyname", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer keeper.Close()
-
-	// Now we can use keeper to encrypt or decrypt.
-	ctx := context.Background()
-	plaintext := []byte("Hello, Secrets!")
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = decrypted
 }
 
 func Example_openFromURL() {
+	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#azure
+
+	// import _ "gocloud.dev/secrets/azurekeyvault"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// secrets.OpenKeeper creates a *secrets.Keeper from a URL.
 	// The "azurekeyvault" URL scheme is replaced with "https" to construct an Azure
 	// Key Vault keyID, as described in https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates.
 	// You can add an optional "/{key-version}" to the path to use a specific

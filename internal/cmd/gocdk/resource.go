@@ -70,16 +70,16 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		return []*static.Action{
 			static.AddProvider("azurerm"),
 			static.AddProvider("random"),
-			static.AddOutputVar("BLOB_BUCKET_URL", "${local.azureblob_bucket_url}"),
-			static.AddOutputVar("AZURE_STORAGE_ACCOUNT", "${azurerm_storage_account.storage_account.name}"),
-			static.AddOutputVar("AZURE_STORAGE_KEY", "${azurerm_storage_account.storage_account.primary_access_key}"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "local.azureblob_bucket_url"),
+			static.AddOutputVar("AZURE_STORAGE_ACCOUNT", "azurerm_storage_account.storage_account.name"),
+			static.AddOutputVar("AZURE_STORAGE_KEY", "azurerm_storage_account.storage_account.primary_access_key"),
 			static.CopyFile("/resource/blob/azureblob.tf", "azureblob.tf"),
 		}, nil
 	},
 	"blob/fileblob": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
 		return []*static.Action{
 			static.AddProvider("local"),
-			static.AddOutputVar("BLOB_BUCKET_URL", "${local.fileblob_bucket_url}"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "local.fileblob_bucket_url"),
 			static.CopyFile("/resource/blob/fileblob.tf", "fileblob.tf"),
 		}, nil
 	},
@@ -96,7 +96,7 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		return []*static.Action{
 			static.AddProvider("google"),
 			static.AddProvider("random"),
-			static.AddOutputVar("BLOB_BUCKET_URL", "${local.gcsblob_bucket_url}"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "local.gcsblob_bucket_url"),
 			static.CopyFile("/resource/blob/gcsblob.tf", "gcsblob.tf"),
 		}, nil
 	},
@@ -108,8 +108,94 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		}
 		return []*static.Action{
 			static.AddProvider("aws"),
-			static.AddOutputVar("BLOB_BUCKET_URL", "${local.s3blob_bucket_url}"),
+			static.AddOutputVar("BLOB_BUCKET_URL", "local.s3blob_bucket_url"),
 			static.CopyFile("/resource/blob/s3blob.tf", "s3blob.tf"),
+		}, nil
+	},
+
+	// DOCSTORE
+	"docstore/awsdynamodb": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AWSRegionIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("aws"),
+			static.AddProvider("random"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "local.awsdynamodb_url"),
+			static.CopyFile("/resource/docstore/awsdynamodb.tf", "awsdynamodb.tf"),
+		}, nil
+	},
+	"docstore/azurecosmos": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AzureLocationIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("azurerm"),
+			static.AddProvider("random"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "local.azurecosmos_url"),
+			static.AddOutputVar("MONGO_SERVER_URL", "local.azurecosmos_mongo_url"),
+			static.CopyFile("/resource/docstore/azurecosmos.tf", "azurecosmos.tf"),
+		}, nil
+	},
+	"docstore/gcpfirestore": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.GCPProjectIDIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("google"),
+			static.AddProvider("random"),
+			static.AddOutputVar("DOCSTORE_COLLECTION_URL", "local.gcpfirestore_url"),
+			static.CopyFile("/resource/docstore/gcpfirestore.tf", "gcpfirestore.tf"),
+		}, nil
+	},
+
+	// PUBSUB
+	"pubsub/awssnssqs": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AWSRegionIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("aws"),
+			static.AddOutputVar("PUBSUB_SUBSCRIPTION_URL", "local.awssqs_subscription_url"),
+			static.AddOutputVar("PUBSUB_TOPIC_URL", "local.awssns_topic_url"),
+			static.CopyFile("/resource/pubsub/awssnssqs.tf", "awssnssqs.tf"),
+		}, nil
+	},
+	"pubsub/azuresb": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AzureLocationIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("azurerm"),
+			static.AddProvider("random"),
+			static.AddOutputVar("PUBSUB_SUBSCRIPTION_URL", "local.azuresb_subscription_url"),
+			static.AddOutputVar("PUBSUB_TOPIC_URL", "local.azuresb_topic_url"),
+			static.AddOutputVar("SERVICEBUS_CONNECTION_STRING", "azurerm_servicebus_namespace.namespace.default_primary_connection_string"),
+			static.CopyFile("/resource/pubsub/azuresb.tf", "azuresb.tf"),
+		}, nil
+	},
+	"pubsub/gcppubsub": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.GCPProjectIDIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("google"),
+			static.AddProvider("random"),
+			static.AddOutputVar("PUBSUB_SUBSCRIPTION_URL", "local.gcppubsub_subscription_url"),
+			static.AddOutputVar("PUBSUB_TOPIC_URL", "local.gcppubsub_topic_url"),
+			static.CopyFile("/resource/pubsub/gcppubsub.tf", "gcppubsub.tf"),
 		}, nil
 	},
 
@@ -123,14 +209,14 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		return []*static.Action{
 			static.AddProvider("aws"),
 			static.AddProvider("random"),
-			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.awsparamstore_url}"),
+			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "local.awsparamstore_url"),
 			static.CopyFile("/resource/runtimevar/awsparamstore.tf", "awsparamstore.tf"),
 		}, nil
 	},
 	"runtimevar/filevar": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
 		return []*static.Action{
 			static.AddProvider("local"),
-			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.filevar_url}"),
+			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "local.filevar_url"),
 			static.CopyFile("/resource/runtimevar/filevar.tf", "filevar.tf"),
 		}, nil
 	},
@@ -143,8 +229,51 @@ var provisionableTypes = map[string]func(*processContext, string) ([]*static.Act
 		return []*static.Action{
 			static.AddProvider("google"),
 			static.AddProvider("random"),
-			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "${local.gcpruntimeconfig_url}"),
+			static.AddOutputVar("RUNTIMEVAR_VARIABLE_URL", "local.gcpruntimeconfig_url"),
 			static.CopyFile("/resource/runtimevar/gcpruntimeconfig.tf", "gcpruntimeconfig.tf"),
+		}, nil
+	},
+
+	// SECRETS
+	"secrets/awskms": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AWSRegionIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("aws"),
+			static.AddProvider("random"),
+			static.AddOutputVar("SECRETS_KEEPER_URL", "local.awskms_url"),
+			static.CopyFile("/resource/secrets/awskms.tf", "awskms.tf"),
+		}, nil
+	},
+	"secrets/azurekeyvault": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.AzureLocationIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("azurerm"),
+			static.AddProvider("external"),
+			static.AddProvider("random"),
+			static.AddOutputVar("SECRETS_KEEPER_URL", "local.azurekeyvault_url"),
+			static.AddOutputVar("AZURE_KEYVAULT_AUTH_VIA_CLI", "true"),
+			static.CopyFile("/resource/secrets/azurekeyvault.tf", "azurekeyvault.tf"),
+		}, nil
+	},
+	"secrets/gcpkms": func(pctx *processContext, biomeDir string) ([]*static.Action, error) {
+		reader := bufio.NewReader(pctx.stdin)
+		_, err := prompt.GCPProjectIDIfNeeded(reader, pctx.stderr, biomeDir)
+		if err != nil {
+			return nil, err
+		}
+		return []*static.Action{
+			static.AddProvider("google"),
+			static.AddProvider("random"),
+			static.AddOutputVar("SECRETS_KEEPER_URL", "local.gcpkms_url"),
+			static.CopyFile("/resource/secrets/gcpkms.tf", "gcpkms.tf"),
 		}, nil
 	},
 }
@@ -176,7 +305,10 @@ func resourceAdd(ctx context.Context, pctx *processContext, biome, typ string) e
 	if err != nil {
 		return xerrors.Errorf("resource add: %w", err)
 	}
-	destBiomeDir := biomeDir(moduleDir, biome)
+	destBiomeDir, err := biomeDir(moduleDir, biome)
+	if err != nil {
+		return xerrors.Errorf("resource add: %w", err)
+	}
 
 	do := provisionableTypes[typ]
 	if do == nil {

@@ -13,12 +13,12 @@
 # limitations under the License.
 
 variable "project" {
-  type        = "string"
+  type        = string
   description = "Project to set up."
 }
 
 variable "zone" {
-  type        = "string"
+  type        = string
   description = "GCP zone to create the GKE cluster in, like 'us-central1-a'. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
 }
 
@@ -26,3 +26,4 @@ variable "github_app_key" {
   default     = ""
   description = "PEM-encoded GitHub application private key. This defaults to empty for bootstrapping reasons."
 }
+

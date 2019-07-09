@@ -65,6 +65,9 @@ type Harness interface {
 	// function given to BeforeQuery.
 	BeforeQueryTypes() []interface{}
 
+	// RevisionsEqual reports whether two revisions are equal.
+	RevisionsEqual(rev1, rev2 interface{}) bool
+
 	// Close closes resources used by the harness.
 	Close()
 }
@@ -162,6 +165,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
+	t.Run("SerializeRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testSerializeRevision) })
 
 	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
@@ -304,12 +308,12 @@ type docstruct struct {
 	DocstoreRevision interface{}
 	Etag             interface{}
 
-	I  int                    `docstore:"i"`
-	U  uint                   `docstore:"u"`
-	F  float64                `docstore:"f"`
-	St string                 `docstore:"st"`
-	B  bool                   `docstore:"b"`
-	M  map[string]interface{} `docstore:"m"`
+	I  int
+	U  uint
+	F  float64
+	St string
+	B  bool
+	M  map[string]interface{}
 }
 
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
@@ -520,6 +524,7 @@ func checkNoRevisionField(t *testing.T, doc interface{}, revField string) {
 
 // Check that doc has a non-nil revision field.
 func checkHasRevisionField(t *testing.T, doc interface{}, revField string) {
+
 	t.Helper()
 	ddoc, err := driver.NewDocument(doc)
 	if err != nil {
@@ -586,7 +591,23 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 		{
 			name: "get struct with field path",
 			doc: &docstruct{
-				Name: "testGetStruct",
+				Name: "testGetStructFP",
+				St:   "a string",
+				I:    95,
+				F:    32.3,
+				M:    map[string]interface{}{"a": "one", "b": "two"},
+			},
+			fps: []docstore.FieldPath{"St", "M.a"},
+			want: &docstruct{
+				Name: "testGetStructFP",
+				St:   "a string",
+				M:    map[string]interface{}{"a": "one"},
+			},
+		},
+		{
+			name: "get struct wrong case",
+			doc: &docstruct{
+				Name: "testGetStructWC",
 				St:   "a string",
 				I:    95,
 				F:    32.3,
@@ -594,9 +615,7 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 			},
 			fps: []docstore.FieldPath{"st", "m.a"},
 			want: &docstruct{
-				Name: "testGetStruct",
-				St:   "a string",
-				M:    map[string]interface{}{"a": "one"},
+				Name: "testGetStructWC",
 			},
 		},
 	} {
@@ -697,10 +716,10 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 			name: "update struct",
 			doc:  &docstruct{Name: "testUpdateStruct", St: "st", I: 1, F: 3.5},
 			mods: ds.Mods{
-				"st": "str",
-				"i":  nil,
-				"u":  docstore.Increment(4),
-				"f":  docstore.Increment(-3),
+				"St": "str",
+				"I":  nil,
+				"U":  docstore.Increment(4),
+				"F":  docstore.Increment(-3),
 			},
 			want: &docstruct{Name: "testUpdateStruct", St: "str", U: 4, F: 0.5},
 		},
@@ -782,6 +801,29 @@ func testRevisionField(t *testing.T, coll *ds.Collection, revField string, write
 				t.Errorf("write with old revision field: got %v, wanted FailedPrecondition or NotFound", err)
 			}
 		})
+	}
+}
+
+// Verify that the driver can serialize and deserialize revisions.
+func testSerializeRevision(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
+	doc := docmap{KeyField: "testSerializeRevision", "x": 1}
+	if err := coll.Create(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	want := doc[docstore.DefaultRevisionField]
+	if want == nil {
+		t.Fatal("nil revision")
+	}
+	s, err := coll.RevisionToString(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := coll.StringToRevision(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !h.RevisionsEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
 	}
 }
 

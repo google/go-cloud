@@ -24,8 +24,8 @@ import (
 	firestore "cloud.google.com/go/firestore/apiv1"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"gocloud.dev/docstore"
-	_ "gocloud.dev/docstore/dynamodocstore"
-	_ "gocloud.dev/docstore/firedocstore"
+	_ "gocloud.dev/docstore/awsdynamodb"
+	_ "gocloud.dev/docstore/gcpfirestore"
 	"gocloud.dev/docstore/memdocstore"
 	"gocloud.dev/gcerrors"
 )
@@ -102,9 +102,9 @@ func ExampleCollection_Update() {
 
 func ExampleOpenCollection() {
 	ctx := context.Background()
-	// Open a collection using the firedocstore package.
+	// Open a collection using the gcpfirestore package.
 	// You will need to blank-import the package for this to work:
-	//   import _ "gocloud.dev/docstore/firedocstore"
+	//   import _ "gocloud.dev/docstore/gcpfirestore"
 	coll, err := docstore.OpenCollection(ctx, "firestore://my-collection")
 	if err != nil {
 		log.Fatal(err)
@@ -115,14 +115,14 @@ func ExampleOpenCollection() {
 }
 
 func ExampleCollection_As() {
-	// This example is specific to the firedocstore implementation; it demonstrates
+	// This example is specific to the gcpfirestore implementation; it demonstrates
 	// access to the underlying *cloud.google.com/go/firestore/apiv1.Client.
 
 	// You will need to blank-import the package for this to work:
-	//   import _ "gocloud.dev/docstore/firedocstore"
+	//   import _ "gocloud.dev/docstore/gcpfirestore"
 
-	// The types exposed for As by firedocstore are documented in
-	// https://godoc.org/gocloud.dev/docstore/firedocstore#hdr-As
+	// The types exposed for As by gcpfirestore are documented in
+	// https://godoc.org/gocloud.dev/docstore/gcpfirestore#hdr-As
 
 	// This URL will open the collection using default credentials.
 	ctx := context.Background()
@@ -143,9 +143,9 @@ func ExampleCollection_As() {
 }
 
 func ExampleCollection_ErrorAs() {
-	// This example is specific to the dynamodocstore implementation.
+	// This example is specific to the awsdynamodb implementation.
 	// You will need to blank-import the package for this to work:
-	//   import _ "gocloud.dev/docstore/dynamodocstore"
+	//   import _ "gocloud.dev/docstore/awsdynamodb"
 
 	// The types exposed for As by mongodocstore are documented in
 	// https://godoc.org/gocloud.dev/docstore/mongodocstore#hdr-As

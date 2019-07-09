@@ -110,7 +110,9 @@ func (d Document) Get(fp []string) (interface{}, error) {
 }
 
 func (d Document) structField(name string) (reflect.Value, error) {
-	f := d.fields.Match(name)
+	// We do case-insensitive match here to cover the MongoDB's lowercaseFields
+	// option.
+	f := d.fields.MatchFold(name)
 	if f == nil {
 		return reflect.Value{}, gcerr.Newf(gcerr.NotFound, nil, "field %q not found in struct type %s", name, d.s.Type())
 	}

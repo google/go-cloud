@@ -7,9 +7,12 @@ import (
 	"html/template"
 	"net/http"
 	"os"
-	"time"
 
 	"gocloud.dev/secrets"
+	_ "gocloud.dev/secrets/awskms"
+	_ "gocloud.dev/secrets/azurekeyvault"
+	_ "gocloud.dev/secrets/gcpkms"
+	_ "gocloud.dev/secrets/hashivault"
 	_ "gocloud.dev/secrets/localsecrets"
 )
 
@@ -27,13 +30,13 @@ var keeper *secrets.Keeper
 var keeperErr error
 
 func init() {
+	ctx := context.Background()
+
 	keeperURL = os.Getenv("SECRETS_KEEPER_URL")
 	if keeperURL == "" {
 		// TODO(rvangent): Remove default later.
 		keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	keeper, keeperErr = secrets.OpenKeeper(ctx, keeperURL)
 }
 
@@ -138,74 +141,74 @@ var (
 
 // secretsEncryptHandler allows the user to enter some data to be encrypted.
 func secretsEncryptHandler(w http.ResponseWriter, req *http.Request) {
-	input := &secretsData{
+	data := &secretsData{
 		URL:    keeperURL,
 		In:     req.FormValue("plaintext"),
 		Base64: req.FormValue("base64") == "true",
 	}
 	defer func() {
-		if err := secretsEncryptTmpl.Execute(w, input); err != nil {
+		if err := secretsEncryptTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if keeperErr != nil {
-		input.Err = keeperErr
+		data.Err = keeperErr
 		return
 	}
-	if input.In != "" {
+	if data.In != "" {
 		var in []byte
-		if input.Base64 {
+		if data.Base64 {
 			var err error
-			in, err = base64.StdEncoding.DecodeString(input.In)
+			in, err = base64.StdEncoding.DecodeString(data.In)
 			if err != nil {
-				input.Err = fmt.Errorf("Plaintext data was not valid Base64: %v", err)
+				data.Err = fmt.Errorf("Plaintext data was not valid Base64: %v", err)
 				return
 			}
 		} else {
-			in = []byte(input.In)
+			in = []byte(data.In)
 		}
 		encrypted, err := keeper.Encrypt(req.Context(), in)
 		if err != nil {
-			input.Err = fmt.Errorf("Failed to encrypt: %v", err)
+			data.Err = fmt.Errorf("Failed to encrypt: %v", err)
 			return
 		}
-		input.Out = base64.StdEncoding.EncodeToString(encrypted)
+		data.Out = base64.StdEncoding.EncodeToString(encrypted)
 	}
 }
 
 // secretsDecryptHandler allows the user to enter some data to be decrypted.
 func secretsDecryptHandler(w http.ResponseWriter, req *http.Request) {
-	input := &secretsData{
+	data := &secretsData{
 		URL:    keeperURL,
 		In:     req.FormValue("ciphertext"),
 		Base64: req.FormValue("base64") == "true",
 	}
 	defer func() {
-		if err := secretsDecryptTmpl.Execute(w, input); err != nil {
+		if err := secretsDecryptTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if keeperErr != nil {
-		input.Err = keeperErr
+		data.Err = keeperErr
 		return
 	}
-	if input.In != "" {
-		in, err := base64.StdEncoding.DecodeString(input.In)
+	if data.In != "" {
+		in, err := base64.StdEncoding.DecodeString(data.In)
 		if err != nil {
-			input.Err = fmt.Errorf("Ciphertext data was not valid Base64: %v", err)
+			data.Err = fmt.Errorf("Ciphertext data was not valid Base64: %v", err)
 			return
 		}
 		decrypted, err := keeper.Decrypt(req.Context(), in)
 		if err != nil {
-			input.Err = fmt.Errorf("Failed to decrypt: %v", err)
+			data.Err = fmt.Errorf("Failed to decrypt: %v", err)
 			return
 		}
-		if input.Base64 {
-			input.Out = base64.StdEncoding.EncodeToString(decrypted)
+		if data.Base64 {
+			data.Out = base64.StdEncoding.EncodeToString(decrypted)
 		} else {
-			input.Out = string(decrypted)
+			data.Out = string(decrypted)
 		}
 	}
 }

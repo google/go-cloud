@@ -87,7 +87,7 @@ func filterMatches(f driver.Filter, doc map[string]interface{}) bool {
 
 // op is one of the five permitted docstore operators ("=", "<", etc.)
 // c is the result of strings.Compare or the like.
-// TODO(jba): dedup from firedocstore/query?
+// TODO(jba): dedup from gcpfirestore/query?
 func applyComparison(op string, c int) bool {
 	switch op {
 	case driver.EqualOp:

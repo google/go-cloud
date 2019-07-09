@@ -28,16 +28,13 @@ var variable *runtimevar.Variable
 var variableErr error
 
 func init() {
+	ctx := context.Background()
+
 	variableURL = os.Getenv("RUNTIMEVAR_VARIABLE_URL")
 	if variableURL == "" {
 		variableURL = "constant://?val=my-variable&decoder=string"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	variable, variableErr = runtimevar.OpenVariable(ctx, variableURL)
-	if variableErr != nil {
-		_, variableErr = variable.Latest(ctx)
-	}
 }
 
 type runtimevarData struct {
@@ -85,23 +82,25 @@ const runtimevarTemplate = `
 var runtimevarTmpl = template.Must(template.New("runtimevar").Parse(runtimevarTemplate))
 
 func runtimevarHandler(w http.ResponseWriter, req *http.Request) {
-	input := &runtimevarData{
+	data := &runtimevarData{
 		URL: variableURL,
 	}
 	defer func() {
-		if err := runtimevarTmpl.Execute(w, input); err != nil {
+		if err := runtimevarTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if variableErr != nil {
-		input.Err = variableErr
+		data.Err = variableErr
 		return
 	}
-	snapshot, err := variable.Latest(req.Context())
+	ctx, cancel := context.WithTimeout(req.Context(), 100*time.Millisecond)
+	defer cancel()
+	snapshot, err := variable.Latest(ctx)
 	if err != nil {
-		input.Err = err
+		data.Err = err
 		return
 	}
-	input.Snapshot = &snapshot
+	data.Snapshot = &snapshot
 }

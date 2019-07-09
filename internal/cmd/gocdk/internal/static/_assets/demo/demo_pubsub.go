@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"gocloud.dev/pubsub"
+	_ "gocloud.dev/pubsub/awssnssqs"
+	_ "gocloud.dev/pubsub/azuresb"
+	_ "gocloud.dev/pubsub/gcppubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
 )
 
@@ -32,8 +35,7 @@ var subscription *pubsub.Subscription
 var subscriptionErr error
 
 func init() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	topicURL = os.Getenv("PUBSUB_TOPIC_URL")
 	if topicURL == "" {
@@ -123,52 +125,52 @@ var (
 )
 
 func pubsubSendHandler(w http.ResponseWriter, req *http.Request) {
-	input := &pubsubData{
+	data := &pubsubData{
 		TopicURL:        topicURL,
 		SubscriptionURL: subscriptionURL,
 		Msg:             req.FormValue("msg"),
 	}
 	defer func() {
-		if err := pubsubSendTmpl.Execute(w, input); err != nil {
+		if err := pubsubSendTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if topicErr != nil {
-		input.Err = topicErr
+		data.Err = topicErr
 		return
 	}
-	if input.Msg != "" {
-		input.Err = topic.Send(req.Context(), &pubsub.Message{Body: []byte(input.Msg)})
-		if input.Err == nil {
-			input.Success = true
+	if data.Msg != "" {
+		data.Err = topic.Send(req.Context(), &pubsub.Message{Body: []byte(data.Msg)})
+		if data.Err == nil {
+			data.Success = true
 		}
 	}
 }
 
 func pubsubReceiveHandler(w http.ResponseWriter, req *http.Request) {
-	input := &pubsubData{
+	data := &pubsubData{
 		TopicURL:        topicURL,
 		SubscriptionURL: subscriptionURL,
 	}
 	defer func() {
-		if err := pubsubReceiveTmpl.Execute(w, input); err != nil {
+		if err := pubsubReceiveTmpl.Execute(w, data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}()
 
 	if subscriptionErr != nil {
-		input.Err = subscriptionErr
+		data.Err = subscriptionErr
 		return
 	}
 	ctx, cancel := context.WithTimeout(req.Context(), waitForMessage)
 	defer cancel()
 	msg, err := subscription.Receive(ctx)
 	if err == nil {
-		input.Msg = string(msg.Body)
-		input.Success = true
+		data.Msg = string(msg.Body)
+		data.Success = true
 		msg.Ack()
 	} else if err != context.DeadlineExceeded {
-		input.Err = err
+		data.Err = err
 	}
 }

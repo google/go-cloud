@@ -39,7 +39,10 @@ package memdocstore // import "gocloud.dev/docstore/memdocstore"
 
 import (
 	"context"
+	"encoding/gob"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -57,7 +60,13 @@ type Options struct {
 
 	// The maximum number of concurrent goroutines started for a single call to
 	// ActionList.Do. If less than 1, there is no limit.
-	MaxOutstandingActionRPCs int
+	MaxOutstandingActions int
+
+	// The filename associated with this collection.
+	// When a collection is opened with a non-nil filename, the collection
+	// is loaded from the file if it exists. Otherwise, an empty collection is created.
+	// When the collection is closed, its contents are saved to the file.
+	Filename string
 }
 
 // TODO(jba): make this package thread-safe.
@@ -94,11 +103,15 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{},
 	if opts.RevisionField == "" {
 		opts.RevisionField = docstore.DefaultRevisionField
 	}
+	docs, err := loadDocs(opts.Filename)
+	if err != nil {
+		return nil, err
+	}
 	return &collection{
 		keyField:    keyField,
 		keyFunc:     keyFunc,
+		docs:        docs,
 		opts:        opts,
-		docs:        map[interface{}]map[string]interface{}{},
 		curRevision: 0,
 	}, nil
 }
@@ -142,7 +155,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 
 	// Run the actions concurrently with each other.
 	run := func(as []*driver.Action) {
-		t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
+		t := driver.NewThrottle(c.opts.MaxOutstandingActions)
 		for _, a := range as {
 			a := a
 			t.Acquire()
@@ -364,7 +377,11 @@ func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) 
 	if err != nil {
 		return nil, err
 	}
-	return m2[fp[len(fp)-1]], nil
+	v, ok := m2[fp[len(fp)-1]]
+	if ok {
+		return v, nil
+	}
+	return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", fp)
 }
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
@@ -408,6 +425,20 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 	return m, nil
 }
 
+// RevisionToBytes implements driver.RevisionToBytes.
+func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
+	r, ok := rev.(int64)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not an int64", rev)
+	}
+	return strconv.AppendInt(nil, r, 10), nil
+}
+
+// BytesToRevision implements driver.BytesToRevision.
+func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
+	return strconv.ParseInt(string(b), 10, 64)
+}
+
 // As implements driver.As.
 func (c *collection) As(i interface{}) bool { return false }
 
@@ -415,4 +446,48 @@ func (c *collection) As(i interface{}) bool { return false }
 func (c *collection) ErrorAs(err error, i interface{}) bool { return false }
 
 // Close implements driver.Collection.Close.
-func (c *collection) Close() error { return nil }
+// If the collection was created with a Filename option, Close writes the
+// collection's documents to the file.
+func (c *collection) Close() error {
+	return saveDocs(c.opts.Filename, c.docs)
+}
+
+type mapOfDocs = map[interface{}]map[string]interface{}
+
+// Read a map from the filename if is is not empty and the file exists.
+// Otherwise return an empty (not nil) map.
+func loadDocs(filename string) (mapOfDocs, error) {
+	if filename == "" {
+		return mapOfDocs{}, nil
+	}
+	f, err := os.Open(filename)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		// If the file doesn't exist, return an empty map without error.
+		return mapOfDocs{}, nil
+	}
+	defer f.Close()
+	var m mapOfDocs
+	if err := gob.NewDecoder(f).Decode(&m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// saveDocs saves m to filename if filename is not empty.
+func saveDocs(filename string, m mapOfDocs) error {
+	if filename == "" {
+		return nil
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	if err := gob.NewEncoder(f).Encode(m); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
+}

@@ -17,11 +17,11 @@ terraform {
     bucket = "go-cloud-contribute-bot-tfstate"
   }
 
-  required_version = "~>0.11"
+  required_version = "~>0.12"
 }
 
 provider "google" {
-  version = "~> 1.15"
+  version = "~> 2.5"
   project = "go-cloud-contribute-bot"
 }
 
@@ -31,8 +31,9 @@ variable "github_app_key" {
 }
 
 module "contributebot" {
-  source         = ".."
+  source         = "./.."
   project        = "go-cloud-contribute-bot"
   zone           = "us-central1-c"
-  github_app_key = "${var.github_app_key}"
+  github_app_key = var.github_app_key
 }
+
