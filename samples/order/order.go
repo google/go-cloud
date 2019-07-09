@@ -30,13 +30,10 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gocloud.dev/blob"
-	"gocloud.dev/blob/fileblob"
 	"gocloud.dev/docstore"
 	"gocloud.dev/pubsub"
 )
@@ -138,7 +135,7 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 		burl = "file://" + filepath.ToSlash(dir)
 		addCleanup(func() { os.Remove(dir) })
 	}
-	bucket, keyFromURL, err := openBucket(ctx, burl)
+	bucket, err := blob.OpenBucket(ctx, burl)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -154,7 +151,6 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 		requestTopic: reqTopic,
 		bucket:       bucket,
 		coll:         coll,
-		keyFromURL:   keyFromURL,
 	}
 	p := &processor{
 		requestSub: reqSub,
@@ -162,29 +158,4 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 		coll:       coll,
 	}
 	return f, p, cleanup, nil
-}
-
-func openBucket(ctx context.Context, surl string) (*blob.Bucket, func(context.Context, *url.URL) (string, error), error) {
-	if !strings.HasPrefix(surl, "file:") {
-		bucket, err := blob.OpenBucket(ctx, surl)
-		if err != nil {
-			return nil, nil, err
-		}
-		return bucket, nil, nil
-	}
-	// To support signed URLs with fileblob, we need to pass an option.
-	u, err := url.Parse(surl)
-	if err != nil {
-		return nil, nil, err
-	}
-	path := u.Path
-	if os.PathSeparator != '/' {
-		path = strings.TrimPrefix(path, "/")
-	}
-	signer := fileblob.NewURLSignerHMAC(&url.URL{Path: "/show"}, []byte("secret key"))
-	bucket, err := fileblob.OpenBucket(filepath.FromSlash(path), &fileblob.Options{URLSigner: signer})
-	if err != nil {
-		return nil, nil, err
-	}
-	return bucket, signer.KeyFromURL, nil
 }

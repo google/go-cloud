@@ -23,7 +23,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -43,8 +42,6 @@ type frontend struct {
 	requestTopic *pubsub.Topic
 	bucket       *blob.Bucket
 	coll         *docstore.Collection
-	// function to recover an object key from a URL
-	keyFromURL func(ctx context.Context, sURL *url.URL) (string, error)
 }
 
 var (
@@ -186,7 +183,6 @@ func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
 
 func (f *frontend) showImage(w http.ResponseWriter, r *http.Request) error {
 	objKey := strings.TrimPrefix(r.URL.Path, "/show/")
-	log.Printf("objKey = %q", objKey)
 	reader, err := f.bucket.NewReader(r.Context(), objKey, nil)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("file %q not found", objKey), http.StatusNotFound)
