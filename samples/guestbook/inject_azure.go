@@ -24,10 +24,10 @@ import (
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/blobvar"
 	"gocloud.dev/server"
+	"gocloud.dev/server/requestlog"
 )
 
 // This file wires the generic interfaces up to Microsoft Azure. It

@@ -9,6 +9,10 @@ import (
 	"os"
 
 	"gocloud.dev/secrets"
+	_ "gocloud.dev/secrets/awskms"
+	_ "gocloud.dev/secrets/azurekeyvault"
+	_ "gocloud.dev/secrets/gcpkms"
+	_ "gocloud.dev/secrets/hashivault"
 	_ "gocloud.dev/secrets/localsecrets"
 )
 
