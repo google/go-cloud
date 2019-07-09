@@ -17,6 +17,7 @@
 // topic.
 //
 // At present, it just encodes input images into PNG format.
+
 package main
 
 import (

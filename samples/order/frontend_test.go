@@ -140,13 +140,10 @@ func TestListOrders(t *testing.T) {
 
 func testConfig(name string) config {
 	reqURL := "mem://requests-" + name
-	resURL := "mem://responses-" + name
 	return config{
-		requestTopicURL:  reqURL,
-		requestSubURL:    reqURL,
-		responseTopicURL: resURL,
-		responseSubURL:   resURL,
-		bucketURL:        "", // setup will use fileblob with a temporary dir
-		collectionURL:    fmt.Sprintf("mem://orders-%s/ID", name),
+		requestTopicURL: reqURL,
+		requestSubURL:   reqURL,
+		bucketURL:       "", // setup will use fileblob with a temporary dir
+		collectionURL:   fmt.Sprintf("mem://orders-%s/ID", name),
 	}
 }

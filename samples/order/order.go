@@ -12,12 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This application processes orders for converting images to PNG format. It
+// consists of two components: a frontend, which serves web pages that people
+// can use to place and view orders; and a processor, which performs the
+// conversions. This binary can run both together in one process (the default),
+// or it can run either on its own. Either way, the two components:
+//  - communicate over a topic using the gocloud.dev/pubsub API;
+//  - write orders to a database using the gocloud.dev/docstore API;
+//  - and save image files to cloud storage using the gocloud.dev/blob API.
+//
+// This application assumes at-least-once processing. Make sure the pubsub
+// implementation you provide to it has that behavior.
 package main
 
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -29,12 +39,10 @@ import (
 )
 
 var (
-	requestTopicURL  = flag.String("request-topic", "mem://requests", "gocloud.dev/pubsub URL for request topic")
-	requestSubURL    = flag.String("request-sub", "mem://requests", "gocloud.dev/pubsub URL for request subscription")
-	responseTopicURL = flag.String("response-topic", "mem://responses", "gocloud.dev/pubsub URL for response topic")
-	responseSubURL   = flag.String("response-sub", "mem://responses", "gocloud.dev/pubsub URL for response subscription")
-	bucketURL        = flag.String("bucket", "", "gocloud.dev/blob URL for image bucket")
-	collectionURL    = flag.String("collection", "mem://orders/ID", "gocloud.dev/docstore URL for order collection")
+	requestTopicURL = flag.String("request-topic", "mem://requests", "gocloud.dev/pubsub URL for request topic")
+	requestSubURL   = flag.String("request-sub", "mem://requests", "gocloud.dev/pubsub URL for request subscription")
+	bucketURL       = flag.String("bucket", "", "gocloud.dev/blob URL for image bucket")
+	collectionURL   = flag.String("collection", "mem://orders/ID", "gocloud.dev/docstore URL for order collection")
 
 	port         = flag.Int("port", 10538, "HTTP port for frontend")
 	runFrontend  = flag.Bool("frontend", true, "run the frontend")
@@ -44,12 +52,10 @@ var (
 func main() {
 	flag.Parse()
 	conf := config{
-		requestTopicURL:  *requestTopicURL,
-		requestSubURL:    *requestSubURL,
-		responseTopicURL: *responseTopicURL,
-		responseSubURL:   *responseSubURL,
-		bucketURL:        *bucketURL,
-		collectionURL:    *collectionURL,
+		requestTopicURL: *requestTopicURL,
+		requestSubURL:   *requestSubURL,
+		bucketURL:       *bucketURL,
+		collectionURL:   *collectionURL,
 	}
 	frontend, processor, cleanup, err := setup(conf)
 	if err != nil {
@@ -59,17 +65,18 @@ func main() {
 
 	// Run the frontend, or the processor, or both.
 	// When we want to run both, one of them has to run in a goroutine.
-	// So it's easier to run both in goroutines, even if we only need
+	// So it's simpler to run both in goroutines, even if we only need
 	// to run one.
 	errc := make(chan error, 2)
 	if *runFrontend {
 		go func() { errc <- frontend.run(context.Background(), *port) }()
-		fmt.Printf("listening on port %d\n", *port)
+		log.Printf("listening on port %d", *port)
 	} else {
 		errc <- nil
 	}
 	if *runProcessor {
 		go func() { errc <- processor.run(context.Background()) }()
+		log.Println("processing")
 	} else {
 		errc <- nil
 	}
@@ -83,58 +90,41 @@ func main() {
 
 // config describes the URLs for the resources used by the order application.
 type config struct {
-	requestTopicURL  string
-	requestSubURL    string
-	responseTopicURL string
-	responseSubURL   string
-	bucketURL        string
-	collectionURL    string
+	requestTopicURL string
+	requestSubURL   string
+	bucketURL       string
+	collectionURL   string
 }
 
 // setup opens all the necessary resources for the application.
 func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
-	// TODO(jba): simplify cleanup logic
-	var cleanups []func()
+
+	addCleanup := func(f func()) {
+		old := cleanup
+		cleanup = func() { old(); f() }
+	}
+
 	defer func() {
-		// Clean up on error; return cleanup func on success.
-		f := func() {
-			for _, c := range cleanups {
-				c()
-			}
-		}
 		if err != nil {
-			f()
+			cleanup()
 			cleanup = nil
-		} else {
-			cleanup = f
 		}
 	}()
 
 	ctx := context.Background()
-	// TODO(jba): This application assumes at-least-once processing. Enforce that here if possible.
+	cleanup = func() {}
+
 	reqTopic, err := pubsub.OpenTopic(ctx, conf.requestTopicURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	cleanups = append(cleanups, func() { reqTopic.Shutdown(ctx) })
+	addCleanup(func() { reqTopic.Shutdown(ctx) })
 
 	reqSub, err := pubsub.OpenSubscription(ctx, conf.requestSubURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	cleanups = append(cleanups, func() { reqSub.Shutdown(ctx) })
-
-	resTopic, err := pubsub.OpenTopic(ctx, conf.responseTopicURL)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	cleanups = append(cleanups, func() { resTopic.Shutdown(ctx) })
-
-	resSub, err := pubsub.OpenSubscription(ctx, conf.responseSubURL)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	cleanups = append(cleanups, func() { resSub.Shutdown(ctx) })
+	addCleanup(func() { reqSub.Shutdown(ctx) })
 
 	burl := conf.bucketURL
 	if burl == "" {
@@ -143,19 +133,19 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 			return nil, nil, nil, err
 		}
 		burl = "file://" + filepath.ToSlash(dir)
-		cleanups = append(cleanups, func() { os.Remove(dir) })
+		addCleanup(func() { os.Remove(dir) })
 	}
 	bucket, err := blob.OpenBucket(ctx, burl)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	cleanups = append(cleanups, func() { bucket.Close() })
+	addCleanup(func() { bucket.Close() })
 
 	coll, err := docstore.OpenCollection(ctx, conf.collectionURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	cleanups = append(cleanups, func() { coll.Close() })
+	addCleanup(func() { coll.Close() })
 
 	f := &frontend{
 		requestTopic: reqTopic,
@@ -167,5 +157,5 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 		bucket:     bucket,
 		coll:       coll,
 	}
-	return f, p, nil, nil
+	return f, p, cleanup, nil
 }
