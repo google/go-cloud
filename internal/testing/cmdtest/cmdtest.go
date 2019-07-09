@@ -46,6 +46,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -473,6 +474,95 @@ func Program(path string) CommandFunc {
 	return func(args []string, inputFile string) ([]byte, error) {
 		return execute(abspath, args, inputFile)
 	}
+}
+
+// InProcessProgram defines a command function that will invoke f, which must
+// behave like an actual main function except that it returns an error code
+// instead of calling os.Exit.
+// Before calling f:
+// - os.Args is set to the concatenation of name and args.
+// - If inputFile is non-empty, it is redirected to standard input.
+// - Standard output and standard error are redirected to a buffer, which is
+// returned.
+func InProcessProgram(name string, f func() int) CommandFunc {
+	return func(args []string, inputFile string) ([]byte, error) {
+		origArgs := os.Args
+		origOut := os.Stdout
+		origErr := os.Stderr
+		defer func() {
+			os.Args = origArgs
+			os.Stdout = origOut
+			os.Stderr = origErr
+		}()
+		os.Args = append([]string{name}, args...)
+		// Redirect stdout and stderr to pipes.
+		rOut, wOut, err := os.Pipe()
+		if err != nil {
+			return nil, err
+		}
+		rErr, wErr, err := os.Pipe()
+		if err != nil {
+			return nil, err
+		}
+		os.Stdout = wOut
+		os.Stderr = wErr
+		// Copy both stdout and stderr to the same buffer.
+		buf := &bytes.Buffer{}
+		lw := &lockingWriter{w: buf}
+		errc := make(chan error, 2)
+		go func() {
+			_, err := io.Copy(lw, rOut)
+			errc <- err
+		}()
+		go func() {
+			_, err := io.Copy(lw, rErr)
+			errc <- err
+		}()
+
+		// Redirect stdin if needed.
+		if inputFile != "" {
+			f, err := os.Open(inputFile)
+			if err != nil {
+				return nil, err
+			}
+			defer f.Close()
+			origIn := os.Stdin
+			defer func() { os.Stdin = origIn }()
+			os.Stdin = f
+		}
+
+		res := f()
+		if err := wOut.Close(); err != nil {
+			return nil, err
+		}
+		if err := wErr.Close(); err != nil {
+			return nil, err
+		}
+		// Wait for pipe copying to finish.
+		if err := <-errc; err != nil {
+			return nil, err
+		}
+		if err := <-errc; err != nil {
+			return nil, err
+		}
+		if res != 0 {
+			err = fmt.Errorf("%s failed with exit code %d", name, res)
+		}
+		return buf.Bytes(), err
+	}
+}
+
+// lockingWriter is an io.Writer whose Write method is safe for
+// use by multiple goroutines.
+type lockingWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (w *lockingWriter) Write(b []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.w.Write(b)
 }
 
 // execute uses exec.Command to run the named program with the given args. The

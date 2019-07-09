@@ -45,13 +45,17 @@ const helpSuffix = `
 `
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&pubCmd{}, "")
 	subcommands.Register(&subCmd{}, "")
 	log.SetFlags(0)
 	log.SetPrefix("gocdk-pubsub: ")
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	return int(subcommands.Execute(context.Background()))
 }
 
 type pubCmd struct{}

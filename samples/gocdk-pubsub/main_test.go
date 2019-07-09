@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main_test
+package main
 
 import (
 	"flag"
 	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/streadway/amqp"
@@ -29,11 +28,6 @@ import (
 var update = flag.Bool("update", false, "replace test file contents with output")
 
 func Test(t *testing.T) {
-	if err := exec.Command("go", "build").Run(); err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("gocdk-pubsub")
-
 	ts, err := cmdtest.Read(".")
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +36,7 @@ func Test(t *testing.T) {
 	if err := initRabbit(); err != nil {
 		t.Fatal(err)
 	}
-	ts.Commands["gocdk-pubsub"] = cmdtest.Program("gocdk-pubsub")
+	ts.Commands["gocdk-pubsub"] = cmdtest.InProcessProgram("gocdk-pubsub", run)
 	if err := ts.Run(*update); err != nil {
 		t.Error(err)
 	}
