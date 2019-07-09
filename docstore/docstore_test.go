@@ -160,6 +160,18 @@ func TestClosedErrors(t *testing.T) {
 	check(iter.Next(ctx, doc))
 }
 
+func TestSerializeRevisionErrors(t *testing.T) {
+	c := newCollection(fakeDriverCollection{})
+	_, err := c.RevisionToString(nil)
+	if got := gcerrors.Code(err); got != gcerrors.InvalidArgument {
+		t.Errorf("got %v, want InvalidArgument", got)
+	}
+	_, err = c.StringToRevision("")
+	if got := gcerrors.Code(err); got != gcerrors.InvalidArgument {
+		t.Errorf("got %v, want InvalidArgument", got)
+	}
+}
+
 type fakeDriverCollection struct {
 	driver.Collection
 }
