@@ -26,8 +26,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/xray/xrayiface"
 	"github.com/google/wire"
 	"go.opencensus.io/trace"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
+	"gocloud.dev/server/requestlog"
 )
 
 // Set is a Wire provider set that provides the diagnostic hooks for

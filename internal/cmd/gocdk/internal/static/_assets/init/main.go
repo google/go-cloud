@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
+	"gocloud.dev/server/requestlog"
 )
 
 func main() {

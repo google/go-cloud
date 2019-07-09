@@ -408,9 +408,12 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	// Get the messages, but nack them.
 	// Make sure to nack after receiving all of them; otherwise, we could
 	// receive one of the messages twice instead of receiving all nMessages.
+	// The test will hang here if the messages aren't redelivered, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 	var got []*pubsub.Message
 	for i := 0; i < nMessages; i++ {
-		m, err := sub.Receive(ctx)
+		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -424,7 +427,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 		t.Error(diff)
 	}
 	// The test will hang here if the messages aren't redelivered, so use a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx2, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	got = nil
@@ -505,9 +508,12 @@ func testBatching(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Get the messages.
+	// The test will hang here if the messages aren't delivered, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 	var got []*pubsub.Message
 	for i := 0; i < nMessages; i++ {
-		m, err := sub.Receive(ctx)
+		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -547,9 +553,12 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Retrieve the messages.
+	// The test will hang here if the messages aren't delivered, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 	var dms []*driver.Message
 	for len(dms) != 3 {
-		curdms, err := ds.ReceiveBatch(ctx, 3)
+		curdms, err := ds.ReceiveBatch(ctx2, 3)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -584,7 +593,7 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// The test will hang here if the message isn't redelivered, so use a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx2, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	// We're looking to re-receive dms[2].
@@ -779,7 +788,10 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 
-		m, err = sub.Receive(ctx)
+		// The test will hang here if the messages aren't delivered, so use a shorter timeout.
+		ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		m, err = sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -837,7 +849,10 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
-	m, err = sub.Receive(ctx)
+	// The test will hang here if the messages aren't delivered, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	m, err = sub.Receive(ctx2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -912,7 +927,10 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err := topic.Send(ctx, msg); err != nil {
 		t.Fatal(err)
 	}
-	m, err := sub.Receive(ctx)
+	// The test will hang here if the messages aren't delivered, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	m, err := sub.Receive(ctx2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -954,7 +972,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}()
 
 	// The test will hang here if Receive doesn't fail quickly, so set a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx2, cancel = context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	_, subErr := nonExistentSub.Receive(ctx2)
 	if subErr == nil || ctx2.Err() != nil || gcerrors.Code(subErr) != gcerrors.NotFound {
