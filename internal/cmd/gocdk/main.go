@@ -72,7 +72,6 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 	registerResourceCmd(ctx, pctx, rootCmd)
 	registerDeployCmd(ctx, pctx, rootCmd)
 	registerBuildCmd(ctx, pctx, rootCmd)
-	registerApplyCmd(ctx, pctx, rootCmd)
 	registerLaunchCmd(ctx, pctx, rootCmd)
 
 	rootCmd.SetArgs(args)

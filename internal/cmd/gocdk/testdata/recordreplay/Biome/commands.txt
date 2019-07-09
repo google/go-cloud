@@ -4,6 +4,10 @@ gocdk biome add mybiome --> FAIL
 gocdk init myproj
 cd myproj
 
+gocdk biome list
+
 gocdk biome add mybiome --launcher local
 cd biomes
 ls mybiome
+
+gocdk biome list

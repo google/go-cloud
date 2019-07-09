@@ -47,12 +47,12 @@ func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra
 				snapshotRef,
 			}
 
-			// Run build, apply, and launch.
+			// Run build, "biome apply", and launch.
 			biome := args[0]
 			if err := build(ctx, pctx, buildRefs); err != nil {
 				return err
 			}
-			if err := apply(ctx, pctx, biome, true); err != nil {
+			if err := biomeApply(ctx, pctx, biome, true); err != nil {
 				return err
 			}
 			if err := launch(ctx, pctx, biome, snapshotRef); err != nil {
