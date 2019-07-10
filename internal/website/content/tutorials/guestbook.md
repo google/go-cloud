@@ -1,7 +1,7 @@
 ---
 title: "Tutorial: Guestbook Application"
 linkTitle: "Guestbook"
-date: 2019-03-19T19:17:56-07:00
+date: 2019-07-10T16:58:00-07:00
 weight: 2
 toc: true
 ---
