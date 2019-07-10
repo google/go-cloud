@@ -140,6 +140,15 @@ func newLauncher(ctx context.Context, pctx *processContext, launcherName string)
 			ConfigProvider: sess,
 			DockerClient:   docker.New(pctx.env),
 		}, nil
+	case "exec":
+		dir, err := pctx.ModuleRoot(ctx)
+		if err != nil {
+			return nil, xerrors.Errorf("prepare exec launcher: %w", err)
+		}
+		return &launcher.Exec{
+			Stderr: pctx.stderr,
+			Dir:    dir,
+		}, nil
 	default:
 		return nil, xerrors.Errorf("prepare launcher: unknown launcher %q", launcherName)
 	}

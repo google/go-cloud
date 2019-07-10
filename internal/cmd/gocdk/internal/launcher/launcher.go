@@ -32,15 +32,15 @@ type Input struct {
 	// DockerImage specifies the image name and tag of the local Docker image to
 	// deploy. If the local image does not exist, then the launcher should return
 	// an error.
-	DockerImage string
+	DockerImage string `json:"docker_image"`
 
 	// env is the set of additional environment variables to set. It should not
 	// include PORT nor should it contain multiple entries for the same variable
 	// name.
-	Env []string
+	Env []string `json:"env"`
 
 	// specifier is the set of arguments passed from a biome's Terraform module.
-	Specifier map[string]interface{}
+	Specifier map[string]interface{} `json:"specifier"`
 }
 
 // Local starts local Docker containers.
@@ -121,4 +121,21 @@ func specifierBoolValue(spec map[string]interface{}, key string) bool {
 	default:
 		return false
 	}
+}
+
+// specifierStringArrayValue returns the specifier's value for a key if it is an array of strings.
+func specifierStringArrayValue(spec map[string]interface{}, key string) []string {
+	arr, _ := spec[key].([]interface{})
+	if len(arr) == 0 {
+		return nil
+	}
+	sarr := make([]string, 0, len(arr))
+	for _, v := range arr {
+		s, ok := v.(string)
+		if !ok {
+			return nil
+		}
+		sarr = append(sarr, s)
+	}
+	return sarr
 }
