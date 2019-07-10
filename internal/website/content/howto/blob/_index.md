@@ -103,6 +103,34 @@ Other operations like listing and reading metadata are documented in the
 
 ## Supported Storage Services {#services}
 
+### Google Cloud Storage {#gcs}
+
+[Google Cloud Storage][] (GCS) URLs in the Go CDK closely resemble the URLs
+you would see in the `gsutil` CLI. `blob.OpenBucket` will use [Application
+Default Credentials][GCP creds].
+
+{{< goexample "gocloud.dev/blob/gcsblob.Example_openBucketFromURL" >}}
+
+Full details about acceptable URLs can be found under the API reference for
+[`gcsblob.URLOpener`][].
+
+[Google Cloud Storage]: https://cloud.google.com/storage/
+[`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
+
+#### Google Cloud Storage Constructor {#gcs-ctor}
+
+The [`gcsblob.OpenBucket`][] constructor opens a GCS bucket. You must first
+create a `*net/http.Client` that sends requests authorized by [Google Cloud
+Platform credentials][GCP creds]. (You can reuse the same client for any
+other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
+[`gocloud.dev/gcp`][] package to set this up for you.
+
+{{< goexample "gocloud.dev/blob/gcsblob.ExampleOpenBucket" >}}
+
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
+[`gocloud.dev/gcp`]: https://godoc.org/gocloud.dev/gcp
+
 ### S3 {#s3}
 
 S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
@@ -152,34 +180,6 @@ See [`aws.ConfigFromURLParams`][] for more details on supported URL options for 
 [Minio]: https://www.minio.io/
 [SeaweedFS]: https://github.com/chrislusf/seaweedfs
 [S3-compatible storage servers]: https://en.wikipedia.org/wiki/Amazon_S3#S3_API_and_competing_services
-
-### Google Cloud Storage {#gcs}
-
-[Google Cloud Storage][] (GCS) URLs in the Go CDK closely resemble the URLs
-you would see in the `gsutil` CLI. `blob.OpenBucket` will use [Application
-Default Credentials][GCP creds].
-
-{{< goexample "gocloud.dev/blob/gcsblob.Example_openBucketFromURL" >}}
-
-Full details about acceptable URLs can be found under the API reference for
-[`gcsblob.URLOpener`][].
-
-[Google Cloud Storage]: https://cloud.google.com/storage/
-[`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
-
-#### Google Cloud Storage Constructor {#gcs-ctor}
-
-The [`gcsblob.OpenBucket`][] constructor opens a GCS bucket. You must first
-create a `*net/http.Client` that sends requests authorized by [Google Cloud
-Platform credentials][GCP creds]. (You can reuse the same client for any
-other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
-[`gocloud.dev/gcp`][] package to set this up for you.
-
-{{< goexample "gocloud.dev/blob/gcsblob.ExampleOpenBucket" >}}
-
-[GCP creds]: https://cloud.google.com/docs/authentication/production
-[`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
-[`gocloud.dev/gcp`]: https://godoc.org/gocloud.dev/gcp
 
 ### Azure Storage {#azure}
 
