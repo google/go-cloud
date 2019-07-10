@@ -92,8 +92,7 @@ gcloud auth login
 
 ### Provision resources
 
-You can now use Terraform, a tool for initializing cloud resources, to set
-up your project.
+You can now use Terraform to set up your project.
 
 ```shell
 gcloud auth application-default login
@@ -106,15 +105,15 @@ terraform apply
 ```
 
 ### Deploy the application
-This sample provides a script for building the Guestbook binary
-and deploying it to the Kubernetes cluster created by Terraform.
+
+This sample provides a script for building the Guestbook binary and deploying it
+to the Kubernetes cluster created by Terraform.
 
 ```shell
 go run deploy/main.go
 ```
 
 The deploy script will display the URL of your running service.
-
 
 ### Cleanup
 
@@ -157,9 +156,8 @@ ssh-add
 
 ### Provision resources
 
-You can now use Terraform to set up
-your project. This will create an EC2 instance you can SSH to and run your
-binary.
+You can now use Terraform to set up your project. This will create an EC2
+instance you can SSH to and run your binary.
 
 ```shell
 # Build for deploying on the AWS Linux VM.
@@ -231,7 +229,6 @@ You first need to set up an Azure account and install the [Azure CLI][]. Then,
 use the `az` CLI to log in.
 
 [#1305]: https://github.com/google/go-cloud/issues/1305
-
 [Azure CLI]: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
 ```shell
