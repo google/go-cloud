@@ -16,6 +16,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,6 +39,7 @@ func Test(t *testing.T) {
 		if os.PathSeparator != '/' && !strings.HasPrefix(slashdir, "/") {
 			slashdir = "/" + slashdir
 		}
+		fmt.Printf("################ Setup: rootdir=%q, slashdir=%q\n", rootdir, slashdir)
 		return os.Setenv("SLASHDIR", slashdir)
 	}
 	if err := ts.Run(*update); err != nil {
