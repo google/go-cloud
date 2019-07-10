@@ -26,6 +26,13 @@ before_install:
   - mv /tmp/terraform ~/bin
   - export PATH="$HOME/bin:$PATH"
   - terraform -version
+  # Install Docker if necessary.
+  - if [[ $(type -P docker) ]]; then
+      echo "Docker is already installed.";
+    else
+      curl -fsSL https://get.docker.com -o get-docker.sh;
+      sh get-docker.sh;
+    fi
 
 install:
   # Re-checkout files preserving line feeds. This prevents Windows builds from
