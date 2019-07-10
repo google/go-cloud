@@ -16,13 +16,13 @@ limitations under the License.
 
 /* Basic layout {{{1 */
 html {
-  font: 16px/1.5 'Roboto', sans-serif;
+  font: 14px/1.5 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
 }
 @media (min-width: 768px) {
   html {
-    font-size: 20px;
+    font-size: 16px;
   }
 }
 body {
@@ -59,12 +59,17 @@ body {
 .PageLogo {
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 0;
+  padding: 1.25rem 0;
   text-align: center;
   width: 20rem;
 }
 .PageLogo-image {
-  height: 9rem;
+  height: 80px;
+}
+@media (max-width: 768px) {
+  .PageLogo-image {
+    height: 72px;
+  }
 }
 .MainContent {
   box-sizing: border-box;
