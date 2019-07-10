@@ -2,6 +2,7 @@
 title: "Store and Access Unstructured Data"
 date: 2019-03-21T08:42:51-07:00
 weight: 2
+toc: true
 ---
 
 Once you have [opened a bucket][] for the storage provider you want, you can

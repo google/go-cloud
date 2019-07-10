@@ -2,6 +2,7 @@
 title: "Runtime Configuration"
 date: 2019-06-18T14:51:12-07:00
 showInSidenav: true
+toc: true
 ---
 
 Working with runtime variables using the Go CDK takes two steps:

@@ -2,6 +2,7 @@
 title: "Open a Secret Keeper"
 date: 2019-03-21T17:43:54-07:00
 weight: 1
+toc: true
 ---
 
 The first step in working with your secrets is establishing your
