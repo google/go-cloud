@@ -339,9 +339,9 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 	send()
 
 	// Receive the messages via the subscription.
-	got := make(chan struct{})
+	got := make(chan int)
 	done := make(chan error)
-	read := func(ctx context.Context, sub *pubsub.Subscription) {
+	read := func(ctx context.Context, subNum int, sub *pubsub.Subscription) {
 		for {
 			m, err := sub.Receive(ctx)
 			if err != nil {
@@ -354,13 +354,13 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 				return
 			}
 			m.Ack()
-			got <- struct{}{}
+			got <- subNum
 		}
 	}
 	// The test will hang here if the messages aren't available, so use a shorter
 	// timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
-	go read(ctx2, sub)
+	go read(ctx2, 0, sub)
 	for i := 0; i < nMessages; i++ {
 		select {
 		case <-got:
@@ -395,11 +395,13 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 
 	// The test will hang here if the message isn't available, so use a shorter timeout.
 	ctx3, cancel := context.WithTimeout(ctx, 30*time.Second)
-	go read(ctx3, sub)
-	go read(ctx3, sub2)
+	go read(ctx3, 0, sub)
+	go read(ctx3, 1, sub2)
+	counts := []int{0, 0}
 	for i := 0; i < nMessages; i++ {
 		select {
-		case <-got:
+		case sub := <-got:
+			counts[sub]++
 		case err := <-done:
 			// Premature error.
 			if err != nil {
@@ -412,6 +414,9 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 		if err := <-done; err != nil {
 			t.Fatal(err)
 		}
+	}
+	if counts[0] == 0 || counts[1] == 0 {
+		t.Errorf("one of the partitioned subscriptions didn't get any messages: %v", counts)
 	}
 }
 

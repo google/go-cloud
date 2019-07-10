@@ -26,3 +26,12 @@ $ echo foo equals "${foo}"
 
 # Input redirection.
 $ echo-stdin < bar
+
+# InProcessProgram with input redirection.
+$ echoStdin < bar
+
+# More stuff here to check that InProcessProgram undoes
+# its redirections.
+
+$ echof bar line three
+$ cat bar

@@ -36,3 +36,15 @@ foo equals "bar"
 $ echo-stdin < bar
 Here is stdin:
 line two
+
+# InProcessProgram with input redirection.
+$ echoStdin < bar
+Here is stdin:
+line two
+
+# More stuff here to check that InProcessProgram undoes
+# its redirections.
+
+$ echof bar line three
+$ cat bar
+line three
