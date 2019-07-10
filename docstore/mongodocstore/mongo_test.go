@@ -274,8 +274,15 @@ func TestLowercaseFields(t *testing.T) {
 	check(got4, map[string]interface{}{"id": int64(1), "f": int64(4), "g": int64(3),
 		"docstorerevision": udoc.DocstoreRevision})
 
-	// // Query filters.
+	// Query filters.
 	var got5 S
 	must(coll.Query().Where("ID", "=", 1).Where("G", ">", 2).Get(ctx).Next(ctx, &got5))
 	check(got5, S{ID: 1, F: 4, G: 3, DocstoreRevision: udoc.DocstoreRevision})
+
+	// Query orders.
+	sdoc2 := &S{ID: 2, F: 5, G: 6}
+	must(coll.Put(ctx, sdoc2))
+	var got6 S
+	must(coll.Query().OrderBy("G", docstore.Descending).Get(ctx).Next(ctx, &got6))
+	check(got6, *sdoc2)
 }
