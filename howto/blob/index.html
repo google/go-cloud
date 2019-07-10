@@ -32,20 +32,509 @@ if (!doNotTrack) {
     <main class="MainContent">
       <div class="MainContent-bounds"><h1>Blob</h1>
 
+<nav class="PageTOC">
+  <div class="PageTOC-heading">In this article</div>
+  <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#opening">Opening a Bucket</a>
+<ul>
+<li><a href="#prefix">Prefixed Buckets</a></li>
+</ul></li>
+<li><a href="#using">Using a Bucket</a>
+<ul>
+<li><a href="#writing">Writing Data to a Bucket</a></li>
+<li><a href="#reading">Reading Data from a Bucket</a></li>
+<li><a href="#deleting">Deleting a Bucket</a></li>
+<li><a href="#other">Other Operations</a></li>
+</ul></li>
+<li><a href="#services">Supported Storage Services</a>
+<ul>
+<li><a href="#gcs">Google Cloud Storage</a>
+<ul>
+<li><a href="#gcs-ctor">GCS Constructor</a></li>
+</ul></li>
+<li><a href="#s3">S3</a>
+<ul>
+<li><a href="#s3-ctor">S3 Constructor</a></li>
+<li><a href="#s3-compatible">S3-Compatible Servers</a></li>
+</ul></li>
+<li><a href="#azure">Azure Storage</a>
+<ul>
+<li><a href="#azure-ctor">Azure Storage Constructor</a></li>
+</ul></li>
+<li><a href="#local">Local Storage</a>
+<ul>
+<li><a href="#local-ctor">Local Storage Constructors</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+</nav>
+
 <p>Blobs are a common abstraction for storing unstructured data on cloud storage
 providers and accessing them via HTTP. These guides show how to work with
 blobs in the Go CDK.</p>
 
-<ul class="HowtoList">
-  <li class="HowtoList-item">
-  <a href="/howto/blob/open-bucket/">Open a Bucket</a>
-</li>
+<h2 id="opening"> Opening a Bucket<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
 
-  <li class="HowtoList-item">
-  <a href="/howto/blob/data/">Store and Access Unstructured Data</a>
-</li>
+<p>The first step in interacting with unstructured storage is connecting to your
+storage provider. Every storage provider is a little different, but the Go CDK
+lets you interact with all of them using the <a href="https://godoc.org/gocloud.dev/blob#Bucket"><code>*blob.Bucket</code> type</a>.</p>
 
-</ul></div>
+<p>The easiest way to open a blob is using <a href="https://godoc.org/gocloud.dev/blob#OpenBucket"><code>blob.OpenBucket</code></a> and a URL
+pointing to the blob, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to
+link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need
+fine-grained control over the connection settings, you can call the constructor
+function in the driver package directly (like <code>s3blob.OpenBucket</code>).</p>
+
+<p>See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
+
+<h3 id="prefix"> Prefixed Buckets<a class="anchor" href="#prefix" aria-label="Link to Section">🔗</a></h3>
+
+<p>You can wrap a <code>*blob.Bucket</code> to always operate on a subfolder of the bucket
+using <code>blob.PrefixedBucket</code>:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/blob&#34;</span>
+
+<span class="c1">// Wrap the bucket using blob.PrefixedBucket.
+</span><span class="c1">// The prefix should end with &#34;/&#34;, so that the resulting bucket operates
+</span><span class="c1">// in a subfolder.
+</span><span class="c1"></span><span class="nx">bucket</span> <span class="p">=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">PrefixedBucket</span><span class="p">(</span><span class="nx">bucket</span><span class="p">,</span> <span class="s">&#34;a/subfolder/&#34;</span><span class="p">)</span>
+
+<span class="c1">// The original bucket is no longer usable; it has been closed.
+</span><span class="c1">// The wrapped bucket should be closed when done.
+</span><span class="c1"></span><span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Bucket operations on &lt;key&gt; will be translated to &#34;a/subfolder/&lt;key&gt;&#34;.
+</span></code></pre></div>
+
+<p>Alternatively, you can configure the prefix directly in the <code>blob.OpenBucket</code>
+URL:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Connect to a bucket using a URL, using the &#34;prefix&#34; query parameter to
+</span><span class="c1">// target a subfolder in the bucket.
+</span><span class="c1">// The prefix should end with &#34;/&#34;, so that the resulting bucket operates
+</span><span class="c1">// in a subfolder.
+</span><span class="c1"></span><span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://?prefix=a/subfolder/&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Bucket operations on &lt;key&gt; will be translated to &#34;a/subfolder/&lt;key&gt;&#34;.
+</span></code></pre></div>
+
+<h2 id="using"> Using a Bucket<a class="anchor" href="#using" aria-label="Link to Section">🔗</a></h2>
+
+<p>Once you have opened a bucket for the storage provider you want, you can
+store and access data from it using the standard Go I/O patterns.</p>
+
+<h3 id="writing"> Writing Data to a Bucket<a class="anchor" href="#writing" aria-label="Link to Section">🔗</a></h3>
+
+<p>To write data to a bucket, you create a writer, write data to it, and then
+close the writer. Closing the writer commits the write to the provider,
+flushing any buffers, and releases any resources used while writing, so you
+must always check the error of <code>Close</code>.</p>
+
+<p>The writer implements <a href="https://golang.org/pkg/io/#Writer"><code>io.Writer</code></a>, so you can use any functions that take
+an <code>io.Writer</code> like <code>io.Copy</code> or <code>fmt.Fprintln</code>.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for writing with the default options.
+</span><span class="c1"></span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewWriter</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">_</span><span class="p">,</span> <span class="nx">writeErr</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintln</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="s">&#34;Hello, World!&#34;</span><span class="p">)</span>
+<span class="c1">// Always check the return value of Close when writing.
+</span><span class="c1"></span><span class="nx">closeErr</span> <span class="o">:=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="k">if</span> <span class="nx">writeErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">writeErr</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">closeErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">closeErr</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>In some cases, you may want to cancel an in-progress write to avoid the blob
+being created or overwritten. A typical reason for wanting to cancel a write
+is encountering an error in the stream your program is copying from. To abort
+a write, you cancel the <code>Context</code> you pass to the writer. Again, you must
+always <code>Close</code> the writer to release the resources, but in this case you can
+ignore the error because the write&rsquo;s failure is expected.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Create a cancelable context from the existing context.
+</span><span class="c1"></span><span class="nx">writeCtx</span><span class="p">,</span> <span class="nx">cancelWrite</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nf">cancelWrite</span><span class="p">()</span>
+
+<span class="c1">// Open the key &#34;foo.txt&#34; for writing with the default options.
+</span><span class="c1"></span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewWriter</span><span class="p">(</span><span class="nx">writeCtx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Assume some writes happened and we encountered an error.
+</span><span class="c1">// Now we want to abort the write.
+</span><span class="c1"></span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="c1">// First cancel the context.
+</span><span class="c1"></span>	<span class="nf">cancelWrite</span><span class="p">()</span>
+	<span class="c1">// You must still close the writer to avoid leaking resources.
+</span><span class="c1"></span>	<span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="reading"> Reading Data from a Bucket<a class="anchor" href="#reading" aria-label="Link to Section">🔗</a></h3>
+
+<p>Once you have written data to a bucket, you can read it back by creating a
+reader. The reader implements <a href="https://golang.org/pkg/io/#Reader"><code>io.Reader</code></a>, so you can use any functions
+that take an <code>io.Reader</code> like <code>io.Copy</code> or <code>io/ioutil.ReadAll</code>. You must
+always close a reader after using it to avoid leaking resources.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for reading with the default options.
+</span><span class="c1"></span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// Readers also have a limited view of the blob&#39;s metadata.
+</span><span class="c1"></span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Content-Type:&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nf">ContentType</span><span class="p">())</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">()</span>
+<span class="c1">// Copy from the reader to stdout.
+</span><span class="c1"></span><span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">r</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Many storage providers provide efficient random-access to data in buckets. To
+start reading from an arbitrary offset in the blob, use <code>NewRangeReader</code>.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for reading at offset 1024 and read up to 4096 bytes.
+</span><span class="c1"></span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewRangeReader</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">4096</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// Copy from the read range to stdout.
+</span><span class="c1"></span><span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">r</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="deleting"> Deleting a Bucket<a class="anchor" href="#deleting" aria-label="Link to Section">🔗</a></h3>
+
+<p>You can delete blobs using the <code>Bucket.Delete</code> method.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="other"> Other Operations<a class="anchor" href="#other" aria-label="Link to Section">🔗</a></h3>
+
+<p>These are the most common operations you will need to use with a bucket.
+Other operations like listing and reading metadata are documented in the
+<a href="https://godoc.org/gocloud.dev/blob"><code>blob</code> package documentation</a>.</p>
+
+<h2 id="services"> Supported Storage Services<a class="anchor" href="#services" aria-label="Link to Section">🔗</a></h2>
+
+<h3 id="gcs"> Google Cloud Storage<a class="anchor" href="#gcs" aria-label="Link to Section">🔗</a></h3>
+
+<p><a href="https://cloud.google.com/storage/">Google Cloud Storage</a> (GCS) URLs in the Go CDK closely resemble the URLs
+you would see in the <code>gsutil</code> CLI. <code>blob.OpenBucket</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application
+Default Credentials</a>.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/gcsblob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// blob.OpenBucket creates a *blob.Bucket from a URL.
+</span><span class="c1">// This URL will open the bucket &#34;my-bucket&#34; using default credentials.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;gs://my-bucket&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener"><code>gcsblob.URLOpener</code></a>.</p>
+
+<h4 id="gcs-ctor"> GCS Constructor<a class="anchor" href="#gcs-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket"><code>gcsblob.OpenBucket</code></a> constructor opens a GCS bucket. You must first
+create a <code>*net/http.Client</code> that sends requests authorized by <a href="https://cloud.google.com/docs/authentication/production">Google Cloud
+Platform credentials</a>. (You can reuse the same client for any
+other API that takes in a <code>*gcp.HTTPClient</code>.) You can find functions in the
+<a href="https://godoc.org/gocloud.dev/gcp"><code>gocloud.dev/gcp</code></a> package to set this up for you.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob/gcsblob&#34;</span>
+	<span class="s">&#34;gocloud.dev/gcp&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Your GCP credentials.
+</span><span class="c1">// See https://cloud.google.com/docs/authentication/production
+</span><span class="c1">// for more info on alternatives.
+</span><span class="c1"></span><span class="nx">creds</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultCredentials</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create an HTTP client.
+</span><span class="c1">// This example uses the default HTTP transport and the credentials
+</span><span class="c1">// created above.
+</span><span class="c1"></span><span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">NewHTTPClient</span><span class="p">(</span>
+	<span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultTransport</span><span class="p">(),</span>
+	<span class="nx">gcp</span><span class="p">.</span><span class="nf">CredentialsTokenSource</span><span class="p">(</span><span class="nx">creds</span><span class="p">))</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a *blob.Bucket.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcsblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">client</span><span class="p">,</span> <span class="s">&#34;my-bucket&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="s3"> S3<a class="anchor" href="#s3" aria-label="Link to Section">🔗</a></h3>
+
+<p>S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
+You can specify the <code>region</code> query parameter to ensure your application connects
+to the correct region, but otherwise <code>blob.OpenBucket</code> will use the region found
+in the environment variables or your AWS CLI configuration.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// blob.OpenBucket creates a *blob.Bucket from a URL.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;s3://my-bucket?region=us-west-1&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/blob/s3blob#URLOpener"><code>s3blob.URLOpener</code></a>.</p>
+
+<h4 id="s3-ctor"> S3 Constructor<a class="anchor" href="#s3-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blob.OpenBucket</code></a> constructor opens an <a href="https://aws.amazon.com/s3/">S3</a> bucket. You must first
+create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your bucket:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Establish an AWS session.
+</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+</span><span class="c1">// The region must match the region for &#34;my-bucket&#34;.
+</span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-west-1&#34;</span><span class="p">),</span>
+<span class="p">})</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a *blob.Bucket.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">s3blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="s">&#34;my-bucket&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h4 id="s3-compatible"> S3-Compatible Servers<a class="anchor" href="#s3-compatible" aria-label="Link to Section">🔗</a></h4>
+
+<p>The Go CDK can also interact with <a href="https://en.wikipedia.org/wiki/Amazon_S3#S3_API_and_competing_services">S3-compatible storage servers</a> that
+recognize the same REST HTTP endpoints as S3, like <a href="https://www.minio.io/">Minio</a>, <a href="https://ceph.com/">Ceph</a>, or
+<a href="https://github.com/chrislusf/seaweedfs">SeaweedFS</a>. You can change the endpoint by changing the <a href="https://godoc.org/github.com/aws/aws-sdk-go/aws#Config.Endpoint"><code>Endpoint</code> field</a>
+on the <code>*aws.Config</code> you pass to <code>s3blob.OpenBucket</code>. If you are using
+<code>blob.OpenBucket</code>, you can switch endpoints by using the S3 URL using query
+parameters like so:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="s">&#34;s3://mybucket?&#34;</span> <span class="o">+</span>
+    <span class="s">&#34;endpoint=my.minio.local:8080&amp;&#34;</span> <span class="o">+</span>
+    <span class="s">&#34;disableSSL=true&amp;&#34;</span> <span class="o">+</span>
+    <span class="s">&#34;s3ForcePathStyle=true&#34;</span><span class="p">)</span></code></pre></div>
+<p>See <a href="https://godoc.org/gocloud.dev/aws#ConfigFromURLParams"><code>aws.ConfigFromURLParams</code></a> for more details on supported URL options for S3.</p>
+
+<h3 id="azure"> Azure Storage<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h3>
+
+<p>Azure Storage URLs in the Go CDK allow you to identify <a href="https://azure.microsoft.com/en-us/services/storage/">Azure Storage</a> containers
+when opening a bucket with <code>blob.OpenBucket</code>. Go CDK uses the environment
+variables <code>AZURE_STORAGE_ACCOUNT</code>, <code>AZURE_STORAGE_KEY</code>, and
+<code>AZURE_STORAGE_SAS_TOKEN</code> to configure the credentials. <code>AZURE_STORAGE_ACCOUNT</code>
+is required, along with one of the other two.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// blob.OpenBucket creates a *blob.Bucket from a URL.
+</span><span class="c1">// This URL will open the container &#34;my-container&#34; using default
+</span><span class="c1">// credentials found in the environment variables
+</span><span class="c1">// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
+</span><span class="c1">// and AZURE_STORAGE_SAS_TOKEN.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;azblob://my-container&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/blob/azureblob#URLOpener"><code>azureblob.URLOpener</code></a>.</p>
+
+<h4 id="azure-ctor"> Azure Storage Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket"><code>azureblob.OpenBucket</code></a> constructor opens an Azure Storage container.
+<code>azureblob</code> operates on <a href="https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs">Azure Storage Block Blobs</a>. You must first create
+Azure Storage credentials and then create an Azure Storage pipeline before
+you can open a container.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/Azure/azure-storage-blob-go/azblob&#34;</span>
+	<span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="p">(</span>
+	<span class="c1">// Fill in with your Azure Storage Account and Access Key.
+</span><span class="c1"></span>	<span class="nx">accountName</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nx">AccountName</span> <span class="p">=</span> <span class="s">&#34;my-account&#34;</span>
+	<span class="nx">accountKey</span>  <span class="nx">azureblob</span><span class="p">.</span><span class="nx">AccountKey</span>  <span class="p">=</span> <span class="s">&#34;my-account-key&#34;</span>
+	<span class="c1">// Fill in with the storage container to access.
+</span><span class="c1"></span>	<span class="nx">containerName</span> <span class="p">=</span> <span class="s">&#34;my-container&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Create a credentials object.
+</span><span class="c1"></span><span class="nx">credential</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewCredential</span><span class="p">(</span><span class="nx">accountName</span><span class="p">,</span> <span class="nx">accountKey</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a Pipeline, using whatever PipelineOptions you need.
+</span><span class="c1"></span><span class="nx">pipeline</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewPipeline</span><span class="p">(</span><span class="nx">credential</span><span class="p">,</span> <span class="nx">azblob</span><span class="p">.</span><span class="nx">PipelineOptions</span><span class="p">{})</span>
+
+<span class="c1">// Create a *blob.Bucket.
+</span><span class="c1">// The credential Option is required if you&#39;re going to use blob.SignedURL.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">pipeline</span><span class="p">,</span> <span class="nx">accountName</span><span class="p">,</span> <span class="nx">containerName</span><span class="p">,</span>
+	<span class="o">&amp;</span><span class="nx">azureblob</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span><span class="nx">Credential</span><span class="p">:</span> <span class="nx">credential</span><span class="p">})</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="local"> Local Storage<a class="anchor" href="#local" aria-label="Link to Section">🔗</a></h3>
+
+<p>The Go CDK provides blob drivers for storing data in memory and on the local
+filesystem. These are primarily intended for testing and local development,
+but may be useful in production scenarios where an NFS mount is used.</p>
+
+<p>Local storage URLs take the form of either <code>mem://</code> or <code>file:///</code> URLs.
+Memory URLs are always <code>mem://</code> with no other information and always create a
+new bucket. File URLs convert slashes to the operating system&rsquo;s native file
+separator, so on Windows, <code>C:\foo\bar</code> would be written as
+<code>file:///C:/foo/bar</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;gocloud.dev/blob&#34;</span>
+    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/fileblob&#34;</span>
+    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/memblob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// ...
+</span><span class="c1"></span>
+<span class="nx">bucket1</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket1</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="nx">bucket2</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;file:///path/to/dir&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket2</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
+<h4 id="local-ctor"> Local Storage Constructors<a class="anchor" href="#local-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>You can create an in-memory bucket with <a href="https://godoc.org/gocloud.dev/blob/memblob#OpenBucket"><code>memblob.OpenBucket</code></a>:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob/memblob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Create an in-memory bucket.
+</span><span class="c1"></span><span class="nx">bucket</span> <span class="o">:=</span> <span class="nx">memblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="kc">nil</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Now we can use bucket to read or write files to the bucket.
+</span><span class="c1"></span><span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">WriteAll</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;my-key&#34;</span><span class="p">,</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;my-key&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">data</span><span class="p">))</span>
+
+<span class="c1">// Output:
+</span><span class="c1">// hello world
+</span></code></pre></div>
+
+<p>You can use a local filesystem directory with <a href="https://godoc.org/gocloud.dev/blob/fileblob#OpenBucket"><code>fileblob.OpenBucket</code></a>:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;os&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob/fileblob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// The directory you pass to fileblob.OpenBucket must exist first.
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">myDir</span> <span class="p">=</span> <span class="s">&#34;path/to/local/directory&#34;</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">MkdirAll</span><span class="p">(</span><span class="nx">myDir</span><span class="p">,</span> <span class="mo">0777</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a file-based bucket.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fileblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">myDir</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+</div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">

@@ -48,17 +48,6 @@ lets you interact with all of them using the &lt;a href=&#34;https://godoc.org/g
     </item>
     
     <item>
-      <title>Open a Bucket</title>
-      <link>https://gocloud.dev/howto/blob/open-bucket/</link>
-      <pubDate>Wed, 20 Mar 2019 14:51:29 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/howto/blob/open-bucket/</guid>
-      <description>&lt;p&gt;The first step in interacting with unstructured storage is connecting to your
-storage provider. Every storage provider is a little different, but the Go CDK
-lets you interact with all of them using the &lt;a href=&#34;https://godoc.org/gocloud.dev/blob#Bucket&#34;&gt;&lt;code&gt;*blob.Bucket&lt;/code&gt; type&lt;/a&gt;.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
       <title>Tutorial: Command-Line Uploader</title>
       <link>https://gocloud.dev/tutorials/cli-uploader/</link>
       <pubDate>Tue, 19 Mar 2019 18:45:53 -0700</pubDate>
@@ -110,16 +99,6 @@ message from being redelivered.&lt;/li&gt;
       <guid>https://gocloud.dev/howto/secrets/crypt/</guid>
       <description>&lt;p&gt;Once you have &lt;a href=&#34;https://gocloud.dev/howto/secrets/open-keeper/&#34;&gt;opened a secrets keeper&lt;/a&gt; for the secrets provider you want,
 you can encrypt and decrypt small messages using the keeper.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
-      <title>Store and Access Unstructured Data</title>
-      <link>https://gocloud.dev/howto/blob/data/</link>
-      <pubDate>Thu, 21 Mar 2019 08:42:51 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/howto/blob/data/</guid>
-      <description>&lt;p&gt;Once you have &lt;a href=&#34;https://gocloud.dev/howto/blob/open-bucket/&#34;&gt;opened a bucket&lt;/a&gt; for the storage provider you want, you can
-store and access data from it using the standard Go I/O patterns.&lt;/p&gt;</description>
     </item>
     
     <item>
