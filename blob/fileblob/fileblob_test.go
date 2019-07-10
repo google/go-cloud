@@ -203,6 +203,11 @@ func TestOpenBucketFromURL(t *testing.T) {
 	if err := ioutil.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
 		t.Fatal(err)
 	}
+	// To avoid making another temp dir, use the bucket directory to hold the secret key file.
+	secretKeyPath := filepath.Join(dir, "secret.key")
+	if err := ioutil.WriteFile(secretKeyPath, []byte("secret key"), 0666); err != nil {
+		t.Fatal(err)
+	}
 	if err := ioutil.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0666); err != nil {
 		t.Fatal(err)
 	}
@@ -231,16 +236,33 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file://" + dirpath + "?prefix=" + subdir + "/", "myfileinsubdir.txt", false, false, "hello world in subdir"},
 		// Invalid query parameter.
 		{"file://" + dirpath + "?param=value", "myfile.txt", true, false, ""},
+		// OK, with params.
+		{
+			fmt.Sprintf("file://%s?base_url=/show&secret_key_path=%s", dirpath, secretKeyPath),
+			"myfile.txt", false, false, "hello world",
+		},
+		// Bad secret key filename.
+		{
+			fmt.Sprintf("file://%s?base_url=/show&secret_key_path=%s", dirpath, "bad"),
+			"myfile.txt", true, false, "",
+		},
+		// Missing base_url.
+		{
+			fmt.Sprintf("file://%s?secret_key_path=%s", dirpath, secretKeyPath),
+			"myfile.txt", true, false, "",
+		},
+		// Missing secret_key_path.
+		{"file://" + dirpath + "?base_url=/show", "myfile.txt", true, false, ""},
 	}
 
 	ctx := context.Background()
-	for _, test := range tests {
+	for i, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
 		if b != nil {
 			defer b.Close()
 		}
 		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+			t.Errorf("#%d: %s: got error %v, want error %v", i, test.URL, err, test.WantErr)
 		}
 		if err != nil {
 			continue

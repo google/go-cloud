@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -33,8 +34,8 @@ import (
 	_ "gocloud.dev/docstore/memdocstore"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
+	"gocloud.dev/server/requestlog"
 )
 
 // A frontend is a web server that takes image-processing orders.
@@ -45,9 +46,25 @@ type frontend struct {
 }
 
 var (
-	listTemplate      = template.Must(template.ParseFiles("list.htmlt"))
-	orderFormTemplate = template.Must(template.ParseFiles("order-form.htmlt"))
+	listTemplate      *template.Template
+	orderFormTemplate *template.Template
 )
+
+func init() {
+	// Work around a bug in go test where -coverpkg=./... uses the wrong
+	// working directory (golang.org/issue/33016).
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if filepath.Base(dir) != "order" {
+		// The bug puts us in a sibling directory.
+		log.Printf("working around #33016, which put us in %s", dir)
+		dir = filepath.Join(filepath.Dir(dir), "order")
+	}
+	listTemplate = template.Must(template.ParseFiles(filepath.Join(dir, "list.htmlt")))
+	orderFormTemplate = template.Must(template.ParseFiles(filepath.Join(dir, "order-form.htmlt")))
+}
 
 // run starts the server on port and runs it indefinitely.
 func (f *frontend) run(ctx context.Context, port int) error {

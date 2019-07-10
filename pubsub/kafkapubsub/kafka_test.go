@@ -253,7 +253,7 @@ func TestKafkaKey(t *testing.T) {
 	}
 
 	// The test will hang here if the message isn't available, so use a shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	got, err := sub.Receive(ctx2)
 	if err != nil {
@@ -285,7 +285,7 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 	}
 	const (
 		keyName   = "kafkakey"
-		nMessages = 50
+		nMessages = 10
 	)
 	uniqueID := rand.Int()
 	ctx := context.Background()
@@ -340,30 +340,41 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 
 	// Receive the messages via the subscription.
 	got := make(chan struct{})
-	done := make(chan struct{})
+	done := make(chan error)
 	read := func(ctx context.Context, sub *pubsub.Subscription) {
 		for {
 			m, err := sub.Receive(ctx)
-			if err == context.Canceled {
-				break
-			}
 			if err != nil {
-				t.Fatal(err)
+				if err == context.Canceled {
+					// Expected after all messages are received, no error.
+					done <- nil
+				} else {
+					done <- err
+				}
+				return
 			}
-			got <- struct{}{}
 			m.Ack()
+			got <- struct{}{}
 		}
-		done <- struct{}{}
 	}
 	// The test will hang here if the messages aren't available, so use a shorter
 	// timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	go read(ctx2, sub)
 	for i := 0; i < nMessages; i++ {
-		<-got
+		select {
+		case <-got:
+		case err := <-done:
+			// Premature error.
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	cancel()
-	<-done
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
 
 	// Add another subscription to the same group. Kafka will rebalance the
 	// consumer group, causing the Cleanup/Setup/ConsumeClaim loop. Each of the
@@ -383,15 +394,25 @@ func TestMultiplePartionsWithRebalancing(t *testing.T) {
 	send()
 
 	// The test will hang here if the message isn't available, so use a shorter timeout.
-	ctx3, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx3, cancel := context.WithTimeout(ctx, 30*time.Second)
 	go read(ctx3, sub)
 	go read(ctx3, sub2)
 	for i := 0; i < nMessages; i++ {
-		<-got
+		select {
+		case <-got:
+		case err := <-done:
+			// Premature error.
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	cancel()
-	<-done
-	<-done
+	for i := 0; i < 2; i++ {
+		if err := <-done; err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func sanitize(testName string) string {

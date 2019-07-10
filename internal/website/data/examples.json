@@ -291,6 +291,10 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the exchange \"myexchange\".\ntopic, err := pubsub.OpenTopic(ctx, \"rabbit://myexchange\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/runtimevar.ExampleDecryptDecode": {
+		"imports": "import (\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/secrets\"\n)",
+		"code": "decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode)\ndecoder := runtimevar.NewDecoder(\"\", decodeFunc)"
+	},
 	"gocloud.dev/runtimevar.ExampleVariable_Latest": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
 		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"

@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob"
@@ -33,12 +32,12 @@ var bucket *blob.Bucket
 var bucketErr error
 
 func init() {
+	ctx := context.Background()
+
 	bucketURL = os.Getenv("BLOB_BUCKET_URL")
 	if bucketURL == "" {
 		bucketURL = "mem://"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	bucket, bucketErr = blob.OpenBucket(ctx, bucketURL)
 }
 

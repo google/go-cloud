@@ -45,13 +45,17 @@ const helpSuffix = `
 `
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&pubCmd{}, "")
 	subcommands.Register(&subCmd{}, "")
 	log.SetFlags(0)
 	log.SetPrefix("gocdk-pubsub: ")
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	return int(subcommands.Execute(context.Background()))
 }
 
 type pubCmd struct{}
@@ -64,7 +68,7 @@ func (*pubCmd) Usage() string {
   Read messages from stdin, one per line and send them to <topic URL>.
 
   Example:
-    gocdk-pubsub sub gcppubsub://myproject/mysubscription` + helpSuffix
+    gocdk-pubsub pub gcppubsub://myproject/mytopic` + helpSuffix
 }
 
 func (*pubCmd) SetFlags(_ *flag.FlagSet) {}

@@ -7,9 +7,12 @@ import (
 	"html/template"
 	"net/http"
 	"os"
-	"time"
 
 	"gocloud.dev/secrets"
+	_ "gocloud.dev/secrets/awskms"
+	_ "gocloud.dev/secrets/azurekeyvault"
+	_ "gocloud.dev/secrets/gcpkms"
+	_ "gocloud.dev/secrets/hashivault"
 	_ "gocloud.dev/secrets/localsecrets"
 )
 
@@ -27,13 +30,13 @@ var keeper *secrets.Keeper
 var keeperErr error
 
 func init() {
+	ctx := context.Background()
+
 	keeperURL = os.Getenv("SECRETS_KEEPER_URL")
 	if keeperURL == "" {
 		// TODO(rvangent): Remove default later.
 		keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	keeper, keeperErr = secrets.OpenKeeper(ctx, keeperURL)
 }
 

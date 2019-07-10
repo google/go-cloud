@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"gocloud.dev/docstore"
 	_ "gocloud.dev/docstore/awsdynamodb"
@@ -31,12 +30,12 @@ var collection *docstore.Collection
 var collectionErr error
 
 func init() {
+	ctx := context.Background()
+
 	collectionURL = os.Getenv("DOCSTORE_COLLECTION_URL")
 	if collectionURL == "" {
 		collectionURL = "mem://mycollection/Key"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	collection, collectionErr = docstore.OpenCollection(ctx, collectionURL)
 }
 

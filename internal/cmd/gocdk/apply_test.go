@@ -46,7 +46,10 @@ func TestApply(t *testing.T) {
 		defer cleanup()
 
 		const greeting = "HALLO WORLD"
-		devBiomeDir := biomeDir(pctx.workdir, "dev")
+		devBiomeDir, err := biomeDir(pctx.workdir, "dev")
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		// Add a custom output variable to "main.tf".
 		// We'll verify that we can read it down below.
