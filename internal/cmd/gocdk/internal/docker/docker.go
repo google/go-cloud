@@ -190,6 +190,17 @@ func (c *Client) Push(ctx context.Context, imageRef string, progressOutput io.Wr
 	return nil
 }
 
+// Login stores the credentials for the given remote registry. This is used for
+// Docker push and pull.
+func (c *Client) Login(ctx context.Context, registry, username, password string) error {
+	cmd := exec.CommandContext(ctx, "docker", "login", "--username="+username, "--password-stdin", "--", registry)
+	cmd.Stdin = strings.NewReader(password)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return xerrors.Errorf("docker login: %w", cmdError(err, out))
+	}
+	return nil
+}
+
 // ParseImageRef parses a Docker image reference, as documented in
 // https://godoc.org/github.com/docker/distribution/reference. It permits some
 // looseness in characters, and in particular, permits the empty name form
@@ -203,6 +214,17 @@ func ParseImageRef(s string) (name, tag, digest string) {
 		return s, "", digest
 	}
 	return s[:i], s[i:], digest
+}
+
+// ImageRefRegistry parses the registry (everything before the first slash) from
+// a Docker image reference or name.
+func ImageRefRegistry(s string) string {
+	name, _, _ := ParseImageRef(s)
+	i := strings.IndexByte(name, '/')
+	if i == -1 {
+		return ""
+	}
+	return name[:i]
 }
 
 // run runs a command, capturing its stdout and stderr, and returns the stdout
