@@ -29,7 +29,7 @@ See the [guide below][] for usage of both forms for each supported provider.
 https://godoc.org/gocloud.dev/blob#OpenBucket
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
-[guide below]: {{< "#services" >}}
+[guide below]: {{< ref "#services" >}}
 
 ### Prefixed Buckets {#prefix}
 
