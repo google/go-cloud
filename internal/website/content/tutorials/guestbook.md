@@ -7,7 +7,7 @@ toc: true
 ---
 
 In this tutorial, we will deploy an existing Go CDK application called Guestbook
-locally, then on Google Cloud Platform (GCP), Amazon Web Services (AWS), and/or
+locally, then on Google Cloud Platform (GCP), Amazon Web Services (AWS), and
 Azure.
 
 <!--more-->
@@ -27,8 +27,6 @@ You will need to install the following software for this tutorial:
 -   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
 -   [Docker Desktop](https://docs.docker.com/install/)
 -   [Terraform](https://www.terraform.io/intro/getting-started/install.html)
-
-[Terraform]: https://www.terraform.io/
 
 ### Cloning the Sample
 
@@ -92,9 +90,9 @@ gcloud components install kubectl
 gcloud auth login
 ```
 
-### Provision resources with Terraform
+### Provision resources
 
-You can now use [Terraform][], a tool for initializing cloud resources, to set
+You can now use Terraform, a tool for initializing cloud resources, to set
 up your project.
 
 ```shell
@@ -157,9 +155,9 @@ ssh-add
 
 [GitHub SSH]: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
 
-### Provision resources with Terraform
+### Provision resources
 
-You can now use [Terraform][], a tool for initializing cloud resources, to set up
+You can now use Terraform to set up
 your project. This will create an EC2 instance you can SSH to and run your
 binary.
 
@@ -240,10 +238,9 @@ use the `az` CLI to log in.
 az login
 ```
 
-### Provision resources with Terraform
+### Provision resources
 
-We'll use [Terraform][], a tool for initializing cloud resources, to set up your
-project.
+We'll use Terraform to set up your project.
 
 ```shell
 # Enter the Azure directory from samples/guestbook.
