@@ -2,6 +2,7 @@
 title: "Encrypt & Decrypt Data"
 date: 2019-03-21T17:44:28-07:00
 weight: 2
+toc: true
 ---
 
 Once you have [opened a secrets keeper][] for the secrets provider you want,
