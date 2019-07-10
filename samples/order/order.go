@@ -116,13 +116,13 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 
 	reqTopic, err := pubsub.OpenTopic(ctx, conf.requestTopicURL)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, cleanup, err
 	}
 	addCleanup(func() { reqTopic.Shutdown(ctx) })
 
 	reqSub, err := pubsub.OpenSubscription(ctx, conf.requestSubURL)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, cleanup, err
 	}
 	addCleanup(func() { reqSub.Shutdown(ctx) })
 
@@ -130,20 +130,20 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 	if burl == "" {
 		dir, err := ioutil.TempDir("", "gocdk-order")
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, cleanup, err
 		}
 		burl = "file://" + filepath.ToSlash(dir)
 		addCleanup(func() { os.Remove(dir) })
 	}
 	bucket, err := blob.OpenBucket(ctx, burl)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, cleanup, err
 	}
 	addCleanup(func() { bucket.Close() })
 
 	coll, err := docstore.OpenCollection(ctx, conf.collectionURL)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, cleanup, err
 	}
 	addCleanup(func() { coll.Close() })
 

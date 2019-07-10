@@ -16,6 +16,8 @@ package main
 
 import (
 	"flag"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"gocloud.dev/internal/testing/cmdtest"
@@ -29,6 +31,9 @@ func Test(t *testing.T) {
 		t.Fatal(err)
 	}
 	ts.Commands["gocdk-blob"] = cmdtest.InProcessProgram("gocdk-blob", run)
+	ts.Setup = func(rootdir string) error {
+		return os.Setenv("SLASHDIR", filepath.ToSlash(rootdir))
+	}
 	if err := ts.Run(*update); err != nil {
 		t.Error(err)
 	}

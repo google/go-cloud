@@ -18,19 +18,19 @@
 $ mkdir bucket
 
 # List an empty bucket: valid, but no output.
-$ gocdk-blob ls file://${ROOTDIR}/bucket
+$ gocdk-blob ls file://${SLASHDIR}/bucket
 
 $ echof hello.txt hello world
-$ gocdk-blob upload file://${ROOTDIR}/bucket hw < hello.txt
+$ gocdk-blob upload file://${SLASHDIR}/bucket hw < hello.txt
 
-$ gocdk-blob ls file://${ROOTDIR}/bucket
+$ gocdk-blob ls file://${SLASHDIR}/bucket
 hw
 
-$ gocdk-blob download file://${ROOTDIR}/bucket hw
+$ gocdk-blob download file://${SLASHDIR}/bucket hw
 hello world
 
 # Error downloading a bucket that doesn't exist.
 # For now we can't use this test case, because the output won't be the same across operating systems.
-#$ gocdk-blob download file://${ROOTDIR}/bucket noexist --> FAIL
-#gocdk-blob: Failed to read "noexist": blob (code=NotFound): stat ${ROOTDIR}/bucket/noexist: no such file or directory
+#$ gocdk-blob download file://${SLASHDIR}/bucket noexist --> FAIL
+#gocdk-blob: Failed to read "noexist": blob (code=NotFound): stat ${SLASHDIR}/bucket/noexist: no such file or directory
 
