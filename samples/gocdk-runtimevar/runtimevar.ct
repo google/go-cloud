@@ -14,10 +14,6 @@
 
 # Tests of the gocdk-runtimevar program.
 
-# We can't test watch in this test framework, because it runs indefinitely in the
-# foreground. We would need to add some job control (background, kill). Probably
-# not worth it.
-
 $ gocdk-runtimevar cat constant://?val=foo&decoder=string
 (string) foo
 
