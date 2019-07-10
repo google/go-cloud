@@ -14,7 +14,7 @@
 
 # Tests of the gocdk-doctore program.
 
-$ setenv url mongo://sample-db/sample-coll?id_field=ID
+$ setenv url mem://sample-coll/ID
 
 # Collection is initially empty.
 $ gocdk-docstore ls ${url}

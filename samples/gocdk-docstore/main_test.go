@@ -16,11 +16,9 @@ package main
 
 import (
 	"flag"
-	"os"
 	"testing"
 
 	"gocloud.dev/internal/testing/cmdtest"
-	"gocloud.dev/internal/testing/setup"
 )
 
 // Requires mongo to be running. Run docstore/mongodocstore/localmongo.sh.
@@ -28,14 +26,10 @@ import (
 var update = flag.Bool("update", false, "replace test file contents with output")
 
 func Test(t *testing.T) {
-	if !setup.HasDockerTestEnvironment() {
-		t.Skip("do not have docker test environment")
-	}
 	ts, err := cmdtest.Read(".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Setenv("MONGO_SERVER_URL", "mongodb://localhost")
 	ts.Commands["gocdk-docstore"] = cmdtest.InProcessProgram("gocdk-docstore", run)
 	if err := ts.Run(*update); err != nil {
 		t.Error(err)
