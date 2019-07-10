@@ -18,7 +18,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os"
+	"io/ioutil"
 	"sort"
 	"strconv"
 
@@ -178,17 +178,14 @@ func biomeList(ctx context.Context, pctx *processContext) error {
 	if err != nil {
 		return xerrors.Errorf("biome list: %w", err)
 	}
-	dir, err := os.Open(biomesRootDir(moduleRoot))
-	if err != nil {
-		return xerrors.Errorf("biome list: %w", err)
-	}
-	entries, err := dir.Readdir(0)
+	entries, err := ioutil.ReadDir(biomesRootDir(moduleRoot))
 	if err != nil {
 		return xerrors.Errorf("biome list: %w", err)
 	}
 	var biomes []string
 	for _, entry := range entries {
-		if entry.IsDir() {
+		_, err := biomeDir(moduleRoot, entry.Name())
+		if err == nil {
 			biomes = append(biomes, entry.Name())
 		}
 	}
