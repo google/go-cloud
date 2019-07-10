@@ -88,7 +88,7 @@ start reading from an arbitrary offset in the blob, use `NewRangeReader`.
 
 [`io.Reader`]: https://golang.org/pkg/io/#Reader
 
-### Deleting Blobs {#deleting}
+### Deleting a Bucket {#deleting}
 
 You can delete blobs using the `Bucket.Delete` method.
 
@@ -118,7 +118,7 @@ Full details about acceptable URLs can be found under the API reference for
 [Google Cloud Storage]: https://cloud.google.com/storage/
 [`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
 
-#### Google Cloud Storage Constructor {#gcs-ctor}
+#### GCS Constructor {#gcs-ctor}
 
 The [`gcsblob.OpenBucket`][] constructor opens a GCS bucket. You must first
 create a `*net/http.Client` that sends requests authorized by [Google Cloud
@@ -157,7 +157,7 @@ create an [AWS session][] with the same region as your bucket:
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 [S3]: https://aws.amazon.com/s3/
 
-#### S3-compatible storage servers {#s3-compatible}
+#### S3-Compatible Servers {#s3-compatible}
 
 The Go CDK can also interact with [S3-compatible storage servers][] that
 recognize the same REST HTTP endpoints as S3, like [Minio][], [Ceph][], or
