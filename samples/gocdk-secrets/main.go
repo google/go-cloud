@@ -31,8 +31,8 @@ import (
 	_ "gocloud.dev/secrets/awskms"
 	_ "gocloud.dev/secrets/azurekeyvault"
 	_ "gocloud.dev/secrets/gcpkms"
-	_ "gocloud.dev/secrets/hashivault"
 	_ "gocloud.dev/secrets/localsecrets"
+	_ "gocloud.dev/secrets/vault"
 )
 
 const helpSuffix = `
@@ -44,13 +44,17 @@ const helpSuffix = `
 `
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&decryptCmd{}, "")
 	subcommands.Register(&encryptCmd{}, "")
 	log.SetFlags(0)
 	log.SetPrefix("gocdk-secrets: ")
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	return int(subcommands.Execute(context.Background()))
 }
 
 type decryptCmd struct {
@@ -132,8 +136,8 @@ func (*encryptCmd) Usage() string {
 }
 
 func (cmd *encryptCmd) SetFlags(f *flag.FlagSet) {
-	f.BoolVar(&cmd.base64in, "base64in", false, "the plaintext is base64 encoded")
-	f.BoolVar(&cmd.base64out, "base64out", true, "the resulting ciphertext should be base64 encoded before printing it out")
+	f.BoolVar(&cmd.base64in, "base64in", false, "the plaintext is base64-encoded")
+	f.BoolVar(&cmd.base64out, "base64out", true, "the resulting ciphertext should be base64-encoded before printing it out")
 }
 
 func (cmd *encryptCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

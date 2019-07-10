@@ -20,6 +20,7 @@ require (
 	gocloud.dev/pubsub/rabbitpubsub v0.15.0
 	gocloud.dev/runtimevar/etcdvar v0.15.0
 	gocloud.dev/secrets/hashivault v0.15.0
+	gocloud.dev/secrets/vault v0.15.0
 	google.golang.org/genproto v0.0.0-20190605220351-eb0b1bdb6ae6
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
