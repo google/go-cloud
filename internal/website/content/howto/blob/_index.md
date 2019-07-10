@@ -16,22 +16,20 @@ The first step in interacting with unstructured storage is connecting to your
 storage provider. Every storage provider is a little different, but the Go CDK
 lets you interact with all of them using the [`*blob.Bucket` type][].
 
-[`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
-
 The easiest way to open a blob is using [`blob.OpenBucket`][] and a URL
 pointing to the blob, making sure you ["blank import"][] the driver package to
 link it in. See [Concepts: URLs][] for more details. If you need
 fine-grained control over the connection settings, you can call the constructor
-function in the driver package directly (like `s3blob.OpenBucket`). This guide
-shows how to use both forms for each provider.
+function in the driver package directly (like `s3blob.OpenBucket`).
 
-Once you have opened a bucket for the storage provider you want, you can
-store and access data from it using the standard Go I/O patterns.
+See the [guide below][] for usage of both forms for each supported provider.
 
+[`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
 [`blob.OpenBucket`]:
 https://godoc.org/gocloud.dev/blob#OpenBucket
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
+[guide below]: {{< "#services" >}}
 
 ### Prefixed Buckets {#prefix}
 
@@ -45,7 +43,12 @@ URL:
 
 {{< goexample "gocloud.dev/blob.Example_openFromURLWithPrefix" >}}
 
-## Writing Data to a Bucket {#writing}
+## Using a Bucket {#using}
+
+Once you have opened a bucket for the storage provider you want, you can
+store and access data from it using the standard Go I/O patterns.
+
+### Writing Data to a Bucket {#writing}
 
 To write data to a bucket, you create a writer, write data to it, and then
 close the writer. Closing the writer commits the write to the provider,
@@ -68,7 +71,7 @@ ignore the error because the write's failure is expected.
 
 [`io.Writer`]: https://golang.org/pkg/io/#Writer
 
-## Reading Data from a Bucket {#reading}
+### Reading Data from a Bucket {#reading}
 
 Once you have written data to a bucket, you can read it back by creating a
 reader. The reader implements [`io.Reader`][], so you can use any functions
@@ -84,13 +87,13 @@ start reading from an arbitrary offset in the blob, use `NewRangeReader`.
 
 [`io.Reader`]: https://golang.org/pkg/io/#Reader
 
-## Deleting Blobs {#deleting}
+### Deleting Blobs {#deleting}
 
 You can delete blobs using the `Bucket.Delete` method.
 
 {{< goexample src="gocloud.dev/blob.ExampleBucket_Delete" imports="0" >}}
 
-## Other Operations {#other}
+### Other Operations {#other}
 
 These are the most common operations you will need to use with a bucket.
 Other operations like listing and reading metadata are documented in the
@@ -98,7 +101,7 @@ Other operations like listing and reading metadata are documented in the
 
 [`blob` package documentation]: https://godoc.org/gocloud.dev/blob
 
-## Service-Specific Initialization
+## Supported Storage Services {#services}
 
 ### S3 {#s3}
 
