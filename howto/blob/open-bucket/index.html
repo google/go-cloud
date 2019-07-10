@@ -31,6 +31,40 @@ if (!doNotTrack) {
     </header>
     <main class="MainContent">
       <div class="MainContent-bounds"><h1>Open a Bucket</h1>
+
+<nav class="PageTOC">
+  <div class="PageTOC-heading">In this article</div>
+  <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#constructors-versus-url-openers">Constructors versus URL openers</a>
+<ul>
+<li><a href="#prefix">Prefixed Buckets</a></li>
+</ul></li>
+<li><a href="#s3">S3</a>
+<ul>
+<li><a href="#s3-ctor">S3 Constructor</a></li>
+<li><a href="#s3-compatible">S3-compatible storage servers</a></li>
+</ul></li>
+<li><a href="#gcs">Google Cloud Storage</a>
+<ul>
+<li><a href="#gcs-ctor">Google Cloud Storage Constructor</a></li>
+</ul></li>
+<li><a href="#azure">Azure Storage</a>
+<ul>
+<li><a href="#azure-ctor">Azure Storage Constructor</a></li>
+</ul></li>
+<li><a href="#local">Local Storage</a>
+<ul>
+<li><a href="#local-ctor">Local Storage Constructors</a></li>
+</ul></li>
+<li><a href="#what-s-next">What&rsquo;s Next</a></li>
+</ul></li>
+</ul>
+</nav>
+</nav>
+
 <p>The first step in interacting with unstructured storage is connecting to your
 storage provider. Every storage provider is a little different, but the Go CDK
 lets you interact with all of them using the <a href="https://godoc.org/gocloud.dev/blob#Bucket"><code>*blob.Bucket</code> type</a>.</p>

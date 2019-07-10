@@ -31,6 +31,51 @@ if (!doNotTrack) {
     </header>
     <main class="MainContent">
       <div class="MainContent-bounds"><h1>Publish Messages to a Topic</h1>
+
+<nav class="PageTOC">
+  <div class="PageTOC-heading">In this article</div>
+  <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#constructors-versus-url-openers">Constructors versus URL openers</a></li>
+<li><a href="#sns">Amazon Simple Notification Service</a>
+<ul>
+<li><a href="#sns-ctor">Amazon Simple Notification Service Constructor</a></li>
+</ul></li>
+<li><a href="#sqs">Amazon Simple Notification Service</a>
+<ul>
+<li><a href="#sqs-ctor">Amazon Simple Queue Service Constructor</a></li>
+</ul></li>
+<li><a href="#gcp">Google Cloud Pub/Sub</a>
+<ul>
+<li><a href="#gcp-ctor">Google Cloud Pub/Sub Constructor</a></li>
+</ul></li>
+<li><a href="#azure">Azure Service Bus</a>
+<ul>
+<li><a href="#azure-ctor">Azure Service Bus Constructor</a></li>
+</ul></li>
+<li><a href="#rabbitmq">RabbitMQ</a>
+<ul>
+<li><a href="#rabbitmq-ctor">RabbitMQ Constructor</a></li>
+</ul></li>
+<li><a href="#nats">NATS</a>
+<ul>
+<li><a href="#nats-ctor">NATS Constructor</a></li>
+</ul></li>
+<li><a href="#kafka">Kafka</a>
+<ul>
+<li><a href="#kafka-ctor">Kafka Constructor</a></li>
+</ul></li>
+<li><a href="#mem">In-Memory</a>
+<ul>
+<li><a href="#mem-ctor">In-Memory Constructor</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+</nav>
+
 <p>Publishing a message to a topic with the Go CDK takes two steps:</p>
 
 <ol>

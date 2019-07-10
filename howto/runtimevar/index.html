@@ -32,6 +32,33 @@ if (!doNotTrack) {
     <main class="MainContent">
       <div class="MainContent-bounds"><h1>Runtime Configuration</h1>
 
+<nav class="PageTOC">
+  <div class="PageTOC-heading">In this article</div>
+  <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#constructors-versus-url-openers">Constructors versus URL openers</a></li>
+<li><a href="#gcp-url">GCP Runtime Configurator</a>
+<ul>
+<li><a href="#rc-ctor">GCP Runtime Configurator Constructor</a></li>
+</ul></li>
+<li><a href="#ps-url">AWS Parameter Store</a>
+<ul>
+<li><a href="#ps-ctor">AWS Parameter Store Constructor</a></li>
+</ul></li>
+<li><a href="#etcd-url">etcd</a>
+<ul>
+<li><a href="#etcd-constructor">etcd Constructor</a></li>
+</ul></li>
+<li><a href="#latest">Fetching the latest value</a></li>
+<li><a href="#watch">Watch</a></li>
+</ul></li>
+</ul>
+</nav>
+</nav>
+
+
 
 <p>Working with runtime variables using the Go CDK takes two steps:</p>
 
@@ -76,7 +103,7 @@ the <code>runtimevar.OpenVariable</code> function as follows.</p>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h2 id="rc-ctor"> GCP Runtime Configurator Constructor<a class="anchor" href="#rc-ctor" aria-label="Link to Section">🔗</a></h2>
+<h3 id="rc-ctor"> GCP Runtime Configurator Constructor<a class="anchor" href="#rc-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig#OpenVariable"><code>gcpruntimeconfig.OpenVariable</code></a> constructor opens a Runtime Configurator
 variable.</p>
@@ -146,7 +173,7 @@ variable.</p>
 <span class="p">}</span>
 </code></pre></div>
 
-<h2 id="ps-ctor"> AWS Parameter Store Constructor<a class="anchor" href="#ps-ctor" aria-label="Link to Section">🔗</a></h2>
+<h3 id="ps-ctor"> AWS Parameter Store Constructor<a class="anchor" href="#ps-ctor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable"><code>awsparamstore.OpenVariable</code></a> constructor opens a Parameter Store
 variable.</p>
@@ -201,7 +228,7 @@ remotely. To open a variable stored in <code>etcd</code> via a URL, you can use 
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h2 id="etcd-constructor"> etcd Constructor<a class="anchor" href="#etcd-constructor" aria-label="Link to Section">🔗</a></h2>
+<h3 id="etcd-constructor"> etcd Constructor<a class="anchor" href="#etcd-constructor" aria-label="Link to Section">🔗</a></h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable"><code>etcdvar.OpenVariable</code></a> constructor opens an etcd variable.</p>
 
