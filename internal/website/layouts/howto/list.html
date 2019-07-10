@@ -1,5 +1,6 @@
 {{ define "main" -}}
 <h1>{{ .Title }}</h1>
+{{ partial "page-toc.html" . }}
 {{ partial "header-link.html" .Content }}
 {{ if or .Data.Pages .Sections }}
 <ul class="HowtoList">

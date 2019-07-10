@@ -2,6 +2,7 @@
 title: "Open a Bucket"
 date: 2019-03-20T14:51:29-07:00
 weight: 1
+toc: true
 ---
 
 The first step in interacting with unstructured storage is connecting to your

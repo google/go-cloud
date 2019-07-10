@@ -80,7 +80,6 @@ body {
 }
 .MainContent-bounds {
   box-sizing: border-box;
-  grid-area: main;
   margin: 0;
   padding: 0;
   max-width: 50rem;
@@ -130,6 +129,59 @@ body {
 .Sidenav-pageLink:hover,
 .Sidenav-pageLink:active {
   text-decoration: underline;
+}
+.PageTOC {
+  border-left: 2px solid #dbd9d6;
+  float: right;
+  margin: 0.25rem 0 1rem 2rem;
+  max-width: 25%;
+  min-width: 15%;
+  padding: 0.5rem 0 0.5rem 1rem;
+}
+@media (max-width: 1024px) {
+  .PageTOC {
+    border: none;
+    float: none;
+    margin: 1.5rem 0 0.5rem;
+    max-width: none;
+    min-width: none;
+    padding: 0;
+  }
+}
+.PageTOC {
+  font-size: 0.85rem;
+}
+.PageTOC-heading {
+  font: 700 1rem/1.25 'Work Sans', 'Roboto', sans-serif;
+  margin: 0 0 0.5rem;
+  text-rendering: optimizeLegibility;
+}
+.PageTOC>nav>ul>li>ul {
+  /* Don't indent top-level list. */
+  margin: 0;
+}
+.PageTOC ul {
+  list-style: none;
+  margin: 0 0 0 1rem;
+  padding: 0;
+}
+.PageTOC li {
+  margin: 0.3rem 0;
+  padding: 0;
+}
+.PageTOC>nav>ul {
+  /* CSS trick to remove h1 level from TOC.
+   * https://github.com/gohugoio/hugo/issues/1778 */
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+.PageTOC>nav>ul>li {
+  /* CSS trick to remove h1 level from TOC.
+   * https://github.com/gohugoio/hugo/issues/1778 */
+  display: block;
+  margin: 0;
+  padding: 0;
 }
 .PageFooter {
   background: #555759;
