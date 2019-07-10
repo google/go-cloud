@@ -220,7 +220,9 @@ func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods [
 	defer c.mu.Unlock()
 	for _, doc := range c.docs {
 		if filtersMatch(q.Filters, doc) {
-			if err := c.update(doc, mods); err != nil {
+			// TODO(#2458): provide an option for the user to choose whether or not to
+			// update the revision.
+			if err := c.update(doc, mods, true); err != nil {
 				return err
 			}
 		}

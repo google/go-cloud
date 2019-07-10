@@ -284,7 +284,7 @@ func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) erro
 	return nil
 }
 
-// fieldByIndex retrieves the the field of v at the given index if present.
+// fieldByIndex retrieves the field of v at the given index if present.
 // v must be a struct. index must refer to a valid field of v's type.
 // The second return value is false if there is a nil embedded pointer
 // along the path denoted by index.

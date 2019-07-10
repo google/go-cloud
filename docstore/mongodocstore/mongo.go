@@ -346,8 +346,11 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 		}
 		mdoc[mongoIDField] = id
 	}
-	rev := driver.UniqueString()
-	mdoc[c.revisionField] = rev
+	var rev string
+	if doc.RevisionOn(c.revisionField) {
+		rev = driver.UniqueString()
+		mdoc[c.revisionField] = rev
+	}
 	return mdoc, rev, nil
 }
 
@@ -360,14 +363,14 @@ func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc m
 	if err != nil {
 		return nil, nil, "", err
 	}
-	updateDoc, rev, err = c.newUpdateDoc(a.Mods)
+	updateDoc, rev, err = c.newUpdateDoc(a.Mods, a.Doc.RevisionOn(c.revisionField))
 	if err != nil {
 		return nil, nil, "", err
 	}
 	return filter, updateDoc, rev, nil
 }
 
-func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, string, error) {
+func (c *collection) newUpdateDoc(mods []driver.Mod, revOn bool) (map[string]bson.D, string, error) {
 	var (
 		sets   bson.D
 		unsets bson.D
@@ -392,8 +395,12 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, string,
 		}
 	}
 	updateDoc := map[string]bson.D{}
-	rev := driver.UniqueString()
-	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: rev})
+	var rev string
+	if revOn {
+		rev = driver.UniqueString()
+		sets = append(sets, bson.E{Key: c.revisionField, Value: rev})
+	}
+	updateDoc["$set"] = sets
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}

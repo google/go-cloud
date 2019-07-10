@@ -182,3 +182,15 @@ func (d Document) Decode(dec Decoder) error {
 	}
 	return decodeStruct(d.s, dec)
 }
+
+// RevisionOn returns whether or not we should perform optimistic locking for
+// d. It could be either a map, or a struct with a revision field named after
+// revField.
+func (d Document) RevisionOn(revField string) bool {
+	switch d.Origin.(type) {
+	case map[string]interface{}:
+		return true
+	default:
+		return d.fields.MatchFold(revField) != nil
+	}
+}

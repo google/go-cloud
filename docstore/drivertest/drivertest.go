@@ -166,6 +166,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
 	t.Run("SerializeRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testSerializeRevision) })
+	t.Run("ActionsOnStructWithoutRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testActionsOnStructWithoutRevision) })
 
 	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
@@ -1671,6 +1672,33 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 				t.Errorf("index %d: got %v, want NotFound", i, e.Err)
 			}
 		}
+	}
+}
+
+func testActionsOnStructWithoutRevision(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
+	type item struct {
+		Name string `docstore:"name"`
+		I    int
+	}
+	doc1 := item{Name: "createandreplace"}
+	doc2 := item{Name: "putandupdate"}
+
+	got1 := item{Name: doc1.Name}
+	got2 := item{Name: doc2.Name}
+	if err := coll.Actions().
+		Create(&doc1).Put(&doc2).
+		Get(&got1).Get(&got2).
+		Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	got3 := item{Name: doc1.Name}
+	got4 := item{Name: doc2.Name}
+	if err := coll.Actions().
+		Replace(&doc1).Update(&item{Name: doc2.Name}, ds.Mods{"I": 1}).
+		Get(&got3, "I").Get(&got4, "I").
+		Do(ctx); err != nil {
+		t.Fatal(err)
 	}
 }
 

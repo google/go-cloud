@@ -214,3 +214,39 @@ func TestFieldNames(t *testing.T) {
 		}
 	}
 }
+
+func TestRevisionOn(t *testing.T) {
+	type withRev struct {
+		Rev interface{}
+	}
+	type withoutRev struct {
+		W withRev
+	}
+
+	for _, tc := range []struct {
+		in   interface{}
+		want bool
+	}{
+		{
+			in:   &withRev{},
+			want: true,
+		},
+		{
+			in:   &withoutRev{},
+			want: false,
+		},
+		{
+			in:   map[string]interface{}{},
+			want: true,
+		},
+	} {
+		doc, err := NewDocument(tc.in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		on := doc.RevisionOn("Rev")
+		if on != tc.want {
+			t.Errorf("%v: got %v want %v", tc.in, on, tc.want)
+		}
+	}
+}

@@ -199,6 +199,15 @@ func (q *Query) Delete(ctx context.Context) error {
 	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
 }
 
+type UpdateQueryOptions struct {
+	// UpdateRevision lets the update query to generate and insert the revision
+	// field into the Mods. Use this option when you have a revision field in your
+	// document and you do not want to check for it when do the update queries. If
+	// you want docstore to check the revision for you, use get query and update
+	// actions instead.
+	UpdateRevision bool
+}
+
 // Update updates all the documents specified by the query.
 // It is an error if the query has a limit.
 func (q *Query) Update(ctx context.Context, mods Mods) error {

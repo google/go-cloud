@@ -349,9 +349,12 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 		// It doesn't make sense to generate a random sort key.
 		return nil, fmt.Errorf("missing sort key %q", c.sortKey)
 	}
-	rev := driver.UniqueString()
-	if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
-		return nil, err
+	var rev string
+	if a.Doc.RevisionOn(c.RevisionField()) {
+		rev = driver.UniqueString()
+		if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
+			return nil, err
+		}
 	}
 	dput := &dyn.Put{
 		TableName: &c.table,
@@ -467,8 +470,11 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 			ub = ub.Set(fp, expression.Value(m.Value))
 		}
 	}
-	rev := driver.UniqueString()
-	ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(rev))
+	var rev string
+	if a.Doc.RevisionOn(c.RevisionField()) {
+		rev = driver.UniqueString()
+		ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(rev))
+	}
 	cb, err := c.precondition(a)
 	if err != nil {
 		return nil, err

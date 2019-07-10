@@ -102,7 +102,7 @@ func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string, r
 	} else {
 		// Make a document to decode from that has only the field paths and the revision field.
 		// (We don't need the key field because ddoc must already have it.)
-		m2 = map[string]interface{}{revField: m[revField]}
+		m2 = map[string]interface{}{}
 		for _, fp := range fps {
 			val, err := getAtFieldPath(m, fp)
 			if err != nil {
@@ -114,6 +114,9 @@ func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string, r
 			if err := setAtFieldPath(m2, fp, val); err != nil {
 				return err
 			}
+		}
+		if ddoc.RevisionOn(revField) {
+			m2[revField] = m[revField]
 		}
 	}
 	return ddoc.Decode(decoder{m2})
