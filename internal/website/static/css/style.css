@@ -143,19 +143,39 @@ body {
     padding: 0;
   }
 }
+.PageTOC {
+  font-size: 0.85rem;
+}
 .PageTOC-heading {
   font: 700 1rem/1.25 'Work Sans', 'Roboto', sans-serif;
   margin: 0 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
+.PageTOC>nav>ul>li>ul {
+  /* Don't indent top-level list. */
+  margin: 0;
+}
 .PageTOC ul {
+  list-style: none;
+  margin: 0 0 0 1rem;
+  padding: 0;
+}
+.PageTOC li {
+  margin: 0.3rem 0;
+  padding: 0;
+}
+.PageTOC>nav>ul {
+  /* CSS trick to remove h1 level from TOC.
+   * https://github.com/gohugoio/hugo/issues/1778 */
   display: block;
   margin: 0;
   padding: 0;
 }
-.PageTOC li {
+.PageTOC>nav>ul>li {
+  /* CSS trick to remove h1 level from TOC.
+   * https://github.com/gohugoio/hugo/issues/1778 */
   display: block;
-  margin: 0.3rem 0;
+  margin: 0;
   padding: 0;
 }
 .PageFooter {

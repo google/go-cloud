@@ -37,7 +37,7 @@ the `runtimevar.OpenVariable` function as follows.
 {{< goexample
 "gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL" >}}
 
-## GCP Runtime Configurator Constructor {#rc-ctor}
+### GCP Runtime Configurator Constructor {#rc-ctor}
 
 The [`gcpruntimeconfig.OpenVariable`][] constructor opens a Runtime Configurator
 variable.
@@ -58,7 +58,7 @@ To open a variable stored in [AWS Parameter Store][] via a URL, you can use the
 [AWS Parameter Store]:
 https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
 
-## AWS Parameter Store Constructor {#ps-ctor}
+### AWS Parameter Store Constructor {#ps-ctor}
 
 The [`awsparamstore.OpenVariable`][] constructor opens a Parameter Store
 variable.
@@ -79,7 +79,7 @@ remotely. To open a variable stored in `etcd` via a URL, you can use the
 
 [etcd]: https://etcd.io/
 
-## etcd Constructor
+### etcd Constructor
 
 The [`etcdvar.OpenVariable`][] constructor opens an etcd variable.
 

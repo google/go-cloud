@@ -41,7 +41,7 @@ application connects to the correct region, but otherwise
 
 [AWS KMS]: https://aws.amazon.com/kms/
 
-## AWS Key Management Service Constructor {#aws-ctor}
+### AWS Key Management Service Constructor {#aws-ctor}
 
 The [`awskms.OpenKeeper`][] constructor opens a customer master key. You must
 first create an [AWS session][] with the same region as your key and then

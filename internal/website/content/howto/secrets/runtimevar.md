@@ -2,7 +2,6 @@
 title: "Keep Secrets in Configuration"
 date: 2019-03-21T17:45:27-07:00
 weight: 3
-toc: true
 ---
 
 Once you have [opened a secrets keeper][] for the secrets provider you want,
