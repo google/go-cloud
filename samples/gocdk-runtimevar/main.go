@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/google/subcommands"
 	"gocloud.dev/runtimevar"
@@ -45,13 +46,17 @@ const helpSuffix = `
 `
 
 func main() {
+	os.Exit(run(context.Background()))
+}
+
+func run(ctx context.Context) int {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&catCmd{}, "")
 	subcommands.Register(&watchCmd{}, "")
 	log.SetFlags(0)
 	log.SetPrefix("gocdk-runtimevar: ")
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	return int(subcommands.Execute(ctx))
 }
 
 type catCmd struct{}
@@ -124,13 +129,17 @@ func (*watchCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 	defer variable.Close()
 
 	fmt.Fprintf(os.Stderr, "Watching %q for changes...\n\n", variableURL)
+	time.Sleep(250 * time.Millisecond) // to ensure deterministic combined output for test
 	for {
 		snapshot, err := variable.Watch(ctx)
 		if err != nil {
+			if err == context.Canceled {
+				return subcommands.ExitSuccess
+			}
 			fmt.Printf("(error) %v\n", err)
 			continue
 		}
-		fmt.Printf("(%T) %v\n", snapshot.Value, snapshot.Value)
+		fmt.Printf("(%T) %[1]v\n", snapshot.Value)
 	}
 	return subcommands.ExitSuccess
 }

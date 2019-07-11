@@ -2,6 +2,7 @@
 title: "Publish Messages to a Topic"
 date: 2019-03-26T09:44:15-07:00
 weight: 1
+toc: true
 ---
 
 Publishing a message to a topic with the Go CDK takes two steps:
