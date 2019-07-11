@@ -54,9 +54,20 @@ lets you interact with all of them using the &lt;a href=&#34;https://godoc.org/g
       
       <guid>https://gocloud.dev/tutorials/cli-uploader/</guid>
       <description>&lt;p&gt;This quickstart will build a command line application called &lt;code&gt;upload&lt;/code&gt; that
-uploads files to blob storage on both AWS and GCP. Blob storage stores binary
+uploads files to blob storage on GCP, AWS, and Azure. Blob storage stores binary
 data under a string key, and is one of the most frequently used cloud
 services.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Tutorial: Guestbook Application</title>
+      <link>https://gocloud.dev/tutorials/guestbook/</link>
+      <pubDate>Wed, 10 Jul 2019 16:58:00 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/tutorials/guestbook/</guid>
+      <description>&lt;p&gt;In this tutorial, we will deploy an existing Go CDK application called Guestbook
+locally, then on Google Cloud Platform (GCP), Amazon Web Services (AWS), and
+Azure.&lt;/p&gt;</description>
     </item>
     
     <item>
@@ -102,16 +113,6 @@ you can encrypt and decrypt small messages using the keeper.&lt;/p&gt;</descript
     </item>
     
     <item>
-      <title>Tutorial: Deploy to AWS</title>
-      <link>https://gocloud.dev/tutorials/deploy-aws/</link>
-      <pubDate>Tue, 19 Mar 2019 19:17:56 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/tutorials/deploy-aws/</guid>
-      <description>&lt;p&gt;In this tutorial, we will deploy an existing Go CDK application called
-Guestbook to Amazon Web Services (AWS).&lt;/p&gt;</description>
-    </item>
-    
-    <item>
       <title>Using provider-specific APIs</title>
       <link>https://gocloud.dev/concepts/as/</link>
       <pubDate>Fri, 10 May 2019 11:17:09 -0700</pubDate>
@@ -134,29 +135,6 @@ functions.&lt;/p&gt;</description>
       <description>Once you have opened a secrets keeper for the secrets provider you want, you can use a secrets keeper to access sensitive configuration stored in an encrypted runtimevar.
 First, you create a *runtimevar.Decoder configured to use your secrets keeper using runtimevar.DecryptDecode. In this example, we assume the data is a plain string, but the configuration could be a more structured type.
 decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode) decoder := runtimevar.NewDecoder(&amp;#34;&amp;#34;, decodeFunc)  Then you can pass the decoder to the runtime configuration provider of your choice.</description>
-    </item>
-    
-    <item>
-      <title>Tutorial: Deploy to GCP</title>
-      <link>https://gocloud.dev/tutorials/deploy-gcp/</link>
-      <pubDate>Wed, 20 Mar 2019 09:47:11 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/tutorials/deploy-gcp/</guid>
-      <description>&lt;p&gt;In this tutorial, we will deploy an existing Go CDK application called
-Guestbook to Google Cloud Platform (GCP).&lt;/p&gt;</description>
-    </item>
-    
-    <item>
-      <title>Tutorial: Connect to Azure</title>
-      <link>https://gocloud.dev/tutorials/deploy-azure/</link>
-      <pubDate>Wed, 20 Mar 2019 09:59:16 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/tutorials/deploy-azure/</guid>
-      <description>&lt;p&gt;In this tutorial, we will run an existing Go CDK application called Guestbook
-backed by services running on Microsoft Azure. The Go CDK doesn&amp;rsquo;t have
-support for SQL on Azure yet (&lt;a href=&#34;https://github.com/google/go-cloud/issues/1305&#34;&gt;#1305&lt;/a&gt;), so we&amp;rsquo;ll run MySQL and the
-binary locally. This tutorial will show how to use Azure storage for the MOTD
-and Gopher logo.&lt;/p&gt;</description>
     </item>
     
     <item>

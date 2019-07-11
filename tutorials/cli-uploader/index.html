@@ -33,7 +33,7 @@ if (!doNotTrack) {
       <div class="MainContent-bounds"><h1>Tutorial: Command-Line Uploader</h1>
 
 <p>This quickstart will build a command line application called <code>upload</code> that
-uploads files to blob storage on both AWS and GCP. Blob storage stores binary
+uploads files to blob storage on GCP, AWS, and Azure. Blob storage stores binary
 data under a string key, and is one of the most frequently used cloud
 services.</p>
 
@@ -175,8 +175,8 @@ nil)</code>.</p>
 
 <h2 id="uploading-an-image"> Uploading an image<a class="anchor" href="#uploading-an-image" aria-label="Link to Section">🔗</a></h2>
 
-<p>That&rsquo;s it! Let&rsquo;s try it out. As setup, we will need to create an
-<a href="https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html">S3 bucket</a>, a <a href="https://cloud.google.com/storage/docs/creating-buckets">GCS bucket</a>, and an
+<p>That&rsquo;s it! Let&rsquo;s try it out. As setup, we will need to create a
+<a href="https://cloud.google.com/storage/docs/creating-buckets">GCS bucket</a>, an <a href="https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html">S3 bucket</a>, and an
 <a href="https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction">Azure container</a>. In the code above, I called that bucket
 <code>go-cloud-bucket</code>, but you can change that to match whatever your bucket is
 called. Of course, you are free to try the code on any subset of Cloud
@@ -205,8 +205,7 @@ first:</p>
 <p>Then, we will send <code>gopher.png</code> (in the same directory as this README) to GCS:</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ ./upload gs://go-cloud-bucket gopher.png</code></pre></div>
 <p>Then, we send that same gopher to S3:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ <span class="nb">export</span> <span class="nv">AWS_REGION</span><span class="o">=</span>us-west-1
-$ ./upload s3://go-cloud-bucket gopher.png</code></pre></div>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ ./upload s3://go-cloud-bucket?region<span class="o">=</span>us-west-1 gopher.png</code></pre></div>
 <p>Finally, we send that same gopher to Azure:</p>
 <div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">$ ./upload azblob://go-cloud-bucket gopher.png</code></pre></div>
 <p>If we check the buckets, we should see our gopher in each of them! We&rsquo;re done!</p>
@@ -240,13 +239,7 @@ If you want to see how to use Go CDK APIs in your application, see the
                 <a href="/tutorials/cli-uploader/" class="Sidenav-pageLink">Command-Line Uploader</a>
               </li>
               <li class="Sidenav-page">
-                <a href="/tutorials/deploy-aws/" class="Sidenav-pageLink">Deploy to AWS</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/tutorials/deploy-gcp/" class="Sidenav-pageLink">Deploy to GCP</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/tutorials/deploy-azure/" class="Sidenav-pageLink">Connect to Azure</a>
+                <a href="/tutorials/guestbook/" class="Sidenav-pageLink">Guestbook</a>
               </li>
               
             </ul>
