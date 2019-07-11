@@ -106,19 +106,17 @@ func TestCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 	goroot := strings.TrimSpace(string(gorootOut))
-	os.Setenv("PATH", fmt.Sprintf("%s/bin", goroot))
-	os.Setenv("GO111MODULE", "on")
+	os.Setenv("PATH", fmt.Sprintf("%s/bin", goroot)) // gocdk runs the go command
+	os.Setenv("GO111MODULE", "on")                   // gocdk requires module behavior even when under GOPATH
+
 	ts, err := cmdtest.Read("testdata")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// !!!!!!!!!!!!!!!!
-	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// Set GOPATH to the parent of the test's root directory. That lets gocdk
-	// determine a module path, but doesn't clutter the root directory with
-	// the module cache (pkg/mod).
-
+	// Before each test runs:
+	// - Set GOPATH to the root directory.
+	// - Then move the root directory into a src subdirectory.
 	ts.Setup = func(rootDir string) error {
 		if err := os.Setenv("GOPATH", rootDir); err != nil {
 			return err
