@@ -31,6 +31,7 @@ import (
 	"gocloud.dev/internal/testing/cmdtest"
 )
 
+// TODO(vangent): consider renaming to "update"
 var record = flag.Bool("record", false, "true to record the desired output for record/replay testcases")
 
 func TestProcessContextModuleRoot(t *testing.T) {
@@ -115,15 +116,8 @@ func TestCLI(t *testing.T) {
 		return os.Setenv("GOPATH", filepath.Dir(rootDir))
 	}
 
-	for _, fn := range testFilenames {
-		testName := strings.TrimSuffix(filepath.Base(fn), filepath.Ext(fn))
-		t.Run(testName, func(t *testing.T) {
-			tf, err := cmdtest.ReadTestFile(fn)
-			if err != nil {
-				t.Fatal(err)
-			}
-			// "ls": list files, in platform-independent order.
-			tf.Commands["ls"] = func(args []string) ([]byte, error) {
+	// "ls": list files, in platform-independent order.
+	ts.Commands["ls"] = func(args []string, _ string) ([]byte, error) {
 				var arg string
 				if len(args) == 1 {
 					arg = args[0]
@@ -142,13 +136,13 @@ func TestCLI(t *testing.T) {
 					return nil, err
 				}
 				return out.Bytes(), nil
-			}
+	}
+
 			if diff := tf.Compare(); diff != "" {
 				t.Error(diff)
 			}
-		})
-	}
-}
+
+
 
 // doList recursively lists the files/directory in dir to out.
 // If arg is not empty, it only lists arg.
