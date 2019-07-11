@@ -2,12 +2,26 @@
 <html lang="en">
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>Go CDK Image Conversion Sample</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="/style.css">
   </head>
   <body>
-    <h1>Go CDK Image Conversion Sample</h1>
-    <ul>
-      <li><a href="/orders/new">Convert an Image</a></li>
-      <li><a href="/orders">List Conversions</a></li>
-    </ul>
+    <header id="PageHeader">
+      <a href="/" class="PageTitle-link"><h1 id="PageTitle">Go CDK Image Conversion Sample</h1></a>
+    </header>
+    <main id="PageContent">
+      <div class="FrontPageActions">
+        <button class="FrontPageActions-button" data-href="/orders/new">Convert an Image</button>
+        <button class="FrontPageActions-button" data-href="/orders">List Conversions</button>
+      </div>
+    </main>
+    <script type="text/javascript">
+      document.addEventListener('click', function(e) {
+        if (e.target.dataset.href) {
+          window.location.href = e.target.dataset.href;
+        }
+      });
+    </script>
   </body>
 </html>
