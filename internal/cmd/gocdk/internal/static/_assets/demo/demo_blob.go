@@ -196,7 +196,7 @@ func blobListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// blobListHandler is the handler for /demo/view.
+// blobViewHandler is the handler for /demo/view.
 //
 // It expects a "key" query parameter, and renders the contents of the blob
 // at that key.
