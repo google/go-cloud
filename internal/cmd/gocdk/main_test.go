@@ -100,35 +100,27 @@ func TestProcessContextModuleRoot(t *testing.T) {
 // Each .ct file in testdata contains a series of commands and their
 // output. This test runs the command and checks that the output matches.
 func TestCLI(t *testing.T) {
-	if err := exec.Command("go", "build").Run(); err != nil {
-		t.Fatal(err)
-	}
-	testFilenames, err := filepath.Glob("testdata/*.ct")
-	if err != nil {
-		t.Fatal(err)
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
 	gorootOut, err := exec.Command("go", "env", "GOROOT").Output()
 	if err != nil {
 		t.Fatal(err)
 	}
 	goroot := strings.TrimSpace(string(gorootOut))
-	os.Setenv("PATH", fmt.Sprintf("%s%c%s/bin", cwd, os.PathListSeparator, goroot))
+	os.Setenv("PATH", fmt.Sprintf("%s/bin", goroot))
+	ts, err := cmdtest.Read("testdata")
+
+	// Set GOPATH to the parent of the test's root directory. That lets gocdk
+	// determine a module path, but doesn't clutter the root directory with
+	// the module cache (pkg/mod).
+	tf.Setup = func(rootDir string) error {
+		return os.Setenv("GOPATH", filepath.Dir(rootDir))
+	}
+
 	for _, fn := range testFilenames {
 		testName := strings.TrimSuffix(filepath.Base(fn), filepath.Ext(fn))
 		t.Run(testName, func(t *testing.T) {
 			tf, err := cmdtest.ReadTestFile(fn)
 			if err != nil {
 				t.Fatal(err)
-			}
-			// Set GOPATH to the parent of the test's root directory. That lets gocdk
-			// determine a module path, but doesn't clutter the root directory with
-			// the module cache (pkg/mod).
-			tf.Setup = func(rootDir string) error {
-				return os.Setenv("GOPATH", filepath.Dir(rootDir))
 			}
 			// "ls": list files, in platform-independent order.
 			tf.Commands["ls"] = func(args []string) ([]byte, error) {
