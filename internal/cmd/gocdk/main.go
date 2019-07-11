@@ -166,6 +166,7 @@ func (pctx *processContext) Println(a ...interface{}) {
 // module root. It also ensures that the module looks like a Go CDK project,
 // based on the existence of a "biomes" directory.
 func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
+	fmt.Printf("#### ModuleRoot workdir=%q\n", pctx.workdir)
 	c := exec.CommandContext(ctx, "go", "list", "-m", "-f", "{{.Dir}}")
 	c.Dir = pctx.workdir
 	output, err := c.Output()
