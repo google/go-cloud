@@ -1,10 +1,10 @@
 # Add fails when we're not in a module.
 $ gocdk resource add dev blob/fileblob --> FAIL
 gocdk: Adding "blob/fileblob" to "dev"...
-Error: resource add: couldn't find a Go module root at or above ${ROOTDIR}
+Error: resource add: couldn't find a Go module root at or above ${ROOTDIR}/src
 
 $ gocdk init myproj
-gocdk: Project created at ${ROOTDIR}/myproj with:
+gocdk: Project created at ${ROOTDIR}/src/myproj with:
 gocdk: - Go HTTP server
 gocdk: - Dockerfile
 gocdk: - 'dev' biome for local development settings

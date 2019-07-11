@@ -107,11 +107,11 @@ func TestCLI(t *testing.T) {
 	}
 	goroot := strings.TrimSpace(string(gorootOut))
 	os.Setenv("PATH", fmt.Sprintf("%s/bin", goroot))
+	os.Setenv("GO111MODULE", "on")
 	ts, err := cmdtest.Read("testdata")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.Verbose = true
 
 	// !!!!!!!!!!!!!!!!
 	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -155,7 +155,7 @@ func TestCLI(t *testing.T) {
 		}
 		return out.Bytes(), nil
 	}
-	if err := ts.RunMatch("init$", *record); err != nil {
+	if err := ts.Run(*record); err != nil {
 		t.Error(err)
 	}
 }
