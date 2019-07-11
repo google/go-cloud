@@ -1,10 +1,10 @@
 # Add fails when we're not in a module.
 $ gocdk biome add mybiome --> FAIL
 gocdk: Adding biome "mybiome"...
-Error: biome add: couldn't find a Go module root at or above ${ROOTDIR}/src
+Error: biome add: couldn't find a Go module root at or above ${ROOTDIR}
 
 $ gocdk init myproj
-gocdk: Project created at ${ROOTDIR}/src/myproj with:
+gocdk: Project created at ${ROOTDIR}/myproj with:
 gocdk: - Go HTTP server
 gocdk: - Dockerfile
 gocdk: - 'dev' biome for local development settings
