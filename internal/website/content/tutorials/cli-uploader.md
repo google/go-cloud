@@ -6,7 +6,7 @@ weight: 1
 ---
 
 This quickstart will build a command line application called `upload` that
-uploads files to blob storage on both AWS and GCP. Blob storage stores binary
+uploads files to blob storage on GCP, AWS, and Azure. Blob storage stores binary
 data under a string key, and is one of the most frequently used cloud
 services.
 
@@ -176,8 +176,8 @@ nil)`.
 
 ## Uploading an image
 
-That's it! Let's try it out. As setup, we will need to create an
-[S3 bucket][s3-bucket], a [GCS bucket][gcs-bucket], and an
+That's it! Let's try it out. As setup, we will need to create a
+[GCS bucket][gcs-bucket], an [S3 bucket][s3-bucket], and an
 [Azure container][azure-container]. In the code above, I called that bucket
 `go-cloud-bucket`, but you can change that to match whatever your bucket is
 called. Of course, you are free to try the code on any subset of Cloud
@@ -214,8 +214,7 @@ $ ./upload gs://go-cloud-bucket gopher.png
 Then, we send that same gopher to S3:
 
 ```shell
-$ export AWS_REGION=us-west-1
-$ ./upload s3://go-cloud-bucket gopher.png
+$ ./upload s3://go-cloud-bucket?region=us-west-1 gopher.png
 ```
 
 Finally, we send that same gopher to Azure:
