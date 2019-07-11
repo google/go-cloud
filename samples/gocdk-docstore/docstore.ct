@@ -1,0 +1,44 @@
+# Copyright 2019 The Go Cloud Development Kit Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Tests of the gocdk-doctore program.
+
+$ setenv url mem://sample-coll/ID?filename=save
+
+# Collection is initially empty.
+$ gocdk-docstore ls ${url}
+
+$ gocdk-docstore put -d 2019-05-01 -id first ${url} message1
+Put message: first 2019-05-01: message1
+
+$ gocdk-docstore ls -d 2019-05-01 ${url}
+first 2019-05-01: message1
+
+$ gocdk-docstore put -d 2019-05-02 -id second ${url} message2
+$ gocdk-docstore ls -d 2019-05-02 ${url}
+Put message: second 2019-05-02: message2
+second 2019-05-02: message2
+
+$ gocdk-docstore update first ${url} new-message
+updated: first 2019-05-01: new-message
+
+
+# Delete everything.
+$ gocdk-docstore delete ${url}
+
+# Collection is empty again.
+$ gocdk-docstore ls ${url}
+
+
+
