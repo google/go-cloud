@@ -94,6 +94,11 @@ func Test(t *testing.T) {
 		return nil, nil
 	}
 
+	ts.Setup = func(rootdir string) error {
+		t.Logf("rootdir = %q", rootdir)
+		return nil
+	}
+
 	if err := ts.Run(*update); err != nil {
 		t.Error(err)
 	}
