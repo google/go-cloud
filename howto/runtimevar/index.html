@@ -38,47 +38,86 @@ if (!doNotTrack) {
 <ul>
 <li>
 <ul>
-<li><a href="#constructors-versus-url-openers">Constructors versus URL openers</a></li>
-<li><a href="#gcp-url">GCP Runtime Configurator</a>
+<li><a href="#opening">Opening a Variable</a></li>
+<li><a href="#using">Using a Variable</a>
 <ul>
-<li><a href="#rc-ctor">GCP Runtime Configurator Constructor</a></li>
-</ul></li>
-<li><a href="#ps-url">AWS Parameter Store</a>
-<ul>
-<li><a href="#ps-ctor">AWS Parameter Store Constructor</a></li>
-</ul></li>
-<li><a href="#etcd-url">etcd</a>
-<ul>
-<li><a href="#etcd-constructor">etcd Constructor</a></li>
-</ul></li>
-<li><a href="#latest">Fetching the latest value</a></li>
+<li><a href="#latest">Latest</a></li>
 <li><a href="#watch">Watch</a></li>
+</ul></li>
+<li><a href="#services">Supported Services</a>
+<ul>
+<li><a href="#gcprc">GCP Runtime Configurator</a>
+<ul>
+<li><a href="#gcprc-ctor">GCP Constructor</a></li>
+</ul></li>
+<li><a href="#awsps">AWS Parameter Store</a>
+<ul>
+<li><a href="#awsps-ctor">AWS Constructor</a></li>
+</ul></li>
+<li><a href="#etcd">etcd</a>
+<ul>
+<li><a href="#etcd-ctor">Etcd Constructor</a></li>
+</ul></li>
+</ul></li>
 </ul></li>
 </ul>
 </nav>
 </nav>
 
+<p>The runtimevar package provides an easy and portable way to watch runtime
+configuration variables. This guide shows how to work with runtime configuration
+variables using the Go CDK.</p>
 
+<h2 id="opening"> Opening a Variable<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
 
-<p>Working with runtime variables using the Go CDK takes two steps:</p>
+<p>The first step in watching a variable is to instantiate a
+<a href="https://godoc.org/gocloud.dev/runtimevar#Variable"><code>*runtimevar.Variable</code></a>.</p>
 
-<ol>
-<li>Open the variable with the <code>runtimevar</code> provider of your choice. You can
-provide a <a href="https://godoc.org/gocloud.dev/runtimevar#Decoder">decoder</a> parameter to specify whether the raw value stored
-in the variable is interpreted as a <code>string</code>, a <code>[]byte</code> or as JSON.</li>
-<li>Use the <code>Latest</code> method to fetch the value of the variable.</li>
-</ol>
+<p>The easiest way to do so is to use <a href="https://godoc.org/gocloud.dev/runtimevar#OpenVariable"><code>runtimevar.OpenVariable</code></a> and a URL pointing
+to the variable, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to link
+it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need fine-grained control
+over the connection settings, you can call the constructor function in the
+driver package directly (like <code>etcdvar.OpenVariable</code>).</p>
 
-<h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
+<p>When opening the variable, you can provide a <a href="https://godoc.org/gocloud.dev/runtimevar#Decoder">decoder</a> parameter (either as a
+query parameter for URLs, or explicitly to the constructor) to specify whether
+the raw value stored in the variable is interpreted as a <code>string</code>, a <code>[]byte</code>,
+or as JSON.</p>
 
-<p>The easiest way to open a variable is using <a href="https://godoc.org/gocloud.dev/runtimevar#OpenVariable"><code>runtimevar.OpenVariable</code></a> and a
-URL pointing to the variable, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver
-package to link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need
-fine-grained control over the connection settings, you can call the constructor
-function in the driver package directly (like <code>awsparamstore.OpenVariable</code>).
-This guide shows how to use both forms for each provider.</p>
+<p>See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
 
-<h2 id="gcp-url"> GCP Runtime Configurator<a class="anchor" href="#gcp-url" aria-label="Link to Section">🔗</a></h2>
+<h2 id="using"> Using a Variable<a class="anchor" href="#using" aria-label="Link to Section">🔗</a></h2>
+
+<p>Once you have opened a <code>runtimevar.Variable</code> for the provider you want, you can
+use it portably.</p>
+
+<h3 id="latest"> Latest<a class="anchor" href="#latest" aria-label="Link to Section">🔗</a></h3>
+
+<p>The easiest way to a <code>Variable</code> is to use the <a href="https://godoc.org/gocloud.dev/runtimevar#Variable.Latest"><code>Variable.Latest</code></a> method. It
+returns the latest good <a href="https://godoc.org/gocloud.dev/runtimevar#Snapshot"><code>Snapshot</code></a> of the variable value, blocking if no
+good value has <em>ever</em> been received. The dynamic type of <code>Snapshot.Value</code>
+depends on the decoder you provided when creating the <code>Variable</code>.</p>
+
+<p>To avoid blocking, you can pass an already-<code>Done</code> context.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">snapshot</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Latest</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;Error in retrieving variable: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="c1">// If runtimevar.StringDecoder was used when constructing v, the
+</span><span class="c1">// snapshot.Value will be of type string.
+</span><span class="c1"></span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%q\n&#34;</span><span class="p">,</span> <span class="nx">snapshot</span><span class="p">.</span><span class="nx">Value</span><span class="p">.(</span><span class="kt">string</span><span class="p">))</span>
+</code></pre></div>
+
+<h3 id="watch"> Watch<a class="anchor" href="#watch" aria-label="Link to Section">🔗</a></h3>
+
+<p><code>Variable</code> also has a <a href="https://godoc.org/gocloud.dev/runtimevar#Variable.Watch"><code>Watch</code></a> method for obtaining the value of a variable;
+it has different semantics than <code>Latest</code> and may be useful in some scenarios. We
+recommend starting with <code>Latest</code> as it&rsquo;s conceptually simpler to work with.</p>
+
+<h2 id="services"> Supported Services<a class="anchor" href="#services" aria-label="Link to Section">🔗</a></h2>
+
+<h3 id="gcprc"> GCP Runtime Configurator<a class="anchor" href="#gcprc" aria-label="Link to Section">🔗</a></h3>
 
 <p>To open a variable stored in <a href="https://cloud.google.com/deployment-manager/runtime-configurator/">GCP Runtime Configurator</a> via a URL, you can use
 the <code>runtimevar.OpenVariable</code> function as follows.</p>
@@ -91,19 +130,18 @@ the <code>runtimevar.OpenVariable</code> function as follows.</p>
 <span class="p">)</span>
 
 <span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-</span><span class="c1">// The URL host+path form the GCP Runtime Configurator variable key.
-</span><span class="c1">// See https://cloud.google.com/deployment-manager/runtime-configurator/
+</span><span class="c1">// The URL Host+Path are used as the GCP Runtime Configurator Variable key;
+</span><span class="c1">// see https://cloud.google.com/deployment-manager/runtime-configurator/
 </span><span class="c1">// for more details.
 </span><span class="c1"></span>
 <span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h3 id="rc-ctor"> GCP Runtime Configurator Constructor<a class="anchor" href="#rc-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="gcprc-ctor"> GCP Constructor<a class="anchor" href="#gcprc-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig#OpenVariable"><code>gcpruntimeconfig.OpenVariable</code></a> constructor opens a Runtime Configurator
 variable.</p>
@@ -153,7 +191,7 @@ variable.</p>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h2 id="ps-url"> AWS Parameter Store<a class="anchor" href="#ps-url" aria-label="Link to Section">🔗</a></h2>
+<h3 id="awsps"> AWS Parameter Store<a class="anchor" href="#awsps" aria-label="Link to Section">🔗</a></h3>
 
 <p>To open a variable stored in <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Parameter Store</a> via a URL, you can use the
 <code>runtimevar.OpenVariable</code> function as follows.</p>
@@ -167,13 +205,14 @@ variable.</p>
 
 <span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 </span><span class="c1"></span>
-<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awsparamstore://myvar?region=us-west-1&#34;</span><span class="p">)</span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awsparamstore://myvar?region=us-west-1&amp;decoder=string&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h3 id="ps-ctor"> AWS Parameter Store Constructor<a class="anchor" href="#ps-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="awsps-ctor"> AWS Constructor<a class="anchor" href="#awsps-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable"><code>awsparamstore.OpenVariable</code></a> constructor opens a Parameter Store
 variable.</p>
@@ -204,10 +243,10 @@ variable.</p>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h2 id="etcd-url"> etcd<a class="anchor" href="#etcd-url" aria-label="Link to Section">🔗</a></h2>
+<h3 id="etcd"> etcd<a class="anchor" href="#etcd" aria-label="Link to Section">🔗</a></h3>
 
-<p>The Go CDK supports using <a href="https://etcd.io/">etcd</a> for storing variables locally or
-remotely. To open a variable stored in <code>etcd</code> via a URL, you can use the
+<p>The Go CDK supports using <a href="https://etcd.io/">etcd</a> for storing variables locally or remotely. To
+open a variable stored in <code>etcd</code> via a URL, you can use the
 <code>runtimevar.OpenVariable</code> function as follows.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
@@ -228,7 +267,7 @@ remotely. To open a variable stored in <code>etcd</code> via a URL, you can use 
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h3 id="etcd-constructor"> etcd Constructor<a class="anchor" href="#etcd-constructor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="etcd-ctor"> Etcd Constructor<a class="anchor" href="#etcd-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable"><code>etcdvar.OpenVariable</code></a> constructor opens an etcd variable.</p>
 
@@ -256,32 +295,6 @@ remotely. To open a variable stored in <code>etcd</code> via a URL, you can use 
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
-
-<h2 id="latest"> Fetching the latest value<a class="anchor" href="#latest" aria-label="Link to Section">🔗</a></h2>
-
-<p>Once we have an open variable, we can use the <a href="https://godoc.org/gocloud.dev/runtimevar#Variable.Latest"><code>Variable.Latest</code></a> method to
-fetch its latest value. This method returns the latest good <a href="https://godoc.org/gocloud.dev/runtimevar#Snapshot"><code>Snapshot</code></a> of
-the variable value, blocking if no good value has <em>ever</em> been received. The
-dynamic type of <code>Snapshot.Value</code> depends on the decoder you provided when
-creating the <code>Variable</code>.</p>
-
-<p>To avoid blocking, you can pass an already-<code>Done</code> context.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">snapshot</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Latest</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;Error in retrieving variable: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="c1">// snapshot.Value will be of type string.
-</span><span class="c1"></span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%q\n&#34;</span><span class="p">,</span> <span class="nx">snapshot</span><span class="p">.</span><span class="nx">Value</span><span class="p">.(</span><span class="kt">string</span><span class="p">))</span>
-</code></pre></div>
-
-<h2 id="watch"> Watch<a class="anchor" href="#watch" aria-label="Link to Section">🔗</a></h2>
-
-<p>Type <a href="https://godoc.org/gocloud.dev/runtimevar#Variable"><code>Variable</code></a> also has a <a href="https://godoc.org/gocloud.dev/runtimevar#Variable.Watch"><code>Watch</code></a> method for obtaining the value of
-a variable; it has different semantics than <a href="https://godoc.org/gocloud.dev/runtimevar#Variable.Latest"><code>Variable.Latest</code></a> and may be
-useful in some scenarios. We recommend starting with <code>Latest</code> as it&rsquo;s
-conceptually simpler to work with.</p>
-
 </div>
     </main>
     <nav class="Sidenav">
