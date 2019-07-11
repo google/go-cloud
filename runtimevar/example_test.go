@@ -28,38 +28,44 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func Example_constantvarJsonVariable() {
-	// DBConfig is the sample config struct we're going to parse our JSON into.
-	type DBConfig struct {
-		Host     string
-		Port     int
-		Username string
+func Example_jsonDecoder() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	// Config is the sample config struct we're going to parse our JSON into.
+	type Config struct {
+		Host string
+		Port int
 	}
 
-	// Here's our sample JSON config.
-	const jsonConfig = `{"Host": "gocloud.dev", "Port": 8080, "Username": "testuser"}`
+	// A sample JSON config that will decode into Config.
+	const jsonConfig = `{"Host": "gocloud.dev", "Port": 8080}`
 
-	// We need a Decoder that decodes raw bytes into our config.
-	decoder := runtimevar.NewDecoder(DBConfig{}, runtimevar.JSONDecode)
+	// Construct a Decoder that decodes raw bytes into our config.
+	decoder := runtimevar.NewDecoder(Config{}, runtimevar.JSONDecode)
 
-	// Next, a construct a *Variable using a constructor from one of the
-	// runtimevar subpackages. This example uses constantvar.
+	// Next, a construct a *Variable using a constructor or URL opener.
+	// This example uses constantvar.
+	// If you're using a URL opener, you can't decode JSON into a struct, but
+	// you can use the query parameter "decoder=jsonmap" to decode into a map.
 	v := constantvar.NewBytes([]byte(jsonConfig), decoder)
 	defer v.Close()
+	// snapshot.Value will be of type Config.
 
-	// Call Latest to retrieve the value.
-	snapshot, err := v.Latest(context.Background())
+	// Ignore unused variables in example:
+	snapshot, err := v.Latest(ctx)
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
-	// snapshot.Value will be of type DBConfig.
-	fmt.Printf("Config: %+v\n", snapshot.Value.(DBConfig))
+	fmt.Printf("Config: %+v\n", snapshot.Value.(Config))
 
 	// Output:
-	// Config: {Host:gocloud.dev Port:8080 Username:testuser}
+	// Config: {Host:gocloud.dev Port:8080}
 }
 
-func Example_constantvarStringVariable() {
+func Example_stringDecoder() {
 	// Construct a *Variable using a constructor from one of the
 	// runtimevar subpackages. This example uses constantvar.
 	// The variable value is of type string, so we use StringDecoder.
@@ -88,9 +94,8 @@ func ExampleVariable_Latest() {
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
-	// If runtimevar.StringDecoder was used when constructing v, the
-	// snapshot.Value will be of type string.
-	fmt.Printf("%q\n", snapshot.Value.(string))
+	// Ignore unused variables in example:
+	_ = snapshot
 }
 
 func ExampleSnapshot_As() {

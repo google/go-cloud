@@ -23,12 +23,6 @@ import (
 	"gocloud.dev/runtimevar/gcpruntimeconfig"
 )
 
-// MyConfig is a sample configuration struct.
-type MyConfig struct {
-	Server string
-	Port   int
-}
-
 func ExampleOpenVariable() {
 	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#gcprc-ctor
 
@@ -50,9 +44,6 @@ func ExampleOpenVariable() {
 	}
 	defer cleanup()
 
-	// Create a decoder for decoding JSON strings into MyConfig.
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
-
 	// You can use the VariableKey helper to construct a Variable key from
 	// your project ID, config ID, and the variable name; alternatively,
 	// you can construct the full string yourself (e.g.,
@@ -65,7 +56,7 @@ func ExampleOpenVariable() {
 	variableKey := gcpruntimeconfig.VariableKey("gcp-project-id", "config-id", "variable-name")
 
 	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)
+	v, err := gcpruntimeconfig.OpenVariable(client, variableKey, runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,7 +66,7 @@ func ExampleOpenVariable() {
 func Example_openVariableFromURL() {
 	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#gcprc
 
-	// import _ "gocloud.dev/runtimervar/gcpruntimeconfig"
+	// import _ "gocloud.dev/runtimevar/gcpruntimeconfig"
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The URL Host+Path are used as the GCP Runtime Configurator Variable key;
@@ -90,15 +81,4 @@ func Example_openVariableFromURL() {
 		log.Fatal(err)
 	}
 	defer v.Close()
-}
-
-func Example_openVariableFromURLAndCallLatest() {
-	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	snapshot, err := v.Latest(ctx)
-	_, _ = snapshot, err
 }

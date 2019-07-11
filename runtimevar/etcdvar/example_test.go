@@ -23,12 +23,6 @@ import (
 	"gocloud.dev/runtimevar/etcdvar"
 )
 
-// MyConfig is a sample configuration struct.
-type MyConfig struct {
-	Server string
-	Port   int
-}
-
 func ExampleOpenVariable() {
 	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-ctor
 
@@ -38,13 +32,8 @@ func ExampleOpenVariable() {
 		log.Fatal(err)
 	}
 
-	// Create a decoder for decoding JSON strings into MyConfig.
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
-
 	// Construct a *runtimevar.Variable that watches the variable.
-	// The etcd variable being referenced should have a JSON string that
-	// decodes into MyConfig.
-	v, err := etcdvar.OpenVariable(client, "cfg-variable-name", decoder, nil)
+	v, err := etcdvar.OpenVariable(client, "cfg-variable-name", runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,13 +52,9 @@ func Example_openVariableFromURL() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	v, err := runtimevar.OpenVariable(ctx, "etcd://myvarname")
+	v, err := runtimevar.OpenVariable(ctx, "etcd://myvarname?decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
-
-	// Ignore unused variables in example:
-	snapshot, err := v.Latest(ctx)
-	_, _ = snapshot, err
 }

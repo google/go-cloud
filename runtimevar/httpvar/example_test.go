@@ -23,42 +23,35 @@ import (
 	"gocloud.dev/runtimevar/httpvar"
 )
 
-// MyConfig is a sample configuration struct.
-type MyConfig struct {
-	Server string
-	Port   int
-}
-
 func ExampleOpenVariable() {
-	httpClient := http.DefaultClient
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#http-ctor
 
-	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := httpvar.OpenVariable(httpClient, "http://example.com", decoder, nil)
+	// Create an HTTP.Client
+	httpClient := http.DefaultClient
+
+	// Construct a *runtimevar.Variable that watches the page.
+	v, err := httpvar.OpenVariable(httpClient, "http://example.com", runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
-
-	// We can now read the current value of the variable from v.
-	snapshot, err := v.Watch(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := snapshot.Value.(MyConfig)
-	_ = cfg
 }
 
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#http-url
+
+	// import _ "gocloud.dev/runtimevar/httpvar"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-	// The "decoder" query parameter is optional, and is removed before fetching
-	// the URL.
+	// The default opener connects to an etcd server based on the environment
+	// variable ETCD_SERVER_URL.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	v, err := runtimevar.OpenVariable(ctx, "http://myserver.com/foo.txt?decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	snapshot, err := v.Latest(ctx)
-	_, _ = snapshot, err
+	defer v.Close()
 }

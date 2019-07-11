@@ -23,9 +23,11 @@ over the connection settings, you can call the constructor function in the
 driver package directly (like `etcdvar.OpenVariable`).
 
 When opening the variable, you can provide a [decoder][] parameter (either as a
-query parameter for URLs, or explicitly to the constructor) to specify whether
-the raw value stored in the variable is interpreted as a `string`, a `[]byte`,
-or as JSON.
+[query parameter][] for URLs, or explicitly to the constructor) to specify
+whether the raw value stored in the variable is interpreted as a `string`, a
+`[]byte`, or as JSON. Here's an example of using a JSON encoder:
+
+{{< goexample src="gocloud.dev/runtimevar.Example_jsonDecoder" imports="0" >}}
 
 See the [guide below][] for usage of both forms for each supported provider.
 
@@ -35,6 +37,7 @@ See the [guide below][] for usage of both forms for each supported provider.
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [decoder]: https://godoc.org/gocloud.dev/runtimevar#Decoder
 [guide below]: {{< ref "#services" >}}
+[query parameter]: https://godoc.org/gocloud.dev/runtimevar#DecoderByName
 
 ## Using a Variable {#using}
 
@@ -50,8 +53,7 @@ depends on the decoder you provided when creating the `Variable`.
 
 To avoid blocking, you can pass an already-`Done` context.
 
-{{< goexample src="gocloud.dev/runtimevar.ExampleVariable_Latest"
-imports="0" >}}
+{{< goexample src="gocloud.dev/runtimevar.ExampleVariable_Latest" imports="0" >}}
 
 [`Variable.Latest`]: https://godoc.org/gocloud.dev/runtimevar#Variable.Latest
 [`Snapshot`]: https://godoc.org/gocloud.dev/runtimevar#Snapshot
@@ -106,10 +108,9 @@ variable.
 [`awsparamstore.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable
 
-### etcd {#etcd}
+### Etcd {#etcd}
 
-The Go CDK supports using [etcd][] for storing variables locally or remotely. To
-open a variable stored in `etcd` via a URL, you can use the
+To open a variable stored in [etcd][] via URL, you can use the
 `runtimevar.OpenVariable` function as follows.
 
 {{< goexample "gocloud.dev/runtimevar/etcdvar.Example_openVariableFromURL" >}}
@@ -118,9 +119,51 @@ open a variable stored in `etcd` via a URL, you can use the
 
 #### Etcd Constructor {#etcd-ctor}
 
-The [`etcdvar.OpenVariable`][] constructor opens an etcd variable.
+The [`etcdvar.OpenVariable`][] constructor opens an `etcd` variable.
 
 [`etcdvar.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable
 
 {{< goexample "gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable" >}}
+
+### HTTP {#http}
+
+`httpvar` supports watching a variable via an HTTP request. Use
+`runtimevar.OpenVariable` with a regular URL starting with `http` or `https`.
+`httpvar` will periodically make an HTTP `GET` request to that URL, with the
+`decode` URL parameter removed (if present).
+
+{{< goexample "gocloud.dev/runtimevar/httpvar.Example_openVariableFromURL" >}}
+
+#### HTTP Constructor {#http-ctor}
+
+The [`httpvar.OpenVariable`][] constructor opens a variable with a `http.Client`
+and a URL.
+
+{{< goexample "gocloud.dev/runtimevar/httpvar.ExampleOpenVariable" >}}
+
+[`httpvar.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/httpvar#OpenVariable
+
+### Blob {#blob}
+
+`blobvar` supports watching a variable based on the contents of a Go CDK blob.
+Set the environment variable `BLOBVAR_BUCKET_URL` to the URL of the bucket,
+and then use `runtimevar.OpenVariable` as shown below. `blobvar` will
+periodically re-fetch the contents of the blob.
+
+{{< goexample "gocloud.dev/runtimevar/blobvar.Example_openVariableFromURL" >}}
+
+You can also use [`blobvar.OpenVariable`][].
+
+[`blobvar.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/blobvar#OpenVariable
+
+### Local {#local}
+
+You can create an in-memory variable (useful for testing) using `constantvar`:
+
+{{< goexample "gocloud.dev/runtimevar/constantvar.Example_openVariableFromURL" >}}
+
+Alternatively, you can create a variable based on the contents of a file using
+`filevar`:
+
+{{< goexample "gocloud.dev/runtimevar/filevar.Example_openVariableFromURL" >}}
