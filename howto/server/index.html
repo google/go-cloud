@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Server &middot; Go CDK</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Source+Code+Pro|Work+Sans:400,700">
+  <link type="text/css" rel="stylesheet" href="/css/syntax.css">
+  <link type="text/css" rel="stylesheet" href="/css/style.css">
+  <link rel="shortcut icon" href="/favicon-32x32.png">
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-135118641-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+</head>
+<body>
+  <div class="PageLayout">
+    <header class="PageHeader">
+      <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
+    </header>
+    <main class="MainContent">
+      <div class="MainContent-bounds"><h1>Server</h1>
+
+<nav class="PageTOC">
+  <div class="PageTOC-heading">In this article</div>
+  <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#starting-up-the-server">Starting up the server</a>
+<ul>
+<li><a href="#adding-a-request-logger">Adding a request logger</a></li>
+<li><a href="#adding-health-checks">Adding health checks</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+</nav>
+
+
+
+<p>The Go CDK&rsquo;s <code>server</code> package provides a pre-configured HTTP server with
+diagnostic hooks for request logging, health checks, and trace exporting via
+OpenCensus. This guide will show you how to start up and shut down the server,
+as well as how to work with the request logging and health checks.</p>
+
+<h2 id="starting-up-the-server"> Starting up the server<a class="anchor" href="#starting-up-the-server" aria-label="Link to Section">🔗</a></h2>
+
+<p>The Go CDK Server constructor takes an <code>http.Handler</code> and an <code>Options</code> struct.
+The simplest way to start the server is to use <code>http.DefaultServeMux</code> and
+pass <code>nil</code> for the options.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/server&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Use the constructor function to create the server.
+</span><span class="c1"></span><span class="nx">srv</span> <span class="o">:=</span> <span class="nx">server</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">DefaultServeMux</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+
+<span class="c1">// Register a route.
+</span><span class="c1"></span><span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintln</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="s">&#34;Hello, World!&#34;</span><span class="p">)</span>
+<span class="p">})</span>
+
+<span class="c1">// Start the server. If ListenAndServe returns an error, print it and exit.
+</span><span class="c1"></span><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">srv</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8080&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="adding-a-request-logger"> Adding a request logger<a class="anchor" href="#adding-a-request-logger" aria-label="Link to Section">🔗</a></h3>
+
+<p>You can use the <code>server.Options</code> struct to specify a request logger.</p>
+
+<p>The example is shown with the Go CDK <a href="https://godoc.org/gocloud.dev/server/requestlog"><code>requestlog</code></a> package&rsquo;s <code>NCSALogger</code>.
+To get logs in the Stackdriver JSON format, use <code>NewStackdriverLogger</code> in place
+of <code>NewNCSALogger</code>.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+	<span class="s">&#34;os&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/server&#34;</span>
+	<span class="s">&#34;gocloud.dev/server/requestlog&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Create a logger, and assign it to the RequestLogger field of a
+</span><span class="c1">// server.Options struct.
+</span><span class="c1"></span><span class="nx">srvOptions</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">server</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+	<span class="nx">RequestLogger</span><span class="p">:</span> <span class="nx">requestlog</span><span class="p">.</span><span class="nf">NewNCSALogger</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="kt">error</span><span class="p">)</span> <span class="p">{}),</span>
+<span class="p">}</span>
+
+<span class="c1">// Pass the options to the Server constructor.
+</span><span class="c1"></span><span class="nx">srv</span> <span class="o">:=</span> <span class="nx">server</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">DefaultServeMux</span><span class="p">,</span> <span class="nx">srvOptions</span><span class="p">)</span>
+
+<span class="c1">// Register a route.
+</span><span class="c1"></span><span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintln</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="s">&#34;Hello, World!&#34;</span><span class="p">)</span>
+<span class="p">})</span>
+
+<span class="c1">// Start the server. You will see requests logged to STDOUT.
+</span><span class="c1"></span><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">srv</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8080&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="adding-health-checks"> Adding health checks<a class="anchor" href="#adding-health-checks" aria-label="Link to Section">🔗</a></h3>
+
+<p>The Go CDK <code>server</code> package affords a hook for you to define health checks for
+your application and see the results at <code>/healthz/readiness</code>. The server also
+runs an endpoint at <code>/healthz/liveness</code>, which is a conventional name for a
+liveness check and is where Kubernetes, if you are using it, will look.</p>
+
+<p>Health checks are an important part of application monitoring, and readiness
+checks are subtly different than liveness checks. The liveness check will return
+<code>200 OK</code> if the server can serve requests. But because each application may have
+a different definition of what it means to be &ldquo;healthy&rdquo; (perhaps your
+application has a dependency on a back end service), you will need to define a
+concrete type to implement the <code>health.Checker</code> interface and define a
+<code>CheckHealth</code> method specific to your application for readiness checks.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// customHealthCheck is an example health check. It implements the
+</span><span class="c1">// health.Checker interface and reports the server is healthy when the healthy
+</span><span class="c1">// field is set to true.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">customHealthCheck</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">mu</span>      <span class="nx">sync</span><span class="p">.</span><span class="nx">RWMutex</span>
+	<span class="nx">healthy</span> <span class="kt">bool</span>
+<span class="p">}</span>
+
+<span class="c1">// customHealthCheck implements the health.Checker interface because it has a
+</span><span class="c1">// CheckHealth method.
+</span><span class="c1"></span><span class="kd">func</span> <span class="p">(</span><span class="nx">h</span> <span class="o">*</span><span class="nx">customHealthCheck</span><span class="p">)</span> <span class="nf">CheckHealth</span><span class="p">()</span> <span class="kt">error</span> <span class="p">{</span>
+	<span class="nx">h</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">RLock</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">h</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">RUnlock</span><span class="p">()</span>
+	<span class="k">if</span> <span class="p">!</span><span class="nx">h</span><span class="p">.</span><span class="nx">healthy</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;not ready yet!&#34;</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span></code></pre></div>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;net/http&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/server&#34;</span>
+	<span class="s">&#34;gocloud.dev/server/health&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Create a health.Checker from the type we defined for our application.
+</span><span class="c1">// In this example, healthCheck will report the server is unhealthy for 10 seconds
+</span><span class="c1">// after startup, and as healthy henceforth. Check the /healthz/readiness
+</span><span class="c1">// HTTP path to see readiness.
+</span><span class="c1"></span><span class="nx">healthCheck</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">customHealthCheck</span><span class="p">)</span>
+<span class="nx">time</span><span class="p">.</span><span class="nf">AfterFunc</span><span class="p">(</span><span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+	<span class="nx">healthCheck</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Lock</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="nx">healthCheck</span><span class="p">.</span><span class="nx">mu</span><span class="p">.</span><span class="nf">Unlock</span><span class="p">()</span>
+	<span class="nx">healthCheck</span><span class="p">.</span><span class="nx">healthy</span> <span class="p">=</span> <span class="kc">true</span>
+<span class="p">})</span>
+
+<span class="c1">// The server.Options struct takes a slice of health checks, because you
+</span><span class="c1">// may need to check several things.
+</span><span class="c1"></span><span class="nx">srvOptions</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">server</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span>
+	<span class="nx">HealthChecks</span><span class="p">:</span> <span class="p">[]</span><span class="nx">health</span><span class="p">.</span><span class="nx">Checker</span><span class="p">{</span><span class="nx">healthCheck</span><span class="p">},</span>
+<span class="p">}</span>
+
+<span class="c1">// Pass the options to the Server constructor.
+</span><span class="c1"></span><span class="nx">srv</span> <span class="o">:=</span> <span class="nx">server</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">http</span><span class="p">.</span><span class="nx">DefaultServeMux</span><span class="p">,</span> <span class="nx">srvOptions</span><span class="p">)</span>
+
+<span class="c1">// Register a route.
+</span><span class="c1"></span><span class="nx">http</span><span class="p">.</span><span class="nf">HandleFunc</span><span class="p">(</span><span class="s">&#34;/&#34;</span><span class="p">,</span> <span class="kd">func</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintln</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="s">&#34;Hello, World!&#34;</span><span class="p">)</span>
+<span class="p">})</span>
+
+<span class="c1">// Start the server. You will see requests logged to STDOUT.
+</span><span class="c1"></span><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">srv</span><span class="p">.</span><span class="nf">ListenAndServe</span><span class="p">(</span><span class="s">&#34;:8080&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+</div>
+    </main>
+    <nav class="Sidenav">
+      <ul class="Sidenav-list">
+        <li class="Sidenav-section">
+          <a href="/" class="Sidenav-sectionLink">Home</a>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/tutorials/" class="Sidenav-sectionLink">Tutorials</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/tutorials/cli-uploader/" class="Sidenav-pageLink">Command-Line Uploader</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/guestbook/" class="Sidenav-pageLink">Guestbook</a>
+              </li>
+              
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
+            <ul class="Sidenav-pageList">
+              
+              <li class="Sidenav-page">
+                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/sql/" class="Sidenav-pageLink">MySQL/PostgreSQL</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/runtimevar/" class="Sidenav-pageLink">Runtime Configuration</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/server/" class="Sidenav-pageLink">Server</a>
+              </li>
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/ref/" class="Sidenav-sectionLink">Reference</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/blob/" class="Sidenav-pageLink">blob</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/mysql/" class="Sidenav-pageLink">mysql</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/postgres/" class="Sidenav-pageLink">postgres</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/pubsub/" class="Sidenav-pageLink">pubsub</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/runtimevar/" class="Sidenav-pageLink">runtimevar</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/secrets/" class="Sidenav-pageLink">secrets</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/server/" class="Sidenav-pageLink">server</a>
+              </li>
+              
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/concepts/" class="Sidenav-sectionLink">Concepts</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/concepts/structure/" class="Sidenav-pageLink">Structuring Portable Code</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/concepts/urls/" class="Sidenav-pageLink">URLs</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/concepts/as/" class="Sidenav-pageLink">Using provider-specific APIs</a>
+              </li>
+              
+            </ul>
+        </li>
+      </ul>
+    </nav>
+    <footer class="PageFooter">
+      <nav>
+        <ul class="FooterLinks">
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
+          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
+          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+        </ul>
+      </nav>
+
+      <p class="PageFooter-paragraph">
+        Copyright © 2018–2019 The Go Cloud Development Kit Authors.
+        All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
+      </p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/howto/server/_index.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+    </footer>
+  </div>
+</body>
+</html>
