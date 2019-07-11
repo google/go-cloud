@@ -278,14 +278,46 @@ func (ts *TestSuite) Run(update bool) error {
 	}
 }
 
+// RunMatch is like Run, but executes only the test files that match
+// the regular expression pattern.
+func (ts *TestSuite) RunMatch(pattern string, update bool) error {
+	files, err := ts.matchingFiles(pattern)
+	if err != nil {
+		return err
+	}
+	if update {
+		return ts.update(files)
+	} else {
+		return ts.compare(files)
+	}
+}
+
+func (ts *TestSuite) matchingFiles(pattern string) ([]*testFile, error) {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+	var matches []*testFile
+	for _, tf := range ts.files {
+		if re.MatchString(strings.TrimSuffix(tf.filename, ".ct")) {
+			matches = append(matches, tf)
+		}
+	}
+	return matches, nil
+}
+
 // Compare runs the commands in each file in the test suite and compares their
 // output with the output in the file. The comparison is done line by line.
 // Before comparing, occurrences of the root directory in the output are
 // replaced by ${ROOTDIR}. Compare returns a non-nil error if there are
 // differences, or it could not execute the TestSuite.
 func (ts *TestSuite) Compare() error {
+	return ts.compare(ts.files)
+}
+
+func (ts *TestSuite) compare(files []*testFile) error {
 	var ss []string
-	for _, tf := range ts.files {
+	for _, tf := range files {
 		s := tf.compare()
 		if s != "" {
 			ss = append(ss, s)
@@ -316,7 +348,11 @@ func (tf *testFile) compare() string {
 // output back to the file, overwriting the previous output. Occurrences of the
 // root directory in the output are replaced by ${ROOTDIR}.
 func (ts *TestSuite) Update() error {
-	for _, tf := range ts.files {
+	return ts.update(ts.files)
+}
+
+func (ts *TestSuite) update(files []*testFile) error {
+	for _, tf := range files {
 		tmpfile, err := tf.updateToTemp()
 		if err != nil {
 			return err
@@ -388,7 +424,7 @@ func (tf *testFile) execute() error {
 		}
 	}
 	for _, tc := range tf.cases {
-		if err := tc.execute(tf.suite, rootDir); err != nil {
+		if err := tc.execute(tf.suite); err != nil {
 			return fmt.Errorf("%s:%v", tf.filename, err) // no space after :, for line number
 		}
 	}
@@ -402,7 +438,7 @@ type fatal struct{ error }
 // is saved in tc.gotOutput.
 // An error is returned if: a command that should succeed instead failed; a command that should
 // fail instead succeeded; or a built-in command was called incorrectly.
-func (tc *testCase) execute(ts *TestSuite, rootDir string) error {
+func (tc *testCase) execute(ts *TestSuite) error {
 	const failMarker = " --> FAIL"
 
 	tc.gotOutput = nil
@@ -451,7 +487,7 @@ func (tc *testCase) execute(ts *TestSuite, rootDir string) error {
 		allout = append(allout, out...)
 	}
 	if len(allout) > 0 {
-		allout = scrub(rootDir, allout)
+		allout = scrub(os.Getenv("ROOTDIR"), allout) // use Getenv because Setup could change ROOTDIR
 		// Remove final whitespace.
 		s := strings.TrimRight(string(allout), " \t\n")
 		tc.gotOutput = strings.Split(s, "\n")
