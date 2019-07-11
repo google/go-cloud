@@ -22,12 +22,13 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/testing/cmdtest"
 )
 
 var record = flag.Bool("record", false, "true to record the desired output for record/replay testcases")
@@ -95,177 +96,63 @@ func TestProcessContextModuleRoot(t *testing.T) {
 	})
 }
 
-// A record/replay testcase.
-type testCase struct {
-	// The directory where the testcase was found, e.g. testdata/recordreplay/Foo.
-	dir string
-
-	// The list of commands to execute.
-	//
-	// Empty lines and lines starting with "#" are ignored.
-	//
-	// By default, commands are expected to succeed, and the test will fail
-	// otherwise. However, commands that are expected to fail can be marked
-	// with a " --> FAIL" suffix.
-	//
-	// The following commands are supported:
-	//  - gocdk: Executed through run().
-	//  - cd: Takes exactly 1 argument, which cannot have "/" in it.
-	//        Changes the working directory.
-	//  - ls: With no arguments, recursively lists the files in the current
-	//        working directory. With one argument, which cannot have "/" in it,
-	//        recursively lists the file or directory named in the argument.
-	commands []string
-
-	// The desired success/failure for each command in commands.
-	wantFail []bool
-
-	// The desired STDOUT and STDERR (merged).
-	//
-	// In addition to the actual command output, the executed commands are written
-	// to both, prefixed with "$ ", and a blank line is inserted after each
-	// command. For example, the commands "ls" in a directory with a single file,
-	// foo.txt, would result in:
-	// $ ls
-	// foo.txt
-	//
-	want []byte
-}
-
-// newTestCase reads a test case from dir.
-//
-// The directory structure is:
-//
-//	commands.txt: Commands to execute, one per line.
-//  out.txt: Expected STDOUT/STDERR output.
-//
-//  See the testCase struct docstring for more info on each of the above.
-func newTestCase(dir string, record bool) (*testCase, error) {
-	const failMarker = " --> FAIL"
-
-	name := filepath.Base(dir)
-	tc := &testCase{dir: dir}
-
-	commandsFile := filepath.Join(dir, "commands.txt")
-	commandsBytes, err := ioutil.ReadFile(commandsFile)
-	if err != nil {
-		return nil, fmt.Errorf("load test case %s: %v", name, err)
+// This test uses the cmdtest package for testing CLI programs.
+// Each .ct file in testdata contains a series of commands and their
+// output. This test runs the command and checks that the output matches.
+func TestCLI(t *testing.T) {
+	if err := exec.Command("go", "build").Run(); err != nil {
+		t.Fatal(err)
 	}
-	for _, line := range strings.Split(string(commandsBytes), "\n") {
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		wantFail := false
-		if strings.HasSuffix(line, failMarker) {
-			line = strings.TrimSuffix(line, failMarker)
-			wantFail = true
-		}
-		tc.commands = append(tc.commands, line)
-		tc.wantFail = append(tc.wantFail, wantFail)
-	}
-
-	if !record {
-		tc.want, err = ioutil.ReadFile(filepath.Join(dir, "out.txt"))
-		if err != nil {
-			return nil, err
-		}
-	}
-	return tc, nil
-}
-
-func TestRecordReplay(t *testing.T) {
-	const testRoot = "testdata/recordreplay"
-	testcaseDirs, err := ioutil.ReadDir(testRoot)
+	testFilenames, err := filepath.Glob("testdata/*.ct")
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	testcases := make([]*testCase, 0, len(testcaseDirs))
-	for _, dir := range testcaseDirs {
-		testcase, err := newTestCase(filepath.Join(testRoot, dir.Name()), *record)
-		if err != nil {
-			t.Fatal(err)
-		}
-		testcases = append(testcases, testcase)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	ctx := context.Background()
-	for _, tc := range testcases {
-		tc := tc
-		t.Run(filepath.Base(tc.dir), func(t *testing.T) {
-			t.Parallel()
-
-			rootDir, err := ioutil.TempDir("", testTempDirPrefix)
+	gorootOut, err := exec.Command("go", "env", "GOROOT").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	goroot := strings.TrimSpace(string(gorootOut))
+	os.Setenv("PATH", fmt.Sprintf("%s%c%s/bin", cwd, os.PathListSeparator, goroot))
+	for _, fn := range testFilenames {
+		testName := strings.TrimSuffix(filepath.Base(fn), filepath.Ext(fn))
+		t.Run(testName, func(t *testing.T) {
+			tf, err := cmdtest.ReadTestFile(fn)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer os.RemoveAll(rootDir)
-
-			var out bytes.Buffer
-			srcDir := filepath.Join(rootDir, "src")
-			if err := os.Mkdir(srcDir, 0777); err != nil {
-				t.Error(err)
+			// Set GOPATH to the parent of the test's root directory. That lets gocdk
+			// determine a module path, but doesn't clutter the root directory with
+			// the module cache (pkg/mod).
+			tf.Setup = func(rootDir string) error {
+				return os.Setenv("GOPATH", filepath.Dir(rootDir))
 			}
-			curDir := srcDir
-			pctx := newProcessContext(curDir, strings.NewReader(""), &out, &out)
-			pctx.env = append(pctx.env, "GOPATH="+rootDir)
-			for i, command := range tc.commands {
-				fmt.Fprintln(&out, "$", command)
-				args := strings.Split(command, " ")
-				cmd := args[0]
-				args = args[1:]
-
-				// We can add support for additional commands as needed; see
-				// https://github.com/golang/go/blob/master/src/cmd/go/testdata/script/README
-				// for inspiration.
-				var cmdErr error
-				switch cmd {
-				case "gocdk":
-					cmdErr = run(ctx, pctx, args)
-				case "cd":
-					if len(args) != 1 {
-						t.Fatalf("command #%d: cd takes exactly 1 argument", i)
+			// "ls": list files, in platform-independent order.
+			tf.Commands["ls"] = func(args []string) ([]byte, error) {
+				var arg string
+				if len(args) == 1 {
+					arg = args[0]
+					if strings.Contains(arg, "/") {
+						return nil, fmt.Errorf("argument must be in the current directory (%q has a '/')", arg)
 					}
-					if strings.Contains(args[0], "/") {
-						t.Fatalf("command #%d: argument to cd must be in the current directory (%q has a '/')", i, args[0])
-					}
-					curDir = filepath.Join(curDir, args[0])
-					pctx.workdir = curDir
-				case "ls":
-					var arg string
-					if len(args) == 1 {
-						arg = args[0]
-						if strings.Contains(arg, "/") {
-							t.Fatalf("command #%d: argument to ls must be in the current directory (%q has a '/')", i, arg)
-						}
-					} else if len(args) > 1 {
-						t.Fatalf("command #%d: ls takes 0-1 arguments (got %d)", i, len(args))
-					}
-					cmdErr = doList(curDir, &out, arg, "")
-				default:
-					t.Fatalf("unknown command #%d (%q)", i, command)
+				} else if len(args) > 1 {
+					return nil, fmt.Errorf("takes 0-1 arguments (got %d)", len(args))
 				}
-				if cmdErr == nil && tc.wantFail[i] {
-					t.Fatalf("command #%d (%q) succeeded, but it was expected to fail", i, command)
+				out := &bytes.Buffer{}
+				cwd, err := os.Getwd()
+				if err != nil {
+					return nil, err
 				}
-				if cmdErr != nil && !tc.wantFail[i] {
-					t.Fatalf("command #%d (%q) failed with %v", i, command, cmdErr)
+				if err := doList(cwd, out, arg, ""); err != nil {
+					return nil, err
 				}
-				fmt.Fprintln(&out)
+				return out.Bytes(), nil
 			}
-
-			got := scrub(srcDir, out.Bytes())
-			if *record {
-				if err := ioutil.WriteFile(filepath.Join(tc.dir, "out.txt"), got, 0666); err != nil {
-					t.Fatalf("failed to record out.txt to testdata: %v", err)
-				}
-			} else {
-				// Split to string lines to make diff output cleaner.
-				gotLines := strings.Split(string(got), "\n")
-				wantLines := strings.Split(string(tc.want), "\n")
-				if diff := cmp.Diff(wantLines, gotLines); diff != "" {
-					t.Errorf("out mismatch:\n%s", diff)
-				}
+			if diff := tf.Compare(); diff != "" {
+				t.Error(diff)
 			}
 		})
 	}
@@ -298,14 +185,4 @@ func doList(dir string, out io.Writer, arg, indent string) error {
 		}
 	}
 	return nil
-}
-
-// scrub removes dynamic content from recorded files.
-func scrub(rootDir string, b []byte) []byte {
-	const scrubbedRootDir = "[ROOTDIR]"
-	rootDirWithSeparator := rootDir + string(filepath.Separator)
-	scrubbedRootDirWithSeparator := scrubbedRootDir + "/"
-	b = bytes.Replace(b, []byte(rootDirWithSeparator), []byte(scrubbedRootDirWithSeparator), -1)
-	b = bytes.Replace(b, []byte(rootDir), []byte(scrubbedRootDir), -1)
-	return b
 }
