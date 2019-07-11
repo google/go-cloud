@@ -54,15 +54,6 @@ type urlColl struct {
 // OpenCollectionURL opens a docstore.Collection based on u.
 func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
 	q := u.Query()
-	options := &Options{
-		RevisionField: q.Get("revision_field"),
-		Filename:      q.Get("filename"),
-	}
-	q.Del("revision_field")
-	q.Del("filename")
-	for param := range q {
-		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
-	}
 	collName := u.Host
 	if collName == "" {
 		return nil, fmt.Errorf("open collection %v: empty collection name", u)
@@ -74,6 +65,22 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	if keyName == "" || strings.ContainsRune(keyName, '/') {
 		return nil, fmt.Errorf("open collection %v: invalid key name %q (must be non-empty and have no slashes)", u, keyName)
 	}
+
+	options := &Options{
+		RevisionField: q.Get("revision_field"),
+		Filename:      q.Get("filename"),
+		onClose: func() {
+			o.mu.Lock()
+			delete(o.collections, collName)
+			o.mu.Unlock()
+		},
+	}
+	q.Del("revision_field")
+	q.Del("filename")
+	for param := range q {
+		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
+	}
+
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.collections == nil {

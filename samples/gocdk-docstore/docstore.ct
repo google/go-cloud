@@ -14,7 +14,7 @@
 
 # Tests of the gocdk-doctore program.
 
-$ setenv url mem://sample-coll/ID
+$ setenv url mem://sample-coll/ID?filename=save
 
 # Collection is initially empty.
 $ gocdk-docstore ls ${url}
