@@ -37,7 +37,7 @@ type Player struct {
 }
 
 func ExampleCollection_Actions_bulkWrite() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#act-list.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -56,7 +56,7 @@ func ExampleCollection_Actions_bulkWrite() {
 }
 
 func ExampleCollection_Actions_getAfterWrite() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#act-list.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -74,7 +74,7 @@ func ExampleCollection_Actions_getAfterWrite() {
 }
 
 func ExampleCollection_Update() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#act-update.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -170,7 +170,7 @@ func ExampleCollection_ErrorAs() {
 }
 
 func ExampleQuery_Get() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#qr-get.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -235,7 +235,7 @@ func ExampleQuery_Get_full() {
 }
 
 func ExampleQuery_Delete() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#qr-del.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -293,7 +293,7 @@ func ExampleQuery_Delete_full() {
 }
 
 func ExampleQuery_Update() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#qr-update.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -356,7 +356,7 @@ func ExampleQuery_Update_full() {
 }
 
 func Example_optimisticLocking() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#docrev.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
