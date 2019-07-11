@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"os/exec"
 	"testing"
 	"time"
 
@@ -72,9 +71,6 @@ func Test(t *testing.T) {
 		cancel()
 		res := <-outc
 		if res.err == context.Canceled {
-			res.err = nil
-		}
-		if ee, ok := res.err.(*exec.ExitError); ok && ee.ExitCode() == -1 { // killed by signal
 			res.err = nil
 		}
 
