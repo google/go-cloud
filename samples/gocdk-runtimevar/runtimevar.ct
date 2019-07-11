@@ -22,6 +22,9 @@ $ echof fvar contents
 $ gocdk-runtimevar cat file:///${ROOTDIR}/fvar?decoder=string
 (string) contents
 
+$ echo ROOTDIR is '${ROOTDIR}'
+ROOTDIR is '${ROOTDIR}'
+
 $ gocdk-runtimevar& watch file:///${ROOTDIR}/fvar?decoder=string
 $ sleep 1s
 $ echof fvar new contents
