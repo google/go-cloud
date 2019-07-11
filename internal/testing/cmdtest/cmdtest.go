@@ -278,46 +278,14 @@ func (ts *TestSuite) Run(update bool) error {
 	}
 }
 
-// RunMatch is like Run, but executes only the test files that match
-// the regular expression pattern.
-func (ts *TestSuite) RunMatch(pattern string, update bool) error {
-	files, err := ts.matchingFiles(pattern)
-	if err != nil {
-		return err
-	}
-	if update {
-		return ts.update(files)
-	} else {
-		return ts.compare(files)
-	}
-}
-
-func (ts *TestSuite) matchingFiles(pattern string) ([]*testFile, error) {
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil, err
-	}
-	var matches []*testFile
-	for _, tf := range ts.files {
-		if re.MatchString(strings.TrimSuffix(tf.filename, ".ct")) {
-			matches = append(matches, tf)
-		}
-	}
-	return matches, nil
-}
-
 // Compare runs the commands in each file in the test suite and compares their
 // output with the output in the file. The comparison is done line by line.
 // Before comparing, occurrences of the root directory in the output are
 // replaced by ${ROOTDIR}. Compare returns a non-nil error if there are
 // differences, or it could not execute the TestSuite.
 func (ts *TestSuite) Compare() error {
-	return ts.compare(ts.files)
-}
-
-func (ts *TestSuite) compare(files []*testFile) error {
 	var ss []string
-	for _, tf := range files {
+	for _, tf := range ts.files {
 		s := tf.compare()
 		if s != "" {
 			ss = append(ss, s)
@@ -348,11 +316,7 @@ func (tf *testFile) compare() string {
 // output back to the file, overwriting the previous output. Occurrences of the
 // root directory in the output are replaced by ${ROOTDIR}.
 func (ts *TestSuite) Update() error {
-	return ts.update(ts.files)
-}
-
-func (ts *TestSuite) update(files []*testFile) error {
-	for _, tf := range files {
+	for _, tf := range ts.files {
 		tmpfile, err := tf.updateToTemp()
 		if err != nil {
 			return err
