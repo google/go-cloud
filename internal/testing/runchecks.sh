@@ -97,13 +97,6 @@ while read -r path || [[ -n "$path" ]]; do
   gotestflags=("-mod=readonly" "-json" "-race")
   testsummaryflags=("-progress")
 
-  # Enable verbose output for kafka; it seems to stall a lot.
-  # TODO(rvangent): Remove this after the stalls are resolved.
-  if [[ "${path}" == "pubsub/kafkapubsub" ]]; then
-    gotestflags+=("-v")
-    testsummaryflags+=("-verbose")
-  fi
-
   # Only do coverage for the Linux build on Travis because it is slow, and
   # codecov will only save the last one anyway.
   if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
