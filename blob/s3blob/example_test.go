@@ -25,7 +25,7 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#s3-ctor
+	// This example is used in https://gocloud.dev/howto/blob/#s3-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -49,7 +49,7 @@ func ExampleOpenBucket() {
 }
 
 func Example_openBucketFromURL() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#s3
+	// This example is used in https://gocloud.dev/howto/blob/#s3
 
 	// import _ "gocloud.dev/blob/s3blob"
 
