@@ -38,7 +38,8 @@ func init() {
 	http.HandleFunc("/demo/blob/write", blobWriteHandler)
 
 	// Initialize the blob.Bucket using a URL from the environment, defaulting
-	// to an in-memory bucket provider.
+	// to an in-memory bucket provider. Note that the in-memory bucket provider
+	// starts out empty every time you run the application!
 	bucketURL = os.Getenv("BLOB_BUCKET_URL")
 	if bucketURL == "" {
 		bucketURL = "mem://"
