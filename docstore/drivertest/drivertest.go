@@ -1698,22 +1698,24 @@ func testActionsOnStructWithoutRevision(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 
 	got1 := item{Name: doc1.Name}
-	got2 := item{Name: doc2.Name}
+	got2 := map[string]interface{}{"name": doc2.Name}
 	if err := coll.Actions().
 		Create(&doc1).Put(&doc2).
-		Get(&got1).Get(&got2).
+		Get(&got1).Get(got2).
 		Do(ctx); err != nil {
 		t.Fatal(err)
 	}
+	checkNoRevisionField(t, got2, ds.DefaultRevisionField)
 
-	got3 := item{Name: doc1.Name}
+	got3 := map[string]interface{}{"name": doc1.Name}
 	got4 := item{Name: doc2.Name}
 	if err := coll.Actions().
 		Replace(&doc1).Update(&item{Name: doc2.Name}, ds.Mods{"I": 1}).
-		Get(&got3, "I").Get(&got4, "I").
+		Get(got3, "I").Get(&got4, "I").
 		Do(ctx); err != nil {
 		t.Fatal(err)
 	}
+	checkNoRevisionField(t, got3, ds.DefaultRevisionField)
 }
 
 // Verify that BeforeDo is invoked, and its as function behaves as expected.
