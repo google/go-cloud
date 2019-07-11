@@ -16,50 +16,172 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"net/url"
+	"path/filepath"
+	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
+	"gocloud.dev/gcp"
+	"gocloud.dev/internal/cmd/gocdk/internal/docker"
+	"gocloud.dev/internal/cmd/gocdk/internal/launcher"
 	"golang.org/x/xerrors"
+	"google.golang.org/api/option"
+	cloudrun "google.golang.org/api/run/v1alpha1"
 )
 
 func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
+	var dockerImage string
+	var apply bool
 	deployCmd := &cobra.Command{
 		Use:   "deploy BIOME",
 		Short: "TODO Deploy the biome",
 		Long:  "TODO more about deploy",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			// Precompute snapshot tag and pass into build and launch.
-			moduleRoot, err := pctx.ModuleRoot(ctx)
-			if err != nil {
-				return xerrors.Errorf("gocdk deploy: %w", err)
-			}
-			imageName, err := moduleDockerImageName(moduleRoot)
-			if err != nil {
-				return xerrors.Errorf("gocdk deploy: %w", err)
-			}
-			tag, err := generateTag()
-			if err != nil {
-				return xerrors.Errorf("gocdk deploy: %w", err)
-			}
-			snapshotRef := imageName + ":" + tag
-			buildRefs := []string{
-				imageName + defaultDockerTag,
-				snapshotRef,
-			}
-
-			// Run build, "biome apply", and launch.
-			biome := args[0]
-			if err := build(ctx, pctx, buildRefs); err != nil {
-				return err
-			}
-			if err := biomeApply(ctx, pctx, biome, true); err != nil {
-				return err
-			}
-			if err := launch(ctx, pctx, biome, snapshotRef); err != nil {
-				return err
-			}
-			return nil
+			return deploy(ctx, pctx, args[0], dockerImage, apply)
 		},
 	}
+	deployCmd.Flags().StringVar(&dockerImage, "image", defaultDockerTag, "Docker image to deploy in the form `name[:tag]` OR `:tag`, or empty string to build a new image")
+	deployCmd.Flags().BoolVar(&apply, "apply", true, "whether to run `biome apply` before deploying")
 	rootCmd.AddCommand(deployCmd)
+}
+
+// deploy implements the "deploy" command.
+//
+// If dockerImage is not provided, it does a build for a generated tag.
+func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string, apply bool) error {
+	moduleRoot, err := pctx.ModuleRoot(ctx)
+	if err != nil {
+		return xerrors.Errorf("gocdk deploy: %w", err)
+	}
+
+	// If no image was specified, compute a snapshot tag and build it.
+	if dockerImage == "" {
+		var err error
+		dockerImage, err = buildForDeploy(ctx, pctx, moduleRoot)
+		if err != nil {
+			return xerrors.Errorf("gocdk deploy: %w", err)
+		}
+	}
+
+	// Run "terraform apply".
+	if apply {
+		if err := biomeApply(ctx, pctx, biome, true); err != nil {
+			return err
+		}
+	}
+
+	// Get the image name from the Dockerfile if not specified.
+	if strings.HasPrefix(dockerImage, ":") {
+		name, err := moduleDockerImageName(moduleRoot)
+		if err != nil {
+			return xerrors.Errorf("gocdk deploy: %w", err)
+		}
+		dockerImage = name + dockerImage
+	}
+
+	biomePath, err := biomeDir(moduleRoot, biome)
+	if err != nil {
+		return xerrors.Errorf("gocdk deploy: %w", err)
+	}
+
+	// Prepare the launcher.
+	cfg, err := readBiomeConfig(moduleRoot, biome)
+	if err != nil {
+		return xerrors.Errorf("gocdk deploy: %w", err)
+	}
+	if cfg.Launcher == nil {
+		return xerrors.Errorf("gocdk deploy: launcher not specified in %s", filepath.Join(biomePath, biomeConfigFileName))
+	}
+	myLauncher, err := newLauncher(ctx, pctx, *cfg.Launcher)
+	if err != nil {
+		return xerrors.Errorf("gocdk deploy: %w", err)
+	}
+
+	// Read the launch specifier from the biome's Terraform output.
+	tfOutput, err := tfReadOutput(ctx, biomePath, pctx.env)
+	if err != nil {
+		return xerrors.Errorf("gocdk deploy: %w", err)
+	}
+	env, err := launchEnv(tfOutput)
+	if err != nil {
+		return xerrors.Errorf("gocdk deploy: %w", err)
+	}
+
+	// Launch the application.
+	launchURL, err := myLauncher.Launch(ctx, &launcher.Input{
+		DockerImage: dockerImage,
+		Env:         env,
+		Specifier:   tfOutput["launch_specifier"].mapValue(),
+	})
+	if err != nil {
+		return xerrors.Errorf("gocdk deploy: %w", err)
+	}
+	pctx.Logf("Serving at %s\n", launchURL)
+	return nil
+}
+
+func buildForDeploy(ctx context.Context, pctx *processContext, moduleRoot string) (string, error) {
+	imageName, err := moduleDockerImageName(moduleRoot)
+	if err != nil {
+		return "", err
+	}
+	tag, err := generateTag()
+	if err != nil {
+		return "", err
+	}
+	snapshotRef := imageName + ":" + tag
+	buildRefs := []string{
+		imageName + defaultDockerTag,
+		snapshotRef,
+	}
+	if err := build(ctx, pctx, buildRefs); err != nil {
+		return "", err
+	}
+	return snapshotRef, nil
+}
+
+// Launcher is the interface for any type that can launch a Docker image.
+type Launcher interface {
+	Launch(ctx context.Context, input *launcher.Input) (*url.URL, error)
+}
+
+// newLauncher creates the launcher for the given name.
+func newLauncher(ctx context.Context, pctx *processContext, launcherName string) (Launcher, error) {
+	switch launcherName {
+	case "local":
+		return &launcher.Local{
+			Logger:       pctx.errlog,
+			DockerClient: docker.New(pctx.env),
+		}, nil
+	case "cloudrun":
+		creds, err := pctx.gcpCredentials(ctx)
+		if err != nil {
+			return nil, xerrors.Errorf("prepare cloudrun launcher: %w", err)
+		}
+		httpClient, _ := gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
+		runService, err := cloudrun.NewService(ctx, option.WithHTTPClient(&httpClient.Client))
+		if err != nil {
+			return nil, xerrors.Errorf("prepare cloudrun launcher: %w", err)
+		}
+		return &launcher.CloudRun{
+			Logger:       pctx.errlog,
+			Client:       runService,
+			DockerClient: docker.New(pctx.env),
+		}, nil
+	case "ecs":
+		sess, err := session.NewSession()
+		if err != nil {
+			return nil, xerrors.Errorf("prepare ecs launcher: %w", err)
+		}
+		return &launcher.ECS{
+			Logger:         pctx.errlog,
+			ConfigProvider: sess,
+			DockerClient:   docker.New(pctx.env),
+		}, nil
+	default:
+		return nil, xerrors.Errorf("prepare launcher: unknown launcher %q", launcherName)
+	}
 }
