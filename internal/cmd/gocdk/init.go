@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -117,6 +118,7 @@ func inferModulePath(ctx context.Context, pctx *processContext, projectDir strin
 	if err != nil {
 		return "", xerrors.Errorf("infer module path: %w", err)
 	}
+	fmt.Printf("#### gopath = %q\n", gopath)
 
 	gopathEntries := filepath.SplitList(strings.TrimSuffix(string(gopath), "\n"))
 	for _, entry := range gopathEntries {

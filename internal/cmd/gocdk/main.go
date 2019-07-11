@@ -38,18 +38,23 @@ import (
 //go:generate go run generate_static.go
 
 func main() {
+	os.Exit(doit())
+}
+
+func doit() int {
 	pctx, err := newOSProcessContext()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 
 	}
 	ctx, done := withInterrupt(context.Background())
 	err = run(ctx, pctx, os.Args[1:])
 	done()
 	if err != nil {
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func run(ctx context.Context, pctx *processContext, args []string) error {

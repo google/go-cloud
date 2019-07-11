@@ -112,37 +112,36 @@ func TestCLI(t *testing.T) {
 	// Set GOPATH to the parent of the test's root directory. That lets gocdk
 	// determine a module path, but doesn't clutter the root directory with
 	// the module cache (pkg/mod).
-	tf.Setup = func(rootDir string) error {
+	ts.Setup = func(rootDir string) error {
 		return os.Setenv("GOPATH", filepath.Dir(rootDir))
 	}
 
+	ts.Commands["gocdk"] = cmdtest.InProcessProgram("gocdk", doit)
 	// "ls": list files, in platform-independent order.
 	ts.Commands["ls"] = func(args []string, _ string) ([]byte, error) {
-				var arg string
-				if len(args) == 1 {
-					arg = args[0]
-					if strings.Contains(arg, "/") {
-						return nil, fmt.Errorf("argument must be in the current directory (%q has a '/')", arg)
-					}
-				} else if len(args) > 1 {
-					return nil, fmt.Errorf("takes 0-1 arguments (got %d)", len(args))
-				}
-				out := &bytes.Buffer{}
-				cwd, err := os.Getwd()
-				if err != nil {
-					return nil, err
-				}
-				if err := doList(cwd, out, arg, ""); err != nil {
-					return nil, err
-				}
-				return out.Bytes(), nil
-	}
-
-			if diff := tf.Compare(); diff != "" {
-				t.Error(diff)
+		var arg string
+		if len(args) == 1 {
+			arg = args[0]
+			if strings.Contains(arg, "/") {
+				return nil, fmt.Errorf("argument must be in the current directory (%q has a '/')", arg)
 			}
-
-
+		} else if len(args) > 1 {
+			return nil, fmt.Errorf("takes 0-1 arguments (got %d)", len(args))
+		}
+		out := &bytes.Buffer{}
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		if err := doList(cwd, out, arg, ""); err != nil {
+			return nil, err
+		}
+		return out.Bytes(), nil
+	}
+	if err := ts.RunMatch("init", *record); err != nil {
+		t.Error(err)
+	}
+}
 
 // doList recursively lists the files/directory in dir to out.
 // If arg is not empty, it only lists arg.
