@@ -38,7 +38,6 @@ func Test(t *testing.T) {
 		if os.PathSeparator != '/' && !strings.HasPrefix(slashdir, "/") {
 			slashdir = "/" + slashdir
 		}
-		t.Logf("Setup: rootdir=%q, slashdir=%q\n", rootdir, slashdir)
 		return os.Setenv("SLASHDIR", slashdir)
 	}
 	if err := ts.Run(*update); err != nil {

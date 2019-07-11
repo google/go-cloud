@@ -95,7 +95,6 @@ func Test(t *testing.T) {
 	}
 
 	ts.Setup = func(rootdir string) error {
-		t.Logf("rootdir = %q", rootdir)
 		return nil
 	}
 
