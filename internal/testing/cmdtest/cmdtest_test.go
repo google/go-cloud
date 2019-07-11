@@ -76,7 +76,7 @@ func TestRead(t *testing.T) {
 	want := &TestSuite{
 		files: []*testFile{
 			{
-				filename: "testdata/read/read.ct",
+				filename: filepath.Join("testdata", "read", "read.ct"),
 				cases: []*testCase{
 					{
 						before: []string{
@@ -132,10 +132,10 @@ func TestCompare(t *testing.T) {
 	}
 	got := err.Error()
 	wants := []string{
-		"testdata/bad/bad-output.ct:2: got=-, want=+",
-		"testdata/bad/bad-output.ct:6: got=-, want=+",
-		`testdata/bad/bad-fail-1.ct:4: "echo" succeeded, but it was expected to fail`,
-		`testdata/bad/bad-fail-2.ct:4: "cd foo" failed with chdir`,
+		`testdata.bad.bad-output\.ct:2: got=-, want=+`,
+		`testdata.bad.bad-output\.ct:6: got=-, want=+`,
+		`testdata.bad.bad-fail-1\.ct:4: "echo" succeeded, but it was expected to fail`,
+		`testdata.bad.bad-fail-2\.ct:4: "cd foo" failed with chdir`,
 	}
 	failed := false
 	_ = failed

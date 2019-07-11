@@ -16,9 +16,6 @@ package main
 
 import (
 	"flag"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"gocloud.dev/internal/testing/cmdtest"
@@ -31,15 +28,7 @@ func Test(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.Commands["gocdk-blob"] = cmdtest.InProcessProgram("gocdk-blob", run)
-	ts.Setup = func(rootdir string) error {
-		// On Windows, convert "\" to "/" and add a leading "/":
-		slashdir := filepath.ToSlash(rootdir)
-		if os.PathSeparator != '/' && !strings.HasPrefix(slashdir, "/") {
-			slashdir = "/" + slashdir
-		}
-		return os.Setenv("ROOTDIR_URL", "file://"+slashdir)
-	}
+	ts.Commands["gocdk-docstore"] = cmdtest.InProcessProgram("gocdk-docstore", run)
 	if err := ts.Run(*update); err != nil {
 		t.Error(err)
 	}
