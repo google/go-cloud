@@ -31,7 +31,7 @@ import (
 )
 
 func ExampleBucket_NewReader() {
-	// This example is used in https://gocloud.dev/howto/blob/data/#reading
+	// This example is used in https://gocloud.dev/howto/blob/#reading
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -53,7 +53,7 @@ func ExampleBucket_NewReader() {
 }
 
 func ExampleBucket_NewRangeReader() {
-	// This example is used in https://gocloud.dev/howto/blob/data/#reading
+	// This example is used in https://gocloud.dev/howto/blob/#reading
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -72,7 +72,7 @@ func ExampleBucket_NewRangeReader() {
 }
 
 func ExampleBucket_NewWriter() {
-	// This example is used in https://gocloud.dev/howto/blob/data/#writing
+	// This example is used in https://gocloud.dev/howto/blob/#writing
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -95,7 +95,7 @@ func ExampleBucket_NewWriter() {
 }
 
 func ExampleBucket_NewWriter_cancel() {
-	// This example is used in https://gocloud.dev/howto/blob/data/#writing
+	// This example is used in https://gocloud.dev/howto/blob/#writing
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -123,7 +123,7 @@ func ExampleBucket_NewWriter_cancel() {
 }
 
 func ExampleBucket_Delete() {
-	// This example is used in https://gocloud.dev/howto/blob/data/#deleting
+	// This example is used in https://gocloud.dev/howto/blob/#deleting
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -417,7 +417,7 @@ func ExampleListOptions() {
 }
 
 func ExamplePrefixedBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#prefix
+	// This example is used in https://gocloud.dev/howto/blob/#prefix
 
 	// Variables set up elsewhere:
 	var bucket *blob.Bucket

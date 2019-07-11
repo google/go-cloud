@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#local-ctor
+	// This example is used in https://gocloud.dev/howto/blob/#local-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()

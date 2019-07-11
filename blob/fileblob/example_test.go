@@ -28,7 +28,7 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#local-ctor
+	// This example is used in https://gocloud.dev/howto/blob/#local-ctor
 
 	// The directory you pass to fileblob.OpenBucket must exist first.
 	const myDir = "path/to/local/directory"
