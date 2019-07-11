@@ -21,8 +21,6 @@ import (
 	"gocloud.dev/internal/testing/cmdtest"
 )
 
-// Requires mongo to be running. Run docstore/mongodocstore/localmongo.sh.
-
 var update = flag.Bool("update", false, "replace test file contents with output")
 
 func Test(t *testing.T) {
