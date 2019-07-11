@@ -145,14 +145,14 @@ func (cmd *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{
 	defer sub.Shutdown(ctx)
 
 	// Receive messages from the subscription and print them to stdout.
-	fmt.Fprintf(os.Stderr, "Receiving messages from %q...\n", subURL)
+	fmt.Printf("Receiving messages from %q...\n", subURL)
 	for i := 0; cmd.n == 0 || i < cmd.n; i++ {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			log.Print(err)
 			return subcommands.ExitFailure
 		}
-		fmt.Fprintf(os.Stdout, "%s\n", m.Body)
+		fmt.Printf("%s\n", m.Body)
 		m.Ack()
 	}
 	return subcommands.ExitSuccess
