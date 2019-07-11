@@ -253,7 +253,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		if err := decodeDoc(current, a.Doc, a.FieldPaths, c.opts.RevisionField); err != nil {
+		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
 			return err
 		}
 	default:
@@ -356,9 +356,13 @@ func (c *collection) changeRevision(doc map[string]interface{}) {
 
 func (c *collection) checkRevision(arg driver.Document, current map[string]interface{}) error {
 	if current == nil || !arg.RevisionOn(c.opts.RevisionField) {
-		return nil // no existing document
+		return nil // no existing document or the incoming doc has no revision
 	}
-	curRev := current[c.opts.RevisionField].(int64)
+	curRev, ok := current[c.opts.RevisionField]
+	if !ok {
+		return nil // there is no revision to check
+	}
+	curRev = curRev.(int64)
 	r, err := arg.GetField(c.opts.RevisionField)
 	if err != nil || r == nil {
 		return nil // no incoming revision information: nothing to check

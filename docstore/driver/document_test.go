@@ -236,8 +236,12 @@ func TestRevisionOn(t *testing.T) {
 			want: false,
 		},
 		{
-			in:   map[string]interface{}{},
+			in:   map[string]interface{}{"Rev": nil},
 			want: true,
+		},
+		{
+			in:   map[string]interface{}{},
+			want: false,
 		},
 	} {
 		doc, err := NewDocument(tc.in)

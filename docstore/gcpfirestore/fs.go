@@ -554,8 +554,9 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 	j := 0
 	for i, wr := range wrs {
 		if _, ok := call.writes[i].Operation.(*pb.Write_Transform); !ok {
-			// Ignore errors. It's fine if the doc doesn't have a revision field.
-			call.actions[j].Doc.SetField(c.opts.RevisionField, wr.UpdateTime)
+			if call.actions[j].Doc.RevisionOn(c.opts.RevisionField) {
+				call.actions[j].Doc.SetField(c.opts.RevisionField, wr.UpdateTime)
+			}
 			j++
 		}
 	}

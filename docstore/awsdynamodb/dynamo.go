@@ -200,7 +200,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		// We need to add the key fields if the user doesn't include them. The
 		// BatchGet API doesn't return them otherwise.
 		var hasP, hasS bool
-		nbs := []expression.NameBuilder{expression.Name(c.opts.RevisionField)}
+		nbs := []expression.NameBuilder{}
 		for _, fp := range gets[start].FieldPaths {
 			p := strings.Join(fp, ".")
 			nbs = append(nbs, expression.Name(p))
@@ -350,7 +350,7 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 		return nil, fmt.Errorf("missing sort key %q", c.sortKey)
 	}
 	var rev string
-	if a.Doc.RevisionOn(c.RevisionField()) {
+	if a.Doc.RevisionOn(c.opts.RevisionField) {
 		rev = driver.UniqueString()
 		if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
 			return nil, err
@@ -471,7 +471,7 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 		}
 	}
 	var rev string
-	if a.Doc.RevisionOn(c.RevisionField()) {
+	if a.Doc.RevisionOn(c.opts.RevisionField) {
 		rev = driver.UniqueString()
 		ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(rev))
 	}

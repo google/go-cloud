@@ -176,7 +176,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 		it.err = io.EOF
 		return it.err
 	}
-	if err := decodeDoc(it.docs[0], doc, it.fieldPaths, it.revField); err != nil {
+	if err := decodeDoc(it.docs[0], doc, it.fieldPaths); err != nil {
 		it.err = err
 		return it.err
 	}

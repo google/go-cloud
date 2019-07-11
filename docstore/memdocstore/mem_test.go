@@ -67,7 +67,7 @@ func TestUpdateEncodesValues(t *testing.T) {
 	}
 	coll := docstore.NewCollection(dc)
 	defer coll.Close()
-	doc := docmap{drivertest.KeyField: "testUpdateEncodes", "a": 1}
+	doc := docmap{drivertest.KeyField: "testUpdateEncodes", "a": 1, dc.RevisionField(): nil}
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 	coll := docstore.NewCollection(dc)
 	defer coll.Close()
-	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B"}
+	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B", dc.RevisionField(): nil}
 
 	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
 	if err := coll.Put(ctx, doc); err != nil {
@@ -171,6 +171,13 @@ func TestSortDocs(t *testing.T) {
 }
 
 func TestExampleInDoc(t *testing.T) {
+	dc, err := newCollection("Title", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	defer coll.Close()
+
 	// This is the document used as an example in ../docstore/doc.go.
 	doc := map[string]interface{}{
 		"Title": "The Master and Margarita",
@@ -179,14 +186,9 @@ func TestExampleInDoc(t *testing.T) {
 			"Last":  "Bulgakov",
 		},
 		"PublicationYears": []int{1967, 1973},
+		dc.RevisionField(): nil,
 	}
 
-	dc, err := newCollection("Title", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	coll := docstore.NewCollection(dc)
-	defer coll.Close()
 	ctx := context.Background()
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
