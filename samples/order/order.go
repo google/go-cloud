@@ -132,7 +132,11 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 		if err != nil {
 			return nil, nil, cleanup, err
 		}
-		burl = "file://" + filepath.ToSlash(dir)
+		if os.PathSeparator == '\\' {
+			burl = "file:///" + filepath.ToSlash(dir)
+		} else {
+			burl = "file://" + dir
+		}
 		addCleanup(func() { os.Remove(dir) })
 	}
 	bucket, err := blob.OpenBucket(ctx, burl)
