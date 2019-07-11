@@ -93,11 +93,6 @@ func Test(t *testing.T) {
 		time.Sleep(dur)
 		return nil, nil
 	}
-
-	ts.Setup = func(rootdir string) error {
-		return nil
-	}
-
 	if err := ts.Run(*update); err != nil {
 		t.Error(err)
 	}
