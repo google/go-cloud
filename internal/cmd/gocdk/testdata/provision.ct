@@ -1,0 +1,41 @@
+# Add fails when we're not in a module.
+$ gocdk provision add dev blob/fileblob --> FAIL
+gocdk: Adding "blob/fileblob" to "dev"...
+Error: provision add: couldn't find a Go module root at or above ${ROOTDIR}
+
+$ gocdk init myproj
+gocdk: Project created at ${ROOTDIR}/myproj with:
+gocdk: - Go HTTP server
+gocdk: - Dockerfile
+gocdk: - 'dev' biome for local development settings
+gocdk: Run `cd myproj`, then run:
+gocdk: - `gocdk serve` to run the server locally with live code reloading
+gocdk: - `gocdk demo` to test new APIs
+gocdk: - `gocdk build` to build a Docker container
+gocdk: - `gocdk biome add` to configure launch settings
+
+$ cd myproj
+
+# Add fails for an invalid type.
+$ gocdk provision add dev blob/foo --> FAIL
+gocdk: Adding "blob/foo" to "dev"...
+Error: provision add: "blob/foo" is not a supported type; use 'gocdk provision list' to see available types
+
+$ gocdk provision add dev blob/fileblob
+gocdk: Adding "blob/fileblob" to "dev"...
+gocdk:   added a Terraform provider "local" to "main.tf"
+gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
+gocdk:   added a new file "fileblob.tf"
+gocdk: Success!
+
+$ cd biomes
+
+$ ls dev
+dev/
+  biome.json
+  fileblob.tf
+  main.tf
+  outputs.tf
+  secrets.auto.tfvars
+  variables.tf
+
