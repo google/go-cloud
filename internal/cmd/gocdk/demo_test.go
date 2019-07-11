@@ -89,7 +89,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
 				"This page demonstrates the use",
-				"https://gocloud.dev/howto/blob/",
+				"https://gocloud.dev/howto/blob",
 				`<a href="./list">List</a>`,
 				`<a href="./write">Write</a>`,
 			},
@@ -400,7 +400,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/runtimevar demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/runtimevar",
+				"https://gocloud.dev/howto/runtimevar",
 				"The current value of the variable",
 				"test-variable-value",
 				"It was last modified",
