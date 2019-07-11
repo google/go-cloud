@@ -30,7 +30,7 @@ type MyConfig struct {
 }
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#rc-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#gcprc-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -73,13 +73,13 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#rc-url
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#gcprc
 
 	// import _ "gocloud.dev/runtimervar/gcpruntimeconfig"
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-	// The URL host+path form the GCP Runtime Configurator variable key.
-	// See https://cloud.google.com/deployment-manager/runtime-configurator/
+	// The URL Host+Path are used as the GCP Runtime Configurator Variable key;
+	// see https://cloud.google.com/deployment-manager/runtime-configurator/
 	// for more details.
 
 	// Variables set up elsewhere:
@@ -89,7 +89,6 @@ func Example_openVariableFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer v.Close()
 }
 
