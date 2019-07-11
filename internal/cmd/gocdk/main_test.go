@@ -108,12 +108,29 @@ func TestCLI(t *testing.T) {
 	goroot := strings.TrimSpace(string(gorootOut))
 	os.Setenv("PATH", fmt.Sprintf("%s/bin", goroot))
 	ts, err := cmdtest.Read("testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.Verbose = true
 
+	// !!!!!!!!!!!!!!!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// Set GOPATH to the parent of the test's root directory. That lets gocdk
 	// determine a module path, but doesn't clutter the root directory with
 	// the module cache (pkg/mod).
+
 	ts.Setup = func(rootDir string) error {
-		return os.Setenv("GOPATH", filepath.Dir(rootDir))
+		if err := os.Setenv("GOPATH", rootDir); err != nil {
+			return err
+		}
+		srcDir := filepath.Join(rootDir, "src")
+		if err := os.Mkdir(srcDir, 0700); err != nil {
+			return err
+		}
+		if err := os.Chdir(srcDir); err != nil {
+			return err
+		}
+		return os.Setenv("ROOTDIR", srcDir)
 	}
 
 	ts.Commands["gocdk"] = cmdtest.InProcessProgram("gocdk", doit)
@@ -138,7 +155,7 @@ func TestCLI(t *testing.T) {
 		}
 		return out.Bytes(), nil
 	}
-	if err := ts.RunMatch("init", *record); err != nil {
+	if err := ts.RunMatch("init$", *record); err != nil {
 		t.Error(err)
 	}
 }
