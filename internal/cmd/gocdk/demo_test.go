@@ -340,7 +340,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"Enter a message to send to the topic",
@@ -354,7 +354,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"No message available",
@@ -362,18 +362,17 @@ func TestAddDemo(t *testing.T) {
 		},
 		{
 			demo:        "pubsub",
-			description: "send1",
-			urlPaths:    []string{"/demo/pubsub/send"},
-			urlQuery:    "msg=hello+world",
-			op:          "GET",
+			description: "send",
+			urlPaths:    []string{"/demo/pubsub/", "/demo/pubsub/send"},
+			op:          "POST",
+			urlValues:   map[string][]string{"msg": {"hello world"}},
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"Message sent!",
-				"hello world", // message carries over
 			},
 		},
 		{
@@ -384,7 +383,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"Received message:",
