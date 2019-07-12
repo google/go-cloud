@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#mem-ctor.
 
 	coll, err := memdocstore.OpenCollection("userID", nil)
 	if err != nil {
@@ -33,7 +33,7 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithKeyFunc() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#mem-ctor.
 
 	// Variables set up elsewhere:
 	type HighScore struct {
@@ -55,7 +55,7 @@ func ExampleOpenCollectionWithKeyFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#mem.
 
 	// import _ "gocloud.dev/docstore/memdocstore"
 

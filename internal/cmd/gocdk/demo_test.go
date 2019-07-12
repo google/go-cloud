@@ -350,7 +350,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"Enter a message to send to the topic",
@@ -364,7 +364,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"No message available",
@@ -372,18 +372,17 @@ func TestAddDemo(t *testing.T) {
 		},
 		{
 			demo:        "pubsub",
-			description: "send1",
-			urlPaths:    []string{"/demo/pubsub/send"},
-			urlQuery:    "msg=hello+world",
-			op:          "GET",
+			description: "send",
+			urlPaths:    []string{"/demo/pubsub/", "/demo/pubsub/send"},
+			op:          "POST",
+			urlValues:   map[string][]string{"msg": {"hello world"}},
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"Message sent!",
-				"hello world", // message carries over
 			},
 		},
 		{
@@ -394,7 +393,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/pubsub demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/pubsub",
+				"https://gocloud.dev/howto/pubsub",
 				`<a href="./send">Send</a>`,
 				`<a href="./receive">Receive</a>`,
 				"Received message:",
@@ -425,7 +424,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/secrets demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/secrets",
+				"https://gocloud.dev/howto/secrets",
 				`<a href="./encrypt">Encrypt</a>`,
 				`<a href="./decrypt">Decrypt</a>`,
 				"Enter plaintext data to encrypt",
@@ -434,9 +433,11 @@ func TestAddDemo(t *testing.T) {
 		{
 			demo:        "secrets",
 			description: "encrypt works",
-			urlPaths:    []string{"/demo/secrets/encrypt"},
-			op:          "GET",
-			urlQuery:    "plaintext=my-sample-plaintext",
+			urlPaths:    []string{"/demo/secrets/", "/demo/secrets/encrypt"},
+			op:          "POST",
+			urlValues: map[string][]string{
+				"plaintext": {"my-sample-plaintext"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/secrets demo</title>",
 				`<a href="./encrypt">Encrypt</a>`,
@@ -444,15 +445,18 @@ func TestAddDemo(t *testing.T) {
 				"Enter plaintext data to encrypt",
 				"my-sample-plaintext", // input carries over
 				"Encrypted result",
-				"Decrypt it</a>", // link to decrypt it
+				"Decrypt it", // form button to decrypt it
 			},
 		},
 		{
 			demo:        "secrets",
 			description: "encrypt fails on invalid base64 input",
-			urlPaths:    []string{"/demo/secrets/encrypt"},
-			urlQuery:    "plaintext=this-is-not-base64&base64=true",
-			op:          "GET",
+			urlPaths:    []string{"/demo/secrets/", "/demo/secrets/encrypt"},
+			op:          "POST",
+			urlValues: map[string][]string{
+				"plaintext": {"this-is-not-base64"},
+				"base64":    {"true"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/secrets demo</title>",
 				`<a href="./encrypt">Encrypt</a>`,
@@ -479,43 +483,52 @@ func TestAddDemo(t *testing.T) {
 			demo:        "secrets",
 			description: "decrypt works",
 			urlPaths:    []string{"/demo/secrets/decrypt"},
-			urlQuery:    "ciphertext=6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH%2fRQM6JCc0nnWc0V1Zz1ty%2fWmX8UlJy", // "hello world" encrypted, base64, then url-encoded
-			op:          "GET",
+			op:          "POST",
+			urlValues: map[string][]string{
+				// "hello world" encrypted, then base64-encoded.
+				"ciphertext": {"6AzIcsNNnPv0x7jkVnNRoHI2mf4UY94N0pInrQM8AhFxoU7ZKeiPLaF5YHpTDBmRe8rw"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/secrets demo</title>",
 				`<a href="./encrypt">Encrypt</a>`,
 				`<a href="./decrypt">Decrypt</a>`,
 				"Enter base64-encoded data to decrypt",
-				"6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH/RQM6JCc0nnWc0V1Zz1ty/WmX8UlJy", // input carries over; "hello world" encrypted, base64
+				"6AzIcsNNnPv0x7jkVnNRoHI2mf4UY94N0pInrQM8AhFxoU7ZKeiPLaF5YHpTDBmRe8rw", // input carries over
 				"Decrypted result",
 				"hello world",
-				"Encrypt it</a>", // link to re-encrypt it
+				"Encrypt it", // form button to re-encrypt it
 			},
 		},
 		{
 			demo:        "secrets",
 			description: "decrypt works with base64 output",
 			urlPaths:    []string{"/demo/secrets/decrypt"},
-			urlQuery:    "base64=true&ciphertext=6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH%2fRQM6JCc0nnWc0V1Zz1ty%2fWmX8UlJy", // "hello world" encrypted, base64, then url-encoded
-			op:          "GET",
+			op:          "POST",
+			urlValues: map[string][]string{
+				"base64": {"true"},
+				// "hello world" encrypted, then base64-encoded.
+				"ciphertext": {"6AzIcsNNnPv0x7jkVnNRoHI2mf4UY94N0pInrQM8AhFxoU7ZKeiPLaF5YHpTDBmRe8rw"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/secrets demo</title>",
 				`<a href="./encrypt">Encrypt</a>`,
 				`<a href="./decrypt">Decrypt</a>`,
 				"Enter base64-encoded data to decrypt",
-				"6DsNeBLvlAvDpJH6DjCODSm8a3JPiT4t7xIyWH/RQM6JCc0nnWc0V1Zz1ty/WmX8UlJy", // input carries over; "hello world" encrypted, base64
+				"6AzIcsNNnPv0x7jkVnNRoHI2mf4UY94N0pInrQM8AhFxoU7ZKeiPLaF5YHpTDBmRe8rw", // input carries over
 				"checked", // base64 checkbox stays checked
 				"Decrypted result",
 				"aGVsbG8gd29ybGQ=", // "hello world" base64 encoded
-				"Encrypt it</a>",   // link to re-encrypt it
+				"Encrypt it",       // form button to re-encrypt it
 			},
 		},
 		{
 			demo:        "secrets",
 			description: "decrypt fails on invalid base64 input",
 			urlPaths:    []string{"/demo/secrets/decrypt"},
-			urlQuery:    "ciphertext=this-is-not-base64",
-			op:          "GET",
+			op:          "POST",
+			urlValues: map[string][]string{
+				"ciphertext": {"this-is-not-base64"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/secrets demo</title>",
 				`<a href="./encrypt">Encrypt</a>`,
