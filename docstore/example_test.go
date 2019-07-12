@@ -356,7 +356,7 @@ func ExampleQuery_Update_full() {
 }
 
 func Example_optimisticLocking() {
-	// This example is used in https://gocloud.dev/howto/docstore#docrev.
+	// This example is used in https://gocloud.dev/howto/docstore#rev.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()

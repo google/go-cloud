@@ -41,7 +41,7 @@ https://godoc.org/gocloud.dev/docstore#OpenCollection
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [guide below]: {{< ref "#services" >}}
 
-## Using a Collection
+## Using a Collection {#using}
 
 ### Representing Documents {#rep-doc}
 
@@ -61,15 +61,14 @@ your data, but Docstore also accepts `map[string]interface{}` values. See
 for more information.
 
 The `DocstoreRevision` field holds information about the latest revision of the
-document. We discuss it [below]({{< ref "#docrev" >}}).
+document. We discuss it [below]({{< ref "#rev" >}}).
 
 ### Actions {#actions}
 
-In Docstore, you use actions to read, modify and write documents. You can
-execute a single action, or run multiple actions together in an _action list_.
-
-Once you have [opened a collection]({{< ref "#opening" >}}), you can call action
-methods on it. We will use `coll` as the variable holding the collection.
+Once you have [opened a collection]( {{< ref "#opening" >}}), you can call
+action methods on it to read, modify and write documents. You can execute a
+single action, or run multiple actions together in an [_action list_]({{ ref
+"act-list" }}).
 
 Docstore supports six kinds of actions on documents:
 
@@ -80,7 +79,8 @@ Docstore supports six kinds of actions on documents:
 -   `Update` applies a set of modifications to a document.
 -   `Delete` deletes a document.
 
-You can create a single document with the `Collection.Create` method:
+You can create a single document with the `Collection.Create` method, we will
+use `coll` as the variable holding the collection throughout the guide:
 
 ```go
 err := coll.Create(ctx, &Player{Name: "Pat", Score: 10})
@@ -91,10 +91,10 @@ if err != nil {
 
 #### Action Lists {#act-list}
 
-If you have more than one action to perform, it is better to use an action list.
-Drivers can optimize action lists by using bulk RPCs, running the actions
-concurrently, or employing a provider's special features to improve efficiency
-and reduce cost. Here we create several documents using an action list.
+When you use an action list to perform multiple actions at once, drivers can
+optimize action lists by using bulk RPCs, running the actions concurrently,
+or employing a provider's special features to improve efficiency and reduce
+cost. Here we create several documents using an action list.
 
 {{< goexample "gocloud.dev/docstore.ExampleCollection_Actions_bulkWrite" >}}
 
@@ -182,7 +182,7 @@ all the documents that match the criteria.
 
 {{< goexample "gocloud.dev/docstore.ExampleQuery_Update" >}}
 
-### Revisions {#docrev}
+### Revisions {#rev}
 
 Docstore maintains a revision for every document. Whenever the document is
 changed, the revision is too. By default, Docstore stores the revision in a
