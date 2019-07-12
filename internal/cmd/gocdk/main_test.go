@@ -159,9 +159,7 @@ func TestCLI(t *testing.T) {
 		}
 		return out.Bytes(), nil
 	}
-	if err := ts.Run(*record); err != nil {
-		t.Error(err)
-	}
+	ts.Run(t, *record)
 }
 
 // doList recursively lists the files/directory in dir to out.
