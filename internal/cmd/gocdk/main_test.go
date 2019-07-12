@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -118,6 +119,11 @@ func TestCLI(t *testing.T) {
 	// - Set GOPATH to the root directory.
 	// - Then move the root directory into a src subdirectory.
 	ts.Setup = func(rootDir string) error {
+		// On MacOS, "/var" is a symlink to "/private/var".
+		// Tempdir returns the former, but Getwd returns the latter.
+		if runtime.GOOS == "darwin" {
+			rootDir = filepath.Join("/private", rootDir)
+		}
 		if err := os.Setenv("GOPATH", rootDir); err != nil {
 			return err
 		}
