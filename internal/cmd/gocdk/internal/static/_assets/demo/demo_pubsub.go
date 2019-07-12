@@ -162,7 +162,7 @@ func pubsubSendHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// pubsubSendHandler is the handler for /demo/pubsub/receive.
+// pubsubReceiveHandler is the handler for /demo/pubsub/receive.
 //
 // It tries to read a message from the subscription, with a short timeout.
 func pubsubReceiveHandler(w http.ResponseWriter, req *http.Request) {
