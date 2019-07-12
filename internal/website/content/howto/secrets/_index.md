@@ -43,7 +43,6 @@ https://godoc.org/gocloud.dev/secrets#OpenKeeper
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [guide below]: {{< ref "#services" >}}
 
-
 ## Using a SecretsKeeper {#using}
 
 Once you have [opened a secrets keeper][] for the secrets provider you want,
@@ -51,14 +50,14 @@ you can encrypt and decrypt small messages using the keeper.
 
 [opened a secrets keeper]: {{< ref "#opening" >}}
 
-### Encrypting data {#encrypt}
+### Encrypting Data {#encrypt}
 
 To encrypt data with a keeper, you call `Encrypt` with the byte slice you
 want to encrypt.
 
 {{< goexample src="gocloud.dev/secrets.ExampleKeeper_Encrypt" imports="0" >}}
 
-### Decrypting data {#decrypt}
+### Decrypting Data {#decrypt}
 
 To decrypt data with a keeper, you call `Decrypt` with the byte slice you
 want to decrypt. This should be data that you obtained from a previous call
@@ -113,6 +112,28 @@ runtime configuration.
 
 ## Supported Services {#services}
 
+### Google Cloud Key Management Service {#gcp}
+
+The Go CDK can use keys from Google Cloud Platform's [Key Management
+Service][GCP KMS] (GCP KMS) to keep information secret. `secrets.OpenKeeper`
+will use [Application Default Credentials][GCP credentials]. GCP KMS URLs are
+similar to [key resource IDs][]:
+
+{{< goexample "gocloud.dev/secrets/gcpkms.Example_openFromURL" >}}
+
+[GCP KMS]: https://cloud.google.com/kms/
+[key resource IDs]: https://cloud.google.com/kms/docs/object-hierarchy#key
+
+#### GCP Constructor {#gcp-ctor}
+
+The [`gcpkms.OpenKeeper`][] constructor opens a GCP KMS key. You must first
+obtain [GCP credentials][] and then create a gRPC connection to GCP KMS.
+
+{{< goexample "gocloud.dev/secrets/gcpkms.ExampleOpenKeeper" >}}
+
+[GCP credentials]: https://cloud.google.com/docs/authentication/production
+[`gcpkms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/gcpkms#OpenKeeper
+
 ### AWS Key Management Service {#aws}
 
 The Go CDK can use customer master keys from Amazon Web Service's [Key
@@ -127,7 +148,7 @@ application connects to the correct region, but otherwise
 
 [AWS KMS]: https://aws.amazon.com/kms/
 
-#### AWS Key Management Service Constructor {#aws-ctor}
+#### AWS Constructor {#aws-ctor}
 
 The [`awskms.OpenKeeper`][] constructor opens a customer master key. You must
 first create an [AWS session][] with the same region as your key and then
@@ -137,28 +158,6 @@ connect to KMS:
 
 [`awskms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/awskms#OpenKeeper
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-
-### Google Cloud Key Management Service {#gcp}
-
-The Go CDK can use keys from Google Cloud Platform's [Key Management
-Service][GCP KMS] (GCP KMS) to keep information secret. `secrets.OpenKeeper`
-will use [Application Default Credentials][GCP credentials]. GCP KMS URLs are
-similar to [key resource IDs][]:
-
-{{< goexample "gocloud.dev/secrets/gcpkms.Example_openFromURL" >}}
-
-[GCP KMS]: https://cloud.google.com/kms/
-[key resource IDs]: https://cloud.google.com/kms/docs/object-hierarchy#key
-
-#### Google Cloud Key Management Service Constructor {#gcp-ctor}
-
-The [`gcpkms.OpenKeeper`][] constructor opens a GCP KMS key. You must first
-obtain [GCP credentials][] and then create a gRPC connection to GCP KMS.
-
-{{< goexample "gocloud.dev/secrets/gcpkms.ExampleOpenKeeper" >}}
-
-[GCP credentials]: https://cloud.google.com/docs/authentication/production
-[`gcpkms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/gcpkms#OpenKeeper
 
 ### Azure KeyVault {#azure}
 
@@ -176,7 +175,7 @@ Azure KeyVault URLs are based on the [Azure Key object identifer][Azure Key ID]:
 [Azure Environment Auth]: https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization#use-environment-based-authentication
 [Azure Key ID]: https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates
 
-#### Azure KeyVault Constructor {#azure-ctor}
+#### Azure Constructor {#azure-ctor}
 
 The [`azurekeyvault.OpenKeeper`][] constructor opens an Azure KeyVault key.
 
