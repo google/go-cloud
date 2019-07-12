@@ -1,3 +1,22 @@
+$ gocdk resource list
+blob/azureblob
+blob/fileblob
+blob/gcsblob
+blob/s3blob
+docstore/awsdynamodb
+docstore/azurecosmos
+docstore/gcpfirestore
+pubsub/awssnssqs
+pubsub/azuresb
+pubsub/gcppubsub
+runtimevar/awsparamstore
+runtimevar/filevar
+runtimevar/gcpruntimeconfig
+secrets/awskms
+secrets/azurekeyvault
+secrets/gcpkms
+
+# Add fails when we're not in a module.
 $ gocdk resource add dev blob/fileblob --> FAIL
 gocdk: Adding "blob/fileblob" to "dev"...
 Error: resource add: couldn't find a Go module root at or above ${ROOTDIR}
@@ -15,14 +34,18 @@ gocdk: - `gocdk biome add` to configure launch settings
 
 $ cd myproj
 
+# Add fails for an invalid biome.
 $ gocdk resource add foo blob/fileblob --> FAIL
 gocdk: Adding "blob/fileblob" to "foo"...
 Error: resource add: biome foo not found
 
+# Add fails for an invalid type.
 $ gocdk resource add dev blob/foo --> FAIL
 gocdk: Adding "blob/foo" to "dev"...
 Error: resource add: "blob/foo" is not a supported type; use 'gocdk resource list' to see available types
 
+# Provision types that don't need any stdin.
+# TODO(rvangent): Add the other types once they work without input.
 $ gocdk resource add dev blob/fileblob
 gocdk: Adding "blob/fileblob" to "dev"...
 gocdk:   added a Terraform provider "local" to "main.tf"
@@ -37,7 +60,6 @@ gocdk:   added a new file "filevar.tf"
 gocdk: Success!
 
 $ cd biomes
-
 $ ls dev
 dev/
   biome.json
@@ -47,4 +69,3 @@ dev/
   outputs.tf
   secrets.auto.tfvars
   variables.tf
-

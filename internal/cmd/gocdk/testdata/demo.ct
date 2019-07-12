@@ -1,3 +1,10 @@
+$ gocdk demo list
+blob
+docstore
+pubsub
+runtimevar
+secrets
+
 # Add fails when we're not in a module.
 $ gocdk demo add blob --> FAIL
 Error: demo add: couldn't find a Go module root at or above ${ROOTDIR}
@@ -26,4 +33,3 @@ gocdk: Run 'gocdk serve' and visit http://localhost:8080/demo/blob to see the de
 
 $ ls demo_blob.go
 demo_blob.go
-

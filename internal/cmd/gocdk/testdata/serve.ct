@@ -1,3 +1,7 @@
+# Serve fails when we're not in a module.
+$ gocdk serve --> FAIL
+Error: gocdk serve: couldn't find a Go module root at or above ${ROOTDIR}
+
 $ gocdk init myproj
 gocdk: Project created at ${ROOTDIR}/myproj with:
 gocdk: - Go HTTP server
@@ -9,22 +13,8 @@ gocdk: - `gocdk demo` to test new APIs
 gocdk: - `gocdk build` to build a Docker container
 gocdk: - `gocdk biome add` to configure launch settings
 
-$ ls
-myproj/
-  .dockerignore
-  .gitignore
-  .vscode/
-    tasks.json
-  biomes/
-    dev/
-      biome.json
-      main.tf
-      outputs.tf
-      secrets.auto.tfvars
-      variables.tf
-    README.md
-  Dockerfile
-  go.mod
-  go.sum
-  main.go
-  README.md
+$ cd myproj
+
+# Serve fails when given an invalid biome.
+$ gocdk serve --biome=foo --> FAIL
+Error: gocdk serve: biome foo not found
