@@ -5,7 +5,7 @@
 # Create an ECR Docker repository.
 # The name used here will be part of the deployed Docker image name.
 resource "aws_ecr_repository" "default" {
-  name = "{{.ProjectName}}"
+  name = local.gocdk_random_name
 }
 
 # ECS Cluster

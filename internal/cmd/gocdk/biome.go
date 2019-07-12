@@ -164,9 +164,8 @@ func biomeAdd(ctx context.Context, pctx *processContext, biome, launcher string)
 			static.AddProvider("aws"),
 			static.AddProvider("random"),
 			&static.Action{
-				SourcePath:   "/launchers/ecs.tf",
-				DestRelPath:  "ecs.tf",
-				TemplateData: struct{ ProjectName string }{filepath.Base(moduleRoot)},
+				SourcePath:  "/launchers/ecs.tf",
+				DestRelPath: "ecs.tf",
 			},
 		)
 		launchSpecifiers = append(launchSpecifiers,
