@@ -17,9 +17,13 @@
       </div>
     </main>
     <script type="text/javascript">
+      // If an element with the attribute "data-href" is clicked, then redirect
+      // the browser to the value of the attribute instead of performing the
+      // default behavior.
       document.addEventListener('click', function(e) {
         if (e.target.dataset.href) {
           window.location.href = e.target.dataset.href;
+          return false;
         }
       });
     </script>
