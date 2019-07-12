@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#mongo-ctor.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -41,7 +41,7 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithIDFunc() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#mongo-ctor.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -70,7 +70,7 @@ func ExampleOpenCollectionWithIDFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#mongo.
 
 	// import _ "gocloud.dev/docstore/mongodocstore"
 
