@@ -1,7 +1,7 @@
 ---
 title: "Docstore"
 date: 2019-06-08T15:11:57-04:00
-lastmod: 2019-07-11T14:57:23-07:00
+lastmod: 2019-07-11T21:03:45-07:00
 draft: true
 showInSidenav: true
 toc: true
@@ -26,49 +26,186 @@ way. To be portable, Docstore requires that the key be part of the document's
 contents. When you open a collection using one of the functions described here,
 you specify how to find the provider's primary key in the document.
 
-[`*docstore.Collection`]: https://godoc.org/gocloud.dev/docstore#Collection
-
-### Constructors versus URL openers
-
 The easiest way to open a collection is using [`docstore.OpenCollection`][] and
 a URL pointing to the topic, making sure you ["blank import"][] the driver
 package to link it in. See [Concepts: URLs][] for more details. If you need
 fine-grained control over the connection settings, you can call the constructor
 function in the driver package directly (like `mongodocstore.OpenCollection`).
-This guide will show how to use both forms for each document store provider.
 
+See the [guide below][] for usage of both forms for each supported provider.
+
+[`*docstore.Collection`]: https://godoc.org/gocloud.dev/docstore#Collection
 [`docstore.OpenCollection`]:
 https://godoc.org/gocloud.dev/docstore#OpenCollection
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
+[Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
+[guide below]: {{< ref "#services" >}}
 
-\[Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
+## Using a Collection
 
-### DynamoDB {#dynamodb}
+### Representing Documents {#rep-doc}
 
-The [`awsdynamodb`](https://godoc.org/gocloud.dev/docstore/awsdynamodb) package
-supports [Amazon DynamoDB](https://aws.amazon.com/dynamodb). A Docstore
-collection corresponds to a DynamoDB table.
+We'll use a collection with documents represented by this Go struct:
 
-DynamoDB URLs provide the table, partition key field and optionally the sort key
-field for the collection.
+```go
+type Player struct {
+    Name             string
+    Score            int
+    DocstoreRevision interface{}
+}
+```
 
-{{< goexample
-"gocloud.dev/docstore/awsdynamodb.Example_openCollectionFromURL" >}}
+We recommend using structs for documents because they impose some structure on
+your data, but Docstore also accepts `map[string]interface{}` values. See
+[the `docstore` package documentation](https://godoc.org/gocloud.dev/docstore#hdr-Documents)
+for more information.
 
-Full details about acceptable URLs can be found under the API reference for
-[`awsdynamodb.URLOpener`][].
+The `DocstoreRevision` field holds information about the latest revision of the
+document. We discuss it [below]({{< ref "#docrev" >}}).
 
-#### DynamoDB Constructor {#dynamodb-ctor}
+### Actions {#actions}
 
-The [`awsdynamodb.OpenCollection`][] constructor opens a DynamoDB table as a
-Docstore collection. You must first create an [AWS session][] with the same
-region as your collection:
+In Docstore, you use actions to read, modify and write documents. You can
+execute a single action, or run multiple actions together in an _action list_.
 
-{{< goexample "gocloud.dev/docstore/awsdynamodb.ExampleOpenCollection" >}}
+Once you have [opened a collection]({{< ref "#opening" >}}), you can call action
+methods on it. We will use `coll` as the variable holding the collection.
 
-[AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-[`awsdynamodb.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#OpenCollection
-[`awsdynamodb.URLOpener`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#URLOpener
+Docstore supports six kinds of actions on documents:
+
+-   `Get` retrieves a document.
+-   `Create` creates a new document.
+-   `Replace` replaces an existing document.
+-   `Put` puts a document whether or not it already exists.
+-   `Update` applies a set of modifications to a document.
+-   `Delete` deletes a document.
+
+You can create a single document with the `Collection.Create` method:
+
+```go
+err := coll.Create(ctx, &Player{Name: "Pat", Score: 10})
+if err != nil {
+    return err
+}
+```
+
+#### Action Lists {#act-list}
+
+If you have more than one action to perform, it is better to use an action list.
+Drivers can optimize action lists by using bulk RPCs, running the actions
+concurrently, or employing a provider's special features to improve efficiency
+and reduce cost. Here we create several documents using an action list.
+
+{{< goexample "gocloud.dev/docstore.ExampleCollection_Actions_bulkWrite" >}}
+
+`ActionList` has a fluent API, so you can build and execute a sequence of
+actions in one line of code. Here we `Put` a document and immediately `Get` its
+new contents.
+
+{{< goexample "gocloud.dev/docstore.ExampleCollection_Actions_getAfterWrite" >}}
+
+If the underlying provider is eventually consistent, the result of the `Get`
+might not reflect the `Put`. Docstore only guarantees that it will perform the
+`Get` after the `Put` completes.
+
+See the documentation for [`docstore.ActionList`][] for the semantics of action
+list execution.
+
+[`docstore.ActionList`]: https://godoc.org/gocloud.dev/docstore#ActionList
+
+#### Updates {#act-update}
+
+Use `Update` to modify individual fields of a document. The `Update` action
+takes a set of modifications to document fields, and applies them all
+atomically. You can change the value of a field, increment it, or delete it.
+
+{{< goexample "gocloud.dev/docstore.ExampleCollection_Update" >}}
+
+### Queries {#queries}
+
+Docstore's `Get` action lets you retrieve a single document by its primary key.
+Queries let you retrieve all documents that match some conditions. You can also
+use queries to delete or update all documents that match the conditions.
+
+#### Getting Documents {#qr-get}
+
+Like [actions]({{< ref "#actions" >}}), queries are built up in a fluent
+style. Just as a `Get` action returns one document, the `Query.Get` method
+returns several documents, in the form of an iterator.
+
+```go
+iter := coll.Query().Where("Score", ">", 20).Get(ctx)
+defer iter.Stop() // Always call Stop on an iterator.
+```
+
+Repeatedly calling `Next` on the iterator will return all the matching
+documents. Like the `Get` action, `Next` will populate an empty document that
+you pass to it:
+
+```go
+doc := &Player{}
+err := iter.Next(ctx, doc)
+```
+
+The iteration is over when `Next` returns `io.EOF`.
+
+{{< goexample "gocloud.dev/docstore.ExampleQuery_Get" >}}
+
+You can pass a list of fields to `Get` to reduce the amount of data transmitted.
+
+Queries support the following methods:
+
+-   `Where` describes a condition on a document. You can ask whether a field is
+    equal to, greater than, or less than a value. The "not equals" comparison
+    isn't supported, because it isn't portable across providers.
+-   `OrderBy` specifies the order of the resulting documents, by field and
+    direction. For portability, you can specify at most one `OrderBy`, and its
+    field must also be mentioned in a `Where` clause.
+-   `Limit` limits the number of documents in the result.
+
+If a query returns an error, the message may help you fix the problem. Some
+features, like full table scans, have to be enabled via constructor options,
+because they can be expensive. Other queries may require that you manually
+create an index on the collection.
+
+#### Deleting Documents {#qr-del}
+
+Call `Delete` on a `Query` instead of `Get` to delete all the documents in the
+collection that match the conditions.
+
+{{< goexample "gocloud.dev/docstore.ExampleQuery_Delete" >}}
+
+#### Updating Documents {#qr-update}
+
+Calling `Update` on a `Query` and passing in a set of modifications will update
+all the documents that match the criteria.
+
+{{< goexample "gocloud.dev/docstore.ExampleQuery_Update" >}}
+
+### Revisions {#docrev}
+
+Docstore maintains a revision for every document. Whenever the document is
+changed, the revision is too. By default, Docstore stores the revision in a
+field named `DocstoreRevision`, but you can change the field name via an option
+to a `Collection` constructor.
+
+You can use revisions to perform _optimistic locking_, a technique for updating
+a document atomically:
+
+1.  `Get` a document. This reads the current revision.
+2.  Modify the document contents on the client (but do not change the revision).
+3.  `Replace` the document. If the document was changed since it was retrieved
+    in step 1, the revision will be different, and Docstore will return an error
+    instead of overwriting the document.
+4.  If the `Replace` failed, start again from step 1.
+
+{{< goexample "gocloud.dev/docstore.Example_optimisticLocking" >}}
+
+See
+[the Revisions section of the package documentation](https://godoc.org/gocloud.dev/docstore#hdr-Revisions)
+for more on revisions.
+
+## Supported Docstore Services {#services}
 
 ### Google Cloud Firestore {#firestore}
 
@@ -115,6 +252,33 @@ whose name is the combination of two or more fields.
 [`gcpfirestore.Dial`]: https://godoc.org/gocloud.dev/docstore/gcpfirestore#Dial
 [`gcpfirestore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/gcpfirestore#OpenCollection
 [`gcpfirestore.OpenCollectionWithNameFunc`]: https://godoc.org/gocloud.dev/docstore/gcpfirestore#OpenCollectionWithNameFunc
+
+### Amazon DynamoDB {#dynamodb}
+
+The [`awsdynamodb`](https://godoc.org/gocloud.dev/docstore/awsdynamodb) package
+supports [Amazon DynamoDB](https://aws.amazon.com/dynamodb). A Docstore
+collection corresponds to a DynamoDB table.
+
+DynamoDB URLs provide the table, partition key field and optionally the sort key
+field for the collection.
+
+{{< goexample
+"gocloud.dev/docstore/awsdynamodb.Example_openCollectionFromURL" >}}
+
+Full details about acceptable URLs can be found under the API reference for
+[`awsdynamodb.URLOpener`][].
+
+#### DynamoDB Constructor {#dynamodb-ctor}
+
+The [`awsdynamodb.OpenCollection`][] constructor opens a DynamoDB table as a
+Docstore collection. You must first create an [AWS session][] with the same
+region as your collection:
+
+{{< goexample "gocloud.dev/docstore/awsdynamodb.ExampleOpenCollection" >}}
+
+[AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+[`awsdynamodb.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#OpenCollection
+[`awsdynamodb.URLOpener`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#URLOpener
 
 ### MongoDB {#mongo}
 
@@ -195,165 +359,3 @@ for documents whose name is the combination of two or more fields.
 
 [`memdocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/memdocstore#OpenCollection
 [`memdocstore.OpenCollectionWithKeyFunc`]: https://godoc.org/gocloud.dev/docstore/memdocstore#OpenCollectionWithKeyFunc
-
-## Actions {#actions}
-
-In Docstore, you use actions to read, modify and write documents. You can
-execute a single action, or run multiple actions together in an _action list_.
-
-### Representing Documents {#rep-doc}
-
-We'll use a collection with documents represented by this Go struct:
-
-```go
-type Player struct {
-    Name             string
-    Score            int
-    DocstoreRevision interface{}
-}
-```
-
-We recommend using structs for documents because they impose some structure on
-your data, but Docstore also accepts `map[string]interface{}` values. See
-[the `docstore` package documentation](https://godoc.org/gocloud.dev/docstore#hdr-Documents)
-for more information.
-
-The `DocstoreRevision` field holds information about the latest revision of the
-document. We discuss it [below]({{< ref "#docrev" >}}).
-
-### Actions and Action Lists {#act-list}
-
-Once you have [opened a collection]({{< ref "#opening" >}}), you can call action
-methods on it. We will use `coll` as the variable holding the collection.
-
-Docstore supports six actions on documents:
-
--   `Get` retrieves a document.
--   `Create` creates a new document.
--   `Replace` replaces an existing document.
--   `Put` puts a document whether or not it already exists.
--   `Update` applies a set of modifications to a document.
--   `Delete` deletes a document.
-
-You can create a single document with the `Collection.Create` method:
-
-```go
-err := coll.Create(ctx, &Player{Name: "Pat", Score: 10})
-if err != nil {
-    return err
-}
-```
-
-If you have more than one action to perform, it is better to use an action list.
-Drivers can optimize action lists by using bulk RPCs, running the actions
-concurrently, or employing a provider's special features to improve efficiency
-and reduce cost. Here we create several documents using an action list.
-
-{{< goexample "gocloud.dev/docstore.ExampleCollection_Actions_bulkWrite" >}}
-
-`ActionList` has a fluent API, so you can build and execute a sequence of
-actions in one line of code. Here we `Put` a document and immediately `Get` its
-new contents.
-
-{{< goexample "gocloud.dev/docstore.ExampleCollection_Actions_getAfterWrite" >}}
-
-If the underlying provider is eventually consistent, the result of the `Get`
-might not reflect the `Put`. Docstore only guarantees that it will perform the
-`Get` after the `Put` completes.
-
-See the documentation for [`docstore.ActionList`][] for the semantics of action
-list execution.
-
-[`docstore.ActionList`]: https://godoc.org/gocloud.dev/docstore#ActionList
-
-### Updates {#act-update}
-
-Use `Update` to modify individual fields of a document. The `Update` action
-takes a set of modifications to document fields, and applies them all
-atomically. You can change the value of a field, increment it, or delete it.
-
-{{< goexample "gocloud.dev/docstore.ExampleCollection_Update" >}}
-
-### Revisions {#docrev}
-
-Docstore maintains a revision for every document. Whenever the document is
-changed, the revision is too. By default, Docstore stores the revision in a
-field named `DocstoreRevision`, but you can change the field name via an option
-to a `Collection` constructor.
-
-You can use revisions to perform _optimistic locking_, a technique for updating
-a document atomically:
-
-1.  `Get` a document. This reads the current revision.
-2.  Modify the document contents on the client (but do not change the revision).
-3.  `Replace` the document. If the document was changed since it was retrieved
-    in step 1, the revision will be different, and Docstore will return an error
-    instead of overwriting the document.
-4.  If the `Replace` failed, start again from step 1.
-
-{{< goexample "gocloud.dev/docstore.Example_optimisticLocking" >}}
-
-See
-[the Revisions section of the package documentation](https://godoc.org/gocloud.dev/docstore#hdr-Revisions)
-for more on revisions.
-
-## Queries {#queries}
-
-Docstore's `Get` action lets you retrieve a single document by its primary key.
-Queries let you retrieve all documents that match some conditions. You can also
-use queries to delete or update all documents that match the conditions.
-
-### Getting Documents {#qr-get}
-
-Like [action lists]({{< ref "#act-list" >}}), queries are built up in a fluent
-style. Just as a `Get` action returns one document, the `Query.Get` method
-returns several documents, in the form of an iterator.
-
-```go
-iter := coll.Query().Where("Score", ">", 20).Get(ctx)
-defer iter.Stop() // Always call Stop on an iterator.
-```
-
-Repeatedly calling `Next` on the iterator will return all the matching
-documents. Like the `Get` action, `Next` will populate an empty document that
-you pass to it:
-
-```go
-doc := &Player{}
-err := iter.Next(ctx, doc)
-```
-
-The iteration is over when `Next` returns `io.EOF`.
-
-{{< goexample "gocloud.dev/docstore.ExampleQuery_Get" >}}
-
-You can pass a list of fields to `Get` to reduce the amount of data transmitted.
-
-Queries support the following methods:
-
--   `Where` describes a condition on a document. You can ask whether a field is
-    equal to, greater than, or less than a value. The "not equals" comparison
-    isn't supported, because it isn't portable across providers.
--   `OrderBy` specifies the order of the resulting documents, by field and
-    direction. For portability, you can specify at most one `OrderBy`, and its
-    field must also be mentioned in a `Where` clause.
--   `Limit` limits the number of documents in the result.
-
-If a query returns an error, the message may help you fix the problem. Some
-features, like full table scans, have to be enabled via constructor options,
-because they can be expensive. Other queries may require that you manually
-create an index on the collection.
-
-### Deleting Documents {#qr-del}
-
-Call `Delete` on a `Query` instead of `Get` to delete all the documents in the
-collection that match the conditions.
-
-{{< goexample "gocloud.dev/docstore.ExampleQuery_Delete" >}}
-
-### Updating Documents {#qr-update}
-
-Calling `Update` on a `Query` and passing in a set of modifications will update
-all the documents that match the criteria.
-
-{{< goexample "gocloud.dev/docstore.ExampleQuery_Update" >}}
