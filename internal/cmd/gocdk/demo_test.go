@@ -89,16 +89,15 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/blob",
+				"https://gocloud.dev/howto/blob",
 				`<a href="./list">List</a>`,
-				`<a href="./view">View</a>`,
 				`<a href="./write">Write</a>`,
 			},
 		},
 		{
 			demo:        "blob",
-			description: "list+view: empty bucket",
-			urlPaths:    []string{"/demo/blob/list", "/demo/blob/view"},
+			description: "list: empty bucket",
+			urlPaths:    []string{"/demo/blob/list"},
 			op:          "GET",
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
@@ -183,18 +182,6 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/blob demo</title>",
 				`<a href="./view?key=subdir%2fkey2">subdir/key2</a>`,
-			},
-		},
-		{
-			demo:        "blob",
-			description: "view: none selected",
-			urlPaths:    []string{"/demo/blob/view"},
-			op:          "GET",
-			stringsToFind: []string{
-				"<title>gocloud.dev/blob demo</title>",
-				"Choose a blob",
-				`<option value="key1">key1</option>`,
-				`<option value="subdir/key2">subdir/key2</option>`,
 			},
 		},
 		{
@@ -413,7 +400,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/runtimevar demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/runtimevar",
+				"https://gocloud.dev/howto/runtimevar",
 				"The current value of the variable",
 				"test-variable-value",
 				"It was last modified",

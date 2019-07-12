@@ -88,6 +88,7 @@ func ExampleVariable_Latest() {
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
+	// If runtimevar.StringDecoder was used when constructing v, the
 	// snapshot.Value will be of type string.
 	fmt.Printf("%q\n", snapshot.Value.(string))
 }
