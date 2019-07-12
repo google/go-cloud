@@ -229,7 +229,7 @@ func secretsDecryptHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// POST.
-	// The string to be encrypted is in data.In, base64-encoded.
+	// The string to be decrypted is in data.In, base64-encoded.
 	in, err := base64.StdEncoding.DecodeString(data.In)
 	if err != nil {
 		data.Err = fmt.Errorf("Ciphertext data was not valid Base64: %v", err)
