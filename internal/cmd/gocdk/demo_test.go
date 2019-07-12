@@ -436,7 +436,7 @@ func TestAddDemo(t *testing.T) {
 				"Enter plaintext data to encrypt",
 				"my-sample-plaintext", // input carries over
 				"Encrypted result",
-				"Decrypt it", // link to decrypt it
+				"Decrypt it", // form button to decrypt it
 			},
 		},
 		{
@@ -487,7 +487,7 @@ func TestAddDemo(t *testing.T) {
 				"6AzIcsNNnPv0x7jkVnNRoHI2mf4UY94N0pInrQM8AhFxoU7ZKeiPLaF5YHpTDBmRe8rw", // input carries over
 				"Decrypted result",
 				"hello world",
-				"Encrypt it", // link to re-encrypt it
+				"Encrypt it", // form button to re-encrypt it
 			},
 		},
 		{
@@ -509,7 +509,7 @@ func TestAddDemo(t *testing.T) {
 				"checked", // base64 checkbox stays checked
 				"Decrypted result",
 				"aGVsbG8gd29ybGQ=", // "hello world" base64 encoded
-				"Encrypt it",       // link to re-encrypt it
+				"Encrypt it",       // form button to re-encrypt it
 			},
 		},
 		{
