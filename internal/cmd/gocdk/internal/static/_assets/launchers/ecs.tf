@@ -14,11 +14,6 @@ resource "aws_ecs_cluster" "default" {
   name = local.gocdk_random_name
 }
 
-resource "random_id" "cluster_name" {
-  prefix      = "${local.gocdk_random_name}-"
-  byte_length = 8
-}
-
 # EC2 Instance Networking
 
 resource "aws_security_group" "ecs_cluster" {

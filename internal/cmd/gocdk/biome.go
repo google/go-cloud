@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"sort"
 	"strconv"
 
