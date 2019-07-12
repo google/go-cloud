@@ -45,13 +45,17 @@ const helpSuffix = `
 `
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&pubCmd{}, "")
 	subcommands.Register(&subCmd{}, "")
 	log.SetFlags(0)
 	log.SetPrefix("gocdk-pubsub: ")
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	return int(subcommands.Execute(context.Background()))
 }
 
 type pubCmd struct{}
@@ -64,7 +68,7 @@ func (*pubCmd) Usage() string {
   Read messages from stdin, one per line and send them to <topic URL>.
 
   Example:
-    gocdk-pubsub sub gcppubsub://myproject/mysubscription` + helpSuffix
+    gocdk-pubsub pub gcppubsub://myproject/mytopic` + helpSuffix
 }
 
 func (*pubCmd) SetFlags(_ *flag.FlagSet) {}
@@ -141,14 +145,14 @@ func (cmd *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{
 	defer sub.Shutdown(ctx)
 
 	// Receive messages from the subscription and print them to stdout.
-	fmt.Fprintf(os.Stderr, "Receiving messages from %q...\n", subURL)
+	fmt.Printf("Receiving messages from %q...\n", subURL)
 	for i := 0; cmd.n == 0 || i < cmd.n; i++ {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			log.Print(err)
 			return subcommands.ExitFailure
 		}
-		fmt.Fprintf(os.Stdout, "%s\n", m.Body)
+		fmt.Printf("%s\n", m.Body)
 		m.Ack()
 	}
 	return subcommands.ExitSuccess

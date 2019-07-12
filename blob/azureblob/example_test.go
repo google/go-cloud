@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure-ctor
+	// This example is used in https://gocloud.dev/howto/blob/#azure-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -91,7 +91,7 @@ func ExampleOpenBucket_usingSASToken() {
 }
 
 func Example_openBucketFromURL() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure
+	// This example is used in https://gocloud.dev/howto/blob/#azure
 
 	// import _ "gocloud.dev/blob/azureblob"
 

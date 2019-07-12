@@ -291,9 +291,13 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the RabbitMQ server at the URL in the environment\n// variable RABBIT_SERVER_URL and open the exchange \"myexchange\".\ntopic, err := pubsub.OpenTopic(ctx, \"rabbit://myexchange\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/runtimevar.ExampleDecryptDecode": {
+		"imports": "import (\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/secrets\"\n)",
+		"code": "decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode)\ndecoder := runtimevar.NewDecoder(\"\", decodeFunc)"
+	},
 	"gocloud.dev/runtimevar.ExampleVariable_Latest": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
-		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"
+		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// If runtimevar.StringDecoder was used when constructing v, the\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"
 	},
 	"gocloud.dev/runtimevar/awsparamstore.ExampleOpenVariable": {
 		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awsparamstore\"\n)",
@@ -301,7 +305,7 @@
 	},
 	"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/awsparamstore\"\n\t\"gocloud.dev/runtimevar\"\n)",
-		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"awsparamstore://myvar?region=us-west-1\")\nif err != nil {\n\treturn err\n}"
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"awsparamstore://myvar?region=us-west-1\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable": {
 		"imports": "import (\n\t\"go.etcd.io/etcd/clientv3\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/etcdvar\"\n)",
@@ -317,7 +321,7 @@
 	},
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/gcpruntimeconfig\"\n\t\"gocloud.dev/runtimevar\"\n)",
-		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL host+path form the GCP Runtime Configurator variable key.\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\n\ndefer v.Close()"
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL Host+Path are used as the GCP Runtime Configurator Variable key;\n// see https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/secrets.ExampleKeeper_Decrypt": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n)",
@@ -366,5 +370,17 @@
 	"gocloud.dev/secrets/localsecrets.Example_openFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/localsecrets\"\n)",
 		"code": "// Using \"base64key://\", a new random key will be generated.\nrandomKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://\")\nif err != nil {\n\treturn err\n}\ndefer randomKeyKeeper.Close()\n\n// Otherwise, the URL hostname must be a base64-encoded key, of length 32 bytes when decoded.\nsavedKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=\")\nif err != nil {\n\treturn err\n}\ndefer savedKeyKeeper.Close()"
+	},
+	"gocloud.dev/server.ExampleServer_HealthChecks": {
+		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\t\"time\"\n\n\t\"gocloud.dev/server\"\n\t\"gocloud.dev/server/health\"\n)",
+		"code": "// Create a health.Checker from the type we defined for our application.\n// In this example, healthCheck will report the server is unhealthy for 10 seconds\n// after startup, and as healthy henceforth. Check the /healthz/readiness\n// HTTP path to see readiness.\nhealthCheck := new(customHealthCheck)\ntime.AfterFunc(10*time.Second, func() {\n\thealthCheck.mu.Lock()\n\tdefer healthCheck.mu.Unlock()\n\thealthCheck.healthy = true\n})\n\n// The server.Options struct takes a slice of health checks, because you\n// may need to check several things.\nsrvOptions := \u0026server.Options{\n\tHealthChecks: []health.Checker{healthCheck},\n}\n\n// Pass the options to the Server constructor.\nsrv := server.New(http.DefaultServeMux, srvOptions)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. You will see requests logged to STDOUT.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
+	},
+	"gocloud.dev/server.ExampleServer_New": {
+		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\n\t\"gocloud.dev/server\"\n)",
+		"code": "// Use the constructor function to create the server.\nsrv := server.New(http.DefaultServeMux, nil)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. If ListenAndServe returns an error, print it and exit.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
+	},
+	"gocloud.dev/server.ExampleServer_RequestLogger": {
+		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\t\"os\"\n\n\t\"gocloud.dev/server\"\n\t\"gocloud.dev/server/requestlog\"\n)",
+		"code": "// Create a logger, and assign it to the RequestLogger field of a\n// server.Options struct.\nsrvOptions := \u0026server.Options{\n\tRequestLogger: requestlog.NewNCSALogger(os.Stdout, func(error) {}),\n}\n\n// Pass the options to the Server constructor.\nsrv := server.New(http.DefaultServeMux, srvOptions)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. You will see requests logged to STDOUT.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
 	}
 }

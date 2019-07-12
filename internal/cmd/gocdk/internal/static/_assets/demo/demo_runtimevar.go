@@ -1,3 +1,9 @@
+// This file demonstrates basic usage of the runtimevvar.Variable portable type.
+//
+// It initializes a runtimevar.Variable URL based on the environment variable
+// RUNTIMEVAR_VARIABLE_URL, and then registers handlers for "/demo/runtimevar"
+// on http.DefaultServeMux.
+
 package main
 
 import (
@@ -16,36 +22,36 @@ import (
 	_ "gocloud.dev/runtimevar/httpvar"
 )
 
-// TODO(rvangent): This file is user-visible, add many comments explaining
-// how it works.
+// Package variables for the runtimevar.Variable URL, and the initialized
+// runtimevar.Variable.
+var (
+	variableURL string
+	variable    *runtimevar.Variable
+	variableErr error
+)
 
 func init() {
+	// Register the handler. See https://golang.org/pkg/net/http/.
 	http.HandleFunc("/demo/runtimevar/", runtimevarHandler)
-}
 
-var variableURL string
-var variable *runtimevar.Variable
-var variableErr error
-
-func init() {
+	// Initialize the runtimevar.Variable using a URL from the environment,
+	// defaulting to an in-memory constant provider.
 	variableURL = os.Getenv("RUNTIMEVAR_VARIABLE_URL")
 	if variableURL == "" {
 		variableURL = "constant://?val=my-variable&decoder=string"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	variable, variableErr = runtimevar.OpenVariable(ctx, variableURL)
-	if variableErr != nil {
-		_, variableErr = variable.Latest(ctx)
-	}
+	variable, variableErr = runtimevar.OpenVariable(context.Background(), variableURL)
 }
 
+// runtimevarData holds the input for the demo page. The page handler will
+// initialize the struct and pass it to the template.
 type runtimevarData struct {
 	URL      string
 	Err      error
 	Snapshot *runtimevar.Snapshot
 }
 
+// runtimevarTemplate is the template for /demo/runtimevar. See runtimevarHandler.
 // Input: *runtimevarData.
 const runtimevarTemplate = `
 <!DOCTYPE html>
@@ -56,15 +62,11 @@ const runtimevarTemplate = `
 </head>
 <body>
   <p>
-    This page demonstrates the use of Go CDK's <a href="https://godoc.org/gocloud.dev/runtimevar">runtimevar</a> package.
+    This page demonstrates the use of Go CDK's <a href="https://gocloud.dev/howto/runtimevar">runtimevar</a> package.
   </p>
   <p>
     It is currently using a runtimevar.Variable based on the URL "{{ .URL }}", which
     can be configured via the environment variable "RUNTIMEVAR_VARIABLE_URL".
-  </p>
-  <p>
-    See <a href="https://gocloud.dev/concepts/urls/">here</a> for more
-    information about URLs in Go CDK APIs.
   </p>
   {{if .Err}}
     <p><strong>{{ .Err }}</strong></p>
@@ -84,6 +86,7 @@ const runtimevarTemplate = `
 
 var runtimevarTmpl = template.Must(template.New("runtimevar").Parse(runtimevarTemplate))
 
+// runtimevarHandler is the handler for /demo/runtimevar.
 func runtimevarHandler(w http.ResponseWriter, req *http.Request) {
 	data := &runtimevarData{
 		URL: variableURL,
@@ -94,12 +97,20 @@ func runtimevarHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	// Verify that variable initialization succeeded.
 	if variableErr != nil {
 		data.Err = variableErr
 		return
 	}
-	snapshot, err := variable.Latest(req.Context())
+
+	// Use Latest to get the current value of the variable. It will block if
+	// there's never been a good value, so use a ctx with a timeout to make the
+	// page render quickly.
+	ctx, cancel := context.WithTimeout(req.Context(), 100*time.Millisecond)
+	defer cancel()
+	snapshot, err := variable.Latest(ctx)
 	if err != nil {
+		// We never had a good value; show an error.
 		data.Err = err
 		return
 	}

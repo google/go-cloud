@@ -33,10 +33,10 @@ import (
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/health"
-	"gocloud.dev/health/sqlhealth"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/server"
+	"gocloud.dev/server/health"
+	"gocloud.dev/server/health/sqlhealth"
 )
 
 type cliFlags struct {

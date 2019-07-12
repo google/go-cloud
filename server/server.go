@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/google/wire"
-	"gocloud.dev/health"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/server/driver"
+	"gocloud.dev/server/health"
+	"gocloud.dev/server/requestlog"
 
 	"go.opencensus.io/trace"
 )

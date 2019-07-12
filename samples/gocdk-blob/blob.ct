@@ -1,0 +1,39 @@
+# Copyright 2019 The Go Cloud Development Kit Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Tests of the gocdk-blob program.
+
+# ROOTDIR_URL is a platform-specific environment variable set
+# in main_test.go.
+
+# Create a subdirectory so we can use fileblob.
+$ mkdir bucket
+
+# List an empty bucket: valid, but no output.
+$ gocdk-blob ls ${ROOTDIR_URL}/bucket
+
+$ echof hello.txt hello world
+$ gocdk-blob upload ${ROOTDIR_URL}/bucket hw < hello.txt
+
+$ gocdk-blob ls ${ROOTDIR_URL}/bucket
+hw
+
+$ gocdk-blob download ${ROOTDIR_URL}/bucket hw
+hello world
+
+# Error downloading a bucket that doesn't exist.
+# For now we can't use this test case, because the output won't be the same across operating systems.
+#$ gocdk-blob download ${ROOTDIR_URL}/bucket noexist --> FAIL
+#gocdk-blob: Failed to read "noexist": blob (code=NotFound): stat ${SLASHDIR}/bucket/noexist: no such file or directory
+

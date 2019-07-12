@@ -15,6 +15,8 @@
 package cmdtest
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -35,6 +37,19 @@ func setup() {
 	if err := exec.Command("go", "build", "testdata/echo-stdin.go").Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// echoStdin contains the same code as the main function of
+// testdata/echo-stdin.go, except that it returns the exit code instead of
+// calling os.Exit. It is for testing InProcessProgram.
+func echoStdin() int {
+	fmt.Println("Here is stdin:")
+	_, err := io.Copy(os.Stdout, os.Stdin)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed: %v\n", err)
+		return 1
+	}
+	return 0
 }
 
 func TestMain(m *testing.M) {
@@ -61,7 +76,7 @@ func TestRead(t *testing.T) {
 	want := &TestSuite{
 		files: []*testFile{
 			{
-				filename: "testdata/read/read.ct",
+				filename: filepath.Join("testdata", "read", "read.ct"),
 				cases: []*testCase{
 					{
 						before: []string{
@@ -101,6 +116,7 @@ func TestCompare(t *testing.T) {
 	once.Do(setup)
 	ts := mustReadTestSuite(t, "good")
 	ts.Commands["echo-stdin"] = Program("echo-stdin")
+	ts.Commands["echoStdin"] = InProcessProgram("echoStdin", echoStdin)
 	if err := ts.Compare(); err != nil {
 		t.Error(err)
 	}
@@ -116,10 +132,10 @@ func TestCompare(t *testing.T) {
 	}
 	got := err.Error()
 	wants := []string{
-		"testdata/bad/bad-output.ct:2: got=-, want=+",
-		"testdata/bad/bad-output.ct:6: got=-, want=+",
-		`testdata/bad/bad-fail-1.ct:4: "echo" succeeded, but it was expected to fail`,
-		`testdata/bad/bad-fail-2.ct:4: "cd foo" failed with chdir`,
+		`testdata.bad.bad-output\.ct:2: got=-, want=+`,
+		`testdata.bad.bad-output\.ct:6: got=-, want=+`,
+		`testdata.bad.bad-fail-1\.ct:4: "echo" succeeded, but it was expected to fail`,
+		`testdata.bad.bad-fail-2\.ct:4: "cd foo" failed with chdir`,
 	}
 	failed := false
 	_ = failed
@@ -180,6 +196,7 @@ func TestUpdateToTemp(t *testing.T) {
 	for _, dir := range []string{"good", "good-without-output"} {
 		ts := mustReadTestSuite(t, dir)
 		ts.Commands["echo-stdin"] = Program("echo-stdin")
+		ts.Commands["echoStdin"] = InProcessProgram("echoStdin", echoStdin)
 		fname, err := ts.files[0].updateToTemp()
 		if err != nil {
 			t.Fatal(err)

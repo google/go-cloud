@@ -54,7 +54,7 @@ func Example_openFromURL() {
 }
 
 func Example_openFromURLWithPrefix() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#prefix
+	// This example is used in https://gocloud.dev/howto/blob/#prefix
 
 	// Variables set up elsewhere:
 	ctx := context.Background()

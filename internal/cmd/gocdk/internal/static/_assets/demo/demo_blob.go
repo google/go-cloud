@@ -1,3 +1,9 @@
+// This file demonstrates basic usage of the blob.Bucket portable type.
+//
+// It initializes a blob.Bucket URL based on the environment variable
+// BLOB_BUCKET_URL, and then registers handlers for "/demo/blob" on
+// http.DefaultServeMux.
+
 package main
 
 import (
@@ -8,7 +14,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"gocloud.dev/blob"
 	_ "gocloud.dev/blob/azureblob"
@@ -18,31 +23,33 @@ import (
 	_ "gocloud.dev/blob/s3blob"
 )
 
-// TODO(rvangent): This file is user-visible, add many comments explaining
-// how it works.
+// Package variables for the blob.Bucket URL, and the initialized blob.Bucket.
+var (
+	bucketURL string
+	bucket    *blob.Bucket
+	bucketErr error
+)
 
 func init() {
+	// Register handlers. See https://golang.org/pkg/net/http/.
 	http.HandleFunc("/demo/blob/", blobBaseHandler)
 	http.HandleFunc("/demo/blob/list", blobListHandler)
 	http.HandleFunc("/demo/blob/view", blobViewHandler)
 	http.HandleFunc("/demo/blob/write", blobWriteHandler)
-}
 
-var bucketURL string
-var bucket *blob.Bucket
-var bucketErr error
-
-func init() {
+	// Initialize the blob.Bucket using a URL from the environment, defaulting
+	// to an in-memory bucket provider. Note that the in-memory bucket provider
+	// starts out empty every time you run the application!
 	bucketURL = os.Getenv("BLOB_BUCKET_URL")
 	if bucketURL == "" {
 		bucketURL = "mem://"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	bucket, bucketErr = blob.OpenBucket(ctx, bucketURL)
+	bucket, bucketErr = blob.OpenBucket(context.Background(), bucketURL)
 }
 
-// TODO(rvangent): This is pretty raw HTML. Should we have a common style sheet/etc. for demos?
+// The structs below hold the input to each of the pages in the demo.
+// Each page handler will initialize one of the structs and pass it to
+// one of the templates.
 
 type blobBaseData struct {
 	URL string
@@ -52,13 +59,6 @@ type blobBaseData struct {
 type blobListData struct {
 	URL         string
 	Err         error
-	ListObjects []*blob.ListObject
-}
-
-type blobViewData struct {
-	URL         string
-	Err         error
-	Key         string
 	ListObjects []*blob.ListObject
 }
 
@@ -80,19 +80,14 @@ const (
 </head>
 <body>
   <p>
-    This page demonstrates the use of Go CDK's <a href="https://godoc.org/gocloud.dev/blob">blob</a> package.
+    This page demonstrates the use of Go CDK's <a href="https://gocloud.dev/howto/blob">blob</a> package.
   </p>
   <p>
     It is currently using a blob.Bucket based on the URL "{{ .URL }}", which
     can be configured via the environment variable "BLOB_BUCKET_URL".
   </p>
-  <p>
-    See <a href="https://gocloud.dev/concepts/urls/">here</a> for more
-    information about URLs in Go CDK APIs.
-  </p>
   <ul>
     <li><a href="./list">List</a> the contents of the bucket</li>
-    <li><a href="./view">View</a> the contents of a specific blob in the bucket</li>
     <li><a href="./write">Write</a> a new blob into the bucket</li>
 </ul>
 {{if .Err}}
@@ -103,9 +98,11 @@ const (
 </body>
 </html>`
 
+	// blobBaseTemplate is the template for /demo/blob. See blobBaseHandler.
 	// Input: *blobBaseData.
 	blobBaseTemplate = blobTemplatePrefix + blobTemplateSuffix
 
+	// blobListTemplate is the template for /demo/blob/list. See blobListHandler.
 	// Input: *blobListData.
 	blobListTemplate = blobTemplatePrefix + `
   {{range .ListObjects}}
@@ -118,28 +115,13 @@ const (
     </div>
   {{end}}` + blobTemplateSuffix
 
-	// Input: *blobViewData.
-	blobViewTemplate = blobTemplatePrefix + `
-  {{if .ListObjects}}
-    <form>
-    <p><label>
-      Choose a blob to view:
-      <select name="key">
-        {{range .ListObjects}}
-          <option value="{{.Key}}">{{.Key}}</option>
-        {{end}}
-      </select>
-    </label></p>
-    <input type="submit">
-    </form>
-  {{end}}` + blobTemplateSuffix
-
+	// blobWriteTemplate is the template for /demo/blob/write. See blobWriteHandler.
 	// Input: *blobWriteData.
 	blobWriteTemplate = blobTemplatePrefix + `
   {{if .WriteSuccess}}
     Wrote it!
   {{else}}
-    <form>
+    <form method="POST">
     <p><label>
       Blob key to write to (any previous blob will be overwritten):
       <br/>
@@ -158,10 +140,10 @@ const (
 var (
 	blobBaseTmpl  = template.Must(template.New("blob base").Parse(blobBaseTemplate))
 	blobListTmpl  = template.Must(template.New("blob list").Parse(blobListTemplate))
-	blobViewTmpl  = template.Must(template.New("blob view").Parse(blobViewTemplate))
 	blobWriteTmpl = template.Must(template.New("blob write").Parse(blobWriteTemplate))
 )
 
+// blobBaseHandler is the handler for /demo/blob.
 func blobBaseHandler(w http.ResponseWriter, req *http.Request) {
 	data := &blobBaseData{URL: bucketURL}
 	if err := blobBaseTmpl.Execute(w, data); err != nil {
@@ -169,9 +151,15 @@ func blobBaseHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// blobListHandler lists the items in a bucket, possibly under a "prefix"
-// query parameter. Each listed directory is a link to list that directory,
-// and each non-directory is a link to view that file.
+// blobListHandler is the handler for /demo/blob/list.
+//
+// It lists the keys in a bucket, possibly under a "prefix".
+//
+// Each key that represents a "directory" is rendered as a link to list the
+// items in that subdirectory.
+//
+// Each key that represents a blob is rendered as a link to view the contents
+// of the blob.
 func blobListHandler(w http.ResponseWriter, req *http.Request) {
 	data := &blobListData{URL: bucketURL}
 	defer func() {
@@ -180,22 +168,26 @@ func blobListHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	// Verify that bucket initialization succeeded.
 	if bucketErr != nil {
 		data.Err = bucketErr
 		return
 	}
-	opts := &blob.ListOptions{
-		Delimiter: "/",
-		Prefix:    req.FormValue("prefix"),
-	}
-	iter := bucket.List(opts)
+	// Use bucket.List to get an iterator over the keys in the bucket.
+	//
+	// Setting ListOptions.Delimiter to "/" means that blob keys with "/" in them
+	// will be interpreted as "directories".
+	//
+	// Setting ListOptions.Prefix limits the results to keys with the prefix;
+	// this can be used to list keys in a "directory".
+	iter := bucket.List(&blob.ListOptions{Delimiter: "/", Prefix: req.FormValue("prefix")})
 	for {
 		obj, err := iter.Next(req.Context())
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			data.Err = fmt.Errorf("Failed to iterate to next blob.Bucket key: %v", err)
+			data.Err = fmt.Errorf("failed to iterate to next blob.Bucket key: %v", err)
 			return
 		}
 		data.ListObjects = append(data.ListObjects, obj)
@@ -205,55 +197,38 @@ func blobListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// blobViewHandler is the handler for /demo/blob/view.
+//
+// It expects a "key" query parameter, and renders the contents of the blob
+// at that key.
 func blobViewHandler(w http.ResponseWriter, req *http.Request) {
-	data := &blobViewData{
-		URL: bucketURL,
-		Key: req.FormValue("key"),
-	}
-	skipTemplate := false
+	// Render the base template if there's an error.
+	data := &blobBaseData{URL: bucketURL}
 	defer func() {
-		if !skipTemplate {
-			if err := blobViewTmpl.Execute(w, data); err != nil {
+		if data.Err != nil {
+			if err := blobBaseTmpl.Execute(w, data); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		}
 	}()
 
+	// Verify that bucket initialization succeeded.
 	if bucketErr != nil {
 		data.Err = bucketErr
 		return
 	}
-	if data.Key == "" {
-		// No key selected. Render a form with a dropdown to choose one.
-		iter := bucket.List(nil)
-		for {
-			obj, err := iter.Next(req.Context())
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				data.Err = fmt.Errorf("failed to iterate to next blob.Bucket key: %v", err)
-				return
-			}
-			data.ListObjects = append(data.ListObjects, obj)
-		}
-		if len(data.ListObjects) == 0 {
-			data.Err = errors.New("no blobs in bucket")
-		}
-	} else {
-		// A key was provided. Download the blob for that key.
-		skipTemplate = true
-		reader, err := bucket.NewReader(req.Context(), data.Key, nil)
-		if err != nil {
-			data.Err = fmt.Errorf("failed to create Reader: %v", err)
-			return
-		}
-		defer reader.Close()
-		io.Copy(w, reader)
-		// TODO(rvangent): Consider setting Content-Type, Content-Length headers.
+	// Get a reader for the blob contents, and use io.Copy to write it to the
+	// http.ResponseWriter.
+	reader, err := bucket.NewReader(req.Context(), req.FormValue("key"), nil)
+	if err != nil {
+		data.Err = fmt.Errorf("failed to create Reader: %v", err)
+		return
 	}
+	defer reader.Close()
+	io.Copy(w, reader)
 }
 
+// blobWriteHandler is the handler for /demo/blob/write.
 func blobWriteHandler(w http.ResponseWriter, req *http.Request) {
 	data := &blobWriteData{
 		URL:           bucketURL,
@@ -266,13 +241,18 @@ func blobWriteHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	// Verify that bucket initialization succeeded.
 	if bucketErr != nil {
 		data.Err = bucketErr
 		return
 	}
-	if data.Key == "" && data.WriteContents == "" {
+
+	// For GET, render the form.
+	if req.Method == http.MethodGet {
 		return
 	}
+
+	// POST.
 	if data.Key == "" {
 		data.Err = errors.New("enter a non-empty key to write to")
 		return

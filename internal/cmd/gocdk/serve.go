@@ -63,20 +63,18 @@ func serve(ctx context.Context, pctx *processContext, opts *serveOptions) error 
 	}
 
 	// Verify that biome configuration permits serving.
-	biomeConfig, err := readBiomeConfig(opts.moduleRoot, opts.biome)
-	if xerrors.As(err, new(*biomeNotFoundError)) {
-		// TODO(light): Keep err in formatting chain for debugging.
-		return xerrors.Errorf("gocdk serve: biome configuration not found for %s. "+
-			"Make sure that %s exists and has `\"serve_enabled\": true`.",
-			opts.biome, filepath.Join(biomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
+	biomePath, err := biomeDir(opts.moduleRoot, opts.biome)
+	if err != nil {
+		return xerrors.Errorf("gocdk serve: %w", err)
 	}
+	biomeConfig, err := readBiomeConfig(opts.moduleRoot, opts.biome)
 	if err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
 	if biomeConfig.ServeEnabled == nil || !*biomeConfig.ServeEnabled {
 		return xerrors.Errorf("gocdk serve: biome %s has not enabled serving. "+
 			"Add `\"serve_enabled\": true` to %s and try again.",
-			opts.biome, filepath.Join(biomeDir(opts.moduleRoot, opts.biome), biomeConfigFileName))
+			opts.biome, filepath.Join(biomePath, biomeConfigFileName))
 	}
 
 	// Start reverse proxy on address.
@@ -121,6 +119,11 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 	reload, reloadDone := notifyUserSignal1()
 	defer reloadDone()
 
+	biomePath, err := biomeDir(opts.moduleRoot, opts.biome)
+	if err != nil {
+		return xerrors.Errorf("gocdk serve: %w", err)
+	}
+
 	// Log biome that is being used.
 	logger.Printf("Preparing to serve %s...", opts.biome)
 
@@ -136,7 +139,7 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 	}()
 
 	// Apply Terraform configuration in biome.
-	if err := apply(ctx, pctx, opts.biome, false); err != nil {
+	if err := biomeApply(ctx, pctx, opts.biome, false); err != nil {
 		return err
 	}
 
@@ -190,7 +193,7 @@ loop:
 		}
 
 		// Read output from Terraform built during apply or refresh.
-		tfOutput, err := tfReadOutput(ctx, biomeDir(opts.moduleRoot, opts.biome), pctx.env)
+		tfOutput, err := tfReadOutput(ctx, biomePath, pctx.env)
 		if err != nil {
 			logger.Printf("Terraform: %v", err)
 			if process == nil {

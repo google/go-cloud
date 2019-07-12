@@ -101,7 +101,8 @@ func TestListOrders(t *testing.T) {
 		t.Fatal(err)
 	}
 	orders := []*Order{
-		{ID: "a", Email: "pat@example.com", InImage: "a-in", CreateTime: time.Now()},
+		{ID: "a", Email: "pat@example.com", InImage: "a-in", OutImage: "a-out",
+			CreateTime: time.Now().Add(-18 * time.Second), FinishTime: time.Now()},
 		{ID: "b", Email: "mel@example.com", InImage: "b-in", CreateTime: time.Now()},
 	}
 	actions := f.coll.Actions()
@@ -136,17 +137,18 @@ func TestListOrders(t *testing.T) {
 			t.Errorf("got %q, should contain %q", got, ord.Email)
 		}
 	}
+	url := `<a href="/show/a-out">a-out</a>`
+	if !strings.Contains(got, url) {
+		t.Errorf("got %q, should contain %q", got, url)
+	}
 }
 
 func testConfig(name string) config {
 	reqURL := "mem://requests-" + name
-	resURL := "mem://responses-" + name
 	return config{
-		requestTopicURL:  reqURL,
-		requestSubURL:    reqURL,
-		responseTopicURL: resURL,
-		responseSubURL:   resURL,
-		bucketURL:        "", // setup will use fileblob with a temporary dir
-		collectionURL:    fmt.Sprintf("mem://orders-%s/ID", name),
+		requestTopicURL: reqURL,
+		requestSubURL:   reqURL,
+		bucketURL:       "", // setup will use fileblob with a temporary dir
+		collectionURL:   fmt.Sprintf("mem://orders-%s/ID", name),
 	}
 }

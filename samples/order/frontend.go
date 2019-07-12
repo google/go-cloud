@@ -24,6 +24,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"gocloud.dev/blob"
@@ -32,8 +34,8 @@ import (
 	_ "gocloud.dev/docstore/memdocstore"
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
-	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
+	"gocloud.dev/server/requestlog"
 )
 
 // A frontend is a web server that takes image-processing orders.
@@ -44,9 +46,25 @@ type frontend struct {
 }
 
 var (
-	listTemplate      = template.Must(template.ParseFiles("list.htmlt"))
-	orderFormTemplate = template.Must(template.ParseFiles("order-form.htmlt"))
+	listTemplate      *template.Template
+	orderFormTemplate *template.Template
 )
+
+func init() {
+	// Work around a bug in go test where -coverpkg=./... uses the wrong
+	// working directory (golang.org/issue/33016).
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if filepath.Base(dir) != "order" {
+		// The bug puts us in a sibling directory.
+		log.Printf("working around #33016, which put us in %s", dir)
+		dir = filepath.Join(filepath.Dir(dir), "order")
+	}
+	listTemplate = template.Must(template.ParseFiles(filepath.Join(dir, "list.htmlt")))
+	orderFormTemplate = template.Must(template.ParseFiles(filepath.Join(dir, "order-form.htmlt")))
+}
 
 // run starts the server on port and runs it indefinitely.
 func (f *frontend) run(ctx context.Context, port int) error {
@@ -54,6 +72,7 @@ func (f *frontend) run(ctx context.Context, port int) error {
 	http.HandleFunc("/orders/", wrapHTTPError(f.listOrders))
 	http.HandleFunc("/orders/new", wrapHTTPError(f.orderForm))
 	http.HandleFunc("/createOrder", wrapHTTPError(f.createOrder))
+	http.HandleFunc("/show/", wrapHTTPError(f.showImage))
 
 	rl := requestlog.NewNCSALogger(os.Stdout, func(err error) { fmt.Fprintf(os.Stderr, "%v\n", err) })
 	s := server.New(nil, &server.Options{
@@ -158,8 +177,6 @@ func (f *frontend) doCreateOrder(ctx context.Context, email string, file io.Read
 
 // listOrders lists all the orders in the database.
 func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
-	// TODO(jba): use Bucket.SignedURL to add a link to the output images.
-
 	if r.Method != "GET" {
 		http.Error(w, "bad method for listOrders: want GET", http.StatusBadRequest)
 		return nil
@@ -179,6 +196,20 @@ func (f *frontend) listOrders(w http.ResponseWriter, r *http.Request) error {
 		orders = append(orders, &ord)
 	}
 	return executeTemplate(listTemplate, orders, w)
+}
+
+func (f *frontend) showImage(w http.ResponseWriter, r *http.Request) error {
+	objKey := strings.TrimPrefix(r.URL.Path, "/show/")
+	reader, err := f.bucket.NewReader(r.Context(), objKey, nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("file %q not found", objKey), http.StatusNotFound)
+		return nil
+	}
+	defer reader.Close()
+	if _, err := io.Copy(w, reader); err != nil {
+		log.Printf("copy from %q failed: %v", objKey, err)
+	}
+	return nil
 }
 
 // newID creates a new unique ID for an incoming order. It uses the current
