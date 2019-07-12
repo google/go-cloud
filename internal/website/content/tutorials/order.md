@@ -5,6 +5,7 @@ draft: true
 showInSidenav: false  # only for sections (any level)
 pagesInSidenav: false  # only for top-level sections
 weight: 5
+toc: true
 ---
 
 In this tutorial, we will run a Go CDK application called Order
@@ -45,32 +46,29 @@ go build
 
 ## Running Locally
 
-
 If you run `order` with no arguments, both the frontend and the processor will
 run together in the same process. 
 
 ```shell
 ./order
 ```
+The frontend is now running on http://localhost:10538.
+
+Visit the home page in your browser and click "Convert an Image".
+
+Enter an email address (it need not be real) and select any image file from your
+computer. Then click Submit.
+
+Now visit the order list page by returning to the home page and clicking "List
+Conversions". It make take a few seconds to process the order (thanks to an
+artificial delay in the processor), so refresh the page until you see your order
+in the list.
+
+Then click on the output image link to see the converted image in your browser.
 
 
 
-In another terminal, run the `guestbook` application:
 
-```shell
-# Set a local Message of the Day.
-echo 'Hello, World!' > motd.txt
 
-# Run the server.
-# For blob, it uses fileblob, pointing at the local directory ./blobs.
-# For runtimevar, it uses filevar, pointing at the local file ./motd.txt.
-#   You can update the ./motd.txt while the server is running, refresh
-#   the page, and see it change.
-./guestbook -env=local -bucket=blobs -motd_var=motd.txt
-```
 
-Your server is now running on http://localhost:8080/.
-
-You can stop the MySQL database server with Ctrl-\\. MySQL ignores Ctrl-C
-(SIGINT).
 
