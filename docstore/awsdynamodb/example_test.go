@@ -25,7 +25,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#dynamodb-ctor.
 
 	// import _ "gocloud.dev/docstore/awsdynamodb"
 
@@ -42,7 +42,7 @@ func ExampleOpenCollection() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#dynamodb.
 
 	// import _ "gocloud.dev/docstore/awsdynamodb"
 
