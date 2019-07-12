@@ -1,3 +1,7 @@
+# This file creates an ECS cluster and its instances. The AWS Console creates
+# these resources for you automatically, but AWS does not expose an equivalent
+# API.
+
 # Create an ECR Docker repository.
 # The name used here will be part of the deployed Docker image name.
 resource "aws_ecr_repository" "default" {
@@ -7,11 +11,11 @@ resource "aws_ecr_repository" "default" {
 # ECS Cluster
 
 resource "aws_ecs_cluster" "default" {
-  name = random_id.cluster_name.hex
+  name = local.gocdk_random_name
 }
 
 resource "random_id" "cluster_name" {
-  prefix      = "{{.ProjectName}}-"
+  prefix      = "${local.gocdk_random_name}-"
   byte_length = 8
 }
 
