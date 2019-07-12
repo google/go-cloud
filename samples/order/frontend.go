@@ -69,6 +69,7 @@ func init() {
 // run starts the server on port and runs it indefinitely.
 func (f *frontend) run(ctx context.Context, port int) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "index.html") })
+	http.HandleFunc("/style.css", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "style.css") })
 	http.HandleFunc("/orders/", wrapHTTPError(f.listOrders))
 	http.HandleFunc("/orders/new", wrapHTTPError(f.orderForm))
 	http.HandleFunc("/createOrder", wrapHTTPError(f.createOrder))

@@ -1,8 +1,0 @@
-# Serve fails when we're not in a module.
-gocdk serve --> FAIL
-
-gocdk init myproj
-cd myproj
-
-# Serve fails when given an invalid biome.
-gocdk serve --biome=foo --> FAIL

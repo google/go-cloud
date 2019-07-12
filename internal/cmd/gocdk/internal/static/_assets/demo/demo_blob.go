@@ -80,7 +80,7 @@ const (
 </head>
 <body>
   <p>
-    This page demonstrates the use of Go CDK's <a href="https://gocloud.dev/howto/blob/">blob</a> package.
+    This page demonstrates the use of Go CDK's <a href="https://gocloud.dev/howto/blob">blob</a> package.
   </p>
   <p>
     It is currently using a blob.Bucket based on the URL "{{ .URL }}", which
@@ -98,11 +98,11 @@ const (
 </body>
 </html>`
 
-	// blobBaseTemplate is the template for /demo. See blobBaseHandler.
+	// blobBaseTemplate is the template for /demo/blob. See blobBaseHandler.
 	// Input: *blobBaseData.
 	blobBaseTemplate = blobTemplatePrefix + blobTemplateSuffix
 
-	// blobListTemplate is the template for /demo/list. See blobListHandler.
+	// blobListTemplate is the template for /demo/blob/list. See blobListHandler.
 	// Input: *blobListData.
 	blobListTemplate = blobTemplatePrefix + `
   {{range .ListObjects}}
@@ -115,7 +115,7 @@ const (
     </div>
   {{end}}` + blobTemplateSuffix
 
-	// blobWriteTemplate is the template for /demo/write. See blobWriteHandler.
+	// blobWriteTemplate is the template for /demo/blob/write. See blobWriteHandler.
 	// Input: *blobWriteData.
 	blobWriteTemplate = blobTemplatePrefix + `
   {{if .WriteSuccess}}
@@ -143,7 +143,7 @@ var (
 	blobWriteTmpl = template.Must(template.New("blob write").Parse(blobWriteTemplate))
 )
 
-// blobBaseHandler is the handler for /demo.
+// blobBaseHandler is the handler for /demo/blob.
 func blobBaseHandler(w http.ResponseWriter, req *http.Request) {
 	data := &blobBaseData{URL: bucketURL}
 	if err := blobBaseTmpl.Execute(w, data); err != nil {
@@ -151,7 +151,7 @@ func blobBaseHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// blobListHandler is the handler for /demo/list.
+// blobListHandler is the handler for /demo/blob/list.
 //
 // It lists the keys in a bucket, possibly under a "prefix".
 //
@@ -197,7 +197,7 @@ func blobListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// blobViewHandler is the handler for /demo/view.
+// blobViewHandler is the handler for /demo/blob/view.
 //
 // It expects a "key" query parameter, and renders the contents of the blob
 // at that key.
@@ -228,7 +228,7 @@ func blobViewHandler(w http.ResponseWriter, req *http.Request) {
 	io.Copy(w, reader)
 }
 
-// blobWriteHandler is the handler for /demo/write.
+// blobWriteHandler is the handler for /demo/blob/write.
 func blobWriteHandler(w http.ResponseWriter, req *http.Request) {
 	data := &blobWriteData{
 		URL:           bucketURL,
