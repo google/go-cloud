@@ -229,9 +229,11 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		if err != nil {
 			return err
 		}
-		if a.Doc.RevisionOn(c.opts.RevisionField) {
+		if a.Doc.HasField(c.opts.RevisionField) {
 			c.changeRevision(doc)
-			a.Doc.SetField(c.opts.RevisionField, doc[c.opts.RevisionField])
+			if err := a.Doc.SetField(c.opts.RevisionField, doc[c.opts.RevisionField]); err != nil {
+				return err
+			}
 		}
 		c.docs[a.Key] = doc
 
@@ -245,10 +247,14 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		if err := c.checkRevision(a.Doc, current); err != nil {
 			return err
 		}
-		if err := c.update(current, a.Mods, a.Doc.RevisionOn(c.opts.RevisionField)); err != nil {
+		if err := c.update(current, a.Mods, a.Doc.HasField(c.opts.RevisionField)); err != nil {
 			return err
 		}
-		_ = a.Doc.SetField(c.opts.RevisionField, current[c.opts.RevisionField])
+		if a.Doc.HasField(c.opts.RevisionField) {
+			if err := a.Doc.SetField(c.opts.RevisionField, current[c.opts.RevisionField]); err != nil {
+				return err
+			}
+		}
 
 	case driver.Get:
 		// We've already retrieved the document into current, above.
@@ -355,7 +361,7 @@ func (c *collection) changeRevision(doc map[string]interface{}) {
 }
 
 func (c *collection) checkRevision(arg driver.Document, current map[string]interface{}) error {
-	if current == nil || !arg.RevisionOn(c.opts.RevisionField) {
+	if current == nil {
 		return nil // no existing document or the incoming doc has no revision
 	}
 	curRev, ok := current[c.opts.RevisionField]

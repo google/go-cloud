@@ -31,7 +31,8 @@ type Document struct {
 	fields fields.List            // for structs
 }
 
-// Create a new document from doc, which must be a non-nil map[string]interface{} or struct pointer.
+// NewDocument creates a new document from doc, which must be a non-nil
+// map[string]interface{} or struct pointer.
 func NewDocument(doc interface{}) (Document, error) {
 	if doc == nil {
 		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "document cannot be nil")
@@ -183,13 +184,11 @@ func (d Document) Decode(dec Decoder) error {
 	return decodeStruct(d.s, dec)
 }
 
-// RevisionOn returns whether or not we should write a revision value when we
-// write a document. It could be either a map or a struct with a revision key or
-// field named after revField.
-func (d Document) RevisionOn(revField string) bool {
+// HasField returns whether or not d has a certain field.
+func (d Document) HasField(field string) bool {
 	if d.m != nil {
-		_, ok := d.m[revField]
+		_, ok := d.m[field]
 		return ok
 	}
-	return d.fields.MatchFold(revField) != nil
+	return d.fields.MatchFold(field) != nil
 }

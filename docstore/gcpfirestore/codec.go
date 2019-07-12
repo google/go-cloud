@@ -153,8 +153,8 @@ func decodeDoc(pdoc *pb.Document, ddoc driver.Document, nameField, revField stri
 		return err
 	}
 	// Set the revision field in the document, if it exists, to the update time.
-	if ddoc.RevisionOn(revField) && pdoc.UpdateTime != nil {
-		_ = ddoc.SetField(revField, pdoc.UpdateTime)
+	if ddoc.HasField(revField) && pdoc.UpdateTime != nil {
+		return ddoc.SetField(revField, pdoc.UpdateTime)
 	}
 	return nil
 }

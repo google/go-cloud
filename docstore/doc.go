@@ -193,9 +193,9 @@
 //
 // Docstore gives every document a revision at creation time and updates that
 // revision whenever the document is modified if and only if the document struct
-// or map has a revision field/key matching the revision field name. If you
-// don't want Docstore to handle any revision logic, simply do not have the
-// revision field or key in your document.
+// or map has a field matching the revision field name. If you don't want
+// Docstore to handle any revision logic, simply do not have the revision field
+// in your document.
 //
 // When you pass a document with a non-nil revision to Put, Replace, Update or
 // Delete, Docstore will also compare the revision of the stored document to

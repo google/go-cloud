@@ -100,6 +100,7 @@ type Collection interface {
 // ActionKind describes the type of an action.
 type ActionKind int
 
+// Values for ActionKind.
 const (
 	Create ActionKind = iota
 	Replace
@@ -130,7 +131,7 @@ type Mod struct {
 	Value     interface{}
 }
 
-// A value representing an increment modification.
+// IncOp is a value representing an increment modification.
 type IncOp struct {
 	Amount interface{}
 }

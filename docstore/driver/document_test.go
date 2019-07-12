@@ -215,7 +215,7 @@ func TestFieldNames(t *testing.T) {
 	}
 }
 
-func TestRevisionOn(t *testing.T) {
+func TestHasField(t *testing.T) {
 	type withRev struct {
 		Rev interface{}
 	}
@@ -248,7 +248,7 @@ func TestRevisionOn(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		on := doc.RevisionOn("Rev")
+		on := doc.HasField("Rev")
 		if on != tc.want {
 			t.Errorf("%v: got %v want %v", tc.in, on, tc.want)
 		}

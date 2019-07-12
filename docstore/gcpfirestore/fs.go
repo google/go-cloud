@@ -554,8 +554,11 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 	j := 0
 	for i, wr := range wrs {
 		if _, ok := call.writes[i].Operation.(*pb.Write_Transform); !ok {
-			if call.actions[j].Doc.RevisionOn(c.opts.RevisionField) {
-				call.actions[j].Doc.SetField(c.opts.RevisionField, wr.UpdateTime)
+			a := call.actions[j]
+			if a.Doc.HasField(c.opts.RevisionField) {
+				if err := a.Doc.SetField(c.opts.RevisionField, wr.UpdateTime); err != nil {
+					errs[a.Index] = err
+				}
 			}
 			j++
 		}
@@ -566,6 +569,7 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 			_ = a.Doc.SetField(c.nameField, call.newNames[i])
 		}
 	}
+	return
 }
 
 func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.RunActionsOptions) ([]*pb.WriteResult, error) {

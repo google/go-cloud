@@ -347,7 +347,7 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 		mdoc[mongoIDField] = id
 	}
 	var rev string
-	if doc.RevisionOn(c.revisionField) {
+	if doc.HasField(c.revisionField) {
 		rev = driver.UniqueString()
 		mdoc[c.revisionField] = rev
 	}
@@ -363,7 +363,7 @@ func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc m
 	if err != nil {
 		return nil, nil, "", err
 	}
-	updateDoc, rev, err = c.newUpdateDoc(a.Mods, a.Doc.RevisionOn(c.revisionField))
+	updateDoc, rev, err = c.newUpdateDoc(a.Mods, a.Doc.HasField(c.revisionField))
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -522,9 +522,11 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 		}
 	}
 	for i, rev := range revs {
-		if rev != "" {
-			// Ignore error, because document may not have a revision field.
-			_ = modelActions[i].Doc.SetField(c.revisionField, rev)
+		a := modelActions[i]
+		if rev != "" && a.Doc.HasField(c.revisionField) {
+			if err := a.Doc.SetField(c.revisionField, rev); err != nil && errs[a.Index] == nil {
+				errs[a.Index] = err
+			}
 		}
 	}
 	if res.DeletedCount != nDeletes {

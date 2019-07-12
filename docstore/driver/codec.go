@@ -720,6 +720,7 @@ func wrap(err error, code gcerr.ErrorCode) error {
 
 var fieldCache = fields.NewCache(parseTag, nil, nil)
 
+// IsEmptyValue returns whether or not v is a zero value of its type.
 // Copied from encoding/json, go 1.12.
 func IsEmptyValue(v reflect.Value) bool {
 	switch k := v.Kind(); k {
