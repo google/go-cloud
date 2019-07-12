@@ -213,7 +213,7 @@ func TestAddDemo(t *testing.T) {
 			stringsToFind: []string{
 				"<title>gocloud.dev/docstore demo</title>",
 				"This page demonstrates the use",
-				"https://godoc.org/gocloud.dev/docstore",
+				"https://gocloud.dev/howto/docstore",
 				`<a href="./list">List</a>`,
 				`<a href="./edit?create=true">Create</a>`,
 			},
@@ -244,7 +244,10 @@ func TestAddDemo(t *testing.T) {
 			description: "create: empty key",
 			urlPaths:    []string{"/demo/docstore/edit"},
 			op:          "POST",
-			urlValues:   map[string][]string{"create": {"true"}, "value": {"foo"}},
+			urlValues: map[string][]string{
+				"create": {"true"},
+				"value":  {"foo"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/docstore demo</title>",
 				"<strong>enter a non-empty key</strong>",
@@ -257,7 +260,11 @@ func TestAddDemo(t *testing.T) {
 			description: "create: success",
 			urlPaths:    []string{"/demo/docstore/edit"},
 			op:          "POST",
-			urlValues:   map[string][]string{"create": {"true"}, "key": {"key1"}, "value": {"initial value"}},
+			urlValues: map[string][]string{
+				"create": {"true"},
+				"key":    {"key1"},
+				"value":  {"initial value"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/docstore demo</title>",
 				"Write succeeded!",
@@ -312,7 +319,10 @@ func TestAddDemo(t *testing.T) {
 			description: "edit: success",
 			urlPaths:    []string{"/demo/docstore/edit"},
 			op:          "POST",
-			urlValues:   map[string][]string{"key": {"key1"}, "value": {"updated value"}},
+			urlValues: map[string][]string{
+				"key":   {"key1"},
+				"value": {"updated value"},
+			},
 			stringsToFind: []string{
 				"<title>gocloud.dev/docstore demo</title>",
 				"Write succeeded!",
