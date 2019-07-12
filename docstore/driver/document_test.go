@@ -254,3 +254,37 @@ func TestHasField(t *testing.T) {
 		}
 	}
 }
+
+func TestHasFieldFold(t *testing.T) {
+	type withRev struct {
+		Rev interface{}
+	}
+	type withoutRev struct {
+		W withRev
+	}
+
+	for _, tc := range []struct {
+		in   interface{}
+		want bool
+	}{
+		{
+			in:   &withRev{},
+			want: true,
+		},
+		{
+			in:   &withoutRev{},
+			want: false,
+		},
+	} {
+		doc, err := NewDocument(tc.in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range []string{"Rev", "rev", "REV"} {
+			on := doc.HasFieldFold(f)
+			if on != tc.want {
+				t.Errorf("%v: got %v want %v", tc.in, on, tc.want)
+			}
+		}
+	}
+}

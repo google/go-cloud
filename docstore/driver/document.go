@@ -186,9 +186,22 @@ func (d Document) Decode(dec Decoder) error {
 
 // HasField returns whether or not d has a certain field.
 func (d Document) HasField(field string) bool {
+	return d.hasField(field, true)
+}
+
+// HasFieldFold is like HasField but matches case-insensitively for struct
+// field.
+func (d Document) HasFieldFold(field string) bool {
+	return d.hasField(field, false)
+}
+
+func (d Document) hasField(field string, exactMatch bool) bool {
 	if d.m != nil {
 		_, ok := d.m[field]
 		return ok
+	}
+	if exactMatch {
+		return d.fields.MatchExact(field) != nil
 	}
 	return d.fields.MatchFold(field) != nil
 }

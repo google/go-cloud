@@ -347,7 +347,7 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 		mdoc[mongoIDField] = id
 	}
 	var rev string
-	if doc.HasField(c.revisionField) {
+	if c.hasField(doc, c.revisionField) {
 		rev = driver.UniqueString()
 		mdoc[c.revisionField] = rev
 	}
@@ -363,7 +363,7 @@ func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc m
 	if err != nil {
 		return nil, nil, "", err
 	}
-	updateDoc, rev, err = c.newUpdateDoc(a.Mods, a.Doc.HasField(c.revisionField))
+	updateDoc, rev, err = c.newUpdateDoc(a.Mods, c.hasField(a.Doc, c.revisionField))
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -523,7 +523,7 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 	}
 	for i, rev := range revs {
 		a := modelActions[i]
-		if rev != "" && a.Doc.HasField(c.revisionField) {
+		if rev != "" && c.hasField(a.Doc, c.revisionField) {
 			if err := a.Doc.SetField(c.revisionField, rev); err != nil && errs[a.Index] == nil {
 				errs[a.Index] = err
 			}
@@ -618,6 +618,13 @@ func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a string", rev)
 	}
 	return []byte(s), nil
+}
+
+func (c *collection) hasField(doc driver.Document, field string) bool {
+	if c.opts.LowercaseFields {
+		return doc.HasFieldFold(field)
+	}
+	return doc.HasField(field)
 }
 
 // BytesToRevision implements driver.BytesToRevision.
