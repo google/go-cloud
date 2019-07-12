@@ -1,8 +1,8 @@
 ---
 title: "Server"
 date: 2019-06-21T10:36:43-07:00
-draft: true
 showInSidenav: true
+toc: true
 ---
 
 The Go CDK's `server` package provides a pre-configured HTTP server with 

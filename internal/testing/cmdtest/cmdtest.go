@@ -388,7 +388,7 @@ func (tf *testFile) execute() error {
 		}
 	}
 	for _, tc := range tf.cases {
-		if err := tc.execute(tf.suite, rootDir); err != nil {
+		if err := tc.execute(tf.suite); err != nil {
 			return fmt.Errorf("%s:%v", tf.filename, err) // no space after :, for line number
 		}
 	}
@@ -402,7 +402,7 @@ type fatal struct{ error }
 // is saved in tc.gotOutput.
 // An error is returned if: a command that should succeed instead failed; a command that should
 // fail instead succeeded; or a built-in command was called incorrectly.
-func (tc *testCase) execute(ts *TestSuite, rootDir string) error {
+func (tc *testCase) execute(ts *TestSuite) error {
 	const failMarker = " --> FAIL"
 
 	tc.gotOutput = nil
@@ -451,7 +451,7 @@ func (tc *testCase) execute(ts *TestSuite, rootDir string) error {
 		allout = append(allout, out...)
 	}
 	if len(allout) > 0 {
-		allout = scrub(rootDir, allout)
+		allout = scrub(os.Getenv("ROOTDIR"), allout) // use Getenv because Setup could change ROOTDIR
 		// Remove final whitespace.
 		s := strings.TrimRight(string(allout), " \t\n")
 		tc.gotOutput = strings.Split(s, "\n")

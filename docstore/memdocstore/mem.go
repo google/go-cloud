@@ -67,6 +67,10 @@ type Options struct {
 	// is loaded from the file if it exists. Otherwise, an empty collection is created.
 	// When the collection is closed, its contents are saved to the file.
 	Filename string
+
+	// Call this function when the collection is closed.
+	// For internal use only.
+	onClose func()
 }
 
 // TODO(jba): make this package thread-safe.
@@ -449,6 +453,9 @@ func (c *collection) ErrorAs(err error, i interface{}) bool { return false }
 // If the collection was created with a Filename option, Close writes the
 // collection's documents to the file.
 func (c *collection) Close() error {
+	if c.opts.onClose != nil {
+		c.opts.onClose()
+	}
 	return saveDocs(c.opts.Filename, c.docs)
 }
 

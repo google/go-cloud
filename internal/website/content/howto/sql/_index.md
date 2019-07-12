@@ -2,6 +2,7 @@
 title: "MySQL/PostgreSQL"
 date: 2019-06-21T09:26:56-07:00
 showInSidenav: true
+toc: true
 ---
 
 Connecting to cloud providers' hosted database services requires additional

@@ -139,7 +139,7 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 	}()
 
 	// Apply Terraform configuration in biome.
-	if err := apply(ctx, pctx, opts.biome, false); err != nil {
+	if err := biomeApply(ctx, pctx, opts.biome, false); err != nil {
 		return err
 	}
 

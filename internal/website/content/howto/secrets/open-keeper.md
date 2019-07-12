@@ -2,6 +2,7 @@
 title: "Open a Secret Keeper"
 date: 2019-03-21T17:43:54-07:00
 weight: 1
+toc: true
 ---
 
 The first step in working with your secrets is establishing your
@@ -14,17 +15,17 @@ lets you interact with all of them using the [`*secrets.Keeper` type][].
 
 ## Constructors versus URL openers
 
-If you know that your program is always going to use a particular secret
-keeper provider or you need fine-grained control over the connection
-settings, you should call the constructor function in the driver package
-directly (like `awskms.OpenKeeper`). However, if you want to change providers
-based on configuration, you can use `secrets.OpenKeeper`, making sure you
-["blank import"][] the driver package to link it in. See the
-[documentation on URLs][] for more details. This guide will show how to use
-both forms for each secret keeper provider.
+The easiest way to open a secrets keeper is using [`secrets.OpenKeeper`][] and a URL
+pointing to the keeper, making sure you ["blank import"][] the driver package to
+link it in. See [Concepts: URLs][] for more details. If you need
+fine-grained control over the connection settings, you can call the constructor
+function in the driver package directly (like `awskms.OpenKeeper`). This guide
+shows how to use both forms for each provider.
 
+[`secrets.OpenKeeper`]:
+https://godoc.org/gocloud.dev/secrets#OpenKeeper
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
-[documentation on URLs]: {{< ref "/concepts/urls.md" >}}
+[Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
 ## AWS Key Management Service {#aws}
 
@@ -40,7 +41,7 @@ application connects to the correct region, but otherwise
 
 [AWS KMS]: https://aws.amazon.com/kms/
 
-## AWS Key Management Service Constructor {#aws-ctor}
+### AWS Key Management Service Constructor {#aws-ctor}
 
 The [`awskms.OpenKeeper`][] constructor opens a customer master key. You must
 first create an [AWS session][] with the same region as your key and then

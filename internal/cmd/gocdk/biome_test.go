@@ -17,10 +17,14 @@ package main
 import (
 	"context"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/cmd/gocdk/internal/static"
 )
 
 func TestBiomeAdd(t *testing.T) {
@@ -67,6 +71,64 @@ func TestBiomeAdd(t *testing.T) {
 		}
 		if diff := cmp.Diff(want, got); diff != "" {
 			t.Errorf("biomeAdd diff (-want +got):\n%s", diff)
+		}
+	})
+}
+
+func TestBiomeApply(t *testing.T) {
+	// TODO(#1809): test cases
+	// didn't supply biome name to command
+	// named biome doesn't exist
+	// no terraform file
+	// terraform not initialized *
+	// terraform never previously applied
+	// terraform apply repeat
+
+	if _, err := exec.LookPath("terraform"); err != nil {
+		t.Skip("terraform not found:", err)
+	}
+
+	t.Run("TerraformNotInitialized", func(t *testing.T) {
+		ctx := context.Background()
+		pctx, cleanup, err := newTestProject(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer cleanup()
+
+		const greeting = "HALLO WORLD"
+		devBiomeDir, err := biomeDir(pctx.workdir, "dev")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Add a custom output variable to "main.tf".
+		// We'll verify that we can read it down below.
+		if err := static.Do(devBiomeDir, nil, &static.Action{
+			SourceContent: []byte(`output "greeting" { value = ` + strconv.Quote(greeting) + `	}`),
+			DestRelPath: "outputs.tf",
+			DestExists:  true,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		// Call the main package run function as if 'apply dev' were passed
+		// on the command line. As part of this, ensureTerraformInit is called to check
+		// that terraform has been properly initialized before running 'terraform apply'.
+		if err := run(ctx, pctx, []string{"biome", "apply", "dev"}); err != nil {
+			t.Fatalf("run error: %+v", err)
+		}
+
+		// After a successful terraform apply, 'terraform output' should return the greeting
+		// we configured. Terraform output fails if 'terraform init' was not called.
+		// It also fails if 'terraform apply' has never been run, as there will be no
+		// terraform state file (terraform.tfstate).
+		outputs, err := tfReadOutput(ctx, devBiomeDir, os.Environ())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := outputs["greeting"].stringValue(); got != greeting {
+			t.Errorf("greeting = %q; want %q", got, greeting)
 		}
 	})
 }

@@ -21,7 +21,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 
@@ -45,15 +44,17 @@ const helpSuffix = `
 `
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&listCmd{}, "")
 	subcommands.Register(&putCmd{}, "")
 	subcommands.Register(&updateCmd{}, "")
 	subcommands.Register(&deleteCmd{}, "")
-	log.SetFlags(0)
-	log.SetPrefix("gocdk-docstore: ")
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+	return int(subcommands.Execute(context.Background()))
 }
 
 // A Message is a document entry stored in a collection.
@@ -65,7 +66,7 @@ type Message struct {
 }
 
 func (m Message) String() string {
-	return fmt.Sprintf("%s\t%s: %s", m.ID, m.Date, m.Content)
+	return fmt.Sprintf("%s %s: %s", m.ID, m.Date, m.Content)
 }
 
 type listCmd struct {
@@ -97,7 +98,7 @@ func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface
 	// Open a *docstore.Collection using the collectionURL.
 	collection, err := docstore.OpenCollection(ctx, collectionURL)
 	if err != nil {
-		log.Printf("Failed to open collection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to open collection: %v\n", err)
 		return subcommands.ExitFailure
 	}
 	defer collection.Close()
@@ -115,7 +116,7 @@ func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface
 			break
 		}
 		if err != nil {
-			log.Printf("Failed to list: %v", err)
+			fmt.Fprintf(os.Stderr, "Failed to list: %v\n", err)
 			return subcommands.ExitFailure
 		}
 		fmt.Println(msg)
@@ -123,12 +124,15 @@ func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface
 	return subcommands.ExitSuccess
 }
 
-type putCmd struct{}
+type putCmd struct {
+	id   string // user-chosen ID
+	date string // user-chosen date
+}
 
 func (*putCmd) Name() string     { return "put" }
 func (*putCmd) Synopsis() string { return "Put an item from stdin" }
 func (*putCmd) Usage() string {
-	return `put <collection URL> <message>
+	return `put [-id <ID>] [-d <date>] <collection URL> <message>
 
   Read from stdin and put an message with the current timestamp in <collection URL>.
 
@@ -136,9 +140,12 @@ func (*putCmd) Usage() string {
     gocdk-docstore put "mongo://myDB/myCollection?id_field=ID" "hello docstore"` + helpSuffix
 }
 
-func (*putCmd) SetFlags(_ *flag.FlagSet) {}
+func (p *putCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&p.id, "id", "", "ID of document")
+	f.StringVar(&p.date, "d", "", "date of document")
+}
 
-func (*putCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *putCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -149,21 +156,27 @@ func (*putCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) s
 	// Open a *docstore.Collection using the collectionURL.
 	collection, err := docstore.OpenCollection(ctx, collectionURL)
 	if err != nil {
-		log.Printf("Failed to open collection: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to open collection: %v\n", err)
 		return subcommands.ExitFailure
 	}
 	defer collection.Close()
 
+	if p.id == "" {
+		p.id = uuid.New().String()
+	}
+	if p.date == "" {
+		p.date = time.Now().Format("2006-01-02")
+	}
 	msg := &Message{
-		ID:      uuid.New().String(),
-		Date:    time.Now().Format("2006-01-02"),
+		ID:      p.id,
+		Date:    p.date,
 		Content: content,
 	}
 	if err := collection.Put(ctx, msg); err != nil {
-		log.Printf("Failed to put message: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to put message: %v\n", err)
 		return subcommands.ExitFailure
 	}
-	log.Printf("Put message: %s", msg)
+	fmt.Printf("Put message: %s\n", msg)
 	return subcommands.ExitSuccess
 }
 
@@ -194,7 +207,7 @@ func (cmd *updateCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 	// Open a *docstore.Collection using the collectionURL.
 	collection, err := docstore.OpenCollection(ctx, collectionURL)
 	if err != nil {
-		log.Printf("Failed to open collection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to open collection: %v\n", err)
 		return subcommands.ExitFailure
 	}
 	defer collection.Close()
@@ -202,10 +215,10 @@ func (cmd *updateCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 	msg := &Message{ID: id}
 	mods := docstore.Mods{"Content": updated}
 	if errs := collection.Actions().Update(msg, mods).Get(msg).Do(ctx); errs != nil {
-		log.Printf("Failed to update message: %v", errs)
+		fmt.Fprintf(os.Stderr, "Failed to update message: %v\n", errs)
 		return subcommands.ExitFailure
 	}
-	log.Printf("updated: %s", msg)
+	fmt.Printf("updated: %s\n", msg)
 	return subcommands.ExitSuccess
 }
 
@@ -221,7 +234,7 @@ func (*deleteCmd) Usage() string {
   Delete the documents in <collection URL>.
 
   Example:
-    gocdk-docstore delete -d "2006-01-02" "mongo://myDB/myCollection?id_field=ID"` + helpSuffix
+    gocdk-docstore delete -d 2006-01-02 mongo://myDB/myCollection?id_field=ID` + helpSuffix
 }
 
 func (cmd *deleteCmd) SetFlags(f *flag.FlagSet) {
@@ -238,7 +251,7 @@ func (cmd *deleteCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 	// Open a *docstore.Collection using the collectionURL.
 	collection, err := docstore.OpenCollection(ctx, collectionURL)
 	if err != nil {
-		log.Printf("Failed to open collection: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to open collection: %v\n", err)
 		return subcommands.ExitFailure
 	}
 	defer collection.Close()
@@ -248,7 +261,7 @@ func (cmd *deleteCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 		q = q.Where("Date", "=", cmd.date)
 	}
 	if err := q.Delete(ctx); err != nil {
-		log.Printf("Failed to delete: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to delete: %v\n", err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess

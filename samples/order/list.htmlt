@@ -31,7 +31,7 @@
               <td class="OrderList-cell">{{.ID}}</td>
               <td class="OrderList-cell">{{.Email}}</td>
               <td class="OrderList-cell">{{.InImage}}</td>
-              <td class="OrderList-cell">{{.OutImage}}</td>
+              <td class="OrderList-cell">{{with .OutImage}}<a href="/show/{{.}}">{{.}}</a>{{end}}</td>
               <td class="OrderList-cell">{{with .CreateTime}}{{.Format "2006-01-02 03:04 AM"}}{{end}}</td>
               <td class="OrderList-cell">{{with .FinishTime}}{{.Format "2006-01-02 03:04 AM"}}{{end}}</td>
               <td class="OrderList-cell">{{.Note}}</td>
