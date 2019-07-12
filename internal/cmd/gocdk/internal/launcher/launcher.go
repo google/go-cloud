@@ -29,21 +29,22 @@ import (
 
 // Input is the input to a launcher.
 type Input struct {
-	// DockerImage specifies the image name and tag of the local Docker image to
-	// deploy. If the local image does not exist, then the launcher should return
-	// an error.
+	// DockerImage is a reference to the Docker image in the local Docker daemon's
+	// storage that should be launched. If the image does not exist in the local
+	// Docker daemon's storage, then the launcher should return an error.
 	DockerImage string
 
-	// env is the set of additional environment variables to set. It should not
-	// include PORT nor should it contain multiple entries for the same variable
-	// name.
+	// Env is the set of additional environment variables to set in the launched
+	// container's environment in the form "KEY=VALUE". It should not include PORT
+	// nor should it contain multiple entries for the same variable name.
 	Env []string
 
-	// specifier is the set of arguments passed from a biome's Terraform module.
+	// Specifier is the set of arguments passed from a biome's Terraform module.
+	// Its interpretation is launcher-specific.
 	Specifier map[string]interface{}
 }
 
-// Local starts local Docker containers.
+// Local starts Docker containers on the local Docker daemon.
 type Local struct {
 	Logger       *log.Logger
 	DockerClient *docker.Client
