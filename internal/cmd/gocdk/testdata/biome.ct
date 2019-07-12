@@ -16,6 +16,9 @@ gocdk: - `gocdk biome add` to configure launch settings
 
 $ cd myproj
 
+$ gocdk biome list
+dev
+
 $ gocdk biome add mybiome --launcher local
 gocdk: Adding biome "mybiome"...
 gocdk: Success!
@@ -30,3 +33,6 @@ mybiome/
   secrets.auto.tfvars
   variables.tf
 
+$ gocdk biome list
+dev
+mybiome
