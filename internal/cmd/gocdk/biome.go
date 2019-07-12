@@ -138,6 +138,14 @@ func biomeAdd(ctx context.Context, pctx *processContext, biome, launcher string)
 		if err != nil {
 			return xerrors.Errorf("biome add: %w", err)
 		}
+		saveActions = append(saveActions,
+			static.AddProvider("google"),
+			&static.Action{
+				SourcePath:  "/launchers/cloudrun.tf",
+				DestRelPath: "main.tf",
+				DestExists:  true,
+			},
+		)
 		launchSpecifiers = append(launchSpecifiers,
 			&launchSpecifier{Key: "project_id", Value: strconv.Quote("${local.gcp_project}")},
 			&launchSpecifier{Key: "location", Value: strconv.Quote("${local.gcp_region}")},

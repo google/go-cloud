@@ -1,3 +1,9 @@
+// This file demonstrates basic usage of the secrets.Keeper portable type.
+//
+// It initializes a secrets.Keeper URL based on the environment variable
+// SECRETS_KEEPER_URL, and then registers handlers for "/demo/secrets" on
+// http.DefaultServeMux.
+
 package main
 
 import (
@@ -16,30 +22,31 @@ import (
 	_ "gocloud.dev/secrets/localsecrets"
 )
 
-// TODO(rvangent): This file is user-visible, add many comments explaining
-// how it works.
+// Package variables for the secrets.Keeper URL, and the initialized secrets.Keeper.
+var (
+	keeperURL string
+	keeper    *secrets.Keeper
+	keeperErr error
+)
 
 func init() {
+	// Register handlers. See https://golang.org/pkg/net/http/.
 	http.HandleFunc("/demo/secrets/", secretsEncryptHandler)
 	http.HandleFunc("/demo/secrets/encrypt", secretsEncryptHandler)
 	http.HandleFunc("/demo/secrets/decrypt", secretsDecryptHandler)
-}
 
-var keeperURL string
-var keeper *secrets.Keeper
-var keeperErr error
-
-func init() {
-	ctx := context.Background()
-
+	// Initialize the secrets.Keeper using a URL from the environment, defaulting
+	// to an local provider that use in-process encryption/decryption.
 	keeperURL = os.Getenv("SECRETS_KEEPER_URL")
 	if keeperURL == "" {
 		// TODO(rvangent): Remove default later.
 		keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
 	}
-	keeper, keeperErr = secrets.OpenKeeper(ctx, keeperURL)
+	keeper, keeperErr = secrets.OpenKeeper(context.Background(), keeperURL)
 }
 
+// secretsData holds the input for the demo pages. The page handlers will
+// initialize the struct and pass it to the templates.
 type secretsData struct {
 	URL string
 	Err error
@@ -59,15 +66,11 @@ const (
 </head>
 <body>
   <p>
-    This page demonstrates the use of Go CDK's <a href="https://godoc.org/gocloud.dev/secrets">secrets</a> package.
+    This page demonstrates the use of Go CDK's <a href="https://gocloud.dev/howto/secrets">secrets</a> package.
   </p>
   <p>
     It is currently using a secrets.Keeper based on the URL "{{ .URL }}", which
     can be configured via the environment variable "SECRETS_KEEPER_URL".
-  </p>
-  <p>
-    See <a href="https://gocloud.dev/concepts/urls/">here</a> for more
-    information about URLs in Go CDK APIs.
   </p>
   <ul>
     <li><a href="./encrypt">Encrypt</a> using the secrets.Keeper</li>
@@ -81,9 +84,10 @@ const (
 </body>
 </html>`
 
+	// secretsEncryptTemplate is the template for /demo/secrets and /demo/secrets/encrypt. See secretsEncryptHandler.
 	// Input: *secretsData.
 	secretsEncryptTemplate = secretsTemplatePrefix + `
-  <form>
+  <form method="POST">
     <p><label>
       Enter plaintext data to encrypt:
       <br/>
@@ -95,7 +99,6 @@ const (
     </label></p>
     <input type="submit" value="Encrypt!">
   </form>
-
   {{if .Out}}
     <p><label>
       Encrypted result (base64 encoded):
@@ -103,13 +106,18 @@ const (
       <textarea rows="4" cols="50" readonly="true">{{ .Out }}</textarea>
     </label></p>
     <div>
-      <a href="./decrypt?ciphertext={{ .Out }}&base64={{ .Base64 }}">Decrypt it</a>
+      <form method="POST" action="./decrypt">
+        <input type="hidden" name="ciphertext" value="{{ .Out }}">
+        <input type="hidden" name="base64" value="{{ .Base64 }}">
+        <input type="submit" value="Decrypt it">
+      </form>
     </div>
   {{end}}` + secretsTemplateSuffix
 
+	// secretsDecryptTemplate is the template for /demo/secrets/decrypt. See secretsDecryptHandler.
 	// Input: *secretsData.
 	secretsDecryptTemplate = secretsTemplatePrefix + `
-  <form>
+  <form method="POST">
     <p><label>
       Enter base64-encoded data to decrypt:
       <br/>
@@ -121,7 +129,6 @@ const (
     </label></p>
     <input type="submit" value="Decrypt!">
   </form>
-
   {{if .Out}}
     <p><label>
       Decrypted result:
@@ -129,7 +136,11 @@ const (
       <textarea rows="4" cols="50" readonly="true">{{ .Out }}</textarea>
     </label></p>
     <div>
-      <a href="./encrypt?plaintext={{ .Out }}&base64={{.Base64}}">Encrypt it</a>
+      <form method="POST" action="./encrypt">
+        <input type="hidden" name="plaintext" value="{{ .Out }}">
+        <input type="hidden" name="base64" value="{{ .Base64 }}">
+        <input type="submit" value="Encrypt it">
+      </form>
     </div>
   {{end}}` + secretsTemplateSuffix
 )
@@ -139,7 +150,9 @@ var (
 	secretsDecryptTmpl = template.Must(template.New("secrets decrypt").Parse(secretsDecryptTemplate))
 )
 
-// secretsEncryptHandler allows the user to enter some data to be encrypted.
+// secretsEncryptHandler is the handler for /demo/secrets/ and /demo/secrets/encrypt.
+//
+// It shows a form that allows the user to enter some data to be encrypted.
 func secretsEncryptHandler(w http.ResponseWriter, req *http.Request) {
 	data := &secretsData{
 		URL:    keeperURL,
@@ -152,32 +165,46 @@ func secretsEncryptHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	// Verify that keeper initialization succeeded.
 	if keeperErr != nil {
 		data.Err = keeperErr
 		return
 	}
-	if data.In != "" {
-		var in []byte
-		if data.Base64 {
-			var err error
-			in, err = base64.StdEncoding.DecodeString(data.In)
-			if err != nil {
-				data.Err = fmt.Errorf("Plaintext data was not valid Base64: %v", err)
-				return
-			}
-		} else {
-			in = []byte(data.In)
-		}
-		encrypted, err := keeper.Encrypt(req.Context(), in)
+
+	// For GET, render the form.
+	if req.Method == http.MethodGet {
+		return
+	}
+
+	// POST.
+	// The string to be encrypted is in data.In.
+	// If the user checked the "base64" box, then base64-decode it.
+	var in []byte
+	if data.Base64 {
+		var err error
+		in, err = base64.StdEncoding.DecodeString(data.In)
 		if err != nil {
-			data.Err = fmt.Errorf("Failed to encrypt: %v", err)
+			data.Err = fmt.Errorf("Plaintext data was not valid Base64: %v", err)
 			return
 		}
-		data.Out = base64.StdEncoding.EncodeToString(encrypted)
+	} else {
+		in = []byte(data.In)
 	}
+
+	// Encrypt the input.
+	encrypted, err := keeper.Encrypt(req.Context(), in)
+	if err != nil {
+		data.Err = fmt.Errorf("Failed to encrypt: %v", err)
+		return
+	}
+
+	// Always show the result base64-encoded.
+	data.Out = base64.StdEncoding.EncodeToString(encrypted)
 }
 
-// secretsDecryptHandler allows the user to enter some data to be decrypted.
+// secretsDecryptHandler is the handler for /demo/secrets/decrypt.
+//
+// It shows a form that allows the user to enter some data to be decrypted.
 func secretsDecryptHandler(w http.ResponseWriter, req *http.Request) {
 	data := &secretsData{
 		URL:    keeperURL,
@@ -190,25 +217,36 @@ func secretsDecryptHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	// Verify that keeper initialization succeeded.
 	if keeperErr != nil {
 		data.Err = keeperErr
 		return
 	}
-	if data.In != "" {
-		in, err := base64.StdEncoding.DecodeString(data.In)
-		if err != nil {
-			data.Err = fmt.Errorf("Ciphertext data was not valid Base64: %v", err)
-			return
-		}
-		decrypted, err := keeper.Decrypt(req.Context(), in)
-		if err != nil {
-			data.Err = fmt.Errorf("Failed to decrypt: %v", err)
-			return
-		}
-		if data.Base64 {
-			data.Out = base64.StdEncoding.EncodeToString(decrypted)
-		} else {
-			data.Out = string(decrypted)
-		}
+
+	// For GET, render the form.
+	if req.Method == http.MethodGet {
+		return
+	}
+
+	// POST.
+	// The string to be decrypted is in data.In, base64-encoded.
+	in, err := base64.StdEncoding.DecodeString(data.In)
+	if err != nil {
+		data.Err = fmt.Errorf("Ciphertext data was not valid Base64: %v", err)
+		return
+	}
+
+	// Decrypt it.
+	decrypted, err := keeper.Decrypt(req.Context(), in)
+	if err != nil {
+		data.Err = fmt.Errorf("Failed to decrypt: %v", err)
+		return
+	}
+
+	// If the user checked the "base64" box, then base64-encode the output.
+	if data.Base64 {
+		data.Out = base64.StdEncoding.EncodeToString(decrypted)
+	} else {
+		data.Out = string(decrypted)
 	}
 }
