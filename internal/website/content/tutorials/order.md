@@ -60,7 +60,7 @@ Enter an email address (it need not be real) and select any image file from your
 computer. Then click Submit.
 
 Now visit the order list page by returning to the home page and clicking "List
-Conversions". It make take a few seconds to process the order (thanks to an
+Conversions". It may take a few seconds to process the order (thanks to an
 artificial delay in the processor), so refresh the page until you see your order
 in the list.
 
@@ -69,14 +69,16 @@ Then click on the output image link to see the converted image in your browser.
 ## Running on a Cloud Provider
 
 To run the Order Processor application on a cloud provider like Google Cloud
-Platform, Amazone AWS or Microsoft Azure, you will have to provision
+Platform, Amazon AWS or Microsoft Azure, you will have to provision
 some resources:
 
-- A storage bucket, to hold the image files.
+- A storage bucket, to hold the image files. (See the 
+  [`blob` How-To Guide](https://gocloud.dev/howto/blob/).)
 - A Pub/Sub topic and subscription, for requests from the frontend to the
-  processor.
-- A document store collection (Google Firestore, Amazon DynamoDB or Document DB,
-  or Microsoft Cosmos) to store order metadata.
+  processor. (See the [`pubsub` How-To Guide](https://gocloud.dev/howto/pubsub/).)
+- A document store collection to store order metadata. (See the [`docstore` How-To
+  Guide](https://gocloud.dev/howto/docstore/).)
+  
 
 Then launch the `order` program with flags that provide the URLs to your
 resources. Run `order -help` to see the list of flags.
