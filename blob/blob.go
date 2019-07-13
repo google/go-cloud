@@ -20,10 +20,10 @@
 // interfaces from the io package), deleting blobs, and listing blobs in a
 // bucket.
 //
-// Subpackages contain distinct implementations of blob for various providers,
+// Subpackages contain distinct implementations of blob for various services,
 // including Cloud and on-prem solutions. For example, "fileblob" supports
 // blobs backed by a filesystem. Your application should import one of these
-// provider-specific subpackages and use its exported function(s) to create a
+// driver subpackages and use its exported function(s) to create a
 // *Bucket; do not use the NewBucket function in this package. For example:
 //
 //  bucket, err := fileblob.OpenBucket("path/to/dir", nil)
@@ -34,7 +34,7 @@
 //  ...
 //
 // Then, write your application code using the *Bucket type. You can easily
-// reconfigure your initialization code to choose a different provider.
+// reconfigure your initialization code to choose a different driver.
 // You can develop your application locally using fileblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
@@ -69,14 +69,14 @@
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/blob/Attributes".
-// The metrics are "completed_calls", a count of completed method calls by provider,
+// The metrics are "completed_calls", a count of completed method calls by driver,
 // method and status (error code); and "latency", a distribution of method latency
-// by provider and method.
+// by driver and method.
 // For example, "gocloud.dev/blob/latency".
 //
 // It also collects the following metrics:
-// - gocloud.dev/blob/bytes_read: the total number of bytes read, by provider.
-// - gocloud.dev/blob/bytes_written: the total number of bytes written, by provider.
+// - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
+// - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
@@ -119,7 +119,7 @@ type Reader struct {
 	b        driver.Bucket
 	r        driver.Reader
 	end      func(error) // called at Close to finish trace and metric collection
-	provider string      // for metric collection
+	provider string      // for metric collection; refers to driver package
 	closed   bool
 }
 
@@ -154,17 +154,17 @@ func (r *Reader) Size() int64 {
 	return r.r.Attributes().Size
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
 }
 
 // Attributes contains attributes about a blob.
 type Attributes struct {
-	// CacheControl specifies caching attributes that providers may use
+	// CacheControl specifies caching attributes that services may use
 	// when serving the blob.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 	CacheControl string
@@ -182,7 +182,7 @@ type Attributes struct {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 	// Metadata holds key/value pairs associated with the blob.
-	// Keys are guaranteed to be in lowercase, even if the backend provider
+	// Keys are guaranteed to be in lowercase, even if the backend service
 	// has case-sensitive keys (although note that Metadata written via
 	// this package will always be lowercased). If there are duplicate
 	// case-insensitive keys (e.g., "foo" and "FOO"), only one value
@@ -198,10 +198,10 @@ type Attributes struct {
 	asFunc func(interface{}) bool
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (a *Attributes) As(i interface{}) bool {
 	if a.asFunc == nil {
 		return false
@@ -220,7 +220,7 @@ type Writer struct {
 	cancel     func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5 []byte
 	md5hash    hash.Hash
-	provider   string // for metric collection
+	provider   string // for metric collection, refers to driver package name
 	closed     bool
 
 	// These fields exist only when w is not yet created.
@@ -333,7 +333,7 @@ type ListOptions struct {
 	// Delimiter sets the delimiter used to define a hierarchical namespace,
 	// like a filesystem with "directories". It is highly recommended that you
 	// use "" or "/" as the Delimiter. Other values should work through this API,
-	// but provider UIs generally assume "/".
+	// but service UIs generally assume "/".
 	//
 	// An empty delimiter means that the bucket is treated as a single flat
 	// namespace.
@@ -346,8 +346,8 @@ type ListOptions struct {
 	Delimiter string
 
 	// BeforeList is a callback that will be called before each call to the
-	// the underlying provider's list functionality.
-	// asFunc converts its argument to provider-specific types.
+	// the underlying service's list functionality.
+	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeList func(asFunc func(interface{}) bool) error
 }
@@ -419,10 +419,10 @@ type ListObject struct {
 	asFunc func(interface{}) bool
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (o *ListObject) As(i interface{}) bool {
 	if o.asFunc == nil {
 		return false
@@ -432,8 +432,7 @@ func (o *ListObject) As(i interface{}) bool {
 
 // Bucket provides an easy and portable way to interact with blobs
 // within a "bucket", including read, write, and list operations.
-// To create a Bucket, use constructors found in provider-specific
-// subpackages.
+// To create a Bucket, use constructors found in driver subpackages.
 type Bucket struct {
 	b      driver.Bucket
 	tracer *oc.Tracer
@@ -461,20 +460,20 @@ var (
 		&view.View{
 			Name:        pkgName + "/bytes_read",
 			Measure:     bytesReadMeasure,
-			Description: "Sum of bytes read from the provider service.",
+			Description: "Sum of bytes read from the service.",
 			TagKeys:     []tag.Key{oc.ProviderKey},
 			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        pkgName + "/bytes_written",
 			Measure:     bytesWrittenMeasure,
-			Description: "Sum of bytes written to the provider service.",
+			Description: "Sum of bytes written to the service.",
 			TagKeys:     []tag.Key{oc.ProviderKey},
 			Aggregation: view.Sum(),
 		})
 )
 
-// NewBucket is intended for use by provider implementations.
+// NewBucket is intended for use by drivers.
 var NewBucket = newBucket
 
 // newBucket creates a new *Bucket based on a specific driver implementation.
@@ -491,10 +490,10 @@ func newBucket(b driver.Bucket) *Bucket {
 	}
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (b *Bucket) As(i interface{}) bool {
 	if i == nil {
 		return false
@@ -502,7 +501,7 @@ func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
 }
 
-// ErrorAs converts err to provider-specific types.
+// ErrorAs converts err to driver-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://gocloud.dev/concepts/as/ for background information.
@@ -533,7 +532,7 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) 
 // A nil ListOptions is treated the same as the zero value.
 //
 // List is not guaranteed to include all recently-written blobs;
-// some providers are only eventually consistent.
+// some services are only eventually consistent.
 func (b *Bucket) List(opts *ListOptions) *ListIterator {
 	if opts == nil {
 		opts = &ListOptions{}
@@ -584,7 +583,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 	}
 	var md map[string]string
 	if len(a.Metadata) > 0 {
-		// Providers are inconsistent, but at least some treat keys
+		// Services are inconsistent, but at least some treat keys
 		// as case-insensitive. To make the behavior consistent, we
 		// force-lowercase them when writing and reading.
 		md = make(map[string]string, len(a.Metadata))
@@ -702,7 +701,7 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 // The blob being written is not guaranteed to be readable until Close
 // has been called; until then, any previous blob will still be readable.
 // Even after Close is called, newly written blobs are not guaranteed to be
-// returned from List; some providers are only eventually consistent.
+// returned from List; some services are only eventually consistent.
 //
 // The returned Writer will store ctx for later use in Write and/or Close.
 // To abort a write, cancel ctx; otherwise, it must remain open until
@@ -727,7 +726,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		BeforeWrite:        opts.BeforeWrite,
 	}
 	if len(opts.Metadata) > 0 {
-		// Providers are inconsistent, but at least some treat keys
+		// Services are inconsistent, but at least some treat keys
 		// as case-insensitive. To make the behavior consistent, we
 		// force-lowercase them when writing and reading.
 		md := make(map[string]string, len(opts.Metadata))
@@ -863,7 +862,7 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 //
 // It is valid to call SignedURL for a key that does not exist.
 //
-// If the provider implementation does not support this functionality, SignedURL
+// If the driver does not support this functionality, SignedURL
 // will return an error for which gcerrors.Code will return gcerrors.Unimplemented.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	if !utf8.ValidString(key) {
@@ -918,7 +917,7 @@ type ReaderOptions struct {
 	// any data is read (unless NewReader returns an error before then, in which
 	// case it may not be called at all).
 	//
-	// asFunc converts its argument to provider-specific types.
+	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeRead func(asFunc func(interface{}) bool) error
 }
@@ -929,15 +928,15 @@ type WriterOptions struct {
 	// Writer will upload in a single request; larger blobs will be split into
 	// multiple requests.
 	//
-	// This option may be ignored by some provider implementations.
+	// This option may be ignored by some drivers.
 	//
-	// If 0, the provider implementation will choose a reasonable default.
+	// If 0, the driver will choose a reasonable default.
 	//
 	// If the Writer is used to do many small writes concurrently, using a
 	// smaller BufferSize may reduce memory usage.
 	BufferSize int
 
-	// CacheControl specifies caching attributes that providers may use
+	// CacheControl specifies caching attributes that services may use
 	// when serving the blob.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 	CacheControl string
@@ -976,10 +975,10 @@ type WriterOptions struct {
 	// BeforeWrite is a callback that will be called exactly once, before
 	// any data is written (unless NewWriter returns an error, in which case
 	// it will not be called at all). Note that this is not necessarily during
-	// or after the first Write call, as providers may buffer bytes before
+	// or after the first Write call, as drivers may buffer bytes before
 	// sending an upload request.
 	//
-	// asFunc converts its argument to provider-specific types.
+	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
@@ -989,7 +988,7 @@ type CopyOptions struct {
 	// BeforeCopy is a callback that will be called before the copy is
 	// initiated.
 	//
-	// asFunc converts its argument to provider-specific types.
+	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeCopy func(asFunc func(interface{}) bool) error
 }
@@ -1076,11 +1075,11 @@ func DefaultURLMux() *URLMux {
 
 // OpenBucket opens the bucket identified by the URL given.
 //
-// See the URLOpener documentation in provider-specific subpackages for
+// See the URLOpener documentation in driver subpackages for
 // details on supported URL formats, and https://gocloud.dev/concepts/urls/
 // for more information.
 //
-// In addition to provider-specific query parameters, OpenBucket supports
+// In addition to driver-specific query parameters, OpenBucket supports
 // the following query parameters:
 //
 //   - prefix: wraps the resulting Bucket using PrefixedBucket with the

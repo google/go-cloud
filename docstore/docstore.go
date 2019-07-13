@@ -33,7 +33,7 @@ import (
 
 // A Document is a set of field-value pairs. One or more fields, called the key
 // fields, must uniquely identify the document in the collection. You specify the key
-// fields when you open a provider collection.
+// fields when you open a collection.
 // A field name must be a valid UTF-8 string that does not contain a '.'.
 //
 // A Document can be represented as a map[string]int or a pointer to a struct. For
@@ -48,7 +48,7 @@ type Collection struct {
 	closed bool
 }
 
-// NewCollection is intended for use by provider implementations.
+// NewCollection is intended for use by drivers.
 var NewCollection = newCollection
 
 // newCollection makes a Collection.
@@ -110,8 +110,8 @@ func (c *Collection) Actions() *ActionList {
 // A Get and a write may refer to the same document. Each write may be paired with
 // only one Get in this way. The Get and write will be executed in the order
 // specified in the list: a Get before a write will see the old value of the
-// document; a Get after the write will see the new value if the provider is strongly
-// consistent, but may see the old value if the provider is eventually consistent.
+// document; a Get after the write will see the new value if the service is strongly
+// consistent, but may see the old value if the service is eventually consistent.
 type ActionList struct {
 	coll     *Collection
 	actions  []*Action
@@ -280,13 +280,13 @@ func (e ActionListError) Unwrap() error {
 }
 
 // BeforeDo takes a callback function that will be called before the ActionList is
-// executed by the underlying provider. It may be invoked multiple times for a single
+// executed by the underlying service. It may be invoked multiple times for a single
 // call to ActionList.Do, because the driver may split the action list into several
-// provider calls. If any callback invocation returns an error, ActionList.Do returns
+// service calls. If any callback invocation returns an error, ActionList.Do returns
 // an error.
 //
 // The callback takes a parameter, asFunc, that converts its argument to
-// provider-specific types. See https://gocloud.dev/concepts/as for background
+// driver-specific types. See https://gocloud.dev/concepts/as for background
 // information.
 func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *ActionList {
 	l.beforeDo = f
@@ -606,10 +606,10 @@ func (c *Collection) StringToRevision(s string) (interface{}, error) {
 	return rev, nil
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (c *Collection) As(i interface{}) bool {
 	if i == nil {
 		return false
@@ -653,10 +653,10 @@ func wrapError(c driver.Collection, err error) error {
 	return gcerr.New(c.ErrorCode(err), err, 2, "docstore")
 }
 
-// ErrorAs converts i to provider-specific types. See
+// ErrorAs converts i to driver-specific types. See
 // https://gocloud.dev/concepts/as/ for background information and the
-// provider-specific package documentation for the specific types supported for
-// that provider.
+// driver package documentation for the specific types supported for
+// that driver.
 //
 // When the error is an ActionListError, ErrorAs works on individual errors in
 // the slice, not the slice itself.

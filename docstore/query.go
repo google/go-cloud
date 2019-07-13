@@ -141,8 +141,8 @@ func (q *Query) OrderBy(field, direction string) *Query {
 }
 
 // BeforeQuery takes a callback function that will be called before the Query is
-// executed to the underlying provider's query functionality. The callback takes
-// a parameter, asFunc, that converts its argument to provider-specific types.
+// executed to the underlying service's query functionality. The callback takes
+// a parameter, asFunc, that converts its argument to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information.
 func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query {
 	q.dq.BeforeQuery = f
@@ -272,10 +272,10 @@ func (it *DocumentIterator) Stop() {
 	it.iter.Stop()
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (it *DocumentIterator) As(i interface{}) bool {
 	if i == nil || it.iter == nil {
 		return false
