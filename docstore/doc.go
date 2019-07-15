@@ -134,7 +134,7 @@
 // Times deserve special mention. Docstore can store and retrieve values of type
 // time.Time, with two caveats. First, the timezone will not be preserved. Second,
 // Docstore guarantees only that time.Time values are represented to millisecond
-// precision. Many drivers will do better, but if you need to be sure that times
+// precision. Many services will do better, but if you need to be sure that times
 // are stored with nanosecond precision, convert the time.Time to another type before
 // storing and re-create when you retrieve it. For instance, if you store Unix
 // time in nanoseconds using time's UnixNano method, you can get the original
@@ -231,7 +231,7 @@
 //   iter := coll.Query().Where("Author.Last", "=", "Bulgakov").Limit(3).Get(ctx)
 //
 // You can make multiple Where calls. In some cases, parts of a Where clause may be
-// processed in the driver rather than natively by the backend service, which may have
+// processed in the driver rather than natively by the backing service, which may have
 // performance implications for large result sets. See the driver package
 // documentation for details.
 //
