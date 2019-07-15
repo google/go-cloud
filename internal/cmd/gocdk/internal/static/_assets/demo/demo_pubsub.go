@@ -185,7 +185,7 @@ func pubsubReceiveHandler(w http.ResponseWriter, req *http.Request) {
 	// Try to read a message from the subscription, with a short timeout.
 	// Without the timeout, Receive might block indefinitely if no messages
 	// are available.
-	ctx, cancel := context.WithTimeout(req.Context(), 250*time.Millisecond)
+	ctx, cancel := context.WithTimeout(req.Context(), 500*time.Millisecond)
 	defer cancel()
 	msg, err := subscription.Receive(ctx)
 	if err == nil {
