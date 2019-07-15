@@ -24,6 +24,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v30.0.0+incompatible
 	github.com/Azure/azure-service-bus-go v0.8.0
 	github.com/Azure/azure-storage-blob-go v0.6.0
+	github.com/Azure/go-autorest v12.3.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.5.0
 	github.com/Azure/go-autorest/autorest/azure/auth v0.1.0
 	github.com/Azure/go-autorest/autorest/to v0.2.0 // indirect
