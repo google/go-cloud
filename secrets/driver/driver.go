@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver defines interfaces to be implemented for drivers of the
-// secrets package.
+// Package driver defines interfaces to be implemented by secrets drivers, which
+// will be used by the secrets package to interact with the underlying services.
+// Application code should use package secrets.
 package driver // import "gocloud.dev/secrets/driver"
 
 import (

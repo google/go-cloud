@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver defines a set of interfaces that the runtimevar package uses
-// to interact with the underlying runtime configuration services.
+// Package driver defines interfaces to be implemented by runtimevar drivers, which
+// will be used by the runtimevar package to interact with the underlying services.
+// Application code should use package runtimevar.
 package driver // import "gocloud.dev/runtimevar/driver"
 
 import (

@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver defines a set of interfaces that the pubsub package uses to
-// interact with the underlying pubsub services.
+// Package driver defines interfaces to be implemented by pubsub drivers, which
+// will be used by the pubsub package to interact with the underlying services.
+// Application code should use package pubsub.
 package driver // import "gocloud.dev/pubsub/driver"
 
 import (

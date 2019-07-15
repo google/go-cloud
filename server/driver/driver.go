@@ -13,6 +13,7 @@
 // limitations under the License.
 
 // Package driver defines an interface for custom HTTP listeners.
+// Application code should use package server.
 package driver // import "gocloud.dev/server/driver"
 
 import (
