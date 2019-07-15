@@ -148,7 +148,7 @@ func Example() {
 
 	// We now have a *blob.Bucket! We can write our application using the
 	// *blob.Bucket type, and have the freedom to change the initialization code
-	// above to choose a different driver later.
+	// above to choose a different service-specific driver later.
 
 	// In this example, we'll write a blob and then read it.
 	ctx := context.Background()
