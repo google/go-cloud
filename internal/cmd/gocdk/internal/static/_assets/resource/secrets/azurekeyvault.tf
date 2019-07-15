@@ -1,6 +1,8 @@
-# TODO(rvangent): Add comments explaining.
+# This file creates an Azure KeyVault and key for use with the
+# "secrets/azurekeyvault" driver.
 
 locals {
+  # The Go CDK URL for the key: https://gocloud.dev/howto/secrets/#azure.
   azurekeyvault_url = "azurekeyvault://${replace(azurerm_key_vault_key.key.id, "https://", "")}"
 }
 
@@ -9,9 +11,10 @@ locals {
 # https://github.com/terraform-providers/terraform-provider-azurerm/issues/3234
 # This is a a workaround to get it by shelling out to the "az" CLI.
 data "external" "current_azure_user" {
-  program = ["az","ad","signed-in-user","show","--query","{displayName: displayName,objectId: objectId,objectType: objectType}"]
+  program = ["az", "ad", "signed-in-user", "show", "--query", "{displayName: displayName,objectId: objectId,objectType: objectType}"]
 }
 
+# The key vault to hold the key.
 resource "azurerm_key_vault" "keyvault" {
   name                = local.gocdk_random_name
   location            = azurerm_resource_group.resource_group.location
@@ -35,6 +38,7 @@ resource "azurerm_key_vault" "keyvault" {
   }
 }
 
+# The key itself.
 resource "azurerm_key_vault_key" "key" {
   name         = local.gocdk_random_name
   key_vault_id = azurerm_key_vault.keyvault.id
