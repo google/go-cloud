@@ -20,11 +20,12 @@ seamlessly deploy cloud applications on any combination of cloud providers.
 It does this by providing stable, idiomatic interfaces for common uses like
 storage and databases. Think `database/sql` for cloud products.
 
-At the core of the Go CDK are common "portable types" implemented by cloud
-services. For example, objects of the blob.Bucket portable type can be created
-using gcsblob.OpenBucket, s3blob.OpenBucket, or any other service with a
-Go CDK driver implementation. Then, the blob.Bucket can be used throughout
-your application without worrying about the underlying implementation.
+At the core of the Go CDK are common "portable types", implemented on top of
+service-specific drivers for supported supported cloud services. For example,
+objects of the blob.Bucket portable type can be created using
+gcsblob.OpenBucket, s3blob.OpenBucket, or any other Go CDK driver. Then, the
+blob.Bucket can be used throughout your application without worrying about the
+underlying implementation.
 
 The Go CDK works well with a code generator called Wire
 (https://github.com/google/wire/blob/master/README.md). It creates
