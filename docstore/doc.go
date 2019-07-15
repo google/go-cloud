@@ -101,13 +101,12 @@
 // documents. Using structs is preferred because it enforces some structure on your
 // data.
 //
-// Docstore mimics the encoding/json package in its treatment of
-// structs: by default, a struct's exported fields are the fields of the document.
-// You can alter this default mapping by using a struct tag beginning with
-// "docstore:". Docstore struct tags support renaming, omitting fields
+// Docstore treats a struct's exported fields as the fields of the document by
+// default. You can alter this default mapping by using a struct tag beginning
+// with "docstore:". Docstore struct tags support renaming, omitting fields
 // unconditionally, or omitting them only when they are empty, exactly like
-// encoding/json. Docstore also honors a "json" struct tag if there is no "docstore"
-// tag on the field. For example, this is the Book struct with different field names:
+// encoding/json. For example, this is the Book struct with different field
+// names:
 //
 //   type Book struct {
 //       Title            string `docstore:"title"`
@@ -120,6 +119,15 @@
 // "pub_years". The pub_years field is omitted from the stored document if it has
 // length zero. The NumPublications field is never stored because it can easily be
 // computed from the PublicationYears field.
+//
+// Given a document field "Foo" and a struct type document, Docstore's decoder
+// will look through the destination struct's field to find (in order of
+// preference):
+//   - An exported field with a tag of "Foo";
+//   - An exported field named "Foo".
+//
+// Note that unlike encoding/json, Docstore does case-sensitive matching during
+// decoding to match the behavior of decoders in most docstore services.
 //
 //
 // Representing Data
