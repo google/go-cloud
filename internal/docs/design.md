@@ -115,7 +115,7 @@ it is needed.
 
 The exception we permit is URL scheme registration as documented under
 [URLs](#urls). The amount of boilerplate setup code required for URL muxes for
-multiple drovers without use of a tool like Wire is an unreasonable burden for
+multiple drivers without use of a tool like Wire is an unreasonable burden for
 users of Go CDK. We want the Go CDK to be usable both with and without Wire. A
 global registry is acceptable as long as its use is not mandatory, but the
 burden is to prove the benefit over the cost.
@@ -493,7 +493,7 @@ The Go CDK APIs will end up exposing functionality that is not supported by all
 services. In addition, some functionality details will differ across services.
 Some theoretical examples using [`blob.Bucket`][]:
 
-1.  **Top-level APIs**: There might be a services that supports reads, but not
+1.  **Top-level APIs**: There might be a service that supports reads, but not
     writes or deletes.
 1.  **Data fields**. Some services may support key/value metadata associated
     with a blob, others may not.
@@ -744,7 +744,7 @@ wiki page. We also adopt the following guidelines:
 Since our goal is for users to be able to use drivers interchangeably, it is
 critical that they behave similarly. To this end, each portable API (e.g.,
 `blob`) must provide a suite of conformance tests that driver implementations
-should run. The conformance tests should be comprehensive; drvers should not
+should run. The conformance tests should be comprehensive; drivers should not
 need additional unit tests for the core driver semantics.
 
 ### Provisioning For Tests
