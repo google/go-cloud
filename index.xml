@@ -37,17 +37,6 @@ your application&amp;rsquo;s core logic from the details of the services it is u
     </item>
     
     <item>
-      <title>Open a Secret Keeper</title>
-      <link>https://gocloud.dev/howto/secrets/open-keeper/</link>
-      <pubDate>Thu, 21 Mar 2019 17:43:54 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/howto/secrets/open-keeper/</guid>
-      <description>&lt;p&gt;The first step in working with your secrets is establishing your
-secret keeper provider. Every secret keeper provider is a little different, but the Go CDK
-lets you interact with all of them using the &lt;a href=&#34;https://godoc.org/gocloud.dev/secrets#Keeper&#34;&gt;&lt;code&gt;*secrets.Keeper&lt;/code&gt; type&lt;/a&gt;.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
       <title>Tutorial: Command-Line Uploader</title>
       <link>https://gocloud.dev/tutorials/cli-uploader/</link>
       <pubDate>Tue, 19 Mar 2019 18:45:53 -0700</pubDate>
@@ -103,16 +92,6 @@ message from being redelivered.&lt;/li&gt;
     </item>
     
     <item>
-      <title>Encrypt &amp; Decrypt Data</title>
-      <link>https://gocloud.dev/howto/secrets/crypt/</link>
-      <pubDate>Thu, 21 Mar 2019 17:44:28 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/howto/secrets/crypt/</guid>
-      <description>&lt;p&gt;Once you have &lt;a href=&#34;https://gocloud.dev/howto/secrets/open-keeper/&#34;&gt;opened a secrets keeper&lt;/a&gt; for the secrets provider you want,
-you can encrypt and decrypt small messages using the keeper.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
       <title>Using provider-specific APIs</title>
       <link>https://gocloud.dev/concepts/as/</link>
       <pubDate>Fri, 10 May 2019 11:17:09 -0700</pubDate>
@@ -124,17 +103,6 @@ of the most commonly used functionality. There will be cases where a
 developer wants to access provider-specific functionality, such as unexposed
 APIs or data fields, errors, or options. This can be accomplished using &lt;code&gt;As&lt;/code&gt;
 functions.&lt;/p&gt;</description>
-    </item>
-    
-    <item>
-      <title>Keep Secrets in Configuration</title>
-      <link>https://gocloud.dev/howto/secrets/runtimevar/</link>
-      <pubDate>Thu, 21 Mar 2019 17:45:27 -0700</pubDate>
-      
-      <guid>https://gocloud.dev/howto/secrets/runtimevar/</guid>
-      <description>Once you have opened a secrets keeper for the secrets provider you want, you can use a secrets keeper to access sensitive configuration stored in an encrypted runtimevar.
-First, you create a *runtimevar.Decoder configured to use your secrets keeper using runtimevar.DecryptDecode. In this example, we assume the data is a plain string, but the configuration could be a more structured type.
-decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode) decoder := runtimevar.NewDecoder(&amp;#34;&amp;#34;, decodeFunc)  Then you can pass the decoder to the runtime configuration provider of your choice.</description>
     </item>
     
     <item>
