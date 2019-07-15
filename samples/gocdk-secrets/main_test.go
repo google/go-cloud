@@ -29,7 +29,5 @@ func Test(t *testing.T) {
 		t.Fatal(err)
 	}
 	ts.Commands["gocdk-secrets"] = cmdtest.InProcessProgram("gocdk-secrets", run)
-	if err := ts.Run(*update); err != nil {
-		t.Error(err)
-	}
+	ts.Run(t, *update)
 }
