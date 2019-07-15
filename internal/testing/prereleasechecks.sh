@@ -16,7 +16,7 @@
 # This script runs expensive checks that we don't normally run on Travis, but
 # that should run periodically, before each release.
 # For example, tests that can't use record/replay, so must be performed live
-# against the backend service.
+# against the backing service.
 #
 # It should be run from the root directory.
 
