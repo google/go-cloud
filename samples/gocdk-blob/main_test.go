@@ -40,7 +40,5 @@ func Test(t *testing.T) {
 		}
 		return os.Setenv("ROOTDIR_URL", "file://"+slashdir)
 	}
-	if err := ts.Run(*update); err != nil {
-		t.Error(err)
-	}
+	ts.Run(t, *update)
 }

@@ -47,6 +47,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -108,9 +109,6 @@ type TestSuite struct {
 	// The commands that can be executed (that is, whose names can occur as the
 	// first word of a command line).
 	Commands map[string]CommandFunc
-
-	// If true, echo each command and its output as it is run.
-	Verbose bool
 
 	// If true, don't delete the temporary root directories for each test file,
 	// and print out their names for debugging.
@@ -269,57 +267,44 @@ func (tf *testFile) addCase(tc *testCase) []string {
 	return suffix
 }
 
-// Run runs Compare or Update, depending on the value of the argument.
-func (ts *TestSuite) Run(update bool) error {
+// Run runs the commands in each file in the test suite. Each file runs in a
+// separate subtest.
+//
+// If update is false, it compares their output with the output in the file,
+// line by line.
+//
+// If update is true, it writes the output back to the file, overwriting the
+// previous output.
+//
+// Before comparing/updating, occurrences of the root directory in the output
+// are replaced by ${ROOTDIR}.
+func (ts *TestSuite) Run(t *testing.T, update bool) {
 	if update {
-		return ts.Update()
+		ts.update(t)
 	} else {
-		return ts.Compare()
+		ts.compare(t)
 	}
 }
 
-// RunMatch is like Run, but executes only the test files that match
-// the regular expression pattern.
-func (ts *TestSuite) RunMatch(pattern string, update bool) error {
-	files, err := ts.matchingFiles(pattern)
-	if err != nil {
-		return err
-	}
-	if update {
-		return ts.update(files)
-	} else {
-		return ts.compare(files)
-	}
-}
-
-func (ts *TestSuite) matchingFiles(pattern string) ([]*testFile, error) {
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil, err
-	}
-	var matches []*testFile
+// compare runs a subtest for each file in the test suite. See Run.
+func (ts *TestSuite) compare(t *testing.T) {
 	for _, tf := range ts.files {
-		if re.MatchString(strings.TrimSuffix(tf.filename, ".ct")) {
-			matches = append(matches, tf)
-		}
+		t.Run(strings.TrimSuffix(tf.filename, ".ct"), func(t *testing.T) {
+			if s := tf.compare(t.Logf); s != "" {
+				t.Error(s)
+			}
+		})
 	}
-	return matches, nil
 }
 
-// Compare runs the commands in each file in the test suite and compares their
-// output with the output in the file. The comparison is done line by line.
-// Before comparing, occurrences of the root directory in the output are
-// replaced by ${ROOTDIR}. Compare returns a non-nil error if there are
-// differences, or it could not execute the TestSuite.
-func (ts *TestSuite) Compare() error {
-	return ts.compare(ts.files)
-}
+var noopLogger = func(_ string, _ ...interface{}) {}
 
-func (ts *TestSuite) compare(files []*testFile) error {
+// compareReturningError is similar to compare, but it returns
+// errors/differences in an error. It is used in tests for this package.
+func (ts *TestSuite) compareReturningError() error {
 	var ss []string
-	for _, tf := range files {
-		s := tf.compare()
-		if s != "" {
+	for _, tf := range ts.files {
+		if s := tf.compare(noopLogger); s != "" {
 			ss = append(ss, s)
 		}
 	}
@@ -329,9 +314,9 @@ func (ts *TestSuite) compare(files []*testFile) error {
 	return nil
 }
 
-func (tf *testFile) compare() string {
-	if err := tf.execute(); err != nil {
-		return fmt.Sprintf("%v\n", err)
+func (tf *testFile) compare(log func(string, ...interface{})) string {
+	if err := tf.execute(log); err != nil {
+		return fmt.Sprintf("%v", err)
 	}
 	buf := new(bytes.Buffer)
 	for _, c := range tf.cases {
@@ -344,30 +329,26 @@ func (tf *testFile) compare() string {
 	return buf.String()
 }
 
-// Update runs the commands in each file in the test suite and writes their
-// output back to the file, overwriting the previous output. Occurrences of the
-// root directory in the output are replaced by ${ROOTDIR}.
-func (ts *TestSuite) Update() error {
-	return ts.update(ts.files)
-}
-
-func (ts *TestSuite) update(files []*testFile) error {
-	for _, tf := range files {
-		tmpfile, err := tf.updateToTemp()
-		if err != nil {
-			return err
-		}
-		if err := os.Rename(tmpfile, tf.filename); err != nil {
-			return err
-		}
+// update runs a subtest for each file in the test suite, updating their output.
+// See Run.
+func (ts *TestSuite) update(t *testing.T) {
+	for _, tf := range ts.files {
+		t.Run(strings.TrimSuffix(tf.filename, ".ct"), func(t *testing.T) {
+			tmpfile, err := tf.updateToTemp()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Rename(tmpfile, tf.filename); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
-	return nil
 }
 
 // updateToTemp executes tf and writes the output to a temporary file.
 // It returns the name of the temporary file.
 func (tf *testFile) updateToTemp() (fname string, err error) {
-	if err := tf.execute(); err != nil {
+	if err := tf.execute(noopLogger); err != nil {
 		return "", err
 	}
 
@@ -390,10 +371,7 @@ func (tf *testFile) updateToTemp() (fname string, err error) {
 	return f.Name(), nil
 }
 
-func (tf *testFile) execute() error {
-	if tf.suite.Verbose {
-		fmt.Printf("-- %s --\n", tf.filename)
-	}
+func (tf *testFile) execute(log func(string, ...interface{})) error {
 	rootDir, err := ioutil.TempDir("", "cmdtest")
 	if err != nil {
 		return fmt.Errorf("%s: %v", tf.filename, err)
@@ -424,7 +402,7 @@ func (tf *testFile) execute() error {
 		}
 	}
 	for _, tc := range tf.cases {
-		if err := tc.execute(tf.suite); err != nil {
+		if err := tc.execute(tf.suite, log); err != nil {
 			return fmt.Errorf("%s:%v", tf.filename, err) // no space after :, for line number
 		}
 	}
@@ -438,7 +416,7 @@ type fatal struct{ error }
 // is saved in tc.gotOutput.
 // An error is returned if: a command that should succeed instead failed; a command that should
 // fail instead succeeded; or a built-in command was called incorrectly.
-func (tc *testCase) execute(ts *TestSuite) error {
+func (tc *testCase) execute(ts *TestSuite, log func(string, ...interface{})) error {
 	const failMarker = " --> FAIL"
 
 	tc.gotOutput = nil
@@ -457,9 +435,7 @@ func (tc *testCase) execute(ts *TestSuite) error {
 				return err
 			}
 		}
-		if ts.Verbose {
-			fmt.Printf("$ %s\n", strings.Join(args, " "))
-		}
+		log("$ %s", strings.Join(args, " "))
 		name := args[0]
 		args = args[1:]
 		var infile string
@@ -481,9 +457,7 @@ func (tc *testCase) execute(ts *TestSuite) error {
 		if err != nil && !wantFail {
 			return fmt.Errorf("%d: %q failed with %v. Output:\n%s", tc.startLine+i, cmd, err, out)
 		}
-		if ts.Verbose {
-			fmt.Println(string(out))
-		}
+		log("%s\n", string(out))
 		allout = append(allout, out...)
 	}
 	if len(allout) > 0 {
@@ -738,15 +712,24 @@ func cdCmd(args []string) ([]byte, error) {
 
 // echo ARG1 ARG2 ...
 // write args to stdout
+//
+// \n is added at the end of the input.
+// Also, literal "\n" in the input will be replaced by \n.
 func echoCmd(args []string, inputFile string) ([]byte, error) {
 	if inputFile != "" {
 		return nil, fatal{errors.New("input redirection not supported")}
 	}
-	return []byte(strings.Join(args, " ") + "\n"), nil
+	s := strings.Join(args, " ")
+	s = strings.Replace(s, "\\n", "\n", -1)
+	s += "\n"
+	return []byte(s), nil
 }
 
 // echof FILE ARG1 ARG2 ...
 // write args to FILE
+//
+// \n is added at the end of the input.
+// Also, literal "\n" in the input will be replaced by \n.
 func echofCmd(args []string, inputFile string) ([]byte, error) {
 	if len(args) < 1 {
 		return nil, fatal{errors.New("need at least 1 argument")}
@@ -757,7 +740,10 @@ func echofCmd(args []string, inputFile string) ([]byte, error) {
 	if err := checkPath(args[0]); err != nil {
 		return nil, err
 	}
-	return nil, ioutil.WriteFile(args[0], []byte(strings.Join(args[1:], " ")+"\n"), 0600)
+	s := strings.Join(args[1:], " ")
+	s = strings.Replace(s, "\\n", "\n", -1)
+	s += "\n"
+	return nil, ioutil.WriteFile(args[0], []byte(s), 0600)
 }
 
 // cat FILE

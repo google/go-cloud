@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#aws-ctor
+	// This example is used in https://gocloud.dev/howto/secrets/#aws-ctor
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
@@ -45,7 +45,7 @@ func ExampleOpenKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#aws
+	// This example is used in https://gocloud.dev/howto/secrets/#aws
 
 	// import _ "gocloud.dev/secrets/awskms"
 

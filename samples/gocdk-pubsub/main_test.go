@@ -41,9 +41,7 @@ func Test(t *testing.T) {
 		t.Fatal(err)
 	}
 	ts.Commands["gocdk-pubsub"] = cmdtest.InProcessProgram("gocdk-pubsub", run)
-	if err := ts.Run(*update); err != nil {
-		t.Error(err)
-	}
+	ts.Run(t, *update)
 }
 
 const (
