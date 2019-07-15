@@ -148,7 +148,7 @@ func Example() {
 
 	// We now have a *blob.Bucket! We can write our application using the
 	// *blob.Bucket type, and have the freedom to change the initialization code
-	// above to choose a different provider later.
+	// above to choose a different driver later.
 
 	// In this example, we'll write a blob and then read it.
 	ctx := context.Background()
@@ -211,7 +211,7 @@ func ExampleBucket_List() {
 
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
-	// consistent, but is not guaranteed to work on all providers.
+	// consistent, but is not guaranteed to work on all services.
 	iter := bucket.List(nil)
 	for {
 		obj, err := iter.Next(ctx)
@@ -261,7 +261,7 @@ func ExampleBucket_List_withDelimiter() {
 	// list lists files in b starting with prefix. It uses the delimiter "/",
 	// and recurses into "directories", adding 2 spaces to indent each time.
 	// It will list the blobs created above because fileblob is strongly
-	// consistent, but is not guaranteed to work on all providers.
+	// consistent, but is not guaranteed to work on all services.
 	var list func(context.Context, *blob.Bucket, string, string)
 	list = func(ctx context.Context, b *blob.Bucket, prefix, indent string) {
 		iter := b.List(&blob.ListOptions{

@@ -16,7 +16,7 @@
 # This script runs expensive checks that we don't normally run on Travis, but
 # that should run periodically, before each release.
 # For example, tests that can't use record/replay, so must be performed live
-# against the service provider.
+# against the backend service.
 #
 # It should be run from the root directory.
 
@@ -142,8 +142,7 @@ popd &> /dev/null
 
 # This iterates over all packages that have a "testdata" directory, using that
 # as a signal for record/replay tests, and runs the tests with a "-record" flag.
-# This verifies that we can generate a fresh recording against the live
-# provider.
+# This verifies that we can generate a fresh recording against the live service.
 while read -r TESTDIR; do
   echo
   echo "***** $TESTDIR *****"

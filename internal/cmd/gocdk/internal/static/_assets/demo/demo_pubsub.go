@@ -39,7 +39,7 @@ func init() {
 	http.HandleFunc("/demo/pubsub/receive", pubsubReceiveHandler)
 
 	// Initialize the pubsub.Topic and pubsub.Subscription using URLs from the
-	// environment, defaulting to an in-memory provider.
+	// environment, defaulting to an in-memory driver.
 	ctx := context.Background()
 	topicURL = os.Getenv("PUBSUB_TOPIC_URL")
 	if topicURL == "" {

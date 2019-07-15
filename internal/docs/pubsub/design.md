@@ -61,7 +61,7 @@ comparing some of them.
 
 Given a topic that has already been created on the pubsub server, messages can
 be sent to that topic by calling `acmepubsub.OpenTopic` and calling the `Send`
-method of the returned `Topic`, like this (assuming a fictional pubsub provider
+method of the returned `Topic`, like this (assuming a fictional pubsub service
 called "acme"):
 
 ```go
@@ -804,7 +804,7 @@ Pro:
 
 *   The semantics are simple, making it
     *   straightforward to implement the concrete API and the drivers for most
-        pubsub providers
+        pubsub services
     *   easy for developers to reason about how it will behave
     *   less risky that bugs will be present in the concrete API
 *   Fairly efficient sending and receiving of messages is possible by tuning
@@ -935,7 +935,7 @@ At least the following things should be tested:
 ## Benchmarks
 
 What is the throughput and latency of the Go CDK's `pubsub` package, relative to
-directly using the APIs for various providers?
+directly using the APIs for various services?
 
 *   send, for 1, 10, 100 topics, and for 1, 10, 100 goroutines sending messages
     to those topics

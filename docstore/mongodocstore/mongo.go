@@ -106,7 +106,7 @@ type Options struct {
 	// If false (the default), then struct fields and MongoDB document fields will
 	// have the same names. For example, a struct field F will correspond to a
 	// MongoDB document field "F". This setting matches the behavior of other
-	// docstore providers, making code portable across providers.
+	// docstore drivers, making code portable across services.
 	//
 	// If true, all fields correspond to lower-cased MongoDB document fields. The
 	// field name F will correspond to the MongoDB document field "f", for
