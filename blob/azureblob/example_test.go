@@ -19,7 +19,6 @@ import (
 	"log"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
@@ -117,7 +116,7 @@ func ExampleOpenBucket_usingAADCredentials() {
 		// Your Azure Storage Account.
 		accountName = azureblob.AccountName("my-account")
 
-		// Your Azure AAD Service Principal with access to the storage account
+		// Your Azure AAD Service Principal with access to the storage account.
 		// https://docs.microsoft.com/en-us/azure/storage/common/storage-auth-aad-app
 		clientID     = "123"
 		clientSecret = "456"
@@ -127,20 +126,23 @@ func ExampleOpenBucket_usingAADCredentials() {
 		containerName = "my-container"
 	)
 
-	// Get an Oauth2 token for the account for use with Azure Storage
+	// Get an Oauth2 token for the account for use with Azure Storage.
 	ccc := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID)
-	ccc.Resource = azure.PublicCloud.ResourceIdentifiers.Storage
+
+	// Set the target resource to the Azure storage. This is available as a
+	// constant using "azure.PublicCloud.ResourceIdentifiers.Storage".
+	ccc.Resource = "https://storage.azure.com/"
 	token, err := ccc.ServicePrincipalToken()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Refresh OAuth2 token
+	// Refresh OAuth2 token.
 	if err := token.RefreshWithContext(context.Background()); err != nil {
 		log.Fatal(err)
 	}
 
-	// Create the credential using the OAuth2 token
+	// Create the credential using the OAuth2 token.
 	credential := azblob.NewTokenCredential(token.OAuthToken(), nil)
 
 	// Create a Pipeline, using whatever PipelineOptions you need.
@@ -156,11 +158,4 @@ func ExampleOpenBucket_usingAADCredentials() {
 		log.Fatal(err)
 	}
 	defer b.Close()
-
-	// Now we can use b to read or write files to the container.
-	data, err := b.ReadAll(ctx, "my-key")
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = data
 }
