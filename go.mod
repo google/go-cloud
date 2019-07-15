@@ -24,13 +24,10 @@ require (
 	github.com/Azure/azure-sdk-for-go v30.0.0+incompatible
 	github.com/Azure/azure-service-bus-go v0.8.0
 	github.com/Azure/azure-storage-blob-go v0.6.0
-	github.com/Azure/go-autorest v12.3.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.5.0
-	github.com/Azure/go-autorest/autorest/azure/auth v0.1.0
-	github.com/Azure/go-autorest/autorest/to v0.2.0 // indirect
-	github.com/Azure/go-autorest/autorest/validation v0.1.0 // indirect
+	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190605020000-c4ba1fdf4d36
 	github.com/aws/aws-sdk-go v1.19.45
+	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/protobuf v1.3.1
@@ -41,6 +38,7 @@ require (
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/grpc-ecosystem/grpc-gateway v1.9.0 // indirect
 	github.com/lib/pq v1.1.1
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	go.opencensus.io v0.22.0
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 	golang.org/x/net v0.0.0-20190606173856-1492cefac77f
@@ -52,6 +50,5 @@ require (
 	google.golang.org/appengine v1.6.1 // indirect
 	google.golang.org/genproto v0.0.0-20190605220351-eb0b1bdb6ae6
 	google.golang.org/grpc v1.21.1
-	gopkg.in/yaml.v2 v2.2.1 // indirect
 	pack.ag/amqp v0.11.0
 )
