@@ -21,15 +21,15 @@ It does this by providing stable, idiomatic interfaces for common uses like
 storage and databases. Think `database/sql` for cloud products.
 
 At the core of the Go CDK are common "portable types" implemented by cloud
-providers. For example, objects of the blob.Bucket portable type can be created
-using gcsblob.OpenBucket, s3blob.OpenBucket, or any other provider. Then, the
-blob.Bucket can be used throughout your application without worrying about
-the underlying implementation.
+services. For example, objects of the blob.Bucket portable type can be created
+using gcsblob.OpenBucket, s3blob.OpenBucket, or any other service with a
+Go CDK driver implementation. Then, the blob.Bucket can be used throughout
+your application without worrying about the underlying implementation.
 
 The Go CDK works well with a code generator called Wire
 (https://github.com/google/wire/blob/master/README.md). It creates
-human-readable code that only imports the cloud SDKs for providers you use. This
-allows the Go CDK to grow to support any number of cloud providers, without
+human-readable code that only imports the cloud SDKs for drivers you use. This
+allows the Go CDK to grow to support any number of cloud services, without
 increasing compile times or binary sizes, and avoiding any side effects from
 `init()` functions.
 
@@ -42,6 +42,6 @@ See https://gocloud.dev/concepts/urls/ for a discussion of URLs in the Go CDK.
 As
 
 See https://gocloud.dev/concepts/as/ for a discussion of how to write
-provider-specific code with the Go CDK.
+service-specific code with the Go CDK.
 */
 package cloud // import "gocloud.dev"
