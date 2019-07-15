@@ -311,7 +311,7 @@ func (ts *TestSuite) CompareT(t *testing.T) {
 
 func (tf *testFile) compare() string {
 	if err := tf.execute(); err != nil {
-		return fmt.Sprintf("%v\n", err)
+		return fmt.Sprintf("%v", err)
 	}
 	buf := new(bytes.Buffer)
 	for _, c := range tf.cases {
