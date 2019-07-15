@@ -9,9 +9,13 @@ hello world
 $ echo now
 $ echo is
 $ echo the time
+$ echo when\nwe\ndance
 now
 is
 the time
+when
+we
+dance
 
 # Let's make a directory.
 
@@ -48,3 +52,8 @@ line two
 $ echof bar line three
 $ cat bar
 line three
+
+$ echof bar line\nfour
+$ cat bar
+line
+four
