@@ -1,3 +1,9 @@
+// This file demonstrates basic usage of the docstore.Collection portable type.
+//
+// It initializes a docstore.Collection URL based on the environment variable
+// DOCSTORE_COLLECTION_URL, and then registers handlers for "/demo/docstore" on
+// http.DefaultServeMux.
+
 package main
 
 import (
@@ -16,38 +22,39 @@ import (
 	_ "gocloud.dev/docstore/mongodocstore"
 )
 
-// TODO(rvangent): This file is user-visible, add many comments explaining
-// how it works.
+// Package variables for the docstore.Collection URL, and the initialized docstore.Collection.
+var (
+	collectionURL string
+	collection    *docstore.Collection
+	collectionErr error
+)
 
 func init() {
+	// Register handlers. See https://golang.org/pkg/net/http/.
 	http.HandleFunc("/demo/docstore/", docstoreBaseHandler)
 	http.HandleFunc("/demo/docstore/list", docstoreListHandler)
 	http.HandleFunc("/demo/docstore/edit", docstoreEditHandler)
-}
 
-var collectionURL string
-var collection *docstore.Collection
-var collectionErr error
-
-func init() {
-	ctx := context.Background()
-
+	// Initialize the docstore.Collection using a URL from the environment,
+	// defaulting to an in-memory implementation. Note that the in-memory
+	// docstore starts out empty every time you run the application!
 	collectionURL = os.Getenv("DOCSTORE_COLLECTION_URL")
 	if collectionURL == "" {
 		collectionURL = "mem://mycollection/Key"
 	}
-	collection, collectionErr = docstore.OpenCollection(ctx, collectionURL)
+	collection, collectionErr = docstore.OpenCollection(context.Background(), collectionURL)
 }
 
+// MyDocument holds the data for each document in the docstore collection.
 type MyDocument struct {
-	Key   string
-	Value string
-	// TODO(rvangent): Rename this field to demonstrate setting it once
-	// https://github.com/google/go-cloud/issues/2413 is fixed.
+	Key              string
+	Value            string
 	DocstoreRevision interface{}
 }
 
-// TODO(rvangent): This is pretty raw HTML. Should we have a common style sheet/etc. for demos?
+// The structs below hold the input to each of the pages in the demo.
+// Each page handler will initialize one of the structs and pass it to
+// one of the templates.
 
 type docstoreBaseData struct {
 	URL string
@@ -66,7 +73,6 @@ type docstoreEditData struct {
 	Create       bool
 	Key          string
 	Value        string
-	Revision     string
 	WriteSuccess bool
 }
 
@@ -80,15 +86,11 @@ const (
 </head>
 <body>
   <p>
-    This page demonstrates the use of Go CDK's <a href="https://godoc.org/gocloud.dev/docstore">docstore</a> package.
+    This page demonstrates the use of Go CDK's <a href="https://gocloud.dev/howto/docstore">docstore</a> package.
   </p>
   <p>
     It is currently using a docstore.Collection based on the URL "{{ .URL }}", which
     can be configured via the environment variable "DOCSTORE_COLLECTION_URL".
-  </p>
-  <p>
-    See <a href="https://gocloud.dev/concepts/urls/">here</a> for more
-    information about URLs in Go CDK APIs.
   </p>
   <ul>
     <li><a href="./list">List</a> the documents in the collection</li>
@@ -102,9 +104,11 @@ const (
 </body>
 </html>`
 
+	// docstoreBaseTemplate is the template for /demo/docstore. See docstoreBaseHandler.
 	// Input: *docstoreBaseData.
 	docstoreBaseTemplate = docstoreTemplatePrefix + docstoreTemplateSuffix
 
+	// docstoreListTemplate is the template for /demo/docstore/list. See docstoreListHandler.
 	// Input: *docstoreListData.
 	docstoreListTemplate = docstoreTemplatePrefix + `
   {{range .Keys}}
@@ -113,6 +117,7 @@ const (
     </div>
   {{end}}` + docstoreTemplateSuffix
 
+	// docstoreEditTemplate is the template for /demo/docstore/edit. See docstoreEditHandler.
 	// Input: *docstoreEditData.
 	docstoreEditTemplate = docstoreTemplatePrefix + `
   {{if .WriteSuccess}}
@@ -135,9 +140,6 @@ const (
       <br/>
       <input type="text" name="value" value="{{ .Value }}">
     </label></p>
-    {{if not .Create}}
-      <p>Revision: {{ .Revision }}</p>
-    {{end}}
     <input type="submit" value="Write It!">
     </form>
   {{end}}` + docstoreTemplateSuffix
@@ -149,6 +151,7 @@ var (
 	docstoreEditTmpl = template.Must(template.New("docstore edit").Parse(docstoreEditTemplate))
 )
 
+// docstoreBaseHandler is the handler for /demo/docstore.
 func docstoreBaseHandler(w http.ResponseWriter, req *http.Request) {
 	data := &docstoreBaseData{URL: collectionURL}
 	if err := docstoreBaseTmpl.Execute(w, data); err != nil {
@@ -156,9 +159,10 @@ func docstoreBaseHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// docstoreListHandler lists the items in a collection, possibly under a "prefix"
-// query parameter. Each listed directory is a link to list that directory,
-// and each non-directory is a link to view that file.
+// docstoreListHandler is the handler for /demo/docstore/list.
+//
+// It lists the keys for documents in the collection.
+// Each item is shown as a link to edit that document.
 func docstoreListHandler(w http.ResponseWriter, req *http.Request) {
 	data := &docstoreListData{URL: collectionURL}
 	defer func() {
@@ -167,14 +171,15 @@ func docstoreListHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	// Verify that collection initialization succeeded.
 	if collectionErr != nil {
 		data.Err = collectionErr
 		return
 	}
-	// TODO(rvangent): The 1000 limit is arbitrary. Give an error if it is
-	// reached? Or drop it?
-	// TODO(rvangent): Consider adding filters on Key to demonstrate queries
-	// better. Add OrderBy?
+
+	// Iterate over documents in the collection, only fetching the "Key" field.
+	// The demo uses an arbitrary limit of 1000 documents; docstore supports
+	// a variety of query filters.
 	iter := collection.Query().Limit(1000).Get(req.Context(), "Key")
 	defer iter.Stop()
 	for {
@@ -194,6 +199,9 @@ func docstoreListHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// docstoreEditHandler is the handler for /demo/docstore/edit.
+//
+// It renders a form to create a new document, or to edit an existing one.
 func docstoreEditHandler(w http.ResponseWriter, req *http.Request) {
 	data := &docstoreEditData{
 		URL:    collectionURL,
@@ -207,14 +215,16 @@ func docstoreEditHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	// Verify that collection initialization succeeded.
 	if collectionErr != nil {
 		data.Err = collectionErr
 		return
 	}
 
-	if req.Method != "POST" {
-		// Just preparing the form. For create, nothing to do; for edit,
-		// load the existing document.
+	if req.Method == http.MethodGet {
+		// Prepare the edit form.
+		// For create, it will be blank.
+		// For edit, load the existing document.
 		if data.Create {
 			return
 		}
@@ -222,6 +232,7 @@ func docstoreEditHandler(w http.ResponseWriter, req *http.Request) {
 			data.Err = errors.New("key must be provided to edit")
 			return
 		}
+		// Fetch the full document at the given Key.
 		doc := MyDocument{Key: data.Key}
 		err := collection.Get(req.Context(), &doc)
 		if err != nil {
@@ -229,11 +240,10 @@ func docstoreEditHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		data.Value = doc.Value
-		data.Revision = fmt.Sprintf("%v", doc.DocstoreRevision)
 		return
 	}
 
-	// POST
+	// POST.
 	if data.Key == "" {
 		data.Err = errors.New("enter a non-empty key")
 		return
@@ -246,11 +256,8 @@ func docstoreEditHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	} else {
-		// Updating an existing document.
-		// TODO(rvangent): I am not sure why this works without a revision;
-		// see https://github.com/google/go-cloud/issues/2417.
 		if err := collection.Replace(req.Context(), &doc); err != nil {
-			data.Err = fmt.Errorf("document put failed: %v", err)
+			data.Err = fmt.Errorf("document replace failed: %v", err)
 			return
 		}
 	}

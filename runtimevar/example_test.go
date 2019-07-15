@@ -181,7 +181,7 @@ func ExampleVariable_Watch() {
 }
 
 func ExampleDecryptDecode() {
-	// This example is used in https://gocloud.dev/howto/secrets/runtimevar/
+	// This example is used in https://gocloud.dev/howto/secrets/#runtimevar
 
 	// Variables set up elsewhere:
 	var keeper *secrets.Keeper

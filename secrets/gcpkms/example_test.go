@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#gcp-ctor
+	// This example is used in https://gocloud.dev/howto/secrets/#gcp-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -48,7 +48,7 @@ func ExampleOpenKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#gcp
+	// This example is used in https://gocloud.dev/howto/secrets/#gcp
 
 	// import _ "gocloud.dev/secrets/gcpkms"
 

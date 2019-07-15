@@ -93,7 +93,5 @@ func Test(t *testing.T) {
 		time.Sleep(dur)
 		return nil, nil
 	}
-	if err := ts.Run(*update); err != nil {
-		t.Error(err)
-	}
+	ts.Run(t, *update)
 }

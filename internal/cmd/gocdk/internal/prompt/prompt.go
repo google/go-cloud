@@ -83,12 +83,17 @@ func askIfNeeded(biomeDir, tfLocalName string, promptFn func() (string, error)) 
 	return val, nil
 }
 
+// AWSRegionTfLocalName is the name used to store the AWS region in main.tf.
+const AWSRegionTfLocalName = "aws_region"
+
+// AWSRegion prompts the user for an AWS region.
+func AWSRegion(reader *bufio.Reader, out io.Writer) (string, error) {
+	return String(reader, out, "Please enter an AWS region.\n  See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for more information.", "us-west-1")
+}
+
 // AWSRegionIfNeeded prompts the user for an AWS region if needed.
 func AWSRegionIfNeeded(reader *bufio.Reader, out io.Writer, biomeDir string) (string, error) {
-	prompt := func() (string, error) {
-		return String(reader, out, "Please enter an AWS region.\n  See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for more information.", "us-west-1")
-	}
-	return askIfNeeded(biomeDir, "aws_region", prompt)
+	return askIfNeeded(biomeDir, "aws_region", func() (string, error) { return AWSRegion(reader, out) })
 }
 
 // AzureLocationIfNeeded prompts the user for an Azure location if needed.

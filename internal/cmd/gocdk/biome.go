@@ -107,7 +107,7 @@ func biomeAdd(ctx context.Context, pctx *processContext, biome, launcher string)
 		var err error
 		// TODO(rvangent): Do this as a selection instead of freeform input?
 		reader := bufio.NewReader(pctx.stdin)
-		launcher, err = prompt.String(reader, pctx.stderr, "Please enter a launcher to use (local, cloudrun)", "local")
+		launcher, err = prompt.String(reader, pctx.stderr, "Please enter a launcher to use (local, cloudrun, ecs)", "local")
 		if err != nil {
 			return err
 		}
@@ -137,10 +137,40 @@ func biomeAdd(ctx context.Context, pctx *processContext, biome, launcher string)
 		if err != nil {
 			return xerrors.Errorf("biome add: %w", err)
 		}
+		saveActions = append(saveActions,
+			static.AddProvider("google"),
+			&static.Action{
+				SourcePath:  "/launchers/cloudrun.tf",
+				DestRelPath: "main.tf",
+				DestExists:  true,
+			},
+		)
 		launchSpecifiers = append(launchSpecifiers,
 			&launchSpecifier{Key: "project_id", Value: strconv.Quote("${local.gcp_project}")},
 			&launchSpecifier{Key: "location", Value: strconv.Quote("${local.gcp_region}")},
 			&launchSpecifier{Key: "service_name", Value: strconv.Quote(serviceName)},
+		)
+	case "ecs":
+		pctx.Logf("")
+		pctx.Logf("To launch on ECS, we need a few pieces of information.")
+		reader := bufio.NewReader(pctx.stdin)
+		region, err := prompt.AWSRegion(reader, pctx.stderr)
+		if err != nil {
+			return xerrors.Errorf("biome add: %w", err)
+		}
+		saveActions = append(saveActions,
+			static.AddLocal(prompt.AWSRegionTfLocalName, region),
+			static.AddProvider("aws"),
+			static.AddProvider("random"),
+			&static.Action{
+				SourcePath:  "/launchers/ecs.tf",
+				DestRelPath: "ecs.tf",
+			},
+		)
+		launchSpecifiers = append(launchSpecifiers,
+			&launchSpecifier{Key: "cluster", Value: "aws_ecs_cluster.default.name"},
+			&launchSpecifier{Key: "region", Value: "local." + prompt.AWSRegionTfLocalName},
+			&launchSpecifier{Key: "image_name", Value: "aws_ecr_repository.default.repository_url"},
 		)
 	default:
 		return fmt.Errorf("biome add: %q is not a supported launcher", launcher)
