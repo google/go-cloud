@@ -5,7 +5,6 @@ require (
 	github.com/Azure/azure-pipeline-go v0.1.9
 	github.com/Azure/azure-storage-blob-go v0.6.0
 	github.com/aws/aws-sdk-go v1.19.45
-	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/google/go-cmp v0.3.0
 	github.com/google/subcommands v1.0.1
