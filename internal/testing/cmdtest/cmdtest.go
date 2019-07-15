@@ -301,7 +301,7 @@ func (ts *TestSuite) Compare() error {
 // subtest, and calls t.Error if there are errors or differences.
 func (ts *TestSuite) CompareT(t *testing.T) {
 	for _, tf := range ts.files {
-		t.Run(tf.filename, func(t *testing.T) {
+		t.Run(strings.TrimSuffix(tf.filename, ".ct"), func(t *testing.T) {
 			if s := tf.compare(); s != "" {
 				t.Error(s)
 			}
@@ -345,7 +345,7 @@ func (ts *TestSuite) Update() error {
 // files.
 func (ts *TestSuite) UpdateT(t *testing.T) {
 	for _, tf := range ts.files {
-		t.Run(tf.filename, func(t *testing.T) {
+		t.Run(strings.TrimSuffix(tf.filename, ".ct"), func(t *testing.T) {
 			tmpfile, err := tf.updateToTemp()
 			if err != nil {
 				t.Fatal(err)
