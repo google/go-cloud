@@ -8,6 +8,7 @@ $ echo hello world
 $ echo now
 $ echo is
 $ echo the time
+$ echo when\nwe\ndance
 
 # Let's make a directory.
 
@@ -34,4 +35,7 @@ $ echoStdin < bar
 # its redirections.
 
 $ echof bar line three
+$ cat bar
+
+$ echof bar line\nfour
 $ cat bar
