@@ -117,14 +117,14 @@ func TestCompare(t *testing.T) {
 	ts := mustReadTestSuite(t, "good")
 	ts.Commands["echo-stdin"] = Program("echo-stdin")
 	ts.Commands["echoStdin"] = InProcessProgram("echoStdin", echoStdin)
-	ts.CompareT(t)
+	ts.Run(t, false)
 
 	// Test errors.
 	// Since the output of cmp.Diff is unstable, we search for regexps we expect
 	// to find there, rather than checking an exact match.
 	ts = mustReadTestSuite(t, "bad")
 	ts.Commands["echo-stdin"] = Program("echo-stdin")
-	err := ts.Compare()
+	err := ts.compareReturningError()
 	if err == nil {
 		t.Fatal("got nil, want error")
 	}
