@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver defines interfaces to be implemented for providers of the
+// Package driver defines interfaces to be implemented for drivers of the
 // secrets package.
 package driver // import "gocloud.dev/secrets/driver"
 
@@ -29,7 +29,7 @@ type Keeper interface {
 
 	// Decrypt decrypts the ciphertext and returns the plaintext or an error.
 	// Decrypt *may* decrypt ciphertexts that were encrypted using a different
-	// key than the one provided to Keeper; some providers encode the key used
+	// key than the one provided to Keeper; some drivers encode the key used
 	// in the ciphertext.
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 
@@ -39,7 +39,7 @@ type Keeper interface {
 	// Close releases any resources used for the Keeper.
 	Close() error
 
-	// ErrorAs allows providers to expose provider-specific types for returned
+	// ErrorAs allows drivers to expose driver-specific types for returned
 	// errors.
 	//
 	// See https://gocloud.dev/concepts/as/ for background information.

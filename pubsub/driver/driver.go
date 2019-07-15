@@ -48,7 +48,7 @@ type Message struct {
 	// be set by methods implementing Subscription.ReceiveBatch.
 	AckID AckID
 
-	// AsFunc allows providers to expose provider-specific types;
+	// AsFunc allows drivers to expose driver-specific types;
 	// see Topic.As for more details.
 	// AsFunc must be populated on messages returned from ReceiveBatch.
 	AsFunc func(interface{}) bool
@@ -58,7 +58,7 @@ type Message struct {
 	//
 	// The callback must be called exactly once, before the message is sent.
 	//
-	// asFunc converts its argument to provider-specific types.
+	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeSend func(asFunc func(interface{}) bool) error
 }
@@ -95,11 +95,11 @@ type Topic interface {
 	// err will always be a non-nil error returned from SendBatch.
 	IsRetryable(err error) bool
 
-	// As allows providers to expose provider-specific types.
+	// As allows drivers to expose driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
-	// ErrorAs allows providers to expose provider-specific types for errors.
+	// ErrorAs allows drivers to expose driver-specific types for errors.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	ErrorAs(error, interface{}) bool
 
@@ -143,7 +143,7 @@ type Subscription interface {
 	// This method should return only after all the ackIDs are sent, an
 	// error occurs, or the context is done.
 	//
-	// It is acceptable for SendAcks to be a no-op for providers that don't
+	// It is acceptable for SendAcks to be a no-op for drivers that don't
 	// support message acknowledgement.
 	//
 	// SendAcks may be called concurrently from multiple goroutines.
@@ -165,7 +165,7 @@ type Subscription interface {
 	// This method should return only after all the ackIDs are sent, an
 	// error occurs, or the context is done.
 	//
-	// If the provider does not suppport nacking of messages, return false from
+	// If the service does not suppport nacking of messages, return false from
 	// CanNack, and SendNacks will never be called.
 	//
 	// SendNacks may be called concurrently from multiple goroutines.
@@ -179,11 +179,11 @@ type Subscription interface {
 	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.
 	IsRetryable(err error) bool
 
-	// As converts i to provider-specific types.
+	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
-	// ErrorAs allows providers to expose provider-specific types for errors.
+	// ErrorAs allows drivers to expose driver-specific types for errors.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	ErrorAs(error, interface{}) bool
 

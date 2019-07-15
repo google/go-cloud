@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver provides the interface for providers of runtimevar.  This serves as a contract
-// of how the runtimevar API uses a provider implementation.
+// Package driver defines an interface that the runtimevar package uses to
+// interact with the underlying runtime configuration services.
 package driver // import "gocloud.dev/runtimevar/driver"
 
 import (
@@ -41,7 +41,7 @@ type State interface {
 	// UpdateTime returns the update time for the variable.
 	UpdateTime() time.Time
 
-	// As converts i to provider-specific types.
+	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	As(interface{}) bool
 }
@@ -52,12 +52,12 @@ type State interface {
 // An application can have more than one Watcher, one for each variable.  It is typical
 // to only have one Watcher per variable.
 //
-// Many Watcher providers store their configuration data as raw bytes; such
-// providers should include a runtimevar.Decoder in their constructor to allow
+// Many services store their configuration data as raw bytes; drivers for such
+// services should include a runtimevar.Decoder in their constructor to allow
 // users to decode the raw bytes into a particular format (e.g., parsing a
 // JSON string).
 //
-// Providers that don't have raw bytes may dictate the type of the exposed
+// Drivers for services that don't have raw bytes may dictate the type of the exposed
 // Snapshot.Value, or expose custom decoding logic.
 type Watcher interface {
 	// WatchVariable returns the current State of the variable.
@@ -88,7 +88,7 @@ type Watcher interface {
 	// Close cleans up any resources used by the Watcher object.
 	Close() error
 
-	// ErrorAs allows providers to expose provider-specific types for returned
+	// ErrorAs allows drivers to expose driver-specific types for returned
 	// errors; see State.As for more details.
 	ErrorAs(error, interface{}) bool
 

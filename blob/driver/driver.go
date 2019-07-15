@@ -31,7 +31,7 @@ type ReaderOptions struct {
 	// BeforeRead is a callback that must be called exactly once before
 	// any data is read, unless NewRangeReader returns an error before then, in
 	// which case it should not be called at all.
-	// asFunc allows providers to expose provider-specific types;
+	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	BeforeRead func(asFunc func(interface{}) bool) error
 }
@@ -44,7 +44,7 @@ type Reader interface {
 	// The portable type will not modify the returned ReaderAttributes.
 	Attributes() *ReaderAttributes
 
-	// As allows providers to expose provider-specific types;
+	// As allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	As(interface{}) bool
 }
@@ -60,7 +60,7 @@ type WriterOptions struct {
 	// write in a single request, if supported. Larger objects will be split into
 	// multiple requests.
 	BufferSize int
-	// CacheControl specifies caching attributes that providers may use
+	// CacheControl specifies caching attributes that services may use
 	// when serving the blob.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 	CacheControl string
@@ -87,7 +87,7 @@ type WriterOptions struct {
 	// BeforeWrite is a callback that must be called exactly once before
 	// any data is written, unless NewTypedWriter returns an error, in
 	// which case it should not be called.
-	// asFunc allows providers to expose provider-specific types;
+	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
@@ -95,7 +95,7 @@ type WriterOptions struct {
 // CopyOptions controls options for Copy.
 type CopyOptions struct {
 	// BeforeCopy is a callback that must be called before initiating the Copy.
-	// asFunc allows providers to expose provider-specific types;
+	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	BeforeCopy func(asFunc func(interface{}) bool) error
 }
@@ -114,7 +114,7 @@ type ReaderAttributes struct {
 
 // Attributes contains attributes about a blob.
 type Attributes struct {
-	// CacheControl specifies caching attributes that providers may use
+	// CacheControl specifies caching attributes that services may use
 	// when serving the blob.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 	CacheControl string
@@ -143,9 +143,9 @@ type Attributes struct {
 	Size int64
 	// MD5 is an MD5 hash of the blob contents or nil if not available.
 	MD5 []byte
-	// AsFunc allows providers to expose provider-specific types;
+	// AsFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
-	// If not set, no provider-specific types are supported.
+	// If not set, no driver-specific types are supported.
 	AsFunc func(interface{}) bool
 }
 
@@ -174,8 +174,8 @@ type ListOptions struct {
 	// ListPaged call.
 	PageToken []byte
 	// BeforeList is a callback that must be called exactly once during ListPaged,
-	// before the underlying provider's list is executed.
-	// asFunc allows providers to expose provider-specific types;
+	// before the underlying service's list is executed.
+	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	BeforeList func(asFunc func(interface{}) bool) error
 }
@@ -195,9 +195,9 @@ type ListObject struct {
 	// passed as ListOptions.Prefix to list items in the "directory".
 	// Fields other than Key and IsDir will not be set if IsDir is true.
 	IsDir bool
-	// AsFunc allows providers to expose provider-specific types;
+	// AsFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
-	// If not set, no provider-specific types are supported.
+	// If not set, no driver-specific types are supported.
 	AsFunc func(interface{}) bool
 }
 
@@ -225,11 +225,11 @@ type Bucket interface {
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
 
-	// As converts i to provider-specific types.
+	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
-	// ErrorAs allows providers to expose provider-specific types for returned
+	// ErrorAs allows drivers to expose driver-specific types for returned
 	// errors.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	ErrorAs(error, interface{}) bool
@@ -242,7 +242,7 @@ type Bucket interface {
 
 	// ListPaged lists objects in the bucket, in lexicographical order by
 	// UTF-8-encoded key, returning pages of objects at a time.
-	// Providers are only required to be eventually consistent with respect
+	// Services are only required to be eventually consistent with respect
 	// to recently written or deleted objects. That is to say, there is no
 	// guarantee that an object that's been written will immediately be returned
 	// from ListPaged.

@@ -26,11 +26,10 @@ type Server interface {
 	// calls Serve with handler to handle requests on incoming connections.
 	// The addr argument will be a non-empty string specifying "host:port".
 	// The http.Handler will always be non-nil.
-	// Provider implementations must block until serving is done (or
+	// Drivers must block until serving is done (or
 	// return an error if serving can't occur for some reason), serve
 	// requests to the given http.Handler, and be interruptable by Shutdown.
-	// Provider implementations should use the given address
-	// if they serve using TCP directly.
+	// Drivers should use the given address if they serve using TCP directly.
 	ListenAndServe(addr string, h http.Handler) error
 	// Shutdown gracefully shuts down the server without interrupting
 	// any active connections. If the provided context expires before
