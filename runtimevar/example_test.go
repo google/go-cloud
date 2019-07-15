@@ -88,6 +88,7 @@ func ExampleVariable_Latest() {
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
+	// If runtimevar.StringDecoder was used when constructing v, the
 	// snapshot.Value will be of type string.
 	fmt.Printf("%q\n", snapshot.Value.(string))
 }
@@ -175,7 +176,7 @@ func ExampleVariable_Watch() {
 }
 
 func ExampleDecryptDecode() {
-	// This example is used in https://gocloud.dev/howto/secrets/runtimevar/
+	// This example is used in https://gocloud.dev/howto/secrets/#runtimevar
 
 	// Variables set up elsewhere:
 	var keeper *secrets.Keeper

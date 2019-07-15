@@ -30,7 +30,7 @@ type MyConfig struct {
 }
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#ps-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps-ctor
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
@@ -53,7 +53,7 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#ps-url
+	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps
 
 	// import _ "gocloud.dev/runtimervar/awsparamstore"
 
@@ -62,12 +62,9 @@ func Example_openVariableFromURL() {
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	v, err := runtimevar.OpenVariable(ctx, "awsparamstore://myvar?region=us-west-1")
+	v, err := runtimevar.OpenVariable(ctx, "awsparamstore://myvar?region=us-west-1&decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Ignore unused variables in example:
-	snapshot, err := v.Latest(ctx)
-	_, _ = snapshot, err
+	defer v.Close()
 }

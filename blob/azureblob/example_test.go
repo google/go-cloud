@@ -19,12 +19,13 @@ import (
 	"log"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
 )
 
 func ExampleOpenBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure-ctor
+	// This example is used in https://gocloud.dev/howto/blob/#azure-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -91,7 +92,7 @@ func ExampleOpenBucket_usingSASToken() {
 }
 
 func Example_openBucketFromURL() {
-	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure
+	// This example is used in https://gocloud.dev/howto/blob/#azure
 
 	// import _ "gocloud.dev/blob/azureblob"
 
@@ -108,4 +109,53 @@ func Example_openBucketFromURL() {
 		log.Fatal(err)
 	}
 	defer bucket.Close()
+}
+
+func ExampleOpenBucket_usingAADCredentials() {
+	const (
+		// Your Azure Storage Account.
+		accountName = azureblob.AccountName("my-account")
+
+		// Your Azure AAD Service Principal with access to the storage account.
+		// https://docs.microsoft.com/en-us/azure/storage/common/storage-auth-aad-app
+		clientID     = "123"
+		clientSecret = "456"
+		tenantID     = "789"
+
+		// The storage container to access.
+		containerName = "my-container"
+	)
+
+	// Get an Oauth2 token for the account for use with Azure Storage.
+	ccc := auth.NewClientCredentialsConfig(clientID, clientSecret, tenantID)
+
+	// Set the target resource to the Azure storage. This is available as a
+	// constant using "azure.PublicCloud.ResourceIdentifiers.Storage".
+	ccc.Resource = "https://storage.azure.com/"
+	token, err := ccc.ServicePrincipalToken()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Refresh OAuth2 token.
+	if err := token.RefreshWithContext(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the credential using the OAuth2 token.
+	credential := azblob.NewTokenCredential(token.OAuthToken(), nil)
+
+	// Create a Pipeline, using whatever PipelineOptions you need.
+	pipeline := azureblob.NewPipeline(credential, azblob.PipelineOptions{})
+
+	// Create a *blob.Bucket.
+	// Note that we're not supplying azureblob.Options.Credential, so SignedURL
+	// won't work. To use SignedURL, you need a real credential (see the other
+	// example).
+	ctx := context.Background()
+	b, err := azureblob.OpenBucket(ctx, pipeline, accountName, containerName, new(azureblob.Options))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer b.Close()
 }

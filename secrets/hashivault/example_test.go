@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault-ctor
+	// This example is used in https://gocloud.dev/howto/secrets/#vault-ctor
 
 	// import _ "gocloud.dev/secrets/hashivault"
 
@@ -48,7 +48,7 @@ func ExampleOpenKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#vault
+	// This example is used in https://gocloud.dev/howto/secrets/#vault
 
 	// import _ "gocloud.dev/secrets/hashivault"
 

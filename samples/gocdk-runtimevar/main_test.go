@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"os/exec"
 	"testing"
 	"time"
 
@@ -74,9 +73,6 @@ func Test(t *testing.T) {
 		if res.err == context.Canceled {
 			res.err = nil
 		}
-		if ee, ok := res.err.(*exec.ExitError); ok && ee.ExitCode() == -1 { // killed by signal
-			res.err = nil
-		}
 
 		ctx = context.Background()
 		cancel = nil
@@ -97,8 +93,5 @@ func Test(t *testing.T) {
 		time.Sleep(dur)
 		return nil, nil
 	}
-
-	if err := ts.Run(*update); err != nil {
-		t.Error(err)
-	}
+	ts.Run(t, *update)
 }

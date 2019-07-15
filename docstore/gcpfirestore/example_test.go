@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#firestore-ctor.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -46,7 +46,7 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithNameFunc() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#firestore-ctor.
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -79,7 +79,7 @@ func ExampleOpenCollectionWithNameFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore.
+	// This example is used in https://gocloud.dev/howto/docstore#firestore.
 
 	// import _ "gocloud.dev/docstore/gcpfirestore"
 

@@ -15,7 +15,9 @@
 package launcher
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -24,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	cdkaws "gocloud.dev/aws"
 	"gocloud.dev/internal/cmd/gocdk/internal/docker"
@@ -57,7 +60,28 @@ func (l *ECS) Launch(ctx context.Context, input *Input) (*url.URL, error) {
 	if err != nil {
 		return nil, xerrors.Errorf("ECS launch: %w", err)
 	}
-	// TODO(light): Run `docker login` with credentials from ECR API.
+	registryID := ecrRegistryID(docker.ImageRefRegistry(imageRef))
+	ecrClient := ecr.New(config)
+	authTokenOutput, err := ecrClient.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{
+		RegistryIds: []*string{aws.String(registryID)},
+	})
+	if err != nil {
+		return nil, xerrors.Errorf("ECS launch: %w", err)
+	}
+	for _, data := range authTokenOutput.AuthorizationData {
+		tok, err := base64.StdEncoding.DecodeString(*data.AuthorizationToken)
+		if err != nil {
+			return nil, xerrors.Errorf("ECS launch: decode authorization token: %w", err)
+		}
+		i := bytes.IndexByte(tok, ':')
+		if i == -1 {
+			return nil, xerrors.Errorf("ECS launch: decode authorization token: missing username separator")
+		}
+		username, password := string(tok[:i]), string(tok[i+1:])
+		if err := l.DockerClient.Login(ctx, *data.ProxyEndpoint, username, password); err != nil {
+			return nil, xerrors.Errorf("ECS launch: %w", err)
+		}
+	}
 	// TODO(light): Send docker push output somewhere.
 	if err := l.DockerClient.Push(ctx, imageRef, ioutil.Discard); err != nil {
 		return nil, xerrors.Errorf("ECS launch: %w", err)
@@ -230,9 +254,16 @@ func ecsFamilyName(image string) string {
 // The host name format is documented here:
 // https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html
 func isECRName(image string) bool {
-	registry, _, _ := docker.ParseImageRef(image)
-	if i := strings.IndexByte(registry, '/'); i != -1 {
-		registry = registry[:i]
-	}
+	registry := docker.ImageRefRegistry(image)
 	return strings.HasSuffix(registry, ".amazonaws.com") && strings.Contains(registry, ".dkr.ecr.")
+}
+
+// ecrRegistryID returns the ECR registry ID (same as the account ID) for the
+// given Docker registry (of the form "<account>.dkr.ecr.<region>.amazonaws.com").
+func ecrRegistryID(registry string) string {
+	i := strings.IndexByte(registry, '.')
+	if i == -1 {
+		return ""
+	}
+	return registry[:i]
 }
