@@ -32,8 +32,7 @@ import (
 	"gocloud.dev/internal/testing/cmdtest"
 )
 
-// TODO(vangent): consider renaming to "update"
-var record = flag.Bool("record", false, "true to record the desired output for record/replay testcases")
+var update = flag.Bool("update", false, "true to update the expected output for CLI testcases")
 
 func TestProcessContextModuleRoot(t *testing.T) {
 	ctx := context.Background()
@@ -159,9 +158,7 @@ func TestCLI(t *testing.T) {
 		}
 		return out.Bytes(), nil
 	}
-	if err := ts.Run(*record); err != nil {
-		t.Error(err)
-	}
+	ts.Run(t, *update)
 }
 
 // doList recursively lists the files/directory in dir to out.

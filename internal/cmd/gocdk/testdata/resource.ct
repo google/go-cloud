@@ -44,13 +44,99 @@ $ gocdk resource add dev blob/foo --> FAIL
 gocdk: Adding "blob/foo" to "dev"...
 Error: resource add: "blob/foo" is not a supported type; use 'gocdk resource list' to see available types
 
-# Provision types that don't need any stdin.
-# TODO(rvangent): Add the other types once they work without input.
+$ echof stdin
+$ gocdk resource add dev blob/azureblob < stdin
+gocdk: Adding "blob/azureblob" to "dev"...
+
+Please enter an Azure location.
+  See https://azure.microsoft.com/en-us/global-infrastructure/locations for more information.
+  default: westus
+Enter a value, or "cancel": gocdk:   added a Terraform provider "azurerm" to "main.tf"
+gocdk:   added a Terraform provider "random" to "main.tf"
+gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
+gocdk:   added an output variable "AZURE_STORAGE_ACCOUNT" to "outputs.tf"
+gocdk:   added an output variable "AZURE_STORAGE_KEY" to "outputs.tf"
+gocdk:   added a new file "azureblob.tf"
+gocdk: Success!
+
 $ gocdk resource add dev blob/fileblob
 gocdk: Adding "blob/fileblob" to "dev"...
 gocdk:   added a Terraform provider "local" to "main.tf"
 gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
 gocdk:   added a new file "fileblob.tf"
+gocdk: Success!
+
+$ echof stdin myprojectid\n
+$ gocdk resource add dev blob/gcsblob < stdin
+gocdk: Adding "blob/gcsblob" to "dev"...
+
+Please enter your Google Cloud project ID (e.g. "example-project-123456")
+Enter a value, or "cancel": 
+Please enter a GCP storage location.
+  See https://cloud.google.com/storage/docs/locations for more information.
+  default: US
+Enter a value, or "cancel": gocdk:   added a Terraform provider "google" to "main.tf"
+gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
+gocdk:   added a new file "gcsblob.tf"
+gocdk: Success!
+
+$ echof stdin
+$ gocdk resource add dev blob/s3blob < stdin
+gocdk: Adding "blob/s3blob" to "dev"...
+
+Please enter an AWS region.
+  See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for more information.
+  default: us-west-1
+Enter a value, or "cancel": gocdk:   added a Terraform provider "aws" to "main.tf"
+gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
+gocdk:   added a new file "s3blob.tf"
+gocdk: Success!
+
+$ gocdk resource add dev docstore/awsdynamodb
+gocdk: Adding "docstore/awsdynamodb" to "dev"...
+gocdk:   added an output variable "DOCSTORE_COLLECTION_URL" to "outputs.tf"
+gocdk:   added a new file "awsdynamodb.tf"
+gocdk: Success!
+
+$ gocdk resource add dev docstore/azurecosmos
+gocdk: Adding "docstore/azurecosmos" to "dev"...
+gocdk:   added an output variable "DOCSTORE_COLLECTION_URL" to "outputs.tf"
+gocdk:   added an output variable "MONGO_SERVER_URL" to "outputs.tf"
+gocdk:   added a new file "azurecosmos.tf"
+gocdk: Success!
+
+$ gocdk resource add dev docstore/gcpfirestore
+gocdk: Adding "docstore/gcpfirestore" to "dev"...
+gocdk:   added an output variable "DOCSTORE_COLLECTION_URL" to "outputs.tf"
+gocdk:   added a new file "gcpfirestore.tf"
+gocdk: Success!
+
+$ gocdk resource add dev pubsub/awssnssqs
+gocdk: Adding "pubsub/awssnssqs" to "dev"...
+gocdk:   added an output variable "PUBSUB_SUBSCRIPTION_URL" to "outputs.tf"
+gocdk:   added an output variable "PUBSUB_TOPIC_URL" to "outputs.tf"
+gocdk:   added a new file "awssnssqs.tf"
+gocdk: Success!
+
+$ gocdk resource add dev pubsub/azuresb
+gocdk: Adding "pubsub/azuresb" to "dev"...
+gocdk:   added an output variable "PUBSUB_SUBSCRIPTION_URL" to "outputs.tf"
+gocdk:   added an output variable "PUBSUB_TOPIC_URL" to "outputs.tf"
+gocdk:   added an output variable "SERVICEBUS_CONNECTION_STRING" to "outputs.tf"
+gocdk:   added a new file "azuresb.tf"
+gocdk: Success!
+
+$ gocdk resource add dev pubsub/gcppubsub
+gocdk: Adding "pubsub/gcppubsub" to "dev"...
+gocdk:   added an output variable "PUBSUB_SUBSCRIPTION_URL" to "outputs.tf"
+gocdk:   added an output variable "PUBSUB_TOPIC_URL" to "outputs.tf"
+gocdk:   added a new file "gcppubsub.tf"
+gocdk: Success!
+
+$ gocdk resource add dev runtimevar/awsparamstore
+gocdk: Adding "runtimevar/awsparamstore" to "dev"...
+gocdk:   added an output variable "RUNTIMEVAR_VARIABLE_URL" to "outputs.tf"
+gocdk:   added a new file "awsparamstore.tf"
 gocdk: Success!
 
 $ gocdk resource add dev runtimevar/filevar
@@ -59,13 +145,53 @@ gocdk:   added an output variable "RUNTIMEVAR_VARIABLE_URL" to "outputs.tf"
 gocdk:   added a new file "filevar.tf"
 gocdk: Success!
 
+$ gocdk resource add dev runtimevar/gcpruntimeconfig
+gocdk: Adding "runtimevar/gcpruntimeconfig" to "dev"...
+gocdk:   added an output variable "RUNTIMEVAR_VARIABLE_URL" to "outputs.tf"
+gocdk:   added a new file "gcpruntimeconfig.tf"
+gocdk: Success!
+
+$ gocdk resource add dev secrets/awskms
+gocdk: Adding "secrets/awskms" to "dev"...
+gocdk:   added an output variable "SECRETS_KEEPER_URL" to "outputs.tf"
+gocdk:   added a new file "awskms.tf"
+gocdk: Success!
+
+$ gocdk resource add dev secrets/azurekeyvault
+gocdk: Adding "secrets/azurekeyvault" to "dev"...
+gocdk:   added a Terraform provider "external" to "main.tf"
+gocdk:   added an output variable "SECRETS_KEEPER_URL" to "outputs.tf"
+gocdk:   added an output variable "AZURE_KEYVAULT_AUTH_VIA_CLI" to "outputs.tf"
+gocdk:   added a new file "azurekeyvault.tf"
+gocdk: Success!
+
+$ gocdk resource add dev secrets/gcpkms
+gocdk: Adding "secrets/gcpkms" to "dev"...
+gocdk:   added an output variable "SECRETS_KEEPER_URL" to "outputs.tf"
+gocdk:   added a new file "gcpkms.tf"
+gocdk: Success!
+
 $ cd biomes
 $ ls dev
 dev/
+  awsdynamodb.tf
+  awskms.tf
+  awsparamstore.tf
+  awssnssqs.tf
+  azureblob.tf
+  azurecosmos.tf
+  azurekeyvault.tf
+  azuresb.tf
   biome.json
   fileblob.tf
   filevar.tf
+  gcpfirestore.tf
+  gcpkms.tf
+  gcppubsub.tf
+  gcpruntimeconfig.tf
+  gcsblob.tf
   main.tf
   outputs.tf
+  s3blob.tf
   secrets.auto.tfvars
   variables.tf

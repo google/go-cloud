@@ -88,7 +88,7 @@ const AWSRegionTfLocalName = "aws_region"
 
 // AWSRegion prompts the user for an AWS region.
 func AWSRegion(reader *bufio.Reader, out io.Writer) (string, error) {
-	return String(reader, out, "Please enter an AWS region.\n  See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for more information.", "us-east-1")
+	return String(reader, out, "Please enter an AWS region.\n  See https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html for more information.", "us-west-1")
 }
 
 // AWSRegionIfNeeded prompts the user for an AWS region if needed.

@@ -81,7 +81,7 @@ func Example_errorAs() {
 }
 
 func ExampleKeeper_Encrypt() {
-	// This example is used in https://gocloud.dev/howto/secrets/crypt/
+	// This example is used in https://gocloud.dev/howto/secrets/
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -98,7 +98,7 @@ func ExampleKeeper_Encrypt() {
 }
 
 func ExampleKeeper_Decrypt() {
-	// This example is used in https://gocloud.dev/howto/secrets/crypt/
+	// This example is used in https://gocloud.dev/howto/secrets/
 
 	// Variables set up elsewhere:
 	ctx := context.Background()

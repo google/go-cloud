@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#azure-ctor
+	// This example is used in https://gocloud.dev/howto/secrets/#azure-ctor
 
 	// Get a client to use with the Azure KeyVault API, using default
 	// authorization from the environment.
@@ -44,7 +44,7 @@ func ExampleOpenKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#azure
+	// This example is used in https://gocloud.dev/howto/secrets/#azure
 
 	// import _ "gocloud.dev/secrets/azurekeyvault"
 
