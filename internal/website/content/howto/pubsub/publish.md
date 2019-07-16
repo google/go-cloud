@@ -54,7 +54,7 @@ Credentials][GCP creds].
 [Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
 [GCP creds]: https://cloud.google.com/docs/authentication/production
 
-#### GCP Cloud Pub/Sub Constructor {#gcp-ctor}
+#### Google Cloud Pub/Sub Constructor {#gcp-ctor}
 
 The [`gcppubsub.OpenTopic`][] constructor opens a Cloud Pub/Sub topic. You
 must first obtain [GCP credentials][GCP creds] and then create a gRPC
