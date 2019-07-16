@@ -50,7 +50,7 @@ type Harness interface {
 	// be readable by a subsequent driver.Bucket.
 	MakeDriver(ctx context.Context) (driver.Bucket, error)
 	// HTTPClient should return an unauthorized *http.Client, or nil.
-	// Required if the provider supports SignedURL.
+	// Required if the service supports SignedURL.
 	HTTPClient() *http.Client
 	// Close closes resources used by the harness.
 	Close()
@@ -75,7 +75,7 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 7. Tries to read a non-existent blob, and calls ErrorCheck with the error.
 // 8. Makes a copy of the blob, using BeforeCopy as a CopyOption.
 //
-// For example, an AsTest might set a provider-specific field to a custom
+// For example, an AsTest might set a driver-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
 // AttributesCheck and/or ReaderCheck.
 type AsTest interface {
@@ -180,7 +180,7 @@ func (verifyAsFailsOnNil) ListObjectCheck(o *blob.ListObject) error {
 	return nil
 }
 
-// RunConformanceTests runs conformance tests for provider implementations of blob.
+// RunConformanceTests runs conformance tests for driver implementations of blob.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
@@ -237,7 +237,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 }
 
-// RunBenchmarks runs benchmarks for provider implementations of blob.
+// RunBenchmarks runs benchmarks for driver implementations of blob.
 func RunBenchmarks(b *testing.B, bkt *blob.Bucket) {
 	b.Run("BenchmarkRead", func(b *testing.B) {
 		benchmarkRead(b, bkt)
@@ -2040,7 +2040,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	defer b.Close()
 
 	// Verify that a negative Expiry gives an error. This is enforced in the
-	// portable type, so works regardless of provider support.
+	// portable type, so works regardless of driver support.
 	_, err = b.SignedURL(ctx, key, &blob.SignedURLOptions{Expiry: -1 * time.Minute})
 	if err == nil {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
