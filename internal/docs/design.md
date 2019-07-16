@@ -115,12 +115,12 @@ it is needed.
 
 The exception we permit is URL scheme registration as documented under
 [URLs](#urls). The amount of boilerplate setup code required for URL muxes for
-multiple providers without use of a tool like Wire is an unreasonable burden for
+multiple drivers without use of a tool like Wire is an unreasonable burden for
 users of Go CDK. We want the Go CDK to be usable both with and without Wire. A
 global registry is acceptable as long as its use is not mandatory, but the
 burden is to prove the benefit over the cost.
 
-## Package Naming Conventions
+## Driver Package Naming Conventions
 
 Inside this repository, we name packages that handle cloud services after the
 service name, not the providing cloud (`s3blob` instead of `awsblob`). While a
@@ -142,15 +142,15 @@ The naming convention is `<provider><product><api>`, where:
     *   Include for local/test packages like (e.g., `fileblob`, `mempubsub`).
     *   May be omitted when it makes the package name too long (e.g. `awssnssqs`
         is long enough, don't add `pubsub`).
-    *   Encouraged when it helps distinguish the package from the provider's own
+    *   Encouraged when it helps distinguish the package from the service's own
         package name (e.g., `s3blob` not `s3`).
 
 ## Portable Type Constructors
 
-Portable type constructors are the functions defined in provider-specific
-packages that end users call to get an instance of the portable type. For
-example, `gcsblob.OpenBucket`, which returns an instance of the `*blob.Bucket`
-portable type backed by GCS.
+Portable type constructors are the functions defined in driver packages that end
+users call to get an instance of the portable type. For example,
+`gcsblob.OpenBucket`, which returns an instance of the `*blob.Bucket` portable
+type backed by GCS.
 
 -   Portable type constructors should be top-level functions that return the
     portable type directly. Avoid helpers (e.g., a `Client` struct with a
@@ -177,7 +177,7 @@ breaking backward compatibility.
 -   The argument should be of type `*Options`, so that `nil` can be passed in
     the default case.
 -   Name the `Options` struct appropriately. `Options` is usually fine for
-    provider constructors since the package generally only exposes a
+    portable type constructors since the package generally only exposes a
     constructor. Inside a driver interface or in a portable type like `blob`,
     use more descriptive names like `ReaderOptions` or `WriterOptions`.
 -   If a function already has a struct argument, don't add a separate `Options`
@@ -190,7 +190,7 @@ breaking backward compatibility.
     portable type (e.g., `blob.WriterOptions`), duplicate the struct instead of
     aliasing or embedding it, and copy the struct fields explicitly where
     needed. This allows the godoc for each type to be tailored to the
-    appropriate audience (e.g. end-users for the portable type, provider
+    appropriate audience (e.g. end-users for the portable type, driver
     implementors for the driver interface), and also allows the structs to
     diverge over time if appropriate.
 -   Required arguments must not be in an `Options` struct, and all fields of the
@@ -398,7 +398,7 @@ widget, err := myMux.OpenWidget(context.Background(), "gcpwidget://xyzzy")
 
 Driver implementations should:
 
--   Return the raw errors from the underlying provider, and not wrap them in
+-   Return the raw errors from the underlying service, and not wrap them in
     `fmt.Errorf` calls, so that they can be exposed to end users via `ErrorAs`.
 
 ### Portable Types
@@ -406,7 +406,7 @@ Driver implementations should:
 Portable types should:
 
 -   Wrap errors returned from driver implementations before returning them to
-    end users, so that users can't peek into provider-specific error details
+    end users, so that users can't peek into driver-specific error details
     without using `As`. Make sure not to double-wrap.
 
 -   Use `internal/gcerr.New` when wrapping driver errors, like so: `if err :=
@@ -427,7 +427,7 @@ Portable types should:
 
 -   If certain `error`s are interesting for callers to distinguish, choose one
     of the other codes from the `gcerrors.ErrorCode` enum, so user programs can
-    act on the kind of error without having to look at provider-specific errors.
+    act on the kind of error without having to look at driver-specific errors.
 
     -   If more than one error code makes sense, choose the most specific one.
     -   If none make sense, choose `Unknown`.
@@ -440,7 +440,7 @@ Portable types should:
             package. Your code should use a negative integer.
 
 -   For now, your package should expose an `ErrorAs` function to allow users to
-    access provider-specific error types. We may review this choice if
+    access driver-specific error types. We may review this choice if
     `golang.org/x/xerrors.As` becomes part of the standard library.
 
 -   Handle transient network errors. Retry logic is best handled as low in the
@@ -464,7 +464,7 @@ type could be converted into the type provided as the `interface{}`.
 An alternative approach would have been something like
 [`os.ProcessState.Sys`](https://golang.org/pkg/os/#ProcessState.Sys), which
 returns an `interface{}` that the user can then type cast/assert to
-provider-specific types.
+service-specific types.
 
 We ended up going with `As` because:
 
@@ -490,17 +490,17 @@ We ended up going with `As` because:
 ## Enforcing Portability
 
 The Go CDK APIs will end up exposing functionality that is not supported by all
-provider implementations. In addition, some functionality details will differ
-across providers. Some theoretical examples using [`blob.Bucket`][]:
+services. In addition, some functionality details will differ across services.
+Some theoretical examples using [`blob.Bucket`][]:
 
-1.  **Top-level APIs**: There might be a provider implementation that supports
-    reads, but not writes or deletes.
-1.  **Data fields**. Some providers may support key/value metadata associated
+1.  **Top-level APIs**: There might be a service that supports reads, but not
+    writes or deletes.
+1.  **Data fields**. Some services may support key/value metadata associated
     with a blob, others may not.
-1.  **Naming rules**. Different providers may allow different name lengths, or
+1.  **Naming rules**. Different services may allow different name lengths, or
     allow/disallow non-ASCII unicode characters. See [Strings](#strings) below
     for more on handling string differences.
-1.  **Semantic guarantees**. Different providers may have different consistency
+1.  **Semantic guarantees**. Different services may have different consistency
     guarantees; for example, S3 only provides eventually consistency while GCS
     provides strong consistency.
 
@@ -508,8 +508,8 @@ How can we maintain portability while these differences exist?
 
 ### Guiding Principle
 
-Any incompatibilities between provider implementations should be visible to the
-user as soon as possible. From best to worst:
+Any incompatibilities between drivers should be visible to the user as soon as
+possible. From best to worst:
 
 1.  At compile time
 1.  At configuration/app startup time (e.g., when the portable type is created)
@@ -520,27 +520,26 @@ user as soon as possible. From best to worst:
 ### Approaches Considered
 
 1.  **Documentation**. We could try to document non-uniform or optional
-    functionality across providers. Optional fields or functionality would
+    functionality across drivers. Optional fields or functionality would
     return "not implemented" errors or zero values.
 1.  **Restrict functionality to the intersection**. We could explicitly only
-    support the intersection of all provider implementations. For example, if
-    not all providers allow unicode characters in names, then **blob** would not
-    allow it either.
+    support the intersection of all services. For example, if not all services
+    allow unicode characters in names, then **blob** would not allow it either.
 1.  **Enforced feature codes**: Go CDK APIs could enumerate the ways in which
-    providers differ as a `FeatureCode` enum.
-    *   Provider implementations would declare which feature codes they support,
-        enforced by extensions to the existing conformance tests.
+    drivers differ as a `FeatureCode` enum.
+    *   Drivers would declare which feature codes they support, enforced by
+        extensions to the existing conformance tests.
     *   API users would declare which feature codes they need.
-    *   Mismatches between what a user requests and what the provider supports
+    *   Mismatches between what a user requests and what the driver supports
         would be enforced at initialization time.
     *   As much as possible, the API (via the portable type) would enforce that
         the user is only exposed to optional functionality that they asked for.
     *   For example, the default legal name for a blob might be ASCII only, with
         a `FeatureUnicodeNames` feature code. Users that don't request this
         feature code would only be able to use blobs with ASCII names, even if
-        the underlying provider supports unicode. If the user requested
-        `FeatureUnicodeNames`, and their provider supports it, they could then
-        use blobs with unicode; if their provider doesn't support it, they would
+        the underlying service supports unicode. If the user requested
+        `FeatureUnicodeNames`, and their driver supports it, they could then
+        use blobs with unicode; if their driver doesn't support it, they would
         get an initialization-time error.
 
 ```
@@ -553,7 +552,7 @@ on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 
 ### Strings
 
-Providers often differ on what they accept in particular strings (e.g., blob
+Services often differ on what they accept in particular strings (e.g., blob
 names, metadata keys, etc.). A couple of specific examples:
 
 *   Azure Blob only
@@ -566,22 +565,22 @@ These differences lead to a loss of portability and predictability for users.
 
 To resolve this issue, we insist that Go CDK can handle any UTF-8 string, and
 force drivers to use escaping mechanisms to handle strings that the underlying
-provider can't handle. We enforce driver compliance with conformance tests.
+service can't handle. We enforce driver compliance with conformance tests.
 Behavior for non-UTF-8 strings is undefined (but see
 https://github.com/google/go-cloud/issues/1281 and
 https://github.com/google/go-cloud/issues/1260).
 
 We try to use URL encoding as the escaping mechanism where possible; however,
 sometimes it is not and we'll use custom escaping. As an example, a driver for a
-provider that only allows underscores and ASCII alphanumeric characters might
+service that only allows underscores and ASCII alphanumeric characters might
 escape the string `foo.bar` to `foo__0x2e__bar` (URL escaping won't work because
 `%` isn't allowed).
 
 Pros of this approach:
 
 *   Go CDK APIs are internally consistent in that a user can write any string to
-    any provider and get the original string back when they read it back.
-*   Go CDK APIs have visibility into all existing strings for all providers.
+    any service and get the original string back when they read it back.
+*   Go CDK APIs have visibility into all existing strings for all services.
 
 Cons:
 
@@ -589,26 +588,26 @@ Cons:
     already-existing value (e.g., if the `foo__0x2e__bar` string already
     existed, it would be overwritten by a Go CDK write to `foo.bar`).
 *   Escaping may push a string over the maximum allowed string length for a
-    provider. Escaping does not solve (and in fact may exacerbate) problems with
-    different maximum string lengths across providers.
+    service. Escaping does not solve (and in fact may exacerbate) problems with
+    different maximum string lengths across services.
 *   Existing strings that happen to look like Go CDK-escaped strings will be
     unescaped by Go CDK (e.g., an existing string `foo__0x2e__bar` would appear
     as `foo.bar` when read through the Go CDK).
 *   Strings that were written through the Go CDK and needed escaping will appear
     in their escaped form when viewed outside of Go CDK (e.g., `foo__0x2e__bar`
-    would appear on the provider's UI).
+    would appear on the service's UI).
 
 Most of these cons are mitigated by choosing unusual-looking escape mechanisms
 that are unlikely to appear in existing data.
 
-Drivers should escape strings when writing to the underlying provider, and
+Drivers should escape strings when writing to the underlying service, and
 unescape them when reading them back. The Go CDK will provide helpers for these
 operations, as well as a test suite of strings for conformance tests.
 
 Sample code for the helper for escaping strings:
 
 ```
-// package escape provider helpers for escaping and unescaping strings.
+// package escape provides helpers for escaping and unescaping strings.
 package escape
 
 // Escape returns s, with all runes for which shouldEscape returns true
@@ -640,30 +639,30 @@ the example string:
 // ... gcdkMetadata is the metadata passed to the GCDK API.
 for k, v := range gcdkMetadata {
     e := escape.Escape(k, func (r []rune, i int) bool {...})
-    if _, ok := providerMetadata[e]; ok {
+    if _, ok := serviceMetadata[e]; ok {
       return fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
     }
-    providerMetadata[e] = v
+    serviceMetadata[e] = v
 }
-// ... write providerMetadata to the provider.
+// ... write serviceMetadata to the service.
 
 // When reading metadata keys, unescape them:
-// ... providerMetadata is the metadata read from the provider.
-for k, v := range providerMetadata {
+// ... serviceMetadata is the metadata read from the service.
+for k, v := range serviceMetadata {
     gcdkMetadata[escape.Unescape(k)] = v
 }
 // ... return gcdkMetadata.
 ```
 
-The details of what runes need to be escaped will vary from provider to
-provider. The details of how to escape may also vary, although we expect to use
+The details of what runes need to be escaped will vary from service to
+service. The details of how to escape may also vary, although we expect to use
 URL encoding where possible, and a common custom escaping where not. For the
 custom escaping, we plan to escape each rune for which `shouldEscape` returns
 true with `__0xXXX__`, where `XCX` is the hex representation of the rune value.
 
 ### Alternatives Considered
 
-*   We considered restricting Go CDK's APIs to strings that all providers
+*   We considered restricting Go CDK's APIs to strings that all services
     support. For example, we could have asserted that Go CDK's `blob` only
     supports ASCII plus `/` for blob names (and no `//`!). However, such a rule
     would mean that we couldn't cleanly handle existing strings created through
@@ -677,7 +676,7 @@ true with `__0xXXX__`, where `XCX` is the hex representation of the rune value.
     internally consistent (i.e., you can read some strings but not write them).
     Overall, we decided that this approach is unacceptable.
 
-*   We could expose the escaper used by providers in their `Options` structs
+*   We could expose the escaper used by drivers in their `Options` structs
     (including options like disabling it, overriding the set of bytes to be
     escaped, or overriding the escaping mechanism), but we'll wait to see if
     there's demand for that.
@@ -742,12 +741,11 @@ wiki page. We also adopt the following guidelines:
 
 ### Conformance Tests
 
-Since our goal is for users to be able to use provider implementations
-interchangeably, it is critical that they behave similarly. To this end, each
-portable API (e.g., `blob`) must provide a suite of conformance tests that
-provider implementations should run. The conformance tests should be
-comprehensive; provider implementations should not need additional unit tests
-for the core driver semantics.
+Since our goal is for users to be able to use drivers interchangeably, it is
+critical that they behave similarly. To this end, each portable API (e.g.,
+`blob`) must provide a suite of conformance tests that driver implementations
+should run. The conformance tests should be comprehensive; drivers should not
+need additional unit tests for the core driver semantics.
 
 ### Provisioning For Tests
 
@@ -762,11 +760,11 @@ Tests normally run in replay mode. In this mode, they don't require any
 provisioned resources or network interactions. Replay tests verify that:
 
 -   The same test inputs produce the same requests (e.g., HTTP requests) to the
-    cloud provider. Some parts of the request may be dynamic (e.g., dates in the
+    cloud service. Some parts of the request may be dynamic (e.g., dates in the
     HTTP request headers), so the replay tests do some scrubbing when verifying
-    that requests match. Some parts of this scrubbing are provider-specific.
+    that requests match. Some parts of this scrubbing are service-specific.
 
--   The replayed provider responses produce the expected results from the
+-   The replayed service responses produce the expected results from the
     portable API library.
 
 ### Record Mode
@@ -792,7 +790,7 @@ To use `-record`:
     -   For now, pass the required resources via test-specific flags.
     -   When changing or adding tests, please only record the tests that are
         changed/affected by passing the `-run` flag to `go test` with the
-        name of the test(s). Re-recording all tests of a provider creates a lot
+        name of the test(s). Re-recording all tests of a driver creates a lot
         of noise and a large diff that's difficult to review.
 
 3.  The test will save the network interactions for subsequent replays.
@@ -815,13 +813,13 @@ not to do this, for several reasons:
     HTTP headers, XML/JSON body, etc.). It would be difficult and fragile to
     scrub it all.
 
--   The scrub process would also be fragile relative to changes in providers
+-   The scrub process would also be fragile relative to changes in services
     (e.g., adding a new dynamic HTTP response header).
 
--   The scrub process would need to be implemented for every new provider,
+-   The scrub process would need to be implemented for every new service,
     increasing the barrier to entry for new implementations.
 
--   Scrubbing would likely be even more difficult for providers using a
+-   Scrubbing would likely be even more difficult for services using a
     non-HTTP-based protocol (e.g., gRPC).
 
 -   Scrubbing the data decreases the fidelity of the replay test, since it
