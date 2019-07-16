@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleNewKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#local-ctor
+	// This example is used in https://gocloud.dev/howto/secrets/#local-ctor
 
 	secretKey, err := localsecrets.NewRandomKey()
 	if err != nil {
@@ -34,7 +34,7 @@ func ExampleNewKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/open-keeper/#local
+	// This example is used in https://gocloud.dev/howto/secrets/#local
 
 	// import _ "gocloud.dev/secrets/localsecrets"
 
