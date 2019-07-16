@@ -57,13 +57,14 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 		return xerrors.Errorf("gocdk deploy: %w", err)
 	}
 
-	// If no image was specified, compute a snapshot tag and build it.
+	// If no image was specified, do a build.
 	if dockerImage == "" {
-		var err error
-		dockerImage, err = buildForDeploy(ctx, pctx, moduleRoot)
+		refs, err := build(ctx, pctx, nil)
 		if err != nil {
 			return xerrors.Errorf("gocdk deploy: %w", err)
 		}
+		dockerImage = refs[0]
+		pctx.Logf("Deploying Docker image %q...", dockerImage)
 	}
 
 	// Run "terraform apply".
@@ -121,26 +122,6 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 	}
 	pctx.Logf("Serving at %s\n", launchURL)
 	return nil
-}
-
-func buildForDeploy(ctx context.Context, pctx *processContext, moduleRoot string) (string, error) {
-	imageName, err := moduleDockerImageName(moduleRoot)
-	if err != nil {
-		return "", err
-	}
-	tag, err := generateTag()
-	if err != nil {
-		return "", err
-	}
-	snapshotRef := imageName + ":" + tag
-	buildRefs := []string{
-		imageName + defaultDockerTag,
-		snapshotRef,
-	}
-	if err := build(ctx, pctx, buildRefs); err != nil {
-		return "", err
-	}
-	return snapshotRef, nil
 }
 
 // Launcher is the interface for any type that can launch a Docker image.
