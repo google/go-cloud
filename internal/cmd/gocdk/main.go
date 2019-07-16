@@ -163,8 +163,7 @@ func (pctx *processContext) Println(a ...interface{}) {
 // ModuleRoot searches the given directory and those above it for the project
 // root, based on the existence of a "go.mod" file and a "biomes" directory.
 func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
-	var prevDir string
-	for dir := pctx.workdir; ; dir = filepath.Dir(dir) {
+	for dir, prevDir := pctx.workdir, ""; ; dir = filepath.Dir(dir) {
 		if dir == prevDir {
 			return "", xerrors.Errorf("couldn't find a Go CDK project root at or above %s", pctx.workdir)
 		}
