@@ -101,8 +101,8 @@
 // documents. Using structs is preferred because it enforces some structure on your
 // data.
 //
-// Docstore treats a struct's exported fields as the fields of the document by
-// default. You can alter this default mapping by using a struct tag beginning
+// By default, Docstore treats a struct's exported fields as the fields of the
+// document. You can alter this default mapping by using a struct tag beginning
 // with "docstore:". Docstore struct tags support renaming, omitting fields
 // unconditionally, or omitting them only when they are empty, exactly like
 // encoding/json. For example, this is the Book struct with different field
