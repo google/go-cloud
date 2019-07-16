@@ -32,7 +32,7 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 
 	demoCmd := &cobra.Command{
 		Use:   "demo",
-		Short: "Manage Go CDK portable type demos",
+		Short: "Manage demos of Go CDK portable types",
 		Long: `Demos consist of source code added to your application that demonstrate
 the functionality of a particular Go CDK portable type.
 
