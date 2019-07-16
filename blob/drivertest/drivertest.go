@@ -1093,6 +1093,8 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		t.Errorf("got nil want error")
 	} else if gcerrors.Code(err) != gcerrors.NotFound {
 		t.Errorf("got %v want NotFound error", err)
+	} else if !strings.Contains(err.Error(), "not-found") {
+		t.Errorf("got %v want error to include missing key", err)
 	}
 	a, err := b.Attributes(ctx, key)
 	if err != nil {
@@ -1324,6 +1326,8 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 						t.Error("Write failed as expected, but Read after that didn't return an error")
 					} else if !tc.wantReadErr && gcerrors.Code(err) != gcerrors.NotFound {
 						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want NotFound", err)
+					} else if !strings.Contains(err.Error(), tc.key) {
+						t.Errorf("got %v want error to include missing key", err)
 					}
 				}
 				return
@@ -1691,6 +1695,8 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), "does-not-exist") {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 
@@ -1802,6 +1808,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), "does-not-exist") {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 
@@ -1832,6 +1840,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("read after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("read after delete want NotFound error, got %v", err)
+		} else if !strings.Contains(err.Error(), key) {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 		// Subsequent delete also fails.
 		err = b.Delete(ctx, key)
@@ -1839,6 +1849,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("delete after delete got %v, want NotFound error", err)
+		} else if !strings.Contains(err.Error(), key) {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 }
