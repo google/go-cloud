@@ -1088,6 +1088,14 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	b, done := init(t)
 	defer done()
 
+	_, err := b.Attributes(ctx, "not-found")
+	if err == nil {
+		t.Errorf("got nil want error")
+	} else if gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got %v want NotFound error", err)
+	} else if !strings.Contains(err.Error(), "not-found") {
+		t.Errorf("got %v want error to include missing key", err)
+	}
 	a, err := b.Attributes(ctx, key)
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
@@ -1313,11 +1321,13 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 						t.Errorf("Write failed as expected, but content doesn't match expected previous content; got \n%s\n want \n%s", string(buf), existingContent)
 					}
 				} else {
-					// Verify that the read fails with IsNotExist.
+					// Verify that the read fails with NotFound.
 					if err == nil {
 						t.Error("Write failed as expected, but Read after that didn't return an error")
 					} else if !tc.wantReadErr && gcerrors.Code(err) != gcerrors.NotFound {
-						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want IsNotExist", err)
+						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want NotFound", err)
+					} else if !strings.Contains(err.Error(), tc.key) {
+						t.Errorf("got %v want error to include missing key", err)
 					}
 				}
 				return
@@ -1685,6 +1695,8 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), "does-not-exist") {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 
@@ -1796,6 +1808,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), "does-not-exist") {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 
@@ -1820,12 +1834,14 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		if err := b.Delete(ctx, key); err != nil {
 			t.Errorf("got unexpected error deleting blob: %v", err)
 		}
-		// Subsequent read fails with IsNotExist.
+		// Subsequent read fails with NotFound.
 		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
 			t.Errorf("read after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("read after delete want NotFound error, got %v", err)
+		} else if !strings.Contains(err.Error(), key) {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 		// Subsequent delete also fails.
 		err = b.Delete(ctx, key)
@@ -1833,6 +1849,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("delete after delete got %v, want NotFound error", err)
+		} else if !strings.Contains(err.Error(), key) {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 }
@@ -2044,6 +2062,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	if client == nil {
 		t.Fatal("can't verify SignedURL, Harness.HTTPClient() returned nil")
 	}
+
 	// Create the blob.
 	if err := b.WriteAll(ctx, key, contents, nil); err != nil {
 		t.Fatal(err)
