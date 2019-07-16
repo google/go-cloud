@@ -1,12 +1,20 @@
 $ gocdk help demo
-TODO more about demos
+Demos consist of source code added to your application that demonstrate
+the functionality of a particular Go CDK portable type.
+
+By default, each demo uses a local implementation of the portable type; for
+example, the "blob" demo uses an in-memory implementation of "blob".
+
+You can use the "gocdk resource" command to add a different resource to a
+biome; for example, "gocdk resource add blob/gcsblob" will provision a Google Compute
+Storage bucket, and the "blob" demo will work it instead (with no code changes!).
 
 Usage:
   gocdk demo [command]
 
 Available Commands:
-  add         TODO Add a demo
-  list        TODO List available demos
+  add         Add a portable type demo
+  list        List available portable type demos
 
 Flags:
   -h, --help   help for demo
@@ -14,14 +22,22 @@ Flags:
 Use "gocdk demo [command] --help" for more information about a command.
 
 $ gocdk demo -h
-TODO more about demos
+Demos consist of source code added to your application that demonstrate
+the functionality of a particular Go CDK portable type.
+
+By default, each demo uses a local implementation of the portable type; for
+example, the "blob" demo uses an in-memory implementation of "blob".
+
+You can use the "gocdk resource" command to add a different resource to a
+biome; for example, "gocdk resource add blob/gcsblob" will provision a Google Compute
+Storage bucket, and the "blob" demo will work it instead (with no code changes!).
 
 Usage:
   gocdk demo [command]
 
 Available Commands:
-  add         TODO Add a demo
-  list        TODO List available demos
+  add         Add a portable type demo
+  list        List available portable type demos
 
 Flags:
   -h, --help   help for demo
@@ -29,14 +45,22 @@ Flags:
 Use "gocdk demo [command] --help" for more information about a command.
 
 $ gocdk demo --help
-TODO more about demos
+Demos consist of source code added to your application that demonstrate
+the functionality of a particular Go CDK portable type.
+
+By default, each demo uses a local implementation of the portable type; for
+example, the "blob" demo uses an in-memory implementation of "blob".
+
+You can use the "gocdk resource" command to add a different resource to a
+biome; for example, "gocdk resource add blob/gcsblob" will provision a Google Compute
+Storage bucket, and the "blob" demo will work it instead (with no code changes!).
 
 Usage:
   gocdk demo [command]
 
 Available Commands:
-  add         TODO Add a demo
-  list        TODO List available demos
+  add         Add a portable type demo
+  list        List available portable type demos
 
 Flags:
   -h, --help   help for demo
@@ -44,14 +68,22 @@ Flags:
 Use "gocdk demo [command] --help" for more information about a command.
 
 $ gocdk demo
-TODO more about demos
+Demos consist of source code added to your application that demonstrate
+the functionality of a particular Go CDK portable type.
+
+By default, each demo uses a local implementation of the portable type; for
+example, the "blob" demo uses an in-memory implementation of "blob".
+
+You can use the "gocdk resource" command to add a different resource to a
+biome; for example, "gocdk resource add blob/gcsblob" will provision a Google Compute
+Storage bucket, and the "blob" demo will work it instead (with no code changes!).
 
 Usage:
   gocdk demo [command]
 
 Available Commands:
-  add         TODO Add a demo
-  list        TODO List available demos
+  add         Add a portable type demo
+  list        List available portable type demos
 
 Flags:
   -h, --help   help for demo
