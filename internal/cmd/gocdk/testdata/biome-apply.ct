@@ -1,0 +1,62 @@
+$ gocdk init myproj
+gocdk: Project created at ${ROOTDIR}/myproj with:
+gocdk: - Go HTTP server
+gocdk: - Dockerfile
+gocdk: - 'dev' biome for local development settings
+gocdk: Run `cd myproj`, then run:
+gocdk: - `gocdk serve` to run the server locally with live code reloading
+gocdk: - `gocdk demo` to test new APIs
+gocdk: - `gocdk build` to build a Docker container
+gocdk: - `gocdk biome add` to configure launch settings
+
+$ cd myproj
+
+# Biome name is required.
+$ gocdk biome apply --> FAIL
+Error: accepts 1 arg(s), received 0
+Usage:
+  gocdk biome apply <biome name> [flags]
+
+Flags:
+      --auto-approve   true to auto-approve resource changes
+  -h, --help           help for apply
+      --input          ask for input for Terraform variables if not directly set (default true)
+      --quiet          true to suppress all output from Terraform unless there's an error
+      --verbose        true to print all output from Terraform
+
+# Biome name must exist.
+$ gocdk biome apply notabiome --> FAIL
+Error: biome apply notabiome: biome notabiome not found
+
+$ gocdk resource add dev blob/fileblob
+gocdk: Adding "blob/fileblob" to "dev"...
+gocdk:   added a Terraform provider "local" to "main.tf"
+gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
+gocdk:   added a new file "fileblob.tf"
+gocdk: Success!
+
+# User doesn't approve changes.
+$ echof stdin notyes
+$ gocdk biome apply dev --quiet < stdin --> FAIL
+gocdk: Checking to see if resource updates are needed...
+gocdk: Resources updates are needed.
+gocdk: Not showing update details due to --quiet.
+
+Do you want to perform these actions (only 'yes' will be accepted to approve)?
+Enter a value, or "cancel": Error: cancelled
+
+# User approves changes, they are applied.
+$ echof stdin yes
+$ gocdk biome apply dev --quiet < stdin
+gocdk: Checking to see if resource updates are needed...
+gocdk: Resources updates are needed.
+gocdk: Not showing update details due to --quiet.
+
+Do you want to perform these actions (only 'yes' will be accepted to approve)?
+Enter a value, or "cancel": gocdk: Success!
+
+# Re-running "biome apply" has no changes.
+$ gocdk biome apply dev --quiet
+gocdk: Checking to see if resource updates are needed...
+gocdk: No resources updates are needed.
+gocdk: Success!
