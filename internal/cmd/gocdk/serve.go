@@ -307,7 +307,7 @@ func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logge
 	}
 
 	// Wait for server to be ready.
-	logger.Printf("Waiting for server %s to report ready...", alloc.url("/"))
+	logger.Println("Waiting for server to report ready...")
 	err = probe.WaitForHealthy(ctx, alloc.url("/healthz/readiness"))
 	if err != nil {
 		endServerProcess(process)
