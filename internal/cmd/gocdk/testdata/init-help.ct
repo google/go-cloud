@@ -1,8 +1,9 @@
 $ gocdk help init
-TODO more about init
+Initialize a new Go CDK project. The argument should point to a directory
+that does not exist; init will create it and populate the new directory.
 
 Usage:
-  gocdk init PATH_TO_PROJECT_DIR [flags]
+  gocdk init <path to project dir> [flags]
 
 Flags:
       --allow-existing-dir   true to allow initializing an existing directory (contents may be overwritten!)
@@ -10,10 +11,11 @@ Flags:
   -m, --module-path string   the module import path for your project's go.mod file (required if project is outside of GOPATH)
 
 $ gocdk init -h
-TODO more about init
+Initialize a new Go CDK project. The argument should point to a directory
+that does not exist; init will create it and populate the new directory.
 
 Usage:
-  gocdk init PATH_TO_PROJECT_DIR [flags]
+  gocdk init <path to project dir> [flags]
 
 Flags:
       --allow-existing-dir   true to allow initializing an existing directory (contents may be overwritten!)
@@ -21,10 +23,11 @@ Flags:
   -m, --module-path string   the module import path for your project's go.mod file (required if project is outside of GOPATH)
 
 $ gocdk init --help
-TODO more about init
+Initialize a new Go CDK project. The argument should point to a directory
+that does not exist; init will create it and populate the new directory.
 
 Usage:
-  gocdk init PATH_TO_PROJECT_DIR [flags]
+  gocdk init <path to project dir> [flags]
 
 Flags:
       --allow-existing-dir   true to allow initializing an existing directory (contents may be overwritten!)

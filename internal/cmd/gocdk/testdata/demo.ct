@@ -7,7 +7,7 @@ secrets
 
 # Add fails when we're not in a module.
 $ gocdk demo add blob --> FAIL
-Error: demo add: couldn't find a Go module root at or above ${ROOTDIR}
+Error: demo add: couldn't find a Go CDK project root at or above ${ROOTDIR}
 
 $ gocdk init myproj
 gocdk: Project created at ${ROOTDIR}/myproj with:

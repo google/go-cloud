@@ -31,16 +31,21 @@ import (
 func registerBiomeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 	biomeCmd := &cobra.Command{
 		Use:   "biome",
-		Short: "TODO Manage biomes",
-		Long:  "TODO more about biomes",
+		Short: "Manage biomes",
+		Long: `Biomes are target environments. Each biome has a distinct deployment target,
+and maintains its own set of Cloud resources.
+
+A typical set of biomes is "dev", "staging", "prod".`,
 	}
 
 	var launcher string
 	biomeAddCmd := &cobra.Command{
-		Use:   "add BIOME_NAME",
-		Short: "TODO Add BIOME_NAME",
-		Long:  "TODO more about adding biomes",
-		Args:  cobra.ExactArgs(1),
+		Use:   "add <biome name>",
+		Short: "Add a new biome",
+		Long: `Add a new biome. Unless you specify answers via flags, you will be prompted
+to choose a deployment target for the biome, as well as for any deployment-specific
+information needed to deploy.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return biomeAdd(ctx, pctx, args[0], launcher)
 		},
@@ -52,8 +57,8 @@ func registerBiomeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 
 	biomeListCmd := &cobra.Command{
 		Use:   "list",
-		Short: "TODO list",
-		Long:  "TODO more about listing biomes",
+		Short: "Print the list of existing biomes",
+		Long:  `Print the list of existing biomes.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return biomeList(ctx, pctx)
@@ -63,18 +68,19 @@ func registerBiomeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 
 	var input bool
 	applyCmd := &cobra.Command{
-		Use:   "apply BIOME_NAME",
-		Short: "TODO Apply Terraform for BIOME",
-		Long:  "TODO more about apply",
-		Args:  cobra.ExactArgs(1),
+		Use:   "apply <biome name>",
+		Short: "Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)",
+		Long: `Apply the changes required to reach the desired state of the biome's resource
+configuration (e.g., creating or updating Cloud resources).
+
+Runs "terraform init" followed by "terraform apply".`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return biomeApply(ctx, pctx, args[0], input)
 		},
 	}
 	applyCmd.Flags().BoolVar(&input, "input", true, "ask for input for Terraform variables if not directly set")
 	biomeCmd.AddCommand(applyCmd)
-
-	// TODO(rvangent): More biome subcommands: delete, list, ...?
 
 	rootCmd.AddCommand(biomeCmd)
 }
