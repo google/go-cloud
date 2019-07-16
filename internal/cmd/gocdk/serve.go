@@ -249,20 +249,9 @@ loop:
 	return nil
 }
 
-// buildForServe runs Wire and `go build` at moduleRoot to create exePath.
+// buildForServe runs `go build` at moduleRoot to create exePath.
 // Note that on Windows, exePath must end with .EXE.
 func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string, exePath string) error {
-
-	if wireExe, err := exec.LookPath("wire"); err == nil {
-		// TODO(light): Only run Wire if needed, but that requires source analysis.
-		wireCmd := pctx.NewCommand(ctx, moduleRoot, wireExe, "./...")
-		wireCmd.Env = append(wireCmd.Env, "GO111MODULE=on")
-		// TODO(light): Collect build logs into error.
-		if err := wireCmd.Run(); err != nil {
-			return xerrors.Errorf("build server: wire: %w", err)
-		}
-	}
-
 	buildCmd := pctx.NewCommand(ctx, moduleRoot, "go", "build", "-o", exePath)
 	buildCmd.Env = append(buildCmd.Env, "GO111MODULE=on")
 	// TODO(light): Collect build logs into error.
