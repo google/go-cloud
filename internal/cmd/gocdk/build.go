@@ -57,20 +57,22 @@ func registerBuildCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 
 // build a Docker image and tag it with refs.
 //
-// If refs is empty, it defaults to ":<generated tag>" and ":latest", in that
-// order (the most unique reference is first).
+// If refs is empty, it defaults to ":<generated tag>" and ":latest".
 //
 // Refs that start with ":" will be prepended with the Docker image name
 // configured in Dockerfile.
 //
-// build returns the actual image references used.
-func build(ctx context.Context, pctx *processContext, refs []string) ([]string, error) {
+// build returns the first actual image reference used (after any prepending
+// as described above). If refs was originally empty, it returns the reference
+// with the generated tag.
+func build(ctx context.Context, pctx *processContext, refs []string) (string, error) {
 	if len(refs) == 0 {
 		// No refs given. Use defaults.
 		tag, err := generateTag()
 		if err != nil {
-			return nil, xerrors.Errorf("gocdk build: %w", err)
+			return "", xerrors.Errorf("gocdk build: %w", err)
 		}
+		// Note: the generated tag is first, so that it will be returned.
 		refs = []string{":" + tag, defaultDockerTag}
 	} else {
 		// Copy to avoid mutating argument.
@@ -78,7 +80,7 @@ func build(ctx context.Context, pctx *processContext, refs []string) ([]string, 
 	}
 	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
-		return nil, xerrors.Errorf("gocdk build: %w", err)
+		return "", xerrors.Errorf("gocdk build: %w", err)
 	}
 	var imageName string
 	for i := range refs {
@@ -90,15 +92,15 @@ func build(ctx context.Context, pctx *processContext, refs []string) ([]string, 
 			var err error
 			imageName, err = moduleDockerImageName(moduleRoot)
 			if err != nil {
-				return nil, xerrors.Errorf("gocdk build: %w", err)
+				return "", xerrors.Errorf("gocdk build: %w", err)
 			}
 		}
 		refs[i] = imageName + refs[i]
 	}
 	if err := docker.New(pctx.env).Build(ctx, refs, moduleRoot, pctx.stderr); err != nil {
-		return nil, xerrors.Errorf("gocdk build: %w", err)
+		return "", xerrors.Errorf("gocdk build: %w", err)
 	}
-	return refs, nil
+	return refs[0], nil
 }
 
 func listBuilds(ctx context.Context, pctx *processContext) error {

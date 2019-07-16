@@ -59,11 +59,11 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 
 	// If no image was specified, do a build.
 	if dockerImage == "" {
-		refs, err := build(ctx, pctx, nil)
+		var err error
+		dockerImage, err := build(ctx, pctx, nil)
 		if err != nil {
 			return xerrors.Errorf("gocdk deploy: %w", err)
 		}
-		dockerImage = refs[0]
 		pctx.Logf("Deploying Docker image %q...", dockerImage)
 	}
 
