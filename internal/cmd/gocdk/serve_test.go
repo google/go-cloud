@@ -24,8 +24,6 @@ import (
 )
 
 func TestBuildForServe(t *testing.T) {
-	// TODO(light): This test is not hermetic because it brings
-	// in an external module.
 	const content = `package main
 import "fmt"
 func main() { fmt.Println("Hello, World!") }`
