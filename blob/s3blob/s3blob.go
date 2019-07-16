@@ -27,7 +27,7 @@
 //
 // Escaping
 //
-// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are performed for s3blob:
 //  - Blob keys: ASCII characters 0-31 are escaped to "__0x<hex>__".
@@ -150,7 +150,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct {
 	// UseLegacyList forces the use of ListObjects instead of ListObjectsV2.
-	// Some S3-compatible providers (like CEPH) do not currently support
+	// Some S3-compatible services (like CEPH) do not currently support
 	// ListObjectsV2.
 	UseLegacyList bool
 }

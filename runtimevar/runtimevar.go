@@ -19,9 +19,9 @@
 // whenever a change is detected.
 //
 // Subpackages contain distinct implementations of runtimevar for various
-// providers, including Cloud and on-premise solutions. For example, "etcdvar"
+// services, including Cloud and on-premise solutions. For example, "etcdvar"
 // supports variables stored in etcd. Your application should import one of
-// these provider-specific subpackages and use its exported function(s) to
+// these driver subpackages and use its exported function(s) to
 // create a *Variable; do not use the New function in this package. For example:
 //
 //  var v *runtimevar.Variable
@@ -30,7 +30,7 @@
 //  ...
 //
 // Then, write your application code using the *Variable type. You can
-// easily reconfigure your initialization code to choose a different provider.
+// easily reconfigure your initialization code to choose a different driver.
 // You can develop your application locally using filevar or constantvar, and
 // deploy it to multiple Cloud providers. You may find
 // http://github.com/google/wire useful for managing your initialization code.
@@ -48,7 +48,7 @@
 // backend providers. See https://opencensus.io.
 //
 // This API collects an OpenCensus metric "gocloud.dev/runtimevar/value_changes",
-// a count of the number of times all variables have changed values, by provider.
+// a count of the number of times all variables have changed values, by driver.
 //
 // To enable metric collection in your application, see "Exporting stats" at
 // https://opencensus.io/quickstart/go/metrics.
@@ -82,8 +82,7 @@ import (
 // It is intended to be read-only for users.
 type Snapshot struct {
 	// Value contains the value of the variable.
-	// The type for Value depends on the provider; for most providers, it depends
-	// on the decoder used when creating Variable.
+	// The type for Value depends on the decoder used when creating the Variable.
 	Value interface{}
 
 	// UpdateTime is the time when the last change was detected.
@@ -92,10 +91,10 @@ type Snapshot struct {
 	asFunc func(interface{}) bool
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (s *Snapshot) As(i interface{}) bool {
 	if s.asFunc == nil {
 		return false
@@ -113,7 +112,7 @@ var (
 		{
 			Name:        pkgName + "/value_changes",
 			Measure:     changeMeasure,
-			Description: "Count of variable value changes by provider.",
+			Description: "Count of variable value changes by driver.",
 			TagKeys:     []tag.Key{oc.ProviderKey},
 			Aggregation: view.Count(),
 		},
@@ -121,11 +120,10 @@ var (
 )
 
 // Variable provides an easy and portable way to watch runtime configuration
-// variables. To create a Variable, use constructors found in provider-specific
-// subpackages.
+// variables. To create a Variable, use constructors found in driver subpackages.
 type Variable struct {
 	dw       driver.Watcher
-	provider string // for metric collection
+	provider string // for metric collection; refers to driver package name
 
 	// For cancelling the background goroutine, and noticing when it has exited.
 	backgroundCancel context.CancelFunc
@@ -145,7 +143,7 @@ type Variable struct {
 	lastGood Snapshot
 }
 
-// New is intended for use by provider implementations.
+// New is intended for use by drivers.
 var New = newVar
 
 // newVar creates a new *Variable based on a specific driver implementation.
@@ -173,7 +171,7 @@ var ErrClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "Variable has been Clo
 // variable.
 //
 // The first call to Watch will block while reading the variable from the
-// provider, and will return the resulting Snapshot or error. If an error is
+// driver, and will return the resulting Snapshot or error. If an error is
 // returned, the returned Snapshot is a zero value and should be ignored.
 // Subsequent calls will block until the variable's value changes or a different
 // error occurs.
@@ -345,7 +343,7 @@ func wrapError(w driver.Watcher, err error) error {
 	return gcerr.New(w.ErrorCode(err), err, 2, "runtimevar")
 }
 
-// ErrorAs converts err to provider-specific types.
+// ErrorAs converts err to driver-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://gocloud.dev/concepts/as/ for background information.
@@ -414,7 +412,7 @@ func DefaultURLMux() *URLMux {
 }
 
 // OpenVariable opens the variable identified by the URL given.
-// See the URLOpener documentation in provider-specific subpackages for
+// See the URLOpener documentation in driver subpackages for
 // details on supported URL formats, and https://gocloud.dev/concepts/urls
 // for more information.
 func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {

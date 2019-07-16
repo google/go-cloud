@@ -39,7 +39,7 @@ import (
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// CreateTopic creates a new topic in the provider and returns a driver.Topic
+	// CreateTopic creates a new topic and returns a driver.Topic
 	// for testing. The topic may have to be removed manually if the test is
 	// abruptly terminated or the network connection fails.
 	CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error)
@@ -48,7 +48,7 @@ type Harness interface {
 	// does not exist.
 	MakeNonexistentTopic(ctx context.Context) (driver.Topic, error)
 
-	// CreateSubscription creates a new subscription in the provider, subscribed
+	// CreateSubscription creates a new subscription, subscribed
 	// to the given topic, and returns a driver.Subscription for testing. The
 	// subscription may have to be cleaned up manually if the test is abruptly
 	// terminated or the network connection fails.
@@ -66,7 +66,7 @@ type Harness interface {
 	// if there's no max.
 	MaxBatchSizes() (int, int)
 
-	// SupportsMultipleSubscriptions reports whether the provider supports
+	// SupportsMultipleSubscriptions reports whether the driver supports
 	// multiple subscriptions for the same topic.
 	SupportsMultipleSubscriptions() bool
 }
@@ -163,7 +163,7 @@ func (verifyAsFailsOnNil) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
-// RunConformanceTests runs conformance tests for provider implementations of pubsub.
+// RunConformanceTests runs conformance tests for driver implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
 		"TestSendReceive":                          testSendReceive,
@@ -195,7 +195,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 }
 
-// RunBenchmarks runs benchmarks for provider implementations of pubsub.
+// RunBenchmarks runs benchmarks for driver implementations of pubsub.
 func RunBenchmarks(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) {
 	b.Run("BenchmarkReceive", func(b *testing.B) {
 		benchmark(b, topic, sub, false)
@@ -572,7 +572,7 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Ack them again; this should succeed even though we've acked them before.
-	// If providers return an error for this, drivers should drop them.
+	// If services return an error for this, drivers should drop them.
 	err = ds.SendAcks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID})
 	if err != nil {
 		t.Fatal(err)
@@ -585,7 +585,7 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	// Nack all 3 messages. This should also succeed, and the nack of the third
 	// message should take effect, so we should be able to fetch it again.
 	// Note that the other messages *may* also be re-sent, because we're nacking
-	// them here (even though we acked them earlier); it depends on provider
+	// them here (even though we acked them earlier); it depends on service
 	// semantics and time-sensitivity.
 	err = ds.SendNacks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID, dms[2].AckID})
 	if err != nil {
@@ -753,7 +753,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	// Some providers limit the number of metadata per message.
+	// Some services limit the number of metadata per message.
 	// Sort the escape.WeirdStrings values for record/replay consistency,
 	// then break the weird strings up into groups of at most maxMetadataKeys.
 	const maxMetadataKeys = 10

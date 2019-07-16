@@ -15,10 +15,10 @@
 // Package pubsub provides an easy and portable way to interact with publish/
 // subscribe systems. See https://gocloud.dev/howto/pubsub/ for how-to guides.
 //
-// Subpackages contain distinct implementations of pubsub for various providers,
+// Subpackages contain distinct implementations of pubsub for various services,
 // including Cloud and on-premise solutions. For example, "gcppubsub" supports
 // Google Cloud Pub/Sub. Your application should import one of these
-// provider-specific subpackages and use its exported functions to get a
+// driver subpackages and use its exported functions to get a
 // *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
 // functions in this package. For example:
 //
@@ -27,7 +27,7 @@
 //  ...
 //
 // Then, write your application code using the *Topic/*Subscription types. You
-// can easily reconfigure your initialization code to choose a different provider.
+// can easily reconfigure your initialization code to choose a different driver.
 // You can develop your application locally using memblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
@@ -38,22 +38,22 @@
 //
 // At-most-once and At-least-once Delivery
 //
-// The semantics of message delivery vary across PubSub providers.
-// Some providers guarantee that messages received by subscribers but not
+// The semantics of message delivery vary across PubSub services.
+// Some services guarantee that messages received by subscribers but not
 // acknowledged are delivered again (at-least-once semantics). In others,
 // a message will be delivered only once, if it is delivered at all
-// (at-most-once semantics). Some providers support both modes via options.
+// (at-most-once semantics). Some services support both modes via options.
 //
 // This package accommodates both kinds of systems, but application developers
 // should think carefully about which kind of semantics the application needs.
 // Even though the application code may look similar, system-level
-// characteristics are quite different. See the provider-specific package
+// characteristics are quite different. See the driver package
 // documentation for more information about message delivery semantics.
 //
 // After receiving a Message via Subscription.Receive:
 //  - Always call Message.Ack or Message.Nack after processing the message.
-//  - For some providers, Ack will be a no-op.
-//  - For some providers, Nack is not supported and will panic; you can call
+//  - For some drivers, Ack will be a no-op.
+//  - For some drivers, Nack is not supported and will panic; you can call
 //    Message.Nackable to see.
 //
 // OpenCensus Integration
@@ -70,9 +70,9 @@
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/pubsub/Topic.Send".
-// The metrics are "completed_calls", a count of completed method calls by provider,
+// The metrics are "completed_calls", a count of completed method calls by driver,
 // method and status (error code); and "latency", a distribution of method latency
-// by provider and method.
+// by driver and method.
 // For example, "gocloud.dev/pubsub/latency".
 //
 // To enable trace collection in your application, see "Configure Exporter" at
@@ -113,7 +113,7 @@ type Message struct {
 	//
 	// When sending a message, set any key/value pairs you want associated with
 	// the message. It is acceptable for Metadata to be nil.
-	// Note that some providers limit the number of key/value pairs per message.
+	// Note that some services limit the number of key/value pairs per message.
 	//
 	// When receiving a message, Metadata will be nil if the message has no
 	// associated metadata.
@@ -124,7 +124,7 @@ type Message struct {
 	//
 	// The callback will be called exactly once, before the message is sent.
 	//
-	// asFunc converts its argument to provider-specific types.
+	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeSend func(asFunc func(interface{}) bool) error
 
@@ -147,7 +147,7 @@ type Message struct {
 
 // Ack acknowledges the message, telling the server that it does not need to be
 // sent again to the associated Subscription. It will be a no-op for some
-// providers; see
+// drivers; see
 // https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more info.
 //
@@ -166,7 +166,7 @@ func (m *Message) Ack() {
 
 // Nackable returns true iff Nack can be called without panicking.
 //
-// Some providers do not support Nack; for example, at-most-once providers
+// Some services do not support Nack; for example, at-most-once services
 // can't redeliver a message. See
 // https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more info.
@@ -177,7 +177,7 @@ func (m *Message) Nackable() bool {
 // Nack (short for negative acknowledgment) tells the server that this Message
 // was not processed and should be redelivered.
 //
-// Nack panics for some providers, as Nack is meaningless when messages can't be
+// Nack panics for some drivers, as Nack is meaningless when messages can't be
 // redelivered. You can call Nackable to determine if Nack is available. See
 // https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // fore more info.
@@ -197,16 +197,16 @@ func (m *Message) Nack() {
 		panic(fmt.Sprintf("Ack/Nack called twice on message: %+v", m))
 	}
 	if !m.nackable {
-		panic("Message.Nack is not supported for this provider")
+		panic("Message.Nack is not supported by this driver")
 	}
 	m.ack(false)
 	m.isAcked = true
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 // As panics unless it is called on a message obtained from Subscription.Receive.
 func (m *Message) As(i interface{}) bool {
 	if m.asFunc == nil {
@@ -296,15 +296,15 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
-// ErrorAs converts err to provider-specific types.
+// ErrorAs converts err to driver-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://gocloud.dev/concepts/as/ for background information.
@@ -312,7 +312,7 @@ func (t *Topic) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
 
-// NewTopic is for use by provider implementations.
+// NewTopic is for use by drivers.
 var NewTopic = newTopic
 
 // newSendBatcher creates a batcher for topics, for use with NewTopic.
@@ -515,17 +515,17 @@ func (s *Subscription) updateBatchSize() int {
 // blocking and polling if none are available. It can be called
 // concurrently from multiple goroutines.
 //
-// Receive retries retryable errors from the underlying provider forever.
+// Receive retries retryable errors from the underlying driver forever.
 // Therefore, if Receive returns an error, either:
-// 1. It is a non-retryable error from the underlying provider, either from
+// 1. It is a non-retryable error from the underlying driver, either from
 //    an attempt to fetch more messages or from an attempt to ack messages.
 //    Operator intervention may be required (e.g., invalid resource, quota
 //    error, etc.). Receive will return the same error from then on, so the
 //    application should log the error and either recreate the Subscription,
 //    or exit.
 // 2. The provided ctx is Done. Error() on the returned error will include both
-//    the ctx error and the underlying provider error, and ErrorAs on it
-//    can access the underlying provider error type if needed. Receive may
+//    the ctx error and the underlying driver error, and ErrorAs on it
+//    can access the underlying driver error type if needed. Receive may
 //    be called again with a fresh ctx.
 //
 // Callers can distinguish between the two by checking if the ctx they passed
@@ -533,8 +533,7 @@ func (s *Subscription) updateBatchSize() int {
 // on the returned error.
 //
 // The Ack method of the returned Message must be called once the message has
-// been processed, to prevent it from being received again, unless
-// only at-most-once providers are being used; see the package doc for more).
+// been processed, to prevent it from being received again.
 func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 	ctx = s.tracer.Start(ctx, "Subscription.Receive")
 	defer func() { s.tracer.End(ctx, err) }()
@@ -718,15 +717,15 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types.
+// As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
-// examples in this package for examples, and the provider-specific package
-// documentation for the specific types supported for that provider.
+// examples in this package for examples, and the driver package
+// documentation for the specific types supported for that driver.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// ErrorAs converts err to provider-specific types.
+// ErrorAs converts err to driver-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See Topic.As for more details.
@@ -734,7 +733,7 @@ func (s *Subscription) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, s.driver.ErrorAs)
 }
 
-// NewSubscription is for use by provider implementations.
+// NewSubscription is for use by drivers.
 var NewSubscription = newSubscription
 
 // newSubscription creates a Subscription from a driver.Subscription.
@@ -926,7 +925,7 @@ func DefaultURLMux() *URLMux {
 }
 
 // OpenTopic opens the Topic identified by the URL given.
-// See the URLOpener documentation in provider-specific subpackages for
+// See the URLOpener documentation in driver subpackages for
 // details on supported URL formats, and https://gocloud.dev/concepts/urls
 // for more information.
 func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
@@ -934,7 +933,7 @@ func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 }
 
 // OpenSubscription opens the Subscription identified by the URL given.
-// See the URLOpener documentation in provider-specific subpackages for
+// See the URLOpener documentation in driver subpackages for
 // details on supported URL formats, and https://gocloud.dev/concepts/urls
 // for more information.
 func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {

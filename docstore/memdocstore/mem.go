@@ -318,7 +318,7 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 // Add two encoded numbers.
 // Since they're encoded, they are either int64 or float64.
 // Allow adding a float to an int, producing a float.
-// TODO(jba): see how other providers handle that.
+// TODO(jba): see how other drivers handle that.
 func add(x, y interface{}) (interface{}, error) {
 	if x == nil {
 		return y, nil

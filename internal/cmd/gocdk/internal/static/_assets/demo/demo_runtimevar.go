@@ -35,7 +35,7 @@ func init() {
 	http.HandleFunc("/demo/runtimevar/", runtimevarHandler)
 
 	// Initialize the runtimevar.Variable using a URL from the environment,
-	// defaulting to an in-memory constant provider.
+	// defaulting to an in-memory constant driver.
 	variableURL = os.Getenv("RUNTIMEVAR_VARIABLE_URL")
 	if variableURL == "" {
 		variableURL = "constant://?val=my-variable&decoder=string"

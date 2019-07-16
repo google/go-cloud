@@ -67,7 +67,7 @@ func (v verifyAsFailsOnNil) ErrorCheck(k *secrets.Keeper, err error) (ret error)
 	return nil
 }
 
-// RunConformanceTests runs conformance tests for provider implementations of secret management.
+// RunConformanceTests runs conformance tests for driver implementations of secret management.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestEncryptDecrypt", func(t *testing.T) {
 		testEncryptDecrypt(t, newHarness)
