@@ -1099,7 +1099,7 @@ func wrapError(b driver.Bucket, err error, key string) error {
 	}
 	msg := "blob"
 	if key != "" {
-		msg += fmt.Sprintf(" (key %s)", key)
+		msg += fmt.Sprintf(" (key %q)", key)
 	}
 	return gcerr.New(b.ErrorCode(err), err, 2, msg)
 }
