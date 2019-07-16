@@ -21,7 +21,7 @@ It does this by providing stable, idiomatic interfaces for common uses like
 storage and databases. Think `database/sql` for cloud products.
 
 At the core of the Go CDK are common "portable types", implemented on top of
-service-specific drivers for supported supported cloud services. For example,
+service-specific drivers for supported cloud services. For example,
 objects of the blob.Bucket portable type can be created using
 gcsblob.OpenBucket, s3blob.OpenBucket, or any other Go CDK driver. Then, the
 blob.Bucket can be used throughout your application without worrying about the
