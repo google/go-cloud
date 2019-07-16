@@ -116,7 +116,7 @@ func DefaultURLMux() *URLMux {
 // registered in the DefaultURLMux, which is typically done in driver
 // packages' initialization.
 //
-// See the URLOpener documentation in provider-specific subpackages for more
+// See the URLOpener documentation in driver subpackages for more
 // details on supported scheme(s) and URL parameter(s).
 func Open(ctx context.Context, urlstr string) (*sql.DB, error) {
 	return defaultURLMux.OpenPostgres(ctx, urlstr)

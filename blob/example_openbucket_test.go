@@ -28,7 +28,7 @@ func Example_openFromURL() {
 
 	// Connect to a bucket using a URL.
 	// This example uses "memblob", the in-memory implementation.
-	// We need to add a blank import line to register the memblob provider's
+	// We need to add a blank import line to register the memblob driver's
 	// URLOpener, which implements blob.BucketURLOpener:
 	// import _ "gocloud.dev/blob/memblob"
 	// memblob registers for the "mem" scheme.

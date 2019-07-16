@@ -41,9 +41,11 @@ func registerServeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 	var opts serveOptions
 	serveCmd := &cobra.Command{
 		Use:   "serve",
-		Short: "TODO Run an auto-reloading local server",
-		Long:  "TODO more about serve",
-		Args:  cobra.ExactArgs(0),
+		Short: "Run an auto-reloading local server",
+		Long: `Run an auto-reloading local server.
+
+The application will reload any time it detects a change under your project.`,
+		Args: cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return serve(ctx, pctx, &opts)
 		},
@@ -249,20 +251,9 @@ loop:
 	return nil
 }
 
-// buildForServe runs Wire and `go build` at moduleRoot to create exePath.
+// buildForServe runs `go build` at moduleRoot to create exePath.
 // Note that on Windows, exePath must end with .EXE.
 func buildForServe(ctx context.Context, pctx *processContext, moduleRoot string, exePath string) error {
-
-	if wireExe, err := exec.LookPath("wire"); err == nil {
-		// TODO(light): Only run Wire if needed, but that requires source analysis.
-		wireCmd := pctx.NewCommand(ctx, moduleRoot, wireExe, "./...")
-		wireCmd.Env = append(wireCmd.Env, "GO111MODULE=on")
-		// TODO(light): Collect build logs into error.
-		if err := wireCmd.Run(); err != nil {
-			return xerrors.Errorf("build server: wire: %w", err)
-		}
-	}
-
 	buildCmd := pctx.NewCommand(ctx, moduleRoot, "go", "build", "-o", exePath)
 	buildCmd.Env = append(buildCmd.Env, "GO111MODULE=on")
 	// TODO(light): Collect build logs into error.

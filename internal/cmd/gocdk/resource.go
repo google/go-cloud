@@ -29,14 +29,18 @@ import (
 func registerResourceCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 	resourceCmd := &cobra.Command{
 		Use:   "resource",
-		Short: "TODO Resources",
-		Long:  "TODO more about provisioning resources",
+		Short: "Manage resources",
+		Long: `gocdk uses Terraform to provision resources that can be used in your
+application. Resources are associated with a specific biome; often, each biome
+will use a different implementation of the resource. For example, your "dev"
+biome may use a file-based implementation of "blob", while "prod" might use a
+Cloud-based storage solution like a GCS bucket.`,
 	}
 
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "TODO resource list ",
-		Long:  "TODO more about provisioning resources",
+		Short: "List available resources",
+		Long:  `List available resources that can be used in "gocdk resource add".`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return resourceList(pctx)
@@ -45,10 +49,16 @@ func registerResourceCmd(ctx context.Context, pctx *processContext, rootCmd *cob
 	resourceCmd.AddCommand(listCmd)
 
 	addCmd := &cobra.Command{
-		Use:   "add BIOME_NAME TYPE",
-		Short: "TODO resource add BIOME_NAME TYPE",
-		Long:  "TODO more about provisioning resources",
-		Args:  cobra.ExactArgs(2),
+		Use:   "add <biome name> <resource name>",
+		Short: "Add a resource to a biome",
+		Long: `Add Terraform files that will provision the named resource to the
+named biome.
+
+You may be prompted for information needed to provision the resource.
+
+The resource will be created the next time you run "gocdk biome apply",
+"gocdk serve", or "gocdk deploy".`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return resourceAdd(ctx, pctx, args[0], args[1])
 		},

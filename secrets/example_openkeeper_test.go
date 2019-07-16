@@ -28,7 +28,7 @@ func Example_openFromURL() {
 
 	// Create a Keeper using a URL.
 	// This example uses "localsecrets", the in-memory implementation.
-	// We need to add a blank import line to register the localsecrets provider's
+	// We need to add a blank import line to register the localsecrets driver's
 	// URLOpener, which implements secrets.KeeperURLOpener:
 	// import _ "gocloud.dev/secrets/localsecrets"
 	// localsecrets registers for the "base64key" scheme.

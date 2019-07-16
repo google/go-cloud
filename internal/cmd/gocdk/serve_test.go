@@ -24,47 +24,20 @@ import (
 )
 
 func TestBuildForServe(t *testing.T) {
-	t.Run("NoWire", func(t *testing.T) {
-		testBuildForServe(t, map[string]string{
-			"main.go": `package main
+	const content = `package main
 import "fmt"
-func main() { fmt.Println("Hello, World!") }`,
-		})
-	})
-	t.Run("Wire", func(t *testing.T) {
-		if _, err := exec.LookPath("wire"); err != nil {
-			// Wire tool is run unconditionally. Needed for both tests.
-			t.Skip("wire not found:", err)
-		}
-		// TODO(light): This test is not hermetic because it brings
-		// in an external module.
-		testBuildForServe(t, map[string]string{
-			"main.go": `package main
-import "fmt"
-func main() { fmt.Println(greeting()) }`,
-			"setup.go": `// +build wireinject
+func main() { fmt.Println("Hello, World!") }`
 
-package main
-import "github.com/google/wire"
-func greeting() string {
-	wire.Build(wire.Value("Hello, World!"))
-	return ""
-}`,
-		})
-	})
-}
-
-func testBuildForServe(t *testing.T, files map[string]string) {
 	ctx := context.Background()
 	pctx, cleanup, err := newTestProject(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	for name, content := range files {
-		if err := ioutil.WriteFile(filepath.Join(pctx.workdir, name), []byte(content), 0666); err != nil {
-			t.Fatal(err)
-		}
+
+	// Overwrite main.go with content that just prints something out.
+	if err := ioutil.WriteFile(filepath.Join(pctx.workdir, "main.go"), []byte(content), 0666); err != nil {
+		t.Fatal(err)
 	}
 	exePath := filepath.Join(pctx.workdir, "hello")
 	if runtime.GOOS == "windows" {
@@ -73,7 +46,7 @@ func testBuildForServe(t *testing.T, files map[string]string) {
 
 	// Build program.
 	if err := buildForServe(ctx, pctx, pctx.workdir, exePath); err != nil {
-		t.Error("buildForServe(...):", err)
+		t.Fatal("buildForServe(...):", err)
 	}
 
 	// Run program and check output to ensure correctness.
