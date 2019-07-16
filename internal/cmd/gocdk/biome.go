@@ -69,9 +69,11 @@ information needed to deploy.`,
 	var input bool
 	applyCmd := &cobra.Command{
 		Use:   "apply <biome name>",
-		Short: "Apply any changes required for the biome's resource configuration",
+		Short: "Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)",
 		Long: `Apply the changes required to reach the desired state of the biome's resource
-configuration, by running "terraform init" followed by "terraform apply".`,
+configuration (e.g., creating or updating Cloud resources).
+
+Runs "terraform init" followed by "terraform apply".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return biomeApply(ctx, pctx, args[0], input)
