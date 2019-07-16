@@ -50,7 +50,7 @@ type Harness interface {
 	// be readable by a subsequent driver.Bucket.
 	MakeDriver(ctx context.Context) (driver.Bucket, error)
 	// HTTPClient should return an unauthorized *http.Client, or nil.
-	// Required if the provider supports SignedURL.
+	// Required if the service supports SignedURL.
 	HTTPClient() *http.Client
 	// Close closes resources used by the harness.
 	Close()
@@ -75,7 +75,7 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 7. Tries to read a non-existent blob, and calls ErrorCheck with the error.
 // 8. Makes a copy of the blob, using BeforeCopy as a CopyOption.
 //
-// For example, an AsTest might set a provider-specific field to a custom
+// For example, an AsTest might set a driver-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
 // AttributesCheck and/or ReaderCheck.
 type AsTest interface {
@@ -180,7 +180,7 @@ func (verifyAsFailsOnNil) ListObjectCheck(o *blob.ListObject) error {
 	return nil
 }
 
-// RunConformanceTests runs conformance tests for provider implementations of blob.
+// RunConformanceTests runs conformance tests for driver implementations of blob.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
@@ -237,7 +237,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 }
 
-// RunBenchmarks runs benchmarks for provider implementations of blob.
+// RunBenchmarks runs benchmarks for driver implementations of blob.
 func RunBenchmarks(b *testing.B, bkt *blob.Bucket) {
 	b.Run("BenchmarkRead", func(b *testing.B) {
 		benchmarkRead(b, bkt)
@@ -1088,6 +1088,14 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	b, done := init(t)
 	defer done()
 
+	_, err := b.Attributes(ctx, "not-found")
+	if err == nil {
+		t.Errorf("got nil want error")
+	} else if gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got %v want NotFound error", err)
+	} else if !strings.Contains(err.Error(), "not-found") {
+		t.Errorf("got %v want error to include missing key", err)
+	}
 	a, err := b.Attributes(ctx, key)
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
@@ -1313,11 +1321,13 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 						t.Errorf("Write failed as expected, but content doesn't match expected previous content; got \n%s\n want \n%s", string(buf), existingContent)
 					}
 				} else {
-					// Verify that the read fails with IsNotExist.
+					// Verify that the read fails with NotFound.
 					if err == nil {
 						t.Error("Write failed as expected, but Read after that didn't return an error")
 					} else if !tc.wantReadErr && gcerrors.Code(err) != gcerrors.NotFound {
-						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want IsNotExist", err)
+						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want NotFound", err)
+					} else if !strings.Contains(err.Error(), tc.key) {
+						t.Errorf("got %v want error to include missing key", err)
 					}
 				}
 				return
@@ -1685,6 +1695,8 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), "does-not-exist") {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 
@@ -1796,6 +1808,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), "does-not-exist") {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 
@@ -1820,12 +1834,14 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		if err := b.Delete(ctx, key); err != nil {
 			t.Errorf("got unexpected error deleting blob: %v", err)
 		}
-		// Subsequent read fails with IsNotExist.
+		// Subsequent read fails with NotFound.
 		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
 			t.Errorf("read after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("read after delete want NotFound error, got %v", err)
+		} else if !strings.Contains(err.Error(), key) {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 		// Subsequent delete also fails.
 		err = b.Delete(ctx, key)
@@ -1833,6 +1849,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("delete after delete got %v, want NotFound error", err)
+		} else if !strings.Contains(err.Error(), key) {
+			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
 }
@@ -2022,7 +2040,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	defer b.Close()
 
 	// Verify that a negative Expiry gives an error. This is enforced in the
-	// portable type, so works regardless of provider support.
+	// portable type, so works regardless of driver support.
 	_, err = b.SignedURL(ctx, key, &blob.SignedURLOptions{Expiry: -1 * time.Minute})
 	if err == nil {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
@@ -2044,6 +2062,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	if client == nil {
 		t.Fatal("can't verify SignedURL, Harness.HTTPClient() returned nil")
 	}
+
 	// Create the blob.
 	if err := b.WriteAll(ctx, key, contents, nil); err != nil {
 		t.Fatal(err)

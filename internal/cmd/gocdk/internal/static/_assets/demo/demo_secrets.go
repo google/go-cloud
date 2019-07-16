@@ -39,7 +39,6 @@ func init() {
 	// to an local driver that use in-process encryption/decryption.
 	keeperURL = os.Getenv("SECRETS_KEEPER_URL")
 	if keeperURL == "" {
-		// TODO(rvangent): Remove default later.
 		keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
 	}
 	keeper, keeperErr = secrets.OpenKeeper(context.Background(), keeperURL)

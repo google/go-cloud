@@ -81,7 +81,7 @@ func DefaultURLMux() *URLMux {
 }
 
 // OpenCollection opens the collection identified by the URL given.
-// See the URLOpener documentation in provider-specific subpackages for details
+// See the URLOpener documentation in driver subpackages for details
 // on supported URL formats, and https://gocloud.dev/concepts/urls/ for more
 // information.
 func OpenCollection(ctx context.Context, urlstr string) (*Collection, error) {
