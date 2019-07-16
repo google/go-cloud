@@ -7,7 +7,7 @@ Usage:
 Flags:
       --apply biome apply   whether to run biome apply before deploying (default true)
   -h, --help                help for deploy
-      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image (default ":latest")
+      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image
 
 $ gocdk deploy -h
 TODO more about deploy
@@ -18,7 +18,7 @@ Usage:
 Flags:
       --apply biome apply   whether to run biome apply before deploying (default true)
   -h, --help                help for deploy
-      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image (default ":latest")
+      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image
 
 $ gocdk deploy --help
 TODO more about deploy
@@ -29,4 +29,4 @@ Usage:
 Flags:
       --apply biome apply   whether to run biome apply before deploying (default true)
   -h, --help                help for deploy
-      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image (default ":latest")
+      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image
