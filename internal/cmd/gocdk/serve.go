@@ -41,9 +41,11 @@ func registerServeCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 	var opts serveOptions
 	serveCmd := &cobra.Command{
 		Use:   "serve",
-		Short: "TODO Run an auto-reloading local server",
-		Long:  "TODO more about serve",
-		Args:  cobra.ExactArgs(0),
+		Short: "Run an auto-reloading local server",
+		Long: `Run an auto-reloading local server.
+
+The application will reload any time it detects a change under your project.`,
+		Args: cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return serve(ctx, pctx, &opts)
 		},
