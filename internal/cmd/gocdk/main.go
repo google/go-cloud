@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -161,25 +160,23 @@ func (pctx *processContext) Println(a ...interface{}) {
 	pctx.outlog.Println(a...)
 }
 
-// ModuleRoot searches the given directory and those above it for the Go
-// module root. It also ensures that the module looks like a Go CDK project,
-// based on the existence of a "biomes" directory.
+// ModuleRoot searches the given directory and those above it for the project
+// root, based on the existence of a "go.mod" file and a "biomes" directory.
 func (pctx *processContext) ModuleRoot(ctx context.Context) (string, error) {
-	c := exec.CommandContext(ctx, "go", "list", "-m", "-f", "{{.Dir}}")
-	c.Dir = pctx.workdir
-	output, err := c.Output()
-	if err != nil {
-		return "", xerrors.Errorf("couldn't find a Go module root at or above %s", pctx.workdir)
+	var prevDir string
+	for dir := pctx.workdir; ; dir = filepath.Dir(dir) {
+		if dir == prevDir {
+			return "", xerrors.Errorf("couldn't find a Go CDK project root at or above %s", pctx.workdir)
+		}
+		prevDir = dir
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
+			continue
+		}
+		if _, err := os.Stat(biomesRootDir(dir)); err != nil {
+			continue
+		}
+		return dir, nil
 	}
-	output = bytes.TrimSuffix(output, []byte("\n"))
-	if len(output) == 0 {
-		return "", xerrors.Errorf("couldn't find a Go module root at or above %s", pctx.workdir)
-	}
-	root := string(output)
-	if _, err := os.Stat(biomesRootDir(root)); err != nil {
-		return "", xerrors.Errorf("Go module root %s doesn't look like a Go CDK project (no biomes/ directory)", root)
-	}
-	return root, nil
 }
 
 // NewCommand creates a new exec.Cmd based on this processContext.
