@@ -45,7 +45,7 @@ const (
 	InvalidArgument ErrorCode = gcerr.InvalidArgument
 
 	// Something unexpected happened. Internal errors always indicate
-	// bugs in the Go CDK (or possibly the underlying provider).
+	// bugs in the Go CDK (or possibly the underlying service).
 	Internal ErrorCode = gcerr.Internal
 
 	// The feature is not implemented.

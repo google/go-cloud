@@ -40,17 +40,17 @@ func TestOpenCensus(t *testing.T) {
 	_, _ = v.Watch(cctx)
 
 	seen := false
-	const provider = "gocloud.dev/runtimevar/constantvar"
+	const driver = "gocloud.dev/runtimevar/constantvar"
 	for _, row := range te.Counts() {
 		if _, ok := row.Data.(*view.CountData); !ok {
 			continue
 		}
-		if row.Tags[0].Key == oc.ProviderKey && row.Tags[0].Value == provider {
+		if row.Tags[0].Key == oc.ProviderKey && row.Tags[0].Value == driver {
 			seen = true
 			break
 		}
 	}
 	if !seen {
-		t.Errorf("did not see count row with provider=%s", provider)
+		t.Errorf("did not see count row with provider=%s", driver)
 	}
 }
