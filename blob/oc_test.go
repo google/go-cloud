@@ -52,9 +52,9 @@ func TestOpenCensus(t *testing.T) {
 		t.Fatal("got nil, want error")
 	}
 
-	const provider = "gocloud.dev/blob/memblob"
+	const driver = "gocloud.dev/blob/memblob"
 
-	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/blob", provider, []octest.Call{
+	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/blob", driver, []octest.Call{
 		{Method: "NewWriter", Code: gcerrors.OK},
 		{Method: "NewRangeReader", Code: gcerrors.OK},
 		{Method: "Attributes", Code: gcerrors.OK},
@@ -67,7 +67,7 @@ func TestOpenCensus(t *testing.T) {
 
 	// Find and verify the bytes read/written metrics.
 	var sawRead, sawWritten bool
-	tags := []tag.Tag{{Key: oc.ProviderKey, Value: provider}}
+	tags := []tag.Tag{{Key: oc.ProviderKey, Value: driver}}
 	for !sawRead || !sawWritten {
 		data := <-te.Stats
 		switch data.View.Name {

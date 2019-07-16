@@ -111,7 +111,7 @@ func NewBytes(b []byte, decoder *runtimevar.Decoder) *runtimevar.Variable {
 }
 
 // NewError constructs a *runtimevar.Variable that always fails. Runtimevar
-// wraps errors returned by provider implementations, so the error returned
+// wraps errors returned by drivers, so the error returned
 // by runtimevar will not equal err.
 func NewError(err error) *runtimevar.Variable {
 	return runtimevar.New(&watcher{err: err})

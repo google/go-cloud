@@ -36,7 +36,7 @@ func init() {
 	http.HandleFunc("/demo/secrets/decrypt", secretsDecryptHandler)
 
 	// Initialize the secrets.Keeper using a URL from the environment, defaulting
-	// to an local provider that use in-process encryption/decryption.
+	// to an local driver that use in-process encryption/decryption.
 	keeperURL = os.Getenv("SECRETS_KEEPER_URL")
 	if keeperURL == "" {
 		keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
