@@ -1,6 +1,6 @@
 # Build fails when we're not in a module.
 $ gocdk build --> FAIL
-Error: gocdk build: couldn't find a Go module root at or above ${ROOTDIR}
+Error: gocdk build: couldn't find a Go CDK project root at or above ${ROOTDIR}
 
 $ gocdk init myproj
 gocdk: Project created at ${ROOTDIR}/myproj with:
