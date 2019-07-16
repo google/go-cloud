@@ -142,7 +142,7 @@
 // Times deserve special mention. Docstore can store and retrieve values of type
 // time.Time, with two caveats. First, the timezone will not be preserved. Second,
 // Docstore guarantees only that time.Time values are represented to millisecond
-// precision. Many providers will do better, but if you need to be sure that times
+// precision. Many services will do better, but if you need to be sure that times
 // are stored with nanosecond precision, convert the time.Time to another type before
 // storing and re-create when you retrieve it. For instance, if you store Unix
 // time in nanoseconds using time's UnixNano method, you can get the original
@@ -196,7 +196,7 @@
 // Docstore supports document revisions to distinguish different versions of a
 // document and enable optimistic locking. By default, Docstore stores the revision
 // in the field named "DocstoreRevision" (stored in the constant
-// DefaultRevisionField). Providers give you the option of changing that field
+// DefaultRevisionField). Drivers give you the option of changing that field
 // name.
 //
 // Docstore gives every document a revision at creation time and changes that
@@ -239,8 +239,8 @@
 //   iter := coll.Query().Where("Author.Last", "=", "Bulgakov").Limit(3).Get(ctx)
 //
 // You can make multiple Where calls. In some cases, parts of a Where clause may be
-// processed on the client rather than natively by the provider, which may have
-// performance implications for large result sets. See the provider-specific package
+// processed in the driver rather than natively by the backing service, which may have
+// performance implications for large result sets. See the driver package
 // documentation for details.
 //
 // Use the DocumentIterator returned from Query.Get by repeatedly calling its Next
