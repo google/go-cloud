@@ -36,9 +36,13 @@ func registerBuildCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 	var refs []string
 	buildCmd := &cobra.Command{
 		Use:   "build",
-		Short: "TODO Build a Docker image",
-		Long:  "TODO more about build",
-		Args:  cobra.ExactArgs(0),
+		Short: "Build a Docker image",
+		Long: `Build a Docker image for your application. The same image can be deployed
+to multiple biomes.
+
+By default, the image is tagged with ":latest" and an auto-generated snapshot tag;
+use --tag to override.`,
+		Args: cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if list {
 				if err := listBuilds(ctx, pctx); err != nil {
@@ -49,8 +53,8 @@ func registerBuildCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.
 			return build(ctx, pctx, refs)
 		},
 	}
-	buildCmd.Flags().BoolVar(&list, "list", false, "display Docker images of this project")
-	buildCmd.Flags().StringSliceVarP(&refs, "tag", "t", nil, "name and/or tag in the form `name[:tag] OR :tag`")
+	buildCmd.Flags().BoolVar(&list, "list", false, "print existing Docker tags for this project")
+	buildCmd.Flags().StringSliceVarP(&refs, "tag", "t", nil, "tag in the form `[name][:tag]`; name defaults to image name from Dockerfile, tag defaults to latest (can be used multiple times)")
 	rootCmd.AddCommand(buildCmd)
 }
 
