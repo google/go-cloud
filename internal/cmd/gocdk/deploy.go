@@ -43,7 +43,7 @@ func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra
 			return deploy(ctx, pctx, args[0], dockerImage, apply)
 		},
 	}
-	deployCmd.Flags().StringVar(&dockerImage, "image", defaultDockerTag, "Docker image to deploy in the form `name[:tag]` OR `:tag`, or empty string to build a new image")
+	deployCmd.Flags().StringVar(&dockerImage, "image", "", "Docker image to deploy in the form `name[:tag]` OR `:tag`, or empty string to build a new image")
 	deployCmd.Flags().BoolVar(&apply, "apply", true, "whether to run `biome apply` before deploying")
 	rootCmd.AddCommand(deployCmd)
 }
