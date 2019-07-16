@@ -17,10 +17,15 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gocloud.dev/internal/cmd/gocdk/internal/prompt"
@@ -66,7 +71,7 @@ information needed to deploy.`,
 	}
 	biomeCmd.AddCommand(listCmd)
 
-	var input bool
+	var applyOpts biomeApplyOptions
 	applyCmd := &cobra.Command{
 		Use:   "apply <biome name>",
 		Short: "Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)",
@@ -76,10 +81,13 @@ configuration (e.g., creating or updating Cloud resources).
 Runs "terraform init" followed by "terraform apply".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return biomeApply(ctx, pctx, args[0], input)
+			return biomeApply(ctx, pctx, args[0], &applyOpts)
 		},
 	}
-	applyCmd.Flags().BoolVar(&input, "input", true, "ask for input for Terraform variables if not directly set")
+	applyCmd.Flags().BoolVar(&applyOpts.Input, "input", true, "ask for input for Terraform variables if not directly set")
+	applyCmd.Flags().BoolVar(&applyOpts.Verbose, "verbose", false, "true to print all output from Terraform")
+	applyCmd.Flags().BoolVar(&applyOpts.Quiet, "quiet", false, "true to suppress all output from Terraform unless there's an error")
+	applyCmd.Flags().BoolVar(&applyOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
 	biomeCmd.AddCommand(applyCmd)
 
 	rootCmd.AddCommand(biomeCmd)
@@ -232,10 +240,19 @@ func biomeList(ctx context.Context, pctx *processContext) error {
 	return nil
 }
 
+// biomeApply holds options for "biome apply".
+type biomeApplyOptions struct {
+	Quiet       bool // suppress all Terraform output unless there's an error
+	Verbose     bool // show all Terraform output
+	AutoApprove bool // auto-approve Terraform changes
+	Input       bool // allow Terraform prompts for input
+}
+
 // biomeApply implements the "biome apply" subcommand.
 //
-// It runs "terraform init" and "terraform apply" for the named biome.
-func biomeApply(ctx context.Context, pctx *processContext, biome string, input bool) error {
+// It runs "terraform init", "terraform plan", and "terraform apply" for the
+// named biome.
+func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *biomeApplyOptions) error {
 	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
@@ -246,17 +263,91 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, input b
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
 	}
 
-	c := pctx.NewCommand(ctx, biomePath, "terraform", "init", "-input="+strconv.FormatBool(input))
-	if err := c.Run(); err != nil {
-		return xerrors.Errorf("biome apply %s: %w", biome, err)
+	writeTerraformOutput := func(cmd *exec.Cmd, msg []byte) {
+		const separator = "#########################################\n"
+		pctx.stderr.Write([]byte("\n"))
+		pctx.stderr.Write([]byte(separator))
+		pctx.stderr.Write([]byte(fmt.Sprintf("Output from %q\n", strings.Join(cmd.Args, " "))))
+		pctx.stderr.Write([]byte(separator))
+		pctx.stderr.Write(msg)
+		pctx.stderr.Write([]byte(separator))
+		pctx.stderr.Write([]byte("\n"))
 	}
 
-	// TODO(#1821): take over steps (plan, confirm, apply) so we can
-	// dictate the messaging and errors. We should visually differentiate
-	// when we insert verbiage on top of terraform.
-	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", "-input="+strconv.FormatBool(input))
-	if err := c.Run(); err != nil {
+	pctx.Logf("Checking to see if resource updates are needed...")
+
+	// First, run "terraform init". It's needed the first time, and anytime
+	// a new Terraform provider is added, so it's safest to just always run it.
+	inputArg := fmt.Sprintf("-input=%v", opts.Input)
+	c := pctx.NewCommand(ctx, biomePath, "terraform", "init", inputArg)
+	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
+	c.Stdout, c.Stderr = nil, nil
+	if out, err := c.CombinedOutput(); err != nil {
+		writeTerraformOutput(c, out)
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
+	} else if opts.Verbose {
+		writeTerraformOutput(c, out)
 	}
+
+	// Next, run "terraform plan".
+	planFile := filepath.Join(biomePath, "tf.plan")
+	defer os.Remove(planFile)
+	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+planFile, inputArg)
+	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
+	c.Stdout, c.Stderr = nil, nil
+
+	// No error means success and no diffs.
+	// Exit code 1 means the command failed.
+	// Exit code 2 means the command succeeded, but there's a diff.
+	if out, err := c.CombinedOutput(); err != nil && !strings.Contains(err.Error(), "exit status 2") {
+		// A real failure.
+		writeTerraformOutput(c, out)
+		return xerrors.Errorf("biome apply %s: %w", biome, err)
+	} else if err != nil {
+		// Exit code 2 --> there's a diff.
+		// Print them out and prompt for approval.
+		pctx.Logf("Resources updates are needed.")
+		if opts.Quiet {
+			pctx.Logf("Not showing update details due to --quiet.")
+		} else {
+			writeTerraformOutput(c, out)
+		}
+		if !opts.AutoApprove {
+			reader := bufio.NewReader(pctx.stdin)
+			if approve, err := prompt.String(reader, pctx.stderr, "Do you want to perform these actions (only 'yes' will be accepted to approve)?", ""); err != nil {
+				return xerrors.Errorf("biome apply %s: %w", biome, err)
+			} else if approve != "yes" {
+				return errors.New("cancelled")
+			}
+		}
+	} else {
+		// No changes.
+		pctx.Logf("No resources updates are needed.")
+		if opts.Verbose {
+			writeTerraformOutput(c, out)
+		}
+	}
+
+	// Finally, run "terraform apply" on the plan.
+	// Note: do this even if there are no resource changes, because the
+	// plan can include changes to other things, like output variables.
+	// For example:
+	// 1. Edit "outputs.tf" and change an output variable value.
+	// 2. "terraform output" still prints the old value.
+	// 3. "terraform plan -out tf.plan" returns 0 and says "no changes", but tf.plan is non-empty.
+	// 4. "terraform output" still prints the old value.
+	// 5. "terraform apply tf.plan"...
+	// 6. "terraform output" now prints the new value.
+	// See https://github.com/hashicorp/terraform/issues/15419.
+	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", planFile)
+	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
+	c.Stdout, c.Stderr = nil, nil
+	if out, err := c.CombinedOutput(); err != nil {
+		writeTerraformOutput(c, out)
+		return xerrors.Errorf("biome apply %s: %w", biome, err)
+	} else if opts.Verbose {
+		writeTerraformOutput(c, out)
+	}
+	pctx.Logf("Success!")
 	return nil
 }

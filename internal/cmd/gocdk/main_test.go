@@ -106,8 +106,17 @@ func TestCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 	goroot := strings.TrimSpace(string(gorootOut))
-	os.Setenv("PATH", fmt.Sprintf("%s/bin", goroot)) // gocdk runs the go command
-	os.Setenv("GO111MODULE", "on")                   // gocdk requires module behavior even when under GOPATH
+	tfPath, err := exec.LookPath("terraform")
+	if err != nil {
+		t.Skip("terraform not found")
+	}
+	paths := []string{
+		os.Getenv("PATH"),
+		filepath.Join(goroot, "bin"), // gocdk runs the go command
+		tfPath,                       // gocdk runs the terraform command
+	}
+	os.Setenv("PATH", strings.Join(paths, string(os.PathListSeparator)))
+	os.Setenv("GO111MODULE", "on") // gocdk requires module behavior even when under GOPATH
 
 	ts, err := cmdtest.Read("testdata")
 	if err != nil {

@@ -72,7 +72,7 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 
 	// Run "biome apply".
 	if apply {
-		if err := biomeApply(ctx, pctx, biome, true); err != nil {
+		if err := biomeApply(ctx, pctx, biome, nil); err != nil {
 			return err
 		}
 	}
