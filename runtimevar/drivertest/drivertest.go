@@ -34,11 +34,11 @@ import (
 type Harness interface {
 	// MakeWatcher creates a driver.Watcher to watch the given variable.
 	MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error)
-	// CreateVariable creates the variable with the given contents in the provider.
+	// CreateVariable creates the variable with the given contents.
 	CreateVariable(ctx context.Context, name string, val []byte) error
-	// UpdateVariable updates an existing variable to have the given contents in the provider.
+	// UpdateVariable updates an existing variable to have the given contents.
 	UpdateVariable(ctx context.Context, name string, val []byte) error
-	// DeleteVariable deletes an existing variable in the provider.
+	// DeleteVariable deletes an existing variable.
 	DeleteVariable(ctx context.Context, name string) error
 	// Close is called when the test is complete.
 	Close()
@@ -92,7 +92,7 @@ func (verifyAsFailsOnNil) ErrorCheck(v *runtimevar.Variable, err error) (ret err
 	return nil
 }
 
-// RunConformanceTests runs conformance tests for provider implementations
+// RunConformanceTests runs conformance tests for driver implementations
 // of runtimevar.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestNonExistentVariable", func(t *testing.T) {
