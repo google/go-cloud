@@ -88,47 +88,45 @@ func TestBiomeApply(t *testing.T) {
 		t.Skip("terraform not found:", err)
 	}
 
-	t.Run("TerraformNotInitialized", func(t *testing.T) {
-		ctx := context.Background()
-		pctx, cleanup, err := newTestProject(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer cleanup()
+	ctx := context.Background()
+	pctx, cleanup, err := newTestProject(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
 
-		const greeting = "HALLO WORLD"
-		devBiomeDir, err := biomeDir(pctx.workdir, "dev")
-		if err != nil {
-			t.Fatal(err)
-		}
+	const greeting = "HALLO WORLD"
+	devBiomeDir, err := biomeDir(pctx.workdir, "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		// Add a custom output variable to "main.tf".
-		// We'll verify that we can read it down below.
-		if err := static.Do(devBiomeDir, nil, &static.Action{
-			SourceContent: []byte(`output "greeting" { value = ` + strconv.Quote(greeting) + `	}`),
-			DestRelPath: "outputs.tf",
-			DestExists:  true,
-		}); err != nil {
-			t.Fatal(err)
-		}
+	// Add a custom output variable to "main.tf".
+	// We'll verify that we can read it down below.
+	if err := static.Do(devBiomeDir, nil, &static.Action{
+		SourceContent: []byte(`output "greeting" { value = ` + strconv.Quote(greeting) + `	}`),
+		DestRelPath: "outputs.tf",
+		DestExists:  true,
+	}); err != nil {
+		t.Fatal(err)
+	}
 
-		// Call the main package run function as if 'apply dev' were passed
-		// on the command line. As part of this, ensureTerraformInit is called to check
-		// that terraform has been properly initialized before running 'terraform apply'.
-		if err := run(ctx, pctx, []string{"biome", "apply", "dev"}); err != nil {
-			t.Fatalf("run error: %+v", err)
-		}
+	// Call the main package run function as if 'apply dev' were passed
+	// on the command line. As part of this, ensureTerraformInit is called to check
+	// that terraform has been properly initialized before running 'terraform apply'.
+	if err := run(ctx, pctx, []string{"biome", "apply", "dev"}); err != nil {
+		t.Fatalf("run error: %+v", err)
+	}
 
-		// After a successful terraform apply, 'terraform output' should return the greeting
-		// we configured. Terraform output fails if 'terraform init' was not called.
-		// It also fails if 'terraform apply' has never been run, as there will be no
-		// terraform state file (terraform.tfstate).
-		outputs, err := tfReadOutput(ctx, devBiomeDir, os.Environ())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := outputs["greeting"].stringValue(); got != greeting {
-			t.Errorf("greeting = %q; want %q", got, greeting)
-		}
-	})
+	// After a successful terraform apply, 'terraform output' should return the greeting
+	// we configured. Terraform output fails if 'terraform init' was not called.
+	// It also fails if 'terraform apply' has never been run, as there will be no
+	// terraform state file (terraform.tfstate).
+	outputs, err := tfReadOutput(ctx, devBiomeDir, os.Environ())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := outputs["greeting"].stringValue(); got != greeting {
+		t.Errorf("greeting = %q; want %q", got, greeting)
+	}
 }
