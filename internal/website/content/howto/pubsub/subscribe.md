@@ -33,7 +33,9 @@ https://godoc.org/gocloud.dev/pubsub#OpenTopic
 
 ## Receiving and Acknowledging Messages {#receiving}
 
-A simple subscriber that operates on messages serially looks like this:
+A simple subscriber that operates on
+[messages](https://godoc.org/gocloud.dev/pubsub#Message) serially looks like
+this:
 
 {{< goexample src="gocloud.dev/pubsub.ExampleSubscription_Receive" imports="0" >}}
 
