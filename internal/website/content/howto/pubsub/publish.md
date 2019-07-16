@@ -19,10 +19,10 @@ The easiest way to open a topic is using [`pubsub.OpenTopic`][] and a URL
 pointing to the topic, making sure you ["blank import"][] the driver package to
 link it in. See [Concepts: URLs][] for more details. If you need fine-grained
 control over the connection settings, you can call the constructor function in
-the driver package directly (like `gcppubsub.OpenTopic`). [This guide][] will
-show how to use both forms for each pub/sub provider.
+the driver package directly (like `gcppubsub.OpenTopic`).
+See the [guide below][] for usage of both forms for each supported provider.
 
-[This guide]: {{< ref "#services" >}}
+[guide below]: {{< ref "#services" >}}
 [`pubsub.OpenTopic`]:
 https://godoc.org/gocloud.dev/pubsub#OpenTopic
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
@@ -30,7 +30,8 @@ https://godoc.org/gocloud.dev/pubsub#OpenTopic
 
 ## Sending messages on a Topic {#sending}
 
-Sending a message on a Topic looks like this:
+Sending a message on a [Topic](https://godoc.org/gocloud.dev/pubsub#Topic) looks
+like this:
 
 {{< goexample src="gocloud.dev/pubsub.ExampleTopic_Send" imports="0" >}}
 
