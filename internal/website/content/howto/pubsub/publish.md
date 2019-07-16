@@ -13,6 +13,8 @@ Publishing a message to a topic with the Go CDK takes two steps:
 [Open the topic]: {{< ref "#opening" >}}
 [Send messages]: {{< ref "#sending" >}}
 
+<!--more-->
+
 ## Opening a Topic {#opening}
 
 The easiest way to open a topic is using [`pubsub.OpenTopic`][] and a URL
@@ -28,20 +30,42 @@ https://godoc.org/gocloud.dev/pubsub#OpenTopic
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
-## Sending messages on a Topic {#sending}
+## Sending Messages on a Topic {#sending}
 
 Sending a message on a [Topic](https://godoc.org/gocloud.dev/pubsub#Topic) looks
 like this:
 
 {{< goexample src="gocloud.dev/pubsub.ExampleTopic_Send" imports="0" >}}
 
-Note that the [semantics of message delivery][] can vary by provider.
+Note that the [semantics of message delivery][] can vary by backing service.
 
 [semantics of message delivery]: https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 
 ## Supported Pub/Sub Services {#services}
 
-### AWS Simple Notification Service {#sns}
+### Google Cloud Pub/Sub {#gcp}
+
+The Go CDK can publish to a Google [Cloud Pub/Sub][] topic. The URLs use the
+project ID and the topic ID. `pubsub.OpenTopic` will use [Application Default
+Credentials][GCP creds].
+
+{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
+
+[Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+
+#### GCP Cloud Pub/Sub Constructor {#gcp-ctor}
+
+The [`gcppubsub.OpenTopic`][] constructor opens a Cloud Pub/Sub topic. You
+must first obtain [GCP credentials][GCP creds] and then create a gRPC
+connection to Cloud Pub/Sub. (This gRPC connection can be reused among
+topics.)
+
+{{< goexample "gocloud.dev/pubsub/gcppubsub.ExampleOpenTopic" >}}
+
+[`gcppubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenTopic
+
+### Amazon Simple Notification Service {#sns}
 
 The Go CDK can publish to an Amazon [Simple Notification Service][SNS] (SNS)
 topic. SNS URLs in the Go CDK use the Amazon Resource Name (ARN) to identify
@@ -64,7 +88,7 @@ you may need to manually Base64 decode the message payload.
 [SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
 [SNS]: https://aws.amazon.com/sns/
 
-#### Amazon Simple Notification Service Constructor {#sns-ctor}
+#### Amazon SNS Constructor {#sns-ctor}
 
 The [`awssnssqs.OpenSNSTopic`][] constructor opens an SNS topic. You must first
 create an [AWS session][] with the same region as your topic:
@@ -74,7 +98,7 @@ create an [AWS session][] with the same region as your topic:
 [`awssnssqs.OpenSNSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSNSTopic
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
-### AWS Simple Queue Service {#sqs}
+### Amazon Simple Queue Service {#sqs}
 
 The Go CDK can publish to an Amazon [Simple Queue Service][SQS] (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
@@ -97,7 +121,7 @@ you may need to manually Base64 decode the message payload.
 [SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
 [SQS]: https://aws.amazon.com/sqs/
 
-#### Amazon Simple Queue Service Constructor {#sqs-ctor}
+#### Amazon SQS Constructor {#sqs-ctor}
 
 The [`awssnssqs.OpenSQSTopic`][] constructor opens an SQS topic. You must first
 create an [AWS session][] with the same region as your topic:
@@ -106,28 +130,6 @@ create an [AWS session][] with the same region as your topic:
 
 [`awssnssqs.OpenSQSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSQSTopic
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-
-### GCP Cloud Pub/Sub {#gcp}
-
-The Go CDK can publish to a Google [Cloud Pub/Sub][] topic. The URLs use the
-project ID and the topic ID. `pubsub.OpenTopic` will use [Application Default
-Credentials][GCP creds].
-
-{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
-
-[Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
-[GCP creds]: https://cloud.google.com/docs/authentication/production
-
-#### GCP Cloud Pub/Sub Constructor {#gcp-ctor}
-
-The [`gcppubsub.OpenTopic`][] constructor opens a Cloud Pub/Sub topic. You
-must first obtain [GCP credentials][GCP creds] and then create a gRPC
-connection to Cloud Pub/Sub. (This gRPC connection can be reused among
-topics.)
-
-{{< goexample "gocloud.dev/pubsub/gcppubsub.ExampleOpenTopic" >}}
-
-[`gcppubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenTopic
 
 ### Azure Service Bus {#azure}
 
