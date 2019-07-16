@@ -58,9 +58,12 @@ func doit() int {
 
 func run(ctx context.Context, pctx *processContext, args []string) error {
 	var rootCmd = &cobra.Command{
-		Use:   "gocdk",
-		Short: "TODO gocdk",
-		Long:  "TODO more about gocdk",
+		Use: "gocdk",
+		// Short is not used since this is the root command.
+		Long: `gocdk can initialize a new project, add deployment targets (known as "biomes"),
+add demos of Go CDK portable types, provision Cloud resources and use them in the demos,
+build the application into a Docker image, deploy the Docker image to a chosen Cloud provider,
+and serve the application locally with live code reloading.`,
 		// We want to print usage for any command/flag parsing errors, but
 		// suppress usage for random errors returned by a command's RunE.
 		// This function gets called right before RunE, so suppress from now on.
