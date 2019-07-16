@@ -39,9 +39,10 @@ the functionality of a particular Go CDK portable type.
 By default, each demo uses a local implementation of the portable type; for
 example, the "blob" demo uses an in-memory implementation of "blob".
 
-You can use the "gocdk resource" command to add a different resource to a
-biome; for example, "gocdk resource add blob/gcsblob" will provision a Google Compute
-Storage bucket, and the "blob" demo will work it instead (with no code changes!).`,
+If you want to use a different implementation of the portable type, you can
+use the "gocdk resource" command to add it to your biome; for example,
+"gocdk resource add blob/gcsblob" will provision a Google Compute Storage
+bucket, and the "blob" demo will use it instead (with no code changes!).`,
 	}
 
 	demoListCmd := &cobra.Command{
