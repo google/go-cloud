@@ -118,6 +118,7 @@ import (
 type Reader struct {
 	b        driver.Bucket
 	r        driver.Reader
+	key      string
 	end      func(error) // called at Close to finish trace and metric collection
 	provider string      // for metric collection
 	closed   bool
@@ -128,13 +129,13 @@ func (r *Reader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
 	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, r.provider)},
 		bytesReadMeasure.M(int64(n)))
-	return n, wrapError(r.b, err)
+	return n, wrapError(r.b, err, r.key)
 }
 
 // Close implements io.Closer (https://golang.org/pkg/io/#Closer).
 func (r *Reader) Close() error {
 	r.closed = true
-	err := wrapError(r.b, r.r.Close())
+	err := wrapError(r.b, r.r.Close(), r.key)
 	r.end(err)
 	return err
 }
@@ -216,6 +217,7 @@ func (a *Attributes) As(i interface{}) bool {
 type Writer struct {
 	b          driver.Bucket
 	w          driver.Writer
+	key        string
 	end        func(error) // called at Close to finish trace and metric collection
 	cancel     func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5 []byte
@@ -223,15 +225,16 @@ type Writer struct {
 	provider   string // for metric collection
 	closed     bool
 
-	// These fields exist only when w is not yet created.
+	// These fields are non-zero values only when w is nil (not yet created).
 	//
 	// A ctx is stored in the Writer since we need to pass it into NewTypedWriter
 	// when we finish detecting the content type of the blob and create the
 	// underlying driver.Writer. This step happens inside Write or Close and
-	// neither of them take a context.Context as an argument. The ctx is set
-	// to nil after we have passed it to NewTypedWriter.
+	// neither of them take a context.Context as an argument.
+	//
+	// All 3 fields are only initialized when we create the Writer without
+	// setting the w field, and are reset to zero values after w is created.
 	ctx  context.Context
-	key  string
 	opts *driver.WriterOptions
 	buf  *bytes.Buffer
 }
@@ -295,12 +298,12 @@ func (w *Writer) Close() (err error) {
 
 	defer w.cancel()
 	if w.w != nil {
-		return wrapError(w.b, w.w.Close())
+		return wrapError(w.b, w.w.Close(), w.key)
 	}
 	if _, err := w.open(w.buf.Bytes()); err != nil {
 		return err
 	}
-	return wrapError(w.b, w.w.Close())
+	return wrapError(w.b, w.w.Close(), w.key)
 }
 
 // open tries to detect the MIME type of p and write it to the blob.
@@ -309,11 +312,12 @@ func (w *Writer) open(p []byte) (int, error) {
 	ct := http.DetectContentType(p)
 	var err error
 	if w.w, err = w.b.NewTypedWriter(w.ctx, w.key, ct, w.opts); err != nil {
-		return 0, wrapError(w.b, err)
+		return 0, wrapError(w.b, err, w.key)
 	}
+	// Set the 3 fields needed for lazy NewTypedWriter back to zero values
+	// (see the comment on Writer).
 	w.buf = nil
 	w.ctx = nil
-	w.key = ""
 	w.opts = nil
 	return w.write(p)
 }
@@ -322,7 +326,7 @@ func (w *Writer) write(p []byte) (int, error) {
 	n, err := w.w.Write(p)
 	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, w.provider)},
 		bytesWrittenMeasure.M(int64(n)))
-	return n, wrapError(w.b, err)
+	return n, wrapError(w.b, err, w.key)
 }
 
 // ListOptions sets options for listing blobs via Bucket.List.
@@ -393,7 +397,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	// Loading a new page.
 	p, err := i.b.b.ListPaged(ctx, i.opts)
 	if err != nil {
-		return nil, wrapError(i.b.b, err)
+		return nil, wrapError(i.b.b, err, "")
 	}
 	i.page = p
 	i.nextIdx = 0
@@ -580,7 +584,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
-		return nil, wrapError(b.b, err)
+		return nil, wrapError(b.b, err, key)
 	}
 	var md map[string]string
 	if len(a.Metadata) > 0 {
@@ -654,10 +658,10 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	}()
 	dr, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
-		return nil, wrapError(b.b, err)
+		return nil, wrapError(b.b, err, key)
 	}
 	end := func(err error) { b.tracer.End(tctx, err) }
-	r := &Reader{b: b.b, r: dr, end: end, provider: b.tracer.Provider}
+	r := &Reader{b: b.b, r: dr, key: key, end: end, provider: b.tracer.Provider}
 	_, file, lineno, ok := runtime.Caller(2)
 	runtime.SetFinalizer(r, func(r *Reader) {
 		if !r.closed {
@@ -768,8 +772,6 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		end:        end,
 		cancel:     cancel,
 		key:        key,
-		opts:       dopts,
-		buf:        bytes.NewBuffer([]byte{}),
 		contentMD5: opts.ContentMD5,
 		md5hash:    md5.New(),
 		provider:   b.tracer.Provider,
@@ -784,14 +786,13 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		dw, err := b.b.NewTypedWriter(ctx, key, ct, dopts)
 		if err != nil {
 			cancel()
-			return nil, wrapError(b.b, err)
+			return nil, wrapError(b.b, err, key)
 		}
 		w.w = dw
 	} else {
 		// Save the fields needed to called NewTypedWriter later, once we've gotten
-		// sniffLen bytes.
+		// sniffLen bytes; see the comment on Writer.
 		w.ctx = ctx
-		w.key = key
 		w.opts = dopts
 		w.buf = bytes.NewBuffer([]byte{})
 	}
@@ -835,7 +836,7 @@ func (b *Bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOpti
 	}
 	ctx = b.tracer.Start(ctx, "Copy")
 	defer func() { b.tracer.End(ctx, err) }()
-	return wrapError(b.b, b.b.Copy(ctx, dstKey, srcKey, dopts))
+	return wrapError(b.b, b.b.Copy(ctx, dstKey, srcKey, dopts), fmt.Sprintf("%s -> %s", srcKey, dstKey))
 }
 
 // Delete deletes the blob stored at key.
@@ -853,7 +854,7 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	}
 	ctx = b.tracer.Start(ctx, "Delete")
 	defer func() { b.tracer.End(ctx, err) }()
-	return wrapError(b.b, b.b.Delete(ctx, key))
+	return wrapError(b.b, b.b.Delete(ctx, key), key)
 }
 
 // SignedURL returns a URL that can be used to GET the blob for the duration
@@ -887,7 +888,7 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 		return "", errClosed
 	}
 	url, err := b.b.SignedURL(ctx, key, &dopts)
-	return url, wrapError(b.b, err)
+	return url, wrapError(b.b, err, key)
 }
 
 // Close releases any resources used for the bucket.
@@ -899,7 +900,7 @@ func (b *Bucket) Close() error {
 	if prev {
 		return errClosed
 	}
-	return wrapError(b.b, b.b.Close())
+	return wrapError(b.b, b.b.Close(), "")
 }
 
 // DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.
@@ -1089,14 +1090,18 @@ func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	return defaultURLMux.OpenBucket(ctx, urlstr)
 }
 
-func wrapError(b driver.Bucket, err error) error {
+func wrapError(b driver.Bucket, err error, key string) error {
 	if err == nil {
 		return nil
 	}
 	if gcerr.DoNotWrap(err) {
 		return err
 	}
-	return gcerr.New(b.ErrorCode(err), err, 2, "blob")
+	msg := "blob"
+	if key != "" {
+		msg += fmt.Sprintf(" (key %s)", key)
+	}
+	return gcerr.New(b.ErrorCode(err), err, 2, msg)
 }
 
 var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been closed")
