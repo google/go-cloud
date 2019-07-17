@@ -200,7 +200,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		// We need to add the key fields if the user doesn't include them. The
 		// BatchGet API doesn't return them otherwise.
 		var hasP, hasS bool
-		nbs := []expression.NameBuilder{}
+		var nbs []expression.NameBuilder
 		for _, fp := range gets[start].FieldPaths {
 			p := strings.Join(fp, ".")
 			nbs = append(nbs, expression.Name(p))

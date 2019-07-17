@@ -191,11 +191,10 @@
 // DefaultRevisionField). Providers give you the option of changing that field
 // name.
 //
-// Docstore gives every document a revision at creation time and updates that
-// revision whenever the document is modified if and only if the document struct
-// or map has a field matching the revision field name. If you don't want
-// Docstore to handle any revision logic, simply do not have the revision field
-// in your document.
+// When you pass a document with a revision field to a write action, Docstore
+// will give it a revision at creation time or update the revision value when
+// modifying the document. If you don't want Docstore to handle any revision
+// logic, simply do not have the revision field in your document.
 //
 // When you pass a document with a non-nil revision to Put, Replace, Update or
 // Delete, Docstore will also compare the revision of the stored document to
