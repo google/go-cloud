@@ -289,10 +289,17 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		writeTerraformOutput(c, out)
 	}
 
-	// Next, run "terraform plan".
-	planFile := filepath.Join(biomePath, "tf.plan")
-	defer os.Remove(planFile)
-	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+planFile, inputArg)
+	// Next, run "terraform plan", writing the plan to a temp file.
+	planFile, err := ioutil.TempFile(pctx.workdir, "tfplan")
+	if err != nil {
+		return xerrors.Errorf("biome apply %s: %w", biome, err)
+	}
+	// Note: using just the base filename instead of passing the file path to --out
+	// because Terraform appears to not work with full Windows paths.
+	planFileName := filepath.Base(planFile.Name())
+	defer planFile.Close()
+	defer os.Remove(planFile.Name())
+	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+planFileName, inputArg)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	c.Stdout, c.Stderr = nil, nil
 
@@ -339,7 +346,7 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	// 5. "terraform apply tf.plan"...
 	// 6. "terraform output" now prints the new value.
 	// See https://github.com/hashicorp/terraform/issues/15419.
-	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", planFile)
+	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", planFileName)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	c.Stdout, c.Stderr = nil, nil
 	if out, err := c.CombinedOutput(); err != nil {
