@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#gcprc-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/#gcprc-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -64,7 +64,7 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#gcprc
+	// This example is used in https://gocloud.dev/howto/runtimevar/#gcprc
 
 	// import _ "gocloud.dev/runtimevar/gcpruntimeconfig"
 

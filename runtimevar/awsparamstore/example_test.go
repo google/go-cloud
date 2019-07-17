@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps-ctor
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
@@ -42,7 +42,7 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps
+	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps
 
 	// import _ "gocloud.dev/runtimevar/awsparamstore"
 

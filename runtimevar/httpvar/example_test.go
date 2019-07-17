@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#http-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/#http-ctor
 
 	// Create an HTTP.Client
 	httpClient := http.DefaultClient
@@ -38,7 +38,7 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#http-url
+	// This example is used in https://gocloud.dev/howto/runtimevar/#http-url
 
 	// import _ "gocloud.dev/runtimevar/httpvar"
 

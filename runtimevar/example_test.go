@@ -29,7 +29,7 @@ import (
 )
 
 func Example_jsonDecoder() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps-ctor
 
 	// Variables set up elsewhere:
 	ctx := context.Background()
@@ -85,7 +85,7 @@ func Example_stringDecoder() {
 }
 
 func ExampleVariable_Latest() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#latest
+	// This example is used in https://gocloud.dev/howto/runtimevar/#latest
 
 	// Variables set up elsewhere:
 	var v *runtimevar.Variable

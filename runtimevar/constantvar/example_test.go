@@ -76,7 +76,7 @@ func ExampleNewError() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#local
+	// This example is used in https://gocloud.dev/howto/runtimevar/#local
 
 	// import _ "gocloud.dev/runtimevar/constantvar"
 

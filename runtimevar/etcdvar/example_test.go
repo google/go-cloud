@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/#etcd-ctor
 
 	// Connect to the etcd server.
 	client, err := clientv3.NewFromURL("http://your.etcd.server:9999")
@@ -41,7 +41,7 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#etcd-url
+	// This example is used in https://gocloud.dev/howto/runtimevar/#etcd
 
 	// import _ "gocloud.dev/runtimevar/etcdvar"
 

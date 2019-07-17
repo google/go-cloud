@@ -55,7 +55,7 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#blob
+	// This example is used in https://gocloud.dev/howto/runtimevar/#blob
 
 	// import _ "gocloud.dev/runtimevar/blobvar"
 
