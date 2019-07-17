@@ -30,10 +30,11 @@ func registerInitCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 	var modpath string
 	var allowExistingDir bool
 	initCmd := &cobra.Command{
-		Use:   "init PATH_TO_PROJECT_DIR",
-		Short: "TODO: Initialize a new project",
-		Long:  "TODO more about init",
-		Args:  cobra.ExactArgs(1),
+		Use:   "init <path to project dir>",
+		Short: "Initialize a new project",
+		Long: `Initialize a new Go CDK project. The argument should point to a directory
+that does not exist; init will create it and populate the new directory.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return doInit(ctx, pctx, args[0], modpath, allowExistingDir)
 		},

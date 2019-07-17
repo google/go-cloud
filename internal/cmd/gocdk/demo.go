@@ -32,14 +32,23 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 
 	demoCmd := &cobra.Command{
 		Use:   "demo",
-		Short: "TODO Manage demos",
-		Long:  "TODO more about demos",
+		Short: "Manage demos of Go CDK portable types",
+		Long: `Demos consist of source code added to your application that demonstrate
+the functionality of a particular Go CDK portable type.
+
+By default, each demo uses a local implementation of the portable type; for
+example, the "blob" demo uses an in-memory implementation of "blob".
+
+If you want to use a different implementation of the portable type, you can
+use the "gocdk resource" command to add it to your biome; for example,
+"gocdk resource add blob/gcsblob" will provision a Google Compute Storage
+bucket, and the "blob" demo will use it instead (with no code changes!).`,
 	}
 
 	demoListCmd := &cobra.Command{
 		Use:   "list",
-		Short: "TODO List available demos",
-		Long:  "TODO more about listing demos",
+		Short: "List available portable type demos",
+		Long:  `Print the list of available portable type demos.`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return listDemos(pctx)
@@ -49,15 +58,16 @@ func registerDemoCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.C
 
 	var force bool
 	demoAddCmd := &cobra.Command{
-		Use:   "add DEMO",
-		Short: "TODO Add a demo",
-		Long:  "TODO more about adding a demo",
-		Args:  cobra.ExactArgs(1),
+		Use:   "add <demo name>",
+		Short: "Add a portable type demo",
+		Long: `Add Go source code that demonstrates the functionality of a particular
+Go CDK portable type.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return addDemo(ctx, pctx, args[0], force)
 		},
 	}
-	demoAddCmd.Flags().BoolVar(&force, "force", false, "re-add even the demo even if it has already been added, overwriting previous files")
+	demoAddCmd.Flags().BoolVar(&force, "force", false, "re-add the demo source file even if it has already been added, overwriting any previous file")
 	demoCmd.AddCommand(demoAddCmd)
 
 	rootCmd.AddCommand(demoCmd)
@@ -83,9 +93,6 @@ func addDemo(ctx context.Context, pctx *processContext, demoToAdd string, force 
 
 // instantiateDemo does all of the work required to add a demo of a
 // portable API to the user's project.
-// TODO(rvangent): It currently copies a single source code file. It should
-// additionally iterate over existing biomes, adding a config entry and possibly
-// Terraform files.
 func instantiateDemo(pctx *processContext, moduleRoot, demo string, force bool) error {
 	pctx.Logf("Adding %q...", demo)
 

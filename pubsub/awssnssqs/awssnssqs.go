@@ -39,7 +39,7 @@
 //
 // Escaping
 //
-// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are required for awssnssqs:
 //  - Metadata keys: Characters other than "a-zA-z0-9_-.", and additionally "."

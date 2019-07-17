@@ -46,10 +46,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/google/wire"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
+)
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	wire.Struct(new(URLOpener), "ConfigProvider"),
 )
 
 type collection struct {

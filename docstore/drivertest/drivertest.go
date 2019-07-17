@@ -55,7 +55,7 @@ type Harness interface {
 	MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error)
 
 	// BeforeDoTypes should return a list of values whose types are valid for the as
-	// function given to BeforeDo. For example, if the provider converts Get actions
+	// function given to BeforeDo. For example, if the driver converts Get actions
 	// to *GetRequests and write actions to *WriteRequests, then BeforeDoTypes should
 	// return []interface{}{&GetRequest{}, &WriteRequest{}}.
 	// TODO(jba): consider splitting these by action kind.
@@ -98,7 +98,7 @@ const (
 )
 
 // CodecTester describes functions that encode and decode values using both the
-// docstore codec for a provider, and that provider's own "native" codec.
+// docstore codec for a driver, and that driver's own "native" codec.
 type CodecTester interface {
 	UnsupportedTypes() []UnsupportedType
 	NativeEncode(interface{}) (interface{}, error)
@@ -150,7 +150,7 @@ func (v verifyAsFailsOnNil) ErrorCheck(c *docstore.Collection, err error) (ret e
 	return nil
 }
 
-// RunConformanceTests runs conformance tests for provider implementations of docstore.
+// RunConformanceTests runs conformance tests for driver implementations of docstore.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, asTests []AsTest) {
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
@@ -1009,7 +1009,7 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 // Test decoding into an interface{}, where the decoder doesn't know the type of the
 // result and must return some Go type that accurately represents the value.
 // This is implemented by the AsInterface method of driver.Decoder.
-// Since it's fine for different providers to return different types in this case,
+// Since it's fine for different drivers to return different types in this case,
 // each test case compares against a list of possible values.
 func testBlindDecode(t *testing.T, ct CodecTester) {
 	if ct == nil {
@@ -1118,7 +1118,7 @@ type nativeMinimal struct {
 
 // The following is the schema for the collection used for query testing.
 // It is loosely borrowed from the DynamoDB documentation.
-// It is rich enough to require indexes for some providers.
+// It is rich enough to require indexes for some drivers.
 
 // A HighScore records one user's high score in a particular game.
 // The primary key fields are Game and Player.

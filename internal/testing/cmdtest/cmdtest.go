@@ -712,15 +712,24 @@ func cdCmd(args []string) ([]byte, error) {
 
 // echo ARG1 ARG2 ...
 // write args to stdout
+//
+// \n is added at the end of the input.
+// Also, literal "\n" in the input will be replaced by \n.
 func echoCmd(args []string, inputFile string) ([]byte, error) {
 	if inputFile != "" {
 		return nil, fatal{errors.New("input redirection not supported")}
 	}
-	return []byte(strings.Join(args, " ") + "\n"), nil
+	s := strings.Join(args, " ")
+	s = strings.Replace(s, "\\n", "\n", -1)
+	s += "\n"
+	return []byte(s), nil
 }
 
 // echof FILE ARG1 ARG2 ...
 // write args to FILE
+//
+// \n is added at the end of the input.
+// Also, literal "\n" in the input will be replaced by \n.
 func echofCmd(args []string, inputFile string) ([]byte, error) {
 	if len(args) < 1 {
 		return nil, fatal{errors.New("need at least 1 argument")}
@@ -731,7 +740,10 @@ func echofCmd(args []string, inputFile string) ([]byte, error) {
 	if err := checkPath(args[0]); err != nil {
 		return nil, err
 	}
-	return nil, ioutil.WriteFile(args[0], []byte(strings.Join(args[1:], " ")+"\n"), 0600)
+	s := strings.Join(args[1:], " ")
+	s = strings.Replace(s, "\\n", "\n", -1)
+	s += "\n"
+	return nil, ioutil.WriteFile(args[0], []byte(s), 0600)
 }
 
 // cat FILE

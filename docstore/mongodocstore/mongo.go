@@ -65,6 +65,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/google/wire"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -91,6 +92,12 @@ func Dial(ctx context.Context, uri string) (*mongo.Client, error) {
 	return client, nil
 }
 
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	wire.Struct(new(URLOpener), "Client"),
+)
+
 type collection struct {
 	coll          *mongo.Collection
 	idField       string
@@ -106,7 +113,7 @@ type Options struct {
 	// If false (the default), then struct fields and MongoDB document fields will
 	// have the same names. For example, a struct field F will correspond to a
 	// MongoDB document field "F". This setting matches the behavior of other
-	// docstore providers, making code portable across providers.
+	// docstore drivers, making code portable across services.
 	//
 	// If true, all fields correspond to lower-cased MongoDB document fields. The
 	// field name F will correspond to the MongoDB document field "f", for

@@ -41,7 +41,7 @@ var (
 // values using interface{}. An Encoder is responsible for storing the value
 // it is encoding.
 //
-// Because all providers must support the same set of values, the encoding methods
+// Because all drivers must support the same set of values, the encoding methods
 // (with the exception of EncodeStruct) do not return errors. EncodeStruct is special
 // because it is an escape hatch for arbitrary structs, not all of which may be
 // encodable.

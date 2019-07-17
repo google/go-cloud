@@ -69,7 +69,7 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 // activity is being either recorded to files (when *Record is set) or replayed
 // from files. rf is a modifier function that will be invoked with the address
 // of the httpreplay.Recorder object used to obtain the client; this function
-// can mutate the recorder to add provider-specific header filters, for example.
+// can mutate the recorder to add service-specific header filters, for example.
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
 func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder),

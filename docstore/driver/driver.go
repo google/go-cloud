@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver defines a set of interfaces that the docstore package uses to
-// interact with the underlying services.
+// Package driver defines interfaces to be implemented by docstore drivers, which
+// will be used by the docstore package to interact with the underlying services.
+// Application code should use package docstore.
 package driver // import "gocloud.dev/docstore/driver"
 
 import (
@@ -34,7 +35,7 @@ type Collection interface {
 	//
 	// The returned key must be comparable.
 	//
-	// The returned key should not be encoded with the provider's codec; it should
+	// The returned key should not be encoded with the driver's codec; it should
 	// be the user-supplied Go value.
 	Key(Document) (interface{}, error)
 
@@ -46,10 +47,10 @@ type Collection interface {
 	//
 	// If unordered is false, it must appear as if the actions were executed in the
 	// order they appear in the slice, from the client's point of view. The actions
-	// need not happen atomically, nor does eventual consistency in the provider
-	// system need to be taken into account. For example, after a write returns
+	// need not happen atomically, nor does eventual consistency in the service
+	// need to be taken into account. For example, after a write returns
 	// successfully, the driver can immediately perform a read on the same document,
-	// even though the provider's semantics does not guarantee that the read will see
+	// even though the service's semantics does not guarantee that the read will see
 	// the write. RunActions should return immediately after the first action that fails.
 	// The returned slice should have a single element.
 	//
@@ -77,11 +78,11 @@ type Collection interface {
 	// BytesToRevision converts a []byte to a revision.
 	BytesToRevision([]byte) (interface{}, error)
 
-	// As converts i to provider-specific types.
+	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 
-	// ErrorAs allows providers to expose provider-specific types for returned
+	// ErrorAs allows drivers to expose driver-specific types for returned
 	// errors.
 	//
 	// See https://gocloud.dev/concepts/as/ for background information.
@@ -162,8 +163,8 @@ func NewActionListError(errs []error) ActionListError {
 // RunActionsOptions controls the behavior of RunActions.
 type RunActionsOptions struct {
 	// BeforeDo is a callback that must be called once, sequentially, before each one
-	// or group of the underlying provider's actions is executed. asFunc allows
-	// providers to expose provider-specific types.
+	// or group of the underlying service's actions is executed. asFunc allows
+	// drivers to expose driver-specific types.
 	BeforeDo func(asFunc func(interface{}) bool) error
 }
 
@@ -190,8 +191,8 @@ type Query struct {
 	OrderAscending bool
 
 	// BeforeQuery is a callback that must be called exactly once before the
-	// underlying provider's query is executed. asFunc allows providers to expose
-	// provider-specific types.
+	// underlying service's query is executed. asFunc allows drivers to expose
+	// driver-specific types.
 	BeforeQuery func(asFunc func(interface{}) bool) error
 }
 
@@ -218,7 +219,7 @@ type DocumentIterator interface {
 	// needed.
 	Stop()
 
-	// As converts i to provider-specific types.
+	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	As(i interface{}) bool
 }

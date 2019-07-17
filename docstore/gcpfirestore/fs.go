@@ -78,6 +78,7 @@ import (
 	vkit "cloud.google.com/go/firestore/apiv1"
 	"github.com/golang/protobuf/proto"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/google/wire"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcp"
@@ -95,6 +96,12 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error)
 	c, err := vkit.NewClient(ctx, option.WithTokenSource(ts), useragent.ClientOption("docstore"))
 	return c, func() { c.Close() }, err
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	wire.Struct(new(URLOpener), "Client"),
+)
 
 type collection struct {
 	nameField string

@@ -38,8 +38,8 @@ to make an application portable across cloud platforms.
 
 The project works well with a code generator called
 [Wire](https://github.com/google/wire/blob/master/README.md). It creates
-human-readable code that only imports the cloud SDKs for providers you use. This
-allows the Go CDK to grow to support any number of cloud providers, without
+human-readable code that only imports the cloud SDKs for services you use. This
+allows the Go CDK to grow to support any number of cloud services, without
 increasing compile times or binary sizes, and avoiding any side effects from
 `init()` functions.
 
@@ -101,16 +101,16 @@ documentation, bug reports, feature requests, or anything else. We encourage you
 to experiment with the Go CDK and make contributions to help evolve it to meet
 your needs!
 
-The GitHub repository at [google/go-cloud][go-cloud] contains some provider
+The GitHub repository at [google/go-cloud][go-cloud] contains some driver
 implementations for each portable API. We intend to include
 [Google Cloud Platform][gcp], [Amazon Web Services][aws], and [Azure][azure]
-implementations, as well as prominent open source providers and at least one
+implementations, as well as prominent open source services and at least one
 implementation suitable for use in local testing. Unfortunately, we cannot
-support every cloud provider directly from the project; however, we encourage
+support every service directly from the project; however, we encourage
 contributions in separate repositories.
 
 If you create a repository that implements the Go CDK interfaces for other
-providers, let us know! We would be happy to link to it here and give you a
+services, let us know! We would be happy to link to it here and give you a
 heads-up before making any breaking changes.
 
 See [the contributing guide](./CONTRIBUTING.md) for more details.

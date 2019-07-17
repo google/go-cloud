@@ -35,15 +35,18 @@ func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra
 	var dockerImage string
 	var apply bool
 	deployCmd := &cobra.Command{
-		Use:   "deploy BIOME",
-		Short: "TODO Deploy the biome",
-		Long:  "TODO more about deploy",
-		Args:  cobra.ExactArgs(1),
+		Use:   "deploy <biome name>",
+		Short: "Deploy the application to the biome's deployment target",
+		Long: `Deploy the application to the biome's configured deployment target.
+
+By default, a new Docker image is built and deployed; use --image to skip the
+build and use an existing tagged image instead.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return deploy(ctx, pctx, args[0], dockerImage, apply)
 		},
 	}
-	deployCmd.Flags().StringVar(&dockerImage, "image", defaultDockerTag, "Docker image to deploy in the form `name[:tag]` OR `:tag`, or empty string to build a new image")
+	deployCmd.Flags().StringVar(&dockerImage, "image", "", "Docker image to deploy in the form `[name][:tag]`; name defaults to image name from Dockerfile, tag defaults to latest; empty string builds a new image")
 	deployCmd.Flags().BoolVar(&apply, "apply", true, "whether to run `biome apply` before deploying")
 	rootCmd.AddCommand(deployCmd)
 }
@@ -57,16 +60,17 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 		return xerrors.Errorf("gocdk deploy: %w", err)
 	}
 
-	// If no image was specified, compute a snapshot tag and build it.
+	// If no image was specified, do a build.
 	if dockerImage == "" {
 		var err error
-		dockerImage, err = buildForDeploy(ctx, pctx, moduleRoot)
+		dockerImage, err := build(ctx, pctx, nil)
 		if err != nil {
 			return xerrors.Errorf("gocdk deploy: %w", err)
 		}
+		pctx.Logf("Deploying Docker image %q...", dockerImage)
 	}
 
-	// Run "terraform apply".
+	// Run "biome apply".
 	if apply {
 		if err := biomeApply(ctx, pctx, biome, true); err != nil {
 			return err
@@ -121,26 +125,6 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 	}
 	pctx.Logf("Serving at %s\n", launchURL)
 	return nil
-}
-
-func buildForDeploy(ctx context.Context, pctx *processContext, moduleRoot string) (string, error) {
-	imageName, err := moduleDockerImageName(moduleRoot)
-	if err != nil {
-		return "", err
-	}
-	tag, err := generateTag()
-	if err != nil {
-		return "", err
-	}
-	snapshotRef := imageName + ":" + tag
-	buildRefs := []string{
-		imageName + defaultDockerTag,
-		snapshotRef,
-	}
-	if err := build(ctx, pctx, buildRefs); err != nil {
-		return "", err
-	}
-	return snapshotRef, nil
 }
 
 // Launcher is the interface for any type that can launch a Docker image.

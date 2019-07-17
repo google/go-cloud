@@ -1,32 +1,41 @@
 $ gocdk help deploy
-TODO more about deploy
+Deploy the application to the biome's configured deployment target.
+
+By default, a new Docker image is built and deployed; use --image to skip the
+build and use an existing tagged image instead.
 
 Usage:
-  gocdk deploy BIOME [flags]
+  gocdk deploy <biome name> [flags]
 
 Flags:
-      --apply biome apply   whether to run biome apply before deploying (default true)
-  -h, --help                help for deploy
-      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image (default ":latest")
+      --apply biome apply    whether to run biome apply before deploying (default true)
+  -h, --help                 help for deploy
+      --image [name][:tag]   Docker image to deploy in the form [name][:tag]; name defaults to image name from Dockerfile, tag defaults to latest; empty string builds a new image
 
 $ gocdk deploy -h
-TODO more about deploy
+Deploy the application to the biome's configured deployment target.
+
+By default, a new Docker image is built and deployed; use --image to skip the
+build and use an existing tagged image instead.
 
 Usage:
-  gocdk deploy BIOME [flags]
+  gocdk deploy <biome name> [flags]
 
 Flags:
-      --apply biome apply   whether to run biome apply before deploying (default true)
-  -h, --help                help for deploy
-      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image (default ":latest")
+      --apply biome apply    whether to run biome apply before deploying (default true)
+  -h, --help                 help for deploy
+      --image [name][:tag]   Docker image to deploy in the form [name][:tag]; name defaults to image name from Dockerfile, tag defaults to latest; empty string builds a new image
 
 $ gocdk deploy --help
-TODO more about deploy
+Deploy the application to the biome's configured deployment target.
+
+By default, a new Docker image is built and deployed; use --image to skip the
+build and use an existing tagged image instead.
 
 Usage:
-  gocdk deploy BIOME [flags]
+  gocdk deploy <biome name> [flags]
 
 Flags:
-      --apply biome apply   whether to run biome apply before deploying (default true)
-  -h, --help                help for deploy
-      --image name[:tag]    Docker image to deploy in the form name[:tag] OR `:tag`, or empty string to build a new image (default ":latest")
+      --apply biome apply    whether to run biome apply before deploying (default true)
+  -h, --help                 help for deploy
+      --image [name][:tag]   Docker image to deploy in the form [name][:tag]; name defaults to image name from Dockerfile, tag defaults to latest; empty string builds a new image

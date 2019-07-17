@@ -1,13 +1,16 @@
 $ gocdk help biome
-TODO more about biomes
+Biomes are target environments. Each biome has a distinct deployment target,
+and maintains its own set of Cloud resources.
+
+A typical set of biomes is "dev", "staging", "prod".
 
 Usage:
   gocdk biome [command]
 
 Available Commands:
-  add         TODO Add BIOME_NAME
-  apply       TODO Apply Terraform for BIOME
-  list        TODO list
+  add         Add a new biome
+  apply       Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)
+  list        Print the list of existing biomes
 
 Flags:
   -h, --help   help for biome
@@ -15,15 +18,18 @@ Flags:
 Use "gocdk biome [command] --help" for more information about a command.
 
 $ gocdk biome -h
-TODO more about biomes
+Biomes are target environments. Each biome has a distinct deployment target,
+and maintains its own set of Cloud resources.
+
+A typical set of biomes is "dev", "staging", "prod".
 
 Usage:
   gocdk biome [command]
 
 Available Commands:
-  add         TODO Add BIOME_NAME
-  apply       TODO Apply Terraform for BIOME
-  list        TODO list
+  add         Add a new biome
+  apply       Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)
+  list        Print the list of existing biomes
 
 Flags:
   -h, --help   help for biome
@@ -31,15 +37,18 @@ Flags:
 Use "gocdk biome [command] --help" for more information about a command.
 
 $ gocdk biome --help
-TODO more about biomes
+Biomes are target environments. Each biome has a distinct deployment target,
+and maintains its own set of Cloud resources.
+
+A typical set of biomes is "dev", "staging", "prod".
 
 Usage:
   gocdk biome [command]
 
 Available Commands:
-  add         TODO Add BIOME_NAME
-  apply       TODO Apply Terraform for BIOME
-  list        TODO list
+  add         Add a new biome
+  apply       Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)
+  list        Print the list of existing biomes
 
 Flags:
   -h, --help   help for biome
@@ -47,15 +56,18 @@ Flags:
 Use "gocdk biome [command] --help" for more information about a command.
 
 $ gocdk biome
-TODO more about biomes
+Biomes are target environments. Each biome has a distinct deployment target,
+and maintains its own set of Cloud resources.
+
+A typical set of biomes is "dev", "staging", "prod".
 
 Usage:
   gocdk biome [command]
 
 Available Commands:
-  add         TODO Add BIOME_NAME
-  apply       TODO Apply Terraform for BIOME
-  list        TODO list
+  add         Add a new biome
+  apply       Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)
+  list        Print the list of existing biomes
 
 Flags:
   -h, --help   help for biome
