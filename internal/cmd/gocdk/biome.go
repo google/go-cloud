@@ -329,6 +329,8 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 			writeTerraformOutput(c, out)
 		}
 	}
+	x, err := os.Stat(planFile)
+	pctx.Logf("STAT %q: %v | %v", planFile, x, err)
 
 	// Finally, run "terraform apply" on the plan.
 	// Note: do this even if there are no resource changes, because the

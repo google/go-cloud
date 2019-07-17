@@ -110,7 +110,7 @@ func TestBiomeApply(t *testing.T) {
 	// Call the main package run function as if 'biome apply dev' were passed
 	// on the command line.
 	// This should run "terraform init", "terraform plan", and "terraform apply".
-	if err := run(ctx, pctx, []string{"biome", "apply", "dev"}); err != nil {
+	if err := run(ctx, pctx, []string{"biome", "apply", "dev", "--verbose"}); err != nil {
 		t.Fatalf("run error: %+v", err)
 	}
 
