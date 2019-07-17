@@ -18,6 +18,7 @@ package gcpcloud // import "gocloud.dev/gcp/gcpcloud"
 import (
 	"github.com/google/wire"
 	"gocloud.dev/blob/gcsblob"
+	"gocloud.dev/docstore/gcpfirestore"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/pubsub/gcppubsub"
@@ -42,5 +43,6 @@ var Services = wire.NewSet(
 	gcppubsub.Set,
 	gcsblob.Set,
 	cloudsql.CertSourceSet,
+	gcpfirestore.Set,
 	sdserver.Set,
 )
