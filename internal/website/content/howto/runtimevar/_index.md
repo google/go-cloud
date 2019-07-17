@@ -108,7 +108,7 @@ variable.
 [`awsparamstore.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable
 
-### Etcd {#etcd}
+### etcd {#etcd}
 
 To open a variable stored in [etcd][] via URL, you can use the
 `runtimevar.OpenVariable` function as follows.
@@ -117,7 +117,7 @@ To open a variable stored in [etcd][] via URL, you can use the
 
 [etcd]: https://etcd.io/
 
-#### Etcd Constructor {#etcd-ctor}
+#### etcd Constructor {#etcd-ctor}
 
 The [`etcdvar.OpenVariable`][] constructor opens an `etcd` variable.
 
@@ -146,12 +146,14 @@ and a URL.
 
 ### Blob {#blob}
 
-`blobvar` supports watching a variable based on the contents of a Go CDK blob.
-Set the environment variable `BLOBVAR_BUCKET_URL` to the URL of the bucket,
-and then use `runtimevar.OpenVariable` as shown below. `blobvar` will
-periodically re-fetch the contents of the blob.
+`blobvar` supports watching a variable based on the contents of a
+[Go CDK blob][]. Set the environment variable `BLOBVAR_BUCKET_URL` to the URL
+of the bucket, and then use `runtimevar.OpenVariable` as shown below.
+`blobvar` will periodically re-fetch the contents of the blob.
 
 {{< goexample "gocloud.dev/runtimevar/blobvar.Example_openVariableFromURL" >}}
+
+[Go CDK blob]: https://gocloud.dev/howto/blob/
 
 You can also use [`blobvar.OpenVariable`][].
 
