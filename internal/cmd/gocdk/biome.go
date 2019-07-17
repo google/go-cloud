@@ -344,7 +344,7 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	// 6. "terraform ouutput" now prints the new value.
 	// See https://github.com/hashicorp/terraform/issues/15419.
 	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", planFile)
-	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
+	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1", "TF_LOG=TRACE")
 	c.Stdout = nil
 	c.Stderr = nil
 	if out, err := c.CombinedOutput(); err != nil {
