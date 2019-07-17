@@ -27,17 +27,19 @@ require (
 	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190605020000-c4ba1fdf4d36
 	github.com/aws/aws-sdk-go v1.19.45
+	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-cmp v0.3.0
+	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/grpc-ecosystem/grpc-gateway v1.9.0 // indirect
 	github.com/lib/pq v1.1.1
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	go.opencensus.io v0.22.0
-	gocloud.dev/docstore/mongodocstore v0.0.0-20190716225110-77520e8ee25a // indirect
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 	golang.org/x/net v0.0.0-20190606173856-1492cefac77f
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
