@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	//"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -294,7 +293,6 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	//planFile := filepath.Join(biomePath, "tf.plan")
 	planFile := "tf.plan"
 	defer os.Remove(planFile)
-	fmt.Printf("plan file --%q--\n", planFile)
 	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+planFile, inputArg)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	c.Stdout = nil
