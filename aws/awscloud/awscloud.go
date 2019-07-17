@@ -22,6 +22,7 @@ import (
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/docstore/awsdynamodb"
 	"gocloud.dev/pubsub/awssnssqs"
 	"gocloud.dev/runtimevar/awsparamstore"
 	"gocloud.dev/secrets/awskms"
@@ -46,5 +47,6 @@ var Services = wire.NewSet(
 	awsparamstore.Set,
 	awskms.Set,
 	rds.CertFetcherSet,
+	awsdynamodb.Set,
 	xrayserver.Set,
 )
