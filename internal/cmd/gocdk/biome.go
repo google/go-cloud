@@ -294,7 +294,7 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	planFile := filepath.Join(biomePath, "tf.plan")
 	defer os.Remove(planFile)
 	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+planFile, inputArg)
-	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
+	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1", "TF_LOG=TRACE")
 	c.Stdout = nil
 	c.Stderr = nil
 
