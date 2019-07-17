@@ -282,11 +282,11 @@ region as your collection:
 
 ### MongoDB {#mongo}
 
-The [`mongodocstore`](https://godoc.org/gocloud.dev/docstore/mongodocstore)
-package supports the popular [MongoDB](https://mongodb.org) document store.
-MongoDB documents are uniquely identified by a field called `_id`. In Docstore,
-you can choose a different name for this field, or provide a function to extract
-the document ID from a document.
+The [`mongodocstore`][] package supports the popular
+[MongoDB](https://mongodb.org) document store. MongoDB documents are uniquely
+identified by a field called `_id`. In Docstore, you can choose a different
+name for this field, or provide a function to extract the document ID from a
+document.
 
 MongoDB URLs provide the database and collection, and optionally the field that
 holds the document ID. Specify the Mongo server URL by setting the
@@ -321,9 +321,23 @@ whose name is the combination of two or more fields.
 {{< goexample
 "gocloud.dev/docstore/mongodocstore.ExampleOpenCollectionWithIDFunc" >}}
 
+[`mongodocstore`]: https://godoc.org/gocloud.dev/docstore/mongodocstore
 [`mongodocstore.Dial`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#Dial
 [`mongodocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollection
 [`mongodocstore.OpenCollectionWithIDFunc`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollectionWithIDFunc
+
+#### Azure Cosmos DB {#cosmosdb}
+
+[Azure Cosmos DB][] is compatible with MongoDB API. You can use the
+[`mongodocstore`][] package to connect to Cosmos DB. You must
+[create an Azure Cosmos account][] and get the MongoDB [connection string][],
+then you can use the same [MongoDB constructor][] to open a Cosmos DB
+collection.
+
+[Azure Cosmos DB]: https://docs.microsoft.com/en-us/azure/cosmos-db/
+[create an Azure Cosmos account]: https://docs.microsoft.com/en-us/azure/cosmos-db/create-mongodb-dotnet
+[connection string]: https://docs.microsoft.com/en-us/azure/cosmos-db/connect-mongodb-account#QuickstartConnection
+[MongoDB constructor]: {{< ref "#mongo-ctor" >}}
 
 ### In-Memory Document Store {#mem}
 
