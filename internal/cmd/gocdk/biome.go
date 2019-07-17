@@ -39,7 +39,7 @@ A typical set of biomes is "dev", "staging", "prod".`,
 	}
 
 	var launcher string
-	biomeAddCmd := &cobra.Command{
+	addCmd := &cobra.Command{
 		Use:   "add <biome name>",
 		Short: "Add a new biome",
 		Long: `Add a new biome. Unless you specify answers via flags, you will be prompted
@@ -52,10 +52,10 @@ information needed to deploy.`,
 	}
 	// TODO(rvangent): There should be a way to specify answer to launcher-specific
 	// prompts via flags. Maybe a JSON snippet?
-	biomeAddCmd.Flags().StringVar(&launcher, "launcher", "", "the launcher for the new biome")
-	biomeCmd.AddCommand(biomeAddCmd)
+	addCmd.Flags().StringVar(&launcher, "launcher", "", "the launcher for the new biome")
+	biomeCmd.AddCommand(addCmd)
 
-	biomeListCmd := &cobra.Command{
+	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "Print the list of existing biomes",
 		Long:  `Print the list of existing biomes.`,
@@ -64,7 +64,7 @@ information needed to deploy.`,
 			return biomeList(ctx, pctx)
 		},
 	}
-	biomeCmd.AddCommand(biomeListCmd)
+	biomeCmd.AddCommand(listCmd)
 
 	var input bool
 	applyCmd := &cobra.Command{

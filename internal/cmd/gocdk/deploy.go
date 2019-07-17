@@ -70,7 +70,7 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 		pctx.Logf("Deploying Docker image %q...", dockerImage)
 	}
 
-	// Run "terraform apply".
+	// Run "biome apply".
 	if apply {
 		if err := biomeApply(ctx, pctx, biome, true); err != nil {
 			return err
