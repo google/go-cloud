@@ -76,14 +76,6 @@ func TestBiomeAdd(t *testing.T) {
 }
 
 func TestBiomeApply(t *testing.T) {
-	// TODO(#1809): test cases
-	// didn't supply biome name to command
-	// named biome doesn't exist
-	// no terraform file
-	// terraform not initialized *
-	// terraform never previously applied
-	// terraform apply repeat
-
 	if _, err := exec.LookPath("terraform"); err != nil {
 		t.Skip("terraform not found:", err)
 	}
@@ -111,17 +103,16 @@ func TestBiomeApply(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Call the main package run function as if 'apply dev' were passed
-	// on the command line. As part of this, ensureTerraformInit is called to check
-	// that terraform has been properly initialized before running 'terraform apply'.
+	// Call the main package run function as if 'biome apply dev' were passed
+	// on the command line.
+	// This should run "terraform init", "terraform plan", and "terraform apply".
 	if err := run(ctx, pctx, []string{"biome", "apply", "dev"}); err != nil {
 		t.Fatalf("run error: %+v", err)
 	}
 
-	// After a successful terraform apply, 'terraform output' should return the greeting
-	// we configured. Terraform output fails if 'terraform init' was not called.
-	// It also fails if 'terraform apply' has never been run, as there will be no
-	// terraform state file (terraform.tfstate).
+	// After a successful "biome apply", "terraform output" should return the greeting
+	// we configured. It will fail if "terraform init" was not called, or if
+	// "terraform apply" wasn't , as there will be no terraform state file (terraform.tfstate).
 	outputs, err := tfReadOutput(ctx, devBiomeDir, os.Environ())
 	if err != nil {
 		t.Fatal(err)
