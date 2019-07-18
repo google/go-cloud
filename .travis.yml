@@ -49,7 +49,7 @@ jobs:
   include:
     - go: "1.11.x"
       os: linux
-      if: branch = master AND type = push
+      # if: branch = master AND type = push
     - go: "1.12.x"
       os: linux
     - go: "1.12.x"
@@ -57,7 +57,7 @@ jobs:
     - go: "1.12.x"
       os: windows
       # Only run Windows build job on master; it's very slow.
-      if: branch = master AND type = push
+      # if: branch = master AND type = push
       # TODO(rvangent): Remove filter_secrets: false once the Travis issue is fixed:
       # https://travis-ci.community/t/current-known-issues-please-read-this-before-posting-a-new-topic/264/10
       filter_secrets: false
