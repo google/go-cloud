@@ -56,8 +56,14 @@ if (!doNotTrack) {
 </ul></li>
 <li><a href="#etcd">etcd</a>
 <ul>
-<li><a href="#etcd-ctor">Etcd Constructor</a></li>
+<li><a href="#etcd-ctor">etcd Constructor</a></li>
 </ul></li>
+<li><a href="#http">HTTP</a>
+<ul>
+<li><a href="#http-ctor">HTTP Constructor</a></li>
+</ul></li>
+<li><a href="#blob">Blob</a></li>
+<li><a href="#local">Local</a></li>
 </ul></li>
 </ul></li>
 </ul>
@@ -80,9 +86,30 @@ over the connection settings, you can call the constructor function in the
 driver package directly (like <code>etcdvar.OpenVariable</code>).</p>
 
 <p>When opening the variable, you can provide a <a href="https://godoc.org/gocloud.dev/runtimevar#Decoder">decoder</a> parameter (either as a
-query parameter for URLs, or explicitly to the constructor) to specify whether
-the raw value stored in the variable is interpreted as a <code>string</code>, a <code>[]byte</code>,
-or as JSON.</p>
+<a href="https://godoc.org/gocloud.dev/runtimevar#DecoderByName">query parameter</a> for URLs, or explicitly to the constructor) to specify
+whether the raw value stored in the variable is interpreted as a <code>string</code>, a
+<code>[]byte</code>, or as JSON. Here&rsquo;s an example of using a JSON encoder:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Config is the sample config struct we&#39;re going to parse our JSON into.
+</span><span class="c1"></span><span class="kd">type</span> <span class="nx">Config</span> <span class="kd">struct</span> <span class="p">{</span>
+	<span class="nx">Host</span> <span class="kt">string</span>
+	<span class="nx">Port</span> <span class="kt">int</span>
+<span class="p">}</span>
+
+<span class="c1">// A sample JSON config that will decode into Config.
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">jsonConfig</span> <span class="p">=</span> <span class="s">`{&#34;Host&#34;: &#34;gocloud.dev&#34;, &#34;Port&#34;: 8080}`</span>
+
+<span class="c1">// Construct a Decoder that decodes raw bytes into our config.
+</span><span class="c1"></span><span class="nx">decoder</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">Config</span><span class="p">{},</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">JSONDecode</span><span class="p">)</span>
+
+<span class="c1">// Next, a construct a *Variable using a constructor or URL opener.
+</span><span class="c1">// This example uses constantvar.
+</span><span class="c1">// If you&#39;re using a URL opener, you can&#39;t decode JSON into a struct, but
+</span><span class="c1">// you can use the query parameter &#34;decoder=jsonmap&#34; to decode into a map.
+</span><span class="c1"></span><span class="nx">v</span> <span class="o">:=</span> <span class="nx">constantvar</span><span class="p">.</span><span class="nf">NewBytes</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">jsonConfig</span><span class="p">),</span> <span class="nx">decoder</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// snapshot.Value will be of type Config.
+</span></code></pre></div>
 
 <p>See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
 
@@ -104,9 +131,6 @@ depends on the decoder you provided when creating the <code>Variable</code>.</p>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;Error in retrieving variable: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 <span class="p">}</span>
-<span class="c1">// If runtimevar.StringDecoder was used when constructing v, the
-</span><span class="c1">// snapshot.Value will be of type string.
-</span><span class="c1"></span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%q\n&#34;</span><span class="p">,</span> <span class="nx">snapshot</span><span class="p">.</span><span class="nx">Value</span><span class="p">.(</span><span class="kt">string</span><span class="p">))</span>
 </code></pre></div>
 
 <h3 id="watch"> Watch<a class="anchor" href="#watch" aria-label="Link to Section">🔗</a></h3>
@@ -125,8 +149,8 @@ the <code>runtimevar.OpenVariable</code> function as follows.</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
-	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimervar/gcpruntimeconfig&#34;</span>
 	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/gcpruntimeconfig&#34;</span>
 <span class="p">)</span>
 
 <span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
@@ -169,9 +193,6 @@ variable.</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nf">cleanup</span><span class="p">()</span>
 
-<span class="c1">// Create a decoder for decoding JSON strings into MyConfig.
-</span><span class="c1"></span><span class="nx">decoder</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">MyConfig</span><span class="p">{},</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">JSONDecode</span><span class="p">)</span>
-
 <span class="c1">// You can use the VariableKey helper to construct a Variable key from
 </span><span class="c1">// your project ID, config ID, and the variable name; alternatively,
 </span><span class="c1">// you can construct the full string yourself (e.g.,
@@ -184,7 +205,7 @@ variable.</p>
 </span><span class="c1"></span><span class="nx">variableKey</span> <span class="o">:=</span> <span class="nx">gcpruntimeconfig</span><span class="p">.</span><span class="nf">VariableKey</span><span class="p">(</span><span class="s">&#34;gcp-project-id&#34;</span><span class="p">,</span> <span class="s">&#34;config-id&#34;</span><span class="p">,</span> <span class="s">&#34;variable-name&#34;</span><span class="p">)</span>
 
 <span class="c1">// Construct a *runtimevar.Variable that watches the variable.
-</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpruntimeconfig</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">variableKey</span><span class="p">,</span> <span class="nx">decoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpruntimeconfig</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">variableKey</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -199,8 +220,8 @@ variable.</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
-	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimervar/awsparamstore&#34;</span>
 	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/awsparamstore&#34;</span>
 <span class="p">)</span>
 
 <span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
@@ -230,13 +251,8 @@ variable.</p>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
-<span class="c1">// Create a decoder for decoding JSON strings into MyConfig.
-</span><span class="c1"></span><span class="nx">decoder</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">MyConfig</span><span class="p">{},</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">JSONDecode</span><span class="p">)</span>
-
 <span class="c1">// Construct a *runtimevar.Variable that watches the variable.
-</span><span class="c1">// For this example, the Parameter Store variable being referenced
-</span><span class="c1">// should have a JSON string that decodes into MyConfig.
-</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awsparamstore</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">sess</span><span class="p">,</span> <span class="s">&#34;cfg-variable-name&#34;</span><span class="p">,</span> <span class="nx">decoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awsparamstore</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">sess</span><span class="p">,</span> <span class="s">&#34;cfg-variable-name&#34;</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -245,8 +261,7 @@ variable.</p>
 
 <h3 id="etcd"> etcd<a class="anchor" href="#etcd" aria-label="Link to Section">🔗</a></h3>
 
-<p>The Go CDK supports using <a href="https://etcd.io/">etcd</a> for storing variables locally or remotely. To
-open a variable stored in <code>etcd</code> via a URL, you can use the
+<p>To open a variable stored in <a href="https://etcd.io/">etcd</a> via URL, you can use the
 <code>runtimevar.OpenVariable</code> function as follows.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
@@ -260,16 +275,16 @@ open a variable stored in <code>etcd</code> via a URL, you can use the
 </span><span class="c1">// The default opener connects to an etcd server based on the environment
 </span><span class="c1">// variable ETCD_SERVER_URL.
 </span><span class="c1"></span>
-<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;etcd://myvarname&#34;</span><span class="p">)</span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;etcd://myvarname?decoder=string&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
-<h4 id="etcd-ctor"> Etcd Constructor<a class="anchor" href="#etcd-ctor" aria-label="Link to Section">🔗</a></h4>
+<h4 id="etcd-ctor"> etcd Constructor<a class="anchor" href="#etcd-ctor" aria-label="Link to Section">🔗</a></h4>
 
-<p>The <a href="https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable"><code>etcdvar.OpenVariable</code></a> constructor opens an etcd variable.</p>
+<p>The <a href="https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable"><code>etcdvar.OpenVariable</code></a> constructor opens an <code>etcd</code> variable.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;go.etcd.io/etcd/clientv3&#34;</span>
@@ -283,13 +298,123 @@ open a variable stored in <code>etcd</code> via a URL, you can use the
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
-<span class="c1">// Create a decoder for decoding JSON strings into MyConfig.
-</span><span class="c1"></span><span class="nx">decoder</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">NewDecoder</span><span class="p">(</span><span class="nx">MyConfig</span><span class="p">{},</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">JSONDecode</span><span class="p">)</span>
-
 <span class="c1">// Construct a *runtimevar.Variable that watches the variable.
-</span><span class="c1">// The etcd variable being referenced should have a JSON string that
-</span><span class="c1">// decodes into MyConfig.
-</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">etcdvar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="s">&#34;cfg-variable-name&#34;</span><span class="p">,</span> <span class="nx">decoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">etcdvar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="s">&#34;cfg-variable-name&#34;</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="http"> HTTP<a class="anchor" href="#http" aria-label="Link to Section">🔗</a></h3>
+
+<p><code>httpvar</code> supports watching a variable via an HTTP request. Use
+<code>runtimevar.OpenVariable</code> with a regular URL starting with <code>http</code> or <code>https</code>.
+<code>httpvar</code> will periodically make an HTTP <code>GET</code> request to that URL, with the
+<code>decode</code> URL parameter removed (if present).</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/httpvar&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+</span><span class="c1">// The default opener connects to an etcd server based on the environment
+</span><span class="c1">// variable ETCD_SERVER_URL.
+</span><span class="c1"></span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;http://myserver.com/foo.txt?decoder=string&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h4 id="http-ctor"> HTTP Constructor<a class="anchor" href="#http-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/runtimevar/httpvar#OpenVariable"><code>httpvar.OpenVariable</code></a> constructor opens a variable with a <code>http.Client</code>
+and a URL.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;net/http&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="s">&#34;gocloud.dev/runtimevar/httpvar&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Create an HTTP.Client
+</span><span class="c1"></span><span class="nx">httpClient</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nx">DefaultClient</span>
+
+<span class="c1">// Construct a *runtimevar.Variable that watches the page.
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">httpvar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">httpClient</span><span class="p">,</span> <span class="s">&#34;http://example.com&#34;</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="blob"> Blob<a class="anchor" href="#blob" aria-label="Link to Section">🔗</a></h3>
+
+<p><code>blobvar</code> supports watching a variable based on the contents of a
+<a href="https://gocloud.dev/howto/blob/">Go CDK blob</a>. Set the environment variable <code>BLOBVAR_BUCKET_URL</code> to the URL
+of the bucket, and then use <code>runtimevar.OpenVariable</code> as shown below.
+<code>blobvar</code> will periodically re-fetch the contents of the blob.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/blobvar&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+</span><span class="c1">// The default opener opens a blob.Bucket via a URL, based on the environment
+</span><span class="c1">// variable BLOBVAR_BUCKET_URL.
+</span><span class="c1"></span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;blob://myvar.txt?decoder=string&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>You can also use <a href="https://godoc.org/gocloud.dev/runtimevar/blobvar#OpenVariable"><code>blobvar.OpenVariable</code></a>.</p>
+
+<h3 id="local"> Local<a class="anchor" href="#local" aria-label="Link to Section">🔗</a></h3>
+
+<p>You can create an in-memory variable (useful for testing) using <code>constantvar</code>:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/constantvar&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+</span><span class="c1"></span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;constant://?val=hello+world&amp;decoder=string&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Alternatively, you can create a variable based on the contents of a file using
+<code>filevar</code>:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/filevar&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+</span><span class="c1"></span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;file:///path/to/config.txt?decoder=string&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
