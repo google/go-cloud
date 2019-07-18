@@ -331,10 +331,14 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		// Exit code 2 --> there's a diff.
 		// Print out a summary of the changes (unless Verbose).
 		if !opts.Verbose {
-			if idx := bytes.LastIndex(out, []byte("Plan:")); idx == -1 {
-				pctx.Logf("Resources changes are needed; re-run with --verbose for more details.")
-			} else {
-				pctx.Logf(string(out[idx:]))
+			pctx.Logf("Resources changes are needed; re-run with --verbose for more details.")
+			// Best-effort try to print the summary "Plan: " line.
+			if idx := bytes.LastIndex(out, []byte("Plan:")); idx != -1 {
+				// Move to start of that line.
+				for idx >= 0 && out[idx] != '\n' {
+					idx--
+				}
+				pctx.Logf(string(out[idx+1:]))
 			}
 		}
 		// Prompt for approval (unless AutoApprove).

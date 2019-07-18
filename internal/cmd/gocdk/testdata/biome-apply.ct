@@ -38,7 +38,8 @@ gocdk: Success!
 $ echof stdin notyes
 $ gocdk biome apply dev < stdin --> FAIL
 gocdk: Checking to see if resource updates are needed...
-gocdk: Plan:[0m 1 to add, 0 to change, 0 to destroy.[0m
+gocdk: Resources changes are needed; re-run with --verbose for more details.
+gocdk: [0m[1mPlan:[0m 1 to add, 0 to change, 0 to destroy.[0m
 
 Do you want to perform these actions (only 'yes' will be accepted to approve)?
 Enter a value, or "cancel": Error: cancelled
@@ -47,7 +48,8 @@ Enter a value, or "cancel": Error: cancelled
 $ echof stdin yes
 $ gocdk biome apply dev < stdin
 gocdk: Checking to see if resource updates are needed...
-gocdk: Plan:[0m 1 to add, 0 to change, 0 to destroy.[0m
+gocdk: Resources changes are needed; re-run with --verbose for more details.
+gocdk: [0m[1mPlan:[0m 1 to add, 0 to change, 0 to destroy.[0m
 
 Do you want to perform these actions (only 'yes' will be accepted to approve)?
 Enter a value, or "cancel": gocdk: Success!
