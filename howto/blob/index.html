@@ -60,9 +60,9 @@ if (!doNotTrack) {
 <li><a href="#s3-ctor">S3 Constructor</a></li>
 <li><a href="#s3-compatible">S3-Compatible Servers</a></li>
 </ul></li>
-<li><a href="#azure">Azure Storage</a>
+<li><a href="#azure">Azure Blob Storage</a>
 <ul>
-<li><a href="#azure-ctor">Azure Storage Constructor</a></li>
+<li><a href="#azure-ctor">Azure Blob Constructor</a></li>
 </ul></li>
 <li><a href="#local">Local Storage</a>
 <ul>
@@ -382,9 +382,9 @@ parameters like so:</p>
     <span class="s">&#34;s3ForcePathStyle=true&#34;</span><span class="p">)</span></code></pre></div>
 <p>See <a href="https://godoc.org/gocloud.dev/aws#ConfigFromURLParams"><code>aws.ConfigFromURLParams</code></a> for more details on supported URL options for S3.</p>
 
-<h3 id="azure"> Azure Storage<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h3>
+<h3 id="azure"> Azure Blob Storage<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h3>
 
-<p>Azure Storage URLs in the Go CDK allow you to identify <a href="https://azure.microsoft.com/en-us/services/storage/">Azure Storage</a> containers
+<p>Azure Blob Storage URLs in the Go CDK allow you to identify <a href="https://azure.microsoft.com/en-us/services/storage/blobs/">Azure Blob Storage</a> containers
 when opening a bucket with <code>blob.OpenBucket</code>. Go CDK uses the environment
 variables <code>AZURE_STORAGE_ACCOUNT</code>, <code>AZURE_STORAGE_KEY</code>, and
 <code>AZURE_STORAGE_SAS_TOKEN</code> to configure the credentials. <code>AZURE_STORAGE_ACCOUNT</code>
@@ -412,9 +412,9 @@ is required, along with one of the other two.</p>
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/azureblob#URLOpener"><code>azureblob.URLOpener</code></a>.</p>
 
-<h4 id="azure-ctor"> Azure Storage Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
+<h4 id="azure-ctor"> Azure Blob Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
 
-<p>The <a href="https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket"><code>azureblob.OpenBucket</code></a> constructor opens an Azure Storage container.
+<p>The <a href="https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket"><code>azureblob.OpenBucket</code></a> constructor opens an Azure Blob Storage container.
 <code>azureblob</code> operates on <a href="https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs">Azure Storage Block Blobs</a>. You must first create
 Azure Storage credentials and then create an Azure Storage pipeline before
 you can open a container.</p>
