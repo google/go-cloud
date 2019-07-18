@@ -61,7 +61,7 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		Use: "gocdk",
 		// Short is not used since this is the root command.
 		Long: `gocdk can initialize a new project, add deployment targets (known as "biomes"),
-add demos of Go CDK portable types, provision Cloud resources and use them in the demos,
+add demos of Go CDK portable types, provision cloud resources and use them in the demos,
 build the application into a Docker image, deploy the Docker image to a chosen Cloud provider,
 and serve the application locally with live code reloading.`,
 		// We want to print usage for any command/flag parsing errors, but
