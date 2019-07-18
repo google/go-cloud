@@ -9,9 +9,9 @@ runtimevar API. All platform-specific code is set up by
 You can see how to build, run, and deploy this sample by following one of the
 following tutorials based on the cloud platform of your choosing:
 
--  [Amazon Web Services (AWS)](https://gocloud.dev/tutorials/deploy-aws/)
--  [Google Cloud Platform (GCP)](https://gocloud.dev/tutorials/deploy-gcp/)
--  [Microsoft Azure](https://gocloud.dev/tutorials/deploy-azure/)
+-  [Amazon Web Services (AWS)](https://gocloud.dev/tutorials/guestbook/#running-on-amazon-web-services-aws)
+-  [Google Cloud Platform (GCP)](https://gocloud.dev/tutorials/guestbook/#running-on-google-cloud-platform-gcp)
+-  [Microsoft Azure](https://gocloud.dev/tutorials/guestbook/#running-on-azure)
 
 ## Gophers
 
