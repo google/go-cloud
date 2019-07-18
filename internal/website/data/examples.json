@@ -296,32 +296,56 @@
 		"code": "decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode)\ndecoder := runtimevar.NewDecoder(\"\", decodeFunc)"
 	},
 	"gocloud.dev/runtimevar.ExampleVariable_Latest": {
-		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
-		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}\n// If runtimevar.StringDecoder was used when constructing v, the\n// snapshot.Value will be of type string.\nfmt.Printf(\"%q\\n\", snapshot.Value.(string))"
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n)",
+		"code": "snapshot, err := v.Latest(context.Background())\nif err != nil {\n\tlog.Fatalf(\"Error in retrieving variable: %v\", err)\n}"
+	},
+	"gocloud.dev/runtimevar.Example_jsonDecoder": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/constantvar\"\n)",
+		"code": "// Config is the sample config struct we're going to parse our JSON into.\ntype Config struct {\n\tHost string\n\tPort int\n}\n\n// A sample JSON config that will decode into Config.\nconst jsonConfig = `{\"Host\": \"gocloud.dev\", \"Port\": 8080}`\n\n// Construct a Decoder that decodes raw bytes into our config.\ndecoder := runtimevar.NewDecoder(Config{}, runtimevar.JSONDecode)\n\n// Next, a construct a *Variable using a constructor or URL opener.\n// This example uses constantvar.\n// If you're using a URL opener, you can't decode JSON into a struct, but\n// you can use the query parameter \"decoder=jsonmap\" to decode into a map.\nv := constantvar.NewBytes([]byte(jsonConfig), decoder)\ndefer v.Close()\n// snapshot.Value will be of type Config."
 	},
 	"gocloud.dev/runtimevar/awsparamstore.ExampleOpenVariable": {
 		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awsparamstore\"\n)",
-		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\n// Create a decoder for decoding JSON strings into MyConfig.\ndecoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)\n\n// Construct a *runtimevar.Variable that watches the variable.\n// For this example, the Parameter Store variable being referenced\n// should have a JSON string that decodes into MyConfig.\nv, err := awsparamstore.OpenVariable(sess, \"cfg-variable-name\", decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\nv, err := awsparamstore.OpenVariable(sess, \"cfg-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/awsparamstore\"\n\t\"gocloud.dev/runtimevar\"\n)",
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/awsparamstore\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"awsparamstore://myvar?region=us-west-1\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/blobvar.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/blobvar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener opens a blob.Bucket via a URL, based on the environment\n// variable BLOBVAR_BUCKET_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"blob://myvar.txt?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/constantvar.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/constantvar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"constant://?val=hello+world\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable": {
 		"imports": "import (\n\t\"go.etcd.io/etcd/clientv3\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/etcdvar\"\n)",
-		"code": "// Connect to the etcd server.\nclient, err := clientv3.NewFromURL(\"http://your.etcd.server:9999\")\nif err != nil {\n\treturn err\n}\n\n// Create a decoder for decoding JSON strings into MyConfig.\ndecoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)\n\n// Construct a *runtimevar.Variable that watches the variable.\n// The etcd variable being referenced should have a JSON string that\n// decodes into MyConfig.\nv, err := etcdvar.OpenVariable(client, \"cfg-variable-name\", decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+		"code": "// Connect to the etcd server.\nclient, err := clientv3.NewFromURL(\"http://your.etcd.server:9999\")\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\nv, err := etcdvar.OpenVariable(client, \"cfg-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/etcdvar.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/etcdvar\"\n)",
-		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener connects to an etcd server based on the environment\n// variable ETCD_SERVER_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"etcd://myvarname\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener connects to an etcd server based on the environment\n// variable ETCD_SERVER_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"etcd://myvarname?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/filevar.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/filevar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"file:///path/to/config.txt?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/gcpruntimeconfig.ExampleOpenVariable": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/gcpruntimeconfig\"\n)",
-		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Connect to the Runtime Configurator service.\nclient, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// Create a decoder for decoding JSON strings into MyConfig.\ndecoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)\n\n// You can use the VariableKey helper to construct a Variable key from\n// your project ID, config ID, and the variable name; alternatively,\n// you can construct the full string yourself (e.g.,\n// \"projects/gcp-project-id/configs/config-id/variables/variable-name\").\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n//\n// For this example, the GCP Cloud Runtime Configurator variable being\n// referenced should have a JSON string that decodes into MyConfig.\nvariableKey := gcpruntimeconfig.VariableKey(\"gcp-project-id\", \"config-id\", \"variable-name\")\n\n// Construct a *runtimevar.Variable that watches the variable.\nv, err := gcpruntimeconfig.OpenVariable(client, variableKey, decoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Connect to the Runtime Configurator service.\nclient, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// You can use the VariableKey helper to construct a Variable key from\n// your project ID, config ID, and the variable name; alternatively,\n// you can construct the full string yourself (e.g.,\n// \"projects/gcp-project-id/configs/config-id/variables/variable-name\").\n// See https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n//\n// For this example, the GCP Cloud Runtime Configurator variable being\n// referenced should have a JSON string that decodes into MyConfig.\nvariableKey := gcpruntimeconfig.VariableKey(\"gcp-project-id\", \"config-id\", \"variable-name\")\n\n// Construct a *runtimevar.Variable that watches the variable.\nv, err := gcpruntimeconfig.OpenVariable(client, variableKey, runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t_ \"gocloud.dev/runtimervar/gcpruntimeconfig\"\n\t\"gocloud.dev/runtimevar\"\n)",
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/gcpruntimeconfig\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL Host+Path are used as the GCP Runtime Configurator Variable key;\n// see https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/httpvar.ExampleOpenVariable": {
+		"imports": "import (\n\t\"net/http\"\n\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/httpvar\"\n)",
+		"code": "// Create an HTTP.Client\nhttpClient := http.DefaultClient\n\n// Construct a *runtimevar.Variable that watches the page.\nv, err := httpvar.OpenVariable(httpClient, \"http://example.com\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/httpvar.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/httpvar\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener connects to an etcd server based on the environment\n// variable ETCD_SERVER_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"http://myserver.com/foo.txt?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/secrets.ExampleKeeper_Decrypt": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n)",

@@ -24,29 +24,19 @@ import (
 	"gocloud.dev/runtimevar/blobvar"
 )
 
-// MyConfig is a sample configuration struct.
-type MyConfig struct {
-	Server string
-	Port   int
-}
-
 func ExampleOpenVariable() {
 	// Create a *blob.Bucket.
-	// Here, we use an in-memory implementation and write a sample
-	// configuration value.
+	// Here, we use an in-memory implementation and write a sample value.
 	bucket := memblob.OpenBucket(nil)
 	defer bucket.Close()
 	ctx := context.Background()
-	err := bucket.WriteAll(ctx, "cfg-variable-name", []byte(`{"Server": "foo.com", "Port": 80}`), nil)
+	err := bucket.WriteAll(ctx, "cfg-variable-name", []byte("hello world"), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Create a decoder for decoding JSON strings into MyConfig.
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
-
 	// Construct a *runtimevar.Variable that watches the blob.
-	v, err := blobvar.OpenVariable(bucket, "cfg-variable-name", decoder, nil)
+	v, err := blobvar.OpenVariable(bucket, "cfg-variable-name", runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,25 +47,28 @@ func ExampleOpenVariable() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// runtimevar.Snapshot.Value is decoded to type MyConfig.
-	cfg := snapshot.Value.(MyConfig)
-	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
+	// runtimevar.Snapshot.Value is decoded to a string.
+	fmt.Println(snapshot.Value.(string))
 
 	// Output:
-	// foo.com running on port 80
+	// hello world
 }
 
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/#blob
+
+	// import _ "gocloud.dev/runtimevar/blobvar"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The default opener opens a blob.Bucket via a URL, based on the environment
 	// variable BLOBVAR_BUCKET_URL.
-	// This example watches a JSON variable.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "blob://myvar.json?decoder=json")
+
+	v, err := runtimevar.OpenVariable(ctx, "blob://myvar.txt?decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	snapshot, err := v.Latest(ctx)
-	_, _ = snapshot, err
+	defer v.Close()
 }

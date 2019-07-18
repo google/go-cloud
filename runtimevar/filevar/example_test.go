@@ -24,52 +24,49 @@ import (
 	"gocloud.dev/runtimevar/filevar"
 )
 
-// MyConfig is a sample configuration struct.
-type MyConfig struct {
-	Server string
-	Port   int
-}
-
 func ExampleOpenVariable() {
 	// Create a temporary file to hold our config.
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
 		log.Fatal(err)
 	}
-	if _, err := f.Write([]byte(`{"Server": "foo.com", "Port": 80}`)); err != nil {
+	if _, err := f.Write([]byte("hello world")); err != nil {
 		log.Fatal(err)
 	}
 
-	// Create a decoder for decoding JSON strings into MyConfig.
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
-
 	// Construct a *runtimevar.Variable pointing at f.
-	v, err := filevar.OpenVariable(f.Name(), decoder, nil)
+	v, err := filevar.OpenVariable(f.Name(), runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
+	// Ignore unused variables in example:
 
 	// We can now read the current value of the variable from v.
 	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := snapshot.Value.(MyConfig)
-	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
+	// runtimevar.Snapshot.Value is decoded to a string.
+	fmt.Println(snapshot.Value.(string))
 
 	// Output:
-	// foo.com running on port 80
+	// hello world
 }
 
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/#local
+
+	// import _ "gocloud.dev/runtimevar/filevar"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "file:///path/to/config.json?decoder=json")
+
+	v, err := runtimevar.OpenVariable(ctx, "file:///path/to/config.txt?decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	snapshot, err := v.Latest(ctx)
-	_, _ = snapshot, err
+	defer v.Close()
 }
