@@ -38,18 +38,21 @@ if (!doNotTrack) {
 <ul>
 <li>
 <ul>
-<li><a href="#constructors-versus-url-openers">Constructors versus URL openers</a></li>
-<li><a href="#sns">Amazon Simple Notification Service</a>
+<li><a href="#opening">Opening a Topic</a></li>
+<li><a href="#sending">Sending Messages on a Topic</a></li>
+<li><a href="#services">Supported Pub/Sub Services</a>
 <ul>
-<li><a href="#sns-ctor">Amazon Simple Notification Service Constructor</a></li>
-</ul></li>
-<li><a href="#sqs">Amazon Simple Notification Service</a>
-<ul>
-<li><a href="#sqs-ctor">Amazon Simple Queue Service Constructor</a></li>
-</ul></li>
 <li><a href="#gcp">Google Cloud Pub/Sub</a>
 <ul>
 <li><a href="#gcp-ctor">Google Cloud Pub/Sub Constructor</a></li>
+</ul></li>
+<li><a href="#sns">Amazon Simple Notification Service</a>
+<ul>
+<li><a href="#sns-ctor">Amazon SNS Constructor</a></li>
+</ul></li>
+<li><a href="#sqs">Amazon Simple Queue Service</a>
+<ul>
+<li><a href="#sqs-ctor">Amazon SQS Constructor</a></li>
 </ul></li>
 <li><a href="#azure">Azure Service Bus</a>
 <ul>
@@ -72,6 +75,7 @@ if (!doNotTrack) {
 <li><a href="#mem-ctor">In-Memory Constructor</a></li>
 </ul></li>
 </ul></li>
+</ul></li>
 </ul>
 </nav>
 </nav>
@@ -79,12 +83,22 @@ if (!doNotTrack) {
 <p>Publishing a message to a topic with the Go CDK takes two steps:</p>
 
 <ol>
-<li>Open the topic with the Pub/Sub provider of your choice (once per topic).</li>
-<li>Send messages on the topic.</li>
+<li><a href="#opening">Open a topic</a> with the Pub/Sub provider of your choice (once per topic).</li>
+<li><a href="#sending">Send messages</a> on the topic.</li>
 </ol>
 
-<p>The second step is the same across all providers because the first step
-creates a value of the portable <a href="https://godoc.org/gocloud.dev/pubsub#Topic"><code>*pubsub.Topic</code></a> type. Publishing looks
+<h2 id="opening"> Opening a Topic<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
+
+<p>The easiest way to open a topic is using <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenTopic</code></a> and a URL
+pointing to the topic, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to
+link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need fine-grained
+control over the connection settings, you can call the constructor function in
+the driver package directly (like <code>gcppubsub.OpenTopic</code>).
+See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
+
+<h2 id="sending"> Sending Messages on a Topic<a class="anchor" href="#sending" aria-label="Link to Section">🔗</a></h2>
+
+<p>Sending a message on a <a href="https://godoc.org/gocloud.dev/pubsub#Topic">Topic</a> looks
 like this:</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Send</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">pubsub</span><span class="p">.</span><span class="nx">Message</span><span class="p">{</span>
@@ -101,144 +115,11 @@ like this:</p>
 <span class="p">}</span>
 </code></pre></div>
 
-<p>Note that the <a href="https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery">semantics of message delivery</a> can vary by provider.</p>
+<p>Note that the <a href="https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery">semantics of message delivery</a> can vary by backing service.</p>
 
-<p>The rest of this guide will discuss how to accomplish the first step: opening
-a topic for your chosen Pub/Sub provider.</p>
+<h2 id="services"> Supported Pub/Sub Services<a class="anchor" href="#services" aria-label="Link to Section">🔗</a></h2>
 
-<h2 id="constructors-versus-url-openers"> Constructors versus URL openers<a class="anchor" href="#constructors-versus-url-openers" aria-label="Link to Section">🔗</a></h2>
-
-<p>The easiest way to open a topic is using <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenTopic</code></a> and a URL
-pointing to the topic, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to
-link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need fine-grained
-control over the connection settings, you can call the constructor function in
-the driver package directly (like <code>gcppubsub.OpenTopic</code>). This guide will show
-how to use both forms for each pub/sub provider.</p>
-
-<h2 id="sns"> Amazon Simple Notification Service<a class="anchor" href="#sns" aria-label="Link to Section">🔗</a></h2>
-
-<p>The Go CDK can publish to an Amazon <a href="https://aws.amazon.com/sns/">Simple Notification Service</a> (SNS)
-topic. SNS URLs in the Go CDK use the Amazon Resource Name (ARN) to identify
-the topic. You can specify the <code>region</code> query parameter to ensure your
-application connects to the correct region, but otherwise <code>pubsub.OpenTopic</code>
-will use the region found in the environment variables or your AWS CLI
-configuration.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-
-	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
-<span class="p">)</span>
-
-<span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:mytopic&#34;</span>
-<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssns://&#34;</span><span class="o">+</span><span class="nx">topicARN</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-</code></pre></div>
-
-<p>SNS messages are restricted to UTF-8 clean payloads. If your application
-sends a message that contains non-UTF-8 bytes, then the Go CDK will
-automatically <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> encode the message and add a <code>base64encoded</code> message
-attribute. When subscribing to messages on the topic through the Go CDK,
-these will be <a href="/howto/pubsub/subscribe/#sqs">automatically Base64 decoded</a>, but if you are
-receiving messages from a topic in a program that does not use the Go CDK,
-you may need to manually Base64 decode the message payload.</p>
-
-<h3 id="sns-ctor"> Amazon Simple Notification Service Constructor<a class="anchor" href="#sns-ctor" aria-label="Link to Section">🔗</a></h3>
-
-<p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSNSTopic"><code>awssnssqs.OpenSNSTopic</code></a> constructor opens an SNS topic. You must first
-create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-
-	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
-	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
-	<span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// Establish an AWS session.
-</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-</span><span class="c1">// The region must match the region for the SNS topic &#34;mytopic&#34;.
-</span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
-<span class="p">})</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-
-<span class="c1">// Create a *pubsub.Topic.
-</span><span class="c1"></span><span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:mytopic&#34;</span>
-<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSNSTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">topicARN</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="sqs"> Amazon Simple Notification Service<a class="anchor" href="#sqs" aria-label="Link to Section">🔗</a></h2>
-
-<p>The Go CDK can publish to an Amazon <a href="https://aws.amazon.com/sqs/">Simple Queue Service</a> (SQS)
-topic. SQS URLs closely resemble the the queue URL, except the leading
-<code>https://</code> is replaced with <code>awssqs://</code>. You can specify the <code>region</code>
-query parameter to ensure your application connects to the correct region, but
-otherwise <code>pubsub.OpenTopic</code> will use the region found in the environment
-variables or your AWS CLI configuration.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-
-	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
-</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
-<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssqs://&#34;</span><span class="o">+</span><span class="nx">queueURL</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-</code></pre></div>
-
-<p>SQS messages are restricted to UTF-8 clean payloads. If your application
-sends a message that contains non-UTF-8 bytes, then the Go CDK will
-automatically <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> encode the message and add a <code>base64encoded</code> message
-attribute. When subscribing to messages on the topic through the Go CDK,
-these will be <a href="/howto/pubsub/subscribe/#sqs">automatically Base64 decoded</a>, but if you are
-receiving messages from a topic in a program that does not use the Go CDK,
-you may need to manually Base64 decode the message payload.</p>
-
-<h3 id="sqs-ctor"> Amazon Simple Queue Service Constructor<a class="anchor" href="#sqs-ctor" aria-label="Link to Section">🔗</a></h3>
-
-<p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSQSTopic"><code>awssnssqs.OpenSQSTopic</code></a> constructor opens an SQS topic. You must first
-create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-
-	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
-	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
-	<span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// Establish an AWS session.
-</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-</span><span class="c1">// The region must match the region for the SQS queue &#34;myqueue&#34;.
-</span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
-<span class="p">})</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-
-<span class="c1">// Create a *pubsub.Topic.
-</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
-<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSQSTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="gcp"> Google Cloud Pub/Sub<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h2>
+<h3 id="gcp"> Google Cloud Pub/Sub<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can publish to a Google <a href="https://cloud.google.com/pubsub/docs/">Cloud Pub/Sub</a> topic. The URLs use the
 project ID and the topic ID. <code>pubsub.OpenTopic</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application Default
@@ -258,7 +139,7 @@ Credentials</a>.</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="gcp-ctor"> Google Cloud Pub/Sub Constructor<a class="anchor" href="#gcp-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="gcp-ctor"> Google Cloud Pub/Sub Constructor<a class="anchor" href="#gcp-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenTopic"><code>gcppubsub.OpenTopic</code></a> constructor opens a Cloud Pub/Sub topic. You
 must first obtain <a href="https://cloud.google.com/docs/authentication/production">GCP credentials</a> and then create a gRPC
@@ -301,7 +182,130 @@ topics.)</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="azure"> Azure Service Bus<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h2>
+<h3 id="sns"> Amazon Simple Notification Service<a class="anchor" href="#sns" aria-label="Link to Section">🔗</a></h3>
+
+<p>The Go CDK can publish to an Amazon <a href="https://aws.amazon.com/sns/">Simple Notification Service</a> (SNS)
+topic. SNS URLs in the Go CDK use the Amazon Resource Name (ARN) to identify
+the topic. You can specify the <code>region</code> query parameter to ensure your
+application connects to the correct region, but otherwise <code>pubsub.OpenTopic</code>
+will use the region found in the environment variables or your AWS CLI
+configuration.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+<span class="p">)</span>
+
+<span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:mytopic&#34;</span>
+<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssns://&#34;</span><span class="o">+</span><span class="nx">topicARN</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
+<p>SNS messages are restricted to UTF-8 clean payloads. If your application
+sends a message that contains non-UTF-8 bytes, then the Go CDK will
+automatically <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> encode the message and add a <code>base64encoded</code> message
+attribute. When subscribing to messages on the topic through the Go CDK,
+these will be <a href="/howto/pubsub/subscribe/#sqs">automatically Base64 decoded</a>, but if you are
+receiving messages from a topic in a program that does not use the Go CDK,
+you may need to manually Base64 decode the message payload.</p>
+
+<h4 id="sns-ctor"> Amazon SNS Constructor<a class="anchor" href="#sns-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSNSTopic"><code>awssnssqs.OpenSNSTopic</code></a> constructor opens an SNS topic. You must first
+create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Establish an AWS session.
+</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+</span><span class="c1">// The region must match the region for the SNS topic &#34;mytopic&#34;.
+</span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
+<span class="p">})</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a *pubsub.Topic.
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:mytopic&#34;</span>
+<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSNSTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">topicARN</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="sqs"> Amazon Simple Queue Service<a class="anchor" href="#sqs" aria-label="Link to Section">🔗</a></h3>
+
+<p>The Go CDK can publish to an Amazon <a href="https://aws.amazon.com/sqs/">Simple Queue Service</a> (SQS)
+topic. SQS URLs closely resemble the the queue URL, except the leading
+<code>https://</code> is replaced with <code>awssqs://</code>. You can specify the <code>region</code>
+query parameter to ensure your application connects to the correct region, but
+otherwise <code>pubsub.OpenTopic</code> will use the region found in the environment
+variables or your AWS CLI configuration.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
+<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssqs://&#34;</span><span class="o">+</span><span class="nx">queueURL</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
+<p>SQS messages are restricted to UTF-8 clean payloads. If your application
+sends a message that contains non-UTF-8 bytes, then the Go CDK will
+automatically <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> encode the message and add a <code>base64encoded</code> message
+attribute. When subscribing to messages on the topic through the Go CDK,
+these will be <a href="/howto/pubsub/subscribe/#sqs">automatically Base64 decoded</a>, but if you are
+receiving messages from a topic in a program that does not use the Go CDK,
+you may need to manually Base64 decode the message payload.</p>
+
+<h4 id="sqs-ctor"> Amazon SQS Constructor<a class="anchor" href="#sqs-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSQSTopic"><code>awssnssqs.OpenSQSTopic</code></a> constructor opens an SQS topic. You must first
+create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Establish an AWS session.
+</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+</span><span class="c1">// The region must match the region for the SQS queue &#34;myqueue&#34;.
+</span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
+<span class="p">})</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a *pubsub.Topic.
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
+<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSQSTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="azure"> Azure Service Bus<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can publish to an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> topic over <a href="https://www.amqp.org/">AMQP 1.0</a>.
 The URL for publishing is the topic name. <code>pubsub.OpenTopic</code> will use the
@@ -326,7 +330,7 @@ connection string. The connection string can be obtained
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="azure-ctor"> Azure Service Bus Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="azure-ctor"> Azure Service Bus Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/azuresb#OpenTopic"><code>azuresb.OpenTopic</code></a> constructor opens an Azure Service Bus topic. You
 must first connect to the topic using the <a href="https://github.com/Azure/azure-service-bus-go">Azure Service Bus library</a> and
@@ -367,7 +371,7 @@ then pass it to <code>azuresb.OpenTopic</code>. There are also helper functions 
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="rabbitmq"> RabbitMQ<a class="anchor" href="#rabbitmq" aria-label="Link to Section">🔗</a></h2>
+<h3 id="rabbitmq"> RabbitMQ<a class="anchor" href="#rabbitmq" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can publish to an <a href="https://www.rabbitmq.com/protocol.html">AMQP 0.9.1</a> fanout exchange, the dialect of
 AMQP spoken by <a href="https://www.rabbitmq.com">RabbitMQ</a>. A RabbitMQ URL only includes the exchange name.
@@ -391,7 +395,7 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="rabbitmq-ctor"> RabbitMQ Constructor<a class="anchor" href="#rabbitmq-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="rabbitmq-ctor"> RabbitMQ Constructor<a class="anchor" href="#rabbitmq-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenTopic"><code>rabbitpubsub.OpenTopic</code></a> constructor opens a RabbitMQ exchange. You
 must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
@@ -412,7 +416,7 @@ must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connec
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="nats"> NATS<a class="anchor" href="#nats" aria-label="Link to Section">🔗</a></h2>
+<h3 id="nats"> NATS<a class="anchor" href="#nats" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can publish to a <a href="https://nats.io/">NATS</a> subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the <code>NATS_SERVER_URL</code>
@@ -438,7 +442,7 @@ environment variable (which is something like <code>nats://nats.example.com</cod
 <p>Because NATS does not natively support metadata, messages sent to NATS will
 be encoded with <a href="https://golang.org/pkg/encoding/gob/">gob</a>.</p>
 
-<h3 id="nats-ctor"> NATS Constructor<a class="anchor" href="#nats-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="nats-ctor"> NATS Constructor<a class="anchor" href="#nats-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenTopic"><code>natspubsub.OpenTopic</code></a> constructor opens a NATS subject as a topic. You
 must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"><code>*nats.Conn</code></a> to your NATS instance.</p>
@@ -463,7 +467,7 @@ must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="kafka"> Kafka<a class="anchor" href="#kafka" aria-label="Link to Section">🔗</a></h2>
+<h3 id="kafka"> Kafka<a class="anchor" href="#kafka" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can publish to a <a href="https://kafka.apache.org/">Kafka</a> cluster. A Kafka URL only includes the
 topic name. The brokers in the Kafka cluster are discovered from the
@@ -487,7 +491,7 @@ hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="kafka-ctor"> Kafka Constructor<a class="anchor" href="#kafka-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="kafka-ctor"> Kafka Constructor<a class="anchor" href="#kafka-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenTopic"><code>kafkapubsub.OpenTopic</code></a> constructor opens a Kafka topic to publish
 messages to. Depending on your Kafka cluster configuration (see
@@ -517,7 +521,7 @@ you started.</p>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="mem"> In-Memory<a class="anchor" href="#mem" aria-label="Link to Section">🔗</a></h2>
+<h3 id="mem"> In-Memory<a class="anchor" href="#mem" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
 The names in <code>mem://</code> URLs are a process-wide namespace, so subscriptions to
@@ -538,7 +542,7 @@ more in the <a href="https://gocloud.dev/howto/pubsub/subscribe/#mem">subscripti
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="mem-ctor"> In-Memory Constructor<a class="anchor" href="#mem-ctor" aria-label="Link to Section">🔗</a></h3>
+<h4 id="mem-ctor"> In-Memory Constructor<a class="anchor" href="#mem-ctor" aria-label="Link to Section">🔗</a></h4>
 
 <p>To create an in-memory Pub/Sub topic, use the <a href="https://godoc.org/gocloud.dev/pubsub/mempubsub#NewTopic"><code>mempubsub.NewTopic</code>
 function</a>. You can use the returned topic to create in-memory
