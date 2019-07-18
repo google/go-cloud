@@ -16,6 +16,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -86,7 +87,6 @@ Runs "terraform init" followed by "terraform apply".`,
 	}
 	applyCmd.Flags().BoolVar(&applyOpts.Input, "input", true, "ask for input for Terraform variables if not directly set")
 	applyCmd.Flags().BoolVar(&applyOpts.Verbose, "verbose", false, "true to print all output from Terraform")
-	applyCmd.Flags().BoolVar(&applyOpts.Quiet, "quiet", false, "true to suppress all output from Terraform unless there's an error")
 	applyCmd.Flags().BoolVar(&applyOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
 	biomeCmd.AddCommand(applyCmd)
 
@@ -242,7 +242,6 @@ func biomeList(ctx context.Context, pctx *processContext) error {
 
 // biomeApply holds options for "biome apply".
 type biomeApplyOptions struct {
-	Quiet       bool // suppress all Terraform output unless there's an error
 	Verbose     bool // show all Terraform output
 	AutoApprove bool // auto-approve Terraform changes
 	Input       bool // allow Terraform prompts for input
@@ -263,15 +262,28 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
 	}
 
-	writeTerraformOutput := func(cmd *exec.Cmd, msg []byte) {
+	// Writes buffered Terraform output in out, which may be nil.
+	writeBufferedTerraformOutput := func(cmd *exec.Cmd, out []byte) {
+		if len(out) == 0 {
+			return
+		}
 		const separator = "#########################################\n"
 		pctx.stderr.Write([]byte("\n"))
 		pctx.stderr.Write([]byte(separator))
 		pctx.stderr.Write([]byte(fmt.Sprintf("Output from %q\n", strings.Join(cmd.Args, " "))))
 		pctx.stderr.Write([]byte(separator))
-		pctx.stderr.Write(msg)
+		pctx.stderr.Write(out)
 		pctx.stderr.Write([]byte(separator))
 		pctx.stderr.Write([]byte("\n"))
+	}
+
+	// Returns buffered Terraform output, or nil slice if output wasn't buffered.
+	runTerraform := func(cmd *exec.Cmd) ([]byte, error) {
+		if opts.Verbose {
+			return nil, cmd.Run()
+		}
+		cmd.Stdout, cmd.Stderr = nil, nil
+		return cmd.CombinedOutput()
 	}
 
 	pctx.Logf("Checking to see if resource updates are needed...")
@@ -281,12 +293,9 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	inputArg := fmt.Sprintf("-input=%v", opts.Input)
 	c := pctx.NewCommand(ctx, biomePath, "terraform", "init", inputArg)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
-	c.Stdout, c.Stderr = nil, nil
-	if out, err := c.CombinedOutput(); err != nil {
-		writeTerraformOutput(c, out)
+	if out, err := runTerraform(c); err != nil {
+		writeBufferedTerraformOutput(c, out)
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
-	} else if opts.Verbose {
-		writeTerraformOutput(c, out)
 	}
 
 	// Next, run "terraform plan", writing the plan to a temp file.
@@ -301,24 +310,25 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	defer os.Remove(planFile.Name())
 	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+planFileName, inputArg)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
-	c.Stdout, c.Stderr = nil, nil
 
 	// No error means success and no diffs.
 	// Exit code 1 means the command failed.
 	// Exit code 2 means the command succeeded, but there's a diff.
-	if out, err := c.CombinedOutput(); err != nil && !strings.Contains(err.Error(), "exit status 2") {
+	if out, err := runTerraform(c); err != nil && !strings.Contains(err.Error(), "exit status 2") {
 		// A real failure.
-		writeTerraformOutput(c, out)
+		writeBufferedTerraformOutput(c, out)
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
 	} else if err != nil {
 		// Exit code 2 --> there's a diff.
-		// Print them out and prompt for approval.
-		pctx.Logf("Resources updates are needed.")
-		if opts.Quiet {
-			pctx.Logf("Not showing update details due to --quiet.")
-		} else {
-			writeTerraformOutput(c, out)
+		// Print out a summary of the changes (unless Verbose).
+		if !opts.Verbose {
+			if idx := bytes.LastIndex(out, []byte("Plan:")); idx == -1 {
+				pctx.Logf("Resources changes are needed; re-run with --verbose for more details.")
+			} else {
+				pctx.Logf(string(out[idx:]))
+			}
 		}
+		// Prompt for approval (unless AutoApprove).
 		if !opts.AutoApprove {
 			reader := bufio.NewReader(pctx.stdin)
 			if approve, err := prompt.String(reader, pctx.stderr, "Do you want to perform these actions (only 'yes' will be accepted to approve)?", ""); err != nil {
@@ -331,7 +341,7 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		// No changes.
 		pctx.Logf("No resources updates are needed.")
 		if opts.Verbose {
-			writeTerraformOutput(c, out)
+			writeBufferedTerraformOutput(c, out)
 		}
 	}
 
@@ -348,12 +358,9 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	// See https://github.com/hashicorp/terraform/issues/15419.
 	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", planFileName)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
-	c.Stdout, c.Stderr = nil, nil
-	if out, err := c.CombinedOutput(); err != nil {
-		writeTerraformOutput(c, out)
+	if out, err := runTerraform(c); err != nil {
+		writeBufferedTerraformOutput(c, out)
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
-	} else if opts.Verbose {
-		writeTerraformOutput(c, out)
 	}
 	pctx.Logf("Success!")
 	return nil
