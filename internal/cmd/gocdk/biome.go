@@ -90,6 +90,22 @@ Runs "terraform init" followed by "terraform apply".`,
 	applyCmd.Flags().BoolVar(&applyOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
 	biomeCmd.AddCommand(applyCmd)
 
+	var destroyInput bool
+	destroyCmd := &cobra.Command{
+		Use:   "destroy <biome name>",
+		Short: "Removing any changes which were applied for the biome's resource configuration",
+		Long: `Remove all the changes were made to reach the desired state of the biome's resource
+configuration.
+
+Runs "terraform destroy".`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return biomeDestroy(ctx, pctx, args[0], destroyInput)
+		},
+	}
+	destroyCmd.Flags().BoolVar(&destroyInput, "input", true, "ask for input for Terraform variables if not directly set")
+	biomeCmd.AddCommand(destroyCmd)
+
 	rootCmd.AddCommand(biomeCmd)
 }
 
@@ -377,5 +393,26 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
 	}
 	pctx.Logf("Success!")
+	return nil
+}
+
+// biomeDestroy implements the "biome destroy" subcommand.
+//
+// It runs "terraform destroy" for the named biome.
+func biomeDestroy(ctx context.Context, pctx *processContext, biome string, input bool) error {
+	moduleRoot, err := pctx.ModuleRoot(ctx)
+	if err != nil {
+		return xerrors.Errorf("biome destroy %s: %w", biome, err)
+	}
+
+	biomePath, err := biomeDir(moduleRoot, biome)
+	if err != nil {
+		return xerrors.Errorf("biome destroy %s: %w", biome, err)
+	}
+
+	c := pctx.NewCommand(ctx, biomePath, "terraform", "destroy", "-input="+strconv.FormatBool(input), "-auto-approve")
+	if err := c.Run(); err != nil {
+		return xerrors.Errorf("biome destroy %s: %w", biome, err)
+	}
 	return nil
 }

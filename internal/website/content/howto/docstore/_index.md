@@ -280,13 +280,38 @@ region as your collection:
 [`awsdynamodb.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#OpenCollection
 [`awsdynamodb.URLOpener`]: https://godoc.org/gocloud.dev/docstore/awsdynamodb#URLOpener
 
+### Azure Cosmos DB {#cosmosdb}
+
+[Azure Cosmos DB][] is compatible with the MongoDB API. You can use the
+[`mongodocstore`][] package to connect to Cosmos DB. You must
+[create an Azure Cosmos account][] and get the MongoDB [connection string][].
+
+When you use MongoDB URLs to connect to Cosmos DB, specify the Mongo server
+URL by setting the `MONGO_SERVER_URL` environment variable to the connection
+string. See the [MongoDB section][] for more details and examples on how to
+use the package.
+
+[Azure Cosmos DB]: https://docs.microsoft.com/en-us/azure/cosmos-db/
+[create an Azure Cosmos account]: https://docs.microsoft.com/en-us/azure/cosmos-db/create-mongodb-dotnet
+[connection string]: https://docs.microsoft.com/en-us/azure/cosmos-db/connect-mongodb-account#QuickstartConnection
+[MongoDB section]: {{< ref "#mongo" >}}
+
+#### Cosmos DB Constructors {#cosmosdb-ctor}
+
+The [`mongodocstore.OpenCollection`][] constructor can open a Cosmos DB
+collection. You must first obtain a standard MongoDB Go client with your
+Cosmos connections string. See the [MongoDB constructor section][] for more
+details and examples.
+
+[MongoDB constructor section]: {{< ref "#mongo-ctor" >}}
+
 ### MongoDB {#mongo}
 
-The [`mongodocstore`](https://godoc.org/gocloud.dev/docstore/mongodocstore)
-package supports the popular [MongoDB](https://mongodb.org) document store.
-MongoDB documents are uniquely identified by a field called `_id`. In Docstore,
-you can choose a different name for this field, or provide a function to extract
-the document ID from a document.
+The [`mongodocstore`][] package supports the popular
+[MongoDB](https://mongodb.org) document store. MongoDB documents are uniquely
+identified by a field called `_id`. In Docstore, you can choose a different
+name for this field, or provide a function to extract the document ID from a
+document.
 
 MongoDB URLs provide the database and collection, and optionally the field that
 holds the document ID. Specify the Mongo server URL by setting the
@@ -321,6 +346,7 @@ whose name is the combination of two or more fields.
 {{< goexample
 "gocloud.dev/docstore/mongodocstore.ExampleOpenCollectionWithIDFunc" >}}
 
+[`mongodocstore`]: https://godoc.org/gocloud.dev/docstore/mongodocstore
 [`mongodocstore.Dial`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#Dial
 [`mongodocstore.OpenCollection`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollection
 [`mongodocstore.OpenCollectionWithIDFunc`]: https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollectionWithIDFunc

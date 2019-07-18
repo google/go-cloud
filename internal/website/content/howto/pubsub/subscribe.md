@@ -7,48 +7,75 @@ toc: true
 
 Subscribing to messages on a topic with the Go CDK takes three steps:
 
-1. Open the subscription with the Pub/Sub provider of your choice (once per subscription).
-2. Receive messages from the topic.
-3. For each message, acknowledge its receipt using the `Ack` method
-   after completing any work related to the message. This will prevent the
-   message from being redelivered.
+1. [Open a subscription][] with the Pub/Sub provider of your choice (once per
+   subscription).
+2. [Receive and acknowledge messages][] from the topic. After completing any
+   work related to the message, use the Ack method to prevent it from being
+   redelivered.
+
+[Open a subscription]: {{< ref "#opening" >}}
+[Receive and acknowledge messages]: {{< ref "#receiving" >}}
 
 <!--more-->
 
-The last two steps are the same across all providers because the first step
-creates a value of the portable [`*pubsub.Subscription`][] type. A simple
-subscriber that operates on messages serially looks like this:
-
-{{< goexample src="gocloud.dev/pubsub.ExampleSubscription_Receive" imports="0" >}}
-
-If you want your subscriber to operate on the incoming messages concurrently,
-you can start multiple goroutines:
-
-{{< goexample src="gocloud.dev/pubsub.ExampleSubscription_Receive_concurrent" imports="0" >}}
-
-Note that the [semantics of message delivery][] can vary by provider.
-
-The rest of this guide will discuss how to accomplish the first step: opening
-a subscription for your chosen Pub/Sub provider.
-
-[`*pubsub.Subscription`]: https://godoc.org/gocloud.dev/pubsub#Subscription
-[semantics of message delivery]: https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
-
-## Constructors versus URL openers
+## Opening a Subscription {#opening}
 
 The easiest way to open a subscription is using [`pubsub.OpenSubscription`][]
 and a URL pointing to the topic, making sure you ["blank import"][] the driver
 package to link it in. See [Concepts: URLs][] for more details. If you need
 fine-grained control over the connection settings, you can call the constructor
 function in the driver package directly (like `gcppubsub.OpenSubscription`).
-This guide will show how to use both forms for each pub/sub provider.
+See the [guide below][] for usage of both forms for each supported provider.
 
+[guide below]: {{< ref "#services" >}}
 [`pubsub.OpenSubscription`]:
 https://godoc.org/gocloud.dev/pubsub#OpenTopic
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
-## Amazon Simple Queueing Service {#sqs}
+## Receiving and Acknowledging Messages {#receiving}
+
+A simple subscriber that operates on
+[messages](https://godoc.org/gocloud.dev/pubsub#Message) serially looks like
+this:
+
+{{< goexample src="gocloud.dev/pubsub.ExampleSubscription_Receive" imports="0" >}}
+
+If you want your subscriber to operate on incoming messages concurrently,
+you can start multiple goroutines:
+
+{{< goexample src="gocloud.dev/pubsub.ExampleSubscription_Receive_concurrent" imports="0" >}}
+
+Note that the [semantics of message delivery][] can vary by backing service.
+
+[`*pubsub.Subscription`]: https://godoc.org/gocloud.dev/pubsub#Subscription
+[semantics of message delivery]: https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+
+## Supported Pub/Sub Services {#services}
+
+### Google Cloud Pub/Sub {#gcp}
+
+The Go CDK can receive messages from a Google [Cloud Pub/Sub][] subscription.
+The URLs use the project ID and the subscription ID.
+`pubsub.OpenSubscription` will use [Application Default Credentials][GCP creds].
+
+{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openSubscriptionFromURL" >}}
+
+[Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+
+#### Google Cloud Pub/Sub Constructor {#gcp-ctor}
+
+The [`gcppubsub.OpenSubscription`][] constructor opens a Cloud Pub/Sub
+subscription. You must first obtain [GCP credentials][GCP creds] and then
+create a gRPC connection to Cloud Pub/Sub. (This gRPC connection can be
+reused among subscriptions.)
+
+{{< goexample "gocloud.dev/pubsub/gcppubsub.ExampleOpenSubscription" >}}
+
+[`gcppubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenSubscription
+
+### Amazon Simple Queueing Service {#sqs}
 
 The Go CDK can subscribe to an Amazon [Simple Queueing Service][SQS] (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
@@ -75,7 +102,7 @@ or the [SQS publshing guide][] for more details.
 [SNS JSON]: https://aws.amazon.com/sns/faqs/#Raw_message_delivery
 [SQS]: https://aws.amazon.com/sqs/
 
-### Amazon Simple Queueing Service Constructor {#sqs-ctor}
+#### Amazon SQS Constructor {#sqs-ctor}
 
 The [`awssnssqs.OpenSubscription`][] constructor opens an SQS queue. You must
 first create an [AWS session][] with the same region as your topic:
@@ -85,29 +112,7 @@ first create an [AWS session][] with the same region as your topic:
 [`awssnssqs.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSubscription
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
-## Google Cloud Pub/Sub {#gcp}
-
-The Go CDK can receive messages from a Google [Cloud Pub/Sub][] subscription.
-The URLs use the project ID and the subscription ID.
-`pubsub.OpenSubscription` will use [Application Default Credentials][GCP creds].
-
-{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openSubscriptionFromURL" >}}
-
-[Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
-[GCP creds]: https://cloud.google.com/docs/authentication/production
-
-### Google Cloud Pub/Sub Constructor {#gcp-ctor}
-
-The [`gcppubsub.OpenSubscription`][] constructor opens a Cloud Pub/Sub
-subscription. You must first obtain [GCP credentials][GCP creds] and then
-create a gRPC connection to Cloud Pub/Sub. (This gRPC connection can be
-reused among subscriptions.)
-
-{{< goexample "gocloud.dev/pubsub/gcppubsub.ExampleOpenSubscription" >}}
-
-[`gcppubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenSubscription
-
-## Azure Service Bus {#azure}
+### Azure Service Bus {#azure}
 
 The Go CDK can recieve messages from an [Azure Service Bus][] subscription
 over [AMQP 1.0][]. The URL for subscribing is the topic name with the
@@ -122,7 +127,7 @@ you need to copy [from the Azure portal][Azure connection string].
 [Azure connection string]: https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-how-to-use-topics-subscriptions#get-the-connection-string
 [Azure Service Bus]: https://azure.microsoft.com/en-us/services/service-bus/
 
-### Azure Service Bus Constructor {#azure-ctor}
+#### Azure Service Bus Constructor {#azure-ctor}
 
 The [`azuresb.OpenSubscription`][] constructor opens an Azure Service Bus
 subscription. You must first connect to the topic and subscription using the
@@ -135,7 +140,7 @@ package to make this easier.
 [`azuresb.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/azuresb#OpenSubscription
 [Azure Service Bus library]: https://github.com/Azure/azure-service-bus-go
 
-## RabbitMQ {#rabbitmq}
+### RabbitMQ {#rabbitmq}
 
 The Go CDK can receive messages from an [AMQP 0.9.1][] queue, the dialect of
 AMQP spoken by [RabbitMQ][]. A RabbitMQ URL only includes the queue name.
@@ -147,7 +152,7 @@ variable (which is something like `amqp://guest:guest@localhost:5672/`).
 [AMQP 0.9.1]: https://www.rabbitmq.com/protocol.html
 [RabbitMQ]: https://www.rabbitmq.com
 
-### RabbitMQ Constructor {#rabbitmq-ctor}
+#### RabbitMQ Constructor {#rabbitmq-ctor}
 
 The [`rabbitpubsub.OpenSubscription`][] constructor opens a RabbitMQ queue.
 You must first create an [`*amqp.Connection`][] to your RabbitMQ instance.
@@ -157,7 +162,7 @@ You must first create an [`*amqp.Connection`][] to your RabbitMQ instance.
 [`*amqp.Connection`]: https://godoc.org/github.com/streadway/amqp#Connection
 [`rabbitpubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenSubscription
 
-## NATS {#nats}
+### NATS {#nats}
 
 The Go CDK can publish to a [NATS][] subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the `NATS_SERVER_URL`
@@ -177,7 +182,7 @@ subscribing to messages coming from a source not using the Go CDK.
 [NATS]: https://nats.io/
 [publish#nats]: {{< ref "./publish.md#nats" >}}
 
-### NATS Constructor {#nats-ctor}
+#### NATS Constructor {#nats-ctor}
 
 The [`natspubsub.OpenSubscription`][] constructor opens a NATS subject as a
 topic. You must first create an [`*nats.Conn`][] to your NATS instance.
@@ -187,7 +192,7 @@ topic. You must first create an [`*nats.Conn`][] to your NATS instance.
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription
 
-## Kafka {#kafka}
+### Kafka {#kafka}
 
 The Go CDK can receive messages from a [Kafka][] cluster.
 A Kafka URL includes the consumer group name, plus at least one instance
@@ -200,7 +205,7 @@ hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
 
 [Kafka]: https://kafka.apache.org/
 
-### Kafka Constructor {#kafka-ctor}
+#### Kafka Constructor {#kafka-ctor}
 
 The [`kafkapubsub.OpenSubscription`][] constructor creates a consumer in a
 consumer group, subscribed to one or more topics.
@@ -216,7 +221,7 @@ get you started.
 [`kafkapubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenSubscription
 [`kafkapubsub.MinimalConfig`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig
 
-## In-Memory {#mem}
+### In-Memory {#mem}
 
 The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
 The names in `mem://` URLs are a process-wide namespace, so subscriptions to
@@ -226,7 +231,7 @@ you open a topic `mem://topicA` and open two subscriptions with
 
 {{< goexample "gocloud.dev/pubsub/mempubsub.Example_openSubscriptionFromURL" >}}
 
-### In-Memory Constructor {#mem-ctor}
+#### In-Memory Constructor {#mem-ctor}
 
 To create a subscription to an in-memory Pub/Sub topic, pass the [topic you
 created][publish-mem-ctor] into the [`mempubsub.NewSubscription` function][].

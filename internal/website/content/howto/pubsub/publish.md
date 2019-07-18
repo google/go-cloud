@@ -7,40 +7,65 @@ toc: true
 
 Publishing a message to a topic with the Go CDK takes two steps:
 
-1. Open the topic with the Pub/Sub provider of your choice (once per topic).
-2. Send messages on the topic.
+1. [Open a topic][] with the Pub/Sub provider of your choice (once per topic).
+2. [Send messages][] on the topic.
+
+[Open a topic]: {{< ref "#opening" >}}
+[Send messages]: {{< ref "#sending" >}}
 
 <!--more-->
 
-The second step is the same across all providers because the first step
-creates a value of the portable [`*pubsub.Topic`][] type. Publishing looks
-like this:
-
-{{< goexample src="gocloud.dev/pubsub.ExampleTopic_Send" imports="0" >}}
-
-Note that the [semantics of message delivery][] can vary by provider.
-
-The rest of this guide will discuss how to accomplish the first step: opening
-a topic for your chosen Pub/Sub provider.
-
-[`*pubsub.Topic`]: https://godoc.org/gocloud.dev/pubsub#Topic
-[semantics of message delivery]: https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
-
-## Constructors versus URL openers
+## Opening a Topic {#opening}
 
 The easiest way to open a topic is using [`pubsub.OpenTopic`][] and a URL
 pointing to the topic, making sure you ["blank import"][] the driver package to
 link it in. See [Concepts: URLs][] for more details. If you need fine-grained
 control over the connection settings, you can call the constructor function in
-the driver package directly (like `gcppubsub.OpenTopic`). This guide will show
-how to use both forms for each pub/sub provider.
+the driver package directly (like `gcppubsub.OpenTopic`).
+See the [guide below][] for usage of both forms for each supported provider.
 
+[guide below]: {{< ref "#services" >}}
 [`pubsub.OpenTopic`]:
 https://godoc.org/gocloud.dev/pubsub#OpenTopic
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 
-## Amazon Simple Notification Service {#sns}
+## Sending Messages on a Topic {#sending}
+
+Sending a message on a [Topic](https://godoc.org/gocloud.dev/pubsub#Topic) looks
+like this:
+
+{{< goexample src="gocloud.dev/pubsub.ExampleTopic_Send" imports="0" >}}
+
+Note that the [semantics of message delivery][] can vary by backing service.
+
+[semantics of message delivery]: https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+
+## Supported Pub/Sub Services {#services}
+
+### Google Cloud Pub/Sub {#gcp}
+
+The Go CDK can publish to a Google [Cloud Pub/Sub][] topic. The URLs use the
+project ID and the topic ID. `pubsub.OpenTopic` will use [Application Default
+Credentials][GCP creds].
+
+{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
+
+[Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+
+#### Google Cloud Pub/Sub Constructor {#gcp-ctor}
+
+The [`gcppubsub.OpenTopic`][] constructor opens a Cloud Pub/Sub topic. You
+must first obtain [GCP credentials][GCP creds] and then create a gRPC
+connection to Cloud Pub/Sub. (This gRPC connection can be reused among
+topics.)
+
+{{< goexample "gocloud.dev/pubsub/gcppubsub.ExampleOpenTopic" >}}
+
+[`gcppubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenTopic
+
+### Amazon Simple Notification Service {#sns}
 
 The Go CDK can publish to an Amazon [Simple Notification Service][SNS] (SNS)
 topic. SNS URLs in the Go CDK use the Amazon Resource Name (ARN) to identify
@@ -63,7 +88,7 @@ you may need to manually Base64 decode the message payload.
 [SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
 [SNS]: https://aws.amazon.com/sns/
 
-### Amazon Simple Notification Service Constructor {#sns-ctor}
+#### Amazon SNS Constructor {#sns-ctor}
 
 The [`awssnssqs.OpenSNSTopic`][] constructor opens an SNS topic. You must first
 create an [AWS session][] with the same region as your topic:
@@ -73,7 +98,7 @@ create an [AWS session][] with the same region as your topic:
 [`awssnssqs.OpenSNSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSNSTopic
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
-## Amazon Simple Notification Service {#sqs}
+### Amazon Simple Queue Service {#sqs}
 
 The Go CDK can publish to an Amazon [Simple Queue Service][SQS] (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
@@ -96,7 +121,7 @@ you may need to manually Base64 decode the message payload.
 [SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
 [SQS]: https://aws.amazon.com/sqs/
 
-### Amazon Simple Queue Service Constructor {#sqs-ctor}
+#### Amazon SQS Constructor {#sqs-ctor}
 
 The [`awssnssqs.OpenSQSTopic`][] constructor opens an SQS topic. You must first
 create an [AWS session][] with the same region as your topic:
@@ -106,29 +131,7 @@ create an [AWS session][] with the same region as your topic:
 [`awssnssqs.OpenSQSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSQSTopic
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
-## Google Cloud Pub/Sub {#gcp}
-
-The Go CDK can publish to a Google [Cloud Pub/Sub][] topic. The URLs use the
-project ID and the topic ID. `pubsub.OpenTopic` will use [Application Default
-Credentials][GCP creds].
-
-{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
-
-[Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
-[GCP creds]: https://cloud.google.com/docs/authentication/production
-
-### Google Cloud Pub/Sub Constructor {#gcp-ctor}
-
-The [`gcppubsub.OpenTopic`][] constructor opens a Cloud Pub/Sub topic. You
-must first obtain [GCP credentials][GCP creds] and then create a gRPC
-connection to Cloud Pub/Sub. (This gRPC connection can be reused among
-topics.)
-
-{{< goexample "gocloud.dev/pubsub/gcppubsub.ExampleOpenTopic" >}}
-
-[`gcppubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenTopic
-
-## Azure Service Bus {#azure}
+### Azure Service Bus {#azure}
 
 The Go CDK can publish to an [Azure Service Bus][] topic over [AMQP 1.0][].
 The URL for publishing is the topic name. `pubsub.OpenTopic` will use the
@@ -142,7 +145,7 @@ connection string. The connection string can be obtained
 [Azure connection string]: https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-how-to-use-topics-subscriptions#get-the-connection-string
 [Azure Service Bus]: https://azure.microsoft.com/en-us/services/service-bus/
 
-### Azure Service Bus Constructor {#azure-ctor}
+#### Azure Service Bus Constructor {#azure-ctor}
 
 The [`azuresb.OpenTopic`][] constructor opens an Azure Service Bus topic. You
 must first connect to the topic using the [Azure Service Bus library][] and
@@ -154,7 +157,7 @@ then pass it to `azuresb.OpenTopic`. There are also helper functions in the
 [`azuresb.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/azuresb#OpenTopic
 [Azure Service Bus library]: https://github.com/Azure/azure-service-bus-go
 
-## RabbitMQ {#rabbitmq}
+### RabbitMQ {#rabbitmq}
 
 The Go CDK can publish to an [AMQP 0.9.1][] fanout exchange, the dialect of
 AMQP spoken by [RabbitMQ][]. A RabbitMQ URL only includes the exchange name.
@@ -166,7 +169,7 @@ variable (which is something like `amqp://guest:guest@localhost:5672/`).
 [AMQP 0.9.1]: https://www.rabbitmq.com/protocol.html
 [RabbitMQ]: https://www.rabbitmq.com
 
-### RabbitMQ Constructor {#rabbitmq-ctor}
+#### RabbitMQ Constructor {#rabbitmq-ctor}
 
 The [`rabbitpubsub.OpenTopic`][] constructor opens a RabbitMQ exchange. You
 must first create an [`*amqp.Connection`][] to your RabbitMQ instance.
@@ -176,7 +179,7 @@ must first create an [`*amqp.Connection`][] to your RabbitMQ instance.
 [`*amqp.Connection`]: https://godoc.org/github.com/streadway/amqp#Connection
 [`rabbitpubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenTopic
 
-## NATS {#nats}
+### NATS {#nats}
 
 The Go CDK can publish to a [NATS][] subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the `NATS_SERVER_URL`
@@ -190,7 +193,7 @@ be encoded with [gob][].
 [gob]: https://golang.org/pkg/encoding/gob/
 [NATS]: https://nats.io/
 
-### NATS Constructor {#nats-ctor}
+#### NATS Constructor {#nats-ctor}
 
 The [`natspubsub.OpenTopic`][] constructor opens a NATS subject as a topic. You
 must first create an [`*nats.Conn`][] to your NATS instance.
@@ -200,7 +203,7 @@ must first create an [`*nats.Conn`][] to your NATS instance.
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenTopic
 
-## Kafka {#kafka}
+### Kafka {#kafka}
 
 The Go CDK can publish to a [Kafka][] cluster. A Kafka URL only includes the
 topic name. The brokers in the Kafka cluster are discovered from the
@@ -211,7 +214,7 @@ hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
 
 [Kafka]: https://kafka.apache.org/
 
-### Kafka Constructor {#kafka-ctor}
+#### Kafka Constructor {#kafka-ctor}
 
 The [`kafkapubsub.OpenTopic`][] constructor opens a Kafka topic to publish
 messages to. Depending on your Kafka cluster configuration (see
@@ -228,7 +231,7 @@ you started.
 [`kafkapubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenTopic
 [`kafkapubsub.MinimalConfig`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig
 
-## In-Memory {#mem}
+### In-Memory {#mem}
 
 The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
 The names in `mem://` URLs are a process-wide namespace, so subscriptions to
@@ -239,7 +242,7 @@ more in the [subscription guide][subscribe-mem].
 
 [subscribe-mem]: {{< ref "./subscribe.md#mem" >}}
 
-### In-Memory Constructor {#mem-ctor}
+#### In-Memory Constructor {#mem-ctor}
 
 To create an in-memory Pub/Sub topic, use the [`mempubsub.NewTopic`
 function][]. You can use the returned topic to create in-memory
@@ -249,4 +252,3 @@ subscriptions, as detailed in the [subscription guide][subscribe-mem-ctor].
 
 [`mempubsub.NewTopic` function]: https://godoc.org/gocloud.dev/pubsub/mempubsub#NewTopic
 [subscribe-mem-ctor]: {{< ref "./subscribe.md#mem-ctor" >}}
-

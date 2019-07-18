@@ -23,6 +23,7 @@ Top-level package documentation: <https://godoc.org/gocloud.dev/secrets>
 
 * [Google Cloud KMS](https://godoc.org/gocloud.dev/secrets/gcpkms)
 * [AWS KMS](https://godoc.org/gocloud.dev/secrets/awskms)
+* [Azure KeyVault](https://godoc.org/gocloud.dev/secrets/azurekeyvault)
 * [Vault by HashiCorp](https://godoc.org/gocloud.dev/secrets/hashivault) - a
   platform-agnostic secrets engine
 * [In-memory local secrets](https://godoc.org/gocloud.dev/secrets/localsecrets) -
