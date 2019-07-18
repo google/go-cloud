@@ -7,10 +7,10 @@ toc: true
 
 Publishing a message to a topic with the Go CDK takes two steps:
 
-1. [Open the topic][] with the Pub/Sub provider of your choice (once per topic).
+1. [Open a topic][] with the Pub/Sub provider of your choice (once per topic).
 2. [Send messages][] on the topic.
 
-[Open the topic]: {{< ref "#opening" >}}
+[Open a topic]: {{< ref "#opening" >}}
 [Send messages]: {{< ref "#sending" >}}
 
 <!--more-->
