@@ -298,19 +298,26 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
 	}
 
-	// Next, run "terraform plan", writing the plan to a temp file.
-	planFile, err := ioutil.TempFile(pctx.workdir, "tfplan")
+	// Get the name of a temp file in the biome directory, where we'll write the
+	// output of "terraform plan".
+	tmpFile, err := ioutil.TempFile(biomePath, "tfplan")
 	if err != nil {
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
 	}
-	// Note: using just the base filename instead of passing the file path to --out
-	// because Terraform appears to not work with full Windows paths.
-	planFileName := filepath.Base(planFile.Name())
-	defer planFile.Close()
-	defer os.Remove(planFile.Name())
-	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+planFileName, inputArg)
-	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
+	planFilePath := tmpFile.Name()
+	tmpFile.Close() // we don't need the *os.File, just the name
+	defer func() {
+		if err := os.Remove(planFilePath); err != nil {
+			pctx.Logf("Non-fatal error cleaning up; failed to remove Terraform plan file %q: %v", planFilePath, err)
+		}
+	}()
 
+	// Run "terraform plan".
+	// Note: just pass the base filename instead of the full file path to --out,
+	// because Terraform appears to not work with full Windows paths. This works
+	// because the file is in the command's working directory, biomePath.
+	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+filepath.Base(planFilePath), inputArg)
+	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	// No error means success and no diffs.
 	// Exit code 1 means the command failed.
 	// Exit code 2 means the command succeeded, but there's a diff.
@@ -356,7 +363,8 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	// 5. "terraform apply tf.plan"...
 	// 6. "terraform output" now prints the new value.
 	// See https://github.com/hashicorp/terraform/issues/15419.
-	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", planFileName)
+	// See note above "terraform plan" about why filepath.Base instead of the full path.
+	c = pctx.NewCommand(ctx, biomePath, "terraform", "apply", filepath.Base(planFilePath))
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	if out, err := runTerraform(c); err != nil {
 		writeBufferedTerraformOutput(c, out)
