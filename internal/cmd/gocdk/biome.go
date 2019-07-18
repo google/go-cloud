@@ -321,6 +321,8 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	// No error means success and no diffs.
 	// Exit code 1 means the command failed.
 	// Exit code 2 means the command succeeded, but there's a diff.
+	// TODO(rvangent): Go 1.12 added ExitCode (https://godoc.org/os#ProcessState.ExitCode);
+	// use that instead of a string check once support for Go 1.11 is dropped.
 	if out, err := runTerraform(c); err != nil && !strings.Contains(err.Error(), "exit status 2") {
 		// A real failure.
 		writeBufferedTerraformOutput(c, out)
