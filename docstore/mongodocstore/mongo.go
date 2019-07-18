@@ -65,6 +65,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/google/wire"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -90,6 +91,12 @@ func Dial(ctx context.Context, uri string) (*mongo.Client, error) {
 	}
 	return client, nil
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	wire.Struct(new(URLOpener), "Client"),
+)
 
 type collection struct {
 	coll          *mongo.Collection
