@@ -1,5 +1,5 @@
 ---
-title: "Subscribe to a Topic's Messages"
+title: "Subscribe to Messages from a Topic"
 date: 2019-03-26T09:44:33-07:00
 weight: 2
 toc: true
