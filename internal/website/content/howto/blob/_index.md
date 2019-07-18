@@ -182,9 +182,9 @@ See [`aws.ConfigFromURLParams`][] for more details on supported URL options for 
 [SeaweedFS]: https://github.com/chrislusf/seaweedfs
 [S3-compatible storage servers]: https://en.wikipedia.org/wiki/Amazon_S3#S3_API_and_competing_services
 
-### Azure Storage {#azure}
+### Azure Blob Storage {#azure}
 
-Azure Storage URLs in the Go CDK allow you to identify [Azure Storage][] containers
+Azure Blob Storage URLs in the Go CDK allow you to identify [Azure Blob Storage][] containers
 when opening a bucket with `blob.OpenBucket`. Go CDK uses the environment
 variables `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, and
 `AZURE_STORAGE_SAS_TOKEN` to configure the credentials. `AZURE_STORAGE_ACCOUNT`
@@ -195,12 +195,12 @@ is required, along with one of the other two.
 Full details about acceptable URLs can be found under the API reference for
 [`azureblob.URLOpener`][].
 
-[Azure Storage]: https://azure.microsoft.com/en-us/services/storage/
+[Azure Blob Storage]: https://azure.microsoft.com/en-us/services/storage/blobs/
 [`azureblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/azureblob#URLOpener
 
-#### Azure Storage Constructor {#azure-ctor}
+#### Azure Blob Constructor {#azure-ctor}
 
-The [`azureblob.OpenBucket`][] constructor opens an Azure Storage container.
+The [`azureblob.OpenBucket`][] constructor opens an Azure Blob Storage container.
 `azureblob` operates on [Azure Storage Block Blobs][]. You must first create
 Azure Storage credentials and then create an Azure Storage pipeline before
 you can open a container.
