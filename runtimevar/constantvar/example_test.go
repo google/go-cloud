@@ -24,18 +24,9 @@ import (
 	"gocloud.dev/runtimevar/constantvar"
 )
 
-// MyConfig is a sample configuration struct.
-type MyConfig struct {
-	Server string
-	Port   int
-}
-
 func ExampleNew() {
-	// cfg is our sample config.
-	cfg := MyConfig{Server: "foo.com", Port: 80}
-
-	// Construct a *runtimevar.Variable that always returns cfg.
-	v := constantvar.New(cfg)
+	// Construct a *runtimevar.Variable that always returns "hello world".
+	v := constantvar.New("hello world")
 	defer v.Close()
 
 	// We can now read the current value of the variable from v.
@@ -43,20 +34,15 @@ func ExampleNew() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg = snapshot.Value.(MyConfig)
-	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
+	fmt.Println(snapshot.Value.(string))
 
 	// Output:
-	// foo.com running on port 80
+	// hello world
 }
 
 func ExampleNewBytes() {
-
-	// Create a decoder for decoding JSON strings into MyConfig.
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
-
-	// Construct a *runtimevar.Variable based on a JSON string.
-	v := constantvar.NewBytes([]byte(`{"Server": "foo.com", "Port": 80}`), decoder)
+	// Construct a *runtimevar.Variable with a []byte.
+	v := constantvar.NewBytes([]byte(`hello world`), runtimevar.BytesDecoder)
 	defer v.Close()
 
 	// We can now read the current value of the variable from v.
@@ -64,11 +50,10 @@ func ExampleNewBytes() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := snapshot.Value.(MyConfig)
-	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
+	fmt.Printf("byte slice of length %d\n", len(snapshot.Value.([]byte)))
 
 	// Output:
-	// foo.com running on port 80
+	// byte slice of length 11
 }
 
 func ExampleNewError() {
@@ -91,14 +76,21 @@ func ExampleNewError() {
 }
 
 func Example_openVariableFromURL() {
+	// This example is used in https://gocloud.dev/howto/runtimevar/#local
+
+	// import _ "gocloud.dev/runtimevar/constantvar"
+
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
+
 	v, err := runtimevar.OpenVariable(ctx, "constant://?val=hello+world&decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
-
+	// Ignore unused variables in example:
 	snapshot, err := v.Latest(ctx)
 	if err != nil {
 		log.Fatal(err)

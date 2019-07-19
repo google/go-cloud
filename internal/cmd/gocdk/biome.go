@@ -77,7 +77,7 @@ information needed to deploy.`,
 		Use:   "apply <biome name>",
 		Short: "Apply any changes required for the biome's resource configuration (e.g., creating Cloud resources)",
 		Long: `Apply the changes required to reach the desired state of the biome's resource
-configuration (e.g., creating or updating Cloud resources).
+configuration (e.g., creating or updating cloud resources).
 
 Runs "terraform init" followed by "terraform apply".`,
 		Args: cobra.ExactArgs(1),
@@ -90,21 +90,23 @@ Runs "terraform init" followed by "terraform apply".`,
 	applyCmd.Flags().BoolVar(&applyOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
 	biomeCmd.AddCommand(applyCmd)
 
-	var destroyInput bool
-	destroyCmd := &cobra.Command{
-		Use:   "destroy <biome name>",
-		Short: "Removing any changes which were applied for the biome's resource configuration",
-		Long: `Remove all the changes were made to reach the desired state of the biome's resource
-configuration.
+	var deleteBiome bool
+	cleanupOpts := biomeApplyOptions{}
+	cleanupCmd := &cobra.Command{
+		Use:   "cleanup <biome name>",
+		Short: "Clean up resources for the biome",
+		Long: `Clean up resources for the biome. By default, does not delete the biome itself (use --delete).
 
 Runs "terraform destroy".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return biomeDestroy(ctx, pctx, args[0], destroyInput)
+			return biomeCleanup(ctx, pctx, args[0], &cleanupOpts, deleteBiome)
 		},
 	}
-	destroyCmd.Flags().BoolVar(&destroyInput, "input", true, "ask for input for Terraform variables if not directly set")
-	biomeCmd.AddCommand(destroyCmd)
+	cleanupCmd.Flags().BoolVar(&deleteBiome, "delete", false, "delete the entire biome")
+	cleanupCmd.Flags().BoolVar(&cleanupOpts.Verbose, "verbose", false, "true to print all output from Terraform")
+	cleanupCmd.Flags().BoolVar(&cleanupOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
+	biomeCmd.AddCommand(cleanupCmd)
 
 	rootCmd.AddCommand(biomeCmd)
 }
@@ -256,7 +258,7 @@ func biomeList(ctx context.Context, pctx *processContext) error {
 	return nil
 }
 
-// biomeApply holds options for "biome apply".
+// biomeApplyOptions holds options for "biome apply" or "biome cleanup".
 type biomeApplyOptions struct {
 	Verbose     bool // show all Terraform output
 	AutoApprove bool // auto-approve Terraform changes
@@ -268,14 +270,35 @@ type biomeApplyOptions struct {
 // It runs "terraform init", "terraform plan", and "terraform apply" for the
 // named biome.
 func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *biomeApplyOptions) error {
+	if _, err := doBiomeApplyOrDestroy(ctx, pctx, biome, opts, false); err != nil {
+		return xerrors.Errorf("biome apply %s: %w", biome, err)
+	}
+	return nil
+}
+
+func doBiomeApplyOrDestroy(ctx context.Context, pctx *processContext, biome string, opts *biomeApplyOptions, destroy bool) (string, error) {
 	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
-		return xerrors.Errorf("biome apply %s: %w", biome, err)
+		return "", err
 	}
 
 	biomePath, err := biomeDir(moduleRoot, biome)
 	if err != nil {
-		return xerrors.Errorf("biome apply %s: %w", biome, err)
+		return "", err
+	}
+
+	const separator = "#########################################\n"
+
+	writeTerraformPrefix := func(cmd *exec.Cmd) {
+		pctx.stderr.Write([]byte("\n"))
+		pctx.stderr.Write([]byte(separator))
+		pctx.stderr.Write([]byte(fmt.Sprintf("Output from %q\n", strings.Join(cmd.Args, " "))))
+		pctx.stderr.Write([]byte(separator))
+	}
+
+	writeTerraformSuffix := func() {
+		pctx.stderr.Write([]byte(separator))
+		pctx.stderr.Write([]byte("\n"))
 	}
 
 	// Writes buffered Terraform output in out, which may be nil.
@@ -283,26 +306,23 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		if len(out) == 0 {
 			return
 		}
-		const separator = "#########################################\n"
-		pctx.stderr.Write([]byte("\n"))
-		pctx.stderr.Write([]byte(separator))
-		pctx.stderr.Write([]byte(fmt.Sprintf("Output from %q\n", strings.Join(cmd.Args, " "))))
-		pctx.stderr.Write([]byte(separator))
+		writeTerraformPrefix(cmd)
 		pctx.stderr.Write(out)
-		pctx.stderr.Write([]byte(separator))
-		pctx.stderr.Write([]byte("\n"))
+		writeTerraformSuffix()
 	}
 
 	// Returns buffered Terraform output, or nil slice if output wasn't buffered.
 	runTerraform := func(cmd *exec.Cmd) ([]byte, error) {
 		if opts.Verbose {
+			writeTerraformPrefix(cmd)
+			defer writeTerraformSuffix()
 			return nil, cmd.Run()
 		}
 		cmd.Stdout, cmd.Stderr = nil, nil
 		return cmd.CombinedOutput()
 	}
 
-	pctx.Logf("Checking to see if resource updates are needed...")
+	pctx.Logf("Checking to see if resource changes are needed...")
 
 	// First, run "terraform init". It's needed the first time, and anytime
 	// a new Terraform provider is added, so it's safest to just always run it.
@@ -311,14 +331,14 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	if out, err := runTerraform(c); err != nil {
 		writeBufferedTerraformOutput(c, out)
-		return xerrors.Errorf("biome apply %s: %w", biome, err)
+		return "", xerrors.Errorf("failed to run terraform init: %w", err)
 	}
 
 	// Get the name of a temp file in the biome directory, where we'll write the
 	// output of "terraform plan".
 	tmpFile, err := ioutil.TempFile(biomePath, "tfplan")
 	if err != nil {
-		return xerrors.Errorf("biome apply %s: %w", biome, err)
+		return "", xerrors.Errorf("failed to create temp file for Terraform plan: %w", err)
 	}
 	planFilePath := tmpFile.Name()
 	tmpFile.Close() // we don't need the *os.File, just the name
@@ -332,7 +352,11 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	// Note: just pass the base filename instead of the full file path to --out,
 	// because Terraform appears to not work with full Windows paths. This works
 	// because the file is in the command's working directory, biomePath.
-	c = pctx.NewCommand(ctx, biomePath, "terraform", "plan", "-detailed-exitcode", "-out="+filepath.Base(planFilePath), inputArg)
+	planArgs := []string{"plan", "-detailed-exitcode", "-out=" + filepath.Base(planFilePath), inputArg}
+	if destroy {
+		planArgs = append(planArgs, "-destroy")
+	}
+	c = pctx.NewCommand(ctx, biomePath, "terraform", planArgs...)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	// No error means success and no diffs.
 	// Exit code 1 means the command failed.
@@ -342,7 +366,7 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	if out, err := runTerraform(c); err != nil && !strings.Contains(err.Error(), "exit status 2") {
 		// A real failure.
 		writeBufferedTerraformOutput(c, out)
-		return xerrors.Errorf("biome apply %s: %w", biome, err)
+		return "", xerrors.Errorf("failed to run terraform plan: %w", err)
 	} else if err != nil {
 		// Exit code 2 --> there's a diff.
 		// Print out a summary of the changes (unless Verbose).
@@ -361,9 +385,9 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 		if !opts.AutoApprove {
 			reader := bufio.NewReader(pctx.stdin)
 			if approve, err := prompt.String(reader, pctx.stderr, "Do you want to perform these actions (only 'yes' will be accepted to approve)?", ""); err != nil {
-				return xerrors.Errorf("biome apply %s: %w", biome, err)
+				return "", err
 			} else if approve != "yes" {
-				return errors.New("cancelled")
+				return "", errors.New("cancelled")
 			}
 		}
 	} else {
@@ -390,29 +414,27 @@ func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *b
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	if out, err := runTerraform(c); err != nil {
 		writeBufferedTerraformOutput(c, out)
-		return xerrors.Errorf("biome apply %s: %w", biome, err)
+		return "", xerrors.Errorf("failed to run terraform apply: %w", err)
 	}
 	pctx.Logf("Success!")
-	return nil
+	return biomePath, nil
 }
 
-// biomeDestroy implements the "biome destroy" subcommand.
+// biomeCleanup implements the "biome cleanup" subcommand.
 //
-// It runs "terraform destroy" for the named biome.
-func biomeDestroy(ctx context.Context, pctx *processContext, biome string, input bool) error {
-	moduleRoot, err := pctx.ModuleRoot(ctx)
+// It runs "terraform init", "terraform plan -destroy", and "terraform apply"
+// for the named biome.
+//
+// If deleteBiome is true, it also deletes the biome subdirectory.
+func biomeCleanup(ctx context.Context, pctx *processContext, biome string, opts *biomeApplyOptions, deleteBiome bool) error {
+	biomePath, err := doBiomeApplyOrDestroy(ctx, pctx, biome, opts, true)
 	if err != nil {
-		return xerrors.Errorf("biome destroy %s: %w", biome, err)
+		return xerrors.Errorf("biome cleanup %s: %w", biome, err)
 	}
-
-	biomePath, err := biomeDir(moduleRoot, biome)
-	if err != nil {
-		return xerrors.Errorf("biome destroy %s: %w", biome, err)
-	}
-
-	c := pctx.NewCommand(ctx, biomePath, "terraform", "destroy", "-input="+strconv.FormatBool(input), "-auto-approve")
-	if err := c.Run(); err != nil {
-		return xerrors.Errorf("biome destroy %s: %w", biome, err)
+	if deleteBiome {
+		if err := os.RemoveAll(biomePath); err != nil {
+			return xerrors.Errorf("biome cleanup %s: failed to remove biome directory %q: %w", biome, biomePath, err)
+		}
 	}
 	return nil
 }

@@ -353,8 +353,11 @@ func (c *collection) encodeDoc(doc driver.Document, id interface{}) (map[string]
 		}
 		mdoc[mongoIDField] = id
 	}
-	rev := driver.UniqueString()
-	mdoc[c.revisionField] = rev
+	var rev string
+	if c.hasField(doc, c.revisionField) {
+		rev = driver.UniqueString()
+		mdoc[c.revisionField] = rev
+	}
 	return mdoc, rev, nil
 }
 
@@ -367,14 +370,14 @@ func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc m
 	if err != nil {
 		return nil, nil, "", err
 	}
-	updateDoc, rev, err = c.newUpdateDoc(a.Mods)
+	updateDoc, rev, err = c.newUpdateDoc(a.Mods, c.hasField(a.Doc, c.revisionField))
 	if err != nil {
 		return nil, nil, "", err
 	}
 	return filter, updateDoc, rev, nil
 }
 
-func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, string, error) {
+func (c *collection) newUpdateDoc(mods []driver.Mod, revOn bool) (map[string]bson.D, string, error) {
 	var (
 		sets   bson.D
 		unsets bson.D
@@ -399,8 +402,12 @@ func (c *collection) newUpdateDoc(mods []driver.Mod) (map[string]bson.D, string,
 		}
 	}
 	updateDoc := map[string]bson.D{}
-	rev := driver.UniqueString()
-	updateDoc["$set"] = append(sets, bson.E{Key: c.revisionField, Value: rev})
+	var rev string
+	if revOn {
+		rev = driver.UniqueString()
+		sets = append(sets, bson.E{Key: c.revisionField, Value: rev})
+	}
+	updateDoc["$set"] = sets
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}
@@ -522,9 +529,11 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 		}
 	}
 	for i, rev := range revs {
-		if rev != "" {
-			// Ignore error, because document may not have a revision field.
-			_ = modelActions[i].Doc.SetField(c.revisionField, rev)
+		a := modelActions[i]
+		if rev != "" && c.hasField(a.Doc, c.revisionField) {
+			if err := a.Doc.SetField(c.revisionField, rev); err != nil && errs[a.Index] == nil {
+				errs[a.Index] = err
+			}
 		}
 	}
 	if res.DeletedCount != nDeletes {
@@ -616,6 +625,13 @@ func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a string", rev)
 	}
 	return []byte(s), nil
+}
+
+func (c *collection) hasField(doc driver.Document, field string) bool {
+	if c.opts.LowercaseFields {
+		return doc.HasFieldFold(field)
+	}
+	return doc.HasField(field)
 }
 
 // BytesToRevision implements driver.BytesToRevision.

@@ -62,6 +62,37 @@ type docmap = map[string]interface{}
 
 // The following tests test memdocstore's backend implementation.
 
+func TestUpdateEncodesValues(t *testing.T) {
+	// Check that update encodes the values in mods.
+	ctx := context.Background()
+	dc, err := newCollection(drivertest.KeyField, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	defer coll.Close()
+	doc := docmap{drivertest.KeyField: "testUpdateEncodes", "a": 1, dc.RevisionField(): nil}
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	if err := coll.Update(ctx, doc, docstore.Mods{"a": 2}); err != nil {
+		t.Fatal(err)
+	}
+	got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
+	// This Get will fail if the int value 2 in the above mod was not encoded to an int64.
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	want := docmap{
+		drivertest.KeyField: doc[drivertest.KeyField],
+		"a":                 int64(2),
+		dc.RevisionField():  got[dc.RevisionField()],
+	}
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
 func TestUpdateAtomic(t *testing.T) {
 	// Check that update is atomic.
 	ctx := context.Background()
@@ -71,7 +102,7 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 	coll := docstore.NewCollection(dc)
 	defer coll.Close()
-	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B"}
+	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B", dc.RevisionField(): nil}
 
 	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
 	if err := coll.Put(ctx, doc); err != nil {

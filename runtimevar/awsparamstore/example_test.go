@@ -23,14 +23,8 @@ import (
 	"gocloud.dev/runtimevar/awsparamstore"
 )
 
-// MyConfig is a sample configuration struct.
-type MyConfig struct {
-	Server string
-	Port   int
-}
-
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps-ctor
+	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps-ctor
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
@@ -39,13 +33,8 @@ func ExampleOpenVariable() {
 		log.Fatal(err)
 	}
 
-	// Create a decoder for decoding JSON strings into MyConfig.
-	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
-
 	// Construct a *runtimevar.Variable that watches the variable.
-	// For this example, the Parameter Store variable being referenced
-	// should have a JSON string that decodes into MyConfig.
-	v, err := awsparamstore.OpenVariable(sess, "cfg-variable-name", decoder, nil)
+	v, err := awsparamstore.OpenVariable(sess, "cfg-variable-name", runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,9 +42,9 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/runtimevar/#awsps
+	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps
 
-	// import _ "gocloud.dev/runtimervar/awsparamstore"
+	// import _ "gocloud.dev/runtimevar/awsparamstore"
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 

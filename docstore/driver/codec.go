@@ -284,7 +284,7 @@ func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) erro
 	return nil
 }
 
-// fieldByIndex retrieves the the field of v at the given index if present.
+// fieldByIndex retrieves the field of v at the given index if present.
 // v must be a struct. index must refer to a valid field of v's type.
 // The second return value is false if there is a nil embedded pointer
 // along the path denoted by index.
@@ -720,6 +720,7 @@ func wrap(err error, code gcerr.ErrorCode) error {
 
 var fieldCache = fields.NewCache(parseTag, nil, nil)
 
+// IsEmptyValue returns whether or not v is a zero value of its type.
 // Copied from encoding/json, go 1.12.
 func IsEmptyValue(v reflect.Value) bool {
 	switch k := v.Kind(); k {
