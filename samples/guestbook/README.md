@@ -6,12 +6,7 @@ in a cloud-agnostic manner using MySQL, the generic blob API, and the generic
 runtimevar API. All platform-specific code is set up by
 [Wire](https://github.com/google/wire).
 
-You can see how to build, run, and deploy this sample by following one of the
-following tutorials based on the cloud platform of your choosing:
-
--  [Amazon Web Services (AWS)](https://gocloud.dev/tutorials/deploy-aws/)
--  [Google Cloud Platform (GCP)](https://gocloud.dev/tutorials/deploy-gcp/)
--  [Microsoft Azure](https://gocloud.dev/tutorials/deploy-azure/)
+The [online tutorial](https://gocloud.dev/tutorials/guestbook) will walk you through how to build, run, and deploy this sample locally, on Google Cloud Platform (GCP), on Amazon Web Servicess (AWS), or on Microsoft Azure.
 
 ## Gophers
 
