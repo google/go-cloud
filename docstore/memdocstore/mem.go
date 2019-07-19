@@ -233,9 +233,12 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		if err != nil {
 			return err
 		}
-		c.changeRevision(doc)
-		// Ignore errors. It's fine if the doc doesn't have a revision field.
-		a.Doc.SetField(c.opts.RevisionField, doc[c.opts.RevisionField])
+		if a.Doc.HasField(c.opts.RevisionField) {
+			c.changeRevision(doc)
+			if err := a.Doc.SetField(c.opts.RevisionField, doc[c.opts.RevisionField]); err != nil {
+				return err
+			}
+		}
 		c.docs[a.Key] = doc
 
 	case driver.Delete:
@@ -248,15 +251,19 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		if err := c.checkRevision(a.Doc, current); err != nil {
 			return err
 		}
-		if err := c.update(current, a.Mods); err != nil {
+		if err := c.update(current, a.Mods, a.Doc.HasField(c.opts.RevisionField)); err != nil {
 			return err
 		}
-		_ = a.Doc.SetField(c.opts.RevisionField, current[c.opts.RevisionField])
+		if a.Doc.HasField(c.opts.RevisionField) {
+			if err := a.Doc.SetField(c.opts.RevisionField, current[c.opts.RevisionField]); err != nil {
+				return err
+			}
+		}
 
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		if err := decodeDoc(current, a.Doc, a.FieldPaths, c.opts.RevisionField); err != nil {
+		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
 			return err
 		}
 	default:
@@ -266,7 +273,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 }
 
 // Must be called with the lock held.
-func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error {
+func (c *collection) update(doc map[string]interface{}, mods []driver.Mod, revOn bool) error {
 	// Sort mods by first field path element so tests are deterministic.
 	sort.Slice(mods, func(i, j int) bool { return mods[i].FieldPath[0] < mods[j].FieldPath[0] })
 
@@ -311,7 +318,9 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 			m.parentMap[m.key] = m.encodedValue
 		}
 	}
-	c.changeRevision(doc)
+	if revOn {
+		c.changeRevision(doc)
+	}
 	return nil
 }
 
@@ -357,9 +366,13 @@ func (c *collection) changeRevision(doc map[string]interface{}) {
 
 func (c *collection) checkRevision(arg driver.Document, current map[string]interface{}) error {
 	if current == nil {
-		return nil // no existing document
+		return nil // no existing document or the incoming doc has no revision
 	}
-	curRev := current[c.opts.RevisionField].(int64)
+	curRev, ok := current[c.opts.RevisionField]
+	if !ok {
+		return nil // there is no revision to check
+	}
+	curRev = curRev.(int64)
 	r, err := arg.GetField(c.opts.RevisionField)
 	if err != nil || r == nil {
 		return nil // no incoming revision information: nothing to check

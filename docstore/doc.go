@@ -194,23 +194,26 @@
 // Revisions
 //
 // Docstore supports document revisions to distinguish different versions of a
-// document and enable optimistic locking. By default, Docstore stores the revision
-// in the field named "DocstoreRevision" (stored in the constant
-// DefaultRevisionField). Drivers give you the option of changing that field
+// document and enable optimistic locking. By default, Docstore stores the
+// revision in the field named "DocstoreRevision" (stored in the constant
+// DefaultRevisionField). Providers give you the option of changing that field
 // name.
 //
-// Docstore gives every document a revision at creation time and changes that
-// revision whenever the document is modified. If modification methods are called
-// on a document struct or map without a revision field, then no revision
-// checks are performed, and changes are forced blindly. Otherwise, whenever
-// you pass a document with a revision to Put, Replace, Update or Delete,
-// docstore will compare the revision of the stored document to that of the
-// given document and return an error with code FailedPrecondition on mismatch.
-// (See https://gocloud.dev/gcerrors for information about error codes.)
-// If you call Get to retrieve a document with a revision, then later perform a
-// write action with that same document, it will fail if the document was changed
-// since the Get. Create, Put, Replace and Update all populate the revision
-// field of the argument document with the new revision value.
+// When you pass a document with a revision field to a write action, Docstore
+// will give it a revision at creation time or update the revision value when
+// modifying the document. If you don't want Docstore to handle any revision
+// logic, simply do not have the revision field in your document.
+//
+// When you pass a document with a non-nil revision to Put, Replace, Update or
+// Delete, Docstore will also compare the revision of the stored document to
+// that of the given document before making the change. It returns an error with
+// code FailedPrecondition on mismatch. (See https://gocloud.dev/gcerrors for
+// information about error codes.) If modification methods are called on a
+// document struct or map a nil revision field, then no revision checks are
+// performed, and changes are forced blindly, but a new revision will still be
+// given for the document. For example, if you call Get to retrieve a document
+// with a revision, then later perform a write action with that same document,
+// it will fail if the document was changed since the Get.
 //
 // Since different services use different types for revisions, revision fields
 // of unspecified type must be handled. When defining a document struct,

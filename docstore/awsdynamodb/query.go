@@ -85,8 +85,8 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			}
 			pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
 		}
-		// Always include the key and revision fields.
-		for _, f := range []string{c.partitionKey, c.sortKey, c.opts.RevisionField} {
+		// Always include the keys.
+		for _, f := range []string{c.partitionKey, c.sortKey} {
 			if f != "" && !hasFields[f] {
 				pb = pb.AddNames(expression.Name(f))
 				q.FieldPaths = append(q.FieldPaths, []string{f})

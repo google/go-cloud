@@ -206,7 +206,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		// We need to add the key fields if the user doesn't include them. The
 		// BatchGet API doesn't return them otherwise.
 		var hasP, hasS bool
-		nbs := []expression.NameBuilder{expression.Name(c.opts.RevisionField)}
+		var nbs []expression.NameBuilder
 		for _, fp := range gets[start].FieldPaths {
 			p := strings.Join(fp, ".")
 			nbs = append(nbs, expression.Name(p))
@@ -307,7 +307,7 @@ func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, err
 			if err != nil {
 				errs[a.Index] = err
 			} else {
-				c.onSuccess(op)
+				errs[a.Index] = c.onSuccess(op)
 			}
 		}()
 	}
@@ -355,9 +355,12 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 		// It doesn't make sense to generate a random sort key.
 		return nil, fmt.Errorf("missing sort key %q", c.sortKey)
 	}
-	rev := driver.UniqueString()
-	if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
-		return nil, err
+	var rev string
+	if a.Doc.HasField(c.opts.RevisionField) {
+		rev = driver.UniqueString()
+		if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
+			return nil, err
+		}
 	}
 	dput := &dyn.Put{
 		TableName: &c.table,
@@ -473,8 +476,11 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 			ub = ub.Set(fp, expression.Value(m.Value))
 		}
 	}
-	rev := driver.UniqueString()
-	ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(rev))
+	var rev string
+	if a.Doc.HasField(c.opts.RevisionField) {
+		rev = driver.UniqueString()
+		ub = ub.Set(expression.Name(c.opts.RevisionField), expression.Value(rev))
+	}
 	cb, err := c.precondition(a)
 	if err != nil {
 		return nil, err
@@ -516,14 +522,15 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 }
 
 // Handle the effects of successful execution.
-func (c *collection) onSuccess(op *writeOp) {
+func (c *collection) onSuccess(op *writeOp) error {
 	// Set the new partition key (if any) and the new revision into the user's document.
 	if op.newPartitionKey != "" {
 		_ = op.action.Doc.SetField(c.partitionKey, op.newPartitionKey) // cannot fail
 	}
 	if op.newRevision != "" {
-		_ = op.action.Doc.SetField(c.opts.RevisionField, op.newRevision) // OK if there is no revision field
+		return op.action.Doc.SetField(c.opts.RevisionField, op.newRevision)
 	}
+	return nil
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
@@ -636,7 +643,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 		return
 	}
 	for _, op := range ops {
-		c.onSuccess(op)
+		errs[op.action.Index] = c.onSuccess(op)
 	}
 }
 
