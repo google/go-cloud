@@ -110,7 +110,10 @@ func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
 	if err := drivertest.MustDocument(x).Encode(&e); err != nil {
 		return nil, err
 	}
-	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
+	return &pb.Document{
+		Name:   "projects/P/databases/(default)/documents/C/D",
+		Fields: e.pv.GetMapValue().Fields,
+	}, nil
 }
 
 func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
