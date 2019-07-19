@@ -173,3 +173,31 @@ func BenchmarkConformance(b *testing.B) {
 	}
 	drivertest.RunBenchmarks(b, docstore.NewCollection(coll))
 }
+
+// gcpfirestore-specific tests.
+
+func TestResourceIDRegexp(t *testing.T) {
+	for _, good := range []string{
+		"projects/abc-_.309/databases/(default)/documents/C",
+		"projects/P/databases/(default)/documents/C/D/E",
+	} {
+		if !resourceIDRE.MatchString(good) {
+			t.Errorf("%q did not match but should have", good)
+		}
+	}
+
+	for _, bad := range []string{
+		"",
+		"Projects/P/databases/(default)/documents/C",
+		"P/databases/(default)/documents/C",
+		"projects/P/Q/databases/(default)/documents/C",
+		"projects/P/databases/mydb/documents/C",
+		"projects/P/databases/(default)/C",
+		"projects/P/databases/(default)/documents/",
+		"projects/P/databases/(default)",
+	} {
+		if resourceIDRE.MatchString(bad) {
+			t.Errorf("%q matched but should not have", bad)
+		}
+	}
+}
