@@ -1134,13 +1134,14 @@ func newHighScore() interface{} { return &HighScore{} }
 
 // HighScoreKey constructs a single primary key from a HighScore struct
 // by concatenating the Game and Player fields.
-func HighScoreKey(doc docstore.Document) interface{} {
-	h := doc.(*HighScore)
-	return h.Game + "|" + h.Player
-}
+func HighScoreKey(doc docstore.Document) interface{} { return doc.(*HighScore).key() }
+
+func (h *HighScore) key() string { return h.Game + "|" + h.Player }
+
+func highScoreLess(h1, h2 *HighScore) bool { return h1.key() < h2.key() }
 
 func (h *HighScore) String() string {
-	return fmt.Sprintf("%s|%s=%d@%s", h.Game, h.Player, h.Score, h.Time.Format("01/02"))
+	return fmt.Sprintf("%s=%d@%s", h.key(), h.Score, h.Time.Format("01/02"))
 }
 
 func date(month, day int) time.Time {
@@ -1341,9 +1342,7 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
-				return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
-			}))
+			diff := cmp.Diff(got, want, cmpopts.SortSlices(highScoreLess))
 			if diff != "" {
 				t.Fatal(diff)
 			}
@@ -1413,9 +1412,7 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 			}
 			want := filterHighScores(prevWant, tc.want)
 			prevWant = want
-			diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
-				return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
-			}))
+			diff := cmp.Diff(got, want, cmpopts.SortSlices(highScoreLess))
 			if diff != "" {
 				t.Error(diff)
 			}
@@ -1433,28 +1430,41 @@ func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	addQueryDocuments(t, coll)
 
-	err := coll.Query().Where("Player", "=", "fran").Update(ctx, docstore.Mods{"Score": 13, "Time": nil})
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
-	for _, g := range got {
-		g.DocstoreRevision = nil
+	check := func(q *ds.Query, filter func(*HighScore) bool) {
+		t.Helper()
+		err := q.Update(ctx, docstore.Mods{"Score": 13, "Time": nil})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
+		for _, g := range got {
+			if g.DocstoreRevision == nil {
+				t.Fatal("revision field not present")
+			}
+			g.DocstoreRevision = nil
+		}
+		want := filterHighScores(queryDocuments, filter)
+		diff := cmp.Diff(got, want, cmpopts.SortSlices(highScoreLess))
+		if diff != "" {
+			t.Error(diff)
+		}
 	}
 
-	want := filterHighScores(queryDocuments, func(h *HighScore) bool {
+	check(coll.Query().Where("Player", "=", "fran"), func(h *HighScore) bool {
 		if h.Player == "fran" {
 			h.Score = 13
 			h.Time = time.Time{}
 		}
 		return true
 	})
-	diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
-		return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
-	}))
-	if diff != "" {
-		t.Error(diff)
-	}
+
+	// Updates without a filter are blind. The revision field shouldn't be checked.
+	// We can't really test that, but we can at least make sure it's written.
+	check(coll.Query(), func(h *HighScore) bool {
+		h.Score = 13
+		h.Time = time.Time{}
+		return true
+	})
 }
 
 func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
