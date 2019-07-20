@@ -47,28 +47,34 @@ type harness struct {
 	db *mongo.Database
 }
 
-func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll, err := newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil, nil)
+func (h *harness) MakeCollection(ctx context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
+	var coll *collection
+	var err error
+	switch kind {
+	case drivertest.SingleKey:
+		coll, err = newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil, nil)
+	case drivertest.TwoKey:
+		coll, err = newCollection(h.db.Collection(collectionName2), "", drivertest.HighScoreKey, nil)
+	case drivertest.AltRev:
+		coll, err = newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil,
+			&Options{RevisionField: drivertest.AlternateRevisionField})
+	case drivertest.NoRev:
+		coll, err = newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil,
+			&Options{NoWriteQueryUpdateRevisions: true})
+	default:
+		panic("bad kind")
+	}
 	if err != nil {
 		return nil, err
 	}
-	// It seems that the client doesn't actually connect until the first RPC, which will
-	// be this one. So time out quickly if there's a problem.
+	// It seems that the client doesn't actually connect until the first RPC. So
+	// time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := coll.coll.Drop(tctx); err != nil {
 		return nil, err
 	}
 	return coll, nil
-}
-
-func (h *harness) MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error) {
-	return newCollection(h.db.Collection(collectionName2), "", drivertest.HighScoreKey, nil)
-}
-
-func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil,
-		&Options{RevisionField: drivertest.AlternateRevisionField})
 }
 
 func (*harness) BeforeDoTypes() []interface{} {

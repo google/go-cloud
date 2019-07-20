@@ -32,16 +32,17 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{}, nil
 }
 
-func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(drivertest.KeyField, nil, nil)
-}
-
-func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
-	return newCollection("", drivertest.HighScoreKey, nil)
-}
-
-func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
-	return newCollection(drivertest.KeyField, nil, &Options{RevisionField: drivertest.AlternateRevisionField})
+func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
+	switch kind {
+	case drivertest.SingleKey, drivertest.NoRev:
+		return newCollection(drivertest.KeyField, nil, nil)
+	case drivertest.TwoKey:
+		return newCollection("", drivertest.HighScoreKey, nil)
+	case drivertest.AltRev:
+		return newCollection(drivertest.KeyField, nil, &Options{RevisionField: drivertest.AlternateRevisionField})
+	default:
+		panic("bad kind")
+	}
 }
 
 func (*harness) BeforeDoTypes() []interface{}    { return nil }

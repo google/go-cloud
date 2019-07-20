@@ -35,24 +35,32 @@ import (
 	"gocloud.dev/gcerrors"
 )
 
+// CollectionKind describes the kind of testing collection to create.
+type CollectionKind int
+
+const (
+	// A collection with a single primary key field of type string named
+	// drivertest.KeyField.
+	SingleKey CollectionKind = iota
+
+	// A collection that will consist entirely of HighScore structs (see below),
+	// whose two primary key fields are "Game" and "Player", both strings. Use
+	// drivertest.HighScoreKey as the key function.
+	TwoKey
+
+	// The collection should behave like a SingleKey collection, except
+	// that the revision field should be drivertest.AlternateRevisionField.
+	AltRev
+
+	// The collection's documents will not have a revision field.
+	NoRev
+)
+
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
 	// MakeCollection makes a driver.Collection for testing.
-	// The collection should have a single primary key field of type string named
-	// drivertest.KeyField.
-	MakeCollection(context.Context) (driver.Collection, error)
-
-	// MakeTwoKeyCollection makes a driver.Collection for testing.
-	// The collection will consist entirely of HighScore structs (see below), whose
-	// two primary key fields are "Game" and "Player", both strings. Use
-	// drivertest.HighScoreKey as the key function.
-	MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error)
-
-	// MakeAlternateRevisionFieldCollection makes a driver.Collection for testing.
-	// The collection should behave like the one returned from MakeCOllection, except
-	// that the revision field should be drivertest.AlternateRevisionField.
-	MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error)
+	MakeCollection(context.Context, CollectionKind) (driver.Collection, error)
 
 	// BeforeDoTypes should return a list of values whose types are valid for the as
 	// function given to BeforeDo. For example, if the driver converts Get actions
@@ -155,22 +163,25 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 
-	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
-	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
-	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
-	t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, testGet) })
-	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
-	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
-	t.Run("Data", func(t *testing.T) { withNoRevCollection(t, newHarness, testData) })
-	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
-	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
-	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
-	t.Run("SerializeRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testSerializeRevision) })
-	t.Run("ActionsOnStructWithoutRevision", func(t *testing.T) { withNoRevCollection(t, newHarness, testActionsOnStructWithoutRevision) })
+	t.Run("Create", func(t *testing.T) { withRevCollections(t, newHarness, testCreate) })
+	t.Run("Put", func(t *testing.T) { withRevCollections(t, newHarness, testPut) })
+	t.Run("Replace", func(t *testing.T) { withRevCollections(t, newHarness, testReplace) })
+	t.Run("Get", func(t *testing.T) { withRevCollections(t, newHarness, testGet) })
+	t.Run("Delete", func(t *testing.T) { withRevCollections(t, newHarness, testDelete) })
+	t.Run("Update", func(t *testing.T) { withRevCollections(t, newHarness, testUpdate) })
+	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testData) })
+	t.Run("MultipleActions", func(t *testing.T) { withRevCollections(t, newHarness, testMultipleActions) })
+	t.Run("UnorderedActions", func(t *testing.T) { withRevCollections(t, newHarness, testUnorderedActions) })
+	t.Run("GetQueryKeyField", func(t *testing.T) { withRevCollections(t, newHarness, testGetQueryKeyField) })
+	t.Run("SerializeRevision", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testSerializeRevision) })
+	t.Run("ActionsOnStructNoRev", func(t *testing.T) {
+		withCollection(t, newHarness, NoRev, testActionsOnStructNoRev)
+	})
 
-	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
-	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
-	t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
+	t.Run("GetQuery", func(t *testing.T) { withCollection(t, newHarness, TwoKey, testGetQuery) })
+	t.Run("DeleteQuery", func(t *testing.T) { withCollection(t, newHarness, TwoKey, testDeleteQuery) })
+	t.Run("UpdateQuery", func(t *testing.T) { withCollection(t, newHarness, TwoKey, testUpdateQuery) })
+	t.Run("UpdateQueryNoRev", func(t *testing.T) { withCollection(t, newHarness, NoRev, testUpdateQueryNoRev) })
 
 	t.Run("BeforeDo", func(t *testing.T) { testBeforeDo(t, newHarness) })
 	t.Run("BeforeQuery", func(t *testing.T) { testBeforeQuery(t, newHarness) })
@@ -182,7 +193,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 				t.Fatalf("AsTest.Name is required")
 			}
 			t.Run(st.Name(), func(t *testing.T) {
-				withTwoKeyCollection(t, newHarness, func(t *testing.T, coll *docstore.Collection) {
+				withCollection(t, newHarness, TwoKey, func(t *testing.T, _ Harness, coll *docstore.Collection) {
 					testAs(t, coll, st)
 				})
 			})
@@ -190,7 +201,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	})
 }
 
-func withHarnessAndCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, context.Context, Harness, *ds.Collection)) {
+func withCollection(t *testing.T, newHarness HarnessMaker, kind CollectionKind, f func(*testing.T, Harness, *ds.Collection)) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -198,51 +209,38 @@ func withHarnessAndCollection(t *testing.T, newHarness HarnessMaker, f func(*tes
 	}
 	defer h.Close()
 
-	dc, err := h.MakeCollection(ctx)
+	withColl(t, h, kind, f)
+}
+
+func withColl(t *testing.T, h Harness, kind CollectionKind, f func(*testing.T, Harness, *ds.Collection)) {
+	ctx := context.Background()
+	dc, err := h.MakeCollection(ctx, kind)
 	if err != nil {
 		t.Fatal(err)
 	}
 	coll := ds.NewCollection(dc)
 	defer coll.Close()
 	clearCollection(t, coll)
-	f(t, ctx, h, coll)
+	f(t, h, coll)
 }
 
-func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection, string)) {
-	withHarnessAndCollection(t, newHarness, func(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
-		t.Run("StdRev", func(t *testing.T) { f(t, coll, ds.DefaultRevisionField) })
-		dc, err := h.MakeAlternateRevisionFieldCollection(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		coll = ds.NewCollection(dc)
-		defer coll.Close()
-		clearCollection(t, coll)
-		t.Run("AltRev", func(t *testing.T) { f(t, coll, AlternateRevisionField) })
+func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection, string)) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	t.Run("StdRev", func(t *testing.T) {
+		withColl(t, h, SingleKey, func(t *testing.T, _ Harness, coll *ds.Collection) {
+			f(t, coll, ds.DefaultRevisionField)
+		})
 	})
-}
-
-func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
-	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-
-	dc, err := h.MakeTwoKeyCollection(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	coll := ds.NewCollection(dc)
-	defer coll.Close()
-	clearCollection(t, coll)
-	f(t, coll)
-}
-
-func withNoRevCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
-	withHarnessAndCollection(t, newHarness, func(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
-		f(t, coll)
+	t.Run("AltRev", func(t *testing.T) {
+		withColl(t, h, AltRev, func(t *testing.T, _ Harness, coll *ds.Collection) {
+			f(t, coll, AlternateRevisionField)
+		})
 	})
 }
 
@@ -814,7 +812,8 @@ func testRevisionField(t *testing.T, coll *ds.Collection, revField string, write
 }
 
 // Verify that the driver can serialize and deserialize revisions.
-func testSerializeRevision(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
+func testSerializeRevision(t *testing.T, h Harness, coll *ds.Collection) {
+	ctx := context.Background()
 	doc := docmap{KeyField: "testSerializeRevision", "x": 1, docstore.DefaultRevisionField: nil}
 	if err := coll.Create(ctx, doc); err != nil {
 		t.Fatal(err)
@@ -837,7 +836,7 @@ func testSerializeRevision(t *testing.T, ctx context.Context, h Harness, coll *d
 }
 
 // Test all Go integer types are supported, and they all come back as int64.
-func testData(t *testing.T, coll *ds.Collection) {
+func testData(t *testing.T, _ Harness, coll *ds.Collection) {
 	ctx := context.Background()
 	for _, test := range []struct {
 		in, want interface{}
@@ -1216,7 +1215,7 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection, revField string) {
 
 func sortByKeyField(d1, d2 docmap) bool { return d1[KeyField].(string) < d2[KeyField].(string) }
 
-func testGetQuery(t *testing.T, coll *ds.Collection) {
+func testGetQuery(t *testing.T, _ Harness, coll *ds.Collection) {
 	ctx := context.Background()
 	addQueryDocuments(t, coll)
 
@@ -1371,7 +1370,7 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 	})
 }
 
-func testDeleteQuery(t *testing.T, coll *ds.Collection) {
+func testDeleteQuery(t *testing.T, _ Harness, coll *ds.Collection) {
 	ctx := context.Background()
 
 	addQueryDocuments(t, coll)
@@ -1426,7 +1425,7 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 	}
 }
 
-func testUpdateQuery(t *testing.T, coll *ds.Collection) {
+func testUpdateQuery(t *testing.T, _ Harness, coll *ds.Collection) {
 	ctx := context.Background()
 	addQueryDocuments(t, coll)
 
@@ -1465,6 +1464,50 @@ func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 		h.Time = time.Time{}
 		return true
 	})
+}
+
+func testUpdateQueryNoRev(t *testing.T, _ Harness, coll *ds.Collection) {
+	type grade struct {
+		Name  string `docstore:"name"`
+		Grade int
+	}
+
+	ctx := context.Background()
+
+	grades := []*grade{
+		{"A", 90},
+		{"B", 95},
+		{"C", 88},
+	}
+	al := coll.Actions()
+	for _, g := range grades {
+		al.Put(g)
+	}
+	if err := al.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := coll.Query().Update(ctx, docstore.Mods{"Grade": 100}); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []*grade{
+		{"A", 100},
+		{"B", 100},
+		{"C", 100},
+	}
+	var got []*grade
+	err := forEach(ctx, coll.Query().Get(ctx),
+		func() interface{} { return &grade{} },
+		func(g interface{}) error { got = append(got, g.(*grade)); return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	diff := cmp.Diff(got, want, cmpopts.SortSlices(func(g1, g2 *grade) bool { return g1.Name < g2.Name }))
+	if diff != "" {
+		t.Error(diff)
+	}
 }
 
 func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
@@ -1698,7 +1741,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 	}
 }
 
-func testActionsOnStructWithoutRevision(t *testing.T, coll *ds.Collection) {
+func testActionsOnStructNoRev(t *testing.T, _ Harness, coll *ds.Collection) {
 	type item struct {
 		Name string `docstore:"name"`
 		I    int
@@ -1730,7 +1773,8 @@ func testActionsOnStructWithoutRevision(t *testing.T, coll *ds.Collection) {
 
 // Verify that BeforeDo is invoked, and its as function behaves as expected.
 func testBeforeDo(t *testing.T, newHarness HarnessMaker) {
-	withHarnessAndCollection(t, newHarness, func(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
+	ctx := context.Background()
+	withCollection(t, newHarness, SingleKey, func(t *testing.T, h Harness, coll *ds.Collection) {
 		var called bool
 		beforeDo := func(asFunc func(interface{}) bool) error {
 			called = true
@@ -1790,7 +1834,8 @@ func testBeforeDo(t *testing.T, newHarness HarnessMaker) {
 
 // Verify that BeforeQuery is invoked, and its as function behaves as expected.
 func testBeforeQuery(t *testing.T, newHarness HarnessMaker) {
-	withHarnessAndCollection(t, newHarness, func(t *testing.T, ctx context.Context, h Harness, coll *ds.Collection) {
+	ctx := context.Background()
+	withCollection(t, newHarness, SingleKey, func(t *testing.T, h Harness, coll *ds.Collection) {
 		var called bool
 		beforeQuery := func(asFunc func(interface{}) bool) error {
 			called = true

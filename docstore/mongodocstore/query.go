@@ -180,7 +180,7 @@ func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods [
 	}
 	// TODO(#2458): provide an option for the user to choose whether or not to
 	// update the revision.
-	updateDoc, _, err := c.newUpdateDoc(mods, true)
+	updateDoc, _, err := c.newUpdateDoc(mods, !c.opts.NoWriteQueryUpdateRevisions)
 	if err != nil {
 		return err
 	}

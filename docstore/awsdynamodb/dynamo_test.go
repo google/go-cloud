@@ -83,20 +83,21 @@ func (h *harness) Close() {
 	h.closer()
 }
 
-func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", &Options{AllowScans: true})
-}
-
-func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{
-		AllowScans:       true,
-		RunQueryFallback: InMemorySortFallback(func() interface{} { return new(drivertest.HighScore) }),
-	})
-}
-
-func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "",
-		&Options{AllowScans: true, RevisionField: drivertest.AlternateRevisionField})
+func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
+	switch kind {
+	case drivertest.SingleKey, drivertest.NoRev:
+		return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", &Options{AllowScans: true})
+	case drivertest.TwoKey:
+		return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{
+			AllowScans:       true,
+			RunQueryFallback: InMemorySortFallback(func() interface{} { return new(drivertest.HighScore) }),
+		})
+	case drivertest.AltRev:
+		return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "",
+			&Options{AllowScans: true, RevisionField: drivertest.AlternateRevisionField})
+	default:
+		panic("bad kind")
+	}
 }
 
 func collectHighScores(ctx context.Context, iter driver.DocumentIterator) ([]*drivertest.HighScore, error) {
@@ -196,7 +197,7 @@ func TestQueryErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	dc, err := h.MakeTwoKeyCollection(ctx)
+	dc, err := h.MakeCollection(ctx, drivertest.TwoKey)
 	if err != nil {
 		t.Fatal(err)
 	}

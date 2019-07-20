@@ -258,10 +258,11 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		if err := c.checkRevision(a.Doc, current); err != nil {
 			return err
 		}
-		if err := c.update(current, a.Mods, a.Doc.HasField(c.opts.RevisionField)); err != nil {
+		if err := c.update(current, a.Mods); err != nil {
 			return err
 		}
 		if a.Doc.HasField(c.opts.RevisionField) {
+			c.changeRevision(current)
 			if err := a.Doc.SetField(c.opts.RevisionField, current[c.opts.RevisionField]); err != nil {
 				return err
 			}
@@ -280,7 +281,8 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 }
 
 // Must be called with the lock held.
-func (c *collection) update(doc storedDoc, mods []driver.Mod, revOn bool) error {
+// Does not change the stored doc's revision field; that is up to the caller.
+func (c *collection) update(doc storedDoc, mods []driver.Mod) error {
 	// Sort mods by first field path element so tests are deterministic.
 	sort.Slice(mods, func(i, j int) bool { return mods[i].FieldPath[0] < mods[j].FieldPath[0] })
 
@@ -324,9 +326,6 @@ func (c *collection) update(doc storedDoc, mods []driver.Mod, revOn bool) error 
 		} else {
 			m.parentMap[m.key] = m.encodedValue
 		}
-	}
-	if revOn {
-		c.changeRevision(doc)
 	}
 	return nil
 }
