@@ -120,15 +120,22 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{},
 	}, nil
 }
 
+// A storedDoc is a document that is stored in a collection.
+//
+// We store documents as maps from keys to values. Even if the user is using
+// map[string]interface{}, we make our own copy.
+//
+// Using a separate helps distinguish documents coming from a user (those "on
+// the client," in a more typical driver that acts as a network client) from
+// those stored in a collection (those "on the server").
+type storedDoc map[string]interface{}
+
 type collection struct {
-	keyField string
-	keyFunc  func(docstore.Document) interface{}
-	opts     *Options
-	mu       sync.Mutex
-	// map from keys to documents. Documents are represented as map[string]interface{},
-	// regardless of what their original representation is. Even if the user is using
-	// map[string]interface{}, we make our own copy.
-	docs        map[interface{}]map[string]interface{}
+	keyField    string
+	keyFunc     func(docstore.Document) interface{}
+	opts        *Options
+	mu          sync.Mutex
+	docs        map[interface{}]storedDoc
 	curRevision int64 // incremented on each write
 }
 
@@ -199,7 +206,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 	defer c.mu.Unlock()
 	// If there is a key, get the current document with that key.
 	var (
-		current map[string]interface{}
+		current storedDoc
 		exists  bool
 	)
 	if a.Key != nil {
@@ -273,7 +280,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 }
 
 // Must be called with the lock held.
-func (c *collection) update(doc map[string]interface{}, mods []driver.Mod, revOn bool) error {
+func (c *collection) update(doc storedDoc, mods []driver.Mod, revOn bool) error {
 	// Sort mods by first field path element so tests are deterministic.
 	sort.Slice(mods, func(i, j int) bool { return mods[i].FieldPath[0] < mods[j].FieldPath[0] })
 
@@ -359,12 +366,12 @@ func add(x, y interface{}) (interface{}, error) {
 }
 
 // Must be called with the lock held.
-func (c *collection) changeRevision(doc map[string]interface{}) {
+func (c *collection) changeRevision(doc storedDoc) {
 	c.curRevision++
 	doc[c.opts.RevisionField] = c.curRevision
 }
 
-func (c *collection) checkRevision(arg driver.Document, current map[string]interface{}) error {
+func (c *collection) checkRevision(arg driver.Document, current storedDoc) error {
 	if current == nil {
 		return nil // no existing document or the incoming doc has no revision
 	}
@@ -472,7 +479,7 @@ func (c *collection) Close() error {
 	return saveDocs(c.opts.Filename, c.docs)
 }
 
-type mapOfDocs = map[interface{}]map[string]interface{}
+type mapOfDocs = map[interface{}]storedDoc
 
 // Read a map from the filename if is is not empty and the file exists.
 // Otherwise return an empty (not nil) map.

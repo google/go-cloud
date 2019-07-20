@@ -36,7 +36,7 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	var resultDocs []map[string]interface{}
+	var resultDocs []storedDoc
 	for _, doc := range c.docs {
 		if q.Limit > 0 && len(resultDocs) == q.Limit {
 			break
@@ -63,7 +63,7 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 	}, nil
 }
 
-func filtersMatch(fs []driver.Filter, doc map[string]interface{}) bool {
+func filtersMatch(fs []driver.Filter, doc storedDoc) bool {
 	for _, f := range fs {
 		if !filterMatches(f, doc) {
 			return false
@@ -72,7 +72,7 @@ func filtersMatch(fs []driver.Filter, doc map[string]interface{}) bool {
 	return true
 }
 
-func filterMatches(f driver.Filter, doc map[string]interface{}) bool {
+func filterMatches(f driver.Filter, doc storedDoc) bool {
 	docval, err := getAtFieldPath(doc, f.FieldPath)
 	// missing or bad field path => no match
 	if err != nil {
@@ -147,7 +147,7 @@ func toBigFloat(x reflect.Value) *big.Float {
 	return &f
 }
 
-func sortDocs(docs []map[string]interface{}, field string, asc bool) {
+func sortDocs(docs []storedDoc, field string, asc bool) {
 	sort.Slice(docs, func(i, j int) bool {
 		c, ok := compare(docs[i][field], docs[j][field])
 		if !ok {
@@ -162,7 +162,7 @@ func sortDocs(docs []map[string]interface{}, field string, asc bool) {
 }
 
 type docIterator struct {
-	docs       []map[string]interface{}
+	docs       []storedDoc
 	fieldPaths [][]string
 	revField   string
 	err        error
