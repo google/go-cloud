@@ -42,7 +42,7 @@ func TestEncodeDoc(t *testing.T) {
 	tm := time.Now()
 	for _, test := range []struct {
 		in   interface{}
-		want map[string]interface{}
+		want storedDoc
 	}{
 		{
 			in: map[string]interface{}{
@@ -53,7 +53,7 @@ func TestEncodeDoc(t *testing.T) {
 					4: map[string]bool{"false": false, "true": true},
 				},
 			},
-			want: map[string]interface{}{
+			want: storedDoc{
 				"x": map[string]interface{}{
 					"1": "a",
 					"2": int64(17),
@@ -73,7 +73,7 @@ func TestEncodeDoc(t *testing.T) {
 				F:     2.5,
 				B:     []byte("abc"),
 			},
-			want: map[string]interface{}{
+			want: storedDoc{
 				"X": int64(3),
 				"Y": "y",
 				"Z": true,
@@ -100,12 +100,12 @@ func TestDecodeDoc(t *testing.T) {
 	var b bool = true
 	tm := time.Now()
 	for _, test := range []struct {
-		in   map[string]interface{}
+		in   storedDoc
 		val  interface{}
 		want interface{}
 	}{
 		{
-			map[string]interface{}{
+			storedDoc{
 				"x": map[string]interface{}{
 					"1": "a",
 					"2": int64(17),
@@ -124,7 +124,7 @@ func TestDecodeDoc(t *testing.T) {
 			},
 		},
 		{
-			map[string]interface{}{
+			storedDoc{
 				"X": int64(3),
 				"Y": "y",
 				"Z": true,
