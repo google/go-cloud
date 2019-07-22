@@ -565,7 +565,9 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 				errs[a.Index] = err
 			}
 		}
-		if call.newNames[i] != "" && c.nameField != "" {
+		if call.newNames[i] != "" {
+			// c.nameField should not be empty since we only create new names when there
+			// is a nameField.
 			_ = a.Doc.SetField(c.nameField, call.newNames[i])
 		}
 		if hasFollowingTransform(call.writes, j) {
