@@ -700,7 +700,6 @@ func testDelete(t *testing.T, coll *ds.Collection, revField string) {
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
-	// TODO(jba): test an increment-only update.
 	ctx := context.Background()
 	for _, tc := range []struct {
 		name string
@@ -716,10 +715,30 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 				"b": nil,
 				"c": "C",
 				"n": docstore.Increment(-1),
+				"i": nil,
+				"m": 3,
+			},
+			want: docmap{KeyField: "testUpdateMap", "a": "X", "c": "C", "n": 2.5, "m": int64(3)},
+		},
+		{
+			name: "update map overwrite only",
+			doc:  docmap{KeyField: "testUpdateMapWrt", "a": "A", revField: nil},
+			mods: ds.Mods{
+				"a": "X",
+				"b": nil,
+				"m": 3,
+			},
+			want: docmap{KeyField: "testUpdateMapWrt", "a": "X", "m": int64(3)},
+		},
+		{
+			name: "update map increment only",
+			doc:  docmap{KeyField: "testUpdateMapInc", "a": "A", "n": 3.5, "i": 1, revField: nil},
+			mods: ds.Mods{
+				"n": docstore.Increment(-1),
 				"i": docstore.Increment(2.5),
 				"m": docstore.Increment(3),
 			},
-			want: docmap{KeyField: "testUpdateMap", "a": "X", "c": "C", "n": 2.5, "i": 3.5, "m": int64(3)},
+			want: docmap{KeyField: "testUpdateMapInc", "a": "A", "n": 2.5, "i": 3.5, "m": int64(3)},
 		},
 		{
 			name: "update struct",
@@ -727,10 +746,29 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 			mods: ds.Mods{
 				"St": "str",
 				"I":  nil,
-				"U":  docstore.Increment(4),
+				"U":  4,
 				"F":  docstore.Increment(-3),
 			},
 			want: &docstruct{Name: "testUpdateStruct", St: "str", U: 4, F: 0.5},
+		},
+		{
+			name: "update struct overwrite only",
+			doc:  &docstruct{Name: "testUpdateStructWrt", St: "st", I: 1},
+			mods: ds.Mods{
+				"St": "str",
+				"I":  nil,
+				"U":  4,
+			},
+			want: &docstruct{Name: "testUpdateStructWrt", St: "str", U: 4},
+		},
+		{
+			name: "update struct increment only",
+			doc:  &docstruct{Name: "testUpdateStructInc", St: "st", I: 1, F: 3.5},
+			mods: ds.Mods{
+				"U": docstore.Increment(4),
+				"F": docstore.Increment(-3),
+			},
+			want: &docstruct{Name: "testUpdateStructInc", St: "st", U: 4, I: 1, F: 0.5},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1639,7 +1677,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 		{KeyField: docs[5][KeyField]},
 	}
 	actions = coll.Actions()
-	actions.Update(docs[6], ds.Mods{"s": "6'"})
+	actions.Update(docs[6], ds.Mods{"s": "6'", "n": ds.Increment(1)})
 	actions.Get(gdocs[0])
 	actions.Delete(docs[0])
 	actions.Delete(docs[1])
@@ -1647,7 +1685,7 @@ func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 	actions.Get(gdocs[1])
 	actions.Delete(docs[2])
 	actions.Get(gdocs[2])
-	actions.Update(docs[8], ds.Mods{"s": "8'"})
+	actions.Update(docs[8], ds.Mods{"n": ds.Increment(-1)})
 	must(actions.Do(ctx))
 	compare(gdocs, docs[3:6])
 
