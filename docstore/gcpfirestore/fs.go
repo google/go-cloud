@@ -206,13 +206,13 @@ func newCollection(client *vkit.Client, collResourceID, nameField string, nameFu
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	if c.nameField != "" {
 		name, err := doc.GetField(c.nameField)
-		if err != nil || name == nil || driver.IsEmptyValue(reflect.ValueOf(name)) {
+		vn := reflect.ValueOf(name)
+		if err != nil || name == nil || driver.IsEmptyValue(vn) {
 			// missing field is not an error
 			return nil, nil
 		}
 		// Check that the reflect kind is String so we can support any type whose underlying type
 		// is string. E.g. "type DocName string".
-		vn := reflect.ValueOf(name)
 		if vn.Kind() != reflect.String {
 			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "key field %q with value %v is not a string",
 				c.nameField, name)

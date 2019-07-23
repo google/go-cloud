@@ -168,6 +168,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("SerializeRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testSerializeRevision) })
 	t.Run("ActionsOnStructWithoutRevision", func(t *testing.T) { withNoRevCollection(t, newHarness, testActionsOnStructWithoutRevision) })
 
+	t.Run("ActionsWithCompositeID", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testActionsWithCompositeID) })
 	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
 	t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
@@ -354,6 +355,10 @@ func testCreate(t *testing.T, coll *ds.Collection, revField string) {
 			doc:  &docstruct{B: true},
 		},
 		{
+			name: "empty named struct",
+			doc:  &docstruct{Name: "", B: true},
+		},
+		{
 			name:    "with non-nil revision",
 			doc:     docmap{KeyField: "testCreate2", revField: 0},
 			wantErr: gcerrors.InvalidArgument,
@@ -468,6 +473,9 @@ func testPut(t *testing.T, coll *ds.Collection, revField string) {
 			return coll.Put(ctx, doc)
 		})
 	})
+
+	err := coll.Put(ctx, &docstruct{Name: ""})
+	checkCode(t, err, gcerrors.InvalidArgument)
 }
 
 func testReplace(t *testing.T, coll *ds.Collection, revField string) {
@@ -644,6 +652,9 @@ func testGet(t *testing.T, coll *ds.Collection, revField string) {
 
 	err := coll.Get(ctx, nonexistentDoc())
 	checkCode(t, err, gcerrors.NotFound)
+
+	err = coll.Get(ctx, &docstruct{Name: ""})
+	checkCode(t, err, gcerrors.InvalidArgument)
 }
 
 func testDelete(t *testing.T, coll *ds.Collection, revField string) {
@@ -697,6 +708,9 @@ func testDelete(t *testing.T, coll *ds.Collection, revField string) {
 	if err := coll.Delete(ctx, nonexistentDoc()); err != nil {
 		t.Errorf("delete nonexistent doc: want nil, got %v", err)
 	}
+
+	err := coll.Delete(ctx, &docstruct{Name: ""})
+	checkCode(t, err, gcerrors.InvalidArgument)
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
@@ -1154,7 +1168,8 @@ type nativeMinimal struct {
 	LS []string
 }
 
-// The following is the schema for the collection used for query testing.
+// The following is the schema for the collection that the ID is composed from
+// multiple fields instead of one. It can be used for query testing.
 // It is loosely borrowed from the DynamoDB documentation.
 // It is rich enough to require indexes for some drivers.
 
@@ -1174,7 +1189,12 @@ func newHighScore() interface{} { return &HighScore{} }
 // by concatenating the Game and Player fields.
 func HighScoreKey(doc docstore.Document) interface{} { return doc.(*HighScore).key() }
 
-func (h *HighScore) key() string { return h.Game + "|" + h.Player }
+func (h *HighScore) key() string {
+	if h.Game == "" || h.Player == "" {
+		return ""
+	}
+	return h.Game + "|" + h.Player
+}
 
 func highScoreLess(h1, h2 *HighScore) bool { return h1.key() < h2.key() }
 
@@ -1190,9 +1210,10 @@ const (
 	game1 = "Praise All Monsters"
 	game2 = "Zombie DMV"
 	game3 = "Days Gone"
+	game4 = "Rush Hour"
 )
 
-var queryDocuments = []*HighScore{
+var highScores = []*HighScore{
 	{game1, "pat", 49, date(3, 13), nil},
 	{game1, "mel", 60, date(4, 10), nil},
 	{game1, "andy", 81, date(2, 1), nil},
@@ -1203,9 +1224,9 @@ var queryDocuments = []*HighScore{
 	{game2, "fran", 33, date(3, 20), nil},
 }
 
-func addQueryDocuments(t *testing.T, coll *ds.Collection) {
+func addHighScores(t *testing.T, coll *ds.Collection) {
 	alist := coll.Actions()
-	for _, doc := range queryDocuments {
+	for _, doc := range highScores {
 		d := *doc
 		alist.Put(&d)
 	}
@@ -1254,9 +1275,41 @@ func testGetQueryKeyField(t *testing.T, coll *ds.Collection, revField string) {
 
 func sortByKeyField(d1, d2 docmap) bool { return d1[KeyField].(string) < d2[KeyField].(string) }
 
+// TODO(shantuo): consider add this test to all action tests, like the AltRev
+// ones.
+func testActionsWithCompositeID(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	// Create cannot generate an ID for the document when using IDFunc.
+	checkCode(t, coll.Create(ctx, &HighScore{}), gcerrors.InvalidArgument)
+	checkCode(t, coll.Get(ctx, &HighScore{}), gcerrors.InvalidArgument)
+
+	// Put
+	addHighScores(t, coll)
+	// Get
+	gots := make([]*HighScore, len(highScores))
+	actions := coll.Actions()
+	for i, doc := range highScores {
+		gots[i] = &HighScore{Game: doc.Game, Player: doc.Player}
+		actions.Get(gots[i])
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for i, got := range gots {
+		if got.DocstoreRevision == nil {
+			t.Errorf("%v missing DocstoreRevision", got)
+		} else {
+			got.DocstoreRevision = nil
+		}
+		if diff := cmp.Diff(got, highScores[i]); diff != "" {
+			t.Error(diff)
+		}
+	}
+}
+
 func testGetQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	addQueryDocuments(t, coll)
+	addHighScores(t, coll)
 
 	// Query filters should have the same behavior when doing string and number
 	// comparison.
@@ -1264,7 +1317,7 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 		name   string
 		q      *ds.Query
 		fields []docstore.FieldPath       // fields to get
-		want   func(*HighScore) bool      // filters queryDocuments
+		want   func(*HighScore) bool      // filters highScores
 		before func(x, y *HighScore) bool // if present, checks result order
 	}{
 		{
@@ -1375,7 +1428,7 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 					g.DocstoreRevision = nil
 				}
 			}
-			want := filterHighScores(queryDocuments, tc.want)
+			want := filterHighScores(highScores, tc.want)
 			_, err = tc.q.Plan()
 			if err != nil {
 				t.Fatal(err)
@@ -1412,14 +1465,14 @@ func testGetQuery(t *testing.T, coll *ds.Collection) {
 func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 
-	addQueryDocuments(t, coll)
+	addHighScores(t, coll)
 
 	// Note: these tests are cumulative. If the first test deletes a document, that
 	// change will persist for the second test.
 	tests := []struct {
 		name string
 		q    *ds.Query
-		want func(*HighScore) bool // filters queryDocuments
+		want func(*HighScore) bool // filters highScores
 	}{
 		{
 			name: "Player",
@@ -1438,7 +1491,7 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 		},
 		// TODO(jba): add a case that requires Firestore to evaluate filters on the client.
 	}
-	prevWant := queryDocuments
+	prevWant := highScores
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := tc.q.Delete(ctx); err != nil {
@@ -1466,7 +1519,7 @@ func testDeleteQuery(t *testing.T, coll *ds.Collection) {
 
 func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	addQueryDocuments(t, coll)
+	addHighScores(t, coll)
 
 	check := func(q *ds.Query, filter func(*HighScore) bool) {
 		t.Helper()
@@ -1481,7 +1534,7 @@ func testUpdateQuery(t *testing.T, coll *ds.Collection) {
 			}
 			g.DocstoreRevision = nil
 		}
-		want := filterHighScores(queryDocuments, filter)
+		want := filterHighScores(highScores, filter)
 		diff := cmp.Diff(got, want, cmpopts.SortSlices(highScoreLess))
 		if diff != "" {
 			t.Error(diff)

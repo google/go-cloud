@@ -151,14 +151,15 @@
 //
 // Representing Keys
 //
-// The key of a docstore document is some function of its contents, usually a field.
+// The key of a docstore document is its unique identifier, usually a field.
 // Keys never appear alone in the docstore API, only as part of a document. For
 // instance, to retrieve a document by key, you pass the Collection.Get method
 // a document as a struct pointer or map with the key field populated, and docstore
-// populates the rest of that argument with the stored contents.
+// populates the rest of that argument with the stored contents. Docstore
+// doesn't take zero-value key.
 //
-// When you open a collection using the OpenCollection method of the service-specific driver or
-// a URL, you specify how to extract the key from a document.
+// When you open a collection using the constructor of the service-specific
+// driver or a URL, you specify how to extract the key from a document.
 // Usually, you provide the name of the key field, as in the example below:
 //
 //   coll, err := memdocstore.OpenCollection("SSN", nil)

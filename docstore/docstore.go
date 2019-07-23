@@ -374,8 +374,13 @@ func (c *Collection) toDriverAction(a *Action) (*driver.Action, error) {
 		}
 		return nil, err
 	}
-	if key == nil && a.kind != driver.Create {
-		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
+	if key == nil || driver.IsEmptyValue(reflect.ValueOf(key)) {
+		if a.kind != driver.Create {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
+		}
+		// set the key to nil so that the following code does not need to check for
+		// empty.
+		key = nil
 	}
 	if reflect.ValueOf(key).Kind() == reflect.Ptr {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "keys cannot be pointers")

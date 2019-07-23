@@ -41,6 +41,7 @@ import (
 	"context"
 	"encoding/gob"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -145,7 +146,7 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 		return key, nil
 	}
 	key := c.keyFunc(doc.Origin)
-	if key == nil {
+	if key == nil || driver.IsEmptyValue(reflect.ValueOf(key)) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
 	}
 	return key, nil
