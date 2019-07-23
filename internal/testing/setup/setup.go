@@ -185,14 +185,13 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 			t.Fatal(err)
 		}
 		return conn, done
-	} else {
-		rep, done := newGCPReplayer(t, filename)
-		conn, err := rep.Connection()
-		if err != nil {
-			t.Fatal(err)
-		}
-		return conn, done
 	}
+	rep, done := newGCPReplayer(t, filename)
+	conn, err := rep.Connection()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return conn, done
 }
 
 // contentTypeInjectPolicy and contentTypeInjector are somewhat of a hack to
@@ -288,11 +287,9 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 	}
 }
 
-// newGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC
-// dial request. These options allow a recorder/replayer to intercept RPCs and
-// save RPCs to the file at filename, or read the RPCs from the file and return
-// them. When recording is set to true, we're in recording mode; otherwise we're
-// in replaying mode.
+// newGCPRecordDialOptions return grpc.DialOptions that are to be appended to a
+// GRPC dial request. These options allow a recorder to intercept RPCs and save
+// RPCs to the file at filename, or read the RPCs from the file and return them.
 func newGCPRecordDialOptions(t *testing.T, filename string) (opts []grpc.DialOption, done func()) {
 	path := filepath.Join("testdata", filename)
 	t.Logf("Recording into golden file %s", path)
