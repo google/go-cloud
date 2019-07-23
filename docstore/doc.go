@@ -158,8 +158,9 @@
 // populates the rest of that argument with the stored contents. Docstore
 // doesn't take zero-value key.
 //
-// When you open a collection using the constructor of the service-specific
-// driver or a URL, you specify how to extract the key from a document.
+// When you open a collection using an OpenCollection method of the
+// service-specific driver or a URL, you specify how to extract the key from a
+// document.
 // Usually, you provide the name of the key field, as in the example below:
 //
 //   coll, err := memdocstore.OpenCollection("SSN", nil)

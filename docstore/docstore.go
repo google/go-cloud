@@ -139,7 +139,9 @@ func (l *ActionList) add(a *Action) *ActionList {
 //
 // If the document doesn't have key fields, or the key fields are empty, meaning
 // 0, a nil interface value, or any empty array or string, key fields with
-// unique values will be created and doc will be populated with them.
+// unique values will be created and doc will be populated with them if there is
+// a way to assign those keys, see each driver for details on the requirement of
+// generating keys.
 //
 // The revision field of the document must be absent or nil.
 //
