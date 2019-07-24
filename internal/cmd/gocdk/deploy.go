@@ -34,6 +34,7 @@ import (
 func registerDeployCmd(ctx context.Context, pctx *processContext, rootCmd *cobra.Command) {
 	var dockerImage string
 	var apply bool
+	var verbose bool
 	deployCmd := &cobra.Command{
 		Use:   "deploy <biome name>",
 		Short: "Deploy the application to the biome's deployment target",
@@ -43,18 +44,19 @@ By default, a new Docker image is built and deployed; use --image to skip the
 build and use an existing tagged image instead.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return deploy(ctx, pctx, args[0], dockerImage, apply)
+			return deploy(ctx, pctx, args[0], dockerImage, apply, verbose)
 		},
 	}
 	deployCmd.Flags().StringVar(&dockerImage, "image", "", "Docker image to deploy in the form `[name][:tag]`; name defaults to image name from Dockerfile, tag defaults to latest; empty string builds a new image")
-	deployCmd.Flags().BoolVar(&apply, "apply", true, "whether to run `biome apply` before deploying")
+	deployCmd.Flags().BoolVar(&apply, "apply", true, "whether to run \"biome apply\" before deploying")
+	deployCmd.Flags().BoolVar(&verbose, "verbose", false, "true to print all output from Terraform during \"biome apply\"")
 	rootCmd.AddCommand(deployCmd)
 }
 
 // deploy implements the "deploy" command.
 //
 // If dockerImage is not provided, it does a build for a generated tag.
-func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string, apply bool) error {
+func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string, apply, verbose bool) error {
 	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return xerrors.Errorf("gocdk deploy: %w", err)
@@ -72,7 +74,7 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 
 	// Run "biome apply".
 	if apply {
-		if err := biomeApply(ctx, pctx, biome, biomeApplyOptions{}); err != nil {
+		if err := biomeApply(ctx, pctx, biome, biomeApplyOptions{Verbose: verbose}); err != nil {
 			return err
 		}
 	}
