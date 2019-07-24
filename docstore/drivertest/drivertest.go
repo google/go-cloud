@@ -1168,7 +1168,7 @@ type nativeMinimal struct {
 	LS []string
 }
 
-// The following is the schema for the collection what the ID is composed from
+// The following is the schema for the collection where the ID is composed from
 // multiple fields instead of one. It can be used for query testing.
 // It is loosely borrowed from the DynamoDB documentation.
 // It is rich enough to require indexes for some drivers.
