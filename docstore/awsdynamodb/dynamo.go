@@ -40,6 +40,7 @@ package awsdynamodb
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -131,12 +132,11 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, op
 
 // Key returns a two-element array with the partition key and sort key, if any.
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
-	var keys [2]interface{}
-	var err error
-	keys[0], err = doc.GetField(c.partitionKey)
-	if err != nil {
+	pkey, err := doc.GetField(c.partitionKey)
+	if err != nil || pkey == nil || driver.IsEmptyValue(reflect.ValueOf(pkey)) {
 		return nil, nil // missing key is not an error
 	}
+	keys := [2]interface{}{pkey}
 	if c.sortKey != "" {
 		keys[1], _ = doc.GetField(c.sortKey) // ignore error since keys[1] is nil in that case
 	}

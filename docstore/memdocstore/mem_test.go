@@ -127,8 +127,8 @@ func TestUpdateAtomic(t *testing.T) {
 }
 
 func TestSortDocs(t *testing.T) {
-	newDocs := func() []docmap {
-		return []docmap{
+	newDocs := func() []storedDoc {
+		return []storedDoc{
 			{"a": int64(1), "b": "1", "c": 3.0},
 			{"a": int64(2), "b": "2", "c": 4.0},
 			{"a": int64(3), "b": "3"}, // missing "c"
@@ -144,14 +144,14 @@ func TestSortDocs(t *testing.T) {
 	for _, test := range []struct {
 		field     string
 		ascending bool
-		want      []docmap
+		want      []storedDoc
 	}{
 		{"a", true, inorder},
 		{"a", false, reversed},
 		{"b", true, inorder},
 		{"b", false, reversed},
 		{"c", true, inorder},
-		{"c", false, []docmap{inorder[1], inorder[0], inorder[2]}},
+		{"c", false, []storedDoc{inorder[1], inorder[0], inorder[2]}},
 	} {
 		got := newDocs()
 		sortDocs(got, test.field, test.ascending)
@@ -167,7 +167,7 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(f.Name())
-	docs := map[interface{}]map[string]interface{}{
+	docs := map[interface{}]storedDoc{
 		"k1": {"key": "k1", "a": 1},
 		"k2": {"key": "k2", "b": 2},
 	}

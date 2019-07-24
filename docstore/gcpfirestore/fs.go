@@ -206,13 +206,13 @@ func newCollection(client *vkit.Client, collResourceID, nameField string, nameFu
 func (c *collection) Key(doc driver.Document) (interface{}, error) {
 	if c.nameField != "" {
 		name, err := doc.GetField(c.nameField)
-		if err != nil || name == nil || driver.IsEmptyValue(reflect.ValueOf(name)) {
+		vn := reflect.ValueOf(name)
+		if err != nil || name == nil || driver.IsEmptyValue(vn) {
 			// missing field is not an error
 			return nil, nil
 		}
 		// Check that the reflect kind is String so we can support any type whose underlying type
 		// is string. E.g. "type DocName string".
-		vn := reflect.ValueOf(name)
 		if vn.Kind() != reflect.String {
 			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "key field %q with value %v is not a string",
 				c.nameField, name)
@@ -554,29 +554,44 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 		}
 		return
 	}
-	_ = wrs
 	// Set the revision fields of the documents.
 	// The actions and writes may not correspond, because Update actions may require
 	// two writes. We can tell which writes correspond to actions by the type of write.
 	j := 0
-	for i, wr := range wrs {
-		if _, ok := call.writes[i].Operation.(*pb.Write_Transform); !ok {
-			a := call.actions[j]
-			if a.Doc.HasField(c.opts.RevisionField) {
-				if err := a.Doc.SetField(c.opts.RevisionField, wr.UpdateTime); err != nil {
-					errs[a.Index] = err
-				}
+	for i, a := range call.actions {
+		wr := wrs[j]
+		if a.Doc.HasField(c.opts.RevisionField) {
+			if err := a.Doc.SetField(c.opts.RevisionField, wr.UpdateTime); err != nil {
+				errs[a.Index] = err
 			}
+		}
+		if call.newNames[i] != "" {
+			// c.nameField should not be empty since we only create new names when there
+			// is a nameField.
+			_ = a.Doc.SetField(c.nameField, call.newNames[i])
+		}
+		if hasFollowingTransform(call.writes, j) {
+			j = j + 2
+		} else {
 			j++
 		}
 	}
-	// Set new names for Create actions.
-	for i, a := range call.actions {
-		if call.newNames[i] != "" {
-			_ = a.Doc.SetField(c.nameField, call.newNames[i])
-		}
-	}
 	return
+}
+
+func hasFollowingTransform(writes []*pb.Write, i int) bool {
+	if i >= len(writes)-1 {
+		return false
+	}
+	curr, ok := writes[i].Operation.(*pb.Write_Update)
+	if !ok {
+		return false
+	}
+	next, ok := writes[i+1].Operation.(*pb.Write_Transform)
+	if !ok {
+		return false
+	}
+	return curr.Update.Name == next.Transform.Document
 }
 
 func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.RunActionsOptions) ([]*pb.WriteResult, error) {

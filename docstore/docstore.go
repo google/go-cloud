@@ -139,7 +139,9 @@ func (l *ActionList) add(a *Action) *ActionList {
 //
 // If the document doesn't have key fields, or the key fields are empty, meaning
 // 0, a nil interface value, or any empty array or string, key fields with
-// unique values will be created and doc will be populated with them.
+// unique values will be created and doc will be populated with them if there is
+// a way to assign those keys, see each driver for details on the requirement of
+// generating keys.
 //
 // The revision field of the document must be absent or nil.
 //
@@ -374,8 +376,13 @@ func (c *Collection) toDriverAction(a *Action) (*driver.Action, error) {
 		}
 		return nil, err
 	}
-	if key == nil && a.kind != driver.Create {
-		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
+	if key == nil || driver.IsEmptyValue(reflect.ValueOf(key)) {
+		if a.kind != driver.Create {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
+		}
+		// set the key to nil so that the following code does not need to check for
+		// empty.
+		key = nil
 	}
 	if reflect.ValueOf(key).Kind() == reflect.Ptr {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "keys cannot be pointers")

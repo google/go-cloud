@@ -32,6 +32,8 @@ require (
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-cmp v0.3.0
+	github.com/google/go-replayers/grpcreplay v0.1.0
+	github.com/google/go-replayers/httpreplay v0.1.0
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.3.0

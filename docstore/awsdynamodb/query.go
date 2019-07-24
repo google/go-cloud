@@ -20,8 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
-	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -648,7 +646,7 @@ func compare(v1, v2 interface{}) int {
 
 	case time.Time:
 		if v2, ok := v2.(time.Time); ok {
-			return compareTimes(v1, v2)
+			return driver.CompareTimes(v1, v2)
 		}
 		if _, ok := v2.(string); ok {
 			return 1
@@ -668,47 +666,12 @@ func compare(v1, v2 interface{}) int {
 		return -1
 
 	default:
-		b1 := toBigFloat(reflect.ValueOf(v1))
-		b2 := toBigFloat(reflect.ValueOf(v2))
-		if b1 == nil && b2 != nil {
+		cmp, err := driver.CompareNumbers(v1, v2)
+		if err != nil {
 			return -1
 		}
-		if b1 != nil && b2 == nil {
-			return 1
-		}
-		return b1.Cmp(b2)
+		return cmp
 	}
-}
-
-// Copied from gcpfirestore.
-// TODO(jba): dedup, probably by having a general driver.Compare function that implements
-// comparison portably.
-func compareTimes(t1, t2 time.Time) int {
-	switch {
-	case t1.Before(t2):
-		return -1
-	case t1.After(t2):
-		return 1
-	default:
-		return 0
-	}
-}
-
-// Copied from gcpfirestore.
-// TODO(jba): dedup
-func toBigFloat(x reflect.Value) *big.Float {
-	var f big.Float
-	switch x.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		f.SetInt64(x.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		f.SetUint64(x.Uint())
-	case reflect.Float32, reflect.Float64:
-		f.SetFloat64(x.Float())
-	default:
-		return nil
-	}
-	return &f
 }
 
 type sliceIterator struct {

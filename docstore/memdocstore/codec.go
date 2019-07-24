@@ -24,13 +24,13 @@ import (
 	"gocloud.dev/docstore/driver"
 )
 
-// encodeDoc encodes a driver.Document as a map[string]interface{}.
-func encodeDoc(doc driver.Document) (map[string]interface{}, error) {
+// encodeDoc encodes a driver.Document as a storedDoc.
+func encodeDoc(doc driver.Document) (storedDoc, error) {
 	var e encoder
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
-	return e.val.(map[string]interface{}), nil
+	return storedDoc(e.val.(map[string]interface{})), nil
 }
 
 func encodeValue(v interface{}) (interface{}, error) {
@@ -95,7 +95,7 @@ func (e *mapEncoder) MapKey(k string) { e.m[k] = e.val }
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string) error {
+func decodeDoc(m storedDoc, ddoc driver.Document, fps [][]string) error {
 	var m2 map[string]interface{}
 	if len(fps) == 0 {
 		m2 = m
