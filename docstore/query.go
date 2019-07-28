@@ -16,7 +16,6 @@ package docstore
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"reflect"
 	"time"
@@ -213,10 +212,13 @@ func (q *Query) Delete(ctx context.Context) error {
 
 func (q *Query) runAction(ctx context.Context, addAction func(*ActionList, Document)) error {
 	var retries map[interface{}]bool
+	// TODO(shantuo): split actions into groups to reduce client memory.
+	// TODO(shantuo): test retry logic (using a mock driver)
 	for {
-		// Run the query. For each document it returns,
-		// add an action to an ActionList.
-		iter := q.Get(ctx) // TODO(shantuo): fetch only key and revision fields
+		// Run the query. For each document it returns, add an action to an ActionList.
+		// TODO(shantuo): fetch only key and revision fields? Not possible
+		// if the collection uses a key-extraction function.
+		iter := q.Get(ctx)
 		al := q.coll.Actions()
 		var keys []interface{}
 		for {
@@ -240,7 +242,6 @@ func (q *Query) runAction(ctx context.Context, addAction func(*ActionList, Docum
 			if retries == nil || retries[key] {
 				addAction(al, doc)
 				keys = append(keys, key)
-				fmt.Println("@@@@", key)
 			}
 
 		}
