@@ -63,6 +63,7 @@ package mongodocstore // import "gocloud.dev/docstore/mongodocstore"
 
 import (
 	"context"
+	"reflect"
 	"strings"
 
 	"github.com/google/wire"
@@ -186,7 +187,7 @@ func (c *collection) Key(doc driver.Document) (interface{}, error) {
 		return id, nil // missing field is not an error
 	}
 	id := c.idFunc(doc.Origin)
-	if id == nil {
+	if id == nil || driver.IsEmptyValue(reflect.ValueOf(id)) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "missing document key")
 	}
 	return id, nil

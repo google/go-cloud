@@ -17,7 +17,6 @@ package memdocstore
 import (
 	"context"
 	"io"
-	"math/big"
 	"reflect"
 	"sort"
 	"strings"
@@ -111,40 +110,15 @@ func compare(x1, x2 interface{}) (int, bool) {
 	if v1.Kind() == reflect.String && v2.Kind() == reflect.String {
 		return strings.Compare(v1.String(), v2.String()), true
 	}
-	bf1 := toBigFloat(v1)
-	bf2 := toBigFloat(v2)
-	if bf1 != nil && bf2 != nil {
-		return bf1.Cmp(bf2), true
+	if cmp, err := driver.CompareNumbers(v1, v2); err == nil {
+		return cmp, true
 	}
 	if t1, ok := x1.(time.Time); ok {
 		if t2, ok := x2.(time.Time); ok {
-			s := t1.Sub(t2)
-			switch {
-			case s < 0:
-				return -1, true
-			case s > 0:
-				return 1, true
-			default:
-				return 0, true
-			}
+			return driver.CompareTimes(t1, t2), true
 		}
 	}
 	return 0, false
-}
-
-func toBigFloat(x reflect.Value) *big.Float {
-	var f big.Float
-	switch x.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		f.SetInt64(x.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		f.SetUint64(x.Uint())
-	case reflect.Float32, reflect.Float64:
-		f.SetFloat64(x.Float())
-	default:
-		return nil
-	}
-	return &f
 }
 
 func sortDocs(docs []storedDoc, field string, asc bool) {

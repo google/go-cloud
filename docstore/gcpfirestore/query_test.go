@@ -159,23 +159,17 @@ func TestEvaluateFilter(t *testing.T) {
 		want      bool
 	}{
 		// Firestore compares numbers to each other ignoring type (int vs. float).
+		// Just a few simple tests here; see driver.TestCompareNumbers for more.
 		{"i", "=", 32, true},
 		{"i", ">", 32, false},
 		{"i", "<", 32, false},
 		{"i", "=", 32.0, true},
 		{"i", ">", 32.0, false},
 		{"i", "<", 32.0, false},
-		{"i", "=", uint(32), true},
 		{"f", "=", 5.5, true},
-		{"f", ">", 5.5, false},
 		{"f", "<", 5.5, false},
 		{"f2", "=", 5, true},
 		{"f2", ">", 5, false},
-		{"f2", "<", 5, false},
-		{"mi", "=", math.MaxInt64, true},
-		{"mi", "=", math.MaxInt64 - 1, false},
-		{"mi", ">", math.MaxInt64 - 1, true},
-		{"mi", "=", float64(math.MaxInt64 - 1), false},
 		// Firestore compares strings to each other, but not to numbers.
 		{"s", "=", "32", true},
 		{"s", ">", "32", false},

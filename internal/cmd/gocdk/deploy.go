@@ -63,7 +63,7 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 	// If no image was specified, do a build.
 	if dockerImage == "" {
 		var err error
-		dockerImage, err := build(ctx, pctx, nil)
+		dockerImage, err = build(ctx, pctx, nil)
 		if err != nil {
 			return xerrors.Errorf("gocdk deploy: %w", err)
 		}
@@ -72,7 +72,7 @@ func deploy(ctx context.Context, pctx *processContext, biome, dockerImage string
 
 	// Run "biome apply".
 	if apply {
-		if err := biomeApply(ctx, pctx, biome, nil); err != nil {
+		if err := biomeApply(ctx, pctx, biome, biomeApplyOptions{}); err != nil {
 			return err
 		}
 	}

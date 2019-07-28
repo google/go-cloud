@@ -18,7 +18,6 @@ import (
 	"context"
 	"flag"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -31,8 +30,9 @@ import (
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/useragent"
 
-	"cloud.google.com/go/httpreplay"
-	"cloud.google.com/go/rpcreplay"
+	"github.com/google/go-replayers/grpcreplay"
+	"github.com/google/go-replayers/httpreplay"
+	hrgoog "github.com/google/go-replayers/httpreplay/google"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -72,8 +72,7 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 // can mutate the recorder to add service-specific header filters, for example.
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
-func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder),
-	opts ...option.ClientOption) (c *http.Client, cleanup func(), initState int64) {
+func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder)) (c *http.Client, cleanup func(), initState int64) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
@@ -88,24 +87,16 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 			t.Fatal(err)
 		}
 		rf(rec)
-		c, err = rec.Client(ctx, opts...)
-		if err != nil {
-			t.Fatal(err)
-		}
 		cleanup = func() {
 			if err := rec.Close(); err != nil {
 				t.Fatal(err)
 			}
 		}
 
-		return c, cleanup, state.UnixNano()
+		return rec.Client(), cleanup, state.UnixNano()
 	}
 	t.Logf("Replaying from golden file %s", path)
 	rep, err := httpreplay.NewReplayer(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	c, err = rep.Client(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +104,7 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 	if err := recState.UnmarshalBinary(rep.Initial()); err != nil {
 		t.Fatal(err)
 	}
-	return c, func() { rep.Close() }, recState.UnixNano()
+	return rep.Client(), func() { rep.Close() }, recState.UnixNano()
 }
 
 // NewAWSSession creates a new session for testing against AWS.
@@ -131,7 +122,7 @@ func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *sess
 		r.ClearHeaders("X-Amz-Date")
 		r.ClearQueryParams("X-Amz-Date")
 		r.ClearHeaders("User-Agent") // AWS includes the Go version
-	}, option.WithoutAuthentication())
+	})
 	sess, err := awsSession(region, client)
 	if err != nil {
 		t.Fatal(err)
@@ -145,22 +136,22 @@ func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *sess
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
 func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt http.RoundTripper, done func()) {
-	var co option.ClientOption
-	if *Record {
-		creds, err := gcp.DefaultCredentials(ctx)
-		if err != nil {
-			t.Fatalf("failed to get default credentials: %v", err)
-		}
-		co = option.WithTokenSource(gcp.CredentialsTokenSource(creds))
-	} else {
-		co = option.WithoutAuthentication()
-	}
 	c, cleanup, _ := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.ClearQueryParams("Expires")
 		r.ClearQueryParams("Signature")
 		r.ClearHeaders("Expires")
 		r.ClearHeaders("Signature")
-	}, co)
+	})
+	if *Record {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			t.Fatalf("failed to get default credentials: %v", err)
+		}
+		c, err = hrgoog.RecordClient(ctx, c, option.WithTokenSource(gcp.CredentialsTokenSource(creds)))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	return &gcp.HTTPClient{Client: *c}, c.Transport, cleanup
 }
 
@@ -170,9 +161,10 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing RPC and uses fake credentials.
 func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*grpc.ClientConn, func()) {
-	opts, done := NewGCPDialOptions(t, *Record, t.Name()+".replay")
-	opts = append(opts, useragent.GRPCDialOption(api))
+	filename := t.Name() + ".replay"
 	if *Record {
+		opts, done := newGCPRecordDialOptions(t, filename)
+		opts = append(opts, useragent.GRPCDialOption(api))
 		// Add credentials for real RPCs.
 		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
@@ -180,25 +172,14 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 		}
 		opts = append(opts, grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")))
 		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}))
-	} else {
-		// Establish a local gRPC server for Dial to connect to and update endPoint
-		// to point to it.
-		// As of grpc 1.18, we must create a true gRPC server.
-		srv := grpc.NewServer()
-		l, err := net.Listen("tcp", "127.0.0.1:0")
+		conn, err := grpc.DialContext(ctx, endPoint, opts...)
 		if err != nil {
 			t.Fatal(err)
 		}
-		go func() {
-			if err := srv.Serve(l); err != nil {
-				t.Error(err)
-			}
-		}()
-		defer srv.Stop()
-		endPoint = l.Addr().String()
-		opts = append(opts, grpc.WithInsecure())
+		return conn, done
 	}
-	conn, err := grpc.DialContext(ctx, endPoint, opts...)
+	rep, done := newGCPReplayer(t, filename)
+	conn, err := rep.Connection()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +221,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 		r.RemoveQueryParams("X-Ms-Date")
 		r.ClearHeaders("X-Ms-Date")
 		r.ClearHeaders("User-Agent") // includes the full Go version
-	}, option.WithoutAuthentication())
+	})
 	f := []pipeline.Factory{
 		// Sets User-Agent for recorder.
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
@@ -274,7 +255,7 @@ func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (*http.Client
 		r.RemoveQueryParams("X-Ms-Date")
 		r.ClearHeaders("X-Ms-Date")
 		r.ClearHeaders("User-Agent") // includes the full Go version
-	}, option.WithoutAuthentication())
+	})
 	return client, cleanup
 }
 
@@ -298,34 +279,16 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 	}
 }
 
-// NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC
-// dial request. These options allow a recorder/replayer to intercept RPCs and
-// save RPCs to the file at filename, or read the RPCs from the file and return
-// them. When recording is set to true, we're in recording mode; otherwise we're
-// in replaying mode.
-func NewGCPDialOptions(t *testing.T, recording bool, filename string) (opts []grpc.DialOption, done func()) {
+// newGCPRecordDialOptions return grpc.DialOptions that are to be appended to a
+// GRPC dial request. These options allow a recorder to intercept RPCs and save
+// RPCs to the file at filename, or read the RPCs from the file and return them.
+func newGCPRecordDialOptions(t *testing.T, filename string) (opts []grpc.DialOption, done func()) {
 	path := filepath.Join("testdata", filename)
-	if recording {
-		t.Logf("Recording into golden file %s", path)
-		r, err := rpcreplay.NewRecorder(path, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		opts = r.DialOptions()
-		done = func() {
-			if err := r.Close(); err != nil {
-				t.Errorf("unable to close recorder: %v", err)
-			}
-		}
-		return opts, done
-	}
-	t.Logf("Replaying from golden file %s", path)
-	r, err := rpcreplay.NewReplayer(path)
+	t.Logf("Recording into golden file %s", path)
+	r, err := grpcreplay.NewRecorder(path, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Uncomment for more verbose logging from the replayer.
-	// r.SetLogFunc(t.Logf)
 	opts = r.DialOptions()
 	done = func() {
 		if err := r.Close(); err != nil {
@@ -333,6 +296,23 @@ func NewGCPDialOptions(t *testing.T, recording bool, filename string) (opts []gr
 		}
 	}
 	return opts, done
+}
+
+// newGCPReplayer returns a Replayer for GCP gRPC connections, as well as a function
+// to call when done with the Replayer.
+func newGCPReplayer(t *testing.T, filename string) (*grpcreplay.Replayer, func()) {
+	path := filepath.Join("testdata", filename)
+	t.Logf("Replaying from golden file %s", path)
+	r, err := grpcreplay.NewReplayer(path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := func() {
+		if err := r.Close(); err != nil {
+			t.Errorf("unable to close recorder: %v", err)
+		}
+	}
+	return r, done
 }
 
 // HasDockerTestEnvironment returns true when either:
