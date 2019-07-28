@@ -89,6 +89,10 @@ func OpenCollection(keyField string, opts *Options) (*docstore.Collection, error
 // a document and returns the document's primary key. It should return nil if the
 // document is missing the information to construct a key. This will cause all
 // actions, even Create, to fail.
+//
+// For the collection to be usable with Query.Delete and Query.Update,
+// keyFunc must work with map[string]interface{} as well as whatever
+// struct type the collection normally uses (if any).
 func OpenCollectionWithKeyFunc(keyFunc func(docstore.Document) interface{}, opts *Options) (*docstore.Collection, error) {
 	c, err := newCollection("", keyFunc, opts)
 	if err != nil {

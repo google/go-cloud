@@ -1133,7 +1133,16 @@ func newHighScore() interface{} { return &HighScore{} }
 
 // HighScoreKey constructs a single primary key from a HighScore struct
 // by concatenating the Game and Player fields.
-func HighScoreKey(doc docstore.Document) interface{} { return doc.(*HighScore).key() }
+func HighScoreKey(doc docstore.Document) interface{} {
+	switch d := doc.(type) {
+	case *HighScore:
+		return d.key()
+	case map[string]interface{}:
+		return fmt.Sprintf("%v|%v", d["Game"], d["Player"])
+	default:
+		panic("bad arg")
+	}
+}
 
 func (h *HighScore) key() string { return h.Game + "|" + h.Player }
 

@@ -20,9 +20,7 @@ package gcpfirestore
 import (
 	"context"
 	"fmt"
-	"io"
 	"math"
-	"math/big"
 	"path"
 	"reflect"
 	"strings"
@@ -139,7 +137,7 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 	// Compare times.
 	if t1, ok := val.(time.Time); ok {
 		if t2, ok := f.Value.(time.Time); ok {
-			return applyComparison(f.Op, compareTimes(t1, t2))
+			return applyComparison(f.Op, driver.CompareTimes(t1, t2))
 		} else {
 			return false
 		}
@@ -153,19 +151,11 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 		return applyComparison(f.Op, strings.Compare(lhs.String(), rhs.String()))
 	}
 
-	// Compare numbers by using big.Float. This is expensive
-	// but simpler to code and more clearly correct. In particular,
-	// it will get the right answer for some mixed-type comparisons
-	// that are hard to do otherwise. For example, comparing the max int64
-	// with a float64: float64(math.MaxInt64) == float64(math.MaxInt64-1)
-	// is true in Go, but the right answer is false.
-	lf := toBigFloat(lhs)
-	rf := toBigFloat(rhs)
-	// If either one is not a number, return false.
-	if lf == nil || rf == nil {
+	cmp, err := driver.CompareNumbers(lhs, rhs)
+	if err != nil {
 		return false
 	}
-	return applyComparison(f.Op, lf.Cmp(rf))
+	return applyComparison(f.Op, cmp)
 }
 
 // op is one of the five permitted docstore operators ("=", "<", etc.)
@@ -185,32 +175,6 @@ func applyComparison(op string, c int) bool {
 	default:
 		panic("bad op")
 	}
-}
-
-func compareTimes(t1, t2 time.Time) int {
-	switch {
-	case t1.Before(t2):
-		return -1
-	case t1.After(t2):
-		return 1
-	default:
-		return 0
-	}
-}
-
-func toBigFloat(x reflect.Value) *big.Float {
-	var f big.Float
-	switch x.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		f.SetInt64(x.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		f.SetUint64(x.Uint())
-	case reflect.Float32, reflect.Float64:
-		f.SetFloat64(x.Float())
-	default:
-		return nil
-	}
-	return &f
 }
 
 func (it *docIterator) Stop() { it.cancel() }
@@ -402,67 +366,4 @@ func newFieldFilter(fp []string, op string, val *pb.Value) (*pb.StructuredQuery_
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
-}
-
-func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
-	return c.runWriteQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
-		return []*pb.Write{{
-			Operation:       &pb.Write_Delete{Delete: doc.Name},
-			CurrentDocument: preconditionFromTimestamp(doc.UpdateTime),
-		}}, nil
-	})
-}
-
-func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
-	fields, paths, transforms, err := processMods(mods)
-	if err != nil {
-		return err
-	}
-	return c.runWriteQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
-		return newUpdateWrites(doc.Name, doc.UpdateTime, fields, paths, transforms)
-	})
-}
-
-// For delete and update queries, limit the number of write actions per RPC, to bound
-// client memory.
-// This is a variable so it can be modified for tests.
-var maxWritesPerRPC = 500
-
-// runWriteQuery runs the query, calls writes for each returned document, and then commits those writes.
-func (c *collection) runWriteQuery(ctx context.Context, q *driver.Query, writes func(*pb.Document) ([]*pb.Write, error)) error {
-	q.FieldPaths = [][]string{{"__name__"}}
-	iter, err := c.newDocIterator(ctx, q)
-	if err != nil {
-		return err
-	}
-	defer iter.Stop()
-
-	opts := &driver.RunActionsOptions{}
-	var pws []*pb.Write
-	for {
-		res, err := iter.nextResponse(ctx)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		ws, err := writes(res.Document)
-		if err != nil {
-			return err
-		}
-		pws = append(pws, ws...)
-		if len(pws) >= maxWritesPerRPC {
-			_, err := c.commit(ctx, pws, opts)
-			if err != nil {
-				return err
-			}
-			pws = pws[:0]
-		}
-	}
-	if len(pws) > 0 {
-		_, err = c.commit(ctx, pws, opts)
-		return err
-	}
-	return nil
 }

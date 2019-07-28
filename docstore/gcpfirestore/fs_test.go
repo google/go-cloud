@@ -157,7 +157,6 @@ func (v verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 
 func TestConformance(t *testing.T) {
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
-	maxWritesPerRPC = 2 // to test RPC batching behavior
 	nc, err := newNativeCodec()
 	if err != nil {
 		t.Fatal(err)
