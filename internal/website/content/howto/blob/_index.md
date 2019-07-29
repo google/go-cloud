@@ -1,6 +1,7 @@
 ---
 title: "Blob"
 date: 2019-07-09T16:46:29-07:00
+lastmod: 2019-07-29T12:00:00-07:00
 showInSidenav: true
 toc: true
 ---
@@ -107,15 +108,24 @@ Other operations like listing and reading metadata are documented in the
 ### Google Cloud Storage {#gcs}
 
 [Google Cloud Storage][] (GCS) URLs in the Go CDK closely resemble the URLs
-you would see in the `gsutil` CLI. `blob.OpenBucket` will use [Application
-Default Credentials][GCP creds].
+you would see in the [`gsutil`][] CLI.
+
+[Google Cloud Storage]: https://cloud.google.com/storage/
+[`gsutil`]: https://cloud.google.com/storage/docs/gsutil
+
+`blob.OpenBucket` will use Application Default Credentials; if you have
+authenticated via [`gcloud auth login`][], it will use those credentials. See
+[Application Default Credentials][GCP creds] to learn about authentication
+alternatives, including using environment variables.
+
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
 
 {{< goexample "gocloud.dev/blob/gcsblob.Example_openBucketFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`gcsblob.URLOpener`][].
 
-[Google Cloud Storage]: https://cloud.google.com/storage/
 [`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
 
 #### GCS Constructor {#gcs-ctor}
@@ -128,16 +138,21 @@ other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
 
 {{< goexample "gocloud.dev/blob/gcsblob.ExampleOpenBucket" >}}
 
-[GCP creds]: https://cloud.google.com/docs/authentication/production
 [`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
 [`gocloud.dev/gcp`]: https://godoc.org/gocloud.dev/gcp
 
 ### S3 {#s3}
 
 S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
-You can specify the `region` query parameter to ensure your application connects
-to the correct region, but otherwise `blob.OpenBucket` will use the region found
-in the environment variables or your AWS CLI configuration.
+You should specify the `region` query parameter to ensure your application
+connects to the correct region.
+
+`blob.OpenBucket` will create a default AWS Session with the
+`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See [AWS Session][] to learn about authentication
+alternatives, including using environment variables.
+
+[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 {{< goexample "gocloud.dev/blob/s3blob.Example_openBucketFromURL" >}}
 

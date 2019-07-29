@@ -1,7 +1,7 @@
 ---
 title: "Docstore"
 date: 2019-06-08T15:11:57-04:00
-lastmod: 2019-07-11T21:03:45-07:00
+lastmod: 2019-07-29T12:00:00-07:00
 draft: true
 showInSidenav: true
 toc: true
@@ -221,6 +221,14 @@ function to extract the name from a document.
 Firestore URLs provide the project and collection, as well as the field that
 holds the document name.
 
+`docstore.OpenCollection` will use Application Default Credentials; if you have
+authenticated via [`gcloud auth login`][], it will use those credentials. See
+[Application Default Credentials][GCP creds] to learn about authentication
+alternatives, including using environment variables.
+
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+
 {{< goexample
 "gocloud.dev/docstore/gcpfirestore.Example_openCollectionFromURL" >}}
 
@@ -261,6 +269,13 @@ collection corresponds to a DynamoDB table.
 
 DynamoDB URLs provide the table, partition key field and optionally the sort key
 field for the collection.
+
+`docstore.OpenCollection` will create a default AWS Session with the
+`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See [AWS Session][] to learn about authentication
+alternatives, including using environment variables.
+
+[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 {{< goexample
 "gocloud.dev/docstore/awsdynamodb.Example_openCollectionFromURL" >}}
