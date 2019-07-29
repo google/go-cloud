@@ -23,11 +23,9 @@ import (
 )
 
 func Example() {
-	// This example is used in https://gocloud.dev/howto/sql/#aws
-
-	// import _ "gocloud.dev/postgres/awspostgres"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/postgres/awspostgres"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Replace these with your actual settings.

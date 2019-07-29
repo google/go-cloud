@@ -24,9 +24,8 @@ import (
 )
 
 func ExampleOpenTopic() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#gcp-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Your GCP credentials.
@@ -59,11 +58,9 @@ func ExampleOpenTopic() {
 }
 
 func Example_openTopicFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#gcp
-
-	// import _ "gocloud.dev/pubsub/gcppubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/gcppubsub"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	topic, err := pubsub.OpenTopic(ctx, "gcppubsub://projects/myproject/topics/mytopic")
@@ -74,9 +71,8 @@ func Example_openTopicFromURL() {
 }
 
 func ExampleOpenSubscription() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#gcp-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Your GCP credentials.
@@ -111,11 +107,9 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#gcp
-
-	// import _ "gocloud.dev/pubsub/gcppubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/gcppubsub"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	subscription, err := pubsub.OpenSubscription(ctx,

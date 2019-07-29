@@ -24,9 +24,8 @@ import (
 )
 
 func ExampleNewSubscription() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#mem-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Construct a *pubsub.Topic.
@@ -39,9 +38,8 @@ func ExampleNewSubscription() {
 }
 
 func ExampleNewTopic() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#mem-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	topic := mempubsub.NewTopic()
@@ -49,11 +47,9 @@ func ExampleNewTopic() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#mem
-
-	// import _ "gocloud.dev/pubsub/mempubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/mempubsub"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Create a topic.
@@ -72,11 +68,9 @@ func Example_openSubscriptionFromURL() {
 }
 
 func Example_openTopicFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#mem
-
-	// import _ "gocloud.dev/pubsub/mempubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/mempubsub"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	topic, err := pubsub.OpenTopic(ctx, "mem://topicA")

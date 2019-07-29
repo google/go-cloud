@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps-ctor
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
@@ -42,14 +42,12 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps
-
-	// import _ "gocloud.dev/runtimevar/awsparamstore"
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/runtimevar/awsparamstore"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
+	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-
-	// Variables set up elsewhere:
-	ctx := context.Background()
 
 	v, err := runtimevar.OpenVariable(ctx, "awsparamstore://myvar?region=us-west-1&decoder=string")
 	if err != nil {

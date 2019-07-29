@@ -27,9 +27,8 @@ import (
 )
 
 func ExampleTopic_Send() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var topic *pubsub.Topic
 
@@ -48,9 +47,8 @@ func ExampleTopic_Send() {
 }
 
 func ExampleSubscription_Receive() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var subscription *pubsub.Subscription
 
@@ -70,9 +68,8 @@ func ExampleSubscription_Receive() {
 }
 
 func ExampleSubscription_Receive_concurrent() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var subscription *pubsub.Subscription
 

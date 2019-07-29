@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore#mem-ctor.
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
 
 	coll, err := memdocstore.OpenCollection("userID", nil)
 	if err != nil {
@@ -33,9 +33,8 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithKeyFunc() {
-	// This example is used in https://gocloud.dev/howto/docstore#mem-ctor.
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	type HighScore struct {
 		Game   string
 		Player string
@@ -55,11 +54,9 @@ func ExampleOpenCollectionWithKeyFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore#mem.
-
-	// import _ "gocloud.dev/docstore/memdocstore"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/docstore/memdocstore"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.

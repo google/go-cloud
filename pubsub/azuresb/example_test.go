@@ -25,9 +25,8 @@ import (
 )
 
 func ExampleOpenTopic() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#azure-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Change these as needed for your application.
@@ -58,11 +57,9 @@ func ExampleOpenTopic() {
 }
 
 func Example_openTopicFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#azure
-
-	// import _ "gocloud.dev/pubsub/azuresb"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/azuresb"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
@@ -76,9 +73,8 @@ func Example_openTopicFromURL() {
 }
 
 func ExampleOpenSubscription() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#azure-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Change these as needed for your application.
@@ -112,11 +108,9 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#azure
-
-	// import _ "gocloud.dev/pubsub/azuresb"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/azuresb"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
@@ -133,7 +127,6 @@ func Example_openSubscriptionFromURL() {
 
 func Example_OpenSubscription_inReceiveAndDeleteMode() {
 
-	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// Change these as needed for your application.

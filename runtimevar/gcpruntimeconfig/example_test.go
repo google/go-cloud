@@ -24,9 +24,8 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#gcprc-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Your GCP credentials.
@@ -64,17 +63,15 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#gcprc
-
-	// import _ "gocloud.dev/runtimevar/gcpruntimeconfig"
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/runtimevar/gcpruntimeconfig"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
+	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The URL Host+Path are used as the GCP Runtime Configurator Variable key;
 	// see https://cloud.google.com/deployment-manager/runtime-configurator/
 	// for more details.
-
-	// Variables set up elsewhere:
-	ctx := context.Background()
 
 	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string")
 	if err != nil {

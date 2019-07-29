@@ -24,9 +24,8 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore#firestore-ctor.
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	creds, err := gcp.DefaultCredentials(ctx)
@@ -46,9 +45,8 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithNameFunc() {
-	// This example is used in https://gocloud.dev/howto/docstore#firestore-ctor.
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	type HighScore struct {
 		Game   string
@@ -79,11 +77,9 @@ func ExampleOpenCollectionWithNameFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore#firestore.
-
-	// import _ "gocloud.dev/docstore/gcpfirestore"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/docstore/gcpfirestore"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.

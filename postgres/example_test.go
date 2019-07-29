@@ -22,9 +22,8 @@ import (
 )
 
 func ExampleOpen() {
-	// This example is used in https://gocloud.dev/howto/sql/#local
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Replace this with your actual settings.

@@ -23,11 +23,9 @@ import (
 )
 
 func Example() {
-	// This example is used in https://gocloud.dev/howto/sql/#azure
-
-	// import _ "gocloud.dev/mysql/azuremysql"
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/mysql/azuremysql"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Replace this with your actual settings.

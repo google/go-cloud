@@ -31,9 +31,8 @@ import (
 )
 
 func ExampleBucket_NewReader() {
-	// This example is used in https://gocloud.dev/howto/blob/#reading
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
 
@@ -53,9 +52,8 @@ func ExampleBucket_NewReader() {
 }
 
 func ExampleBucket_NewRangeReader() {
-	// This example is used in https://gocloud.dev/howto/blob/#reading
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
 
@@ -72,9 +70,8 @@ func ExampleBucket_NewRangeReader() {
 }
 
 func ExampleBucket_NewWriter() {
-	// This example is used in https://gocloud.dev/howto/blob/#writing
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
 
@@ -95,9 +92,8 @@ func ExampleBucket_NewWriter() {
 }
 
 func ExampleBucket_NewWriter_cancel() {
-	// This example is used in https://gocloud.dev/howto/blob/#writing
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
 
@@ -123,9 +119,8 @@ func ExampleBucket_NewWriter_cancel() {
 }
 
 func ExampleBucket_Delete() {
-	// This example is used in https://gocloud.dev/howto/blob/#deleting
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
 
@@ -417,9 +412,8 @@ func ExampleListOptions() {
 }
 
 func ExamplePrefixedBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/#prefix
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	var bucket *blob.Bucket
 
 	// Wrap the bucket using blob.PrefixedBucket.

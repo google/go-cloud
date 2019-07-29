@@ -29,9 +29,8 @@ import (
 )
 
 func Example_jsonDecoder() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#awsps-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
 	// Config is the sample config struct we're going to parse our JSON into.
@@ -54,7 +53,7 @@ func Example_jsonDecoder() {
 	defer v.Close()
 	// snapshot.Value will be of type Config.
 
-	// Ignore unused variables in example:
+	// PRAGMA(gocloud.dev): Skip rest of function.
 	snapshot, err := v.Latest(ctx)
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
@@ -85,16 +84,15 @@ func Example_stringDecoder() {
 }
 
 func ExampleVariable_Latest() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#latest
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	var v *runtimevar.Variable
 
 	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
-	// Ignore unused variables in example:
+	// PRAGMA(gocloud.dev): Skip rest of function.
 	_ = snapshot
 }
 
@@ -181,14 +179,13 @@ func ExampleVariable_Watch() {
 }
 
 func ExampleDecryptDecode() {
-	// This example is used in https://gocloud.dev/howto/secrets/#runtimevar
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	var keeper *secrets.Keeper
 
 	decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode)
 	decoder := runtimevar.NewDecoder("", decodeFunc)
 
-	// Ignore unused variables in example:
+	// PRAGMA(gocloud.dev): Skip rest of function.
 	_ = decoder
 }

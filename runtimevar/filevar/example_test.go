@@ -40,7 +40,6 @@ func ExampleOpenVariable() {
 		log.Fatal(err)
 	}
 	defer v.Close()
-	// Ignore unused variables in example:
 
 	// We can now read the current value of the variable from v.
 	snapshot, err := v.Latest(context.Background())
@@ -55,14 +54,12 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#local
-
-	// import _ "gocloud.dev/runtimevar/filevar"
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/runtimevar/filevar"
+	// PRAGMA(gocloud.dev): Skip until next blank line.
+	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-
-	// Variables set up elsewhere:
-	ctx := context.Background()
 
 	v, err := runtimevar.OpenVariable(ctx, "file:///path/to/config.txt?decoder=string")
 	if err != nil {

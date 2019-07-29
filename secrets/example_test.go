@@ -81,9 +81,8 @@ func Example_errorAs() {
 }
 
 func ExampleKeeper_Encrypt() {
-	// This example is used in https://gocloud.dev/howto/secrets/
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var keeper *secrets.Keeper
 
@@ -93,14 +92,13 @@ func ExampleKeeper_Encrypt() {
 		log.Fatal(err)
 	}
 
-	// Ignore unused variables in example:
+	// PRAGMA(gocloud.dev): Skip rest of function.
 	_ = cipherText
 }
 
 func ExampleKeeper_Decrypt() {
-	// This example is used in https://gocloud.dev/howto/secrets/
-
-	// Variables set up elsewhere:
+	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var keeper *secrets.Keeper
 
@@ -110,6 +108,6 @@ func ExampleKeeper_Decrypt() {
 		log.Fatal(err)
 	}
 
-	// Ignore unused variables in example:
+	// PRAGMA(gocloud.dev): Skip rest of function.
 	_ = plainText
 }
