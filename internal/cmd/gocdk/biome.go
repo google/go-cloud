@@ -72,6 +72,7 @@ information needed to deploy.`,
 	}
 	biomeCmd.AddCommand(listCmd)
 
+	var input bool
 	var applyOpts biomeApplyOptions
 	applyCmd := &cobra.Command{
 		Use:   "apply <biome name>",
@@ -82,10 +83,11 @@ configuration (e.g., creating or updating cloud resources).
 Runs "terraform init" followed by "terraform apply".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return biomeApply(ctx, pctx, args[0], &applyOpts)
+			applyOpts.DisableInput = !input
+			return biomeApply(ctx, pctx, args[0], applyOpts)
 		},
 	}
-	applyCmd.Flags().BoolVar(&applyOpts.Input, "input", true, "ask for input for Terraform variables if not directly set")
+	applyCmd.Flags().BoolVar(&input, "input", true, "ask for input for Terraform variables if not directly set")
 	applyCmd.Flags().BoolVar(&applyOpts.Verbose, "verbose", false, "true to print all output from Terraform")
 	applyCmd.Flags().BoolVar(&applyOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
 	biomeCmd.AddCommand(applyCmd)
@@ -100,7 +102,7 @@ Runs "terraform init" followed by "terraform apply".`,
 Runs "terraform destroy".`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return biomeCleanup(ctx, pctx, args[0], &cleanupOpts, deleteBiome)
+			return biomeCleanup(ctx, pctx, args[0], cleanupOpts, deleteBiome)
 		},
 	}
 	cleanupCmd.Flags().BoolVar(&deleteBiome, "delete", false, "delete the entire biome")
@@ -259,24 +261,25 @@ func biomeList(ctx context.Context, pctx *processContext) error {
 }
 
 // biomeApplyOptions holds options for "biome apply" or "biome cleanup".
+// The zero value is the default set of options.
 type biomeApplyOptions struct {
-	Verbose     bool // show all Terraform output
-	AutoApprove bool // auto-approve Terraform changes
-	Input       bool // allow Terraform prompts for input
+	Verbose      bool // show all Terraform output
+	AutoApprove  bool // auto-approve Terraform changes
+	DisableInput bool // disable Terraform prompts for input
 }
 
 // biomeApply implements the "biome apply" subcommand.
 //
 // It runs "terraform init", "terraform plan", and "terraform apply" for the
 // named biome.
-func biomeApply(ctx context.Context, pctx *processContext, biome string, opts *biomeApplyOptions) error {
+func biomeApply(ctx context.Context, pctx *processContext, biome string, opts biomeApplyOptions) error {
 	if _, err := doBiomeApplyOrDestroy(ctx, pctx, biome, opts, false); err != nil {
 		return xerrors.Errorf("biome apply %s: %w", biome, err)
 	}
 	return nil
 }
 
-func doBiomeApplyOrDestroy(ctx context.Context, pctx *processContext, biome string, opts *biomeApplyOptions, destroy bool) (string, error) {
+func doBiomeApplyOrDestroy(ctx context.Context, pctx *processContext, biome string, opts biomeApplyOptions, destroy bool) (string, error) {
 	moduleRoot, err := pctx.ModuleRoot(ctx)
 	if err != nil {
 		return "", err
@@ -326,7 +329,7 @@ func doBiomeApplyOrDestroy(ctx context.Context, pctx *processContext, biome stri
 
 	// First, run "terraform init". It's needed the first time, and anytime
 	// a new Terraform provider is added, so it's safest to just always run it.
-	inputArg := fmt.Sprintf("-input=%v", opts.Input)
+	inputArg := fmt.Sprintf("-input=%t", !opts.DisableInput)
 	c := pctx.NewCommand(ctx, biomePath, "terraform", "init", inputArg)
 	c.Env = overrideEnv(c.Env, "TF_IN_AUTOMATION=1")
 	if out, err := runTerraform(c); err != nil {
@@ -426,7 +429,7 @@ func doBiomeApplyOrDestroy(ctx context.Context, pctx *processContext, biome stri
 // for the named biome.
 //
 // If deleteBiome is true, it also deletes the biome subdirectory.
-func biomeCleanup(ctx context.Context, pctx *processContext, biome string, opts *biomeApplyOptions, deleteBiome bool) error {
+func biomeCleanup(ctx context.Context, pctx *processContext, biome string, opts biomeApplyOptions, deleteBiome bool) error {
 	biomePath, err := doBiomeApplyOrDestroy(ctx, pctx, biome, opts, true)
 	if err != nil {
 		return xerrors.Errorf("biome cleanup %s: %w", biome, err)

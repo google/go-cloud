@@ -19,10 +19,10 @@ require (
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
 	contrib.go.opencensus.io/exporter/stackdriver v0.12.1
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
-	github.com/Azure/azure-amqp-common-go/v2 v2.0.0
+	github.com/Azure/azure-amqp-common-go/v2 v2.1.0
 	github.com/Azure/azure-pipeline-go v0.1.9
-	github.com/Azure/azure-sdk-for-go v30.0.0+incompatible
-	github.com/Azure/azure-service-bus-go v0.8.0
+	github.com/Azure/azure-sdk-for-go v30.1.0+incompatible
+	github.com/Azure/azure-service-bus-go v0.9.1
 	github.com/Azure/azure-storage-blob-go v0.6.0
 	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190605020000-c4ba1fdf4d36
@@ -38,19 +38,17 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible
-	github.com/grpc-ecosystem/grpc-gateway v1.9.0 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	go.opencensus.io v0.22.0
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
-	golang.org/x/net v0.0.0-20190606173856-1492cefac77f
+	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/sys v0.0.0-20190606203320-7fc4e5ec1444 // indirect
 	golang.org/x/xerrors v0.0.0-20190513163551-3ee3066db522
 	google.golang.org/api v0.6.0
 	google.golang.org/appengine v1.6.1 // indirect
-	google.golang.org/genproto v0.0.0-20190605220351-eb0b1bdb6ae6
+	google.golang.org/genproto v0.0.0-20190620144150-6af8c5fc6601
 	google.golang.org/grpc v1.21.1
-	pack.ag/amqp v0.11.0
+	pack.ag/amqp v0.11.2
 )

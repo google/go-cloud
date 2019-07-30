@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package awsdynamodb provides a docstore implementation backed by AWS
+// Package awsdynamodb provides a docstore implementation backed by Amazon
 // DynamoDB.
 // Use OpenCollection to construct a *docstore.Collection.
 //
