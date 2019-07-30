@@ -163,7 +163,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withNoRevCollection(t, newHarness, testData) })
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
-	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
 	t.Run("SerializeRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testSerializeRevision) })
 	t.Run("ActionsOnStructWithoutRevision", func(t *testing.T) { withNoRevCollection(t, newHarness, testActionsOnStructWithoutRevision) })
@@ -539,7 +538,6 @@ func checkNoRevisionField(t *testing.T, doc interface{}, revField string) {
 
 // Check that doc has a non-nil revision field.
 func checkHasRevisionField(t *testing.T, doc interface{}, revField string) {
-
 	t.Helper()
 	ddoc, err := driver.NewDocument(doc)
 	if err != nil {
@@ -1210,7 +1208,6 @@ const (
 	game1 = "Praise All Monsters"
 	game2 = "Zombie DMV"
 	game3 = "Days Gone"
-	game4 = "Rush Hour"
 )
 
 var highScores = []*HighScore{
@@ -1620,61 +1617,7 @@ func collectHighScores(ctx context.Context, iter *ds.DocumentIterator) ([]*HighS
 	return hs, nil
 }
 
-// TODO(shantuo): this and the unordered action tests should be merged as now
-// they are testing the same thing. We don't have ordered actions.
 func testMultipleActions(t *testing.T, coll *ds.Collection, revField string) {
-	ctx := context.Background()
-
-	docs := []docmap{
-		{KeyField: "testMultipleActions1", "s": "a"},
-		{KeyField: "testMultipleActions2", "s": "b"},
-		{KeyField: "testMultipleActions3", "s": "c"},
-		{KeyField: "testMultipleActions4", "s": "d"},
-		{KeyField: "testMultipleActions5", "s": "e"},
-		{KeyField: "testMultipleActions6", "s": "f"},
-		{KeyField: "testMultipleActions7", "s": "g"},
-		{KeyField: "testMultipleActions8", "s": "h"},
-		{KeyField: "testMultipleActions9", "s": "i"},
-		{KeyField: "testMultipleActions10", "s": "j"},
-		{KeyField: "testMultipleActions11", "s": "k"},
-		{KeyField: "testMultipleActions12", "s": "l"},
-	}
-
-	actions := coll.Actions()
-	// Writes
-	for i := 0; i < 6; i++ {
-		actions.Create(docs[i])
-	}
-	for i := 6; i < len(docs); i++ {
-		actions.Put(docs[i])
-	}
-
-	// Reads
-	gots := make([]docmap, len(docs))
-	for i, doc := range docs {
-		gots[i] = docmap{KeyField: doc[KeyField]}
-		actions.Get(gots[i], docstore.FieldPath("s"))
-	}
-	if err := actions.Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for i, got := range gots {
-		if diff := cmpDiff(got, docs[i]); diff != "" {
-			t.Error(diff)
-		}
-	}
-
-	// Deletes
-	dels := coll.Actions()
-	for _, got := range gots {
-		dels.Delete(docmap{KeyField: got[KeyField]})
-	}
-	if err := dels.Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 
 	must := func(err error) {
