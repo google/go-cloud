@@ -172,6 +172,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
 	t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
 
+	t.Run("ExampleInDoc", func(t *testing.T) { withNoRevCollection(t, newHarness, testExampleInDoc) })
+
 	t.Run("BeforeDo", func(t *testing.T) { testBeforeDo(t, newHarness) })
 	t.Run("BeforeQuery", func(t *testing.T) { testBeforeQuery(t, newHarness) })
 
@@ -1760,6 +1762,76 @@ func testActionsOnStructWithoutRevision(t *testing.T, coll *ds.Collection) {
 		t.Fatal(err)
 	}
 	checkNoRevisionField(t, got3, ds.DefaultRevisionField)
+}
+
+func testExampleInDoc(t *testing.T, coll *ds.Collection) {
+	type Name struct {
+		First, Last string
+	}
+	type Book struct {
+		Title            string `docstore:"name"`
+		Author           Name   `docstore:"author"`
+		PublicationYears []int  `docstore:"pub_years,omitempty"`
+		NumPublications  int    `docstore:"-"`
+	}
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	checkFieldEqual := func(got, want interface{}, field string) {
+		t.Helper()
+		dg, err := driver.NewDocument(got)
+		must(err)
+		dw, err := driver.NewDocument(want)
+		must(err)
+		fvg, err := dg.GetField(field)
+		must(err)
+		fvw, err := dw.GetField(field)
+		must(err)
+		if !cmp.Equal(fvg, fvw) {
+			t.Errorf("%s: got %v want %v", field, fvg, fvw)
+		}
+	}
+
+	doc1 := &Book{
+		Title: "The Master and Margarita",
+		Author: Name{
+			First: "Mikhail",
+			Last:  "Bulgakov",
+		},
+		PublicationYears: []int{1967, 1973},
+		NumPublications:  2,
+	}
+
+	doc2 := map[string]interface{}{
+		KeyField: "The Heart of a Dog",
+		"author": map[string]interface{}{
+			"First": "Mikhail",
+			"Last":  "Bulgakov",
+		},
+		"pub_years": []int{1968, 1987},
+	}
+
+	ctx := context.Background()
+	must(coll.Actions().Create(doc1).Put(doc2).Do(ctx))
+	got1 := &Book{Title: doc1.Title}
+	got2 := &Book{Title: doc2[KeyField].(string)}
+	must(coll.Actions().Get(got1).Get(got2).Do(ctx))
+
+	if got1.NumPublications != 0 {
+		t.Errorf("docstore:\"-\" tagged field isn't ignored")
+	}
+	checkFieldEqual(got1, doc1, "author")
+	checkFieldEqual(got2, doc2, "pub_years")
+
+	gots := mustCollect(ctx, t, coll.Query().Where("author.Last", "=", "Bulgakov").Get(ctx))
+	if len(gots) != 2 {
+		t.Errorf("got %v want all two results", gots)
+	}
+	must(coll.Actions().Delete(doc1).Delete(doc2).Do(ctx))
 }
 
 // Verify that BeforeDo is invoked, and its as function behaves as expected.
