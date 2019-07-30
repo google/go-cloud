@@ -29,6 +29,7 @@ import (
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/oc"
 )
 
 // A Document is a set of field-value pairs. One or more fields, called the key
@@ -40,20 +41,40 @@ import (
 // structs, the exported fields are the document fields.
 type Document = interface{}
 
-// A Collection is a set of documents.
-// TODO(jba): make the docstring look more like blob.Bucket.
+// A Collection represents a set of documents. It provides an easy and portable
+// way to interact with document stores.
+// To create a Collection, use constructors found in driver subpackages.
 type Collection struct {
 	driver driver.Collection
+	tracer *oc.Tracer
 	mu     sync.Mutex
 	closed bool
 }
+
+const pkgName = "gocloud.dev/docstore"
+
+var (
+	latencyMeasure = oc.LatencyMeasure(pkgName)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
+	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+)
 
 // NewCollection is intended for use by drivers.
 var NewCollection = newCollection
 
 // newCollection makes a Collection.
 func newCollection(d driver.Collection) *Collection {
-	c := &Collection{driver: d}
+	c := &Collection{
+		driver: d,
+		tracer: &oc.Tracer{
+			Package:        pkgName,
+			Provider:       oc.ProviderName(d),
+			LatencyMeasure: latencyMeasure,
+		},
+	}
 	_, file, lineno, ok := runtime.Caller(1)
 	runtime.SetFinalizer(c, func(c *Collection) {
 		c.mu.Lock()
@@ -247,7 +268,7 @@ type Mods map[FieldPath]interface{}
 // Increment returns a modification that results in a field being incremented. It
 // should only be used as a value in a Mods map, like so:
 //
-//    docstore.Mods{"count", docstore.Increment(1)}
+//    docstore.Mods{"count": docstore.Increment(1)}
 //
 // The amount must be an integer or floating-point value.
 func Increment(amount interface{}) interface{} {
@@ -308,10 +329,14 @@ func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *Acti
 // efficiently as possible. Sometimes this makes it impossible to attribute failures
 // to specific actions; in such cases, the returned ActionListError will have entries
 // whose Index field is negative.
-func (l *ActionList) Do(ctx context.Context) error {
+func (l *ActionList) Do(ctx context.Context) (err error) {
 	if err := l.coll.checkClosed(); err != nil {
 		return ActionListError{{-1, errClosed}}
 	}
+
+	ctx = l.coll.tracer.Start(ctx, "ActionList.Do")
+	defer func() { l.coll.tracer.End(ctx, err) }()
+
 	das, err := l.toDriverActions()
 	if err != nil {
 		return err

@@ -281,6 +281,24 @@
 //
 // OpenCensus Integration
 //
-// TODO(jba): implement and document
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
 //
+// This API collects OpenCensus traces and metrics for the following methods:
+//  - ActionList.Do
+//  - Query.Delete
+//  - Query.Get (for the first query only; drivers may make additional calls while iterating over results)
+//  - Query.Update
+// All trace and metric names begin with the package import path.
+// The traces add the method name.
+// For example, "gocloud.dev/docstore/ActionList.Do".
+// The metrics are "completed_calls", a count of completed method calls by driver,
+// method and status (error code); and "latency", a distribution of method latency
+// by driver and method.
+// For example, "gocloud.dev/docstore/latency".
+//
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package docstore // import "gocloud.dev/docstore"

@@ -158,7 +158,13 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	if err := q.initGet(fps); err != nil {
 		return &DocumentIterator{err: wrapError(dcoll, err)}
 	}
-	it, err := dcoll.RunGetQuery(ctx, q.dq)
+
+	var err error
+	ctx = q.coll.tracer.Start(ctx, "Query.Get")
+	defer func() { q.coll.tracer.End(ctx, err) }()
+
+	var it driver.DocumentIterator
+	it, err = dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, coll: q.coll, err: wrapError(dcoll, err)}
 }
 
@@ -192,19 +198,27 @@ func (q *Query) initGet(fps []FieldPath) error {
 
 // Delete deletes all the documents specified by the query.
 // It is an error if the query has a limit.
-func (q *Query) Delete(ctx context.Context) error {
+func (q *Query) Delete(ctx context.Context) (err error) {
 	if err := q.validateWrite("delete"); err != nil {
 		return err
 	}
+
+	ctx = q.coll.tracer.Start(ctx, "Query.Delete")
+	defer func() { q.coll.tracer.End(ctx, err) }()
+
 	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
 }
 
 // Update updates all the documents specified by the query.
 // It is an error if the query has a limit.
-func (q *Query) Update(ctx context.Context, mods Mods) error {
+func (q *Query) Update(ctx context.Context, mods Mods) (err error) {
 	if err := q.validateWrite("update"); err != nil {
 		return err
 	}
+
+	ctx = q.coll.tracer.Start(ctx, "Query.Update")
+	defer func() { q.coll.tracer.End(ctx, err) }()
+
 	dmods, err := toDriverMods(mods)
 	if err != nil {
 		return err
