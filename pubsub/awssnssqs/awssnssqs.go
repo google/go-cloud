@@ -55,10 +55,10 @@
 // As
 //
 // awssnssqs exposes the following types for As:
-//  - Topic: *sns.SNS (for OpenSNSTopic) or *sqs.SQS (for OpenSQSTopic)
+//  - Topic: *sns.SNS for OpenSNSTopic; *sqs.SQS for OpenSQSTopic
 //  - Subscription: *sqs.SQS
 //  - Message: *sqs.Message
-//  - Message.BeforeSend: *sns.PublishInput (for OpenSNSTopic) or *sqs.SendMessageInput (for OpenSQSTopic)
+//  - Message.BeforeSend: *sns.PublishInput for OpenSNSTopic; *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic
 //  - Error: awserror.Error
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
@@ -98,8 +98,13 @@ const (
 	noMessagesPollDuration = 250 * time.Millisecond
 )
 
-var sendBatcherOpts = &batcher.Options{
-	MaxBatchSize: 1,   // Both SNS and SQS SendBatch only support one message at a time
+var sendBatcherOptsSNS = &batcher.Options{
+	MaxBatchSize: 1,   // SNS SendBatch only supports one message at a time
+	MaxHandlers:  100, // max concurrency for sends
+}
+
+var sendBatcherOptsSQS = &batcher.Options{
+	MaxBatchSize: 10,  // SQS SendBatch supports 10 messages at a time
 	MaxHandlers:  100, // max concurrency for sends
 }
 
@@ -304,7 +309,7 @@ func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string,
 // OpenSNSTopic opens a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
 func OpenSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSNSTopic(ctx, sess, topicARN, opts), sendBatcherOpts)
+	return pubsub.NewTopic(openSNSTopic(ctx, sess, topicARN, opts), sendBatcherOptsSNS)
 }
 
 // openSNSTopic returns the driver for OpenSNSTopic. This function exists so the test
@@ -438,7 +443,7 @@ type sqsTopic struct {
 // OpenSQSTopic opens a topic that sends to the SQS topic with the given SQS
 // queue URL.
 func OpenSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSQSTopic(ctx, sess, qURL, opts), sendBatcherOpts)
+	return pubsub.NewTopic(openSQSTopic(ctx, sess, qURL, opts), sendBatcherOptsSQS)
 }
 
 // openSQSTopic returns the driver for OpenSQSTopic. This function exists so the test
@@ -452,45 +457,70 @@ func openSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, 
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	if len(dms) != 1 {
-		panic("sqsTopic.SendBatch should only get one message at a time")
+	req := &sqs.SendMessageBatchInput{
+		QueueUrl: aws.String(t.qURL),
 	}
-	dm := dms[0]
-	attrs := map[string]*sqs.MessageAttributeValue{}
-	for k, v := range encodeMetadata(dm.Metadata) {
-		attrs[k] = &sqs.MessageAttributeValue{
-			DataType:    stringDataType,
-			StringValue: aws.String(v),
-		}
-	}
-	body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
-	if didEncode {
-		attrs[base64EncodedKey] = &sqs.MessageAttributeValue{
-			DataType:    stringDataType,
-			StringValue: aws.String("true"),
-		}
-	}
-	if len(attrs) == 0 {
-		attrs = nil
-	}
-	req := &sqs.SendMessageInput{
-		QueueUrl:          aws.String(t.qURL),
-		MessageAttributes: attrs,
-		MessageBody:       aws.String(body),
-	}
-	if dm.BeforeSend != nil {
-		asFunc := func(i interface{}) bool {
-			if p, ok := i.(**sqs.SendMessageInput); ok {
-				*p = req
-				return true
+	for _, dm := range dms {
+		attrs := map[string]*sqs.MessageAttributeValue{}
+		for k, v := range encodeMetadata(dm.Metadata) {
+			attrs[k] = &sqs.MessageAttributeValue{
+				DataType:    stringDataType,
+				StringValue: aws.String(v),
 			}
-			return false
 		}
-		if err := dm.BeforeSend(asFunc); err != nil {
-			return err
+		body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
+		if didEncode {
+			attrs[base64EncodedKey] = &sqs.MessageAttributeValue{
+				DataType:    stringDataType,
+				StringValue: aws.String("true"),
+			}
+		}
+		if len(attrs) == 0 {
+			attrs = nil
+		}
+		entry := &sqs.SendMessageBatchRequestEntry{
+			Id:                aws.String(strconv.Itoa(len(req.Entries))),
+			MessageAttributes: attrs,
+			MessageBody:       aws.String(body),
+		}
+		req.Entries = append(req.Entries, entry)
+		if dm.BeforeSend != nil {
+			// A previous revision used the non-batch API SendMessage, which takes
+			// a *sqs.SendMessageInput. For backwards compatibility for As, continue
+			// to support that type. If it is requested, create a SendMessageInput
+			// with the fields from SendMessageBatchRequestEntry that were set, and
+			// then copy all of the matching fields back after calling dm.BeforeSend.
+			var smi *sqs.SendMessageInput
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**sqs.SendMessageInput); ok {
+					smi = &sqs.SendMessageInput{
+						// Id does not exist on SendMessageInput.
+						MessageAttributes: entry.MessageAttributes,
+						MessageBody:       entry.MessageBody,
+					}
+					*p = smi
+					return true
+				}
+				if p, ok := i.(**sqs.SendMessageBatchRequestEntry); ok {
+					*p = entry
+					return true
+				}
+				return false
+			}
+			if err := dm.BeforeSend(asFunc); err != nil {
+				return err
+			}
+			if smi != nil {
+				// Copy all of the fields that may have been modified back to the entry.
+				entry.DelaySeconds = smi.DelaySeconds
+				entry.MessageAttributes = smi.MessageAttributes
+				entry.MessageBody = smi.MessageBody
+				entry.MessageDeduplicationId = smi.MessageDeduplicationId
+				entry.MessageGroupId = smi.MessageGroupId
+			}
 		}
 	}
-	_, err := t.client.SendMessageWithContext(ctx, req)
+	_, err := t.client.SendMessageBatchWithContext(ctx, req)
 	return err
 }
 
