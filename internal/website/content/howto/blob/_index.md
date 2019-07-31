@@ -6,36 +6,39 @@ toc: true
 ---
 
 Blobs are a common abstraction for storing unstructured data on Cloud storage
-services and accessing them via HTTP. These guides show how to work with
+services and accessing them via HTTP. This guide shows how to work with
 blobs in the Go CDK.
 
 <!--more-->
 
-The Go CDK supports operations like reading and writing blobs (using standard
-[io package][] interfaces), deleting blobs, and listing blobs in a bucket.
+The [`blob` package][] supports operations like reading and writing blobs (using standard
+[`io` package][] interfaces), deleting blobs, and listing blobs in a bucket.
 
 Subpackages contain driver implementations of blob for various services,
 including Cloud and on-prem solutions. You can develop your application
 locally using [`fileblob`][], then deploy it to multiple Cloud providers with
 minimal reconfiguration of your initialization code.
 
-[io package]: https://golang.org/pkg/io/
+[`blob` package]: https://godoc.org/gocloud.dev/blob
+[`io` package]: https://golang.org/pkg/io/
 [`fileblob`]: https://godoc.org/gocloud.dev/blob/fileblob
 
 ## Opening a Bucket {#opening}
 
-The first step in interacting with unstructured storage is opening a connection
-to your storage service to instantiate a portable [`*blob.Bucket`][].
+The first step in interacting with unstructured storage is
+to instantiate a portable [`*blob.Bucket`][] for your storage service.
 
-The easiest way to open a blob is using [`blob.OpenBucket`][] and a URL
-pointing to the blob, making sure you ["blank import"][] the driver package to
-link it in. Do not use `NewBucket` function, intended for use by the driver
-implementations only. See [Concepts: URLs][] for more details.
+The easiest way to do so is to use [`blob.OpenBucket`][] and a service-specific URL
+pointing to the bucket, making sure you ["blank import"][] the driver package to
+link it in.
 
 ```go
-import _ "gocloud.dev/blob/<driver>"
-
-var bucket *blob.Bucket;
+import (
+	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/<driver>"
+)
+...
+var bucket *blob.Bucket
 bucket, err := blob.OpenBucket(context.Background(), "<driver-url>")
 if err != nil {
     return fmt.Errorf("could not open bucket: %v", err)
@@ -44,23 +47,26 @@ defer bucket.Close()
 ...
 ``` 
 
+See [Concepts: URLs][] for general background and the [guide below][] for URL usage
+for each supported service.
+
 Alternatively, if you need
 fine-grained control over the connection settings, you can call the constructor
 function in the driver package directly.
 
 ```go
 import "gocloud.dev/blob/<driver>"
-
+...
 bucket, err := <driver>.OpenBucket(...)
 ...
 ```
 
-You may find the [wire package][] useful for managing your initialization code
+You may find the [`wire` package][] useful for managing your initialization code
 when switching between different backing services.
 
-See the [guide below][] for usage of both connection forms for each supported service.
+See the [guide below][] for constructor usage for each supported service.
 
-[wire package]: http://github.com/google/wire
+[`wire` package]: http://github.com/google/wire
 [`*blob.Bucket`]: https://godoc.org/gocloud.dev/blob#Bucket
 [`blob.OpenBucket`]: https://godoc.org/gocloud.dev/blob#OpenBucket
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
