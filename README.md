@@ -128,3 +128,12 @@ This project is covered by the Go [Code of Conduct][].
 
 [Code of Conduct]: ./CODE_OF_CONDUCT.md
 [go-cloud mailing list]: https://groups.google.com/forum/#!forum/go-cloud
+
+## Legal disclaimer
+
+The Go CDK is open-source and released under an [Apache 2.0
+License](https://github.com/google/go-cloud/blob/master/LICENSE). Copyright ©
+2018–2019 The Go Cloud Development Kit Authors.
+
+If you are looking for the website of GoCloud Systems, which is unrelated to the
+Go CDK, visit https://gocloud.systems.
