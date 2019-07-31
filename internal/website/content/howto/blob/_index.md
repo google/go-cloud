@@ -17,7 +17,7 @@ The [`blob` package][] supports operations like reading and writing blobs (using
 Subpackages contain driver implementations of blob for various services,
 including Cloud and on-prem solutions. You can develop your application
 locally using [`fileblob`][], then deploy it to multiple Cloud providers with
-minimal reconfiguration of your initialization code.
+minimal initialization reconfiguration.
 
 [`blob` package]: https://godoc.org/gocloud.dev/blob
 [`io` package]: https://golang.org/pkg/io/
