@@ -5,29 +5,64 @@ showInSidenav: true
 toc: true
 ---
 
-Blobs are a common abstraction for storing unstructured data on cloud storage
-providers and accessing them via HTTP. These guides show how to work with
+Blobs are a common abstraction for storing unstructured data on Cloud storage
+services and accessing them via HTTP. These guides show how to work with
 blobs in the Go CDK.
 
 <!--more-->
 
+The Go CDK supports operations like reading and writing blobs (using standard
+[io package][] interfaces), deleting blobs, and listing blobs in a bucket.
+
+Subpackages contain driver implementations of blob for various services,
+including Cloud and on-prem solutions. You can develop your application
+locally using [`fileblob`][], then deploy it to multiple Cloud providers with
+minimal reconfiguration of your initialization code.
+
+[io package]: https://golang.org/pkg/io/
+[`fileblob`]: https://godoc.org/gocloud.dev/blob/fileblob
+
 ## Opening a Bucket {#opening}
 
-The first step in interacting with unstructured storage is connecting to your
-storage provider. Every storage provider is a little different, but the Go CDK
-lets you interact with all of them using the [`*blob.Bucket` type][].
+The first step in interacting with unstructured storage is opening a connection
+to your storage service to instantiate a portable [`*blob.Bucket`][].
 
 The easiest way to open a blob is using [`blob.OpenBucket`][] and a URL
 pointing to the blob, making sure you ["blank import"][] the driver package to
-link it in. See [Concepts: URLs][] for more details. If you need
+link it in. Do not use `NewBucket` function, intended for use by the driver
+implementations only. See [Concepts: URLs][] for more details.
+
+```go
+import _ "gocloud.dev/blob/<driver>"
+
+bucket, err := blob.OpenBucket(context.Background(), "<driver-url>")
+if err != nil {
+    return fmt.Errorf("could not open bucket: %v", err)
+}
+defer bucket.Close()
+// bucket is a *blob.Bucket
+...
+``` 
+
+Alternatively, if you need
 fine-grained control over the connection settings, you can call the constructor
-function in the driver package directly (like `s3blob.OpenBucket`).
+function in the driver package directly.
 
-See the [guide below][] for usage of both forms for each supported provider.
+```go
+import "gocloud.dev/blob/<driver>"
 
-[`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
-[`blob.OpenBucket`]:
-https://godoc.org/gocloud.dev/blob#OpenBucket
+bucket, err := <driver>.OpenBucket(...)
+...
+```
+
+You may find the [wire package][] useful for managing your initialization code
+when switching between different backing services.
+
+See the [guide below][] for usage of both connection forms for each supported service.
+
+[wire package]: http://github.com/google/wire
+[`*blob.Bucket`]: https://godoc.org/gocloud.dev/blob#Bucket
+[`blob.OpenBucket`]: https://godoc.org/gocloud.dev/blob#OpenBucket
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [guide below]: {{< ref "#services" >}}
@@ -47,7 +82,11 @@ URL:
 ## Using a Bucket {#using}
 
 Once you have opened a bucket for the storage provider you want, you can
-store and access data from it using the standard Go I/O patterns.
+store and access data from it using the standard Go I/O patterns described
+below. Other operations like listing and reading metadata are documented in the
+[`blob` package documentation][].
+
+[`blob` package documentation]: https://godoc.org/gocloud.dev/blob
 
 ### Writing Data to a Bucket {#writing}
 
@@ -93,14 +132,6 @@ start reading from an arbitrary offset in the blob, use `NewRangeReader`.
 You can delete blobs using the `Bucket.Delete` method.
 
 {{< goexample src="gocloud.dev/blob.ExampleBucket_Delete" imports="0" >}}
-
-### Other Operations {#other}
-
-These are the most common operations you will need to use with a bucket.
-Other operations like listing and reading metadata are documented in the
-[`blob` package documentation][].
-
-[`blob` package documentation]: https://godoc.org/gocloud.dev/blob
 
 ## Supported Storage Services {#services}
 

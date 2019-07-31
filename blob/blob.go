@@ -13,34 +13,10 @@
 // limitations under the License.
 
 // Package blob provides an easy and portable way to interact with blobs
-// within a storage location, hereafter called a "bucket". See
-// https://gocloud.dev/howto/blob/ for how-to guides.
+// within a storage location. Subpackages contain driver implementations of
+// blob for supported services.
 //
-// It supports operations like reading and writing blobs (using standard
-// interfaces from the io package), deleting blobs, and listing blobs in a
-// bucket.
-//
-// Subpackages contain distinct implementations of blob for various services,
-// including Cloud and on-prem solutions. For example, "fileblob" supports
-// blobs backed by a filesystem. Your application should import one of these
-// driver subpackages and use its exported function(s) to create a
-// *Bucket; do not use the NewBucket function in this package. For example:
-//
-//  bucket, err := fileblob.OpenBucket("path/to/dir", nil)
-//  if err != nil {
-//      return fmt.Errorf("could not open bucket: %v", err)
-//  }
-//  buf, err := bucket.ReadAll(context.Background(), "myfile.txt")
-//  ...
-//
-// Then, write your application code using the *Bucket type. You can easily
-// reconfigure your initialization code to choose a different driver.
-// You can develop your application locally using fileblob, or deploy it to
-// multiple Cloud providers. You may find http://github.com/google/wire useful
-// for managing your initialization code.
-//
-// Alternatively, you can construct a *Bucket via a URL and OpenBucket.
-// See https://gocloud.dev/concepts/urls/ for more information.
+// See https://gocloud.dev/howto/blob/ for detailed how-to guides.
 //
 //
 // Errors
