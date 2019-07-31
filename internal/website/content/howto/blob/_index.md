@@ -35,12 +35,12 @@ implementations only. See [Concepts: URLs][] for more details.
 ```go
 import _ "gocloud.dev/blob/<driver>"
 
+var bucket *blob.Bucket;
 bucket, err := blob.OpenBucket(context.Background(), "<driver-url>")
 if err != nil {
     return fmt.Errorf("could not open bucket: %v", err)
 }
 defer bucket.Close()
-// bucket is a *blob.Bucket
 ...
 ``` 
 
