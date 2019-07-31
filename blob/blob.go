@@ -16,7 +16,7 @@
 // within a storage location. Subpackages contain driver implementations of
 // blob for supported services.
 //
-// See https://gocloud.dev/howto/blob/ for detailed how-to guides.
+// See https://gocloud.dev/howto/blob/ for a detailed how-to guide.
 //
 //
 // Errors
@@ -453,7 +453,7 @@ var (
 		})
 )
 
-// NewBucket is intended for use by drivers.
+// NewBucket is intended for use by drivers only. Do not use in application code.
 var NewBucket = newBucket
 
 // newBucket creates a new *Bucket based on a specific driver implementation.
