@@ -1783,13 +1783,9 @@ func testExampleInDoc(t *testing.T, coll *ds.Collection) {
 	}
 	checkFieldEqual := func(got, want interface{}, field string) {
 		t.Helper()
-		dg, err := driver.NewDocument(got)
+		fvg, err := MustDocument(got).GetField(field)
 		must(err)
-		dw, err := driver.NewDocument(want)
-		must(err)
-		fvg, err := dg.GetField(field)
-		must(err)
-		fvw, err := dw.GetField(field)
+		fvw, err := MustDocument(want).GetField(field)
 		must(err)
 		if !cmp.Equal(fvg, fvw) {
 			t.Errorf("%s: got %v want %v", field, fvg, fvw)
