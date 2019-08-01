@@ -123,9 +123,9 @@ const gatherLoadMode packages.LoadMode = packages.NeedName |
 // directives for formatting.
 const pragmaPrefix = "// PRAGMA(gocloud.dev): "
 
-// signifierComment is the comment used to signify whether the example should be
+// inclusionComment is the comment used to signify whether the example should be
 // included in the output.
-const signifierComment = pragmaPrefix + "This example is used on gocloud.dev; please ignore PRAGMA comments."
+const inclusionComment = pragmaPrefix + "This example is used on gocloud.dev; please ignore PRAGMA comments."
 
 type example struct {
 	Imports string `json:"imports"`
@@ -155,12 +155,12 @@ func gather(pkgs []*packages.Package) (map[string]example, error) {
 					return nil, err // will only occur for bad invocations of Fprint
 				}
 				original := sb.String()
-				if !strings.Contains(original, signifierComment) {
-					// Does not contain the signifier comment. Skip it, but first verify
+				if !strings.Contains(original, inclusionComment) {
+					// Does not contain the inclusion comment. Skip it, but first verify
 					// that it doesn't contain any PRAGMA comments; only examples with
-					// the signifier should include pragmas.
+					// the inclusion comment should include pragmas.
 					if strings.Contains(original, pragmaPrefix) {
-						return nil, fmt.Errorf("%s in package %s has PRAGMA(s) for gatherexamples, but is not marked for inclusion with \"Package this example for gocloud.dev.\"", fn.Name.Name, pkg.PkgPath)
+						return nil, fmt.Errorf("%s in package %s has PRAGMA(s) for gatherexamples, but is not marked for inclusion with %q", fn.Name.Name, pkg.PkgPath, inclusionComment)
 					}
 					continue
 				}
@@ -254,8 +254,8 @@ rewrite:
 			if err == nil {
 				blankImports = append(blankImports, path)
 			}
-		case strings.Contains(lineContent, signifierComment):
-			// Signifier comment. Skip it.
+		case strings.Contains(lineContent, inclusionComment):
+			// inclusion comment. Skip it.
 		default:
 			// Ordinary line, write as-is.
 			sb.WriteString(line)
