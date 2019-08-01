@@ -17,11 +17,9 @@
 // documents. Like other NoSQL databases, document stores are schemaless.
 // See https://en.wikipedia.org/wiki/Document-oriented_database for more information.
 //
-// Subpackages contain distinct implementations ("drivers") of docstore for public
-// cloud services like Google Cloud Firestore and Amazon DynamoDB as well as any MongoDB
-// or MongoDB-compatible service hosted by a cloud provider or on-premise. For example, you can
-// use Azure Cosmos DB and Amazon DocumentDB via the MongoDB driver. There is also
-// memdocstore, an in-process, in-memory implementation suitable for testing and
+// Subpackages contain distinct implementations ("drivers") of docstore for
+// various backing services, including Cloud and on-premise solutions. For example,
+// memdocstore supports an in-process, in-memory implementation suitable for testing and
 // development.
 //
 // In docstore, documents are grouped into collections, and each document has a key
