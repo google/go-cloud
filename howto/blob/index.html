@@ -47,7 +47,6 @@ if (!doNotTrack) {
 <li><a href="#writing">Writing Data to a Bucket</a></li>
 <li><a href="#reading">Reading Data from a Bucket</a></li>
 <li><a href="#deleting">Deleting a Bucket</a></li>
-<li><a href="#other">Other Operations</a></li>
 </ul></li>
 <li><a href="#services">Supported Storage Services</a>
 <ul>
@@ -74,23 +73,52 @@ if (!doNotTrack) {
 </nav>
 </nav>
 
-<p>Blobs are a common abstraction for storing unstructured data on cloud storage
-providers and accessing them via HTTP. These guides show how to work with
+<p>Blobs are a common abstraction for storing unstructured data on Cloud storage
+services and accessing them via HTTP. This guide shows how to work with
 blobs in the Go CDK.</p>
+
+<p>The <a href="https://godoc.org/gocloud.dev/blob"><code>blob</code> package</a> supports operations like reading and writing blobs (using standard
+<a href="https://golang.org/pkg/io/"><code>io</code> package</a> interfaces), deleting blobs, and listing blobs in a bucket.</p>
+
+<p>Subpackages contain driver implementations of blob for various services,
+including Cloud and on-prem solutions. You can develop your application
+locally using <a href="https://godoc.org/gocloud.dev/blob/fileblob"><code>fileblob</code></a>, then deploy it to multiple Cloud providers with
+minimal initialization reconfiguration.</p>
 
 <h2 id="opening"> Opening a Bucket<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
 
-<p>The first step in interacting with unstructured storage is connecting to your
-storage provider. Every storage provider is a little different, but the Go CDK
-lets you interact with all of them using the <a href="https://godoc.org/gocloud.dev/blob#Bucket"><code>*blob.Bucket</code> type</a>.</p>
+<p>The first step in interacting with unstructured storage is
+to instantiate a portable <a href="https://godoc.org/gocloud.dev/blob#Bucket"><code>*blob.Bucket</code></a> for your storage service.</p>
 
-<p>The easiest way to open a blob is using <a href="https://godoc.org/gocloud.dev/blob#OpenBucket"><code>blob.OpenBucket</code></a> and a URL
-pointing to the blob, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to
-link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need
+<p>The easiest way to do so is to use <a href="https://godoc.org/gocloud.dev/blob#OpenBucket"><code>blob.OpenBucket</code></a> and a service-specific URL
+pointing to the bucket, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to
+link it in.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/&lt;driver&gt;&#34;</span>
+<span class="p">)</span>
+<span class="o">...</span>
+<span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="s">&#34;&lt;driver-url&gt;&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;could not open bucket: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// bucket is a *blob.Bucket; see usage below
+</span><span class="c1"></span><span class="o">...</span></code></pre></div>
+<p>See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for general background and the <a href="#services">guide below</a> for URL usage
+for each supported service.</p>
+
+<p>Alternatively, if you need
 fine-grained control over the connection settings, you can call the constructor
-function in the driver package directly (like <code>s3blob.OpenBucket</code>).</p>
+function in the driver package directly.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/blob/&lt;driver&gt;&#34;</span>
+<span class="o">...</span>
+<span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="p">&lt;</span><span class="nx">driver</span><span class="p">&gt;.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="o">...</span></code></pre></div>
+<p>You may find the <a href="http://github.com/google/wire"><code>wire</code> package</a> useful for managing your initialization code
+when switching between different backing services.</p>
 
-<p>See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
+<p>See the <a href="#services">guide below</a> for constructor usage for each supported service.</p>
 
 <h3 id="prefix"> Prefixed Buckets<a class="anchor" href="#prefix" aria-label="Link to Section">🔗</a></h3>
 
@@ -136,7 +164,9 @@ URL:</p>
 <h2 id="using"> Using a Bucket<a class="anchor" href="#using" aria-label="Link to Section">🔗</a></h2>
 
 <p>Once you have opened a bucket for the storage provider you want, you can
-store and access data from it using the standard Go I/O patterns.</p>
+store and access data from it using the standard Go I/O patterns described
+below. Other operations like listing and reading metadata are documented in the
+<a href="https://godoc.org/gocloud.dev/blob"><code>blob</code> package documentation</a>.</p>
 
 <h3 id="writing"> Writing Data to a Bucket<a class="anchor" href="#writing" aria-label="Link to Section">🔗</a></h3>
 
@@ -237,12 +267,6 @@ start reading from an arbitrary offset in the blob, use <code>NewRangeReader</co
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 </code></pre></div>
-
-<h3 id="other"> Other Operations<a class="anchor" href="#other" aria-label="Link to Section">🔗</a></h3>
-
-<p>These are the most common operations you will need to use with a bucket.
-Other operations like listing and reading metadata are documented in the
-<a href="https://godoc.org/gocloud.dev/blob"><code>blob</code> package documentation</a>.</p>
 
 <h2 id="services"> Supported Storage Services<a class="anchor" href="#services" aria-label="Link to Section">🔗</a></h2>
 
