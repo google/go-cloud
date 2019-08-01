@@ -180,7 +180,7 @@ other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
 
 ### S3 {#s3}
 
-S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
+S3 URLs in the Go CDK closely resemble the URLs you would see in the [AWS CLI][].
 You should specify the `region` query parameter to ensure your application
 connects to the correct region.
 
@@ -189,6 +189,7 @@ connects to the correct region.
 it will use those credentials. See [AWS Session][] to learn about authentication
 alternatives, including using environment variables.
 
+[AWS CLI]: https://aws.amazon.com/cli/
 [AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 {{< goexample "gocloud.dev/blob/s3blob.Example_openBucketFromURL" >}}
