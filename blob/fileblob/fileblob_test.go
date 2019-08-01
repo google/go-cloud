@@ -74,19 +74,50 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	allowedMethod := r.URL.Query().Get("method")
+	if allowedMethod == "" {
+		allowedMethod = http.MethodGet
+	}
+	if allowedMethod != r.Method {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	bucket, err := OpenBucket(h.dir, &Options{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	defer bucket.Close()
-	reader, err := bucket.NewReader(r.Context(), objKey, nil)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+
+	switch r.Method {
+	case http.MethodGet:
+		reader, err := bucket.NewReader(r.Context(), objKey, nil)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		defer reader.Close()
+		io.Copy(w, reader)
+	case http.MethodPut:
+		writer, err := bucket.NewWriter(r.Context(), objKey, nil)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		io.Copy(writer, r.Body)
+		if err := writer.Close(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	case http.MethodDelete:
+		if err := bucket.Delete(r.Context(), objKey); err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	default:
+		w.WriteHeader(http.StatusForbidden)
 	}
-	defer reader.Close()
-	io.Copy(w, reader)
 }
 
 func (h *harness) HTTPClient() *http.Client {

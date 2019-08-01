@@ -53,7 +53,7 @@ const (
 	// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 	//    name from the Terraform output instead (saving a copy of it for replay).
 	bucketName       = "go-cloud-blob-test-bucket"
-	serviceAccountID = "storage-viewer@go-cloud-test-216917.iam.gserviceaccount.com"
+	serviceAccountID = "storage-updater@go-cloud-test-216917.iam.gserviceaccount.com"
 )
 
 var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containing private key (required for --record); defaults to ~/Downloads/gcs-private-key.pem")

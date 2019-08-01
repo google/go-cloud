@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7Ua6rpHMl8Uv8Q",
+  "Initial": "AQAAAA7U2leaNQMUrf5c",
   "Version": "0.2",
   "Converter": {
     "ClearHeaders": [
@@ -40,10 +40,10 @@
   },
   "Entries": [
     {
-      "ID": "3a7d7d6d8c436359",
+      "ID": "692272102c0e2654",
       "Request": {
         "Method": "PUT",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
         "Header": {
           "Accept-Encoding": [
             "gzip"
@@ -51,20 +51,11 @@
           "Content-Length": [
             "11"
           ],
-          "Content-Md5": [
-            "XrY7u+Ae7tCTyyK7j1rNww=="
-          ],
           "User-Agent": [
-            "CLEARED"
-          ],
-          "X-Amz-Content-Sha256": [
-            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
-          ],
-          "X-Amz-Date": [
             "CLEARED"
           ]
         },
-        "MediaType": "text/plain",
+        "MediaType": "",
         "BodyParts": [
           "aGVsbG8gd29ybGQ="
         ]
@@ -79,7 +70,7 @@
             "0"
           ],
           "Date": [
-            "Mon, 13 May 2019 18:14:02 GMT"
+            "Mon, 05 Aug 2019 17:00:11 GMT"
           ],
           "Etag": [
             "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
@@ -88,17 +79,17 @@
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "2Zkb94Zg1yA15Clp1/a2uxT34JpFq0iUTtMGvAAMZSzVivizBHg3iYaQgGD1zRaiz1OCF69DU/s="
+            "c8627Qnyk39shpXGqC5vWngeHenL/MHVLaEGxK68f3kck51cQyxQaU5BPALTShbHrAeWBo2PeP0="
           ],
           "X-Amz-Request-Id": [
-            "2E369E5DCA5F37FC"
+            "43D9FA7FC8F2FAFE"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "bfc038af3d2eae34",
+      "ID": "025e1ef48a97ff93",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
@@ -128,104 +119,40 @@
             "11"
           ],
           "Content-Type": [
-            "text/plain; charset=utf-8"
+            "binary/octet-stream"
           ],
           "Date": [
-            "Mon, 13 May 2019 18:14:02 GMT"
+            "Mon, 05 Aug 2019 17:00:11 GMT"
           ],
           "Etag": [
             "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
           ],
           "Last-Modified": [
-            "Mon, 13 May 2019 18:14:02 GMT"
+            "Mon, 05 Aug 2019 17:00:11 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "Gkx6VxoR0qpkNBj5cKpjRMY5KfFcWLi6Z0LU11u6eMU4Juqu41vnhbPmR1HIZ8IJ/85DjsIpouI="
+            "zP3YO9kAtnuCGne+sBt4617FAtHTpCkJ2pOkJ9BsX4K1ExDiKjtnxaLcIJyVCRRj5kHN7zehV/Y="
           ],
           "X-Amz-Request-Id": [
-            "9D2D634D5DF4BAE0"
+            "7AD471EC5E12F6B6"
           ]
         },
         "Body": "aGVsbG8gd29ybGQ="
       }
     },
     {
-      "ID": "bc398a4335fbe64c",
-      "Request": {
-        "Method": "HEAD",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing",
-        "Header": {
-          "User-Agent": [
-            "CLEARED"
-          ],
-          "X-Amz-Content-Sha256": [
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-          ],
-          "X-Amz-Date": [
-            "CLEARED"
-          ]
-        },
-        "MediaType": "",
-        "BodyParts": [
-          ""
-        ]
-      },
-      "Response": {
-        "StatusCode": 200,
-        "Proto": "HTTP/1.1",
-        "ProtoMajor": 1,
-        "ProtoMinor": 1,
-        "Header": {
-          "Accept-Ranges": [
-            "bytes"
-          ],
-          "Content-Length": [
-            "11"
-          ],
-          "Content-Type": [
-            "text/plain; charset=utf-8"
-          ],
-          "Date": [
-            "Mon, 13 May 2019 18:14:02 GMT"
-          ],
-          "Etag": [
-            "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
-          ],
-          "Last-Modified": [
-            "Mon, 13 May 2019 18:14:02 GMT"
-          ],
-          "Server": [
-            "AmazonS3"
-          ],
-          "X-Amz-Id-2": [
-            "CoW+JgEa49vYK6DI4iV9fDMB6bkjDojwoC7rYPuWzs13FyLuwTWcn/BBwHaggOkjgot/j3VgQ74="
-          ],
-          "X-Amz-Request-Id": [
-            "7024D6E4D0C78862"
-          ]
-        },
-        "Body": ""
-      }
-    },
-    {
-      "ID": "843203c2926cec0a",
+      "ID": "c145600f7943550c",
       "Request": {
         "Method": "DELETE",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
         "Header": {
           "Accept-Encoding": [
             "gzip"
           ],
           "User-Agent": [
-            "CLEARED"
-          ],
-          "X-Amz-Content-Sha256": [
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-          ],
-          "X-Amz-Date": [
             "CLEARED"
           ]
         },
@@ -241,19 +168,62 @@
         "ProtoMinor": 1,
         "Header": {
           "Date": [
-            "Mon, 13 May 2019 18:14:03 GMT"
+            "Mon, 05 Aug 2019 17:00:11 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "+/ckWFRTcyTDhW2uvinOozrS+T1MbvAI63TcCtLDGlxS/6ZfQQZgOl9YfyvaVEK2qKt8Hf4lB/c="
+            "4W3k59h2uVDEJYoT8LGSw1Wrq11Jm85km9rTQKLzY03eRxJDs3q8fFzhWxhFAN0gk0hfdmnk7aQ="
           ],
           "X-Amz-Request-Id": [
-            "7C06E0109DBB9B00"
+            "CE60764DAD62DB84"
           ]
         },
         "Body": ""
+      }
+    },
+    {
+      "ID": "e9bfc19edb375017",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 404,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 17:00:10 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "5flhknn3pfmYntj2vSUdZ/epuviI5FOxw4NS+vXIbURa9BztPyMPlOqNm9niKbQFrJoRLze7mSY="
+          ],
+          "X-Amz-Request-Id": [
+            "A6743DF67052FCAA"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1zaWduaW5nPC9LZXk+PFJlcXVlc3RJZD5BNjc0M0RGNjcwNTJGQ0FBPC9SZXF1ZXN0SWQ+PEhvc3RJZD41Zmxoa25uM3BmbVludGoydlNVZFovZXB1dmlJNUZPeHc0TlMrdlhJYlVSYTlCenRQeU1QbE9xTm05bmlLYlFGckpvUkx6ZTdtU1k9PC9Ib3N0SWQ+PC9FcnJvcj4="
       }
     }
   ]

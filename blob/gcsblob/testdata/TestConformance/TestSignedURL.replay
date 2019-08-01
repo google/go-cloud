@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7Ua6m5AdXtyv8Q",
+  "Initial": "AQAAAA7U2le1DH9EMf5c",
   "Version": "0.2",
   "Converter": {
     "ClearHeaders": [
@@ -34,21 +34,23 @@
   },
   "Entries": [
     {
-      "ID": "64b6363d50544410",
+      "ID": "a2f8d2d30e8477fc",
       "Request": {
-        "Method": "POST",
-        "URL": "https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json\u0026prettyPrint=false\u0026projection=full\u0026uploadType=multipart",
+        "Method": "PUT",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
         "Header": {
           "Accept-Encoding": [
             "gzip"
           ],
+          "Content-Length": [
+            "11"
+          ],
           "User-Agent": [
-            "google-api-go-client/0.5 go-cloud/blob/0.1.0"
+            "Go-http-client/1.1"
           ]
         },
-        "MediaType": "multipart/related",
+        "MediaType": "",
         "BodyParts": [
-          "eyJidWNrZXQiOiJnby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0IiwiY29udGVudFR5cGUiOiJ0ZXh0L3BsYWluOyBjaGFyc2V0PXV0Zi04IiwibWQ1SGFzaCI6IlhyWTd1K0FlN3RDVHl5SzdqMXJOd3c9PSIsIm5hbWUiOiJibG9iLWZvci1zaWduaW5nIn0K",
           "aGVsbG8gd29ybGQ="
         ]
       },
@@ -58,46 +60,64 @@
         "ProtoMajor": 1,
         "ProtoMinor": 1,
         "Header": {
-          "Cache-Control": [
-            "no-cache, no-store, max-age=0, must-revalidate"
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
           ],
           "Content-Length": [
-            "2758"
+            "0"
           ],
           "Content-Type": [
-            "application/json; charset=UTF-8"
+            "text/html; charset=UTF-8"
           ],
           "Date": [
-            "Mon, 13 May 2019 18:08:57 GMT"
+            "Mon, 05 Aug 2019 17:00:38 GMT"
           ],
           "Etag": [
-            "CMCC6/qMmeICEAE="
-          ],
-          "Expires": [
-            "CLEARED"
-          ],
-          "Pragma": [
-            "no-cache"
+            "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
           ],
           "Server": [
             "UploadServer"
           ],
           "Vary": [
-            "Origin",
-            "X-Origin"
+            "Origin"
+          ],
+          "X-Goog-Generation": [
+            "1565024438241143"
+          ],
+          "X-Goog-Hash": [
+            "crc32c=yZRlqg==",
+            "md5=XrY7u+Ae7tCTyyK7j1rNww=="
+          ],
+          "X-Goog-Metageneration": [
+            "1"
+          ],
+          "X-Goog-Stored-Content-Encoding": [
+            "identity"
+          ],
+          "X-Goog-Stored-Content-Length": [
+            "11"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "success"
+          ],
+          "X-Guploader-Upload-Result": [
+            "success"
           ],
           "X-Guploader-Uploadid": [
-            "AEnB2Ur7Xty46B_CBCq9i5vYe_hat4zzvqiTqICPIlvfJCpPJ9Mnpcxvb8u3sWVtvuQtBxjKmzFH20TfM-wTm3CtBxKngKX-92Wqlf7L0BLQwJXuJv99R0Q"
+            "AEnB2Uone_zlF2qH2QsX5OCwokw6NVAdOa0l0-awW-LORvjcM_9Mn3AcAsLrQWxI6je5S5w50lgC1QXb1ArFgVuES60LD3M8Rg"
           ]
         },
-        "Body": "eyJraW5kIjoic3RvcmFnZSNvYmplY3QiLCJpZCI6ImdvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQvYmxvYi1mb3Itc2lnbmluZy8xNTU3NzcwOTM3MjIxNDQwIiwic2VsZkxpbmsiOiJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9zdG9yYWdlL3YxL2IvZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9vL2Jsb2ItZm9yLXNpZ25pbmciLCJuYW1lIjoiYmxvYi1mb3Itc2lnbmluZyIsImJ1Y2tldCI6ImdvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQiLCJnZW5lcmF0aW9uIjoiMTU1Nzc3MDkzNzIyMTQ0MCIsIm1ldGFnZW5lcmF0aW9uIjoiMSIsImNvbnRlbnRUeXBlIjoidGV4dC9wbGFpbjsgY2hhcnNldD11dGYtOCIsInRpbWVDcmVhdGVkIjoiMjAxOS0wNS0xM1QxODowODo1Ny4yMjBaIiwidXBkYXRlZCI6IjIwMTktMDUtMTNUMTg6MDg6NTcuMjIwWiIsInN0b3JhZ2VDbGFzcyI6IlJFR0lPTkFMIiwidGltZVN0b3JhZ2VDbGFzc1VwZGF0ZWQiOiIyMDE5LTA1LTEzVDE4OjA4OjU3LjIyMFoiLCJzaXplIjoiMTEiLCJtZDVIYXNoIjoiWHJZN3UrQWU3dENUeXlLN2oxck53dz09IiwibWVkaWFMaW5rIjoiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vZG93bmxvYWQvc3RvcmFnZS92MS9iL2dvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQvby9ibG9iLWZvci1zaWduaW5nP2dlbmVyYXRpb249MTU1Nzc3MDkzNzIyMTQ0MCZhbHQ9bWVkaWEiLCJhY2wiOlt7ImtpbmQiOiJzdG9yYWdlI29iamVjdEFjY2Vzc0NvbnRyb2wiLCJpZCI6ImdvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQvYmxvYi1mb3Itc2lnbmluZy8xNTU3NzcwOTM3MjIxNDQwL3Byb2plY3Qtb3duZXJzLTg5Mjk0MjYzODEyOSIsInNlbGZMaW5rIjoiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vc3RvcmFnZS92MS9iL2dvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQvby9ibG9iLWZvci1zaWduaW5nL2FjbC9wcm9qZWN0LW93bmVycy04OTI5NDI2MzgxMjkiLCJidWNrZXQiOiJnby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0Iiwib2JqZWN0IjoiYmxvYi1mb3Itc2lnbmluZyIsImdlbmVyYXRpb24iOiIxNTU3NzcwOTM3MjIxNDQwIiwiZW50aXR5IjoicHJvamVjdC1vd25lcnMtODkyOTQyNjM4MTI5Iiwicm9sZSI6Ik9XTkVSIiwicHJvamVjdFRlYW0iOnsicHJvamVjdE51bWJlciI6Ijg5Mjk0MjYzODEyOSIsInRlYW0iOiJvd25lcnMifSwiZXRhZyI6IkNNQ0M2L3FNbWVJQ0VBRT0ifSx7ImtpbmQiOiJzdG9yYWdlI29iamVjdEFjY2Vzc0NvbnRyb2wiLCJpZCI6ImdvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQvYmxvYi1mb3Itc2lnbmluZy8xNTU3NzcwOTM3MjIxNDQwL3Byb2plY3QtZWRpdG9ycy04OTI5NDI2MzgxMjkiLCJzZWxmTGluayI6Imh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL3N0b3JhZ2UvdjEvYi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L28vYmxvYi1mb3Itc2lnbmluZy9hY2wvcHJvamVjdC1lZGl0b3JzLTg5Mjk0MjYzODEyOSIsImJ1Y2tldCI6ImdvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQiLCJvYmplY3QiOiJibG9iLWZvci1zaWduaW5nIiwiZ2VuZXJhdGlvbiI6IjE1NTc3NzA5MzcyMjE0NDAiLCJlbnRpdHkiOiJwcm9qZWN0LWVkaXRvcnMtODkyOTQyNjM4MTI5Iiwicm9sZSI6Ik9XTkVSIiwicHJvamVjdFRlYW0iOnsicHJvamVjdE51bWJlciI6Ijg5Mjk0MjYzODEyOSIsInRlYW0iOiJlZGl0b3JzIn0sImV0YWciOiJDTUNDNi9xTW1lSUNFQUU9In0seyJraW5kIjoic3RvcmFnZSNvYmplY3RBY2Nlc3NDb250cm9sIiwiaWQiOiJnby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2Jsb2ItZm9yLXNpZ25pbmcvMTU1Nzc3MDkzNzIyMTQ0MC9wcm9qZWN0LXZpZXdlcnMtODkyOTQyNjM4MTI5Iiwic2VsZkxpbmsiOiJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9zdG9yYWdlL3YxL2IvZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9vL2Jsb2ItZm9yLXNpZ25pbmcvYWNsL3Byb2plY3Qtdmlld2Vycy04OTI5NDI2MzgxMjkiLCJidWNrZXQiOiJnby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0Iiwib2JqZWN0IjoiYmxvYi1mb3Itc2lnbmluZyIsImdlbmVyYXRpb24iOiIxNTU3NzcwOTM3MjIxNDQwIiwiZW50aXR5IjoicHJvamVjdC12aWV3ZXJzLTg5Mjk0MjYzODEyOSIsInJvbGUiOiJSRUFERVIiLCJwcm9qZWN0VGVhbSI6eyJwcm9qZWN0TnVtYmVyIjoiODkyOTQyNjM4MTI5IiwidGVhbSI6InZpZXdlcnMifSwiZXRhZyI6IkNNQ0M2L3FNbWVJQ0VBRT0ifSx7ImtpbmQiOiJzdG9yYWdlI29iamVjdEFjY2Vzc0NvbnRyb2wiLCJpZCI6ImdvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQvYmxvYi1mb3Itc2lnbmluZy8xNTU3NzcwOTM3MjIxNDQwL3VzZXItamJhQGdvb2dsZS5jb20iLCJzZWxmTGluayI6Imh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL3N0b3JhZ2UvdjEvYi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L28vYmxvYi1mb3Itc2lnbmluZy9hY2wvdXNlci1qYmFAZ29vZ2xlLmNvbSIsImJ1Y2tldCI6ImdvLWNsb3VkLWJsb2ItdGVzdC1idWNrZXQiLCJvYmplY3QiOiJibG9iLWZvci1zaWduaW5nIiwiZ2VuZXJhdGlvbiI6IjE1NTc3NzA5MzcyMjE0NDAiLCJlbnRpdHkiOiJ1c2VyLWpiYUBnb29nbGUuY29tIiwicm9sZSI6Ik9XTkVSIiwiZW1haWwiOiJqYmFAZ29vZ2xlLmNvbSIsImV0YWciOiJDTUNDNi9xTW1lSUNFQUU9In1dLCJvd25lciI6eyJlbnRpdHkiOiJ1c2VyLWpiYUBnb29nbGUuY29tIn0sImNyYzMyYyI6InlaUmxxZz09IiwiZXRhZyI6IkNNQ0M2L3FNbWVJQ0VBRT0ifQ=="
+        "Body": ""
       }
     },
     {
-      "ID": "47860f9e50919c5d",
+      "ID": "da954a185531498c",
       "Request": {
         "Method": "GET",
-        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-viewer%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
         "Header": {
           "Accept-Encoding": [
             "gzip"
@@ -120,6 +140,9 @@
           "Accept-Ranges": [
             "bytes"
           ],
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
           "Cache-Control": [
             "private, max-age=0"
           ],
@@ -127,10 +150,10 @@
             "11"
           ],
           "Content-Type": [
-            "text/plain; charset=utf-8"
+            "application/octet-stream"
           ],
           "Date": [
-            "Mon, 13 May 2019 18:08:57 GMT"
+            "Mon, 05 Aug 2019 17:00:38 GMT"
           ],
           "Etag": [
             "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
@@ -139,13 +162,13 @@
             "CLEARED"
           ],
           "Last-Modified": [
-            "Mon, 13 May 2019 18:08:57 GMT"
+            "Mon, 05 Aug 2019 17:00:38 GMT"
           ],
           "Server": [
             "UploadServer"
           ],
           "X-Goog-Generation": [
-            "1557770937221440"
+            "1565024438241143"
           ],
           "X-Goog-Hash": [
             "crc32c=yZRlqg==",
@@ -163,24 +186,33 @@
           "X-Goog-Stored-Content-Length": [
             "11"
           ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "success"
+          ],
+          "X-Guploader-Upload-Result": [
+            "success"
+          ],
           "X-Guploader-Uploadid": [
-            "AEnB2UrpBlI9aW7Xj7k6iDKHmK5l1Wr1uaUreZhIiC9MLKCIVQ-EjIu9_pt9QvSluUwG7vhR7uBiCiGPPKyTRZ5MQy3pZQqCPEgasQhc5nezUaZa35HM-E4"
+            "AEnB2Uq9-iP9T2vzAWVfYydGdn8KVJgroc1Vko6jhGWR9gL7MBm0ygDynvjIGGvcQdkd9MX30qB46X3Arvfxn0NMP0WIZOipFA"
           ]
         },
         "Body": "aGVsbG8gd29ybGQ="
       }
     },
     {
-      "ID": "a5e014b1e65f694e",
+      "ID": "2052a163fd73fa8f",
       "Request": {
         "Method": "DELETE",
-        "URL": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing?alt=json\u0026prettyPrint=false",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
         "Header": {
           "Accept-Encoding": [
             "gzip"
           ],
           "User-Agent": [
-            "google-api-go-client/0.5 go-cloud/blob/0.1.0"
+            "Go-http-client/1.1"
           ]
         },
         "MediaType": "",
@@ -194,36 +226,102 @@
         "ProtoMajor": 1,
         "ProtoMinor": 1,
         "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
           "Cache-Control": [
-            "no-cache, no-store, max-age=0, must-revalidate"
+            "private, max-age=0"
           ],
           "Content-Length": [
             "0"
           ],
-          "Content-Type": [
-            "application/json"
-          ],
           "Date": [
-            "Mon, 13 May 2019 18:08:57 GMT"
+            "Mon, 05 Aug 2019 17:00:38 GMT"
           ],
           "Expires": [
             "CLEARED"
-          ],
-          "Pragma": [
-            "no-cache"
           ],
           "Server": [
             "UploadServer"
           ],
           "Vary": [
-            "Origin",
-            "X-Origin"
+            "Origin"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "success"
+          ],
+          "X-Guploader-Upload-Result": [
+            "success"
           ],
           "X-Guploader-Uploadid": [
-            "AEnB2UoqLY0m9smSbx_Xu_zpLcKOrzWaKFJrW41KwNZcwogJ2FsRuf-fs79QrBQvKOiawVUPKOLePRL65ChI34tNyt6b4SMOju3CE4zMxMV0bibTsoAEnmo"
+            "AEnB2UpquSjsO502A1fn2yT6oe2FqjoxSPJ9LhpUVWoh-7Wpl2IdC5KV4rtyrWb4ynr47C0iY4gAzz9AiaZkN6SKCYCUjweEMg"
           ]
         },
         "Body": ""
+      }
+    },
+    {
+      "ID": "6d333bc9cd5d88f7",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 404,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
+          "Cache-Control": [
+            "private, max-age=0"
+          ],
+          "Content-Length": [
+            "204"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 17:00:38 GMT"
+          ],
+          "Expires": [
+            "CLEARED"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2UpBMh7KkrnS8t9JAQKlG7fEPC8yHFt9RlPrV4fizf0VqlJDou5c3aLU9GefuYfAokGxesEDSbS72XVFySpV2oeMxAqadQ"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+Tm9TdWNoS2V5PC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQga2V5IGRvZXMgbm90IGV4aXN0LjwvTWVzc2FnZT48RGV0YWlscz5ObyBzdWNoIG9iamVjdDogZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9ibG9iLWZvci1zaWduaW5nPC9EZXRhaWxzPjwvRXJyb3I+"
       }
     }
   ]

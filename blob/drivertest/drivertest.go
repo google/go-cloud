@@ -2022,7 +2022,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 // testSignedURL tests the functionality of SignedURL.
 func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-signing"
-	var contents = []byte("hello world")
+	const contents = "hello world"
 
 	ctx := context.Background()
 
@@ -2046,43 +2046,108 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
 	}
 
-	// Try to generate a real signed URL.
-	url, err := b.SignedURL(ctx, key, nil)
+	// Generate real signed URLs for GET, PUT, and DELETE.
+	getURL, err := b.SignedURL(ctx, key, nil)
 	if err != nil {
 		if gcerrors.Code(err) == gcerrors.Unimplemented {
 			t.Skipf("SignedURL not supported")
 			return
 		}
 		t.Fatal(err)
+	} else if getURL == "" {
+		t.Fatal("got empty GET url")
 	}
-	if url == "" {
-		t.Fatal("got empty url")
+	putURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodPut})
+	if err != nil {
+		t.Fatal(err)
+	} else if putURL == "" {
+		t.Fatal("got empty PUT url")
 	}
+	deleteURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodDelete})
+	if err != nil {
+		t.Fatal(err)
+	} else if deleteURL == "" {
+		t.Fatal("got empty DELETE url")
+	}
+
 	client := h.HTTPClient()
 	if client == nil {
 		t.Fatal("can't verify SignedURL, Harness.HTTPClient() returned nil")
 	}
 
-	// Create the blob.
-	if err := b.WriteAll(ctx, key, contents, nil); err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = b.Delete(ctx, key) }()
+	// NOTE: It would be nice to verify that URLs only work for the method that
+	// they were created for; e.g., that getURL fails when used to PUT, that
+	// putURL fails when used to GET, etc. However, some services use the
+	// requestor's authorization in addition to the signed URL; for example,
+	// PUT will work with getURL as long as the requestor has authorization to do
+	// a PUT. Signed URLs are generally expected to be used with unauthenticated
+	// clients. However, it's somewhat difficult to reproduce that here since
+	// the client we're using has authentication built into it, but also record/
+	// replay.
+	// TODO(rvangent): See if we can construct another record/replay HTTPClient,
+	// this one unauthenticated, and use it for testing SignedURLs.
 
-	resp, err := client.Get(url)
+	// PUT the blob.
+	req, err := http.NewRequest(http.MethodPut, putURL, strings.NewReader(contents))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to create PUT HTTP request: %v", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		t.Errorf("got status code %d, want 200", resp.StatusCode)
+	if resp, err := client.Do(req); err != nil {
+		t.Fatalf("PUT failed: %v", err)
+	} else {
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			t.Errorf("PUT got status code %d, want 2xx", resp.StatusCode)
+			gotBody, _ := ioutil.ReadAll(resp.Body)
+			t.Errorf(string(gotBody))
+		}
 	}
-	got, err := ioutil.ReadAll(resp.Body)
+
+	// GET it.
+	if resp, err := client.Get(getURL); err != nil {
+		t.Fatalf("GET failed: %v", err)
+	} else {
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			t.Errorf("GET %s got status code %d, want 2xx", getURL, resp.StatusCode)
+			gotBody, _ := ioutil.ReadAll(resp.Body)
+			t.Errorf(string(gotBody))
+		} else {
+			gotBody, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Errorf("GET failed to read response body: %v", err)
+			} else if gotBodyStr := string(gotBody); gotBodyStr != contents {
+				t.Errorf("GET got body %q, want %q", gotBodyStr, contents)
+			}
+		}
+	}
+
+	// DELETE it.
+	req, err = http.NewRequest(http.MethodDelete, deleteURL, nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to create DELETE HTTP request: %v", err)
 	}
-	if !bytes.Equal(got, contents) {
-		t.Errorf("got body %q, want %q", string(got), string(contents))
+	if resp, err := client.Do(req); err != nil {
+		t.Fatalf("DELETE failed: %v", err)
+	} else {
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			t.Fatalf("DELETE got status code %d, want 2xx", resp.StatusCode)
+			gotBody, _ := ioutil.ReadAll(resp.Body)
+			t.Errorf(string(gotBody))
+		}
+	}
+
+	// GET should fail now that the blob has been deleted.
+	if resp, err := client.Get(getURL); err != nil {
+		t.Errorf("GET after DELETE failed: %v", err)
+	} else {
+		defer resp.Body.Close()
+		if resp.StatusCode != 404 {
+			t.Errorf("GET after DELETE got status code %d, want 404", resp.StatusCode)
+			gotBody, _ := ioutil.ReadAll(resp.Body)
+			t.Errorf(string(gotBody))
+		}
 	}
 }
 
