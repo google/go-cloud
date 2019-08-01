@@ -16,6 +16,7 @@ package docstore
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -24,37 +25,15 @@ import (
 	"gocloud.dev/gcerrors"
 )
 
-func TestToDriverMods(t *testing.T) {
-	for _, test := range []struct {
-		mods    Mods
-		want    []driver.Mod
-		wantErr bool
-	}{
-		{
-			Mods{"a": 1, "b": nil},
-			[]driver.Mod{{[]string{"a"}, 1}, {[]string{"b"}, nil}},
-			false,
-		},
-		{
-			Mods{"a.b": 1, "b.c": nil},
-			[]driver.Mod{{[]string{"a", "b"}, 1}, {[]string{"b", "c"}, nil}},
-			false,
-		},
-		// empty mods are an error
-		{Mods{}, nil, true},
-		// prefixes are not allowed
-		{Mods{"a.b.c": 1, "a.b": 2, "a.b+c": 3}, nil, true},
-	} {
-		got, gotErr := toDriverMods(test.mods)
-		if test.wantErr {
-			if gcerrors.Code(gotErr) != gcerrors.InvalidArgument {
-				t.Errorf("%v: got error '%v', want InvalidArgument", test.mods, gotErr)
-			}
+type Book struct {
+	Title            string `docstore:"key"`
+	Author           Name   `docstore:"author"`
+	PublicationYears []int  `docstore:"pub_years,omitempty"`
+	NumPublications  int    `docstore:"-"`
+}
 
-		} else if !cmp.Equal(got, test.want) {
-			t.Errorf("%v: got %v, want %v", test.mods, got, test.want)
-		}
-	}
+type Name struct {
+	First, Last string
 }
 
 func TestIsIncNumber(t *testing.T) {
@@ -70,37 +49,45 @@ func TestIsIncNumber(t *testing.T) {
 	}
 }
 
-func TestToDriverActionsErrors(t *testing.T) {
+func TestActionsDo(t *testing.T) {
 	c := &Collection{driver: fakeDriverCollection{}}
 	dn := map[string]interface{}{"key": nil}
 	d1 := map[string]interface{}{"key": 1}
 	d2 := map[string]interface{}{"key": 2}
+	dsn := &Book{}
+	ds1 := &Book{Title: "The Master and Margarita"}
+	ds2 := &Book{Title: "The Martian"}
 
 	for _, test := range []struct {
 		alist *ActionList
 		want  []int // error indexes; nil if no error
 	}{
-		// Missing keys.
-		{c.Actions().Put(dn), []int{0}},
-		{c.Actions().Get(dn).Replace(dn).Create(dn).Update(dn, Mods{"a": 1}), []int{0, 1, 3}},
-		// Duplicate documents.
-		{c.Actions().Get(d1).Get(d2), nil},
-		{c.Actions().Get(d1).Put(d1), nil},
+		{c.Actions().Get(d1).Get(d2).Get(ds1).Get(ds2), nil},
+		{c.Actions().Get(d1).Put(d1).Put(ds1).Get(ds1), nil},
 		{c.Actions().Get(d2).Replace(d1).Put(d2).Get(d1), nil},
-		{c.Actions().Get(d1).Get(d1), []int{1}},
-		{c.Actions().Put(d1).Get(d1).Get(d1), []int{2}},
-		{c.Actions().Get(d1).Put(d1).Get(d1).Put(d2).Put(d1), []int{2, 4}},
-		{c.Actions().Create(d2).Get(d2).Create(d2), []int{2}},
-		{c.Actions().Create(dn).Create(dn), nil}, // each Create without a key is a separate document
-		{c.Actions().Create(dn).Create(d1).Get(d1), nil},
-		{c.Actions().Put(d1).Create(dn).Create(d1).Get(d1), []int{2}},
-		{c.Actions().Put(d1).Create(dn).Create(d1).Get(d1), []int{2}},
-		{c.Actions().Update(d1, nil), []int{0}}, // empty mod
-		// Other errors with mods are tested in TestToDriverMods.
+		{c.Actions().Get(ds2).Replace(ds1).Put(ds2).Get(ds1), nil},
+		// Missing keys.
+		{c.Actions().Put(dn).Put(dsn), []int{0, 1}},
+		{c.Actions().Get(dn).Replace(dn).Create(dn).Update(dn, Mods{"a": 1}), []int{0, 1, 3}},
+		{c.Actions().Get(dsn).Replace(dsn).Create(dsn).Update(dsn, Mods{"a": 1}), []int{0, 1, 3}},
+		// Duplicate documents.
+		{c.Actions().Create(dn).Create(dn).Create(dsn).Create(dsn), nil}, // each Create without a key is a separate document
+		{c.Actions().Create(d2).Create(ds2).Get(d2).Get(ds2).Create(d2).Put(ds2), []int{4, 5}},
+		{c.Actions().Get(d1).Get(ds1).Get(d1).Get(ds1), []int{2, 3}},
+		{c.Actions().Put(d1).Put(ds1).Get(d1).Get(ds1).Get(d1).Get(ds1), []int{4, 5}},
+		{c.Actions().Get(d1).Get(ds1).Put(d1).Put(d2).Put(ds1).Put(ds2).Put(d1).Replace(ds1), []int{6, 7}},
+		{c.Actions().Create(dn).Create(d1).Create(dsn).Create(ds1).Get(d1).Get(ds1), nil},
+		// Get with field paths.
 		{c.Actions().Get(d1, "a.b", "c"), nil},
-		{c.Actions().Get(d1, ".c"), []int{0}}, // bad field path
+		{c.Actions().Get(ds1, "name.Last", "pub_years"), nil},
+		{c.Actions().Get(d1, ".c").Get(ds1, "").Get(ds2, "\xa0\xa1"), []int{0, 1, 2}}, // bad field path
+		// Mods.
+		{c.Actions().Update(d1, nil).Update(ds1, nil), []int{0, 1}},                                                 // empty mod
+		{c.Actions().Update(d1, Mods{"a.b.c": 1, "a.b": 2, "a.b+c": 3}), []int{0}},                                  // a.b is a prefix of a.b.c
+		{c.Actions().Update(d1, Mods{"": 1}).Update(ds1, Mods{".f": 2}), []int{0, 1}},                               // invalid field path
+		{c.Actions().Update(d1, Mods{"a": Increment(true)}).Update(ds1, Mods{"name": Increment("b")}), []int{0, 1}}, // invalid incOp
 	} {
-		_, err := test.alist.toDriverActions()
+		err := test.alist.Do(context.Background())
 		if err == nil {
 			if len(test.want) > 0 {
 				t.Errorf("%s: got nil, want error", test.alist)
@@ -123,7 +110,7 @@ func TestToDriverActionsErrors(t *testing.T) {
 func TestClosedErrors(t *testing.T) {
 	// Check that all collection methods return errClosed if the collection is closed.
 	ctx := context.Background()
-	c := newCollection(fakeDriverCollection{})
+	c := NewCollection(fakeDriverCollection{})
 	if err := c.Close(); err != nil {
 		t.Fatalf("got %v, want nil", err)
 	}
@@ -154,14 +141,14 @@ func TestClosedErrors(t *testing.T) {
 
 	// Check that DocumentIterator.Next returns errClosed if Close is called
 	// in the middle of the iteration.
-	c = newCollection(fakeDriverCollection{})
+	c = NewCollection(fakeDriverCollection{})
 	iter = c.Query().Get(ctx)
 	c.Close()
 	check(iter.Next(ctx, doc))
 }
 
 func TestSerializeRevisionErrors(t *testing.T) {
-	c := newCollection(fakeDriverCollection{})
+	c := NewCollection(fakeDriverCollection{})
 	_, err := c.RevisionToString(nil)
 	if got := gcerrors.Code(err); got != gcerrors.InvalidArgument {
 		t.Errorf("got %v, want InvalidArgument", got)
@@ -177,12 +164,21 @@ type fakeDriverCollection struct {
 }
 
 func (fakeDriverCollection) Key(doc driver.Document) (interface{}, error) {
-	return doc.GetField("key")
+	key, err := doc.GetField("key")
+	// TODO(#2589): remove this check once we check for empty key.
+	if err != nil || driver.IsEmptyValue(reflect.ValueOf(key)) {
+		return nil, err
+	}
+	return key, nil
 }
 
 func (fakeDriverCollection) RevisionField() string { return DefaultRevisionField }
 
 func (fakeDriverCollection) Close() error { return nil }
+
+func (fakeDriverCollection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
+	return nil
+}
 
 func (fakeDriverCollection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
 	return fakeDriverDocumentIterator{}, nil

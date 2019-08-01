@@ -58,6 +58,10 @@ func TestConformance(t *testing.T) {
 
 type docmap = map[string]interface{}
 
+// memdocstore-specific tests.
+
+// The following tests test memdocstore's backend implementation.
+
 func TestUpdateEncodesValues(t *testing.T) {
 	// Check that update encodes the values in mods.
 	ctx := context.Background()
@@ -122,19 +126,6 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 }
 
-func TestMissingKeyCreateFailsWithKeyFunc(t *testing.T) {
-	dc, err := newCollection("", func(docstore.Document) interface{} { return nil }, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	c := docstore.NewCollection(dc)
-	defer c.Close()
-	err = c.Create(context.Background(), map[string]interface{}{})
-	if err == nil {
-		t.Error("got nil, want error")
-	}
-}
-
 func TestSortDocs(t *testing.T) {
 	newDocs := func() []storedDoc {
 		return []storedDoc{
@@ -170,47 +161,6 @@ func TestSortDocs(t *testing.T) {
 	}
 }
 
-func TestExampleInDoc(t *testing.T) {
-	dc, err := newCollection("Title", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	coll := docstore.NewCollection(dc)
-	defer coll.Close()
-
-	// This is the document used as an example in ../docstore/doc.go.
-	doc := map[string]interface{}{
-		"Title": "The Master and Margarita",
-		"Author": map[string]interface{}{
-			"First": "Mikhail",
-			"Last":  "Bulgakov",
-		},
-		"PublicationYears": []int{1967, 1973},
-		dc.RevisionField(): nil,
-	}
-
-	ctx := context.Background()
-	if err := coll.Put(ctx, doc); err != nil {
-		t.Fatal(err)
-	}
-	got := map[string]interface{}{"Title": "The Master and Margarita"}
-	if err := coll.Get(ctx, got); err != nil {
-		t.Fatal(err)
-	}
-	want := map[string]interface{}{
-		"Title": "The Master and Margarita",
-		"Author": map[string]interface{}{
-			"First": "Mikhail",
-			"Last":  "Bulgakov",
-		},
-		"PublicationYears": []interface{}{int64(1967), int64(1973)},
-		"DocstoreRevision": int64(1),
-	}
-	if diff := cmp.Diff(got, want); diff != "" {
-		t.Error(diff)
-	}
-}
-
 func TestSaveAndLoad(t *testing.T) {
 	f, err := ioutil.TempFile("", "testSaveAndLoad")
 	if err != nil {
@@ -230,5 +180,22 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if !cmp.Equal(got, docs) {
 		t.Errorf("\ngot  %v\nwant %v", got, docs)
+	}
+
+	nofname := "nosuchfile"
+	// Load from nonexistent file should return empty data.
+	if got, err = loadDocs(nofname); err != nil {
+		t.Fatalf("loading from nonexistent file, got %v, want nil", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("loading from nonexistent file, got %v, want empty map", got)
+	}
+	// Save to nonexistent file should create it.
+	if err := saveDocs(nofname, docs); err != nil {
+		t.Fatalf("saving to nonexistent file: got %v, want nil", err)
+	}
+	defer os.Remove(nofname)
+	if _, err := os.Lstat(nofname); err != nil {
+		t.Fatal(err)
 	}
 }
