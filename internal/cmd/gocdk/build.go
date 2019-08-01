@@ -86,6 +86,15 @@ func build(ctx context.Context, pctx *processContext, refs []string) (string, er
 	if err != nil {
 		return "", xerrors.Errorf("gocdk build: %w", err)
 	}
+	// Run a local build to identify compile errors, etc.
+	// TODO(rvangent): Consider using go/packages instead, to avoid the cost of linking.
+	pctx.Logf("Running \"go build\"...")
+	buildCmd := pctx.NewCommand(ctx, moduleRoot, "go", "build")
+	buildCmd.Env = append(buildCmd.Env, "GO111MODULE=on")
+	if err := buildCmd.Run(); err != nil {
+		return "", xerrors.Errorf("gocdk build: go build: %w", err)
+	}
+	pctx.Logf("\"go build\" succeeded.")
 	var imageName string
 	for i := range refs {
 		if !strings.HasPrefix(refs[i], ":") {
