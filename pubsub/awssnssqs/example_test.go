@@ -25,7 +25,7 @@ import (
 )
 
 func ExampleOpenSNSTopic() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
@@ -46,7 +46,7 @@ func ExampleOpenSNSTopic() {
 }
 
 func ExampleOpenSQSTopic() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
@@ -67,7 +67,7 @@ func ExampleOpenSQSTopic() {
 }
 
 func Example_openSNSTopicFromURL() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/awssnssqs"
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
@@ -81,7 +81,7 @@ func Example_openSNSTopicFromURL() {
 }
 
 func Example_openSQSTopicFromURL() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/awssnssqs"
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
@@ -96,7 +96,7 @@ func Example_openSQSTopicFromURL() {
 }
 
 func ExampleOpenSubscription() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
@@ -118,7 +118,7 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/awssnssqs"
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()

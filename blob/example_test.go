@@ -31,7 +31,7 @@ import (
 )
 
 func ExampleBucket_NewReader() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
@@ -52,7 +52,7 @@ func ExampleBucket_NewReader() {
 }
 
 func ExampleBucket_NewRangeReader() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
@@ -70,7 +70,7 @@ func ExampleBucket_NewRangeReader() {
 }
 
 func ExampleBucket_NewWriter() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
@@ -92,7 +92,7 @@ func ExampleBucket_NewWriter() {
 }
 
 func ExampleBucket_NewWriter_cancel() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
@@ -119,7 +119,7 @@ func ExampleBucket_NewWriter_cancel() {
 }
 
 func ExampleBucket_Delete() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var bucket *blob.Bucket
@@ -412,7 +412,7 @@ func ExampleListOptions() {
 }
 
 func ExamplePrefixedBucket() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	var bucket *blob.Bucket
 

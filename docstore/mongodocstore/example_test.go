@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
@@ -40,7 +40,7 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithIDFunc() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	type HighScore struct {
@@ -68,7 +68,7 @@ func ExampleOpenCollectionWithIDFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/docstore/mongodocstore"
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()

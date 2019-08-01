@@ -16,7 +16,7 @@
 // object. This is used as input for building the Go CDK Hugo website.
 //
 // Examples must include a comment
-// "// PRAGMA(gocloud.dev): Package this example for gocloud.dev."
+// // PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 // somewhere in the function body in order to be included in this tool's output.
 //
 // gatherexamples does some minimal rewriting of the example source code for
@@ -125,7 +125,7 @@ const pragmaPrefix = "// PRAGMA(gocloud.dev): "
 
 // signifierComment is the comment used to signify whether the example should be
 // included in the output.
-const signifierComment = pragmaPrefix + "Package this example for gocloud.dev."
+const signifierComment = pragmaPrefix + "This example is used on gocloud.dev; please ignore PRAGMA comments."
 
 type example struct {
 	Imports string `json:"imports"`

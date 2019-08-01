@@ -29,7 +29,7 @@ import (
 )
 
 func Example_jsonDecoder() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
@@ -84,7 +84,7 @@ func Example_stringDecoder() {
 }
 
 func ExampleVariable_Latest() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	var v *runtimevar.Variable
 
@@ -179,7 +179,7 @@ func ExampleVariable_Watch() {
 }
 
 func ExampleDecryptDecode() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	var keeper *secrets.Keeper
 

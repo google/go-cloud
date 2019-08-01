@@ -81,7 +81,7 @@ func Example_errorAs() {
 }
 
 func ExampleKeeper_Encrypt() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var keeper *secrets.Keeper
@@ -97,7 +97,7 @@ func ExampleKeeper_Encrypt() {
 }
 
 func ExampleKeeper_Decrypt() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 	var keeper *secrets.Keeper

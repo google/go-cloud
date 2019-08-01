@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleNewKeeper() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 
 	secretKey, err := localsecrets.NewRandomKey()
 	if err != nil {
@@ -34,7 +34,7 @@ func ExampleNewKeeper() {
 }
 
 func Example_openFromURL() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/secrets/localsecrets"
 

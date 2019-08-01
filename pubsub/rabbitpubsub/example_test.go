@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenTopic() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
@@ -38,7 +38,7 @@ func ExampleOpenTopic() {
 }
 
 func ExampleOpenSubscription() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
 
@@ -52,7 +52,7 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openTopicFromURL() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/rabbitpubsub"
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
@@ -68,7 +68,7 @@ func Example_openTopicFromURL() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/rabbitpubsub"
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()

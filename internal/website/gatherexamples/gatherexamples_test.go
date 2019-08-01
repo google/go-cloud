@@ -92,7 +92,7 @@ func ExampleFoo() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 }`,
 				},
 			},
@@ -109,7 +109,7 @@ func Example() {
 					"example_test.go": `package foo_test
 
 func ExampleFoo() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 }`,
 				},
 			},
@@ -126,7 +126,7 @@ func ExampleFoo() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 
 	// Unattached comment.
 
@@ -158,7 +158,7 @@ func Example() {
 import "fmt"
 
 func Example() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	fmt.Println(42)
 }`,
 				},
@@ -182,7 +182,7 @@ import "fmt"
 import "math"
 
 func Example() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	fmt.Println(math.Pi)
 }`,
 				},
@@ -205,7 +205,7 @@ func Example() {
 import "log"
 
 func Example() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 	var err error
 	if err != nil {
 		log.Fatal(err)
@@ -229,7 +229,7 @@ func Example() {
 import "context"
 
 func Example() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 
 	// PRAGMA(gocloud.dev): Skip until next blank line.
 	ctx := context.Background()
@@ -257,7 +257,7 @@ func Example() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// PRAGMA(gocloud.dev): Package this example for gocloud.dev.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
 
 	// PRAGMA(gocloud.dev): Add a blank import: _ "example.com/bar"
 	_ = 42
