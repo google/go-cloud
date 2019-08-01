@@ -273,8 +273,12 @@ start reading from an arbitrary offset in the blob, use <code>NewRangeReader</co
 <h3 id="gcs"> Google Cloud Storage<a class="anchor" href="#gcs" aria-label="Link to Section">🔗</a></h3>
 
 <p><a href="https://cloud.google.com/storage/">Google Cloud Storage</a> (GCS) URLs in the Go CDK closely resemble the URLs
-you would see in the <code>gsutil</code> CLI. <code>blob.OpenBucket</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application
-Default Credentials</a>.</p>
+you would see in the <a href="https://cloud.google.com/storage/docs/gsutil"><code>gsutil</code></a> CLI.</p>
+
+<p><code>blob.OpenBucket</code> will use Application Default Credentials; if you have
+authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/login"><code>gcloud auth login</code></a>, it will use those credentials. See
+<a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
@@ -338,10 +342,14 @@ other API that takes in a <code>*gcp.HTTPClient</code>.) You can find functions 
 
 <h3 id="s3"> S3<a class="anchor" href="#s3" aria-label="Link to Section">🔗</a></h3>
 
-<p>S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
-You can specify the <code>region</code> query parameter to ensure your application connects
-to the correct region, but otherwise <code>blob.OpenBucket</code> will use the region found
-in the environment variables or your AWS CLI configuration.</p>
+<p>S3 URLs in the Go CDK closely resemble the URLs you would see in the <a href="https://aws.amazon.com/cli/">AWS CLI</a>.
+You should specify the <code>region</code> query parameter to ensure your application
+connects to the correct region.</p>
+
+<p><code>blob.OpenBucket</code> will create a default AWS Session with the
+<code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>

@@ -144,7 +144,12 @@ recommend starting with <code>Latest</code> as it&rsquo;s conceptually simpler t
 <h3 id="gcprc"> GCP Runtime Configurator<a class="anchor" href="#gcprc" aria-label="Link to Section">🔗</a></h3>
 
 <p>To open a variable stored in <a href="https://cloud.google.com/deployment-manager/runtime-configurator/">GCP Runtime Configurator</a> via a URL, you can use
-the <code>runtimevar.OpenVariable</code> function as follows.</p>
+the <code>runtimevar.OpenVariable</code> function as shown in the example below.</p>
+
+<p><code>runtimevar.OpenVariable</code> will use Application Default Credentials; if you have
+authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/login"><code>gcloud auth login</code></a>, it will use those credentials. See
+<a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
@@ -215,7 +220,12 @@ variable.</p>
 <h3 id="awsps"> AWS Parameter Store<a class="anchor" href="#awsps" aria-label="Link to Section">🔗</a></h3>
 
 <p>To open a variable stored in <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html">AWS Parameter Store</a> via a URL, you can use the
-<code>runtimevar.OpenVariable</code> function as follows.</p>
+<code>runtimevar.OpenVariable</code> function as shown in the example below.</p>
+
+<p><code>runtimevar.OpenVariable</code> will create a default AWS Session with the
+<code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>

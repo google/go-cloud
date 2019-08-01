@@ -122,8 +122,12 @@ like this:</p>
 <h3 id="gcp"> Google Cloud Pub/Sub<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can publish to a Google <a href="https://cloud.google.com/pubsub/docs/">Cloud Pub/Sub</a> topic. The URLs use the
-project ID and the topic ID. <code>pubsub.OpenTopic</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application Default
-Credentials</a>.</p>
+project ID and the topic ID.</p>
+
+<p><code>pubsub.OpenTopic</code> will use Application Default Credentials; if you have
+authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/login"><code>gcloud auth login</code></a>, it will use those credentials. See
+<a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
@@ -186,10 +190,13 @@ topics.)</p>
 
 <p>The Go CDK can publish to an Amazon <a href="https://aws.amazon.com/sns/">Simple Notification Service</a> (SNS)
 topic. SNS URLs in the Go CDK use the Amazon Resource Name (ARN) to identify
-the topic. You can specify the <code>region</code> query parameter to ensure your
-application connects to the correct region, but otherwise <code>pubsub.OpenTopic</code>
-will use the region found in the environment variables or your AWS CLI
-configuration.</p>
+the topic. You should specify the <code>region</code> query parameter to ensure your
+application connects to the correct region.</p>
+
+<p><code>pubsub.OpenTopic</code> will create a default AWS Session with the
+<code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>

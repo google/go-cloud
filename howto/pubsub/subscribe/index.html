@@ -166,8 +166,12 @@ you can start multiple goroutines:</p>
 <h3 id="gcp"> Google Cloud Pub/Sub<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h3>
 
 <p>The Go CDK can receive messages from a Google <a href="https://cloud.google.com/pubsub/docs/">Cloud Pub/Sub</a> subscription.
-The URLs use the project ID and the subscription ID.
-<code>pubsub.OpenSubscription</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a>.</p>
+The URLs use the project ID and the subscription ID.</p>
+
+<p><code>pubsub.OpenSubscription</code> will use Application Default Credentials; if you have
+authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/login"><code>gcloud auth login</code></a>, it will use those credentials. See
+<a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
@@ -233,10 +237,13 @@ reused among subscriptions.)</p>
 
 <p>The Go CDK can subscribe to an Amazon <a href="https://aws.amazon.com/sqs/">Simple Queueing Service</a> (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
-<code>https://</code> is replaced with <code>awssqs://</code>. You can specify the <code>region</code>
-query parameter to ensure your application connects to the correct region, but
-otherwise <code>pubsub.OpenSubscription</code> will use the region found in the environment
-variables or your AWS CLI configuration.</p>
+<code>https://</code> is replaced with <code>awssqs://</code>. You should specify the <code>region</code>
+query parameter to ensure your application connects to the correct region.</p>
+
+<p><code>pubsub.OpenSubscription</code> will create a default AWS Session with the
+<code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
+alternatives, including using environment variables.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
