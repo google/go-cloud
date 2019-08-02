@@ -202,6 +202,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	})
 }
 
+// withCollection calls f with a fresh harness and an empty collection of the given kind.
 func withCollection(t *testing.T, newHarness HarnessMaker, kind CollectionKind, f func(*testing.T, Harness, *ds.Collection)) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
@@ -213,6 +214,9 @@ func withCollection(t *testing.T, newHarness HarnessMaker, kind CollectionKind, 
 	withColl(t, h, kind, f)
 }
 
+// withRevCollections calls f twice: once with the SingleKey collection, using documents and code that expect
+// the standard revision field; and once with the AltRev collection, that uses an alternative revisionf field
+// name.
 func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection, string)) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
@@ -1185,14 +1189,14 @@ type HighScore struct {
 
 func newHighScore() interface{} { return &HighScore{} }
 
-// HighScoreKey constructs a single primary key from a HighScore struct
-// by concatenating the Game and Player fields.
+// HighScoreKey constructs a single primary key from a HighScore struct or a map
+// with the same fields by concatenating the Game and Player fields.
 func HighScoreKey(doc docstore.Document) interface{} {
 	switch d := doc.(type) {
 	case *HighScore:
 		return d.key()
 	case map[string]interface{}:
-		return fmt.Sprintf("%v|%v", d["Game"], d["Player"])
+		return barConcat(d["Game"], d["Player"])
 	default:
 		panic("bad arg")
 	}
@@ -1202,8 +1206,10 @@ func (h *HighScore) key() string {
 	if h.Game == "" || h.Player == "" {
 		return ""
 	}
-	return h.Game + "|" + h.Player
+	return barConcat(h.Game, h.Player)
 }
+
+func barConcat(a, b interface{}) string { return fmt.Sprintf("%v|%v", a, b) }
 
 func highScoreLess(h1, h2 *HighScore) bool { return h1.key() < h2.key() }
 
@@ -1566,6 +1572,9 @@ func testUpdateQuery(t *testing.T, _ Harness, coll *ds.Collection) {
 	})
 }
 
+// Verify that we can run an update query on a struct with no revision field.
+// This test is similar to the above, but it uses a different struct, and of
+// course we do not check that a revision field is present.
 func testUpdateQueryNoRev(t *testing.T, _ Harness, coll *ds.Collection) {
 	type grade struct {
 		Name  string `docstore:"name"`
