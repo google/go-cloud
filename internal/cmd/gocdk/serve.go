@@ -51,7 +51,7 @@ The application will reload any time it detects a change under your project.`,
 		},
 	}
 	serveCmd.Flags().StringVar(&opts.address, "address", "localhost:8080", "`host:port` address to serve on")
-	serveCmd.Flags().BoolVar(&opts.verbose, "verbose", false, "true to print all output from Terraform")
+	serveCmd.Flags().BoolVarP(&opts.verbose, "verbose", "v", false, "true to print all output from Terraform")
 	serveCmd.Flags().StringVar(&opts.biome, "biome", "dev", "`name` of biome to apply and use configuration from")
 	serveCmd.Flags().DurationVar(&opts.pollInterval, "poll-interval", 500*time.Millisecond, "time between checking project directory for changes")
 	rootCmd.AddCommand(serveCmd)

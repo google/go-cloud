@@ -21,7 +21,7 @@ Flags:
       --auto-approve   true to auto-approve resource changes
       --delete         delete the entire biome
   -h, --help           help for cleanup
-      --verbose        true to print all output from Terraform
+  -v, --verbose        true to print all output from Terraform
 
 # Biome name must exist.
 $ gocdk biome cleanup notabiome --> FAIL
