@@ -25,9 +25,8 @@ import (
 )
 
 func ExampleOpenSNSTopic() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sns-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Establish an AWS session.
@@ -47,9 +46,8 @@ func ExampleOpenSNSTopic() {
 }
 
 func ExampleOpenSQSTopic() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sqs-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Establish an AWS session.
@@ -69,11 +67,9 @@ func ExampleOpenSQSTopic() {
 }
 
 func Example_openSNSTopicFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sns
-
-	// import _ "gocloud.dev/pubsub/awssnssqs"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/awssnssqs"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	const topicARN = "arn:aws:sns:us-east-2:123456789012:mytopic"
@@ -85,11 +81,9 @@ func Example_openSNSTopicFromURL() {
 }
 
 func Example_openSQSTopicFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sqs
-
-	// import _ "gocloud.dev/pubsub/awssnssqs"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/awssnssqs"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
@@ -102,9 +96,8 @@ func Example_openSQSTopicFromURL() {
 }
 
 func ExampleOpenSubscription() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#sns-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Establish an AWS session.
@@ -125,11 +118,9 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#sns
-
-	// import _ "gocloud.dev/pubsub/awssnssqs"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/awssnssqs"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.

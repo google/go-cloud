@@ -76,21 +76,19 @@ func ExampleNewError() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#local
-
-	// import _ "gocloud.dev/runtimevar/constantvar"
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/runtimevar/constantvar"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-
-	// Variables set up elsewhere:
-	ctx := context.Background()
 
 	v, err := runtimevar.OpenVariable(ctx, "constant://?val=hello+world&decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
-	// Ignore unused variables in example:
+	// PRAGMA: On gocloud.dev, hide the rest of the function.
 	snapshot, err := v.Latest(ctx)
 	if err != nil {
 		log.Fatal(err)

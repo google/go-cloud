@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#http-ctor
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Create an HTTP.Client
 	httpClient := http.DefaultClient
@@ -38,16 +38,14 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// This example is used in https://gocloud.dev/howto/runtimevar/#http-url
-
-	// import _ "gocloud.dev/runtimevar/httpvar"
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/runtimevar/httpvar"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
 	// The default opener connects to an etcd server based on the environment
 	// variable ETCD_SERVER_URL.
-
-	// Variables set up elsewhere:
-	ctx := context.Background()
 
 	v, err := runtimevar.OpenVariable(ctx, "http://myserver.com/foo.txt?decoder=string")
 	if err != nil {

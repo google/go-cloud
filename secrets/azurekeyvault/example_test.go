@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/#azure-ctor
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Get a client to use with the Azure KeyVault API, using default
 	// authorization from the environment.
@@ -44,11 +44,9 @@ func ExampleOpenKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/#azure
-
-	// import _ "gocloud.dev/secrets/azurekeyvault"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/secrets/azurekeyvault"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// The "azurekeyvault" URL scheme is replaced with "https" to construct an Azure

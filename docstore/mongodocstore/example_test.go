@@ -23,9 +23,8 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore#mongo-ctor.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	client, err := mongodocstore.Dial(ctx, "mongodb://my-host")
@@ -41,9 +40,8 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithIDFunc() {
-	// This example is used in https://gocloud.dev/howto/docstore#mongo-ctor.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	type HighScore struct {
 		Game   string
@@ -70,11 +68,9 @@ func ExampleOpenCollectionWithIDFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore#mongo.
-
-	// import _ "gocloud.dev/docstore/mongodocstore"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/docstore/mongodocstore"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.
