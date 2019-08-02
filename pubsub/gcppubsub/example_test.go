@@ -24,8 +24,8 @@ import (
 )
 
 func ExampleOpenTopic() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Your GCP credentials.
@@ -58,9 +58,9 @@ func ExampleOpenTopic() {
 }
 
 func Example_openTopicFromURL() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/gcppubsub"
-	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: Add a blank import: _ "gocloud.dev/pubsub/gcppubsub"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	topic, err := pubsub.OpenTopic(ctx, "gcppubsub://projects/myproject/topics/mytopic")
@@ -71,8 +71,8 @@ func Example_openTopicFromURL() {
 }
 
 func ExampleOpenSubscription() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Your GCP credentials.
@@ -107,9 +107,9 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/pubsub/gcppubsub"
-	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: Add a blank import: _ "gocloud.dev/pubsub/gcppubsub"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	subscription, err := pubsub.OpenSubscription(ctx,

@@ -16,7 +16,7 @@
 // object. This is used as input for building the Go CDK Hugo website.
 //
 // Examples must include a comment
-// "// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored."
+// "// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored."
 // somewhere in the function body in order to be included in this tool's output.
 //
 // gatherexamples does some minimal rewriting of the example source code for
@@ -24,13 +24,13 @@
 //
 //   - Any imports the example uses will be prepended to the code.
 //   - log.Fatal(err) -> return err
-//   - A comment line "// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line." will
+//   - A comment line "// PRAGMA: On gocloud.dev, hide lines until the next blank line." will
 //     remove any code up to the next blank line. This is intended for
 //     compiler-mandated setup like `ctx := context.Background()`.
-//   - A comment line "// PRAGMA(gocloud.dev): On gocloud.dev, hide the rest of the function." will
+//   - A comment line "// PRAGMA: On gocloud.dev, hide the rest of the function." will
 //     remove any code until the end of the function. This is intended for
 //     compiler-mandated assignments like `_ = bucket`.
-//   - A comment line "// PRAGMA(gocloud.dev): Add a blank import: _ "example.com/foo""
+//   - A comment line "// PRAGMA: Add a blank import: _ "example.com/foo""
 //     will add the blank import to the example's imports.
 //
 // The key of each JSON object entry will be the import path of the package,
@@ -121,7 +121,7 @@ const gatherLoadMode packages.LoadMode = packages.NeedName |
 
 // pragmaPrefix is the prefix for all comments in examples that are used as
 // directives for formatting.
-const pragmaPrefix = "// PRAGMA(gocloud.dev): "
+const pragmaPrefix = "// PRAGMA: "
 
 // inclusionComment is the comment used to signify whether the example should be
 // included in the output.

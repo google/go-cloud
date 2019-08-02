@@ -24,8 +24,8 @@ import (
 )
 
 func ExampleOpenVariable() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Your GCP credentials.
@@ -63,9 +63,9 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/runtimevar/gcpruntimeconfig"
-	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: Add a blank import: _ "gocloud.dev/runtimevar/gcpruntimeconfig"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
