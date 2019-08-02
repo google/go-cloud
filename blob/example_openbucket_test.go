@@ -30,7 +30,7 @@ func Example_openFromURL() {
 	// This example uses "memblob", the in-memory implementation.
 	// We need to add a blank import line to register the memblob driver's
 	// URLOpener, which implements blob.BucketURLOpener:
-	// _ "gocloud.dev/blob/memblob"
+	// import _ "gocloud.dev/blob/memblob"
 	// memblob registers for the "mem" scheme.
 	// All blob.OpenBucket URLs also work with "blob+" or "blob+bucket+" prefixes,
 	// e.g., "blob+mem://" or "blob+bucket+mem://".
@@ -54,8 +54,8 @@ func Example_openFromURL() {
 }
 
 func Example_openFromURLWithPrefix() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Connect to a bucket using a URL, using the "prefix" query parameter to

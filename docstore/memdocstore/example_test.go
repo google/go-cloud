@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	coll, err := memdocstore.OpenCollection("userID", nil)
 	if err != nil {
@@ -33,8 +33,8 @@ func ExampleOpenCollection() {
 }
 
 func ExampleOpenCollectionWithKeyFunc() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	type HighScore struct {
 		Game   string
 		Player string
@@ -54,9 +54,9 @@ func ExampleOpenCollectionWithKeyFunc() {
 }
 
 func Example_openCollectionFromURL() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	// PRAGMA(gocloud.dev): Add a blank import: _ "gocloud.dev/docstore/memdocstore"
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.

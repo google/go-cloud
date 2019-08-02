@@ -24,8 +24,8 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Create an in-memory bucket.

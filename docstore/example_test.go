@@ -37,8 +37,8 @@ type Player struct {
 }
 
 func ExampleCollection_Actions_bulkWrite() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -55,8 +55,8 @@ func ExampleCollection_Actions_bulkWrite() {
 }
 
 func ExampleCollection_Actions_getAfterWrite() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -72,8 +72,8 @@ func ExampleCollection_Actions_getAfterWrite() {
 }
 
 func ExampleCollection_Update() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -167,8 +167,8 @@ func ExampleCollection_ErrorAs() {
 }
 
 func ExampleQuery_Get() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -231,8 +231,8 @@ func ExampleQuery_Get_full() {
 }
 
 func ExampleQuery_Delete() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -288,8 +288,8 @@ func ExampleQuery_Delete_full() {
 }
 
 func ExampleQuery_Update() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -350,8 +350,8 @@ func ExampleQuery_Update_full() {
 }
 
 func Example_optimisticLocking() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	coll, err := memdocstore.OpenCollection("Name", nil)

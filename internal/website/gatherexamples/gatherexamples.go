@@ -16,7 +16,7 @@
 // object. This is used as input for building the Go CDK Hugo website.
 //
 // Examples must include a comment
-// // PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+// "// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored."
 // somewhere in the function body in order to be included in this tool's output.
 //
 // gatherexamples does some minimal rewriting of the example source code for
@@ -24,10 +24,10 @@
 //
 //   - Any imports the example uses will be prepended to the code.
 //   - log.Fatal(err) -> return err
-//   - A comment line "// PRAGMA(gocloud.dev): Skip until next blank line." will
+//   - A comment line "// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line." will
 //     remove any code up to the next blank line. This is intended for
 //     compiler-mandated setup like `ctx := context.Background()`.
-//   - A comment line "// PRAGMA(gocloud.dev): Skip rest of function." will
+//   - A comment line "// PRAGMA(gocloud.dev): On gocloud.dev, hide the rest of the function." will
 //     remove any code until the end of the function. This is intended for
 //     compiler-mandated assignments like `_ = bucket`.
 //   - A comment line "// PRAGMA(gocloud.dev): Add a blank import: _ "example.com/foo""
@@ -125,7 +125,7 @@ const pragmaPrefix = "// PRAGMA(gocloud.dev): "
 
 // inclusionComment is the comment used to signify whether the example should be
 // included in the output.
-const inclusionComment = pragmaPrefix + "This example is used on gocloud.dev; please ignore PRAGMA comments."
+const inclusionComment = pragmaPrefix + "This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored."
 
 type example struct {
 	Imports string `json:"imports"`
@@ -232,7 +232,7 @@ rewrite:
 		const importBlankPrefix = pragmaPrefix + "Add a blank import: _ "
 		indent, lineContent := line[:start], line[start:]
 		switch {
-		case lineContent == pragmaPrefix+"Skip until next blank line.":
+		case lineContent == pragmaPrefix+"On gocloud.dev, hide lines until the next blank line.":
 			// Skip lines until we hit a blank line.
 			for len(block) > 0 {
 				var next string
@@ -241,7 +241,7 @@ rewrite:
 					break
 				}
 			}
-		case lineContent == pragmaPrefix+"Skip rest of function.":
+		case lineContent == pragmaPrefix+"On gocloud.dev, hide the rest of the function.":
 			// Ignore remaining lines.
 			break rewrite
 		case lineContent == "log.Fatal(err)":

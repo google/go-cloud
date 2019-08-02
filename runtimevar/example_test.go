@@ -29,8 +29,8 @@ import (
 )
 
 func Example_jsonDecoder() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Config is the sample config struct we're going to parse our JSON into.
@@ -53,7 +53,7 @@ func Example_jsonDecoder() {
 	defer v.Close()
 	// snapshot.Value will be of type Config.
 
-	// PRAGMA(gocloud.dev): Skip rest of function.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide the rest of the function.
 	snapshot, err := v.Latest(ctx)
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
@@ -84,15 +84,15 @@ func Example_stringDecoder() {
 }
 
 func ExampleVariable_Latest() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	var v *runtimevar.Variable
 
 	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
-	// PRAGMA(gocloud.dev): Skip rest of function.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide the rest of the function.
 	_ = snapshot
 }
 
@@ -179,13 +179,13 @@ func ExampleVariable_Watch() {
 }
 
 func ExampleDecryptDecode() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	var keeper *secrets.Keeper
 
 	decodeFunc := runtimevar.DecryptDecode(keeper, runtimevar.StringDecode)
 	decoder := runtimevar.NewDecoder("", decodeFunc)
 
-	// PRAGMA(gocloud.dev): Skip rest of function.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide the rest of the function.
 	_ = decoder
 }

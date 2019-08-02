@@ -92,7 +92,7 @@ func ExampleFoo() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 }`,
 				},
 			},
@@ -109,7 +109,7 @@ func Example() {
 					"example_test.go": `package foo_test
 
 func ExampleFoo() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 }`,
 				},
 			},
@@ -126,7 +126,7 @@ func ExampleFoo() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Unattached comment.
 
@@ -158,7 +158,7 @@ func Example() {
 import "fmt"
 
 func Example() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	fmt.Println(42)
 }`,
 				},
@@ -182,7 +182,7 @@ import "fmt"
 import "math"
 
 func Example() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	fmt.Println(math.Pi)
 }`,
 				},
@@ -205,7 +205,7 @@ func Example() {
 import "log"
 
 func Example() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	var err error
 	if err != nil {
 		log.Fatal(err)
@@ -229,14 +229,14 @@ func Example() {
 import "context"
 
 func Example() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// PRAGMA(gocloud.dev): Skip until next blank line.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// do something
 
-	// PRAGMA(gocloud.dev): Skip rest of function.
+	// PRAGMA(gocloud.dev): On gocloud.dev, hide the rest of the function.
 	_ = ctx
 }`,
 				},
@@ -257,7 +257,7 @@ func Example() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; please ignore PRAGMA comments.
+	// PRAGMA(gocloud.dev): This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// PRAGMA(gocloud.dev): Add a blank import: _ "example.com/bar"
 	_ = 42
