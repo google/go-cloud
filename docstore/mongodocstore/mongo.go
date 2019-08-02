@@ -129,8 +129,8 @@ type Options struct {
 	RevisionField string
 	// Whether Query.Update writes a new revision into the updated documents.
 	// The default is false, meaning that a revision will be written to all
-	// documents that satisfy the query's conditions.. Set to true if the
-	// collection's documents do not have revision fields.
+	// documents that satisfy the query's conditions. Set to true if and only if
+	// the collection's documents do not have revision fields.
 	NoWriteQueryUpdateRevisions bool
 }
 

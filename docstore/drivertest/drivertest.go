@@ -213,18 +213,6 @@ func withCollection(t *testing.T, newHarness HarnessMaker, kind CollectionKind, 
 	withColl(t, h, kind, f)
 }
 
-func withColl(t *testing.T, h Harness, kind CollectionKind, f func(*testing.T, Harness, *ds.Collection)) {
-	ctx := context.Background()
-	dc, err := h.MakeCollection(ctx, kind)
-	if err != nil {
-		t.Fatal(err)
-	}
-	coll := ds.NewCollection(dc)
-	defer coll.Close()
-	clearCollection(t, coll)
-	f(t, h, coll)
-}
-
 func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection, string)) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
@@ -243,6 +231,20 @@ func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T
 			f(t, coll, AlternateRevisionField)
 		})
 	})
+}
+
+// withColl calls f with h and an empty collection of the given kind. It takes care of closing
+// the collection after f returns.
+func withColl(t *testing.T, h Harness, kind CollectionKind, f func(*testing.T, Harness, *ds.Collection)) {
+	ctx := context.Background()
+	dc, err := h.MakeCollection(ctx, kind)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := ds.NewCollection(dc)
+	defer coll.Close()
+	clearCollection(t, coll)
+	f(t, h, coll)
 }
 
 // KeyField is the primary key field for the main test collection.

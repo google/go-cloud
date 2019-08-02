@@ -197,20 +197,16 @@ func (q *Query) Delete(ctx context.Context) error {
 	if err := q.validateWrite("delete"); err != nil {
 		return err
 	}
-	type rdq interface {
-		RunDeleteQuery(context.Context, *driver.Query) error
-	}
-
-	if d, ok := q.coll.driver.(rdq); ok {
+	if d, ok := q.coll.driver.(driver.DeleteQueryer); ok {
 		return d.RunDeleteQuery(ctx, q.dq)
 	}
 
-	return q.runAction(ctx, func(al *ActionList, doc Document) {
+	return q.runActionsWithRetry(ctx, func(al *ActionList, doc Document) {
 		al.Delete(doc)
 	})
 }
 
-func (q *Query) runAction(ctx context.Context, addAction func(*ActionList, Document)) error {
+func (q *Query) runActionsWithRetry(ctx context.Context, addAction func(*ActionList, Document)) error {
 	var retries map[interface{}]bool
 	// TODO(shantuo): split actions into groups to reduce client memory.
 	// TODO(shantuo): test retry logic (using a mock driver)
@@ -277,18 +273,14 @@ func (q *Query) Update(ctx context.Context, mods Mods) error {
 		return err
 	}
 
-	type ruq interface {
-		RunUpdateQuery(context.Context, *driver.Query, []driver.Mod) error
-	}
-
-	if d, ok := q.coll.driver.(ruq); ok {
+	if d, ok := q.coll.driver.(driver.UpdateQueryer); ok {
 		dmods, err := toDriverMods(mods)
 		if err != nil {
 			return err
 		}
 		return d.RunUpdateQuery(ctx, q.dq, dmods)
 	}
-	return q.runAction(ctx, func(al *ActionList, doc Document) {
+	return q.runActionsWithRetry(ctx, func(al *ActionList, doc Document) {
 		al.Update(doc, mods)
 	})
 }

@@ -92,6 +92,20 @@ type Collection interface {
 	Close() error
 }
 
+// DeleteQueryer should be implemented by Collections that can handle Query.Delete
+// efficiently. If a Collection does not implement this interface, then Query.Delete
+// will be implemented by calling RunGetQuery and deleting the returned documents.
+type DeleteQueryer interface {
+	RunDeleteQuery(context.Context, *Query) error
+}
+
+// UpdateQueryer should be implemented by Collections that can handle Query.Update
+// efficiently. If a Collection does not implement this interface, then Query.Update
+// will be implemented by calling RunGetQuery and updating the returned documents.
+type UpdateQueryer interface {
+	RunUpdateQuery(context.Context, *Query, []Mod) error
+}
+
 // ActionKind describes the type of an action.
 type ActionKind int
 
