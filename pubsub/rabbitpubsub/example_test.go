@@ -53,7 +53,7 @@ func ExampleOpenSubscription() {
 
 func Example_openTopicFromURL() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: Add a blank import: _ "gocloud.dev/pubsub/rabbitpubsub"
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/rabbitpubsub"
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
@@ -69,7 +69,7 @@ func Example_openTopicFromURL() {
 
 func Example_openSubscriptionFromURL() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: Add a blank import: _ "gocloud.dev/pubsub/rabbitpubsub"
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/rabbitpubsub"
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 

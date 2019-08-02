@@ -49,7 +49,7 @@ func ExampleOpenBucket() {
 
 func Example_openBucketFromURL() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: Add a blank import: _ "gocloud.dev/blob/s3blob"
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/blob/s3blob"
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 

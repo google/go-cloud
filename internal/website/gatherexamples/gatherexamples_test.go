@@ -259,7 +259,7 @@ func Example() {
 func Example() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// PRAGMA: Add a blank import: _ "example.com/bar"
+	// PRAGMA: On gocloud.dev, add a blank import: _ "example.com/bar"
 	_ = 42
 }`,
 				},

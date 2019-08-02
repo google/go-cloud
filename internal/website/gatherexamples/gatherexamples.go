@@ -30,7 +30,7 @@
 //   - A comment line "// PRAGMA: On gocloud.dev, hide the rest of the function." will
 //     remove any code until the end of the function. This is intended for
 //     compiler-mandated assignments like `_ = bucket`.
-//   - A comment line "// PRAGMA: Add a blank import: _ "example.com/foo""
+//   - A comment line "// PRAGMA: On gocloud.dev, add a blank import: _ "example.com/foo""
 //     will add the blank import to the example's imports.
 //
 // The key of each JSON object entry will be the import path of the package,

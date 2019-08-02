@@ -55,7 +55,7 @@ func ExampleOpenCollectionWithKeyFunc() {
 
 func Example_openCollectionFromURL() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: Add a blank import: _ "gocloud.dev/docstore/memdocstore"
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/docstore/memdocstore"
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
