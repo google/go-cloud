@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcpfirestore provides a docstore implementation backed by GCP
+// Package gcpfirestore provides a docstore implementation backed by Google Cloud
 // Firestore.
 // Use OpenCollection to construct a *docstore.Collection.
 //

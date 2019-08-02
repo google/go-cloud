@@ -1,6 +1,7 @@
 ---
 title: "Publish Messages to a Topic"
 date: 2019-03-26T09:44:15-07:00
+lastmod: 2019-07-29T12:00:00-07:00
 weight: 1
 toc: true
 ---
@@ -46,13 +47,19 @@ Note that the [semantics of message delivery][] can vary by backing service.
 ### Google Cloud Pub/Sub {#gcp}
 
 The Go CDK can publish to a Google [Cloud Pub/Sub][] topic. The URLs use the
-project ID and the topic ID. `pubsub.OpenTopic` will use [Application Default
-Credentials][GCP creds].
-
-{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
+project ID and the topic ID.
 
 [Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/
+
+`pubsub.OpenTopic` will use Application Default Credentials; if you have
+authenticated via [`gcloud auth login`][], it will use those credentials. See
+[Application Default Credentials][GCP creds] to learn about authentication
+alternatives, including using environment variables.
+
 [GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+
+{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
 
 #### Google Cloud Pub/Sub Constructor {#gcp-ctor}
 
@@ -69,10 +76,17 @@ topics.)
 
 The Go CDK can publish to an Amazon [Simple Notification Service][SNS] (SNS)
 topic. SNS URLs in the Go CDK use the Amazon Resource Name (ARN) to identify
-the topic. You can specify the `region` query parameter to ensure your
-application connects to the correct region, but otherwise `pubsub.OpenTopic`
-will use the region found in the environment variables or your AWS CLI
-configuration.
+the topic. You should specify the `region` query parameter to ensure your
+application connects to the correct region.
+
+[SNS]: https://aws.amazon.com/sns/
+
+`pubsub.OpenTopic` will create a default AWS Session with the
+`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See [AWS Session][] to learn about authentication
+alternatives, including using environment variables.
+
+[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 {{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSNSTopicFromURL" >}}
 
@@ -86,7 +100,6 @@ you may need to manually Base64 decode the message payload.
 
 [Base64]: https://en.wikipedia.org/wiki/Base64
 [SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
-[SNS]: https://aws.amazon.com/sns/
 
 #### Amazon SNS Constructor {#sns-ctor}
 

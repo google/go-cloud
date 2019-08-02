@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mongodocstore provides an implementation of the docstore API for MongoDB.
+// Package mongodocstore provides a docstore implementation for MongoDB
+// and MongoDB-compatible services hosted on-premise or by cloud providers,
+// including Amazon DocumentDB and Azure Cosmos DB.
 //
 //
 // URLs

@@ -1,6 +1,7 @@
 ---
 title: "Runtime Configuration"
 date: 2019-07-11T12:00:00-07:00
+lastmod: 2019-07-29T12:00:00-07:00
 showInSidenav: true
 toc: true
 ---
@@ -71,9 +72,17 @@ recommend starting with `Latest` as it's conceptually simpler to work with.
 ### GCP Runtime Configurator {#gcprc}
 
 To open a variable stored in [GCP Runtime Configurator][] via a URL, you can use
-the `runtimevar.OpenVariable` function as follows.
+the `runtimevar.OpenVariable` function as shown in the example below.
 
 [GCP Runtime Configurator]: https://cloud.google.com/deployment-manager/runtime-configurator/
+
+`runtimevar.OpenVariable` will use Application Default Credentials; if you have
+authenticated via [`gcloud auth login`][], it will use those credentials. See
+[Application Default Credentials][GCP creds] to learn about authentication
+alternatives, including using environment variables.
+
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
 
 {{< goexample
 "gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL" >}}
@@ -90,13 +99,20 @@ variable.
 ### AWS Parameter Store {#awsps}
 
 To open a variable stored in [AWS Parameter Store][] via a URL, you can use the
-`runtimevar.OpenVariable` function as follows.
-
-{{< goexample
-"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL" >}}
+`runtimevar.OpenVariable` function as shown in the example below.
 
 [AWS Parameter Store]:
 https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
+
+`runtimevar.OpenVariable` will create a default AWS Session with the
+`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See [AWS Session][] to learn about authentication
+alternatives, including using environment variables.
+
+[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+
+{{< goexample
+"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL" >}}
 
 #### AWS Constructor {#awsps-ctor}
 

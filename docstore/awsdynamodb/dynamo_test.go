@@ -187,7 +187,7 @@ func BenchmarkConformance(b *testing.B) {
 	drivertest.RunBenchmarks(b, docstore.NewCollection(coll))
 }
 
-// Dynamodocstore-specific tests.
+// awsdynamodb-specific tests.
 
 func TestQueryErrors(t *testing.T) {
 	// Verify that bad queries return the right errors.
