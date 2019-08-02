@@ -229,7 +229,7 @@ rewrite:
 			sb.WriteByte('\n')
 			continue
 		}
-		const importBlankPrefix = pragmaPrefix + "Add a blank import: _ "
+		const importBlankPrefix = pragmaPrefix + "On gocloud.dev, add a blank import: _ "
 		indent, lineContent := line[:start], line[start:]
 		switch {
 		case lineContent == pragmaPrefix+"On gocloud.dev, hide lines until the next blank line.":
