@@ -163,8 +163,7 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	ctx = q.coll.tracer.Start(ctx, "Query.Get")
 	defer func() { q.coll.tracer.End(ctx, err) }()
 
-	var it driver.DocumentIterator
-	it, err = dcoll.RunGetQuery(ctx, q.dq)
+	it, err := dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, coll: q.coll, err: wrapError(dcoll, err)}
 }
 
