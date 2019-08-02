@@ -24,7 +24,7 @@ import (
 )
 
 func ExampleOpenKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/#aws-ctor
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
@@ -45,11 +45,9 @@ func ExampleOpenKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/#aws
-
-	// import _ "gocloud.dev/secrets/awskms"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/secrets/awskms"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Use one of the following:

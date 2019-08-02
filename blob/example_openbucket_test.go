@@ -54,9 +54,8 @@ func Example_openFromURL() {
 }
 
 func Example_openFromURLWithPrefix() {
-	// This example is used in https://gocloud.dev/howto/blob/#prefix
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Connect to a bucket using a URL, using the "prefix" query parameter to

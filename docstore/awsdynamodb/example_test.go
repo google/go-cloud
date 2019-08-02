@@ -25,10 +25,7 @@ import (
 )
 
 func ExampleOpenCollection() {
-	// This example is used in https://gocloud.dev/howto/docstore#dynamodb-ctor.
-
-	// import _ "gocloud.dev/docstore/awsdynamodb"
-
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	sess, err := session.NewSession()
 	if err != nil {
 		log.Fatal(err)
@@ -42,11 +39,9 @@ func ExampleOpenCollection() {
 }
 
 func Example_openCollectionFromURL() {
-	// This example is used in https://gocloud.dev/howto/docstore#dynamodb.
-
-	// import _ "gocloud.dev/docstore/awsdynamodb"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/docstore/awsdynamodb"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.

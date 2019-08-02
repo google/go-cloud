@@ -177,26 +177,7 @@ func BenchmarkConformance(b *testing.B) {
 	drivertest.RunBenchmarks(b, docstore.NewCollection(coll))
 }
 
-// Firedocstore-specific tests.
-
-func TestNewGetRequest(t *testing.T) {
-	c := &collection{dbPath: "dbPath", collPath: "collPath", nameField: "name"}
-	actions := []*driver.Action{
-		{Kind: driver.Get, Key: "a", Doc: drivertest.MustDocument(map[string]interface{}{"name": "a"})},
-		{Kind: driver.Get, Key: "b", Doc: drivertest.MustDocument(map[string]interface{}{"name": "b"})},
-	}
-	got, err := c.newGetRequest(actions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := &pb.BatchGetDocumentsRequest{
-		Database:  "dbPath",
-		Documents: []string{"collPath/a", "collPath/b"},
-	}
-	if !proto.Equal(got, want) {
-		t.Errorf("\ngot  %v\nwant %v", got, want)
-	}
-}
+// gcpfirestore-specific tests.
 
 func TestResourceIDRegexp(t *testing.T) {
 	for _, good := range []string{

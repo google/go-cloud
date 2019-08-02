@@ -24,9 +24,8 @@ import (
 )
 
 func ExampleOpenTopic() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#nats-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	natsConn, err := nats.Connect("nats://nats.example.com")
@@ -43,9 +42,8 @@ func ExampleOpenTopic() {
 }
 
 func ExampleOpenSubscription() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#nats-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	natsConn, err := nats.Connect("nats://nats.example.com")
@@ -65,11 +63,9 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openTopicFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#nats
-
-	// import _ "gocloud.dev/pubsub/natspubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
@@ -83,11 +79,9 @@ func Example_openTopicFromURL() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#nats
-
-	// import _ "gocloud.dev/pubsub/natspubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.

@@ -23,7 +23,7 @@ import (
 )
 
 func ExampleNewKeeper() {
-	// This example is used in https://gocloud.dev/howto/secrets/#local-ctor
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	secretKey, err := localsecrets.NewRandomKey()
 	if err != nil {
@@ -34,11 +34,11 @@ func ExampleNewKeeper() {
 }
 
 func Example_openFromURL() {
-	// This example is used in https://gocloud.dev/howto/secrets/#local
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// import _ "gocloud.dev/secrets/localsecrets"
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/secrets/localsecrets"
 
-	// Variables set up elsewhere:
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Using "base64key://", a new random key will be generated.

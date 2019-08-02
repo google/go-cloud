@@ -51,6 +51,7 @@ The application will reload any time it detects a change under your project.`,
 		},
 	}
 	serveCmd.Flags().StringVar(&opts.address, "address", "localhost:8080", "`host:port` address to serve on")
+	serveCmd.Flags().BoolVarP(&opts.verbose, "verbose", "v", false, "true to print all output from Terraform")
 	serveCmd.Flags().StringVar(&opts.biome, "biome", "dev", "`name` of biome to apply and use configuration from")
 	serveCmd.Flags().DurationVar(&opts.pollInterval, "poll-interval", 500*time.Millisecond, "time between checking project directory for changes")
 	rootCmd.AddCommand(serveCmd)
@@ -106,6 +107,7 @@ type serveOptions struct {
 	biome        string
 	address      string
 	pollInterval time.Duration
+	verbose      bool
 
 	// actualAddress is the local address that the reverse proxy is
 	// listening on.
@@ -141,7 +143,7 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 	}()
 
 	// Apply Terraform configuration in biome.
-	if err := biomeApply(ctx, pctx, opts.biome, biomeApplyOptions{}); err != nil {
+	if err := biomeApply(ctx, pctx, opts.biome, biomeApplyOptions{Verbose: opts.verbose}); err != nil {
 		return err
 	}
 
