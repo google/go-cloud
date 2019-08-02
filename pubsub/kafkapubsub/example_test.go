@@ -23,9 +23,8 @@ import (
 )
 
 func ExampleOpenTopic() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#kafka-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// The set of brokers in the Kafka cluster.
@@ -42,9 +41,8 @@ func ExampleOpenTopic() {
 }
 
 func ExampleOpenSubscription() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#kafka-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// The set of brokers in the Kafka cluster.
@@ -63,11 +61,9 @@ func ExampleOpenSubscription() {
 }
 
 func Example_openTopicFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/publish/#kafka
-
-	// import _ "gocloud.dev/pubsub/kafkapubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/kafkapubsub"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
@@ -81,11 +77,9 @@ func Example_openTopicFromURL() {
 }
 
 func Example_openSubscriptionFromURL() {
-	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#kafka
-
-	// import _ "gocloud.dev/pubsub/kafkapubsub"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/kafkapubsub"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.

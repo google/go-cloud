@@ -25,9 +25,8 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/#s3-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Establish an AWS session.
@@ -49,11 +48,9 @@ func ExampleOpenBucket() {
 }
 
 func Example_openBucketFromURL() {
-	// This example is used in https://gocloud.dev/howto/blob/#s3
-
-	// import _ "gocloud.dev/blob/s3blob"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/blob/s3blob"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// blob.OpenBucket creates a *blob.Bucket from a URL.

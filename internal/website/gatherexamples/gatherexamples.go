@@ -14,7 +14,9 @@
 
 // Command gatherexamples extracts examples in a Go module into a JSON-formatted
 // object. This is used as input for building the Go CDK Hugo website.
-// Examples must include a comment that starts with "// This example is used in"
+//
+// Examples must include a comment
+// "// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored."
 // somewhere in the function body in order to be included in this tool's output.
 //
 // gatherexamples does some minimal rewriting of the example source code for
@@ -22,14 +24,14 @@
 //
 //   - Any imports the example uses will be prepended to the code.
 //   - log.Fatal(err) -> return err
-//   - A comment line "// Variables set up elsewhere:" will remove any code up
-//     to the next blank line. This is intended for compiler-mandated setup
-//     like `ctx := context.Background()`.
-//   - A comment line "// Ignore unused variables in example:" will remove any
-//     code until the end of the function. This is intended for
+//   - A comment line "// PRAGMA: On gocloud.dev, hide lines until the next blank line." will
+//     remove any code up to the next blank line. This is intended for
+//     compiler-mandated setup like `ctx := context.Background()`.
+//   - A comment line "// PRAGMA: On gocloud.dev, hide the rest of the function." will
+//     remove any code until the end of the function. This is intended for
 //     compiler-mandated assignments like `_ = bucket`.
-//   - A comment line "// import _ "example.com/foo"" will add a blank import
-//     to the example's imports.
+//   - A comment line "// PRAGMA: On gocloud.dev, add a blank import: _ "example.com/foo""
+//     will add the blank import to the example's imports.
 //
 // The key of each JSON object entry will be the import path of the package,
 // followed by a dot ("."), followed by the name of the example function. The
@@ -83,7 +85,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "gatherexamples: load %s: %v\n", dir, err)
 			os.Exit(1)
 		}
-		for exampleName, ex := range gather(pkgs) {
+		examples, err := gather(pkgs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "gatherexamples: gather: %v", err)
+			os.Exit(1)
+		}
+		for exampleName, ex := range examples {
 			allExamples[exampleName] = ex
 		}
 	}
@@ -112,9 +119,13 @@ const gatherLoadMode packages.LoadMode = packages.NeedName |
 	// 10x slower. Reported as https://github.com/golang/go/issues/31699.
 	packages.NeedDeps
 
-// signifierCommentPrefix is the start of the comment used to signify whether
-// the example should be included in the output.
-const signifierCommentPrefix = "// This example is used in"
+// pragmaPrefix is the prefix for all comments in examples that are used as
+// directives for formatting.
+const pragmaPrefix = "// PRAGMA: "
+
+// inclusionComment is the comment used to signify whether the example should be
+// included in the output.
+const inclusionComment = pragmaPrefix + "This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored."
 
 type example struct {
 	Imports string `json:"imports"`
@@ -123,7 +134,7 @@ type example struct {
 
 // gather extracts the code from the example functions in the given packages
 // and returns a map like the one described in the package documentation.
-func gather(pkgs []*packages.Package) map[string]example {
+func gather(pkgs []*packages.Package) (map[string]example, error) {
 	examples := make(map[string]example)
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
@@ -141,11 +152,16 @@ func gather(pkgs []*packages.Package) map[string]example {
 					Comments: file.Comments,
 				})
 				if err != nil {
-					panic(err) // will only occur for bad invocations of Fprint
+					return nil, err // will only occur for bad invocations of Fprint
 				}
 				original := sb.String()
-				if !strings.Contains(original, "\n\t"+signifierCommentPrefix) {
-					// Does not contain the signifier comment. Skip it.
+				if !strings.Contains(original, inclusionComment) {
+					// Does not contain the inclusion comment. Skip it, but first verify
+					// that it doesn't contain any PRAGMA comments; only examples with
+					// the inclusion comment should include pragmas.
+					if strings.Contains(original, pragmaPrefix) {
+						return nil, fmt.Errorf("%s in package %s has PRAGMA(s) for gatherexamples, but is not marked for inclusion with %q", fn.Name.Name, pkg.PkgPath, inclusionComment)
+					}
 					continue
 				}
 				exampleCode, blankImports := rewriteBlock(original)
@@ -183,7 +199,7 @@ func gather(pkgs []*packages.Package) map[string]example {
 			}
 		}
 	}
-	return examples
+	return examples, nil
 }
 
 // rewriteBlock reformats a Go block statement for display as an example.
@@ -213,10 +229,10 @@ rewrite:
 			sb.WriteByte('\n')
 			continue
 		}
-		const importBlankPrefix = "// import _ "
+		const importBlankPrefix = pragmaPrefix + "On gocloud.dev, add a blank import: _ "
 		indent, lineContent := line[:start], line[start:]
 		switch {
-		case lineContent == "// Variables set up elsewhere:":
+		case lineContent == pragmaPrefix+"On gocloud.dev, hide lines until the next blank line.":
 			// Skip lines until we hit a blank line.
 			for len(block) > 0 {
 				var next string
@@ -225,7 +241,7 @@ rewrite:
 					break
 				}
 			}
-		case lineContent == "// Ignore unused variables in example:":
+		case lineContent == pragmaPrefix+"On gocloud.dev, hide the rest of the function.":
 			// Ignore remaining lines.
 			break rewrite
 		case lineContent == "log.Fatal(err)":
@@ -238,8 +254,8 @@ rewrite:
 			if err == nil {
 				blankImports = append(blankImports, path)
 			}
-		case strings.HasPrefix(lineContent, signifierCommentPrefix):
-			// "This example is used in" comment. Skip it.
+		case strings.Contains(lineContent, inclusionComment):
+			// inclusion comment. Skip it.
 		default:
 			// Ordinary line, write as-is.
 			sb.WriteString(line)

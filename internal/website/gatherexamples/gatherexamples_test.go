@@ -25,9 +25,10 @@ import (
 
 func TestGather(t *testing.T) {
 	tests := []struct {
-		name   string
-		module packagestest.Module
-		want   map[string]example
+		name    string
+		module  packagestest.Module
+		want    map[string]example
+		wantErr bool
 	}{
 		{
 			name: "NoExamples",
@@ -67,6 +68,22 @@ func ExampleFoo() {
 			want: map[string]example{},
 		},
 		{
+			name: "NonSignifiedExampleWithPragma",
+			module: packagestest.Module{
+				Name: "example.com/foo",
+				Files: map[string]interface{}{
+					"foo.go": "package foo\n",
+					"example_test.go": `package foo_test
+
+func ExampleFoo() {
+	// PRAGMA: Do something.
+}`,
+				},
+			},
+			want:    map[string]example{},
+			wantErr: true,
+		},
+		{
 			name: "EmptyExampleWithComment",
 			module: packagestest.Module{
 				Name: "example.com/foo",
@@ -75,7 +92,7 @@ func ExampleFoo() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 }`,
 				},
 			},
@@ -92,7 +109,7 @@ func Example() {
 					"example_test.go": `package foo_test
 
 func ExampleFoo() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 }`,
 				},
 			},
@@ -109,7 +126,7 @@ func ExampleFoo() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Unattached comment.
 
@@ -141,7 +158,7 @@ func Example() {
 import "fmt"
 
 func Example() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	fmt.Println(42)
 }`,
 				},
@@ -165,7 +182,7 @@ import "fmt"
 import "math"
 
 func Example() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	fmt.Println(math.Pi)
 }`,
 				},
@@ -188,7 +205,7 @@ func Example() {
 import "log"
 
 func Example() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	var err error
 	if err != nil {
 		log.Fatal(err)
@@ -212,14 +229,14 @@ func Example() {
 import "context"
 
 func Example() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// Variables set up elsewhere:
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// do something
 
-	// Ignore unused variables in example:
+	// PRAGMA: On gocloud.dev, hide the rest of the function.
 	_ = ctx
 }`,
 				},
@@ -240,9 +257,9 @@ func Example() {
 					"example_test.go": `package foo_test
 
 func Example() {
-	// This example is used in http://www.example.com/docs
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// import _ "example.com/bar"
+	// PRAGMA: On gocloud.dev, add a blank import: _ "example.com/bar"
 	_ = 42
 }`,
 				},
@@ -265,7 +282,10 @@ func Example() {
 				t.Fatal(err)
 			}
 
-			got := gather(pkgs)
+			got, err := gather(pkgs)
+			if (err != nil) != test.wantErr {
+				t.Errorf("gather(pkgs) got err %v want err? %v", err, test.wantErr)
+			}
 			if diff := cmp.Diff(test.want, got, cmpopts.EquateEmpty()); diff != "" {
 				t.Errorf("gather(pkgs) diff (-want +got):\n%s", diff)
 			}

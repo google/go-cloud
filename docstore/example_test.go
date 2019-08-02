@@ -37,9 +37,8 @@ type Player struct {
 }
 
 func ExampleCollection_Actions_bulkWrite() {
-	// This example is used in https://gocloud.dev/howto/docstore#act-list.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -56,9 +55,8 @@ func ExampleCollection_Actions_bulkWrite() {
 }
 
 func ExampleCollection_Actions_getAfterWrite() {
-	// This example is used in https://gocloud.dev/howto/docstore#act-list.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -74,9 +72,8 @@ func ExampleCollection_Actions_getAfterWrite() {
 }
 
 func ExampleCollection_Update() {
-	// This example is used in https://gocloud.dev/howto/docstore#act-update.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -170,9 +167,8 @@ func ExampleCollection_ErrorAs() {
 }
 
 func ExampleQuery_Get() {
-	// This example is used in https://gocloud.dev/howto/docstore#qr-get.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -235,9 +231,8 @@ func ExampleQuery_Get_full() {
 }
 
 func ExampleQuery_Delete() {
-	// This example is used in https://gocloud.dev/howto/docstore#qr-del.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -293,9 +288,8 @@ func ExampleQuery_Delete_full() {
 }
 
 func ExampleQuery_Update() {
-	// This example is used in https://gocloud.dev/howto/docstore#qr-update.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 	var coll *docstore.Collection
 
@@ -356,9 +350,8 @@ func ExampleQuery_Update_full() {
 }
 
 func Example_optimisticLocking() {
-	// This example is used in https://gocloud.dev/howto/docstore#rev.
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	coll, err := memdocstore.OpenCollection("Name", nil)

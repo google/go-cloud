@@ -88,7 +88,7 @@ Runs "terraform init" followed by "terraform apply".`,
 		},
 	}
 	applyCmd.Flags().BoolVar(&input, "input", true, "ask for input for Terraform variables if not directly set")
-	applyCmd.Flags().BoolVar(&applyOpts.Verbose, "verbose", false, "true to print all output from Terraform")
+	applyCmd.Flags().BoolVarP(&applyOpts.Verbose, "verbose", "v", false, "true to print all output from Terraform")
 	applyCmd.Flags().BoolVar(&applyOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
 	biomeCmd.AddCommand(applyCmd)
 
@@ -106,7 +106,7 @@ Runs "terraform destroy".`,
 		},
 	}
 	cleanupCmd.Flags().BoolVar(&deleteBiome, "delete", false, "delete the entire biome")
-	cleanupCmd.Flags().BoolVar(&cleanupOpts.Verbose, "verbose", false, "true to print all output from Terraform")
+	cleanupCmd.Flags().BoolVarP(&cleanupOpts.Verbose, "verbose", "v", false, "true to print all output from Terraform")
 	cleanupCmd.Flags().BoolVar(&cleanupOpts.AutoApprove, "auto-approve", false, "true to auto-approve resource changes")
 	biomeCmd.AddCommand(cleanupCmd)
 

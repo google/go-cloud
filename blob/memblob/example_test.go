@@ -24,9 +24,8 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// This example is used in https://gocloud.dev/howto/blob/#local-ctor
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Create an in-memory bucket.

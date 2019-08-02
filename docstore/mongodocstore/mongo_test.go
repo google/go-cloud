@@ -201,6 +201,8 @@ func BenchmarkConformance(b *testing.B) {
 
 // Mongo-specific tests.
 
+// Testing the driver lower all fields in lowercaseFields mode to match the
+// behavior of the official Go MongoDB client library.
 func TestLowercaseFields(t *testing.T) {
 	// Verify that the LowercaseFields option works in all cases.
 	must := func(err error) {

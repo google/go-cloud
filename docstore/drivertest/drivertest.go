@@ -163,7 +163,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withNoRevCollection(t, newHarness, testData) })
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
-	t.Run("UnorderedActions", func(t *testing.T) { withCollection(t, newHarness, testUnorderedActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withCollection(t, newHarness, testGetQueryKeyField) })
 	t.Run("SerializeRevision", func(t *testing.T) { withHarnessAndCollection(t, newHarness, testSerializeRevision) })
 	t.Run("ActionsOnStructWithoutRevision", func(t *testing.T) { withNoRevCollection(t, newHarness, testActionsOnStructWithoutRevision) })
@@ -172,6 +171,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("GetQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testGetQuery) })
 	t.Run("DeleteQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testDeleteQuery) })
 	t.Run("UpdateQuery", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testUpdateQuery) })
+
+	t.Run("ExampleInDoc", func(t *testing.T) { withNoRevCollection(t, newHarness, testExampleInDoc) })
 
 	t.Run("BeforeDo", func(t *testing.T) { testBeforeDo(t, newHarness) })
 	t.Run("BeforeQuery", func(t *testing.T) { testBeforeQuery(t, newHarness) })
@@ -539,7 +540,6 @@ func checkNoRevisionField(t *testing.T, doc interface{}, revField string) {
 
 // Check that doc has a non-nil revision field.
 func checkHasRevisionField(t *testing.T, doc interface{}, revField string) {
-
 	t.Helper()
 	ddoc, err := driver.NewDocument(doc)
 	if err != nil {
@@ -1210,7 +1210,6 @@ const (
 	game1 = "Praise All Monsters"
 	game2 = "Zombie DMV"
 	game3 = "Days Gone"
-	game4 = "Rush Hour"
 )
 
 var highScores = []*HighScore{
@@ -1620,61 +1619,7 @@ func collectHighScores(ctx context.Context, iter *ds.DocumentIterator) ([]*HighS
 	return hs, nil
 }
 
-// TODO(shantuo): this and the unordered action tests should be merged as now
-// they are testing the same thing. We don't have ordered actions.
 func testMultipleActions(t *testing.T, coll *ds.Collection, revField string) {
-	ctx := context.Background()
-
-	docs := []docmap{
-		{KeyField: "testMultipleActions1", "s": "a"},
-		{KeyField: "testMultipleActions2", "s": "b"},
-		{KeyField: "testMultipleActions3", "s": "c"},
-		{KeyField: "testMultipleActions4", "s": "d"},
-		{KeyField: "testMultipleActions5", "s": "e"},
-		{KeyField: "testMultipleActions6", "s": "f"},
-		{KeyField: "testMultipleActions7", "s": "g"},
-		{KeyField: "testMultipleActions8", "s": "h"},
-		{KeyField: "testMultipleActions9", "s": "i"},
-		{KeyField: "testMultipleActions10", "s": "j"},
-		{KeyField: "testMultipleActions11", "s": "k"},
-		{KeyField: "testMultipleActions12", "s": "l"},
-	}
-
-	actions := coll.Actions()
-	// Writes
-	for i := 0; i < 6; i++ {
-		actions.Create(docs[i])
-	}
-	for i := 6; i < len(docs); i++ {
-		actions.Put(docs[i])
-	}
-
-	// Reads
-	gots := make([]docmap, len(docs))
-	for i, doc := range docs {
-		gots[i] = docmap{KeyField: doc[KeyField]}
-		actions.Get(gots[i], docstore.FieldPath("s"))
-	}
-	if err := actions.Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for i, got := range gots {
-		if diff := cmpDiff(got, docs[i]); diff != "" {
-			t.Error(diff)
-		}
-	}
-
-	// Deletes
-	dels := coll.Actions()
-	for _, got := range gots {
-		dels.Delete(docmap{KeyField: got[KeyField]})
-	}
-	if err := dels.Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func testUnorderedActions(t *testing.T, coll *ds.Collection, revField string) {
 	ctx := context.Background()
 
 	must := func(err error) {
@@ -1817,6 +1762,72 @@ func testActionsOnStructWithoutRevision(t *testing.T, coll *ds.Collection) {
 		t.Fatal(err)
 	}
 	checkNoRevisionField(t, got3, ds.DefaultRevisionField)
+}
+
+func testExampleInDoc(t *testing.T, coll *ds.Collection) {
+	type Name struct {
+		First, Last string
+	}
+	type Book struct {
+		Title            string `docstore:"name"`
+		Author           Name   `docstore:"author"`
+		PublicationYears []int  `docstore:"pub_years,omitempty"`
+		NumPublications  int    `docstore:"-"`
+	}
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	checkFieldEqual := func(got, want interface{}, field string) {
+		t.Helper()
+		fvg, err := MustDocument(got).GetField(field)
+		must(err)
+		fvw, err := MustDocument(want).GetField(field)
+		must(err)
+		if !cmp.Equal(fvg, fvw) {
+			t.Errorf("%s: got %v want %v", field, fvg, fvw)
+		}
+	}
+
+	doc1 := &Book{
+		Title: "The Master and Margarita",
+		Author: Name{
+			First: "Mikhail",
+			Last:  "Bulgakov",
+		},
+		PublicationYears: []int{1967, 1973},
+		NumPublications:  2,
+	}
+
+	doc2 := map[string]interface{}{
+		KeyField: "The Heart of a Dog",
+		"author": map[string]interface{}{
+			"First": "Mikhail",
+			"Last":  "Bulgakov",
+		},
+		"pub_years": []int{1968, 1987},
+	}
+
+	ctx := context.Background()
+	must(coll.Actions().Create(doc1).Put(doc2).Do(ctx))
+	got1 := &Book{Title: doc1.Title}
+	got2 := &Book{Title: doc2[KeyField].(string)}
+	must(coll.Actions().Get(got1).Get(got2).Do(ctx))
+
+	if got1.NumPublications != 0 {
+		t.Errorf("docstore:\"-\" tagged field isn't ignored")
+	}
+	checkFieldEqual(got1, doc1, "author")
+	checkFieldEqual(got2, doc2, "pub_years")
+
+	gots := mustCollect(ctx, t, coll.Query().Where("author.Last", "=", "Bulgakov").Get(ctx))
+	if len(gots) != 2 {
+		t.Errorf("got %v want all two results", gots)
+	}
+	must(coll.Actions().Delete(doc1).Delete(doc2).Do(ctx))
 }
 
 // Verify that BeforeDo is invoked, and its as function behaves as expected.

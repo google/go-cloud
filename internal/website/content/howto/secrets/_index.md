@@ -1,6 +1,7 @@
 ---
 title: "Secrets"
 date: 2019-03-21T17:42:18-07:00
+lastmod: 2019-07-29T12:00:00-07:00
 showInSidenav: true
 toc: true
 ---
@@ -115,23 +116,29 @@ runtime configuration.
 ### Google Cloud Key Management Service {#gcp}
 
 The Go CDK can use keys from Google Cloud Platform's [Key Management
-Service][GCP KMS] (GCP KMS) to keep information secret. `secrets.OpenKeeper`
-will use [Application Default Credentials][GCP credentials]. GCP KMS URLs are
-similar to [key resource IDs][]:
-
-{{< goexample "gocloud.dev/secrets/gcpkms.Example_openFromURL" >}}
+Service][GCP KMS] (GCP KMS) to keep information secret. GCP KMS URLs are
+similar to [key resource IDs][].
 
 [GCP KMS]: https://cloud.google.com/kms/
 [key resource IDs]: https://cloud.google.com/kms/docs/object-hierarchy#key
 
+`secrets.OpenKeeper` will use Application Default Credentials; if you have
+authenticated via [`gcloud auth login`][], it will use those credentials. See
+[Application Default Credentials][GCP creds] to learn about authentication
+alternatives, including using environment variables.
+
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+
+{{< goexample "gocloud.dev/secrets/gcpkms.Example_openFromURL" >}}
+
 #### GCP Constructor {#gcp-ctor}
 
 The [`gcpkms.OpenKeeper`][] constructor opens a GCP KMS key. You must first
-obtain [GCP credentials][] and then create a gRPC connection to GCP KMS.
+obtain [GCP credentials][GCP creds] and then create a gRPC connection to GCP KMS.
 
 {{< goexample "gocloud.dev/secrets/gcpkms.ExampleOpenKeeper" >}}
 
-[GCP credentials]: https://cloud.google.com/docs/authentication/production
 [`gcpkms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/gcpkms#OpenKeeper
 
 ### AWS Key Management Service {#aws}
@@ -139,14 +146,19 @@ obtain [GCP credentials][] and then create a gRPC connection to GCP KMS.
 The Go CDK can use customer master keys from Amazon Web Service's [Key
 Management Service][AWS KMS] (AWS KMS) to keep information secret. AWS KMS
 URLs can use the key's ID, alias, or Amazon Resource Name (ARN) to identify
-the key. You can specify the `region` query parameter to ensure your
-application connects to the correct region, but otherwise
-`secrets.OpenKeeper` will use the region found in the environment variable
-`AWS_REGION` or your AWS CLI configuration.
-
-{{< goexample "gocloud.dev/secrets/awskms.Example_openFromURL" >}}
+the key. You should specify the `region` query parameter to ensure your
+application connects to the correct region.
 
 [AWS KMS]: https://aws.amazon.com/kms/
+
+`secrets.OpenKeeper` will create a default AWS Session with the
+`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See [AWS Session][] to learn about authentication
+alternatives, including using environment variables.
+
+[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+
+{{< goexample "gocloud.dev/secrets/awskms.Example_openFromURL" >}}
 
 #### AWS Constructor {#aws-ctor}
 

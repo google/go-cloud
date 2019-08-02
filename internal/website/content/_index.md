@@ -57,3 +57,12 @@ a beta version. Please try it and provide feedback!
 * Post questions to the
 [project's mailing list](https://groups.google.com/forum/#!forum/go-cloud)
 * Send us private feedback at <go-cdk-feedback@google.com>
+
+## Legal disclaimer
+
+The Go CDK is open-source and released under an [Apache 2.0
+License](https://github.com/google/go-cloud/blob/master/LICENSE). Copyright ©
+2018–2019 The Go Cloud Development Kit Authors.
+
+If you are looking for the website of GoCloud Systems, which is unrelated to the
+Go CDK, visit https://gocloud.systems.

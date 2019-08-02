@@ -23,11 +23,9 @@ import (
 )
 
 func Example() {
-	// This example is used in https://gocloud.dev/howto/sql/#gcp
-
-	// import _ "gocloud.dev/mysql/gcpmysql"
-
-	// Variables set up elsewhere:
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/mysql/gcpmysql"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// Replace this with your actual settings.

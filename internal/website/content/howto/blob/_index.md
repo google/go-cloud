@@ -1,33 +1,75 @@
 ---
 title: "Blob"
 date: 2019-07-09T16:46:29-07:00
+lastmod: 2019-07-29T12:00:00-07:00
 showInSidenav: true
 toc: true
 ---
 
-Blobs are a common abstraction for storing unstructured data on cloud storage
-providers and accessing them via HTTP. These guides show how to work with
+Blobs are a common abstraction for storing unstructured data on Cloud storage
+services and accessing them via HTTP. This guide shows how to work with
 blobs in the Go CDK.
 
 <!--more-->
 
+The [`blob` package][] supports operations like reading and writing blobs (using standard
+[`io` package][] interfaces), deleting blobs, and listing blobs in a bucket.
+
+Subpackages contain driver implementations of blob for various services,
+including Cloud and on-prem solutions. You can develop your application
+locally using [`fileblob`][], then deploy it to multiple Cloud providers with
+minimal initialization reconfiguration.
+
+[`blob` package]: https://godoc.org/gocloud.dev/blob
+[`io` package]: https://golang.org/pkg/io/
+[`fileblob`]: https://godoc.org/gocloud.dev/blob/fileblob
+
 ## Opening a Bucket {#opening}
 
-The first step in interacting with unstructured storage is connecting to your
-storage provider. Every storage provider is a little different, but the Go CDK
-lets you interact with all of them using the [`*blob.Bucket` type][].
+The first step in interacting with unstructured storage is
+to instantiate a portable [`*blob.Bucket`][] for your storage service.
 
-The easiest way to open a blob is using [`blob.OpenBucket`][] and a URL
-pointing to the blob, making sure you ["blank import"][] the driver package to
-link it in. See [Concepts: URLs][] for more details. If you need
+The easiest way to do so is to use [`blob.OpenBucket`][] and a service-specific URL
+pointing to the bucket, making sure you ["blank import"][] the driver package to
+link it in.
+
+```go
+import (
+	"gocloud.dev/blob"
+	_ "gocloud.dev/blob/<driver>"
+)
+...
+bucket, err := blob.OpenBucket(context.Background(), "<driver-url>")
+if err != nil {
+    return fmt.Errorf("could not open bucket: %v", err)
+}
+defer bucket.Close()
+// bucket is a *blob.Bucket; see usage below
+...
+``` 
+
+See [Concepts: URLs][] for general background and the [guide below][] for URL usage
+for each supported service.
+
+Alternatively, if you need
 fine-grained control over the connection settings, you can call the constructor
-function in the driver package directly (like `s3blob.OpenBucket`).
+function in the driver package directly.
 
-See the [guide below][] for usage of both forms for each supported provider.
+```go
+import "gocloud.dev/blob/<driver>"
+...
+bucket, err := <driver>.OpenBucket(...)
+...
+```
 
-[`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
-[`blob.OpenBucket`]:
-https://godoc.org/gocloud.dev/blob#OpenBucket
+You may find the [`wire` package][] useful for managing your initialization code
+when switching between different backing services.
+
+See the [guide below][] for constructor usage for each supported service.
+
+[`wire` package]: http://github.com/google/wire
+[`*blob.Bucket`]: https://godoc.org/gocloud.dev/blob#Bucket
+[`blob.OpenBucket`]: https://godoc.org/gocloud.dev/blob#OpenBucket
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [guide below]: {{< ref "#services" >}}
@@ -47,7 +89,11 @@ URL:
 ## Using a Bucket {#using}
 
 Once you have opened a bucket for the storage provider you want, you can
-store and access data from it using the standard Go I/O patterns.
+store and access data from it using the standard Go I/O patterns described
+below. Other operations like listing and reading metadata are documented in the
+[`blob` package documentation][].
+
+[`blob` package documentation]: https://godoc.org/gocloud.dev/blob
 
 ### Writing Data to a Bucket {#writing}
 
@@ -94,28 +140,29 @@ You can delete blobs using the `Bucket.Delete` method.
 
 {{< goexample src="gocloud.dev/blob.ExampleBucket_Delete" imports="0" >}}
 
-### Other Operations {#other}
-
-These are the most common operations you will need to use with a bucket.
-Other operations like listing and reading metadata are documented in the
-[`blob` package documentation][].
-
-[`blob` package documentation]: https://godoc.org/gocloud.dev/blob
-
 ## Supported Storage Services {#services}
 
 ### Google Cloud Storage {#gcs}
 
 [Google Cloud Storage][] (GCS) URLs in the Go CDK closely resemble the URLs
-you would see in the `gsutil` CLI. `blob.OpenBucket` will use [Application
-Default Credentials][GCP creds].
+you would see in the [`gsutil`][] CLI.
+
+[Google Cloud Storage]: https://cloud.google.com/storage/
+[`gsutil`]: https://cloud.google.com/storage/docs/gsutil
+
+`blob.OpenBucket` will use Application Default Credentials; if you have
+authenticated via [`gcloud auth login`][], it will use those credentials. See
+[Application Default Credentials][GCP creds] to learn about authentication
+alternatives, including using environment variables.
+
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
 
 {{< goexample "gocloud.dev/blob/gcsblob.Example_openBucketFromURL" >}}
 
 Full details about acceptable URLs can be found under the API reference for
 [`gcsblob.URLOpener`][].
 
-[Google Cloud Storage]: https://cloud.google.com/storage/
 [`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
 
 #### GCS Constructor {#gcs-ctor}
@@ -128,16 +175,22 @@ other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
 
 {{< goexample "gocloud.dev/blob/gcsblob.ExampleOpenBucket" >}}
 
-[GCP creds]: https://cloud.google.com/docs/authentication/production
 [`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
 [`gocloud.dev/gcp`]: https://godoc.org/gocloud.dev/gcp
 
 ### S3 {#s3}
 
-S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
-You can specify the `region` query parameter to ensure your application connects
-to the correct region, but otherwise `blob.OpenBucket` will use the region found
-in the environment variables or your AWS CLI configuration.
+S3 URLs in the Go CDK closely resemble the URLs you would see in the [AWS CLI][].
+You should specify the `region` query parameter to ensure your application
+connects to the correct region.
+
+`blob.OpenBucket` will create a default AWS Session with the
+`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See [AWS Session][] to learn about authentication
+alternatives, including using environment variables.
+
+[AWS CLI]: https://aws.amazon.com/cli/
+[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 {{< goexample "gocloud.dev/blob/s3blob.Example_openBucketFromURL" >}}
 

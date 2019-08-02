@@ -11,6 +11,7 @@ Flags:
       --biome name               name of biome to apply and use configuration from (default "dev")
   -h, --help                     help for serve
       --poll-interval duration   time between checking project directory for changes (default 500ms)
+  -v, --verbose                  true to print all output from Terraform
 
 $ gocdk serve -h
 Run an auto-reloading local server.
@@ -25,6 +26,7 @@ Flags:
       --biome name               name of biome to apply and use configuration from (default "dev")
   -h, --help                     help for serve
       --poll-interval duration   time between checking project directory for changes (default 500ms)
+  -v, --verbose                  true to print all output from Terraform
 
 $ gocdk serve --help
 Run an auto-reloading local server.
@@ -39,3 +41,4 @@ Flags:
       --biome name               name of biome to apply and use configuration from (default "dev")
   -h, --help                     help for serve
       --poll-interval duration   time between checking project directory for changes (default 500ms)
+  -v, --verbose                  true to print all output from Terraform
