@@ -13,33 +13,10 @@
 // limitations under the License.
 
 // Package runtimevar provides an easy and portable way to watch runtime
-// configuration variables.
+// configuration variables. Subpackages contain driver implementations of
+// runtimevar for supported services.
 //
-// It provides a blocking method that returns a Snapshot of the variable value
-// whenever a change is detected.
-//
-// Subpackages contain distinct implementations of runtimevar for various
-// services, including Cloud and on-premise solutions. For example, "etcdvar"
-// supports variables stored in etcd. Your application should import one of
-// these driver subpackages and use its exported function(s) to
-// create a *Variable; do not use the New function in this package. For example:
-//
-//  var v *runtimevar.Variable
-//  var err error
-//  v, err = etcdvar.New("my variable", etcdClient, runtimevar.JSONDecode, nil)
-//  ...
-//
-// Then, write your application code using the *Variable type. You can
-// easily reconfigure your initialization code to choose a different driver.
-// You can develop your application locally using filevar or constantvar, and
-// deploy it to multiple Cloud providers. You may find
-// http://github.com/google/wire useful for managing your initialization code.
-//
-// Variable implements health.Checker; it reports as healthy when Latest will
-// return a value without blocking.
-//
-// Alternatively, you can construct a *Variable via a URL and OpenVariable.
-// See https://gocloud.dev/concepts/urls/ for more information.
+// See https://gocloud.dev/howto/runtimevar/ for a detailed how-to guide.
 //
 //
 // OpenCensus Integration
@@ -143,7 +120,7 @@ type Variable struct {
 	lastGood Snapshot
 }
 
-// New is intended for use by drivers.
+// New is intended for use by drivers only. Do not use in application code.
 var New = newVar
 
 // newVar creates a new *Variable based on a specific driver implementation.

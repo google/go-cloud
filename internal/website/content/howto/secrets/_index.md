@@ -6,6 +6,12 @@ showInSidenav: true
 toc: true
 ---
 
+The [`secrets` package][] provides access to key management services in a
+portable way called "secret keepers". These guides show how to work with
+secret keepers in the Go CDK.
+
+<!--more-->
+
 Cloud applications frequently need to store sensitive information like web
 API credentials or encryption keys in a medium that is not fully secure. For
 example, an application that interacts with GitHub needs to store its OAuth2
@@ -14,35 +20,69 @@ information was compromised, it could allow someone else to impersonate the
 application. In order to keep such information secret and secure, you can
 encrypt the data, but then you need to worry about rotating the encryption
 keys and distributing them securely to all of your application servers.
-Most cloud providers include a key management service to perform these tasks,
+Most Cloud providers include a key management service to perform these tasks,
 usually with hardware-level security and audit logging.
 
-<!--more-->
+The [`secrets` package][] supports encryption and decryption operations.
 
-The Go CDK provides access to key management providers in a portable way
-called "secret keepers". These guides show how to work with secret keepers in
-the Go CDK.
+Subpackages contain driver implementations of secret keeper for various services,
+including Cloud and on-prem solutions. You can develop your application
+locally using [`localsecrets`][], then deploy it to multiple Cloud providers with
+minimal initialization reconfiguration.
+
+[`secrets` package]: https://godoc.org/gocloud.dev/secrets
+[`localsecrets`]: https://godoc.org/gocloud.dev/secrets/localsecrets
 
 ## Opening a SecretsKeeper {#opening}
 
-The first step in working with your secrets is establishing your
-secret keeper provider. Every secret keeper provider is a little different, but
-the Go CDK lets you interact with all of them using the [`*secrets.Keeper` type][].
+The first step in working with your secrets is
+to instantiate a portable [`*secrets.Keeper`][] for your secret keeper service.
 
-The easiest way to open a secrets keeper is using [`secrets.OpenKeeper`][] and a
+The easiest way to do so is to use [`secrets.OpenKeeper`][] and a service-specific
 URL pointing to the keeper, making sure you ["blank import"][] the driver
-package to link it in. See [Concepts: URLs][] for more details. If you need
+package to link it in.
+
+```go
+import (
+	"gocloud.dev/secrets"
+	_ "gocloud.dev/secrets/<driver>"
+)
+...
+keeper, err := secrets.OpenKeeper(context.Background(), "<driver-url>")
+if err != nil {
+    return fmt.Errorf("could not open keeper: %v", err)
+}
+defer keeper.Close()
+// keeper is a *secrets.Keeper; see usage below
+...
+``` 
+
+See [Concepts: URLs][] for general background and the [guide below][]
+for URL usage for each supported service.
+
+Alternatively, if you need
 fine-grained control over the connection settings, you can call the constructor
 function in the driver package directly (like `awskms.OpenKeeper`).
 
-See the [guide below][] for usage of both forms for each supported service.
+```go
+import "gocloud.dev/secrets/<driver>"
+...
+keeper, err := <driver>.OpenKeeper(...)
+...
+```
 
-[`*secrets.Keeper` type]: https://godoc.org/gocloud.dev/secrets#Keeper
+You may find the [`wire` package][] useful for managing your initialization code
+when switching between different backing services.
+
+See the [guide below][] for constructor usage for each supported service.
+
+[`*secrets.Keeper`]: https://godoc.org/gocloud.dev/secrets#Keeper
 [`secrets.OpenKeeper`]:
 https://godoc.org/gocloud.dev/secrets#OpenKeeper
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [guide below]: {{< ref "#services" >}}
+[`wire` package]: http://github.com/google/wire
 
 ## Using a SecretsKeeper {#using}
 

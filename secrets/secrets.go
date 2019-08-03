@@ -13,27 +13,10 @@
 // limitations under the License.
 
 // Package secrets provides an easy and portable way to encrypt and decrypt
-// messages.
+// messages. Subpackages contain driver implementations of
+// blob for supported services.
 //
-// Subpackages contain distinct implementations of secrets for various
-// services, including Cloud and on-premise solutions. For example, "localsecrets"
-// supports encryption/decryption using a locally provided key. Your application
-// should import one of these driver subpackages and use its exported
-// function(s) to create a *Keeper; do not use the NewKeeper function in this
-// package. For example:
-//
-//  keeper := localsecrets.NewKeeper(myKey)
-//  encrypted, err := keeper.Encrypt(ctx.Background(), []byte("text"))
-//  ...
-//
-// Then, write your application code using the *Keeper type. You can easily
-// reconfigure your initialization code to choose a different driver.
-// You can develop your application locally using localsecrets, or deploy it to
-// multiple Cloud providers. You may find http://github.com/google/wire useful
-// for managing your initialization code.
-//
-// Alternatively, you can construct a *Keeper via a URL and OpenKeeper.
-// See https://gocloud.dev/concepts/urls/ for more information.
+// See https://gocloud.dev/howto/secrets/ for a detailed how-to guide.
 //
 //
 // OpenCensus Integration
@@ -82,7 +65,7 @@ type Keeper struct {
 	closed bool
 }
 
-// NewKeeper is intended for use by drivers.
+// NewKeeper is intended for use by drivers only. Do not use in application code.
 var NewKeeper = newKeeper
 
 // newKeeper creates a Keeper.
