@@ -267,7 +267,7 @@ func (q *Query) runActionsWithRetry(ctx context.Context, addAction func(*ActionL
 
 // Update updates all the documents specified by the query.
 // It is an error if the query has a limit.
-// TODO: unexport.
+// TODO(shantuo): unexport.
 func (q *Query) Update(ctx context.Context, mods Mods) error {
 	if err := q.validateWrite("update"); err != nil {
 		return err
