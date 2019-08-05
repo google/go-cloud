@@ -51,8 +51,8 @@
 // For example, "gocloud.dev/blob/latency".
 //
 // It also collects the following metrics:
-// - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
-// - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
+//  - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
+//  - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.

@@ -60,7 +60,11 @@ type Collection interface {
 	// RunGetQuery executes a Query.
 	//
 	// Implementations can choose to execute the Query as one single request or
-	// multiple ones, depending on their service offerings.
+	// multiple ones, depending on their service offerings. The portable type
+	// exposes OpenCensus metrics for the call to RunGetQuery (but not for
+	// subsequent calls to DocumentIterator.Next), so drivers should prefer to
+	// make at least one RPC during RunGetQuery itself instead of lazily waiting
+	// for the first call to Next.
 	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
 	// QueryPlan returns the plan for the query.
