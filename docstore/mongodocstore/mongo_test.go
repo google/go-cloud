@@ -154,18 +154,17 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 	return nil
 }
 
-func TestConformanceV4(t *testing.T) {
-	client := newTestClient(t, serverURIV4)
-	defer client.Disconnect(context.Background())
-
-	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
-		return &harness{client.Database(dbName)}, nil
-	}
-	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
+func TestConformance(t *testing.T) {
+	t.Run("V3", func(t *testing.T) {
+		testConformance(t, serverURIV4)
+	})
+	t.Run("V4", func(t *testing.T) {
+		testConformance(t, serverURIV3)
+	})
 }
 
-func TestConformanceV3(t *testing.T) {
-	client := newTestClient(t, serverURIV3)
+func testConformance(t *testing.T, serverURI string) {
+	client := newTestClient(t, serverURI)
 	defer client.Disconnect(context.Background())
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
