@@ -89,13 +89,13 @@ use it portably.
 
 The easiest way to a `Variable` is to use the [`Variable.Latest`][] method. It
 returns the latest good [`Snapshot`][] of the variable value, blocking if no
-change has *ever* been detected. The dynamic type of `Snapshot.Value`
+good value has *ever* been detected. The dynamic type of `Snapshot.Value`
 depends on the decoder you provided when creating the `Variable`.
 
 {{< goexample src="gocloud.dev/runtimevar.ExampleVariable_Latest" imports="0" >}}
 
 To avoid blocking, you can pass an already-`Done` context. You can also use
-[`Variable.CheckHealth`][], which reports as healthy when Latest will
+[`Variable.CheckHealth`][], which reports as healthy when `Latest` will
 return a value without blocking.
 
 [`Variable.Latest`]: https://godoc.org/gocloud.dev/runtimevar#Variable.Latest

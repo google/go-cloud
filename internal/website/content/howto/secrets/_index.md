@@ -7,8 +7,7 @@ toc: true
 ---
 
 The [`secrets` package][] provides access to key management services in a
-portable way called "secret keepers". These guides show how to work with
-secret keepers in the Go CDK.
+portable way. This guide shows how to work with secrets in the Go CDK.
 
 <!--more-->
 
@@ -25,7 +24,7 @@ usually with hardware-level security and audit logging.
 
 The [`secrets` package][] supports encryption and decryption operations.
 
-Subpackages contain driver implementations of secret keeper for various services,
+Subpackages contain driver implementations of secrets for various services,
 including Cloud and on-prem solutions. You can develop your application
 locally using [`localsecrets`][], then deploy it to multiple Cloud providers with
 minimal initialization reconfiguration.
@@ -36,7 +35,7 @@ minimal initialization reconfiguration.
 ## Opening a SecretsKeeper {#opening}
 
 The first step in working with your secrets is
-to instantiate a portable [`*secrets.Keeper`][] for your secret keeper service.
+to instantiate a portable [`*secrets.Keeper`][] for your service.
 
 The easiest way to do so is to use [`secrets.OpenKeeper`][] and a service-specific
 URL pointing to the keeper, making sure you ["blank import"][] the driver

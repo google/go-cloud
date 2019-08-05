@@ -14,7 +14,7 @@
 
 // Package secrets provides an easy and portable way to encrypt and decrypt
 // messages. Subpackages contain driver implementations of
-// blob for supported services.
+// secrets for supported services.
 //
 // See https://gocloud.dev/howto/secrets/ for a detailed how-to guide.
 //
