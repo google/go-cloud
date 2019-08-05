@@ -21,18 +21,56 @@ Subscribing to messages on a topic with the Go CDK takes three steps:
 
 ## Opening a Subscription {#opening}
 
-The easiest way to open a subscription is using [`pubsub.OpenSubscription`][]
-and a URL pointing to the topic, making sure you ["blank import"][] the driver
-package to link it in. See [Concepts: URLs][] for more details. If you need
-fine-grained control over the connection settings, you can call the constructor
-function in the driver package directly (like `gcppubsub.OpenSubscription`).
-See the [guide below][] for usage of both forms for each supported provider.
+The first step in subscribing to messages is
+to instantiate a portable [`*pubsub.Subscription`][] for your service.
+
+The easiest way to do so is to use [`pubsub.OpenSubscription`][]
+and a service-specific URL pointing to the topic, making sure you
+["blank import"][] the driver package to link it in.
+
+```go
+import (
+    "context"
+
+    "gocloud.dev/pubsub"
+    _ "gocloud.dev/pubsub/<driver>"
+)
+...
+ctx := context.Background()
+subs, err := pubsub.OpenSubscription(ctx, "<driver-url>")
+if err != nil {
+    return fmt.Errorf("could not open topic subscription: %v", err)
+}
+defer subs.Shutdown(ctx)
+// subs is a *pubsub.Subscription; see usage below
+...
+```
+
+See [Concepts: URLs][] for general background and the [guide below][]
+for URL usage for each supported service.
+
+Alternatively, if you need fine-grained
+control over the connection settings, you can call the constructor function in
+the driver package directly (like `gcppubsub.OpenTopic`).
+
+```go
+import "gocloud.dev/pubsub/<driver>"
+...
+subs, err := <driver>.OpenSubscription(...)
+...
+```
+
+You may find the [`wire` package][] useful for managing your initialization code
+when switching between different backing services.
+
+See the [guide below][] for constructor usage for each supported service.
 
 [guide below]: {{< ref "#services" >}}
 [`pubsub.OpenSubscription`]:
 https://godoc.org/gocloud.dev/pubsub#OpenTopic
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
+[`wire` package]: http://github.com/google/wire
 
 ## Receiving and Acknowledging Messages {#receiving}
 

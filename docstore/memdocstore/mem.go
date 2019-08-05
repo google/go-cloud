@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package memdocstore provides an in-memory implementation of the docstore
+// Package memdocstore provides an in-process in-memory implementation of the docstore
 // API. It is suitable for local development and testing.
 //
 // Every document in a memdocstore collection has a unique primary key. The primary

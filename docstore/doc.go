@@ -13,40 +13,18 @@
 // limitations under the License.
 
 // Package docstore provides a portable way of interacting with a document store.
-// A document store is a service that stores data in semi-structured JSON-like
-// documents. Like other NoSQL databases, document stores are schemaless.
-// See https://en.wikipedia.org/wiki/Document-oriented_database for more information.
+// Subpackages contain driver implementations of docstore for supported
+// services.
 //
-// Subpackages contain distinct implementations ("drivers") of docstore for
-// various backing services, including Cloud and on-premise solutions. For example,
-// memdocstore supports an in-process, in-memory implementation suitable for testing and
-// development.
+// See https://gocloud.dev/howto/docstore/ for a detailed how-to guide.
+//
+//
+// Collections
 //
 // In docstore, documents are grouped into collections, and each document has a key
 // that is unique in its collection. You can add, retrieve, modify and delete
 // documents by key, and you can query a collection to retrieve documents that match
 // certain criteria.
-//
-// Your application should import one of the service-specific subpackages and use
-// its exported functions to create a *Collection; do not use the NewCollection
-// function in this package. For example:
-//
-//   coll, err := memdocstore.OpenCollection("SSN", nil)
-//   if err != nil {
-//       return fmt.Errorf("opening collection: %v", err)
-//   }
-//   defer coll.Close()
-//   // coll is a *docstore.Collection
-//
-// Then, write your application code using the *Collection type. You can easily
-// reconfigure your initialization code to choose a different driver.
-// You can develop your application locally using memdocstore, or deploy it to
-// multiple Cloud providers. You may find http://github.com/google/wire useful
-// for managing your initialization code.
-//
-// Alternatively, you can construct a *Collection via a URL and the
-// OpenCollection function. See https://gocloud.dev/concepts/urls for more
-// information.
 //
 //
 // Representing Documents

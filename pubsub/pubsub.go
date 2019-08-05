@@ -12,29 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package pubsub provides an easy and portable way to interact with publish/
-// subscribe systems. See https://gocloud.dev/howto/pubsub/ for how-to guides.
+// Package pubsub provides an easy and portable way to interact with
+// publish/subscribe systems. Subpackages contain driver implementations of
+// pubsub for supported services
 //
-// Subpackages contain distinct implementations of pubsub for various services,
-// including Cloud and on-premise solutions. For example, "gcppubsub" supports
-// Google Cloud Pub/Sub. Your application should import one of these
-// driver subpackages and use its exported functions to get a
-// *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
-// functions in this package. For example:
+// See https://gocloud.dev/howto/pubsub/ for a detailed how-to guide.
 //
-//  topic := mempubsub.NewTopic()
-//  err := topic.Send(ctx.Background(), &pubsub.Message{Body: []byte("hi"))
-//  ...
-//
-// Then, write your application code using the *Topic/*Subscription types. You
-// can easily reconfigure your initialization code to choose a different driver.
-// You can develop your application locally using memblob, or deploy it to
-// multiple Cloud providers. You may find http://github.com/google/wire useful
-// for managing your initialization code.
-//
-// Alternatively, you can construct a *Topic/*Subscription via a URL and
-// OpenTopic/OpenSubscription.
-// See https://gocloud.dev/concepts/urls/ for more information.
 //
 // At-most-once and At-least-once Delivery
 //
@@ -312,7 +295,7 @@ func (t *Topic) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
 
-// NewTopic is for use by drivers.
+// NewTopic is for use by drivers only. Do not use in application code.
 var NewTopic = newTopic
 
 // newSendBatcher creates a batcher for topics, for use with NewTopic.
@@ -733,7 +716,7 @@ func (s *Subscription) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, s.driver.ErrorAs)
 }
 
-// NewSubscription is for use by drivers.
+// NewSubscription is for use by drivers only. Do not use in application code.
 var NewSubscription = newSubscription
 
 // newSubscription creates a Subscription from a driver.Subscription.

@@ -62,7 +62,7 @@ var (
 	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
 )
 
-// NewCollection is intended for use by drivers.
+// NewCollection is intended for use by drivers only. Do not use in application code.
 var NewCollection = newCollection
 
 // newCollection makes a Collection.
