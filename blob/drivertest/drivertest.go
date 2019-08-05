@@ -2062,7 +2062,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	// to GET since the client is unauthorized.
 	getURLNoParamsURL, err := url.Parse(getURL)
 	if err != nil {
-		t.Fatal("failed to parse getURL: %v", err)
+		t.Fatalf("failed to parse getURL: %v", err)
 	}
 	getURLNoParamsURL.RawQuery = ""
 	getURLNoParams := getURLNoParamsURL.String()
