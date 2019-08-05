@@ -90,6 +90,10 @@ func OpenCollection(keyField string, opts *Options) (*docstore.Collection, error
 // a document and returns the document's primary key. It should return nil if the
 // document is missing the information to construct a key. This will cause all
 // actions, even Create, to fail.
+//
+// For the collection to be usable with Query.Delete and Query.Update,
+// keyFunc must work with map[string]interface{} as well as whatever
+// struct type the collection normally uses (if any).
 func OpenCollectionWithKeyFunc(keyFunc func(docstore.Document) interface{}, opts *Options) (*docstore.Collection, error) {
 	c, err := newCollection("", keyFunc, opts)
 	if err != nil {
@@ -259,10 +263,11 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		if err := c.checkRevision(a.Doc, current); err != nil {
 			return err
 		}
-		if err := c.update(current, a.Mods, a.Doc.HasField(c.opts.RevisionField)); err != nil {
+		if err := c.update(current, a.Mods); err != nil {
 			return err
 		}
 		if a.Doc.HasField(c.opts.RevisionField) {
+			c.changeRevision(current)
 			if err := a.Doc.SetField(c.opts.RevisionField, current[c.opts.RevisionField]); err != nil {
 				return err
 			}
@@ -281,7 +286,8 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 }
 
 // Must be called with the lock held.
-func (c *collection) update(doc storedDoc, mods []driver.Mod, revOn bool) error {
+// Does not change the stored doc's revision field; that is up to the caller.
+func (c *collection) update(doc storedDoc, mods []driver.Mod) error {
 	// Sort mods by first field path element so tests are deterministic.
 	sort.Slice(mods, func(i, j int) bool { return mods[i].FieldPath[0] < mods[j].FieldPath[0] })
 
@@ -325,9 +331,6 @@ func (c *collection) update(doc storedDoc, mods []driver.Mod, revOn bool) error 
 		} else {
 			m.parentMap[m.key] = m.encodedValue
 		}
-	}
-	if revOn {
-		c.changeRevision(doc)
 	}
 	return nil
 }

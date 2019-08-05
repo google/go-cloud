@@ -187,7 +187,7 @@ func (d decoder) MapLen() (int, bool) {
 	return 0, false
 }
 
-func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder, exactMatch bool) bool) {
+func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder, _ bool) bool) {
 	for k, v := range d.val.(map[string]interface{}) {
 		if !f(k, decoder{v}, true) {
 			return

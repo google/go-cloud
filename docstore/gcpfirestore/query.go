@@ -20,7 +20,6 @@ package gcpfirestore
 import (
 	"context"
 	"fmt"
-	"io"
 	"math"
 	"path"
 	"reflect"
@@ -367,67 +366,4 @@ func newFieldFilter(fp []string, op string, val *pb.Value) (*pb.StructuredQuery_
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
-}
-
-func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
-	return c.runWriteQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
-		return []*pb.Write{{
-			Operation:       &pb.Write_Delete{Delete: doc.Name},
-			CurrentDocument: preconditionFromTimestamp(doc.UpdateTime),
-		}}, nil
-	})
-}
-
-func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
-	fields, paths, transforms, err := processMods(mods)
-	if err != nil {
-		return err
-	}
-	return c.runWriteQuery(ctx, q, func(doc *pb.Document) ([]*pb.Write, error) {
-		return newUpdateWrites(doc.Name, doc.UpdateTime, fields, paths, transforms)
-	})
-}
-
-// For delete and update queries, limit the number of write actions per RPC, to bound
-// client memory.
-// This is a variable so it can be modified for tests.
-var maxWritesPerRPC = 500
-
-// runWriteQuery runs the query, calls writes for each returned document, and then commits those writes.
-func (c *collection) runWriteQuery(ctx context.Context, q *driver.Query, writes func(*pb.Document) ([]*pb.Write, error)) error {
-	q.FieldPaths = [][]string{{"__name__"}}
-	iter, err := c.newDocIterator(ctx, q)
-	if err != nil {
-		return err
-	}
-	defer iter.Stop()
-
-	opts := &driver.RunActionsOptions{}
-	var pws []*pb.Write
-	for {
-		res, err := iter.nextResponse(ctx)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		ws, err := writes(res.Document)
-		if err != nil {
-			return err
-		}
-		pws = append(pws, ws...)
-		if len(pws) >= maxWritesPerRPC {
-			_, err := c.commit(ctx, pws, opts)
-			if err != nil {
-				return err
-			}
-			pws = pws[:0]
-		}
-	}
-	if len(pws) > 0 {
-		_, err = c.commit(ctx, pws, opts)
-		return err
-	}
-	return nil
 }

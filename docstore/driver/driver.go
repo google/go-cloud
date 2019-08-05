@@ -63,12 +63,6 @@ type Collection interface {
 	// multiple ones, depending on their service offerings.
 	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
-	// RunDeleteQuery deletes every document matched by the query.
-	RunDeleteQuery(context.Context, *Query) error
-
-	// RunUpdateQuery updates every document matched by the query.
-	RunUpdateQuery(context.Context, *Query, []Mod) error
-
 	// QueryPlan returns the plan for the query.
 	QueryPlan(*Query) (string, error)
 
@@ -96,6 +90,20 @@ type Collection interface {
 	// there will be no method calls to the Collection other than As, ErrorAs, and
 	// ErrorCode.
 	Close() error
+}
+
+// DeleteQueryer should be implemented by Collections that can handle Query.Delete
+// efficiently. If a Collection does not implement this interface, then Query.Delete
+// will be implemented by calling RunGetQuery and deleting the returned documents.
+type DeleteQueryer interface {
+	RunDeleteQuery(context.Context, *Query) error
+}
+
+// UpdateQueryer should be implemented by Collections that can handle Query.Update
+// efficiently. If a Collection does not implement this interface, then Query.Update
+// will be implemented by calling RunGetQuery and updating the returned documents.
+type UpdateQueryer interface {
+	RunUpdateQuery(context.Context, *Query, []Mod) error
 }
 
 // ActionKind describes the type of an action.

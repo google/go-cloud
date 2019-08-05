@@ -26,7 +26,6 @@ import (
 
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
-	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -493,63 +492,6 @@ func (qr *queryRunner) queryPlan() string {
 		return fmt.Sprintf("Index: %q", *qr.queryIn.IndexName)
 	}
 	return "Table"
-}
-
-func (c *collection) RunDeleteQuery(ctx context.Context, q *driver.Query) error {
-	return c.runActionQuery(ctx, q, nil)
-}
-
-func (c *collection) RunUpdateQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
-	return c.runActionQuery(ctx, q, mods)
-}
-
-func (c *collection) runActionQuery(ctx context.Context, q *driver.Query, mods []driver.Mod) error {
-	q.FieldPaths = [][]string{{c.partitionKey}}
-	if c.sortKey != "" {
-		q.FieldPaths = append(q.FieldPaths, []string{c.sortKey})
-	}
-	qr, err := c.planQuery(q)
-	if err != nil {
-		return err
-	}
-
-	var actions []*driver.Action
-	var startAfter map[string]*dyn.AttributeValue
-	for {
-		items, last, _, err := qr.run(ctx, startAfter)
-		if err != nil {
-			return err
-		}
-		for _, item := range items {
-			doc, err := driver.NewDocument(map[string]interface{}{})
-			if err != nil {
-				return err
-			}
-			if err := decodeDoc(&dyn.AttributeValue{M: item}, doc); err != nil {
-				return err
-			}
-			key, err := c.Key(doc)
-			if err != nil {
-				return err
-			}
-			a := &driver.Action{Doc: doc, Key: key, Index: len(actions), Mods: mods}
-			if mods == nil {
-				a.Kind = driver.Delete
-			} else {
-				a.Kind = driver.Update
-			}
-			actions = append(actions, a)
-		}
-		if last == nil {
-			break
-		}
-		startAfter = last
-	}
-	alerr := c.RunActions(ctx, actions, &driver.RunActionsOptions{})
-	if len(alerr) == 0 {
-		return nil
-	}
-	return docstore.ActionListError(alerr)
 }
 
 // InMemorySortFallback returns a query fallback function for Options.RunQueryFallback.

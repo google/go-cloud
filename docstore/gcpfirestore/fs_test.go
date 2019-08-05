@@ -55,20 +55,21 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{client, done}, nil
 }
 
-func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, CollectionResourceID(projectID, collectionName1), drivertest.KeyField, nil, nil)
-}
-
-func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, CollectionResourceID(projectID, collectionName2), "",
-		func(doc docstore.Document) string {
-			return drivertest.HighScoreKey(doc).(string)
-		}, &Options{AllowLocalFilters: true})
-}
-
-func (h *harness) MakeAlternateRevisionFieldCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, CollectionResourceID(projectID, collectionName1), drivertest.KeyField, nil,
-		&Options{RevisionField: drivertest.AlternateRevisionField})
+func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
+	switch kind {
+	case drivertest.SingleKey, drivertest.NoRev:
+		return newCollection(h.client, CollectionResourceID(projectID, collectionName1), drivertest.KeyField, nil, nil)
+	case drivertest.TwoKey:
+		return newCollection(h.client, CollectionResourceID(projectID, collectionName2), "",
+			func(doc docstore.Document) string {
+				return drivertest.HighScoreKey(doc).(string)
+			}, &Options{AllowLocalFilters: true})
+	case drivertest.AltRev:
+		return newCollection(h.client, CollectionResourceID(projectID, collectionName1), drivertest.KeyField, nil,
+			&Options{RevisionField: drivertest.AlternateRevisionField})
+	default:
+		panic("bad kind")
+	}
 }
 
 func (*harness) BeforeDoTypes() []interface{} {
@@ -156,7 +157,6 @@ func (v verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 
 func TestConformance(t *testing.T) {
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
-	maxWritesPerRPC = 2 // to test RPC batching behavior
 	nc, err := newNativeCodec()
 	if err != nil {
 		t.Fatal(err)
