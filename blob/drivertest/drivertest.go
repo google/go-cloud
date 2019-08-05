@@ -2152,7 +2152,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 			defer resp.Body.Close()
 			success := resp.StatusCode >= 200 && resp.StatusCode < 300
 			if success != test.wantSuccess {
-				t.Fatalf("DELETE with %s URL got status code %d, want 2xx", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				t.Fatalf("DELETE with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
 				gotBody, _ := ioutil.ReadAll(resp.Body)
 				t.Errorf(string(gotBody))
 			}
