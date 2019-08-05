@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -2046,7 +2047,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
 	}
 
-	// Generate real signed URLs for GET, PUT, and DELETE.
+	// Generate real signed URLs for GET, GET with the query params remvoed, PUT, and DELETE.
 	getURL, err := b.SignedURL(ctx, key, nil)
 	if err != nil {
 		if gcerrors.Code(err) == gcerrors.Unimplemented {
@@ -2057,6 +2058,14 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	} else if getURL == "" {
 		t.Fatal("got empty GET url")
 	}
+	// Copy getURL, but remove all query params. This URL should not be allowed
+	// to GET since the client is unauthorized.
+	getURLNoParamsURL, err := url.Parse(getURL)
+	if err != nil {
+		t.Fatal("failed to parse getURL: %v", err)
+	}
+	getURLNoParamsURL.RawQuery = ""
+	getURLNoParams := getURLNoParamsURL.String()
 	putURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodPut})
 	if err != nil {
 		t.Fatal(err)
@@ -2110,6 +2119,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}{
 		{http.MethodDelete, deleteURL, false},
 		{http.MethodPut, putURL, false},
+		{http.MethodGet, getURLNoParams, false},
 		{http.MethodGet, getURL, true},
 	} {
 		if resp, err := client.Get(test.url); err != nil {
