@@ -45,7 +45,7 @@ func TestConformanceCosmos(t *testing.T) {
 		t.Fatalf("dialing to %s: %v", cosmosConnString, err)
 	}
 	if err := client.Ping(ctx, nil); err != nil {
-		t.Fatalf("connecting to %s: %v", serverURI, err)
+		t.Fatalf("connecting to %s: %v", cosmosConnString, err)
 	}
 	defer client.Disconnect(context.Background())
 
