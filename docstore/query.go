@@ -155,15 +155,21 @@ func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query 
 //
 // Call Stop on the iterator when finished.
 func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
+	return q.get(ctx, true, fps...)
+}
+
+// get implements Get, with optional OpenCensus tracing so it can be used internally.
+func (q *Query) get(ctx context.Context, oc bool, fps ...FieldPath) *DocumentIterator {
 	dcoll := q.coll.driver
 	if err := q.initGet(fps); err != nil {
 		return &DocumentIterator{err: wrapError(dcoll, err)}
 	}
 
 	var err error
-	ctx = q.coll.tracer.Start(ctx, "Query.Get")
-	defer func() { q.coll.tracer.End(ctx, err) }()
-
+	if oc {
+		ctx = q.coll.tracer.Start(ctx, "Query.Get")
+		defer func() { q.coll.tracer.End(ctx, err) }()
+	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, coll: q.coll, err: wrapError(dcoll, err)}
 }
@@ -223,7 +229,7 @@ func (q *Query) runActionsWithRetry(ctx context.Context, addAction func(*ActionL
 		// Run the query. For each document it returns, add an action to an ActionList.
 		// TODO(shantuo): fetch only key and revision fields? Not possible
 		// if the collection uses a key-extraction function.
-		iter := q.Get(ctx)
+		iter := q.get(ctx, false)
 		al := q.coll.Actions()
 		var keys []interface{}
 		for {
@@ -251,7 +257,7 @@ func (q *Query) runActionsWithRetry(ctx context.Context, addAction func(*ActionL
 
 		}
 		// Run the Action List.
-		err := al.Do(ctx)
+		err := al.do(ctx, false)
 		// If it succeeds, we're done.
 		if err == nil {
 			return nil

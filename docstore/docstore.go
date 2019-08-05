@@ -329,13 +329,20 @@ func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *Acti
 // efficiently as possible. Sometimes this makes it impossible to attribute failures
 // to specific actions; in such cases, the returned ActionListError will have entries
 // whose Index field is negative.
-func (l *ActionList) Do(ctx context.Context) (err error) {
+func (l *ActionList) Do(ctx context.Context) error {
+	return l.do(ctx, true)
+}
+
+// do implements Do with optional OpenCensus tracing, so it can be used internally.
+func (l *ActionList) do(ctx context.Context, oc bool) (err error) {
 	if err := l.coll.checkClosed(); err != nil {
 		return ActionListError{{-1, errClosed}}
 	}
 
-	ctx = l.coll.tracer.Start(ctx, "ActionList.Do")
-	defer func() { l.coll.tracer.End(ctx, err) }()
+	if oc {
+		ctx = l.coll.tracer.Start(ctx, "ActionList.Do")
+		defer func() { l.coll.tracer.End(ctx, err) }()
+	}
 
 	das, err := l.toDriverActions()
 	if err != nil {
