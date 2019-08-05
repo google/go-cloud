@@ -23,7 +23,7 @@ providers with minimal initialization reconfiguration.
 
 ## Opening a Variable {#opening}
 
-The first step in watching a variable is to instantiate a
+The first step in watching a variable is to instantiate a portable
 [`*runtimevar.Variable`][] for your service.
 
 The easiest way to do so is to use [`runtimevar.OpenVariable`][] and a service-specific URL pointing
