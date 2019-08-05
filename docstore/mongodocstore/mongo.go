@@ -127,6 +127,11 @@ type Options struct {
 	// The name of the field holding the document revision.
 	// Defaults to docstore.DefaultRevisionField.
 	RevisionField string
+	// Whether Query.Update writes a new revision into the updated documents.
+	// The default is false, meaning that a revision will be written to all
+	// documents that satisfy the query's conditions. Set to true if and only if
+	// the collection's documents do not have revision fields.
+	NoWriteQueryUpdateRevisions bool
 }
 
 // OpenCollection opens a MongoDB collection for use with Docstore.
@@ -380,7 +385,7 @@ func (c *collection) prepareUpdate(a *driver.Action) (filter bson.D, updateDoc m
 	return filter, updateDoc, rev, nil
 }
 
-func (c *collection) newUpdateDoc(mods []driver.Mod, revOn bool) (map[string]bson.D, string, error) {
+func (c *collection) newUpdateDoc(mods []driver.Mod, writeRevision bool) (map[string]bson.D, string, error) {
 	var (
 		sets   bson.D
 		unsets bson.D
@@ -406,7 +411,7 @@ func (c *collection) newUpdateDoc(mods []driver.Mod, revOn bool) (map[string]bso
 	}
 	updateDoc := map[string]bson.D{}
 	var rev string
-	if revOn {
+	if writeRevision {
 		rev = driver.UniqueString()
 		sets = append(sets, bson.E{Key: c.revisionField, Value: rev})
 	}
