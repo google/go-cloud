@@ -70,20 +70,49 @@ if (!doNotTrack) {
 </nav>
 </nav>
 
-<p>The runtimevar package provides an easy and portable way to watch runtime
+<p>The <a href="https://godoc.org/gocloud.dev/runtimevar"><code>runtimevar</code> package</a> provides an easy and portable way to watch runtime
 configuration variables. This guide shows how to work with runtime configuration
 variables using the Go CDK.</p>
 
+<p>Subpackages contain driver implementations of runtimevar for various services,
+including Cloud and on-prem solutions. You can develop your application locally
+using <a href="https://godoc.org/gocloud.dev/runtimevar/filevar"><code>filevar</code></a> or <a href="https://godoc.org/gocloud.dev/runtimevar/constantvar"><code>constantvar</code></a>, then deploy it to multiple Cloud
+providers with minimal initialization reconfiguration.</p>
+
 <h2 id="opening"> Opening a Variable<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
 
-<p>The first step in watching a variable is to instantiate a
-<a href="https://godoc.org/gocloud.dev/runtimevar#Variable"><code>*runtimevar.Variable</code></a>.</p>
+<p>The first step in watching a variable is to instantiate a portable
+<a href="https://godoc.org/gocloud.dev/runtimevar#Variable"><code>*runtimevar.Variable</code></a> for your service.</p>
 
-<p>The easiest way to do so is to use <a href="https://godoc.org/gocloud.dev/runtimevar#OpenVariable"><code>runtimevar.OpenVariable</code></a> and a URL pointing
+<p>The easiest way to do so is to use <a href="https://godoc.org/gocloud.dev/runtimevar#OpenVariable"><code>runtimevar.OpenVariable</code></a> and a service-specific URL pointing
 to the variable, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to link
-it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need fine-grained control
+it in.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/&lt;driver&gt;&#34;</span>
+<span class="p">)</span>
+<span class="o">...</span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="s">&#34;&lt;driver-url&gt;&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;could not open variable: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// v is a *runtimevar.Variable; see usage below
+</span><span class="c1"></span><span class="o">...</span></code></pre></div>
+<p>See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for general background and the <a href="#services">guide below</a>
+for URL usage for each supported service.</p>
+
+<p>Alternatively, if you need fine-grained control
 over the connection settings, you can call the constructor function in the
 driver package directly (like <code>etcdvar.OpenVariable</code>).</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/runtimevar/&lt;driver&gt;&#34;</span>
+<span class="o">...</span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="p">&lt;</span><span class="nx">driver</span><span class="p">&gt;.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="o">...</span></code></pre></div>
+<p>You may find the <a href="http://github.com/google/wire"><code>wire</code> package</a> useful for managing your initialization code
+when switching between different backing services.</p>
+
+<p>See the <a href="#services">guide below</a> for constructor usage for each supported service.</p>
 
 <p>When opening the variable, you can provide a <a href="https://godoc.org/gocloud.dev/runtimevar#Decoder">decoder</a> parameter (either as a
 <a href="https://godoc.org/gocloud.dev/runtimevar#DecoderByName">query parameter</a> for URLs, or explicitly to the constructor) to specify
@@ -111,8 +140,6 @@ whether the raw value stored in the variable is interpreted as a <code>string</c
 <span class="c1">// snapshot.Value will be of type Config.
 </span></code></pre></div>
 
-<p>See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
-
 <h2 id="using"> Using a Variable<a class="anchor" href="#using" aria-label="Link to Section">🔗</a></h2>
 
 <p>Once you have opened a <code>runtimevar.Variable</code> for the provider you want, you can
@@ -122,16 +149,18 @@ use it portably.</p>
 
 <p>The easiest way to a <code>Variable</code> is to use the <a href="https://godoc.org/gocloud.dev/runtimevar#Variable.Latest"><code>Variable.Latest</code></a> method. It
 returns the latest good <a href="https://godoc.org/gocloud.dev/runtimevar#Snapshot"><code>Snapshot</code></a> of the variable value, blocking if no
-good value has <em>ever</em> been received. The dynamic type of <code>Snapshot.Value</code>
+good value has <em>ever</em> been detected. The dynamic type of <code>Snapshot.Value</code>
 depends on the decoder you provided when creating the <code>Variable</code>.</p>
-
-<p>To avoid blocking, you can pass an already-<code>Done</code> context.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">snapshot</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Latest</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">())</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;Error in retrieving variable: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></div>
+
+<p>To avoid blocking, you can pass an already-<code>Done</code> context. You can also use
+<a href="https://godoc.org/gocloud.dev/runtimevar#Variable.CheckHealth"><code>Variable.CheckHealth</code></a>, which reports as healthy when <code>Latest</code> will
+return a value without blocking.</p>
 
 <h3 id="watch"> Watch<a class="anchor" href="#watch" aria-label="Link to Section">🔗</a></h3>
 
