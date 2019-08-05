@@ -87,7 +87,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) HTTPClient() *http.Client {
-	return &h.client.Client
+	return &http.Client{Transport: h.rt}
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {

@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7U2le1DH9EMf5c",
+  "Initial": "AQAAAA7U2m3JNWh9s/5c",
   "Version": "0.2",
   "Converter": {
     "ClearHeaders": [
@@ -34,7 +34,123 @@
   },
   "Entries": [
     {
-      "ID": "a2f8d2d30e8477fc",
+      "ID": "6b6fd450bb9968fa",
+      "Request": {
+        "Method": "PUT",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "11"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          "aGVsbG8gd29ybGQ="
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
+          "Content-Length": [
+            "322"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 18:34:50 GMT"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2UqNAZ6c7NdvcN0pqNC07dq4hZX-tk5P9F4BL6_NalVQEcyx3D_2gH0yme9uzuwKi0gsLbgaCUFB_8wBqmApg5BhM99Ytw"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+U2lnbmF0dXJlRG9lc05vdE1hdGNoPC9Db2RlPjxNZXNzYWdlPlRoZSByZXF1ZXN0IHNpZ25hdHVyZSB3ZSBjYWxjdWxhdGVkIGRvZXMgbm90IG1hdGNoIHRoZSBzaWduYXR1cmUgeW91IHByb3ZpZGVkLiBDaGVjayB5b3VyIEdvb2dsZSBzZWNyZXQga2V5IGFuZCBzaWduaW5nIG1ldGhvZC48L01lc3NhZ2U+PFN0cmluZ1RvU2lnbj5QVVQKCgoxNTY1MDMzNjkwCi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2Jsb2ItZm9yLXNpZ25pbmc8L1N0cmluZ1RvU2lnbj48L0Vycm9yPg=="
+      }
+    },
+    {
+      "ID": "490852339014c1e3",
+      "Request": {
+        "Method": "PUT",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "11"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          "aGVsbG8gd29ybGQ="
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
+          "Content-Length": [
+            "322"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 18:34:50 GMT"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2UrqiBySxTuqEQJkHPW7obtFSiu3eNtDL-OMg-Lz3V3VETkvNdu66l5c1YJZc_4OaLGckjf9apBKIq37zlW3Fa7BPNS2BA"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+U2lnbmF0dXJlRG9lc05vdE1hdGNoPC9Db2RlPjxNZXNzYWdlPlRoZSByZXF1ZXN0IHNpZ25hdHVyZSB3ZSBjYWxjdWxhdGVkIGRvZXMgbm90IG1hdGNoIHRoZSBzaWduYXR1cmUgeW91IHByb3ZpZGVkLiBDaGVjayB5b3VyIEdvb2dsZSBzZWNyZXQga2V5IGFuZCBzaWduaW5nIG1ldGhvZC48L01lc3NhZ2U+PFN0cmluZ1RvU2lnbj5QVVQKCgoxNTY1MDMzNjkwCi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2Jsb2ItZm9yLXNpZ25pbmc8L1N0cmluZ1RvU2lnbj48L0Vycm9yPg=="
+      }
+    },
+    {
+      "ID": "03b7f3b3d265c651",
       "Request": {
         "Method": "PUT",
         "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
@@ -70,7 +186,7 @@
             "text/html; charset=UTF-8"
           ],
           "Date": [
-            "Mon, 05 Aug 2019 17:00:38 GMT"
+            "Mon, 05 Aug 2019 18:34:51 GMT"
           ],
           "Etag": [
             "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
@@ -82,7 +198,7 @@
             "Origin"
           ],
           "X-Goog-Generation": [
-            "1565024438241143"
+            "1565030091106373"
           ],
           "X-Goog-Hash": [
             "crc32c=yZRlqg==",
@@ -107,14 +223,136 @@
             "success"
           ],
           "X-Guploader-Uploadid": [
-            "AEnB2Uone_zlF2qH2QsX5OCwokw6NVAdOa0l0-awW-LORvjcM_9Mn3AcAsLrQWxI6je5S5w50lgC1QXb1ArFgVuES60LD3M8Rg"
+            "AEnB2Up9pxNIbuoLvuyDmO4rJ51aoQv1r7fgaWHpFCcgvNgXXdoy8hYopGphj-Xw5G0HiudQNYrtzE4d2Xvsn-ptQvk27Gym3g"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "da954a185531498c",
+      "ID": "48225eda464dec49",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
+          "Cache-Control": [
+            "private, max-age=0"
+          ],
+          "Content-Length": [
+            "322"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 18:34:51 GMT"
+          ],
+          "Expires": [
+            "CLEARED"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2Uplxal-dC3y4yDpHXq2OZqxYl02DKmPQPuUQO9uJMf9Hbs4yBkNspQVFvYfZBPrqd-4CFsJpxw75cyyCN0b7_2-vhp4Eg"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+U2lnbmF0dXJlRG9lc05vdE1hdGNoPC9Db2RlPjxNZXNzYWdlPlRoZSByZXF1ZXN0IHNpZ25hdHVyZSB3ZSBjYWxjdWxhdGVkIGRvZXMgbm90IG1hdGNoIHRoZSBzaWduYXR1cmUgeW91IHByb3ZpZGVkLiBDaGVjayB5b3VyIEdvb2dsZSBzZWNyZXQga2V5IGFuZCBzaWduaW5nIG1ldGhvZC48L01lc3NhZ2U+PFN0cmluZ1RvU2lnbj5HRVQKCgoxNTY1MDMzNjkwCi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2Jsb2ItZm9yLXNpZ25pbmc8L1N0cmluZ1RvU2lnbj48L0Vycm9yPg=="
+      }
+    },
+    {
+      "ID": "29fca16dad0e681b",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
+          "Cache-Control": [
+            "private, max-age=0"
+          ],
+          "Content-Length": [
+            "322"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 18:34:51 GMT"
+          ],
+          "Expires": [
+            "CLEARED"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2UqbmNepsC4bl046RrctmC6afH4gTEbY3FOyLSgr63TCo4KJAQoutZjZM7odX7rtcMz9GG4qFUdEtYFxUsGqaZa7GK-_Tw"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+U2lnbmF0dXJlRG9lc05vdE1hdGNoPC9Db2RlPjxNZXNzYWdlPlRoZSByZXF1ZXN0IHNpZ25hdHVyZSB3ZSBjYWxjdWxhdGVkIGRvZXMgbm90IG1hdGNoIHRoZSBzaWduYXR1cmUgeW91IHByb3ZpZGVkLiBDaGVjayB5b3VyIEdvb2dsZSBzZWNyZXQga2V5IGFuZCBzaWduaW5nIG1ldGhvZC48L01lc3NhZ2U+PFN0cmluZ1RvU2lnbj5HRVQKCgoxNTY1MDMzNjkwCi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2Jsb2ItZm9yLXNpZ25pbmc8L1N0cmluZ1RvU2lnbj48L0Vycm9yPg=="
+      }
+    },
+    {
+      "ID": "41dbf4fcec2a11fe",
       "Request": {
         "Method": "GET",
         "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
@@ -153,7 +391,7 @@
             "application/octet-stream"
           ],
           "Date": [
-            "Mon, 05 Aug 2019 17:00:38 GMT"
+            "Mon, 05 Aug 2019 18:34:51 GMT"
           ],
           "Etag": [
             "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
@@ -162,13 +400,13 @@
             "CLEARED"
           ],
           "Last-Modified": [
-            "Mon, 05 Aug 2019 17:00:38 GMT"
+            "Mon, 05 Aug 2019 18:34:51 GMT"
           ],
           "Server": [
             "UploadServer"
           ],
           "X-Goog-Generation": [
-            "1565024438241143"
+            "1565030091106373"
           ],
           "X-Goog-Hash": [
             "crc32c=yZRlqg==",
@@ -196,14 +434,136 @@
             "success"
           ],
           "X-Guploader-Uploadid": [
-            "AEnB2Uq9-iP9T2vzAWVfYydGdn8KVJgroc1Vko6jhGWR9gL7MBm0ygDynvjIGGvcQdkd9MX30qB46X3Arvfxn0NMP0WIZOipFA"
+            "AEnB2Uo-fw62WNLod6rz22Dudyezsn_yrJCYTs8iGU9859ryHXM5vqBztZI4q7BM6vE3Qq-K7SsaAC8SvnW7NAj_xIAW3StAVg"
           ]
         },
         "Body": "aGVsbG8gd29ybGQ="
       }
     },
     {
-      "ID": "2052a163fd73fa8f",
+      "ID": "11fdf0232b6ef1d0",
+      "Request": {
+        "Method": "DELETE",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
+          "Cache-Control": [
+            "private, max-age=0"
+          ],
+          "Content-Length": [
+            "325"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 18:34:51 GMT"
+          ],
+          "Expires": [
+            "CLEARED"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2UopfJ3j7ou4As0oPrDkzhEclB_VAcQVapa3kmGliKi0MFhbbxzS-5CtrZ4a4oh6lYybGnr8YL8WcAkuAluXPA766Nb3fQ"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+U2lnbmF0dXJlRG9lc05vdE1hdGNoPC9Db2RlPjxNZXNzYWdlPlRoZSByZXF1ZXN0IHNpZ25hdHVyZSB3ZSBjYWxjdWxhdGVkIGRvZXMgbm90IG1hdGNoIHRoZSBzaWduYXR1cmUgeW91IHByb3ZpZGVkLiBDaGVjayB5b3VyIEdvb2dsZSBzZWNyZXQga2V5IGFuZCBzaWduaW5nIG1ldGhvZC48L01lc3NhZ2U+PFN0cmluZ1RvU2lnbj5ERUxFVEUKCgoxNTY1MDMzNjkwCi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2Jsb2ItZm9yLXNpZ25pbmc8L1N0cmluZ1RvU2lnbj48L0Vycm9yPg=="
+      }
+    },
+    {
+      "ID": "f70ad57c62da3925",
+      "Request": {
+        "Method": "DELETE",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,43,39\""
+          ],
+          "Cache-Control": [
+            "private, max-age=0"
+          ],
+          "Content-Length": [
+            "325"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 18:34:51 GMT"
+          ],
+          "Expires": [
+            "CLEARED"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2UreJb5ZcLuxU0TXiOQlC8EJAnhRPh2aC0Y4wSvri96avnU4r384RIUa60fIsuyk5iRx94tMNq7DAxdTasYY_Xrla-JrtQ"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+U2lnbmF0dXJlRG9lc05vdE1hdGNoPC9Db2RlPjxNZXNzYWdlPlRoZSByZXF1ZXN0IHNpZ25hdHVyZSB3ZSBjYWxjdWxhdGVkIGRvZXMgbm90IG1hdGNoIHRoZSBzaWduYXR1cmUgeW91IHByb3ZpZGVkLiBDaGVjayB5b3VyIEdvb2dsZSBzZWNyZXQga2V5IGFuZCBzaWduaW5nIG1ldGhvZC48L01lc3NhZ2U+PFN0cmluZ1RvU2lnbj5ERUxFVEUKCgoxNTY1MDMzNjkwCi9nby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2Jsb2ItZm9yLXNpZ25pbmc8L1N0cmluZ1RvU2lnbj48L0Vycm9yPg=="
+      }
+    },
+    {
+      "ID": "4a8425e79a355898",
       "Request": {
         "Method": "DELETE",
         "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
@@ -236,7 +596,7 @@
             "0"
           ],
           "Date": [
-            "Mon, 05 Aug 2019 17:00:38 GMT"
+            "Mon, 05 Aug 2019 18:34:51 GMT"
           ],
           "Expires": [
             "CLEARED"
@@ -257,14 +617,14 @@
             "success"
           ],
           "X-Guploader-Uploadid": [
-            "AEnB2UpquSjsO502A1fn2yT6oe2FqjoxSPJ9LhpUVWoh-7Wpl2IdC5KV4rtyrWb4ynr47C0iY4gAzz9AiaZkN6SKCYCUjweEMg"
+            "AEnB2UobN320O4NhGz0iJJn0UIVNhziu98JERzThHianRsGAlhSIOyafSRkT-y5EDZpGyCZGINvATpb0pxQKAAUOGcXIKdGAEg"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "6d333bc9cd5d88f7",
+      "ID": "4e193f3a10f3cc62",
       "Request": {
         "Method": "GET",
         "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=CLEARED\u0026GoogleAccessId=storage-updater%40go-cloud-test-216917.iam.gserviceaccount.com\u0026Signature=CLEARED",
@@ -300,7 +660,7 @@
             "application/xml; charset=UTF-8"
           ],
           "Date": [
-            "Mon, 05 Aug 2019 17:00:38 GMT"
+            "Mon, 05 Aug 2019 18:34:51 GMT"
           ],
           "Expires": [
             "CLEARED"
@@ -318,7 +678,7 @@
             "agent_rejected"
           ],
           "X-Guploader-Uploadid": [
-            "AEnB2UpBMh7KkrnS8t9JAQKlG7fEPC8yHFt9RlPrV4fizf0VqlJDou5c3aLU9GefuYfAokGxesEDSbS72XVFySpV2oeMxAqadQ"
+            "AEnB2UqmvZtbG3Thn3V6dpf7KOrSxiI5WUqi2vQUMYL24dpzIFbw55XrYI77lZ6YPgS6F4sfrYA6zcAhLgOj1fdvlm1QFkJciA"
           ]
         },
         "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+Tm9TdWNoS2V5PC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQga2V5IGRvZXMgbm90IGV4aXN0LjwvTWVzc2FnZT48RGV0YWlscz5ObyBzdWNoIG9iamVjdDogZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9ibG9iLWZvci1zaWduaW5nPC9EZXRhaWxzPjwvRXJyb3I+"
