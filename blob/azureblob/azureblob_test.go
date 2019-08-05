@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
@@ -84,7 +85,27 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return nil, err
 	}
 	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, "blob", credential, string(accountName))
+	// Hack to work around the fact that SignedURLs for PUTs are not fully
+	// portable; they require a "x-ms-blob-type" header. Intercept all
+	// requests, and insert that header where needed.
+	httpClient.Transport = &requestInterceptor{httpClient.Transport}
 	return &harness{pipeline: p, credential: credential, closer: done, httpClient: httpClient}, nil
+}
+
+// requestInterceptor implements a hack for the lack of portability for
+// SignedURLs for PUT. It adds the required "x-ms-blob-type" header where
+// Azure requires it.
+type requestInterceptor struct {
+	base http.RoundTripper
+}
+
+func (ri *requestInterceptor) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodPut && strings.Contains(req.URL.Path, "blob-for-signing") {
+		reqClone := *req
+		reqClone.Header.Add("x-ms-blob-type", "BlockBlob")
+		req = &reqClone
+	}
+	return ri.base.RoundTrip(req)
 }
 
 func (h *harness) HTTPClient() *http.Client {

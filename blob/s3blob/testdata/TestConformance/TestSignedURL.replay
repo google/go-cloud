@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7Ua6q0Hw14Kf8Q",
+  "Initial": "AQAAAA7U2o9wBWWcWP5c",
   "Version": "0.2",
   "Converter": {
     "ClearHeaders": [
@@ -40,10 +40,10 @@
   },
   "Entries": [
     {
-      "ID": "3e2cf87fa8f19ff4",
+      "ID": "45cdece9d2bf46a6",
       "Request": {
         "Method": "PUT",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
         "Header": {
           "Accept-Encoding": [
             "gzip"
@@ -51,20 +51,103 @@
           "Content-Length": [
             "11"
           ],
-          "Content-Md5": [
-            "XrY7u+Ae7tCTyyK7j1rNww=="
-          ],
           "User-Agent": [
-            "CLEARED"
-          ],
-          "X-Amz-Content-Sha256": [
-            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
-          ],
-          "X-Amz-Date": [
             "CLEARED"
           ]
         },
-        "MediaType": "text/plain",
+        "MediaType": "",
+        "BodyParts": [
+          "aGVsbG8gd29ybGQ="
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 20:58:25 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "2gl3ZTYZYdXp48mqg/iiihK8botKwIKskueXhBfvRHUMr7+Hb/EMJcJdQ8fH7G4qd4oAVvLauqU="
+          ],
+          "X-Amz-Request-Id": [
+            "9B88F1285CC04F6D"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPlNpZ25hdHVyZURvZXNOb3RNYXRjaDwvQ29kZT48TWVzc2FnZT5UaGUgcmVxdWVzdCBzaWduYXR1cmUgd2UgY2FsY3VsYXRlZCBkb2VzIG5vdCBtYXRjaCB0aGUgc2lnbmF0dXJlIHlvdSBwcm92aWRlZC4gQ2hlY2sgeW91ciBrZXkgYW5kIHNpZ25pbmcgbWV0aG9kLjwvTWVzc2FnZT48QVdTQWNjZXNzS2V5SWQ+QUtJQUpVR1AzRE1KWVFBUjZQREE8L0FXU0FjY2Vzc0tleUlkPjxTdHJpbmdUb1NpZ24+QVdTNC1ITUFDLVNIQTI1NgoyMDE5MDgwNVQyMDU4MjRaCjIwMTkwODA1L3VzLXdlc3QtMS9zMy9hd3M0X3JlcXVlc3QKN2ZjZTZhZTc3ODMwYzBjM2IzYzJlODgxNWJkZmM0MTcyOThmMmU5NDIxZDlmMjA3YzliOTZiODI5NzRhOGRmZTwvU3RyaW5nVG9TaWduPjxTaWduYXR1cmVQcm92aWRlZD5lNzQwODY0MzE4ZDRlNDgyM2YwZjgzMTM3MGJlYTM4ZWQwMmU0NWQ0YjRjYTM1MWMyYzliZTdhOGQzYjQ0NmRlPC9TaWduYXR1cmVQcm92aWRlZD48U3RyaW5nVG9TaWduQnl0ZXM+NDEgNTcgNTMgMzQgMmQgNDggNGQgNDEgNDMgMmQgNTMgNDggNDEgMzIgMzUgMzYgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgNTQgMzIgMzAgMzUgMzggMzIgMzQgNWEgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgMmYgNzUgNzMgMmQgNzcgNjUgNzMgNzQgMmQgMzEgMmYgNzMgMzMgMmYgNjEgNzcgNzMgMzQgNWYgNzIgNjUgNzEgNzUgNjUgNzMgNzQgMGEgMzcgNjYgNjMgNjUgMzYgNjEgNjUgMzcgMzcgMzggMzMgMzAgNjMgMzAgNjMgMzMgNjIgMzMgNjMgMzIgNjUgMzggMzggMzEgMzUgNjIgNjQgNjYgNjMgMzQgMzEgMzcgMzIgMzkgMzggNjYgMzIgNjUgMzkgMzQgMzIgMzEgNjQgMzkgNjYgMzIgMzAgMzcgNjMgMzkgNjIgMzkgMzYgNjIgMzggMzIgMzkgMzcgMzQgNjEgMzggNjQgNjYgNjU8L1N0cmluZ1RvU2lnbkJ5dGVzPjxDYW5vbmljYWxSZXF1ZXN0PlBVVAovYmxvYi1mb3Itc2lnbmluZwpYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZhbXA7WC1BbXotQ3JlZGVudGlhbD1BS0lBSlVHUDNETUpZUUFSNlBEQSUyRjIwMTkwODA1JTJGdXMtd2VzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmYW1wO1gtQW16LURhdGU9MjAxOTA4MDVUMjA1ODI0WiZhbXA7WC1BbXotRXhwaXJlcz0zNjAwJmFtcDtYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QKaG9zdDpnby1jbG91ZC10ZXN0aW5nLnMzLnVzLXdlc3QtMS5hbWF6b25hd3MuY29tCgpob3N0ClVOU0lHTkVELVBBWUxPQUQ8L0Nhbm9uaWNhbFJlcXVlc3Q+PENhbm9uaWNhbFJlcXVlc3RCeXRlcz41MCA1NSA1NCAwYSAyZiA2MiA2YyA2ZiA2MiAyZCA2NiA2ZiA3MiAyZCA3MyA2OSA2NyA2ZSA2OSA2ZSA2NyAwYSA1OCAyZCA0MSA2ZCA3YSAyZCA0MSA2YyA2NyA2ZiA3MiA2OSA3NCA2OCA2ZCAzZCA0MSA1NyA1MyAzNCAyZCA0OCA0ZCA0MSA0MyAyZCA1MyA0OCA0MSAzMiAzNSAzNiAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0MyA3MiA2NSA2NCA2NSA2ZSA3NCA2OSA2MSA2YyAzZCA0MSA0YiA0OSA0MSA0YSA1NSA0NyA1MCAzMyA0NCA0ZCA0YSA1OSA1MSA0MSA1MiAzNiA1MCA0NCA0MSAyNSAzMiA0NiAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSAyNSAzMiA0NiA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyNSAzMiA0NiA3MyAzMyAyNSAzMiA0NiA2MSA3NyA3MyAzNCA1ZiA3MiA2NSA3MSA3NSA2NSA3MyA3NCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NCA2MSA3NCA2NSAzZCAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSA1NCAzMiAzMCAzNSAzOCAzMiAzNCA1YSAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NSA3OCA3MCA2OSA3MiA2NSA3MyAzZCAzMyAzNiAzMCAzMCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA1MyA2OSA2NyA2ZSA2NSA2NCA0OCA2NSA2MSA2NCA2NSA3MiA3MyAzZCA2OCA2ZiA3MyA3NCAwYSA2OCA2ZiA3MyA3NCAzYSA2NyA2ZiAyZCA2MyA2YyA2ZiA3NSA2NCAyZCA3NCA2NSA3MyA3NCA2OSA2ZSA2NyAyZSA3MyAzMyAyZSA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyZSA2MSA2ZCA2MSA3YSA2ZiA2ZSA2MSA3NyA3MyAyZSA2MyA2ZiA2ZCAwYSAwYSA2OCA2ZiA3MyA3NCAwYSA1NSA0ZSA1MyA0OSA0NyA0ZSA0NSA0NCAyZCA1MCA0MSA1OSA0YyA0ZiA0MSA0NDwvQ2Fub25pY2FsUmVxdWVzdEJ5dGVzPjxSZXF1ZXN0SWQ+OUI4OEYxMjg1Q0MwNEY2RDwvUmVxdWVzdElkPjxIb3N0SWQ+MmdsM1pUWVpZZFhwNDhtcWcvaWlpaEs4Ym90S3dJS3NrdWVYaEJmdlJIVU1yNytIYi9FTUpjSmRROGZIN0c0cWQ0b0FWdkxhdXFVPTwvSG9zdElkPjwvRXJyb3I+"
+      }
+    },
+    {
+      "ID": "3c2b32c41ee9ec14",
+      "Request": {
+        "Method": "PUT",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "11"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          "aGVsbG8gd29ybGQ="
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 20:58:24 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "A99863DuLOn0ldGaqgPgWp/r8BkZsMB4ew1OB2QiUPC+yKK1JncjOAOyBW9crQXE7QNK2n99Pq0="
+          ],
+          "X-Amz-Request-Id": [
+            "0DAE62DA00E3636C"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPlNpZ25hdHVyZURvZXNOb3RNYXRjaDwvQ29kZT48TWVzc2FnZT5UaGUgcmVxdWVzdCBzaWduYXR1cmUgd2UgY2FsY3VsYXRlZCBkb2VzIG5vdCBtYXRjaCB0aGUgc2lnbmF0dXJlIHlvdSBwcm92aWRlZC4gQ2hlY2sgeW91ciBrZXkgYW5kIHNpZ25pbmcgbWV0aG9kLjwvTWVzc2FnZT48QVdTQWNjZXNzS2V5SWQ+QUtJQUpVR1AzRE1KWVFBUjZQREE8L0FXU0FjY2Vzc0tleUlkPjxTdHJpbmdUb1NpZ24+QVdTNC1ITUFDLVNIQTI1NgoyMDE5MDgwNVQyMDU4MjRaCjIwMTkwODA1L3VzLXdlc3QtMS9zMy9hd3M0X3JlcXVlc3QKN2ZjZTZhZTc3ODMwYzBjM2IzYzJlODgxNWJkZmM0MTcyOThmMmU5NDIxZDlmMjA3YzliOTZiODI5NzRhOGRmZTwvU3RyaW5nVG9TaWduPjxTaWduYXR1cmVQcm92aWRlZD5kYWVkYTk0NjU0ZGQxZTc5ZjY3OWYwNmIyYjJmNDE4MDFlZjk4NDI1NGVhMjkzM2E5YThhZmY3MjI3YjVkZDQwPC9TaWduYXR1cmVQcm92aWRlZD48U3RyaW5nVG9TaWduQnl0ZXM+NDEgNTcgNTMgMzQgMmQgNDggNGQgNDEgNDMgMmQgNTMgNDggNDEgMzIgMzUgMzYgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgNTQgMzIgMzAgMzUgMzggMzIgMzQgNWEgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgMmYgNzUgNzMgMmQgNzcgNjUgNzMgNzQgMmQgMzEgMmYgNzMgMzMgMmYgNjEgNzcgNzMgMzQgNWYgNzIgNjUgNzEgNzUgNjUgNzMgNzQgMGEgMzcgNjYgNjMgNjUgMzYgNjEgNjUgMzcgMzcgMzggMzMgMzAgNjMgMzAgNjMgMzMgNjIgMzMgNjMgMzIgNjUgMzggMzggMzEgMzUgNjIgNjQgNjYgNjMgMzQgMzEgMzcgMzIgMzkgMzggNjYgMzIgNjUgMzkgMzQgMzIgMzEgNjQgMzkgNjYgMzIgMzAgMzcgNjMgMzkgNjIgMzkgMzYgNjIgMzggMzIgMzkgMzcgMzQgNjEgMzggNjQgNjYgNjU8L1N0cmluZ1RvU2lnbkJ5dGVzPjxDYW5vbmljYWxSZXF1ZXN0PlBVVAovYmxvYi1mb3Itc2lnbmluZwpYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZhbXA7WC1BbXotQ3JlZGVudGlhbD1BS0lBSlVHUDNETUpZUUFSNlBEQSUyRjIwMTkwODA1JTJGdXMtd2VzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmYW1wO1gtQW16LURhdGU9MjAxOTA4MDVUMjA1ODI0WiZhbXA7WC1BbXotRXhwaXJlcz0zNjAwJmFtcDtYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QKaG9zdDpnby1jbG91ZC10ZXN0aW5nLnMzLnVzLXdlc3QtMS5hbWF6b25hd3MuY29tCgpob3N0ClVOU0lHTkVELVBBWUxPQUQ8L0Nhbm9uaWNhbFJlcXVlc3Q+PENhbm9uaWNhbFJlcXVlc3RCeXRlcz41MCA1NSA1NCAwYSAyZiA2MiA2YyA2ZiA2MiAyZCA2NiA2ZiA3MiAyZCA3MyA2OSA2NyA2ZSA2OSA2ZSA2NyAwYSA1OCAyZCA0MSA2ZCA3YSAyZCA0MSA2YyA2NyA2ZiA3MiA2OSA3NCA2OCA2ZCAzZCA0MSA1NyA1MyAzNCAyZCA0OCA0ZCA0MSA0MyAyZCA1MyA0OCA0MSAzMiAzNSAzNiAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0MyA3MiA2NSA2NCA2NSA2ZSA3NCA2OSA2MSA2YyAzZCA0MSA0YiA0OSA0MSA0YSA1NSA0NyA1MCAzMyA0NCA0ZCA0YSA1OSA1MSA0MSA1MiAzNiA1MCA0NCA0MSAyNSAzMiA0NiAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSAyNSAzMiA0NiA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyNSAzMiA0NiA3MyAzMyAyNSAzMiA0NiA2MSA3NyA3MyAzNCA1ZiA3MiA2NSA3MSA3NSA2NSA3MyA3NCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NCA2MSA3NCA2NSAzZCAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSA1NCAzMiAzMCAzNSAzOCAzMiAzNCA1YSAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NSA3OCA3MCA2OSA3MiA2NSA3MyAzZCAzMyAzNiAzMCAzMCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA1MyA2OSA2NyA2ZSA2NSA2NCA0OCA2NSA2MSA2NCA2NSA3MiA3MyAzZCA2OCA2ZiA3MyA3NCAwYSA2OCA2ZiA3MyA3NCAzYSA2NyA2ZiAyZCA2MyA2YyA2ZiA3NSA2NCAyZCA3NCA2NSA3MyA3NCA2OSA2ZSA2NyAyZSA3MyAzMyAyZSA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyZSA2MSA2ZCA2MSA3YSA2ZiA2ZSA2MSA3NyA3MyAyZSA2MyA2ZiA2ZCAwYSAwYSA2OCA2ZiA3MyA3NCAwYSA1NSA0ZSA1MyA0OSA0NyA0ZSA0NSA0NCAyZCA1MCA0MSA1OSA0YyA0ZiA0MSA0NDwvQ2Fub25pY2FsUmVxdWVzdEJ5dGVzPjxSZXF1ZXN0SWQ+MERBRTYyREEwMEUzNjM2QzwvUmVxdWVzdElkPjxIb3N0SWQ+QTk5ODYzRHVMT24wbGRHYXFnUGdXcC9yOEJrWnNNQjRldzFPQjJRaVVQQyt5S0sxSm5jak9BT3lCVzljclFYRTdRTksybjk5UHEwPTwvSG9zdElkPjwvRXJyb3I+"
+      }
+    },
+    {
+      "ID": "90177baa13801fb6",
+      "Request": {
+        "Method": "PUT",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "11"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
         "BodyParts": [
           "aGVsbG8gd29ybGQ="
         ]
@@ -79,7 +162,7 @@
             "0"
           ],
           "Date": [
-            "Mon, 13 May 2019 18:13:09 GMT"
+            "Mon, 05 Aug 2019 20:58:26 GMT"
           ],
           "Etag": [
             "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
@@ -88,17 +171,146 @@
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "i7kV7Flq6tmUzjZMOw4aR3Zy80eljXqUg6cYocn8TD98DN1ksZHsxJsYJa7D1FK2JORlgCjqNjg="
+            "vnPT4kbME4gCw9lH/D8Y342OOzrwg2reNZWQ8LVnzVMumbb6D8YHwpEFOI3CeKOosnEXbh4rO08="
           ],
           "X-Amz-Request-Id": [
-            "9ECDB9DC207CCF2E"
+            "82290B2EB4854DE3"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "8bb3bfbe915841bf",
+      "ID": "d6b7d001a9b813a5",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 20:58:24 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "18CIvgZgoSXgLsVRQN9ybMtOhuVN4Teq8KwHRmhD2LBmLaQN6QYurBf8Zz9OJaZ1DehxHqW+0Vo="
+          ],
+          "X-Amz-Request-Id": [
+            "8B42FC4C002883FB"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPlNpZ25hdHVyZURvZXNOb3RNYXRjaDwvQ29kZT48TWVzc2FnZT5UaGUgcmVxdWVzdCBzaWduYXR1cmUgd2UgY2FsY3VsYXRlZCBkb2VzIG5vdCBtYXRjaCB0aGUgc2lnbmF0dXJlIHlvdSBwcm92aWRlZC4gQ2hlY2sgeW91ciBrZXkgYW5kIHNpZ25pbmcgbWV0aG9kLjwvTWVzc2FnZT48QVdTQWNjZXNzS2V5SWQ+QUtJQUpVR1AzRE1KWVFBUjZQREE8L0FXU0FjY2Vzc0tleUlkPjxTdHJpbmdUb1NpZ24+QVdTNC1ITUFDLVNIQTI1NgoyMDE5MDgwNVQyMDU4MjRaCjIwMTkwODA1L3VzLXdlc3QtMS9zMy9hd3M0X3JlcXVlc3QKYWQxYTU1MTdhNDA3NjU3YjdlNDI4NzExMTI5MTA1YzhlMjNhNzlkYzc4YzEyNDZiMjFhNTViOTMxM2ExNmRiYzwvU3RyaW5nVG9TaWduPjxTaWduYXR1cmVQcm92aWRlZD5kYWVkYTk0NjU0ZGQxZTc5ZjY3OWYwNmIyYjJmNDE4MDFlZjk4NDI1NGVhMjkzM2E5YThhZmY3MjI3YjVkZDQwPC9TaWduYXR1cmVQcm92aWRlZD48U3RyaW5nVG9TaWduQnl0ZXM+NDEgNTcgNTMgMzQgMmQgNDggNGQgNDEgNDMgMmQgNTMgNDggNDEgMzIgMzUgMzYgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgNTQgMzIgMzAgMzUgMzggMzIgMzQgNWEgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgMmYgNzUgNzMgMmQgNzcgNjUgNzMgNzQgMmQgMzEgMmYgNzMgMzMgMmYgNjEgNzcgNzMgMzQgNWYgNzIgNjUgNzEgNzUgNjUgNzMgNzQgMGEgNjEgNjQgMzEgNjEgMzUgMzUgMzEgMzcgNjEgMzQgMzAgMzcgMzYgMzUgMzcgNjIgMzcgNjUgMzQgMzIgMzggMzcgMzEgMzEgMzEgMzIgMzkgMzEgMzAgMzUgNjMgMzggNjUgMzIgMzMgNjEgMzcgMzkgNjQgNjMgMzcgMzggNjMgMzEgMzIgMzQgMzYgNjIgMzIgMzEgNjEgMzUgMzUgNjIgMzkgMzMgMzEgMzMgNjEgMzEgMzYgNjQgNjIgNjM8L1N0cmluZ1RvU2lnbkJ5dGVzPjxDYW5vbmljYWxSZXF1ZXN0PkdFVAovYmxvYi1mb3Itc2lnbmluZwpYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZhbXA7WC1BbXotQ3JlZGVudGlhbD1BS0lBSlVHUDNETUpZUUFSNlBEQSUyRjIwMTkwODA1JTJGdXMtd2VzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmYW1wO1gtQW16LURhdGU9MjAxOTA4MDVUMjA1ODI0WiZhbXA7WC1BbXotRXhwaXJlcz0zNjAwJmFtcDtYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QKaG9zdDpnby1jbG91ZC10ZXN0aW5nLnMzLnVzLXdlc3QtMS5hbWF6b25hd3MuY29tCgpob3N0ClVOU0lHTkVELVBBWUxPQUQ8L0Nhbm9uaWNhbFJlcXVlc3Q+PENhbm9uaWNhbFJlcXVlc3RCeXRlcz40NyA0NSA1NCAwYSAyZiA2MiA2YyA2ZiA2MiAyZCA2NiA2ZiA3MiAyZCA3MyA2OSA2NyA2ZSA2OSA2ZSA2NyAwYSA1OCAyZCA0MSA2ZCA3YSAyZCA0MSA2YyA2NyA2ZiA3MiA2OSA3NCA2OCA2ZCAzZCA0MSA1NyA1MyAzNCAyZCA0OCA0ZCA0MSA0MyAyZCA1MyA0OCA0MSAzMiAzNSAzNiAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0MyA3MiA2NSA2NCA2NSA2ZSA3NCA2OSA2MSA2YyAzZCA0MSA0YiA0OSA0MSA0YSA1NSA0NyA1MCAzMyA0NCA0ZCA0YSA1OSA1MSA0MSA1MiAzNiA1MCA0NCA0MSAyNSAzMiA0NiAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSAyNSAzMiA0NiA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyNSAzMiA0NiA3MyAzMyAyNSAzMiA0NiA2MSA3NyA3MyAzNCA1ZiA3MiA2NSA3MSA3NSA2NSA3MyA3NCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NCA2MSA3NCA2NSAzZCAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSA1NCAzMiAzMCAzNSAzOCAzMiAzNCA1YSAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NSA3OCA3MCA2OSA3MiA2NSA3MyAzZCAzMyAzNiAzMCAzMCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA1MyA2OSA2NyA2ZSA2NSA2NCA0OCA2NSA2MSA2NCA2NSA3MiA3MyAzZCA2OCA2ZiA3MyA3NCAwYSA2OCA2ZiA3MyA3NCAzYSA2NyA2ZiAyZCA2MyA2YyA2ZiA3NSA2NCAyZCA3NCA2NSA3MyA3NCA2OSA2ZSA2NyAyZSA3MyAzMyAyZSA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyZSA2MSA2ZCA2MSA3YSA2ZiA2ZSA2MSA3NyA3MyAyZSA2MyA2ZiA2ZCAwYSAwYSA2OCA2ZiA3MyA3NCAwYSA1NSA0ZSA1MyA0OSA0NyA0ZSA0NSA0NCAyZCA1MCA0MSA1OSA0YyA0ZiA0MSA0NDwvQ2Fub25pY2FsUmVxdWVzdEJ5dGVzPjxSZXF1ZXN0SWQ+OEI0MkZDNEMwMDI4ODNGQjwvUmVxdWVzdElkPjxIb3N0SWQ+MThDSXZnWmdvU1hnTHNWUlFOOXliTXRPaHVWTjRUZXE4S3dIUm1oRDJMQm1MYVFONlFZdXJCZjhaejlPSmFaMURlaHhIcVcrMFZvPTwvSG9zdElkPjwvRXJyb3I+"
+      }
+    },
+    {
+      "ID": "248f1ea7c9a5a937",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 20:58:24 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "GvES/GdlnKbQ48FOSVF+2TYxA+1qH6xO5qwN3/38fs4/F06H2X/s9QpHqyoQJgzPFu5R/qQZ1lY="
+          ],
+          "X-Amz-Request-Id": [
+            "3D4A609ADA9C4AB3"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPlNpZ25hdHVyZURvZXNOb3RNYXRjaDwvQ29kZT48TWVzc2FnZT5UaGUgcmVxdWVzdCBzaWduYXR1cmUgd2UgY2FsY3VsYXRlZCBkb2VzIG5vdCBtYXRjaCB0aGUgc2lnbmF0dXJlIHlvdSBwcm92aWRlZC4gQ2hlY2sgeW91ciBrZXkgYW5kIHNpZ25pbmcgbWV0aG9kLjwvTWVzc2FnZT48QVdTQWNjZXNzS2V5SWQ+QUtJQUpVR1AzRE1KWVFBUjZQREE8L0FXU0FjY2Vzc0tleUlkPjxTdHJpbmdUb1NpZ24+QVdTNC1ITUFDLVNIQTI1NgoyMDE5MDgwNVQyMDU4MjRaCjIwMTkwODA1L3VzLXdlc3QtMS9zMy9hd3M0X3JlcXVlc3QKYWQxYTU1MTdhNDA3NjU3YjdlNDI4NzExMTI5MTA1YzhlMjNhNzlkYzc4YzEyNDZiMjFhNTViOTMxM2ExNmRiYzwvU3RyaW5nVG9TaWduPjxTaWduYXR1cmVQcm92aWRlZD40YWU0MjEwZmY1ZWIzMjE2MzU4M2Q2OWY5ZDFlYzZkYWQ4OGNjM2VmZTg2YzBhMzMzZGM5NDE0MzZiZDhmNGFiPC9TaWduYXR1cmVQcm92aWRlZD48U3RyaW5nVG9TaWduQnl0ZXM+NDEgNTcgNTMgMzQgMmQgNDggNGQgNDEgNDMgMmQgNTMgNDggNDEgMzIgMzUgMzYgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgNTQgMzIgMzAgMzUgMzggMzIgMzQgNWEgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgMmYgNzUgNzMgMmQgNzcgNjUgNzMgNzQgMmQgMzEgMmYgNzMgMzMgMmYgNjEgNzcgNzMgMzQgNWYgNzIgNjUgNzEgNzUgNjUgNzMgNzQgMGEgNjEgNjQgMzEgNjEgMzUgMzUgMzEgMzcgNjEgMzQgMzAgMzcgMzYgMzUgMzcgNjIgMzcgNjUgMzQgMzIgMzggMzcgMzEgMzEgMzEgMzIgMzkgMzEgMzAgMzUgNjMgMzggNjUgMzIgMzMgNjEgMzcgMzkgNjQgNjMgMzcgMzggNjMgMzEgMzIgMzQgMzYgNjIgMzIgMzEgNjEgMzUgMzUgNjIgMzkgMzMgMzEgMzMgNjEgMzEgMzYgNjQgNjIgNjM8L1N0cmluZ1RvU2lnbkJ5dGVzPjxDYW5vbmljYWxSZXF1ZXN0PkdFVAovYmxvYi1mb3Itc2lnbmluZwpYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZhbXA7WC1BbXotQ3JlZGVudGlhbD1BS0lBSlVHUDNETUpZUUFSNlBEQSUyRjIwMTkwODA1JTJGdXMtd2VzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmYW1wO1gtQW16LURhdGU9MjAxOTA4MDVUMjA1ODI0WiZhbXA7WC1BbXotRXhwaXJlcz0zNjAwJmFtcDtYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QKaG9zdDpnby1jbG91ZC10ZXN0aW5nLnMzLnVzLXdlc3QtMS5hbWF6b25hd3MuY29tCgpob3N0ClVOU0lHTkVELVBBWUxPQUQ8L0Nhbm9uaWNhbFJlcXVlc3Q+PENhbm9uaWNhbFJlcXVlc3RCeXRlcz40NyA0NSA1NCAwYSAyZiA2MiA2YyA2ZiA2MiAyZCA2NiA2ZiA3MiAyZCA3MyA2OSA2NyA2ZSA2OSA2ZSA2NyAwYSA1OCAyZCA0MSA2ZCA3YSAyZCA0MSA2YyA2NyA2ZiA3MiA2OSA3NCA2OCA2ZCAzZCA0MSA1NyA1MyAzNCAyZCA0OCA0ZCA0MSA0MyAyZCA1MyA0OCA0MSAzMiAzNSAzNiAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0MyA3MiA2NSA2NCA2NSA2ZSA3NCA2OSA2MSA2YyAzZCA0MSA0YiA0OSA0MSA0YSA1NSA0NyA1MCAzMyA0NCA0ZCA0YSA1OSA1MSA0MSA1MiAzNiA1MCA0NCA0MSAyNSAzMiA0NiAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSAyNSAzMiA0NiA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyNSAzMiA0NiA3MyAzMyAyNSAzMiA0NiA2MSA3NyA3MyAzNCA1ZiA3MiA2NSA3MSA3NSA2NSA3MyA3NCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NCA2MSA3NCA2NSAzZCAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSA1NCAzMiAzMCAzNSAzOCAzMiAzNCA1YSAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NSA3OCA3MCA2OSA3MiA2NSA3MyAzZCAzMyAzNiAzMCAzMCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA1MyA2OSA2NyA2ZSA2NSA2NCA0OCA2NSA2MSA2NCA2NSA3MiA3MyAzZCA2OCA2ZiA3MyA3NCAwYSA2OCA2ZiA3MyA3NCAzYSA2NyA2ZiAyZCA2MyA2YyA2ZiA3NSA2NCAyZCA3NCA2NSA3MyA3NCA2OSA2ZSA2NyAyZSA3MyAzMyAyZSA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyZSA2MSA2ZCA2MSA3YSA2ZiA2ZSA2MSA3NyA3MyAyZSA2MyA2ZiA2ZCAwYSAwYSA2OCA2ZiA3MyA3NCAwYSA1NSA0ZSA1MyA0OSA0NyA0ZSA0NSA0NCAyZCA1MCA0MSA1OSA0YyA0ZiA0MSA0NDwvQ2Fub25pY2FsUmVxdWVzdEJ5dGVzPjxSZXF1ZXN0SWQ+M0Q0QTYwOUFEQTlDNEFCMzwvUmVxdWVzdElkPjxIb3N0SWQ+R3ZFUy9HZGxuS2JRNDhGT1NWRisyVFl4QSsxcUg2eE81cXdOMy8zOGZzNC9GMDZIMlgvczlRcEhxeW9RSmd6UEZ1NVIvcVFaMWxZPTwvSG9zdElkPjwvRXJyb3I+"
+      }
+    },
+    {
+      "ID": "f4507e3127247669",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 20:58:24 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "Mocl1RCr4XkPXVdGN3XhtueG8eKDzptQtY4LgMumrmnkO5FKTdxpLDa5byFSNXE2bvcYBX8LPFA="
+          ],
+          "X-Amz-Request-Id": [
+            "250A8D948E47F066"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPkFjY2Vzc0RlbmllZDwvQ29kZT48TWVzc2FnZT5BY2Nlc3MgRGVuaWVkPC9NZXNzYWdlPjxSZXF1ZXN0SWQ+MjUwQThEOTQ4RTQ3RjA2NjwvUmVxdWVzdElkPjxIb3N0SWQ+TW9jbDFSQ3I0WGtQWFZkR04zWGh0dWVHOGVLRHpwdFF0WTRMZ011bXJtbmtPNUZLVGR4cExEYTVieUZTTlhFMmJ2Y1lCWDhMUEZBPTwvSG9zdElkPjwvRXJyb3I+"
+      }
+    },
+    {
+      "ID": "01738157fbe2574c",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
@@ -128,43 +340,40 @@
             "11"
           ],
           "Content-Type": [
-            "text/plain; charset=utf-8"
+            "binary/octet-stream"
           ],
           "Date": [
-            "Mon, 13 May 2019 18:13:09 GMT"
+            "Mon, 05 Aug 2019 20:58:26 GMT"
           ],
           "Etag": [
             "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
           ],
           "Last-Modified": [
-            "Mon, 13 May 2019 18:13:09 GMT"
+            "Mon, 05 Aug 2019 20:58:26 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "O/AaMOGx95t4SJSXWq/1aOnTTvqSRwIZdowIioRShx+C05Yy63lxSuUNemtwFDcxfmPX2QJbojk="
+            "X+9N5gxxFyuv8GQp60mz8JRBtGwdQy8f9BmbEkDqHzc9GoLJj7QCZfGn04mraBmsWsEOsBQvIOQ="
           ],
           "X-Amz-Request-Id": [
-            "0E5966D8D5F25B40"
+            "A17A0AE46726D04C"
           ]
         },
         "Body": "aGVsbG8gd29ybGQ="
       }
     },
     {
-      "ID": "1246df7ac982aff8",
+      "ID": "b9387cf0c9f0a200",
       "Request": {
-        "Method": "HEAD",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing",
+        "Method": "DELETE",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
         "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
           "User-Agent": [
-            "CLEARED"
-          ],
-          "X-Amz-Content-Sha256": [
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-          ],
-          "X-Amz-Date": [
             "CLEARED"
           ]
         },
@@ -174,58 +383,83 @@
         ]
       },
       "Response": {
-        "StatusCode": 200,
+        "StatusCode": 403,
         "Proto": "HTTP/1.1",
         "ProtoMajor": 1,
         "ProtoMinor": 1,
         "Header": {
-          "Accept-Ranges": [
-            "bytes"
-          ],
-          "Content-Length": [
-            "11"
-          ],
           "Content-Type": [
-            "text/plain; charset=utf-8"
+            "application/xml"
           ],
           "Date": [
-            "Mon, 13 May 2019 18:13:09 GMT"
-          ],
-          "Etag": [
-            "\"5eb63bbbe01eeed093cb22bb8f5acdc3\""
-          ],
-          "Last-Modified": [
-            "Mon, 13 May 2019 18:13:09 GMT"
+            "Mon, 05 Aug 2019 20:58:24 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "nKzjQBvY+aQzVDngxO4i31RXFFKxJobjr74lnEP4WWNsrRqx0pSKCxb/r73FUoboHoEV1Lhr9/E="
+            "HEpDAMMeS5za5k2ggxMQBXZ6qo0VVXOvIaHTjxx41Cus4Mz1ib59FxsmT4wtFJ6Fvqp5e1k80Zg="
           ],
           "X-Amz-Request-Id": [
-            "8C4E0EDAEED9551B"
+            "2BDCEF278AFCC7E8"
           ]
         },
-        "Body": ""
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPlNpZ25hdHVyZURvZXNOb3RNYXRjaDwvQ29kZT48TWVzc2FnZT5UaGUgcmVxdWVzdCBzaWduYXR1cmUgd2UgY2FsY3VsYXRlZCBkb2VzIG5vdCBtYXRjaCB0aGUgc2lnbmF0dXJlIHlvdSBwcm92aWRlZC4gQ2hlY2sgeW91ciBrZXkgYW5kIHNpZ25pbmcgbWV0aG9kLjwvTWVzc2FnZT48QVdTQWNjZXNzS2V5SWQ+QUtJQUpVR1AzRE1KWVFBUjZQREE8L0FXU0FjY2Vzc0tleUlkPjxTdHJpbmdUb1NpZ24+QVdTNC1ITUFDLVNIQTI1NgoyMDE5MDgwNVQyMDU4MjRaCjIwMTkwODA1L3VzLXdlc3QtMS9zMy9hd3M0X3JlcXVlc3QKNGU5OTVjNTE0NDBkZmVhNmNjMjdhZGExNzUwNmY1M2E4NmRjZDYxOGM0MWI1NzExZmMzNmEzODg1Yzk3ODU0YjwvU3RyaW5nVG9TaWduPjxTaWduYXR1cmVQcm92aWRlZD5lNzQwODY0MzE4ZDRlNDgyM2YwZjgzMTM3MGJlYTM4ZWQwMmU0NWQ0YjRjYTM1MWMyYzliZTdhOGQzYjQ0NmRlPC9TaWduYXR1cmVQcm92aWRlZD48U3RyaW5nVG9TaWduQnl0ZXM+NDEgNTcgNTMgMzQgMmQgNDggNGQgNDEgNDMgMmQgNTMgNDggNDEgMzIgMzUgMzYgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgNTQgMzIgMzAgMzUgMzggMzIgMzQgNWEgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgMmYgNzUgNzMgMmQgNzcgNjUgNzMgNzQgMmQgMzEgMmYgNzMgMzMgMmYgNjEgNzcgNzMgMzQgNWYgNzIgNjUgNzEgNzUgNjUgNzMgNzQgMGEgMzQgNjUgMzkgMzkgMzUgNjMgMzUgMzEgMzQgMzQgMzAgNjQgNjYgNjUgNjEgMzYgNjMgNjMgMzIgMzcgNjEgNjQgNjEgMzEgMzcgMzUgMzAgMzYgNjYgMzUgMzMgNjEgMzggMzYgNjQgNjMgNjQgMzYgMzEgMzggNjMgMzQgMzEgNjIgMzUgMzcgMzEgMzEgNjYgNjMgMzMgMzYgNjEgMzMgMzggMzggMzUgNjMgMzkgMzcgMzggMzUgMzQgNjI8L1N0cmluZ1RvU2lnbkJ5dGVzPjxDYW5vbmljYWxSZXF1ZXN0PkRFTEVURQovYmxvYi1mb3Itc2lnbmluZwpYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZhbXA7WC1BbXotQ3JlZGVudGlhbD1BS0lBSlVHUDNETUpZUUFSNlBEQSUyRjIwMTkwODA1JTJGdXMtd2VzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmYW1wO1gtQW16LURhdGU9MjAxOTA4MDVUMjA1ODI0WiZhbXA7WC1BbXotRXhwaXJlcz0zNjAwJmFtcDtYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QKaG9zdDpnby1jbG91ZC10ZXN0aW5nLnMzLnVzLXdlc3QtMS5hbWF6b25hd3MuY29tCgpob3N0ClVOU0lHTkVELVBBWUxPQUQ8L0Nhbm9uaWNhbFJlcXVlc3Q+PENhbm9uaWNhbFJlcXVlc3RCeXRlcz40NCA0NSA0YyA0NSA1NCA0NSAwYSAyZiA2MiA2YyA2ZiA2MiAyZCA2NiA2ZiA3MiAyZCA3MyA2OSA2NyA2ZSA2OSA2ZSA2NyAwYSA1OCAyZCA0MSA2ZCA3YSAyZCA0MSA2YyA2NyA2ZiA3MiA2OSA3NCA2OCA2ZCAzZCA0MSA1NyA1MyAzNCAyZCA0OCA0ZCA0MSA0MyAyZCA1MyA0OCA0MSAzMiAzNSAzNiAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0MyA3MiA2NSA2NCA2NSA2ZSA3NCA2OSA2MSA2YyAzZCA0MSA0YiA0OSA0MSA0YSA1NSA0NyA1MCAzMyA0NCA0ZCA0YSA1OSA1MSA0MSA1MiAzNiA1MCA0NCA0MSAyNSAzMiA0NiAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSAyNSAzMiA0NiA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyNSAzMiA0NiA3MyAzMyAyNSAzMiA0NiA2MSA3NyA3MyAzNCA1ZiA3MiA2NSA3MSA3NSA2NSA3MyA3NCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NCA2MSA3NCA2NSAzZCAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSA1NCAzMiAzMCAzNSAzOCAzMiAzNCA1YSAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NSA3OCA3MCA2OSA3MiA2NSA3MyAzZCAzMyAzNiAzMCAzMCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA1MyA2OSA2NyA2ZSA2NSA2NCA0OCA2NSA2MSA2NCA2NSA3MiA3MyAzZCA2OCA2ZiA3MyA3NCAwYSA2OCA2ZiA3MyA3NCAzYSA2NyA2ZiAyZCA2MyA2YyA2ZiA3NSA2NCAyZCA3NCA2NSA3MyA3NCA2OSA2ZSA2NyAyZSA3MyAzMyAyZSA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyZSA2MSA2ZCA2MSA3YSA2ZiA2ZSA2MSA3NyA3MyAyZSA2MyA2ZiA2ZCAwYSAwYSA2OCA2ZiA3MyA3NCAwYSA1NSA0ZSA1MyA0OSA0NyA0ZSA0NSA0NCAyZCA1MCA0MSA1OSA0YyA0ZiA0MSA0NDwvQ2Fub25pY2FsUmVxdWVzdEJ5dGVzPjxSZXF1ZXN0SWQ+MkJEQ0VGMjc4QUZDQzdFODwvUmVxdWVzdElkPjxIb3N0SWQ+SEVwREFNTWVTNXphNWsyZ2d4TVFCWFo2cW8wVlZYT3ZJYUhUanh4NDFDdXM0TXoxaWI1OUZ4c21UNHd0Rko2RnZxcDVlMWs4MFpnPTwvSG9zdElkPjwvRXJyb3I+"
       }
     },
     {
-      "ID": "6191964d9c63d729",
+      "ID": "a0a6d33fa68f7a01",
       "Request": {
         "Method": "DELETE",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
         "Header": {
           "Accept-Encoding": [
             "gzip"
           ],
           "User-Agent": [
             "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 403,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
           ],
-          "X-Amz-Content-Sha256": [
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          "Date": [
+            "Mon, 05 Aug 2019 20:58:24 GMT"
           ],
-          "X-Amz-Date": [
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "rBdnyZMIQXono22ha5XMsUWmQayVVllpv30qAJ0nDo0iHg4eVsD6NObtUMi8gFI2IzVcTv1v++U="
+          ],
+          "X-Amz-Request-Id": [
+            "AE18B8F386A55590"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPlNpZ25hdHVyZURvZXNOb3RNYXRjaDwvQ29kZT48TWVzc2FnZT5UaGUgcmVxdWVzdCBzaWduYXR1cmUgd2UgY2FsY3VsYXRlZCBkb2VzIG5vdCBtYXRjaCB0aGUgc2lnbmF0dXJlIHlvdSBwcm92aWRlZC4gQ2hlY2sgeW91ciBrZXkgYW5kIHNpZ25pbmcgbWV0aG9kLjwvTWVzc2FnZT48QVdTQWNjZXNzS2V5SWQ+QUtJQUpVR1AzRE1KWVFBUjZQREE8L0FXU0FjY2Vzc0tleUlkPjxTdHJpbmdUb1NpZ24+QVdTNC1ITUFDLVNIQTI1NgoyMDE5MDgwNVQyMDU4MjRaCjIwMTkwODA1L3VzLXdlc3QtMS9zMy9hd3M0X3JlcXVlc3QKNGU5OTVjNTE0NDBkZmVhNmNjMjdhZGExNzUwNmY1M2E4NmRjZDYxOGM0MWI1NzExZmMzNmEzODg1Yzk3ODU0YjwvU3RyaW5nVG9TaWduPjxTaWduYXR1cmVQcm92aWRlZD40YWU0MjEwZmY1ZWIzMjE2MzU4M2Q2OWY5ZDFlYzZkYWQ4OGNjM2VmZTg2YzBhMzMzZGM5NDE0MzZiZDhmNGFiPC9TaWduYXR1cmVQcm92aWRlZD48U3RyaW5nVG9TaWduQnl0ZXM+NDEgNTcgNTMgMzQgMmQgNDggNGQgNDEgNDMgMmQgNTMgNDggNDEgMzIgMzUgMzYgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgNTQgMzIgMzAgMzUgMzggMzIgMzQgNWEgMGEgMzIgMzAgMzEgMzkgMzAgMzggMzAgMzUgMmYgNzUgNzMgMmQgNzcgNjUgNzMgNzQgMmQgMzEgMmYgNzMgMzMgMmYgNjEgNzcgNzMgMzQgNWYgNzIgNjUgNzEgNzUgNjUgNzMgNzQgMGEgMzQgNjUgMzkgMzkgMzUgNjMgMzUgMzEgMzQgMzQgMzAgNjQgNjYgNjUgNjEgMzYgNjMgNjMgMzIgMzcgNjEgNjQgNjEgMzEgMzcgMzUgMzAgMzYgNjYgMzUgMzMgNjEgMzggMzYgNjQgNjMgNjQgMzYgMzEgMzggNjMgMzQgMzEgNjIgMzUgMzcgMzEgMzEgNjYgNjMgMzMgMzYgNjEgMzMgMzggMzggMzUgNjMgMzkgMzcgMzggMzUgMzQgNjI8L1N0cmluZ1RvU2lnbkJ5dGVzPjxDYW5vbmljYWxSZXF1ZXN0PkRFTEVURQovYmxvYi1mb3Itc2lnbmluZwpYLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZhbXA7WC1BbXotQ3JlZGVudGlhbD1BS0lBSlVHUDNETUpZUUFSNlBEQSUyRjIwMTkwODA1JTJGdXMtd2VzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmYW1wO1gtQW16LURhdGU9MjAxOTA4MDVUMjA1ODI0WiZhbXA7WC1BbXotRXhwaXJlcz0zNjAwJmFtcDtYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QKaG9zdDpnby1jbG91ZC10ZXN0aW5nLnMzLnVzLXdlc3QtMS5hbWF6b25hd3MuY29tCgpob3N0ClVOU0lHTkVELVBBWUxPQUQ8L0Nhbm9uaWNhbFJlcXVlc3Q+PENhbm9uaWNhbFJlcXVlc3RCeXRlcz40NCA0NSA0YyA0NSA1NCA0NSAwYSAyZiA2MiA2YyA2ZiA2MiAyZCA2NiA2ZiA3MiAyZCA3MyA2OSA2NyA2ZSA2OSA2ZSA2NyAwYSA1OCAyZCA0MSA2ZCA3YSAyZCA0MSA2YyA2NyA2ZiA3MiA2OSA3NCA2OCA2ZCAzZCA0MSA1NyA1MyAzNCAyZCA0OCA0ZCA0MSA0MyAyZCA1MyA0OCA0MSAzMiAzNSAzNiAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0MyA3MiA2NSA2NCA2NSA2ZSA3NCA2OSA2MSA2YyAzZCA0MSA0YiA0OSA0MSA0YSA1NSA0NyA1MCAzMyA0NCA0ZCA0YSA1OSA1MSA0MSA1MiAzNiA1MCA0NCA0MSAyNSAzMiA0NiAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSAyNSAzMiA0NiA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyNSAzMiA0NiA3MyAzMyAyNSAzMiA0NiA2MSA3NyA3MyAzNCA1ZiA3MiA2NSA3MSA3NSA2NSA3MyA3NCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NCA2MSA3NCA2NSAzZCAzMiAzMCAzMSAzOSAzMCAzOCAzMCAzNSA1NCAzMiAzMCAzNSAzOCAzMiAzNCA1YSAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA0NSA3OCA3MCA2OSA3MiA2NSA3MyAzZCAzMyAzNiAzMCAzMCAyNiA1OCAyZCA0MSA2ZCA3YSAyZCA1MyA2OSA2NyA2ZSA2NSA2NCA0OCA2NSA2MSA2NCA2NSA3MiA3MyAzZCA2OCA2ZiA3MyA3NCAwYSA2OCA2ZiA3MyA3NCAzYSA2NyA2ZiAyZCA2MyA2YyA2ZiA3NSA2NCAyZCA3NCA2NSA3MyA3NCA2OSA2ZSA2NyAyZSA3MyAzMyAyZSA3NSA3MyAyZCA3NyA2NSA3MyA3NCAyZCAzMSAyZSA2MSA2ZCA2MSA3YSA2ZiA2ZSA2MSA3NyA3MyAyZSA2MyA2ZiA2ZCAwYSAwYSA2OCA2ZiA3MyA3NCAwYSA1NSA0ZSA1MyA0OSA0NyA0ZSA0NSA0NCAyZCA1MCA0MSA1OSA0YyA0ZiA0MSA0NDwvQ2Fub25pY2FsUmVxdWVzdEJ5dGVzPjxSZXF1ZXN0SWQ+QUUxOEI4RjM4NkE1NTU5MDwvUmVxdWVzdElkPjxIb3N0SWQ+ckJkbnlaTUlRWG9ubzIyaGE1WE1zVVdtUWF5VlZsbHB2MzBxQUowbkRvMGlIZzRlVnNENk5PYnRVTWk4Z0ZJMkl6VmNUdjF2KytVPTwvSG9zdElkPjwvRXJyb3I+"
+      }
+    },
+    {
+      "ID": "b049ce42939fa241",
+      "Request": {
+        "Method": "DELETE",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
             "CLEARED"
           ]
         },
@@ -241,19 +475,62 @@
         "ProtoMinor": 1,
         "Header": {
           "Date": [
-            "Mon, 13 May 2019 18:13:10 GMT"
+            "Mon, 05 Aug 2019 20:58:26 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "W08S6JRgSSiLwwOM8kNArATAgXJAuQukkjlgVB2XrjJpJ3jXwlU7dNOlacCckVX6FKWPahcbFu4="
+            "ZqWwDt10BghCrgWHaDBd3r2RjS45aQ1dYxMLgcloXhXRUnA6dRZvaCrNW14KEOpeSPU+aPldrik="
           ],
           "X-Amz-Request-Id": [
-            "73AFCDA6ADFECEEE"
+            "9006894A6F8A72F1"
           ]
         },
         "Body": ""
+      }
+    },
+    {
+      "ID": "abc74644424ee271",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Date=CLEARED\u0026X-Amz-Expires=3600\u0026X-Amz-SignedHeaders=host",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 404,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 05 Aug 2019 20:58:24 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "wGBaKAVzcL55sBU5/QKbu76xuGGKwm3LNHAAwjoU7Nn13OmnJLXLaZQ212//UfnMtIGovu4xyRY="
+          ],
+          "X-Amz-Request-Id": [
+            "3E274D401CB30A50"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1zaWduaW5nPC9LZXk+PFJlcXVlc3RJZD4zRTI3NEQ0MDFDQjMwQTUwPC9SZXF1ZXN0SWQ+PEhvc3RJZD53R0JhS0FWemNMNTVzQlU1L1FLYnU3Nnh1R0dLd20zTE5IQUF3am9VN05uMTNPbW5KTFhMYVpRMjEyLy9VZm5NdElHb3Z1NHh5Ulk9PC9Ib3N0SWQ+PC9FcnJvcj4="
       }
     }
   ]

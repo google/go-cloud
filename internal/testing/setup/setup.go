@@ -142,6 +142,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 		r.ClearHeaders("Expires")
 		r.ClearHeaders("Signature")
 	})
+	transport := c.Transport
 	if *Record {
 		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
@@ -152,7 +153,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 			t.Fatal(err)
 		}
 	}
-	return &gcp.HTTPClient{Client: *c}, c.Transport, cleanup
+	return &gcp.HTTPClient{Client: *c}, transport, cleanup
 }
 
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
