@@ -51,8 +51,8 @@
 // For example, "gocloud.dev/blob/latency".
 //
 // It also collects the following metrics:
-// - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
-// - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
+//  - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
+//  - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
@@ -854,8 +854,19 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 	if opts.Expiry == 0 {
 		opts.Expiry = DefaultSignedURLExpiry
 	}
+	if opts.Method == "" {
+		opts.Method = http.MethodGet
+	}
+	switch opts.Method {
+	case http.MethodGet:
+	case http.MethodPut:
+	case http.MethodDelete:
+	default:
+		return "", fmt.Errorf("unsupported SignedURLOptions.Method %q", opts.Method)
+	}
 	dopts := driver.SignedURLOptions{
 		Expiry: opts.Expiry,
+		Method: opts.Method,
 	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -886,6 +897,9 @@ type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for.
 	// Defaults to DefaultSignedURLExpiry.
 	Expiry time.Duration
+	// Method is the HTTP method that can be used on the URL; one of "GET", "PUT",
+	// or "DELETE". Defaults to "GET".
+	Method string
 }
 
 // ReaderOptions sets options for NewReader and NewRangeReader.

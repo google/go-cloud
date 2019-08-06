@@ -306,6 +306,9 @@ type Bucket interface {
 type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.
 	Expiry time.Duration
+	// Method is the HTTP method that can be used on the URL; one of "GET", "PUT",
+	// or "DELETE". Drivers must implement all 3.
+	Method string
 }
 
 // prefixedBucket implements Bucket by prepending prefix to all keys.

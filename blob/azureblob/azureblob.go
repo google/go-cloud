@@ -15,6 +15,11 @@
 // Package azureblob provides a blob implementation that uses Azure Storage’s
 // BlockBlob. Use OpenBucket to construct a *blob.Bucket.
 //
+// NOTE: SignedURLs for PUT created with this package are not fully portable;
+// they will not work unless the PUT request includes a "x-ms-blob-type" header
+// set to "BlockBlob".
+// See https://stackoverflow.com/questions/37824136/put-on-sas-blob-url-without-specifying-x-ms-blob-type-header.
+//
 // URLs
 //
 // For blob.OpenBucket, azureblob registers for the scheme "azblob".
@@ -637,13 +642,25 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
 
+	perms := azblob.BlobSASPermissions{}
+	switch opts.Method {
+	case http.MethodGet:
+		perms.Read = true
+	case http.MethodPut:
+		perms.Create = true
+		perms.Write = true
+	case http.MethodDelete:
+		perms.Delete = true
+	default:
+		return "", fmt.Errorf("unsupported Method %s", opts.Method)
+	}
 	var err error
 	srcBlobParts.SAS, err = azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().UTC().Add(opts.Expiry),
 		ContainerName: b.name,
 		BlobName:      srcBlobParts.BlobName,
-		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
+		Permissions:   perms.String(),
 	}.NewSASQueryParameters(b.opts.Credential)
 	if err != nil {
 		return "", err

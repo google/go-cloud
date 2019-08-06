@@ -50,7 +50,8 @@ func TestIsIncNumber(t *testing.T) {
 }
 
 func TestActionsDo(t *testing.T) {
-	c := &Collection{driver: fakeDriverCollection{}}
+	c := newCollection(fakeDriverCollection{})
+	defer c.Close()
 	dn := map[string]interface{}{"key": nil}
 	d1 := map[string]interface{}{"key": 1}
 	d2 := map[string]interface{}{"key": 2}

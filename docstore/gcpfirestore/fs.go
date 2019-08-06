@@ -165,6 +165,10 @@ func OpenCollection(client *vkit.Client, collResourceID, nameField string, opts 
 // Providing a function to construct the primary key is useful in two situations: if
 // your desired primary key field is not a string, or if there is more than one field
 // you want to use as a primary key.
+//
+// For the collection to be usable with Query.Delete and Query.Update, nameFunc
+// must work with both map and struct types representing the same underlying
+// data structure. See gocloud.dev/docstore/drivertest.HighScoreKey for an example.
 func OpenCollectionWithNameFunc(client *vkit.Client, collResourceID string, nameFunc func(docstore.Document) string, opts *Options) (*docstore.Collection, error) {
 	c, err := newCollection(client, collResourceID, "", nameFunc, opts)
 	if err != nil {

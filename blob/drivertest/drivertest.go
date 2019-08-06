@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -2022,7 +2023,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 // testSignedURL tests the functionality of SignedURL.
 func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-signing"
-	var contents = []byte("hello world")
+	const contents = "hello world"
 
 	ctx := context.Background()
 
@@ -2046,43 +2047,138 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
 	}
 
-	// Try to generate a real signed URL.
-	url, err := b.SignedURL(ctx, key, nil)
+	// Generate real signed URLs for GET, GET with the query params remvoed, PUT, and DELETE.
+	getURL, err := b.SignedURL(ctx, key, nil)
 	if err != nil {
 		if gcerrors.Code(err) == gcerrors.Unimplemented {
 			t.Skipf("SignedURL not supported")
 			return
 		}
 		t.Fatal(err)
+	} else if getURL == "" {
+		t.Fatal("got empty GET url")
 	}
-	if url == "" {
-		t.Fatal("got empty url")
+	// Copy getURL, but remove all query params. This URL should not be allowed
+	// to GET since the client is unauthorized.
+	getURLNoParamsURL, err := url.Parse(getURL)
+	if err != nil {
+		t.Fatalf("failed to parse getURL: %v", err)
 	}
+	getURLNoParamsURL.RawQuery = ""
+	getURLNoParams := getURLNoParamsURL.String()
+	putURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodPut})
+	if err != nil {
+		t.Fatal(err)
+	} else if putURL == "" {
+		t.Fatal("got empty PUT url")
+	}
+	deleteURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodDelete})
+	if err != nil {
+		t.Fatal(err)
+	} else if deleteURL == "" {
+		t.Fatal("got empty DELETE url")
+	}
+
 	client := h.HTTPClient()
 	if client == nil {
 		t.Fatal("can't verify SignedURL, Harness.HTTPClient() returned nil")
 	}
 
-	// Create the blob.
-	if err := b.WriteAll(ctx, key, contents, nil); err != nil {
-		t.Fatal(err)
+	// PUT the blob. Try with all URLs, only putURL should work.
+	for _, test := range []struct {
+		urlMethod   string
+		url         string
+		wantSuccess bool
+	}{
+		{http.MethodGet, getURL, false},
+		{http.MethodDelete, deleteURL, false},
+		{http.MethodPut, putURL, true},
+	} {
+		req, err := http.NewRequest(http.MethodPut, test.url, strings.NewReader(contents))
+		if err != nil {
+			t.Fatalf("failed to create PUT HTTP request using %s URL: %v", test.urlMethod, err)
+		}
+		if resp, err := client.Do(req); err != nil {
+			t.Fatalf("PUT failed with %s URL: %v", test.urlMethod, err)
+		} else {
+			defer resp.Body.Close()
+			success := resp.StatusCode >= 200 && resp.StatusCode < 300
+			if success != test.wantSuccess {
+				t.Errorf("PUT with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				gotBody, _ := ioutil.ReadAll(resp.Body)
+				t.Errorf(string(gotBody))
+			}
+		}
 	}
-	defer func() { _ = b.Delete(ctx, key) }()
 
-	resp, err := client.Get(url)
-	if err != nil {
-		t.Fatal(err)
+	// GET it. Try with all URLs, only getURL should work.
+	for _, test := range []struct {
+		urlMethod   string
+		url         string
+		wantSuccess bool
+	}{
+		{http.MethodDelete, deleteURL, false},
+		{http.MethodPut, putURL, false},
+		{http.MethodGet, getURLNoParams, false},
+		{http.MethodGet, getURL, true},
+	} {
+		if resp, err := client.Get(test.url); err != nil {
+			t.Fatalf("GET with %s URL failed: %v", test.urlMethod, err)
+		} else {
+			defer resp.Body.Close()
+			success := resp.StatusCode >= 200 && resp.StatusCode < 300
+			if success != test.wantSuccess {
+				t.Errorf("GET with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				gotBody, _ := ioutil.ReadAll(resp.Body)
+				t.Errorf(string(gotBody))
+			} else if success {
+				gotBody, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					t.Errorf("GET with %s URL failed to read response body: %v", test.urlMethod, err)
+				} else if gotBodyStr := string(gotBody); gotBodyStr != contents {
+					t.Errorf("GET with %s URL got body %q, want %q", test.urlMethod, gotBodyStr, contents)
+				}
+			}
+		}
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		t.Errorf("got status code %d, want 200", resp.StatusCode)
+
+	// DELETE it. Try with all URLs, only deleteURL should work.
+	for _, test := range []struct {
+		urlMethod   string
+		url         string
+		wantSuccess bool
+	}{
+		{http.MethodGet, getURL, false},
+		{http.MethodPut, putURL, false},
+		{http.MethodDelete, deleteURL, true},
+	} {
+		req, err := http.NewRequest(http.MethodDelete, test.url, nil)
+		if err != nil {
+			t.Fatalf("failed to create DELETE HTTP request using %s URL: %v", test.urlMethod, err)
+		}
+		if resp, err := client.Do(req); err != nil {
+			t.Fatalf("DELETE with %s URL failed: %v", test.urlMethod, err)
+		} else {
+			defer resp.Body.Close()
+			success := resp.StatusCode >= 200 && resp.StatusCode < 300
+			if success != test.wantSuccess {
+				t.Fatalf("DELETE with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				gotBody, _ := ioutil.ReadAll(resp.Body)
+				t.Errorf(string(gotBody))
+			}
+		}
 	}
-	got, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(got, contents) {
-		t.Errorf("got body %q, want %q", string(got), string(contents))
+
+	// GET should fail now that the blob has been deleted.
+	if resp, err := client.Get(getURL); err != nil {
+		t.Errorf("GET after DELETE failed: %v", err)
+	} else {
+		defer resp.Body.Close()
+		if resp.StatusCode != 404 {
+			t.Errorf("GET after DELETE got status code %d, want 404", resp.StatusCode)
+			gotBody, _ := ioutil.ReadAll(resp.Body)
+			t.Errorf(string(gotBody))
+		}
 	}
 }
 

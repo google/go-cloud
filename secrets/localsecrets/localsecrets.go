@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package localsecrets provides a secrets implementation using a locally
-// locally provided symmetric key.
+// provided symmetric key.
 // Use NewKeeper to construct a *secrets.Keeper.
 //
 // URLs

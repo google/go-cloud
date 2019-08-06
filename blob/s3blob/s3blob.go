@@ -720,10 +720,29 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	key = escapeKey(key)
-	in := &s3.GetObjectInput{
-		Bucket: aws.String(b.name),
-		Key:    aws.String(key),
+	switch opts.Method {
+	case http.MethodGet:
+		in := &s3.GetObjectInput{
+			Bucket: aws.String(b.name),
+			Key:    aws.String(key),
+		}
+		req, _ := b.client.GetObjectRequest(in)
+		return req.Presign(opts.Expiry)
+	case http.MethodPut:
+		in := &s3.PutObjectInput{
+			Bucket: aws.String(b.name),
+			Key:    aws.String(key),
+		}
+		req, _ := b.client.PutObjectRequest(in)
+		return req.Presign(opts.Expiry)
+	case http.MethodDelete:
+		in := &s3.DeleteObjectInput{
+			Bucket: aws.String(b.name),
+			Key:    aws.String(key),
+		}
+		req, _ := b.client.DeleteObjectRequest(in)
+		return req.Presign(opts.Expiry)
+	default:
+		return "", fmt.Errorf("unsupported Method %q", opts.Method)
 	}
-	req, _ := b.client.GetObjectRequest(in)
-	return req.Presign(opts.Expiry)
 }

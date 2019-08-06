@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"gocloud.dev/docstore/driver"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 )
 
@@ -154,9 +155,20 @@ func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query 
 //
 // Call Stop on the iterator when finished.
 func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
+	return q.get(ctx, true, fps...)
+}
+
+// get implements Get, with optional OpenCensus tracing so it can be used internally.
+func (q *Query) get(ctx context.Context, oc bool, fps ...FieldPath) *DocumentIterator {
 	dcoll := q.coll.driver
 	if err := q.initGet(fps); err != nil {
 		return &DocumentIterator{err: wrapError(dcoll, err)}
+	}
+
+	var err error
+	if oc {
+		ctx = q.coll.tracer.Start(ctx, "Query.Get")
+		defer func() { q.coll.tracer.End(ctx, err) }()
 	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, coll: q.coll, err: wrapError(dcoll, err)}
@@ -192,24 +204,103 @@ func (q *Query) initGet(fps []FieldPath) error {
 
 // Delete deletes all the documents specified by the query.
 // It is an error if the query has a limit.
-func (q *Query) Delete(ctx context.Context) error {
+func (q *Query) Delete(ctx context.Context) (err error) {
 	if err := q.validateWrite("delete"); err != nil {
 		return err
 	}
-	return q.coll.driver.RunDeleteQuery(ctx, q.dq)
+
+	ctx = q.coll.tracer.Start(ctx, "Query.Delete")
+	defer func() { q.coll.tracer.End(ctx, err) }()
+
+	if d, ok := q.coll.driver.(driver.DeleteQueryer); ok {
+		return d.RunDeleteQuery(ctx, q.dq)
+	}
+
+	return q.runActionsWithRetry(ctx, func(al *ActionList, doc Document) {
+		al.Delete(doc)
+	})
+}
+
+func (q *Query) runActionsWithRetry(ctx context.Context, addAction func(*ActionList, Document)) error {
+	var retries map[interface{}]bool
+	// TODO(shantuo): split actions into groups to reduce client memory.
+	// TODO(shantuo): test retry logic (using a mock driver)
+	for {
+		// Run the query. For each document it returns, add an action to an ActionList.
+		// TODO(shantuo): fetch only key and revision fields? Not possible
+		// if the collection uses a key-extraction function.
+		iter := q.get(ctx, false)
+		al := q.coll.Actions()
+		var keys []interface{}
+		for {
+			doc := map[string]interface{}{}
+			err := iter.Next(ctx, doc)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			ddoc, err := driver.NewDocument(doc)
+			if err != nil {
+				return err
+			}
+			key, err := q.coll.driver.Key(ddoc)
+			if err != nil {
+				return err
+			}
+			// If we're retrying, only act on documents that need to be retried.
+			if retries == nil || retries[key] {
+				addAction(al, doc)
+				keys = append(keys, key)
+			}
+
+		}
+		// Run the Action List.
+		err := al.do(ctx, false)
+		// If it succeeds, we're done.
+		if err == nil {
+			return nil
+		}
+		alerr := err.(ActionListError)
+		// If there are any errors that are not due to revision
+		// mismatches, fail immediately.
+		for _, e := range alerr {
+			if gcerrors.Code(e.Err) != gcerrors.FailedPrecondition {
+				return err
+			}
+		}
+		// Collect the keys of all documents that failed due to revision
+		// mismatches.
+		retries := map[interface{}]bool{}
+		for _, e := range alerr {
+			retries[keys[e.Index]] = true
+		}
+		// Re-run the query.
+	}
 }
 
 // Update updates all the documents specified by the query.
 // It is an error if the query has a limit.
-func (q *Query) Update(ctx context.Context, mods Mods) error {
+// TODO(shantuo): unexport.
+func (q *Query) Update(ctx context.Context, mods Mods) (err error) {
 	if err := q.validateWrite("update"); err != nil {
 		return err
 	}
-	dmods, err := toDriverMods(mods)
-	if err != nil {
-		return err
+
+	ctx = q.coll.tracer.Start(ctx, "Query.Update")
+	defer func() { q.coll.tracer.End(ctx, err) }()
+
+	if d, ok := q.coll.driver.(driver.UpdateQueryer); ok {
+		dmods, err := toDriverMods(mods)
+		if err != nil {
+			return err
+		}
+		return d.RunUpdateQuery(ctx, q.dq, dmods)
 	}
-	return q.coll.driver.RunUpdateQuery(ctx, q.dq, dmods)
+	return q.runActionsWithRetry(ctx, func(al *ActionList, doc Document) {
+		al.Update(doc, mods)
+	})
 }
 
 func (q *Query) validateWrite(kind string) error {

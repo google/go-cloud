@@ -6,22 +6,63 @@ showInSidenav: true
 toc: true
 ---
 
-The runtimevar package provides an easy and portable way to watch runtime
+The [`runtimevar` package][] provides an easy and portable way to watch runtime
 configuration variables. This guide shows how to work with runtime configuration
 variables using the Go CDK.
 
 <!--more-->
 
+Subpackages contain driver implementations of runtimevar for various services,
+including Cloud and on-prem solutions. You can develop your application locally
+using [`filevar`][] or [`constantvar`][], then deploy it to multiple Cloud
+providers with minimal initialization reconfiguration.
+
+[`runtimevar` package]: https://godoc.org/gocloud.dev/runtimevar
+[`filevar`]: https://godoc.org/gocloud.dev/runtimevar/filevar
+[`constantvar`]: https://godoc.org/gocloud.dev/runtimevar/constantvar
+
 ## Opening a Variable {#opening}
 
-The first step in watching a variable is to instantiate a
-[`*runtimevar.Variable`][].
+The first step in watching a variable is to instantiate a portable
+[`*runtimevar.Variable`][] for your service.
 
-The easiest way to do so is to use [`runtimevar.OpenVariable`][] and a URL pointing
+The easiest way to do so is to use [`runtimevar.OpenVariable`][] and a service-specific URL pointing
 to the variable, making sure you ["blank import"][] the driver package to link
-it in. See [Concepts: URLs][] for more details. If you need fine-grained control
+it in.
+
+```go
+import (
+	"gocloud.dev/runtimevar"
+	_ "gocloud.dev/runtimevar/<driver>"
+)
+...
+v, err := runtimevar.OpenVariable(context.Background(), "<driver-url>")
+if err != nil {
+    return fmt.Errorf("could not open variable: %v", err)
+}
+defer v.Close()
+// v is a *runtimevar.Variable; see usage below
+...
+```
+
+See [Concepts: URLs][] for general background and the [guide below][]
+for URL usage for each supported service.
+
+Alternatively, if you need fine-grained control
 over the connection settings, you can call the constructor function in the
 driver package directly (like `etcdvar.OpenVariable`).
+
+```go
+import "gocloud.dev/runtimevar/<driver>"
+...
+v, err := <driver>.OpenVariable(...)
+...
+```
+
+You may find the [`wire` package][] useful for managing your initialization code
+when switching between different backing services.
+
+See the [guide below][] for constructor usage for each supported service.
 
 When opening the variable, you can provide a [decoder][] parameter (either as a
 [query parameter][] for URLs, or explicitly to the constructor) to specify
@@ -30,8 +71,6 @@ whether the raw value stored in the variable is interpreted as a `string`, a
 
 {{< goexample src="gocloud.dev/runtimevar.Example_jsonDecoder" imports="0" >}}
 
-See the [guide below][] for usage of both forms for each supported provider.
-
 [`*runtimevar.Variable`]: https://godoc.org/gocloud.dev/runtimevar#Variable
 [`runtimevar.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar#OpenVariable
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
@@ -39,6 +78,7 @@ See the [guide below][] for usage of both forms for each supported provider.
 [decoder]: https://godoc.org/gocloud.dev/runtimevar#Decoder
 [guide below]: {{< ref "#services" >}}
 [query parameter]: https://godoc.org/gocloud.dev/runtimevar#DecoderByName
+[`wire` package]: http://github.com/google/wire
 
 ## Using a Variable {#using}
 
@@ -49,14 +89,17 @@ use it portably.
 
 The easiest way to a `Variable` is to use the [`Variable.Latest`][] method. It
 returns the latest good [`Snapshot`][] of the variable value, blocking if no
-good value has *ever* been received. The dynamic type of `Snapshot.Value`
+good value has *ever* been detected. The dynamic type of `Snapshot.Value`
 depends on the decoder you provided when creating the `Variable`.
-
-To avoid blocking, you can pass an already-`Done` context.
 
 {{< goexample src="gocloud.dev/runtimevar.ExampleVariable_Latest" imports="0" >}}
 
+To avoid blocking, you can pass an already-`Done` context. You can also use
+[`Variable.CheckHealth`][], which reports as healthy when `Latest` will
+return a value without blocking.
+
 [`Variable.Latest`]: https://godoc.org/gocloud.dev/runtimevar#Variable.Latest
+[`Variable.CheckHealth`]: https://godoc.org/gocloud.dev/runtimevar#Variable.CheckHealth
 [`Snapshot`]: https://godoc.org/gocloud.dev/runtimevar#Snapshot
 
 ### Watch {#watch}
