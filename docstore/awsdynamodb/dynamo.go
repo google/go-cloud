@@ -95,6 +95,18 @@ type Options struct {
 	// The maximum number of concurrent goroutines started for a single call to
 	// ActionList.Do. If less than 1, there is no limit.
 	MaxOutstandingActionRPCs int
+
+	// If true, a strongly consistent read is used whenever possible, including
+	// get, query, scan, etc.; default to false, where an eventually consistent
+	// read is used.
+	//
+	// Not all read operations support this mode however, please check the official
+	// DynamoDB documentation for more details.
+	//
+	// The native client for DynamoDB uses this option in a per-action basis, if
+	// you need the flexibility to run both modes on the same colleciton, create
+	// two colletions with different mode.
+	ConsistentRead bool
 }
 
 // RunQueryFunc is the type of the function passed to RunQueryFallback.
@@ -200,7 +212,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 	}
 	ka := &dyn.KeysAndAttributes{
 		Keys:           keys,
-		ConsistentRead: aws.Bool(true),
+		ConsistentRead: aws.Bool(c.opts.ConsistentRead),
 	}
 	if len(gets[start].FieldPaths) != 0 {
 		// We need to add the key fields if the user doesn't include them. The

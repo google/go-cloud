@@ -58,7 +58,8 @@ func TestPlanQuery(t *testing.T) {
 		return m
 	}
 
-	cmpopt := cmp.AllowUnexported(dynamodb.ScanInput{}, dynamodb.QueryInput{}, dynamodb.AttributeValue{})
+	// Ignores the ConsistentRead field from both QueryInput and ScanInput.
+	cmpopt := cmp.FilterPath(func(p cmp.Path) bool { return p.Last().String() == ".ConsistentRead" }, cmp.Ignore())
 
 	for _, test := range []struct {
 		desc string
