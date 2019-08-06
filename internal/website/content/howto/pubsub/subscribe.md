@@ -1,12 +1,12 @@
 ---
-title: "Subscribe to Messages from a Topic"
+title: "Subscribe to Receive Messages from a Topic"
 date: 2019-03-26T09:44:33-07:00
 lastmod: 2019-07-29T12:00:00-07:00
 weight: 2
 toc: true
 ---
 
-Subscribing to messages on a topic with the Go CDK takes three steps:
+Subscribing to receive message from a topic with the Go CDK takes three steps:
 
 1. [Open a subscription][] with the Pub/Sub provider of your choice (once per
    subscription).
@@ -21,7 +21,7 @@ Subscribing to messages on a topic with the Go CDK takes three steps:
 
 ## Opening a Subscription {#opening}
 
-The first step in subscribing to messages is
+The first step in subscribing to receive messages from a topic is
 to instantiate a portable [`*pubsub.Subscription`][] for your service.
 
 The easiest way to do so is to use [`pubsub.OpenSubscription`][]
@@ -51,7 +51,7 @@ for URL usage for each supported service.
 
 Alternatively, if you need fine-grained
 control over the connection settings, you can call the constructor function in
-the driver package directly (like `gcppubsub.OpenTopic`).
+the driver package directly (like `gcppubsub.OpenSubscription`).
 
 ```go
 import "gocloud.dev/pubsub/<driver>"

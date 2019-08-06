@@ -15,8 +15,8 @@ that other parts of a system may subscribe to. This is commonly used to
 arrange for work to happen at some point after an interactive frontend
 request is finished or in other event-driven computing.
 
-The [`pubsub` package][] supports operations to publish messages and subscribe to
-messages.
+The [`pubsub` package][] supports operations to publish messages to a topic and
+to subscribe to receive messages from a topic.
 
 Subpackages contain driver implementations of pubsub for various services,
 including Cloud and on-prem solutions. You can develop your application
