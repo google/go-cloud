@@ -1,5 +1,5 @@
 ---
-title: "Subscribe to Receive Messages from a Topic"
+title: "Subscribe to Messages from a Topic"
 date: 2019-03-26T09:44:33-07:00
 lastmod: 2019-07-29T12:00:00-07:00
 weight: 2
