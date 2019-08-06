@@ -16,14 +16,14 @@ const connectionStringTemplate = "mongodb://%s:%s@%s/?connect=direct&connectTime
 
 // To run the conformance tests against Amazon DocumentDB:
 //
-//  1. Run `terraform apply ./awsdocdb` to provision a docdb cluster and an EC2 instance.
+//  1. Run `terraform apply` in awsdocdb directory to provision a docdb cluster and an EC2 instance.
 //  2. Run the command provided by the terraform output string to setup port-forwarding.
 //  3. Set the following environment variables and run this test with `-record` flag.
 
 var (
 	username = os.Getenv("AWSDOCDB_USERNAME")
 	password = os.Getenv("AWSDOCDB_PASSWORD")
-	endpoint = os.Getenv("AWSDOCDB_ENDPOINT") // optional, default to localhost:27017
+	endpoint = os.Getenv("AWSDOCDB_ENDPOINT") // optional, default to localhost:27019
 )
 
 func TestConformanceDocDB(t *testing.T) {
@@ -46,7 +46,7 @@ func TestConformanceDocDB(t *testing.T) {
 func newDocDBTestClient(t *testing.T) *mongo.Client {
 	ctx := context.Background()
 	if endpoint == "" {
-		endpoint = "localhost:27017"
+		endpoint = "localhost:27019"
 	}
 	connectionURI := fmt.Sprintf(connectionStringTemplate, username, password, endpoint)
 
