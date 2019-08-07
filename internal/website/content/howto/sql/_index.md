@@ -5,9 +5,9 @@ showInSidenav: true
 toc: true
 ---
 
-Connecting to cloud providers' hosted database services requires additional
-steps to ensure the security of the connection. For example, each of AWS,
-GCP, and Azure require the use of custom certificate authorities to be
+Connecting to Cloud providers' hosted database services requires additional
+steps to ensure the security of the connection. For example, each of GCP,
+AWS and Azure require the use of custom certificate authorities to be
 configured in the client. GCP requires a custom proxy with authentication
 credentials. The Go CDK makes opening these connections easier while still
 using the standard [`*sql.DB`][] type.
@@ -35,19 +35,6 @@ And the portable function for PostgreSQL is [`postgres.Open`][]:
 [`postgres.Open`]: https://godoc.org/gocloud.dev/postgres#Open
 [URL opener pattern]: {{< ref "/concepts/urls.md" >}}
 
-## AWS {#aws}
-
-Users of [AWS RDS for MySQL][] should import the `gocloud.dev/mysql/awsmysql` package:
-
-{{< goexample "gocloud.dev/mysql/awsmysql.Example" >}}
-
-Users of [AWS RDS for PostgreSQL][] should import the `gocloud.dev/postgres/awspostgres` package:
-
-{{< goexample "gocloud.dev/postgres/awspostgres.Example" >}}
-
-[AWS RDS for MySQL]: https://aws.amazon.com/rds/mysql/
-[AWS RDS for PostgreSQL]: https://aws.amazon.com/rds/postgresql/
-
 ## GCP {#gcp}
 
 Users of [GCP Cloud SQL for MySQL][] should import the `gocloud.dev/mysql/gcpmysql` package:
@@ -60,6 +47,19 @@ Users of [GCP Cloud SQL for PostgreSQL][] should import the `gocloud.dev/mysql/g
 
 [GCP Cloud SQL for MySQL]: https://cloud.google.com/sql/docs/mysql/
 [GCP Cloud SQL for PostgreSQL]: https://cloud.google.com/sql/docs/postgres/
+
+## AWS {#aws}
+
+Users of [AWS RDS for MySQL][] should import the `gocloud.dev/mysql/awsmysql` package:
+
+{{< goexample "gocloud.dev/mysql/awsmysql.Example" >}}
+
+Users of [AWS RDS for PostgreSQL][] should import the `gocloud.dev/postgres/awspostgres` package:
+
+{{< goexample "gocloud.dev/postgres/awspostgres.Example" >}}
+
+[AWS RDS for MySQL]: https://aws.amazon.com/rds/mysql/
+[AWS RDS for PostgreSQL]: https://aws.amazon.com/rds/postgresql/
 
 ## Azure {#azure}
 

@@ -14,9 +14,9 @@ Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
 
 ## Supported Providers
 
-* [AWS Paramstore](https://godoc.org/gocloud.dev/runtimevar/awsparamstore)
 * [GCP Runtime
   Configurator](https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig)
+* [AWS Paramstore](https://godoc.org/gocloud.dev/runtimevar/awsparamstore)
 * [blobvar](https://godoc.org/gocloud.dev/runtimevar/blobvar) - a blob-backed
   implementation supported by any provider that has [blob support]({{< relref "blob.md#supported-providers">}})
 * [httpvar](https://godoc.org/gocloud.dev/runtimevar/httpvar) - an
