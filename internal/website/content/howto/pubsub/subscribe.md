@@ -8,7 +8,7 @@ toc: true
 
 Subscribing to receive message from a topic with the Go CDK takes three steps:
 
-1. [Open a subscription][] to a topic with the Pub/Sub provider of your choice (once per
+1. [Open a subscription][] to a topic with the Pub/Sub service of your choice (once per
    subscription).
 2. [Receive and acknowledge messages][] from the topic. After completing any
    work related to the message, use the Ack method to prevent it from being
