@@ -39,17 +39,17 @@ if (!doNotTrack) {
 <li>
 <ul>
 <li><a href="#local">Local or On-Premise</a></li>
-<li><a href="#aws">AWS</a></li>
 <li><a href="#gcp">GCP</a></li>
+<li><a href="#aws">AWS</a></li>
 <li><a href="#azure">Azure</a></li>
 </ul></li>
 </ul>
 </nav>
 </nav>
 
-<p>Connecting to cloud providers&rsquo; hosted database services requires additional
-steps to ensure the security of the connection. For example, each of AWS,
-GCP, and Azure require the use of custom certificate authorities to be
+<p>Connecting to Cloud providers&rsquo; hosted database services requires additional
+steps to ensure the security of the connection. For example, each of GCP,
+AWS and Azure require the use of custom certificate authorities to be
 configured in the client. GCP requires a custom proxy with authentication
 credentials. The Go CDK makes opening these connections easier while still
 using the standard <a href="https://godoc.org/database/sql#DB"><code>*sql.DB</code></a> type.</p>
@@ -89,6 +89,49 @@ instruments the connection with <a href="https://opencensus.io/integrations/sql/
 
 <span class="c1">// Replace this with your actual settings.
 </span><span class="c1"></span><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">postgres</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;postgres://user:password@localhost/testdb&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">db</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Use database in your program.
+</span><span class="c1"></span><span class="nx">db</span><span class="p">.</span><span class="nf">Exec</span><span class="p">(</span><span class="s">&#34;CREATE TABLE foo (bar INT);&#34;</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="gcp"> GCP<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h2>
+
+<p>Users of <a href="https://cloud.google.com/sql/docs/mysql/">GCP Cloud SQL for MySQL</a> should import the <code>gocloud.dev/mysql/gcpmysql</code> package:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/mysql&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/mysql/gcpmysql&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Replace this with your actual settings.
+</span><span class="c1"></span><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">mysql</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+	<span class="s">&#34;gcpmysql://user:password@example-project/region/my-instance01/testdb&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">db</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Use database in your program.
+</span><span class="c1"></span><span class="nx">db</span><span class="p">.</span><span class="nf">Exec</span><span class="p">(</span><span class="s">&#34;CREATE TABLE foo (bar INT);&#34;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Users of <a href="https://cloud.google.com/sql/docs/postgres/">GCP Cloud SQL for PostgreSQL</a> should import the <code>gocloud.dev/mysql/gcppostgres</code> package:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/postgres&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/postgres/gcppostgres&#34;</span>
+<span class="p">)</span>
+
+<span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">postgres</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+	<span class="s">&#34;gcppostgres://myrole@example-project/us-central1/my-instance01/testdb&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -140,49 +183,6 @@ instruments the connection with <a href="https://opencensus.io/integrations/sql/
 
 <span class="c1">// Use database in your program.
 </span><span class="c1"></span><span class="nx">db</span><span class="p">.</span><span class="nf">ExecContext</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;CREATE TABLE foo (bar INT);&#34;</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="gcp"> GCP<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h2>
-
-<p>Users of <a href="https://cloud.google.com/sql/docs/mysql/">GCP Cloud SQL for MySQL</a> should import the <code>gocloud.dev/mysql/gcpmysql</code> package:</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-
-	<span class="s">&#34;gocloud.dev/mysql&#34;</span>
-	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/mysql/gcpmysql&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// Replace this with your actual settings.
-</span><span class="c1"></span><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">mysql</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-	<span class="s">&#34;gcpmysql://user:password@example-project/region/my-instance01/testdb&#34;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">db</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-
-<span class="c1">// Use database in your program.
-</span><span class="c1"></span><span class="nx">db</span><span class="p">.</span><span class="nf">Exec</span><span class="p">(</span><span class="s">&#34;CREATE TABLE foo (bar INT);&#34;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Users of <a href="https://cloud.google.com/sql/docs/postgres/">GCP Cloud SQL for PostgreSQL</a> should import the <code>gocloud.dev/mysql/gcppostgres</code> package:</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-
-	<span class="s">&#34;gocloud.dev/postgres&#34;</span>
-	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/postgres/gcppostgres&#34;</span>
-<span class="p">)</span>
-
-<span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">postgres</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-	<span class="s">&#34;gcppostgres://myrole@example-project/us-central1/my-instance01/testdb&#34;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">db</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-
-<span class="c1">// Use database in your program.
-</span><span class="c1"></span><span class="nx">db</span><span class="p">.</span><span class="nf">Exec</span><span class="p">(</span><span class="s">&#34;CREATE TABLE foo (bar INT);&#34;</span><span class="p">)</span>
 </code></pre></div>
 
 <h2 id="azure"> Azure<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h2>
