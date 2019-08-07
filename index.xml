@@ -80,10 +80,10 @@ using &lt;a href=&#34;https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket&#34;&
       <pubDate>Tue, 26 Mar 2019 09:44:33 -0700</pubDate>
       
       <guid>https://gocloud.dev/howto/pubsub/subscribe/</guid>
-      <description>&lt;p&gt;Subscribing to messages on a topic with the Go CDK takes three steps:&lt;/p&gt;
+      <description>&lt;p&gt;Subscribing to receive message from a topic with the Go CDK takes three steps:&lt;/p&gt;
 
 &lt;ol&gt;
-&lt;li&gt;&lt;a href=&#34;#opening&#34;&gt;Open a subscription&lt;/a&gt; with the Pub/Sub provider of your choice (once per
+&lt;li&gt;&lt;a href=&#34;#opening&#34;&gt;Open a subscription&lt;/a&gt; to a topic with the Pub/Sub service of your choice (once per
 subscription).&lt;/li&gt;
 &lt;li&gt;&lt;a href=&#34;#receiving&#34;&gt;Receive and acknowledge messages&lt;/a&gt; from the topic. After completing any
 work related to the message, use the Ack method to prevent it from being

@@ -89,12 +89,41 @@ if (!doNotTrack) {
 
 <h2 id="opening"> Opening a Topic<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
 
-<p>The easiest way to open a topic is using <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenTopic</code></a> and a URL
+<p>The first step in publishing messages to a topic is to instantiate a
+portable <a href="https://godoc.org/gocloud.dev/pubsub#Topic"><code>*pubsub.Topic</code></a> for your service.</p>
+
+<p>The easiest way to do so is to use <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenTopic</code></a> and a service-specific URL
 pointing to the topic, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to
-link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need fine-grained
+link it in.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;context&#34;</span>
+
+    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/&lt;driver&gt;&#34;</span>
+<span class="p">)</span>
+<span class="o">...</span>
+<span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;&lt;driver-url&gt;&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;could not open topic: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="c1">// topic is a *pubsub.Topic; see usage below
+</span><span class="c1"></span><span class="o">...</span></code></pre></div>
+<p>See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for general background and the <a href="#services">guide below</a>
+for URL usage for each supported service.</p>
+
+<p>Alternatively, if you need fine-grained
 control over the connection settings, you can call the constructor function in
-the driver package directly (like <code>gcppubsub.OpenTopic</code>).
-See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
+the driver package directly (like <code>gcppubsub.OpenTopic</code>).</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/pubsub/&lt;driver&gt;&#34;</span>
+<span class="o">...</span>
+<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="p">&lt;</span><span class="nx">driver</span><span class="p">&gt;.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="o">...</span></code></pre></div>
+<p>You may find the <a href="http://github.com/google/wire"><code>wire</code> package</a> useful for managing your initialization code
+when switching between different backing services.</p>
+
+<p>See the <a href="#services">guide below</a> for constructor usage for each supported service.</p>
 
 <h2 id="sending"> Sending Messages on a Topic<a class="anchor" href="#sending" aria-label="Link to Section">🔗</a></h2>
 
@@ -103,7 +132,8 @@ like this:</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Send</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">pubsub</span><span class="p">.</span><span class="nx">Message</span><span class="p">{</span>
 	<span class="nx">Body</span><span class="p">:</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;Hello, World!\n&#34;</span><span class="p">),</span>
-	<span class="nx">Metadata</span><span class="p">:</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
+	<span class="c1">// Metadata is optional and can be nil.
+</span><span class="c1"></span>	<span class="nx">Metadata</span><span class="p">:</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{</span>
 		<span class="c1">// These are examples of metadata.
 </span><span class="c1"></span>		<span class="c1">// There is nothing special about the key names.
 </span><span class="c1"></span>		<span class="s">&#34;language&#34;</span><span class="p">:</span>   <span class="s">&#34;en&#34;</span><span class="p">,</span>

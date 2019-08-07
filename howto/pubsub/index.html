@@ -32,13 +32,22 @@ if (!doNotTrack) {
     <main class="MainContent">
       <div class="MainContent-bounds"><h1>Pub/Sub</h1>
 
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub"><code>pubsub</code> package</a> provides an easy and portable way to interact with
+publish/subscribe systems. This guide shows how to work with pubsub
+in the Go CDK.</p>
+
 <p>The <a href="https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern">publish/subscribe model</a> allows parts of a system to publish messages
 that other parts of a system may subscribe to. This is commonly used to
 arrange for work to happen at some point after an interactive frontend
 request is finished or in other event-driven computing.</p>
 
-<p>The Go CDK provides portable APIs for publishing messages and subscribing to
-messages.</p>
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub"><code>pubsub</code> package</a> supports operations to publish messages to a topic and
+to subscribe to receive messages from a topic.</p>
+
+<p>Subpackages contain driver implementations of pubsub for various services,
+including Cloud and on-prem solutions. You can develop your application
+locally using <a href="https://godoc.org/gocloud.dev/pubsub/mempubsub"><code>mempubsub</code></a>, then deploy it to multiple Cloud providers with
+minimal initialization reconfiguration.</p>
 
 <ul class="HowtoList">
   <li class="HowtoList-item">

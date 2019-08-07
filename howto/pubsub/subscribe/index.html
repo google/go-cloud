@@ -76,10 +76,10 @@ if (!doNotTrack) {
 </nav>
 </nav>
 
-<p>Subscribing to messages on a topic with the Go CDK takes three steps:</p>
+<p>Subscribing to receive message from a topic with the Go CDK takes three steps:</p>
 
 <ol>
-<li><a href="#opening">Open a subscription</a> with the Pub/Sub provider of your choice (once per
+<li><a href="#opening">Open a subscription</a> to a topic with the Pub/Sub service of your choice (once per
 subscription).</li>
 <li><a href="#receiving">Receive and acknowledge messages</a> from the topic. After completing any
 work related to the message, use the Ack method to prevent it from being
@@ -88,12 +88,41 @@ redelivered.</li>
 
 <h2 id="opening"> Opening a Subscription<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
 
-<p>The easiest way to open a subscription is using <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenSubscription</code></a>
-and a URL pointing to the topic, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver
-package to link it in. See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for more details. If you need
-fine-grained control over the connection settings, you can call the constructor
-function in the driver package directly (like <code>gcppubsub.OpenSubscription</code>).
-See the <a href="#services">guide below</a> for usage of both forms for each supported provider.</p>
+<p>The first step in subscribing to receive messages from a topic is
+to instantiate a portable <a href="https://godoc.org/gocloud.dev/pubsub#Subscription"><code>*pubsub.Subscription</code></a> for your service.</p>
+
+<p>The easiest way to do so is to use <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenSubscription</code></a>
+and a service-specific URL pointing to the topic, making sure you
+<a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to link it in.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;context&#34;</span>
+
+    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/&lt;driver&gt;&#34;</span>
+<span class="p">)</span>
+<span class="o">...</span>
+<span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+<span class="nx">subs</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;&lt;driver-url&gt;&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;could not open topic subscription: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">subs</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="c1">// subs is a *pubsub.Subscription; see usage below
+</span><span class="c1"></span><span class="o">...</span></code></pre></div>
+<p>See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for general background and the <a href="#services">guide below</a>
+for URL usage for each supported service.</p>
+
+<p>Alternatively, if you need fine-grained
+control over the connection settings, you can call the constructor function in
+the driver package directly (like <code>gcppubsub.OpenSubscription</code>).</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/pubsub/&lt;driver&gt;&#34;</span>
+<span class="o">...</span>
+<span class="nx">subs</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="p">&lt;</span><span class="nx">driver</span><span class="p">&gt;.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="o">...</span></code></pre></div>
+<p>You may find the <a href="http://github.com/google/wire"><code>wire</code> package</a> useful for managing your initialization code
+when switching between different backing services.</p>
+
+<p>See the <a href="#services">guide below</a> for constructor usage for each supported service.</p>
 
 <h2 id="receiving"> Receiving and Acknowledging Messages<a class="anchor" href="#receiving" aria-label="Link to Section">🔗</a></h2>
 
