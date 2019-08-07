@@ -20,8 +20,8 @@ listing blobs in a bucket.
 
 ## Supported Providers
 
-* [AWS S3 blob](https://godoc.org/gocloud.dev/blob/s3blob)
 * [GCS blob](https://godoc.org/gocloud.dev/blob/gcsblob)
+* [AWS S3 blob](https://godoc.org/gocloud.dev/blob/s3blob)
 * [Azure blob](https://godoc.org/gocloud.dev/blob/azureblob)
 * [In-memory local blob](https://godoc.org/gocloud.dev/blob/memblob) - mainly
   useful for local testing
