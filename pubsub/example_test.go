@@ -34,6 +34,7 @@ func ExampleTopic_Send() {
 
 	err := topic.Send(ctx, &pubsub.Message{
 		Body: []byte("Hello, World!\n"),
+		// Metadata is optional and can be nil.
 		Metadata: map[string]string{
 			// These are examples of metadata.
 			// There is nothing special about the key names.

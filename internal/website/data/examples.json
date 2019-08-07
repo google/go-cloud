@@ -169,7 +169,7 @@
 	},
 	"gocloud.dev/pubsub.ExampleTopic_Send": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n)",
-		"code": "err := topic.Send(ctx, \u0026pubsub.Message{\n\tBody: []byte(\"Hello, World!\\n\"),\n\tMetadata: map[string]string{\n\t\t// These are examples of metadata.\n\t\t// There is nothing special about the key names.\n\t\t\"language\":   \"en\",\n\t\t\"importance\": \"high\",\n\t},\n})\nif err != nil {\n\treturn err\n}"
+		"code": "err := topic.Send(ctx, \u0026pubsub.Message{\n\tBody: []byte(\"Hello, World!\\n\"),\n\t// Metadata is optional and can be nil.\n\tMetadata: map[string]string{\n\t\t// These are examples of metadata.\n\t\t// There is nothing special about the key names.\n\t\t\"language\":   \"en\",\n\t\t\"importance\": \"high\",\n\t},\n})\nif err != nil {\n\treturn err\n}"
 	},
 	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSNSTopic": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws\"\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",

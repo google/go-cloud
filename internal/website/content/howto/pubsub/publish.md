@@ -18,18 +18,57 @@ Publishing a message to a topic with the Go CDK takes two steps:
 
 ## Opening a Topic {#opening}
 
-The easiest way to open a topic is using [`pubsub.OpenTopic`][] and a URL
+The first step in publishing messages to a topic is to instantiate a
+portable [`*pubsub.Topic`][] for your service.
+
+The easiest way to do so is to use [`pubsub.OpenTopic`][] and a service-specific URL
 pointing to the topic, making sure you ["blank import"][] the driver package to
-link it in. See [Concepts: URLs][] for more details. If you need fine-grained
+link it in.
+
+```go
+import (
+    "context"
+
+    "gocloud.dev/pubsub"
+    _ "gocloud.dev/pubsub/<driver>"
+)
+...
+ctx := context.Background()
+topic, err := pubsub.OpenTopic(ctx, "<driver-url>")
+if err != nil {
+    return fmt.Errorf("could not open topic: %v", err)
+}
+defer topic.Shutdown(ctx)
+// topic is a *pubsub.Topic; see usage below
+...
+```
+
+See [Concepts: URLs][] for general background and the [guide below][]
+for URL usage for each supported service.
+
+Alternatively, if you need fine-grained
 control over the connection settings, you can call the constructor function in
 the driver package directly (like `gcppubsub.OpenTopic`).
-See the [guide below][] for usage of both forms for each supported provider.
+
+```go
+import "gocloud.dev/pubsub/<driver>"
+...
+topic, err := <driver>.OpenTopic(...)
+...
+```
+
+You may find the [`wire` package][] useful for managing your initialization code
+when switching between different backing services.
+
+See the [guide below][] for constructor usage for each supported service.
 
 [guide below]: {{< ref "#services" >}}
+[`*pubsub.Topic`]: https://godoc.org/gocloud.dev/pubsub#Topic
 [`pubsub.OpenTopic`]:
 https://godoc.org/gocloud.dev/pubsub#OpenTopic
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
+[`wire` package]: http://github.com/google/wire
 
 ## Sending Messages on a Topic {#sending}
 

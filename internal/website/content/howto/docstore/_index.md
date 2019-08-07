@@ -7,32 +7,76 @@ showInSidenav: true
 toc: true
 ---
 
-Docstore provides an abstraction layer over common
+The [`docstore` package][] provides an abstraction layer over common
 [document stores](https://en.wikipedia.org/wiki/Document-oriented_database) like
-Amazon DynamoDB, Google Cloud Firestore, and MongoDB. These guides show how to
-work with Docstore in the Go CDK.
+Google Cloud Firestore, Amazon DynamoDB and MongoDB. This guide shows how to
+work with document stores in the Go CDK.
 
 <!--more-->
 
+A document store is a service that stores data in semi-structured JSON-like
+documents grouped into collections. Like other NoSQL databases, document stores
+are schemaless.
+
+The [`docstore` package][] supports operations to add, retrieve, modify and
+delete documents.
+
+Subpackages contain driver implementations of docstore for various services,
+including Cloud and on-prem solutions. You can develop your application
+locally using [`memdocstore`][], then deploy it to multiple Cloud providers with
+minimal initialization reconfiguration.
+
+[`docstore` package]: https://godoc.org/gocloud.dev/docstore
+[`memdocstore`]: https://godoc.org/gocloud.dev/docstore/memdocstore
+
 ## Opening a Collection {#opening}
 
-The first step in using Docstore is connecting to your document store provider.
-Every document store provider is a little different, but the Go CDK lets you
-interact with all of them using the [`*docstore.Collection`][] type.
+The first step in interacting with a document store is to instantiate
+a portable [`*docstore.Collection`][] for your service.
 
-While every provider has the concept of a primary key that uniquely
+While every docstore service has the concept of a primary key that uniquely
 distinguishes a document in a collection, each one specifies that key in its own
 way. To be portable, Docstore requires that the key be part of the document's
 contents. When you open a collection using one of the functions described here,
 you specify how to find the provider's primary key in the document.
 
 The easiest way to open a collection is using [`docstore.OpenCollection`][] and
-a URL pointing to the topic, making sure you ["blank import"][] the driver
-package to link it in. See [Concepts: URLs][] for more details. If you need
+a service-specific URL pointing to it, making sure you ["blank import"][]
+the driver package to link it in.
+
+```go
+import (
+    "gocloud.dev/docstore"
+    _ "gocloud.dev/docstore/<driver>"
+)
+...
+coll, err := docstore.OpenCollection(context.Background(), "<driver-url>")
+if err != nil {
+    return fmt.Errorf("could not open collection: %v", err)
+}
+defer coll.Close()
+// coll is a *docstore.Collection; see usage below
+...
+```
+
+See [Concepts: URLs][] for general background and the [guide below][] for
+URL usage for each supported service.
+
+Alternatively, if you need
 fine-grained control over the connection settings, you can call the constructor
 function in the driver package directly (like `mongodocstore.OpenCollection`).
 
-See the [guide below][] for usage of both forms for each supported provider.
+```go
+import "gocloud.dev/docstore/<driver>"
+...
+coll, err := <driver>.OpenCollection(...)
+...
+```
+
+You may find the [`wire` package][] useful for managing your initialization code
+when switching between different backing services.
+
+See the [guide below][] for constructor usage for each supported service
 
 [`*docstore.Collection`]: https://godoc.org/gocloud.dev/docstore#Collection
 [`docstore.OpenCollection`]:
@@ -40,6 +84,7 @@ https://godoc.org/gocloud.dev/docstore#OpenCollection
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [guide below]: {{< ref "#services" >}}
+[`wire` package]: http://github.com/google/wire
 
 ## Using a Collection {#using}
 
