@@ -217,7 +217,10 @@ func (h *harness) Close() {
 }
 
 func (h *harness) MaxBatchSizes() (int, int) {
-	return sendBatcherOpts.MaxBatchSize, ackBatcherOpts.MaxBatchSize
+	if h.topicKind == topicKindSQS {
+		return sendBatcherOptsSQS.MaxBatchSize, ackBatcherOpts.MaxBatchSize
+	}
+	return sendBatcherOptsSNS.MaxBatchSize, ackBatcherOpts.MaxBatchSize
 }
 
 func (h *harness) SupportsMultipleSubscriptions() bool {
@@ -335,7 +338,11 @@ func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
 			return fmt.Errorf("cast failed for %T", &pub)
 		}
 	case topicKindSQS:
-		var entry *sqs.SendMessageInput
+		var smi *sqs.SendMessageInput
+		if !as(&smi) {
+			return fmt.Errorf("cast failed for %T", &smi)
+		}
+		var entry *sqs.SendMessageBatchRequestEntry
 		if !as(&entry) {
 			return fmt.Errorf("cast failed for %T", &entry)
 		}
@@ -382,6 +389,10 @@ func benchmark(b *testing.B, topicKind topicKind) {
 		b.Fatal(err)
 	}
 	defer cleanup1()
+	sendBatcherOpts := sendBatcherOptsSNS
+	if topicKind == topicKindSQS {
+		sendBatcherOpts = sendBatcherOptsSQS
+	}
 	topic := pubsub.NewTopic(dt, sendBatcherOpts)
 	defer topic.Shutdown(ctx)
 	subName := fmt.Sprintf("%s-subscription", b.Name())
