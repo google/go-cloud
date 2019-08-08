@@ -101,8 +101,9 @@ type Options struct {
 	// read is used.
 	//
 	// Not all read operations support this mode however, such as querying against
-	// a global secondary index, please check the official DynamoDB documentation
-	// for more details.
+	// a global secondary index, the operation will return an InvalidArgument error
+	// in such case, please check the official DynamoDB documentation for more
+	// details.
 	//
 	// The native client for DynamoDB uses this option in a per-action basis, if
 	// you need the flexibility to run both modes on the same collection, create
