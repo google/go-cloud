@@ -100,8 +100,9 @@ type Options struct {
 	// get, query, scan, etc.; default to false, where an eventually consistent
 	// read is used.
 	//
-	// Not all read operations support this mode however, please check the official
-	// DynamoDB documentation for more details.
+	// Not all read operations support this mode however, such as querying against
+	// a global secondary index, please check the official DynamoDB documentation
+	// for more details.
 	//
 	// The native client for DynamoDB uses this option in a per-action basis, if
 	// you need the flexibility to run both modes on the same collection, create
