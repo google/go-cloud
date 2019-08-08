@@ -36,7 +36,8 @@ import (
 )
 
 const (
-	serverURI       = "mongodb://localhost"
+	serverURIV4     = "mongodb://localhost:27017"
+	serverURIV3     = "mongodb://localhost:27018"
 	dbName          = "docstore-test"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
@@ -160,7 +161,12 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 }
 
 func TestConformance(t *testing.T) {
-	client := newTestClient(t)
+	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV4) })
+	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV3) })
+}
+
+func testConformance(t *testing.T, serverURI string) {
+	client := newTestClient(t, serverURI)
 	defer client.Disconnect(context.Background())
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
@@ -169,7 +175,7 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 
-func newTestClient(t *testing.T) *mongo.Client {
+func newTestClient(t *testing.T, serverURI string) *mongo.Client {
 	if !setup.HasDockerTestEnvironment() {
 		t.Skip("Skipping Mongo tests since the Mongo server is not available")
 	}
@@ -188,12 +194,14 @@ func newTestClient(t *testing.T) *mongo.Client {
 func BenchmarkConformance(b *testing.B) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	client, err := Dial(ctx, serverURI)
+
+	// Only run benchmark once (against MongoDB v4).
+	client, err := Dial(ctx, serverURIV4)
 	if err != nil {
-		b.Fatalf("dialing to %s: %v", serverURI, err)
+		b.Fatalf("dialing to %s: %v", serverURIV4, err)
 	}
 	if err := client.Ping(ctx, nil); err != nil {
-		b.Fatalf("connecting to %s: %v", serverURI, err)
+		b.Fatalf("connecting to %s: %v", serverURIV4, err)
 	}
 	defer func() { client.Disconnect(context.Background()) }()
 
@@ -219,7 +227,7 @@ func TestLowercaseFields(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client := newTestClient(t)
+	client := newTestClient(t, serverURIV4)
 	defer func() { client.Disconnect(ctx) }()
 	db := client.Database(dbName)
 	dc, err := newCollection(db.Collection("lowercase-fields"), "id", nil, &Options{LowercaseFields: true})
