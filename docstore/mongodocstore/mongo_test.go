@@ -155,12 +155,8 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 }
 
 func TestConformance(t *testing.T) {
-	t.Run("V3", func(t *testing.T) {
-		testConformance(t, serverURIV4)
-	})
-	t.Run("V4", func(t *testing.T) {
-		testConformance(t, serverURIV3)
-	})
+	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV4) })
+	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV3) })
 }
 
 func testConformance(t *testing.T, serverURI string) {
@@ -192,6 +188,8 @@ func newTestClient(t *testing.T, serverURI string) *mongo.Client {
 func BenchmarkConformance(b *testing.B) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+
+	// Only run benchmark once (against MongoDB v4).
 	client, err := Dial(ctx, serverURIV4)
 	if err != nil {
 		b.Fatalf("dialing to %s: %v", serverURIV4, err)

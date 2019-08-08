@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Starts two local MongoDB instances (v3 and v4) via Docker.
+# Starts two local MongoDB instances (v3 and v4) via Docker listening on two
+# different ports.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euo pipefail
