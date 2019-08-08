@@ -44,23 +44,11 @@ func TestOpenCensus(t *testing.T) {
 	iter := coll.Query().Get(ctx)
 	iter.Stop()
 
-	// Query.Update.
-	if err := coll.Query().Update(ctx, docstore.Mods{"count": docstore.Increment(1)}); err != nil {
-		t.Fatal(err)
-	}
-
-	// Query.Delete.
-	if err := coll.Query().Delete(ctx); err != nil {
-		t.Fatal(err)
-	}
-
 	const driver = "gocloud.dev/docstore/memdocstore"
 
 	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/docstore", driver, []octest.Call{
 		{Method: "ActionList.Do", Code: gcerrors.OK},
 		{Method: "Query.Get", Code: gcerrors.OK},
-		{Method: "Query.Update", Code: gcerrors.OK},
-		{Method: "Query.Delete", Code: gcerrors.OK},
 	})
 	if diff != "" {
 		t.Error(diff)

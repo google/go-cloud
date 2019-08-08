@@ -262,9 +262,7 @@
 //
 // This API collects OpenCensus traces and metrics for the following methods:
 //  - ActionList.Do
-//  - Query.Delete
 //  - Query.Get (for the first query only; drivers may make additional calls while iterating over results)
-//  - Query.Update
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/docstore/ActionList.Do".
