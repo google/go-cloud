@@ -104,8 +104,8 @@ type Options struct {
 	// DynamoDB documentation for more details.
 	//
 	// The native client for DynamoDB uses this option in a per-action basis, if
-	// you need the flexibility to run both modes on the same colleciton, create
-	// two colletions with different mode.
+	// you need the flexibility to run both modes on the same collection, create
+	// two collections with different mode.
 	ConsistentRead bool
 }
 

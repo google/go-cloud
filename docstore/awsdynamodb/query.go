@@ -111,7 +111,10 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
 			cbUsed = true
 		}
-		in := &dyn.ScanInput{TableName: &c.table, ConsistentRead: aws.Bool(c.opts.ConsistentRead)}
+		in := &dyn.ScanInput{
+			TableName:      &c.table,
+			ConsistentRead: aws.Bool(c.opts.ConsistentRead),
+		}
 		if cbUsed {
 			ce, err := cb.Build()
 			if err != nil {
