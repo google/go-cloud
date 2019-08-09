@@ -23,3 +23,17 @@ require (
 	google.golang.org/genproto v0.0.0-20190620144150-6af8c5fc6601
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
+
+replace gocloud.dev => ../
+
+replace gocloud.dev/docstore/mongodocstore => ../docstore/mongodocstore
+
+replace gocloud.dev/pubsub/kafkapubsub => ../pubsub/kafkapubsub
+
+replace gocloud.dev/pubsub/natspubsub => ../pubsub/natspubsub
+
+replace gocloud.dev/pubsub/rabbitpubsub => ../pubsub/rabbitpubsub
+
+replace gocloud.dev/runtimevar/etcdvar => ../runtimevar/etcdvar
+
+replace gocloud.dev/secrets/hashivault => ../secrets/hashivault

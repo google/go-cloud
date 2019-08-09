@@ -16,3 +16,5 @@ require (
 	golang.org/x/xerrors v0.0.0-20190513163551-3ee3066db522
 	google.golang.org/api v0.6.0
 )
+
+replace gocloud.dev => ../../../
