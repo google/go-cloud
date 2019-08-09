@@ -562,6 +562,9 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if err := ctx2.Err(); err != nil {
+			t.Fatalf("never received expected messages: %v", err)
+		}
 		dms = append(dms, curdms...)
 	}
 
