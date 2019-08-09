@@ -260,7 +260,20 @@ func (cmd *deleteCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 	if cmd.date != "" {
 		q = q.Where("Date", "=", cmd.date)
 	}
-	if err := q.Delete(ctx); err != nil {
+	iter := q.Get(ctx, "ID")
+	dels := collection.Actions()
+	for {
+		var msg Message
+		err := iter.Next(ctx, &msg)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return subcommands.ExitFailure
+		}
+		dels.Delete(&msg)
+	}
+	if err := dels.Do(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to delete: %v\n", err)
 		return subcommands.ExitFailure
 	}

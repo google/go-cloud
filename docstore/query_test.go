@@ -80,7 +80,5 @@ func TestInvalidQuery(t *testing.T) {
 		if test.appliesToGet {
 			check(test.q.Get(ctx).Next(ctx, nil))
 		}
-		check(test.q.Delete(ctx))
-		check(test.q.Update(ctx, nil))
 	}
 }

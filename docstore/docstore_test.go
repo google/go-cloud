@@ -135,8 +135,6 @@ func TestClosedErrors(t *testing.T) {
 	check(c.Get(ctx, doc))
 	check(c.Delete(ctx, doc))
 	check(c.Update(ctx, doc, Mods{"a": 1}))
-	check(c.Query().Delete(ctx))
-	check(c.Query().Update(ctx, Mods{"a": 1}))
 	iter := c.Query().Get(ctx)
 	check(iter.Next(ctx, doc))
 

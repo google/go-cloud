@@ -178,9 +178,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	})
 	t.Run("ActionsWithCompositeID", func(t *testing.T) { withCollection(t, newHarness, TwoKey, testActionsWithCompositeID) })
 	t.Run("GetQuery", func(t *testing.T) { withCollection(t, newHarness, TwoKey, testGetQuery) })
-	t.Run("DeleteQuery", func(t *testing.T) { withCollection(t, newHarness, TwoKey, testDeleteQuery) })
-	t.Run("UpdateQuery", func(t *testing.T) { withCollection(t, newHarness, TwoKey, testUpdateQuery) })
-	t.Run("UpdateQueryNoRev", func(t *testing.T) { withCollection(t, newHarness, NoRev, testUpdateQueryNoRev) })
 
 	t.Run("ExampleInDoc", func(t *testing.T) { withCollection(t, newHarness, NoRev, testExampleInDoc) })
 
@@ -1476,149 +1473,6 @@ func testGetQuery(t *testing.T, _ Harness, coll *ds.Collection) {
 	})
 }
 
-func testDeleteQuery(t *testing.T, _ Harness, coll *ds.Collection) {
-	ctx := context.Background()
-
-	addHighScores(t, coll)
-
-	// Note: these tests are cumulative. If the first test deletes a document, that
-	// change will persist for the second test.
-	tests := []struct {
-		name string
-		q    *ds.Query
-		want func(*HighScore) bool // filters highScores
-	}{
-		{
-			name: "Player",
-			q:    coll.Query().Where("Player", "=", "andy"),
-			want: func(h *HighScore) bool { return h.Player != "andy" },
-		},
-		{
-			name: "Score",
-			q:    coll.Query().Where("Score", ">", 100),
-			want: func(h *HighScore) bool { return h.Score <= 100 },
-		},
-		{
-			name: "All",
-			q:    coll.Query(),
-			want: func(h *HighScore) bool { return false },
-		},
-		// TODO(jba): add a case that requires Firestore to evaluate filters on the client.
-	}
-	prevWant := highScores
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if err := tc.q.Delete(ctx); err != nil {
-				t.Fatal(err)
-			}
-			got := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
-			for _, g := range got {
-				g.DocstoreRevision = nil
-			}
-			want := filterHighScores(prevWant, tc.want)
-			prevWant = want
-			diff := cmp.Diff(got, want, cmpopts.SortSlices(highScoreLess))
-			if diff != "" {
-				t.Error(diff)
-			}
-		})
-	}
-
-	// Using Limit with DeleteQuery should be an error.
-	err := coll.Query().Where("Player", "=", "mel").Limit(1).Delete(ctx)
-	if err == nil {
-		t.Fatal("want error for Limit, got nil")
-	}
-}
-
-func testUpdateQuery(t *testing.T, _ Harness, coll *ds.Collection) {
-	ctx := context.Background()
-	addHighScores(t, coll)
-
-	check := func(q *ds.Query, filter func(*HighScore) bool) {
-		t.Helper()
-		err := q.Update(ctx, docstore.Mods{"Score": 13, "Time": nil})
-		if err != nil {
-			t.Fatal(err)
-		}
-		got := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
-		for _, g := range got {
-			if g.DocstoreRevision == nil {
-				t.Fatal("revision field not present")
-			}
-			g.DocstoreRevision = nil
-		}
-		want := filterHighScores(highScores, filter)
-		diff := cmp.Diff(got, want, cmpopts.SortSlices(highScoreLess))
-		if diff != "" {
-			t.Error(diff)
-		}
-	}
-
-	check(coll.Query().Where("Player", "=", "fran"), func(h *HighScore) bool {
-		if h.Player == "fran" {
-			h.Score = 13
-			h.Time = time.Time{}
-		}
-		return true
-	})
-
-	// Updates without a filter are blind. The revision field shouldn't be checked.
-	// We can't really test that, but we can at least make sure it's written.
-	check(coll.Query(), func(h *HighScore) bool {
-		h.Score = 13
-		h.Time = time.Time{}
-		return true
-	})
-}
-
-// Verify that we can run an update query on a struct with no revision field.
-// This test is similar to the above, but it uses a different struct, and of
-// course we do not check that a revision field is present.
-func testUpdateQueryNoRev(t *testing.T, _ Harness, coll *ds.Collection) {
-	type grade struct {
-		Name  string `docstore:"name"`
-		Grade int
-	}
-
-	ctx := context.Background()
-
-	grades := []*grade{
-		{"A", 90},
-		{"B", 95},
-		{"C", 88},
-	}
-	al := coll.Actions()
-	for _, g := range grades {
-		al.Put(g)
-	}
-	if err := al.Do(ctx); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := coll.Query().Update(ctx, docstore.Mods{"Grade": 100}); err != nil {
-		t.Fatal(err)
-	}
-
-	want := []*grade{
-		{"A", 100},
-		{"B", 100},
-		{"C", 100},
-	}
-	var got []*grade
-	err := forEach(ctx, coll.Query().Get(ctx),
-		func() interface{} { return &grade{} },
-		func(g interface{}) error { got = append(got, g.(*grade)); return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	diff := cmp.Diff(got, want, cmpopts.SortSlices(func(g1, g2 *grade) bool { return g1.Name < g2.Name }))
-	if diff != "" {
-		t.Error(diff)
-	}
-}
-
 func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 	var res []*HighScore
 	for _, h := range hs {
@@ -1632,7 +1486,21 @@ func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 
 // clearCollection delete all documents from this collection after test.
 func clearCollection(fataler interface{ Fatalf(string, ...interface{}) }, coll *docstore.Collection) {
-	if err := coll.Query().Delete(context.Background()); err != nil {
+	ctx := context.Background()
+	iter := coll.Query().Get(ctx)
+	dels := coll.Actions()
+	for {
+		doc := map[string]interface{}{}
+		err := iter.Next(ctx, doc)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fataler.Fatalf("%+v", err)
+		}
+		dels.Delete(doc)
+	}
+	if err := dels.Do(ctx); err != nil {
 		fataler.Fatalf("%+v", err)
 	}
 }
@@ -1988,22 +1856,6 @@ func testBeforeQuery(t *testing.T, newHarness HarnessMaker) {
 		}
 		if !called {
 			t.Error("BeforeQuery function never called for Get")
-		}
-
-		called = false
-		if err := coll.Query().BeforeQuery(beforeQuery).Delete(ctx); err != nil {
-			t.Fatal(err)
-		}
-		if !called {
-			t.Error("BeforeQuery function never called for Delete")
-		}
-
-		called = false
-		if err := coll.Query().BeforeQuery(beforeQuery).Update(ctx, ds.Mods{"a": 1}); err != nil {
-			t.Fatal(err)
-		}
-		if !called {
-			t.Error("BeforeQuery function never called for Update")
 		}
 	})
 }

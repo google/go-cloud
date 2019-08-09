@@ -213,20 +213,6 @@ features, like full table scans, have to be enabled via constructor options,
 because they can be expensive. Other queries may require that you manually
 create an index on the collection.
 
-#### Deleting Documents {#qr-del}
-
-Call `Delete` on a `Query` instead of `Get` to delete all the documents in the
-collection that match the conditions.
-
-{{< goexample "gocloud.dev/docstore.ExampleQuery_Delete" >}}
-
-#### Updating Documents {#qr-update}
-
-Calling `Update` on a `Query` and passing in a set of modifications will update
-all the documents that match the criteria.
-
-{{< goexample "gocloud.dev/docstore.ExampleQuery_Update" >}}
-
 ### Revisions {#rev}
 
 Docstore maintains a revision for every document. Whenever the document is
