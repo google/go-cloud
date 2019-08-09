@@ -18,5 +18,5 @@ require (
 	github.com/google/go-cmp v0.3.0
 	github.com/nats-io/nats-server/v2 v2.0.0
 	github.com/nats-io/nats.go v1.8.1
-	gocloud.dev v0.15.0
+	gocloud.dev v0.16.0
 )
