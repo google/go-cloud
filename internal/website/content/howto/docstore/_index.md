@@ -2,7 +2,6 @@
 title: "Docstore"
 date: 2019-06-08T15:11:57-04:00
 lastmod: 2019-07-29T12:00:00-07:00
-draft: true
 showInSidenav: true
 toc: true
 ---

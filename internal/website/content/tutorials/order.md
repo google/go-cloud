@@ -1,7 +1,6 @@
 ---
 title: "Order Processor"
 date: 2019-07-09T10:22:39-04:00
-draft: true
 weight: 5
 toc: true
 ---
