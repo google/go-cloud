@@ -17,11 +17,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"gocloud.dev/docstore"
 )
 
 func TestOrderForm(t *testing.T) {
@@ -97,7 +100,7 @@ func TestListOrders(t *testing.T) {
 
 	ctx := context.Background()
 	// Clear the collection.
-	if err := f.coll.Query().Delete(ctx); err != nil {
+	if err := clearCollection(ctx, f.coll); err != nil {
 		t.Fatal(err)
 	}
 	orders := []*Order{
@@ -151,4 +154,21 @@ func testConfig(name string) config {
 		bucketURL:       "", // setup will use fileblob with a temporary dir
 		collectionURL:   fmt.Sprintf("mem://orders-%s/ID", name),
 	}
+}
+
+func clearCollection(ctx context.Context, coll *docstore.Collection) error {
+	iter := coll.Query().Get(ctx, "ID")
+	dels := coll.Actions()
+	for {
+		var order Order
+		err := iter.Next(ctx, &order)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		dels.Delete(&order)
+	}
+	return dels.Do(ctx)
 }

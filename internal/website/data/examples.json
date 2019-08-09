@@ -71,17 +71,9 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n)",
 		"code": "// Create a player.\npat := \u0026Player{Name: \"Pat\", Score: 0}\nif err := coll.Create(ctx, pat); err != nil {\n\treturn err\n}\n\n// Set the score to a new value.\npat2 := \u0026Player{Name: \"Pat\"}\nerr := coll.Actions().Update(pat, docstore.Mods{\"Score\": 15}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}\n\n// Increment the score.\nerr = coll.Actions().Update(pat, docstore.Mods{\"Score\": docstore.Increment(5)}).Get(pat2).Do(ctx)\nif err != nil {\n\treturn err\n}"
 	},
-	"gocloud.dev/docstore.ExampleQuery_Delete": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n)",
-		"code": "// Delete all players with scores under 25.\nerr := coll.Query().Where(\"Score\", \"\u003c\", 25).Delete(ctx)\nif err != nil {\n\treturn err\n}"
-	},
 	"gocloud.dev/docstore.ExampleQuery_Get": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"io\"\n\n\t\"gocloud.dev/docstore\"\n)",
 		"code": "// Ask for all players with scores at least 20.\niter := coll.Query().Where(\"Score\", \"\u003e=\", 20).OrderBy(\"Score\", docstore.Descending).Get(ctx)\ndefer iter.Stop()\n\n// Query.Get returns an iterator. Call Next on it until io.EOF.\nfor {\n\tvar p Player\n\terr := iter.Next(ctx, \u0026p)\n\tif err == io.EOF {\n\t\tbreak\n\t} else if err != nil {\n\t\treturn err\n\t} else {\n\t\tfmt.Printf(\"%s: %d\\n\", p.Name, p.Score)\n\t}\n}"
-	},
-	"gocloud.dev/docstore.ExampleQuery_Update": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n)",
-		"code": "// Increment a player's score if it is low.\nerr := coll.Query().\n\tWhere(\"Score\", \"\u003c\", 20).\n\tUpdate(ctx, docstore.Mods{\"Score\": docstore.Increment(15)})\nif err != nil {\n\treturn err\n}"
 	},
 	"gocloud.dev/docstore.Example_optimisticLocking": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"time\"\n\n\t\"gocloud.dev/docstore/memdocstore\"\n\t\"gocloud.dev/gcerrors\"\n)",
@@ -169,7 +161,7 @@
 	},
 	"gocloud.dev/pubsub.ExampleTopic_Send": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n)",
-		"code": "err := topic.Send(ctx, \u0026pubsub.Message{\n\tBody: []byte(\"Hello, World!\\n\"),\n\tMetadata: map[string]string{\n\t\t// These are examples of metadata.\n\t\t// There is nothing special about the key names.\n\t\t\"language\":   \"en\",\n\t\t\"importance\": \"high\",\n\t},\n})\nif err != nil {\n\treturn err\n}"
+		"code": "err := topic.Send(ctx, \u0026pubsub.Message{\n\tBody: []byte(\"Hello, World!\\n\"),\n\t// Metadata is optional and can be nil.\n\tMetadata: map[string]string{\n\t\t// These are examples of metadata.\n\t\t// There is nothing special about the key names.\n\t\t\"language\":   \"en\",\n\t\t\"importance\": \"high\",\n\t},\n})\nif err != nil {\n\treturn err\n}"
 	},
 	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSNSTopic": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws\"\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
