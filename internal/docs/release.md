@@ -38,20 +38,20 @@ To do a release:
     [last release](https://github.com/google/go-cloud/releases/latest) was plus
     one, but follow [semantic versioning](https://semver.org/).
 
+-   Edit `./internal/cmd/gocdk/internal/static/_assets/init/go.mod` and update
+    the `requires` line for `gocloud.dev` to point to the new release name.
+
+    Then run `go generate` in `./internal/cmd/gocdk`. This should produce an
+    updated `./internal/cmd/gocdk/internal/static/vfsdata.go`.
+
+    Check that everything looks in order (with `git diff`) and commit.
+
 -   Run the release helper tool to set the version in `require` directives of
     submodules to the new (yet unreleased) version:
 
     ```bash
     $ go run internal/releasehelper/releasehelper.go setversion v0.x.0
     ```
-
-    Check that everything looks in order (with `git diff`) and commit.
-
--   Edit `./internal/cmd/gocdk/internal/static/_assets/init/go.mod` and update
-    the `requires` line for `gocloud.dev` to point to the new release name.
-
-    Then run `go generate` in `./internal/cmd/gocdk`. This should produce an
-    updated `./internal/cmd/gocdk/internal/static/vfsdata.go`.
 
     Check that everything looks in order (with `git diff`) and commit.
 
