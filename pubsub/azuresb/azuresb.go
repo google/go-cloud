@@ -443,11 +443,14 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
 	defer cancel()
 	var messages []*driver.Message
-	var wg sync.WaitGroup
-	wg.Add(1)
 
-	go func() {
-		s.sbSub.Receive(rctx, servicebus.HandlerFunc(func(innerctx context.Context, sbmsg *servicebus.Message) error {
+	// Loop until rctx is Done, or until we've received maxMessages.
+	for len(messages) < maxMessages && rctx.Err() == nil {
+		// NOTE: there's also a Receive method, but it starts two goroutines
+		// that aren't necessarily finished when Receive returns, which causes
+		// data races if Receive is called again quickly. ReceiveOne is more
+		// straightforward.
+		_ = s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
 			metadata := map[string]string{}
 			for key, value := range sbmsg.GetKeyValues() {
 				if strVal, ok := value.(string); ok {
@@ -466,19 +469,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				AckID:    &partitionAckID{partitionID, sbmsg.LockToken},
 				AsFunc:   messageAsFunc(sbmsg),
 			})
-			if len(messages) >= maxMessages {
-				cancel()
-			}
 			return nil
 		}))
-
-		select {
-		case <-rctx.Done():
-			wg.Done()
-		}
-	}()
-
-	wg.Wait()
+	}
 	return messages, nil
 }
 
