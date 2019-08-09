@@ -86,15 +86,24 @@ func (h *harness) Close() {
 func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
 	switch kind {
 	case drivertest.SingleKey, drivertest.NoRev:
-		return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", &Options{AllowScans: true})
+		return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", &Options{
+			AllowScans:     true,
+			ConsistentRead: true,
+		})
 	case drivertest.TwoKey:
+		// For query test we don't use strong consistency mode since some tests are
+		// running on global secondary index and it doesn't support ConsistentRead.
 		return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{
 			AllowScans:       true,
 			RunQueryFallback: InMemorySortFallback(func() interface{} { return new(drivertest.HighScore) }),
 		})
 	case drivertest.AltRev:
 		return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "",
-			&Options{AllowScans: true, RevisionField: drivertest.AlternateRevisionField})
+			&Options{
+				AllowScans:     true,
+				RevisionField:  drivertest.AlternateRevisionField,
+				ConsistentRead: true,
+			})
 	default:
 		panic("bad kind")
 	}

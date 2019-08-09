@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"gocloud.dev/docstore/driver"
@@ -110,7 +111,10 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 			cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
 			cbUsed = true
 		}
-		in := &dyn.ScanInput{TableName: &c.table}
+		in := &dyn.ScanInput{
+			TableName:      &c.table,
+			ConsistentRead: aws.Bool(c.opts.ConsistentRead),
+		}
 		if cbUsed {
 			ce, err := cb.Build()
 			if err != nil {
@@ -138,6 +142,7 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 		KeyConditionExpression:    ce.KeyCondition(),
 		FilterExpression:          ce.Filter(),
 		ProjectionExpression:      ce.Projection(),
+		ConsistentRead:            aws.Bool(c.opts.ConsistentRead),
 	}
 	if q.OrderByField != "" && !q.OrderAscending {
 		qIn.ScanIndexForward = &q.OrderAscending

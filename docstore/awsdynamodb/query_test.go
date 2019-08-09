@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"
 )
@@ -58,7 +59,11 @@ func TestPlanQuery(t *testing.T) {
 		return m
 	}
 
-	cmpopt := cmp.AllowUnexported(dynamodb.ScanInput{}, dynamodb.QueryInput{}, dynamodb.AttributeValue{})
+	// Ignores the ConsistentRead field from both QueryInput and ScanInput.
+	opts := []cmp.Option{
+		cmpopts.IgnoreFields(dynamodb.ScanInput{}, "ConsistentRead"),
+		cmpopts.IgnoreFields(dynamodb.QueryInput{}, "ConsistentRead"),
+	}
 
 	for _, test := range []struct {
 		desc string
@@ -359,7 +364,7 @@ func TestPlanQuery(t *testing.T) {
 			default:
 				t.Fatalf("bad type for test.want: %T", test.want)
 			}
-			if diff := cmp.Diff(got, test.want, cmpopt); diff != "" {
+			if diff := cmp.Diff(got, test.want, opts...); diff != "" {
 				t.Error("input:\n", diff)
 			}
 			gotPlan := gotRunner.queryPlan()
