@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Docstore &middot; Go CDK</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Source+Code+Pro|Work+Sans:400,700">
+  <link type="text/css" rel="stylesheet" href="/css/syntax.css">
+  <link type="text/css" rel="stylesheet" href="/css/style.css">
+  <link rel="shortcut icon" href="/favicon-32x32.png">
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-135118641-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+</head>
+<body>
+  <div class="PageLayout">
+    <header class="PageHeader">
+      <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
+    </header>
+    <main class="MainContent">
+      <div class="MainContent-bounds"><h1>Docstore</h1>
+
+<nav class="PageTOC">
+  <div class="PageTOC-heading">In this article</div>
+  <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#opening">Opening a Collection</a></li>
+<li><a href="#using">Using a Collection</a>
+<ul>
+<li><a href="#rep-doc">Representing Documents</a></li>
+<li><a href="#actions">Actions</a>
+<ul>
+<li><a href="#act-list">Action Lists</a></li>
+<li><a href="#act-update">Updates</a></li>
+</ul></li>
+<li><a href="#queries">Queries</a>
+<ul>
+<li><a href="#qr-get">Getting Documents</a></li>
+</ul></li>
+<li><a href="#rev">Revisions</a></li>
+</ul></li>
+<li><a href="#services">Supported Docstore Services</a>
+<ul>
+<li><a href="#firestore">Google Cloud Firestore</a>
+<ul>
+<li><a href="#firestore-ctor">Firestore Constructors</a></li>
+</ul></li>
+<li><a href="#dynamodb">Amazon DynamoDB</a>
+<ul>
+<li><a href="#dynamodb-ctor">DynamoDB Constructor</a></li>
+</ul></li>
+<li><a href="#cosmosdb">Azure Cosmos DB</a>
+<ul>
+<li><a href="#cosmosdb-ctor">Cosmos DB Constructors</a></li>
+</ul></li>
+<li><a href="#mongo">MongoDB</a>
+<ul>
+<li><a href="#mongo-ctor">MongoDB Constructors</a></li>
+</ul></li>
+<li><a href="#mem">In-Memory Document Store</a>
+<ul>
+<li><a href="#mem-ctor">Mem Constructors</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+</nav>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore"><code>docstore</code> package</a> provides an abstraction layer over common
+<a href="https://en.wikipedia.org/wiki/Document-oriented_database">document stores</a> like
+Google Cloud Firestore, Amazon DynamoDB and MongoDB. This guide shows how to
+work with document stores in the Go CDK.</p>
+
+<p>A document store is a service that stores data in semi-structured JSON-like
+documents grouped into collections. Like other NoSQL databases, document stores
+are schemaless.</p>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore"><code>docstore</code> package</a> supports operations to add, retrieve, modify and
+delete documents.</p>
+
+<p>Subpackages contain driver implementations of docstore for various services,
+including Cloud and on-prem solutions. You can develop your application
+locally using <a href="https://godoc.org/gocloud.dev/docstore/memdocstore"><code>memdocstore</code></a>, then deploy it to multiple Cloud providers with
+minimal initialization reconfiguration.</p>
+
+<h2 id="opening"> Opening a Collection<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
+
+<p>The first step in interacting with a document store is to instantiate
+a portable <a href="https://godoc.org/gocloud.dev/docstore#Collection"><code>*docstore.Collection</code></a> for your service.</p>
+
+<p>While every docstore service has the concept of a primary key that uniquely
+distinguishes a document in a collection, each one specifies that key in its own
+way. To be portable, Docstore requires that the key be part of the document&rsquo;s
+contents. When you open a collection using one of the functions described here,
+you specify how to find the provider&rsquo;s primary key in the document.</p>
+
+<p>The easiest way to open a collection is using <a href="https://godoc.org/gocloud.dev/docstore#OpenCollection"><code>docstore.OpenCollection</code></a> and
+a service-specific URL pointing to it, making sure you <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a>
+the driver package to link it in.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;gocloud.dev/docstore&#34;</span>
+    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/docstore/&lt;driver&gt;&#34;</span>
+<span class="p">)</span>
+<span class="o">...</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">(),</span> <span class="s">&#34;&lt;driver-url&gt;&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Errorf</span><span class="p">(</span><span class="s">&#34;could not open collection: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// coll is a *docstore.Collection; see usage below
+</span><span class="c1"></span><span class="o">...</span></code></pre></div>
+<p>See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for general background and the <a href="#services">guide below</a> for
+URL usage for each supported service.</p>
+
+<p>Alternatively, if you need
+fine-grained control over the connection settings, you can call the constructor
+function in the driver package directly (like <code>mongodocstore.OpenCollection</code>).</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/docstore/&lt;driver&gt;&#34;</span>
+<span class="o">...</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="p">&lt;</span><span class="nx">driver</span><span class="p">&gt;.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="o">...</span></code></pre></div>
+<p>You may find the <a href="http://github.com/google/wire"><code>wire</code> package</a> useful for managing your initialization code
+when switching between different backing services.</p>
+
+<p>See the <a href="#services">guide below</a> for constructor usage for each supported service</p>
+
+<h2 id="using"> Using a Collection<a class="anchor" href="#using" aria-label="Link to Section">🔗</a></h2>
+
+<h3 id="rep-doc"> Representing Documents<a class="anchor" href="#rep-doc" aria-label="Link to Section">🔗</a></h3>
+
+<p>We&rsquo;ll use a collection with documents represented by this Go struct:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">type</span> <span class="nx">Player</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">Name</span>             <span class="kt">string</span>
+    <span class="nx">Score</span>            <span class="kt">int</span>
+    <span class="nx">DocstoreRevision</span> <span class="kd">interface</span><span class="p">{}</span>
+<span class="p">}</span></code></pre></div>
+<p>We recommend using structs for documents because they impose some structure on
+your data, but Docstore also accepts <code>map[string]interface{}</code> values. See
+<a href="https://godoc.org/gocloud.dev/docstore#hdr-Documents">the <code>docstore</code> package documentation</a>
+for more information.</p>
+
+<p>The <code>DocstoreRevision</code> field holds information about the latest revision of the
+document. We discuss it <a href="#rev">below</a>.</p>
+
+<h3 id="actions"> Actions<a class="anchor" href="#actions" aria-label="Link to Section">🔗</a></h3>
+
+<p>Once you have <a href="#opening">opened a collection</a>, you can call
+action methods on it to read, modify and write documents. You can execute a
+single action, or run multiple actions together in an <a href="{{ ref
+&quot;act-list&quot; }}"><em>action list</em></a>.</p>
+
+<p>Docstore supports six kinds of actions on documents:</p>
+
+<ul>
+<li><code>Get</code> retrieves a document.</li>
+<li><code>Create</code> creates a new document.</li>
+<li><code>Replace</code> replaces an existing document.</li>
+<li><code>Put</code> puts a document whether or not it already exists.</li>
+<li><code>Update</code> applies a set of modifications to a document.</li>
+<li><code>Delete</code> deletes a document.</li>
+</ul>
+
+<p>You can create a single document with the <code>Collection.Create</code> method, we will
+use <code>coll</code> as the variable holding the collection throughout the guide:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">err</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;Pat&#34;</span><span class="p">,</span> <span class="nx">Score</span><span class="p">:</span> <span class="mi">10</span><span class="p">})</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span></code></pre></div>
+<h4 id="act-list"> Action Lists<a class="anchor" href="#act-list" aria-label="Link to Section">🔗</a></h4>
+
+<p>When you use an action list to perform multiple actions at once, drivers can
+optimize action lists by using bulk RPCs, running the actions concurrently,
+or employing a provider&rsquo;s special features to improve efficiency and reduce
+cost. Here we create several documents using an action list.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Build an ActionList to create several new players, then execute it.
+</span><span class="c1">// The actions may happen in any order.
+</span><span class="c1"></span><span class="nx">newPlayers</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;Pat&#34;</span><span class="p">,</span> <span class="s">&#34;Mel&#34;</span><span class="p">,</span> <span class="s">&#34;Fran&#34;</span><span class="p">}</span>
+<span class="nx">actionList</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Actions</span><span class="p">()</span>
+<span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">p</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">newPlayers</span> <span class="p">{</span>
+	<span class="nx">actionList</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="nx">p</span><span class="p">,</span> <span class="nx">Score</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">actionList</span><span class="p">.</span><span class="nf">Do</span><span class="p">(</span><span class="nx">ctx</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>ActionList</code> has a fluent API, so you can build and execute a sequence of
+actions in one line of code. Here we <code>Put</code> a document and immediately <code>Get</code> its
+new contents.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Add a document to the collection, then retrieve it.
+</span><span class="c1">// Because both the Put and the Get refer to the same document,
+</span><span class="c1">// they happen in order.
+</span><span class="c1"></span><span class="nx">got</span> <span class="o">:=</span> <span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;Pat&#34;</span><span class="p">}</span>
+<span class="nx">err</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Actions</span><span class="p">().</span><span class="nf">Put</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;Pat&#34;</span><span class="p">,</span> <span class="nx">Score</span><span class="p">:</span> <span class="mi">88</span><span class="p">}).</span><span class="nf">Get</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">got</span><span class="p">).</span><span class="nf">Do</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">got</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span> <span class="nx">got</span><span class="p">.</span><span class="nx">Score</span><span class="p">)</span>
+</code></pre></div>
+
+<p>If the underlying provider is eventually consistent, the result of the <code>Get</code>
+might not reflect the <code>Put</code>. Docstore only guarantees that it will perform the
+<code>Get</code> after the <code>Put</code> completes.</p>
+
+<p>See the documentation for <a href="https://godoc.org/gocloud.dev/docstore#ActionList"><code>docstore.ActionList</code></a> for the semantics of action
+list execution.</p>
+
+<h4 id="act-update"> Updates<a class="anchor" href="#act-update" aria-label="Link to Section">🔗</a></h4>
+
+<p>Use <code>Update</code> to modify individual fields of a document. The <code>Update</code> action
+takes a set of modifications to document fields, and applies them all
+atomically. You can change the value of a field, increment it, or delete it.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Create a player.
+</span><span class="c1"></span><span class="nx">pat</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;Pat&#34;</span><span class="p">,</span> <span class="nx">Score</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">pat</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Set the score to a new value.
+</span><span class="c1"></span><span class="nx">pat2</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;Pat&#34;</span><span class="p">}</span>
+<span class="nx">err</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Actions</span><span class="p">().</span><span class="nf">Update</span><span class="p">(</span><span class="nx">pat</span><span class="p">,</span> <span class="nx">docstore</span><span class="p">.</span><span class="nx">Mods</span><span class="p">{</span><span class="s">&#34;Score&#34;</span><span class="p">:</span> <span class="mi">15</span><span class="p">}).</span><span class="nf">Get</span><span class="p">(</span><span class="nx">pat2</span><span class="p">).</span><span class="nf">Do</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Increment the score.
+</span><span class="c1"></span><span class="nx">err</span> <span class="p">=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Actions</span><span class="p">().</span><span class="nf">Update</span><span class="p">(</span><span class="nx">pat</span><span class="p">,</span> <span class="nx">docstore</span><span class="p">.</span><span class="nx">Mods</span><span class="p">{</span><span class="s">&#34;Score&#34;</span><span class="p">:</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">Increment</span><span class="p">(</span><span class="mi">5</span><span class="p">)}).</span><span class="nf">Get</span><span class="p">(</span><span class="nx">pat2</span><span class="p">).</span><span class="nf">Do</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="queries"> Queries<a class="anchor" href="#queries" aria-label="Link to Section">🔗</a></h3>
+
+<p>Docstore&rsquo;s <code>Get</code> action lets you retrieve a single document by its primary key.
+Queries let you retrieve all documents that match some conditions. You can also
+use queries to delete or update all documents that match the conditions.</p>
+
+<h4 id="qr-get"> Getting Documents<a class="anchor" href="#qr-get" aria-label="Link to Section">🔗</a></h4>
+
+<p>Like <a href="#actions">actions</a>, queries are built up in a fluent
+style. Just as a <code>Get</code> action returns one document, the <code>Query.Get</code> method
+returns several documents, in the form of an iterator.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">iter</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Query</span><span class="p">().</span><span class="nf">Where</span><span class="p">(</span><span class="s">&#34;Score&#34;</span><span class="p">,</span> <span class="s">&#34;&gt;&#34;</span><span class="p">,</span> <span class="mi">20</span><span class="p">).</span><span class="nf">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">iter</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span> <span class="o">//</span> <span class="nx">Always</span> <span class="nx">call</span> <span class="nx">Stop</span> <span class="nx">on</span> <span class="nx">an</span> <span class="nx">iterator</span><span class="p">.</span></code></pre></div>
+<p>Repeatedly calling <code>Next</code> on the iterator will return all the matching
+documents. Like the <code>Get</code> action, <code>Next</code> will populate an empty document that
+you pass to it:</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="nx">doc</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Player</span><span class="p">{}</span>
+<span class="nx">err</span> <span class="o">:=</span> <span class="nx">iter</span><span class="p">.</span><span class="nf">Next</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">doc</span><span class="p">)</span></code></pre></div>
+<p>The iteration is over when <code>Next</code> returns <code>io.EOF</code>.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;io&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Ask for all players with scores at least 20.
+</span><span class="c1"></span><span class="nx">iter</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Query</span><span class="p">().</span><span class="nf">Where</span><span class="p">(</span><span class="s">&#34;Score&#34;</span><span class="p">,</span> <span class="s">&#34;&gt;=&#34;</span><span class="p">,</span> <span class="mi">20</span><span class="p">).</span><span class="nf">OrderBy</span><span class="p">(</span><span class="s">&#34;Score&#34;</span><span class="p">,</span> <span class="nx">docstore</span><span class="p">.</span><span class="nx">Descending</span><span class="p">).</span><span class="nf">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">iter</span><span class="p">.</span><span class="nf">Stop</span><span class="p">()</span>
+
+<span class="c1">// Query.Get returns an iterator. Call Next on it until io.EOF.
+</span><span class="c1"></span><span class="k">for</span> <span class="p">{</span>
+	<span class="kd">var</span> <span class="nx">p</span> <span class="nx">Player</span>
+	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">iter</span><span class="p">.</span><span class="nf">Next</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">p</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">==</span> <span class="nx">io</span><span class="p">.</span><span class="nx">EOF</span> <span class="p">{</span>
+		<span class="k">break</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">err</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;%s: %d\n&#34;</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span> <span class="nx">p</span><span class="p">.</span><span class="nx">Score</span><span class="p">)</span>
+	<span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>You can pass a list of fields to <code>Get</code> to reduce the amount of data transmitted.</p>
+
+<p>Queries support the following methods:</p>
+
+<ul>
+<li><code>Where</code> describes a condition on a document. You can ask whether a field is
+equal to, greater than, or less than a value. The &ldquo;not equals&rdquo; comparison
+isn&rsquo;t supported, because it isn&rsquo;t portable across providers.</li>
+<li><code>OrderBy</code> specifies the order of the resulting documents, by field and
+direction. For portability, you can specify at most one <code>OrderBy</code>, and its
+field must also be mentioned in a <code>Where</code> clause.</li>
+<li><code>Limit</code> limits the number of documents in the result.</li>
+</ul>
+
+<p>If a query returns an error, the message may help you fix the problem. Some
+features, like full table scans, have to be enabled via constructor options,
+because they can be expensive. Other queries may require that you manually
+create an index on the collection.</p>
+
+<h3 id="rev"> Revisions<a class="anchor" href="#rev" aria-label="Link to Section">🔗</a></h3>
+
+<p>Docstore maintains a revision for every document. Whenever the document is
+changed, the revision is too. By default, Docstore stores the revision in a
+field named <code>DocstoreRevision</code>, but you can change the field name via an option
+to a <code>Collection</code> constructor.</p>
+
+<p>You can use revisions to perform <em>optimistic locking</em>, a technique for updating
+a document atomically:</p>
+
+<ol>
+<li><code>Get</code> a document. This reads the current revision.</li>
+<li>Modify the document contents on the client (but do not change the revision).</li>
+<li><code>Replace</code> the document. If the document was changed since it was retrieved
+in step 1, the revision will be different, and Docstore will return an error
+instead of overwriting the document.</li>
+<li>If the <code>Replace</code> failed, start again from step 1.</li>
+</ol>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore/memdocstore&#34;</span>
+	<span class="s">&#34;gocloud.dev/gcerrors&#34;</span>
+<span class="p">)</span>
+
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">memdocstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="s">&#34;Name&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Create a player.
+</span><span class="c1"></span><span class="nx">pat</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;Pat&#34;</span><span class="p">,</span> <span class="nx">Score</span><span class="p">:</span> <span class="mi">7</span><span class="p">}</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Create</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">pat</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">pat</span><span class="p">)</span> <span class="c1">// memdocstore revisions are deterministic, so we can check the output.
+</span><span class="c1"></span>
+<span class="c1">// Double a player&#39;s score. We cannot use Update to multiply, so we use optimistic
+</span><span class="c1">// locking instead.
+</span><span class="c1"></span>
+<span class="c1">// We may have to retry a few times; put a time limit on that.
+</span><span class="c1"></span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">cancel</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithTimeout</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="mi">30</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nf">cancel</span><span class="p">()</span>
+<span class="k">for</span> <span class="p">{</span>
+	<span class="c1">// Get the document.
+</span><span class="c1"></span>	<span class="nx">player</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">Player</span><span class="p">{</span><span class="nx">Name</span><span class="p">:</span> <span class="s">&#34;Pat&#34;</span><span class="p">}</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Get</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">player</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="c1">// player.DocstoreRevision is set to the document&#39;s revision.
+</span><span class="c1"></span>
+	<span class="c1">// Modify the document locally.
+</span><span class="c1"></span>	<span class="nx">player</span><span class="p">.</span><span class="nx">Score</span> <span class="o">*=</span> <span class="mi">2</span>
+
+	<span class="c1">// Replace the document. player.DocstoreRevision will be checked against
+</span><span class="c1"></span>	<span class="c1">// the stored document&#39;s revision.
+</span><span class="c1"></span>	<span class="nx">err</span> <span class="o">:=</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Replace</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">player</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="nx">code</span> <span class="o">:=</span> <span class="nx">gcerrors</span><span class="p">.</span><span class="nf">Code</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+		<span class="c1">// On FailedPrecondition or NotFound, try again.
+</span><span class="c1"></span>		<span class="k">if</span> <span class="nx">code</span> <span class="o">==</span> <span class="nx">gcerrors</span><span class="p">.</span><span class="nx">FailedPrecondition</span> <span class="o">||</span> <span class="nx">code</span> <span class="o">==</span> <span class="nx">gcerrors</span><span class="p">.</span><span class="nx">NotFound</span> <span class="p">{</span>
+			<span class="k">continue</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="nx">err</span>
+	<span class="p">}</span>
+	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">player</span><span class="p">)</span>
+	<span class="k">break</span>
+<span class="p">}</span>
+
+<span class="c1">// Output:
+</span><span class="c1">// &amp;{Pat 7 1}
+</span><span class="c1">// &amp;{Pat 14 2}
+</span></code></pre></div>
+
+<p>See
+<a href="https://godoc.org/gocloud.dev/docstore#hdr-Revisions">the Revisions section of the package documentation</a>
+for more on revisions.</p>
+
+<h2 id="services"> Supported Docstore Services<a class="anchor" href="#services" aria-label="Link to Section">🔗</a></h2>
+
+<h3 id="firestore"> Google Cloud Firestore<a class="anchor" href="#firestore" aria-label="Link to Section">🔗</a></h3>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/gcpfirestore"><code>gcpfirestore</code></a>
+package supports
+<a href="https://https://cloud.google.com/firestore">Google Cloud Firestore</a>. Firestore
+documents are uniquely named by paths that are not part of the document content.
+In Docstore, these unique names are represented as part of the document. You
+must supply a way to extract a document&rsquo;s name from its contents. This can be
+done by specifying a document field that holds the name, or by providing a
+function to extract the name from a document.</p>
+
+<p>Firestore URLs provide the project and collection, as well as the field that
+holds the document name.</p>
+
+<p><code>docstore.OpenCollection</code> will use Application Default Credentials; if you have
+authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/login"><code>gcloud auth login</code></a>, it will use those credentials. See
+<a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
+alternatives, including using environment variables.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/docstore/gcpfirestore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// docstore.OpenCollection creates a *docstore.Collection from a URL.
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">url</span> <span class="p">=</span> <span class="s">&#34;firestore://projects/my-project/databases/(default)/documents/my-collection?name_field=userID&#34;</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">url</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/docstore/gcpfirestore#URLOpener"><code>gcpfirestore.URLOpener</code></a>.</p>
+
+<h4 id="firestore-ctor"> Firestore Constructors<a class="anchor" href="#firestore-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/gcpfirestore#OpenCollection"><code>gcpfirestore.OpenCollection</code></a> constructor opens a Cloud Firestore
+collection as a Docstore collection. You must first connect a Firestore client
+using <a href="https://godoc.org/gocloud.dev/docstore/gcpfirestore#Dial"><code>gcpfirestore.Dial</code></a> or the
+<a href="https://godoc.org/cloud.google.com/go/firestore/apiv1"><code>cloud.google.com/go/firestore/apiv1</code></a>
+package. In addition to a client, <code>OpenCollection</code> requires a Google Cloud
+project ID, the path to the Firestore collection, and the name of the field that
+holds the document name.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore/gcpfirestore&#34;</span>
+	<span class="s">&#34;gocloud.dev/gcp&#34;</span>
+<span class="p">)</span>
+
+<span class="nx">creds</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultCredentials</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">client</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpfirestore</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">creds</span><span class="p">.</span><span class="nx">TokenSource</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">resourceID</span> <span class="o">:=</span> <span class="nx">gcpfirestore</span><span class="p">.</span><span class="nf">CollectionResourceID</span><span class="p">(</span><span class="s">&#34;my-project&#34;</span><span class="p">,</span> <span class="s">&#34;my-collection&#34;</span><span class="p">)</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpfirestore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">resourceID</span><span class="p">,</span> <span class="s">&#34;userID&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Instead of mapping the document name to a field, you can supply a function to
+construct the name from the document contents with
+<a href="https://godoc.org/gocloud.dev/docstore/gcpfirestore#OpenCollectionWithNameFunc"><code>gcpfirestore.OpenCollectionWithNameFunc</code></a>. This can be useful for documents
+whose name is the combination of two or more fields.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+	<span class="s">&#34;gocloud.dev/docstore/gcpfirestore&#34;</span>
+	<span class="s">&#34;gocloud.dev/gcp&#34;</span>
+<span class="p">)</span>
+
+<span class="nx">creds</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultCredentials</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">client</span><span class="p">,</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpfirestore</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">creds</span><span class="p">.</span><span class="nx">TokenSource</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// The name of a document is constructed from the Game and Player fields.
+</span><span class="c1"></span><span class="nx">nameFromDocument</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">doc</span> <span class="nx">docstore</span><span class="p">.</span><span class="nx">Document</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+	<span class="nx">hs</span> <span class="o">:=</span> <span class="nx">doc</span><span class="p">.(</span><span class="o">*</span><span class="nx">HighScore</span><span class="p">)</span>
+	<span class="k">return</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Game</span> <span class="o">+</span> <span class="s">&#34;|&#34;</span> <span class="o">+</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Player</span>
+<span class="p">}</span>
+
+<span class="nx">resourceID</span> <span class="o">:=</span> <span class="nx">gcpfirestore</span><span class="p">.</span><span class="nf">CollectionResourceID</span><span class="p">(</span><span class="s">&#34;my-project&#34;</span><span class="p">,</span> <span class="s">&#34;my-collection&#34;</span><span class="p">)</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpfirestore</span><span class="p">.</span><span class="nf">OpenCollectionWithNameFunc</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">resourceID</span><span class="p">,</span> <span class="nx">nameFromDocument</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="dynamodb"> Amazon DynamoDB<a class="anchor" href="#dynamodb" aria-label="Link to Section">🔗</a></h3>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/awsdynamodb"><code>awsdynamodb</code></a> package
+supports <a href="https://aws.amazon.com/dynamodb">Amazon DynamoDB</a>. A Docstore
+collection corresponds to a DynamoDB table.</p>
+
+<p>DynamoDB URLs provide the table, partition key field and optionally the sort key
+field for the collection.</p>
+
+<p><code>docstore.OpenCollection</code> will create a default AWS Session with the
+<code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
+alternatives, including using environment variables.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/docstore/awsdynamodb&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// docstore.OpenCollection creates a *docstore.Collection from a URL.
+</span><span class="c1"></span><span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;dynamodb://my-table?partition_key=name&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/docstore/awsdynamodb#URLOpener"><code>awsdynamodb.URLOpener</code></a>.</p>
+
+<h4 id="dynamodb-ctor"> DynamoDB Constructor<a class="anchor" href="#dynamodb-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/awsdynamodb#OpenCollection"><code>awsdynamodb.OpenCollection</code></a> constructor opens a DynamoDB table as a
+Docstore collection. You must first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same
+region as your collection:</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/service/dynamodb&#34;</span>
+	<span class="s">&#34;gocloud.dev/docstore/awsdynamodb&#34;</span>
+<span class="p">)</span>
+
+<span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">()</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awsdynamodb</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span>
+	<span class="nx">dynamodb</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">sess</span><span class="p">),</span> <span class="s">&#34;docstore-test&#34;</span><span class="p">,</span> <span class="s">&#34;partitionKeyField&#34;</span><span class="p">,</span> <span class="s">&#34;&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="cosmosdb"> Azure Cosmos DB<a class="anchor" href="#cosmosdb" aria-label="Link to Section">🔗</a></h3>
+
+<p><a href="https://docs.microsoft.com/en-us/azure/cosmos-db/">Azure Cosmos DB</a> is compatible with the MongoDB API. You can use the
+<a href="https://godoc.org/gocloud.dev/docstore/mongodocstore"><code>mongodocstore</code></a> package to connect to Cosmos DB. You must
+<a href="https://docs.microsoft.com/en-us/azure/cosmos-db/create-mongodb-dotnet">create an Azure Cosmos account</a> and get the MongoDB <a href="https://docs.microsoft.com/en-us/azure/cosmos-db/connect-mongodb-account#QuickstartConnection">connection string</a>.</p>
+
+<p>When you use MongoDB URLs to connect to Cosmos DB, specify the Mongo server
+URL by setting the <code>MONGO_SERVER_URL</code> environment variable to the connection
+string. See the <a href="#mongo">MongoDB section</a> for more details and examples on how to
+use the package.</p>
+
+<h4 id="cosmosdb-ctor"> Cosmos DB Constructors<a class="anchor" href="#cosmosdb-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollection"><code>mongodocstore.OpenCollection</code></a> constructor can open a Cosmos DB
+collection. You must first obtain a standard MongoDB Go client with your
+Cosmos connections string. See the <a href="#mongo-ctor">MongoDB constructor section</a> for more
+details and examples.</p>
+
+<h3 id="mongo"> MongoDB<a class="anchor" href="#mongo" aria-label="Link to Section">🔗</a></h3>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/mongodocstore"><code>mongodocstore</code></a> package supports the popular
+<a href="https://mongodb.org">MongoDB</a> document store. MongoDB documents are uniquely
+identified by a field called <code>_id</code>. In Docstore, you can choose a different
+name for this field, or provide a function to extract the document ID from a
+document.</p>
+
+<p>MongoDB URLs provide the database and collection, and optionally the field that
+holds the document ID. Specify the Mongo server URL by setting the
+<code>MONGO_SERVER_URL</code> environment variable.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/docstore/mongodocstore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// docstore.OpenCollection creates a *docstore.Collection from a URL.
+</span><span class="c1"></span><span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mongo://my-db/my-collection?id_field=userID&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/docstore/mongodocstore#URLOpener"><code>mongodocstore.URLOpener</code></a>.</p>
+
+<h4 id="mongo-ctor"> MongoDB Constructors<a class="anchor" href="#mongo-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollection"><code>mongodocstore.OpenCollection</code></a> constructor opens a MongoDB collection.
+You must first obtain a standard MongoDB Go client using
+<a href="https://godoc.org/gocloud.dev/docstore/mongodocstore#Dial"><code>mongodocstore.Dial</code></a> or the package
+<a href="https://godoc.org/go.mongodb.org/mongo-driver/mongo"><code>go.mongodb.org/mongo-driver/mongo</code></a>.
+Obtain a <code>*mongo.Collection</code> from the client with
+<code>client.Database(dbName).Collection(collName)</code>. Then pass the result to
+<code>mongodocstore.OpenCollection</code> along with the name of the ID field, or <code>&quot;&quot;</code> to
+use <code>_id</code>.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore/mongodocstore&#34;</span>
+<span class="p">)</span>
+
+<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">mongodocstore</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mongodb://my-host&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">mcoll</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Database</span><span class="p">(</span><span class="s">&#34;my-db&#34;</span><span class="p">).</span><span class="nf">Collection</span><span class="p">(</span><span class="s">&#34;my-coll&#34;</span><span class="p">)</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">mongodocstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">mcoll</span><span class="p">,</span> <span class="s">&#34;userID&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Instead of mapping the document ID to a field, you can supply a function to
+construct the ID from the document contents with
+<a href="https://godoc.org/gocloud.dev/docstore/mongodocstore#OpenCollectionWithIDFunc"><code>mongodocstore.OpenCollectionWithIDFunc</code></a>. This can be useful for documents
+whose name is the combination of two or more fields.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+	<span class="s">&#34;gocloud.dev/docstore/mongodocstore&#34;</span>
+<span class="p">)</span>
+
+<span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">mongodocstore</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mongodb://my-host&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">mcoll</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nf">Database</span><span class="p">(</span><span class="s">&#34;my-db&#34;</span><span class="p">).</span><span class="nf">Collection</span><span class="p">(</span><span class="s">&#34;my-coll&#34;</span><span class="p">)</span>
+
+<span class="c1">// The name of a document is constructed from the Game and Player fields.
+</span><span class="c1"></span><span class="nx">nameFromDocument</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">doc</span> <span class="nx">docstore</span><span class="p">.</span><span class="nx">Document</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+	<span class="nx">hs</span> <span class="o">:=</span> <span class="nx">doc</span><span class="p">.(</span><span class="o">*</span><span class="nx">HighScore</span><span class="p">)</span>
+	<span class="k">return</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Game</span> <span class="o">+</span> <span class="s">&#34;|&#34;</span> <span class="o">+</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Player</span>
+<span class="p">}</span>
+
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">mongodocstore</span><span class="p">.</span><span class="nf">OpenCollectionWithIDFunc</span><span class="p">(</span><span class="nx">mcoll</span><span class="p">,</span> <span class="nx">nameFromDocument</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="mem"> In-Memory Document Store<a class="anchor" href="#mem" aria-label="Link to Section">🔗</a></h3>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/mongodocstore"><code>memdocstore</code></a>
+package implements an in-memory document store suitable for testing and
+development.</p>
+
+<p>URLs for the in-memory store have a <code>mem:</code> scheme and provide the name of the
+document field to use as a primary key. There is no collection name; each call
+to one of the <code>OpenCollection</code> functions creates a distinct collection.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/docstore/memdocstore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// docstore.OpenCollection creates a *docstore.Collection from a URL.
+</span><span class="c1"></span><span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://userID&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/docstore/memdocstore#URLOpener"><code>memdocstore.URLOpener</code></a>.</p>
+
+<h4 id="mem-ctor"> Mem Constructors<a class="anchor" href="#mem-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/docstore/memdocstore#OpenCollection"><code>memdocstore.OpenCollection</code></a> constructor creates and opens a collection,
+taking the name of the key field.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/docstore/memdocstore&#34;</span>
+
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">memdocstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="s">&#34;userID&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>You can instead supply a function to construct the primary key from the document
+contents with <a href="https://godoc.org/gocloud.dev/docstore/memdocstore#OpenCollectionWithKeyFunc"><code>memdocstore.OpenCollectionWithKeyFunc</code></a>. This can be useful
+for documents whose name is the combination of two or more fields.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;gocloud.dev/docstore&#34;</span>
+	<span class="s">&#34;gocloud.dev/docstore/memdocstore&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// The name of a document is constructed from the Game and Player fields.
+</span><span class="c1"></span><span class="nx">nameFromDocument</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">doc</span> <span class="nx">docstore</span><span class="p">.</span><span class="nx">Document</span><span class="p">)</span> <span class="kd">interface</span><span class="p">{}</span> <span class="p">{</span>
+	<span class="nx">hs</span> <span class="o">:=</span> <span class="nx">doc</span><span class="p">.(</span><span class="o">*</span><span class="nx">HighScore</span><span class="p">)</span>
+	<span class="k">return</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Game</span> <span class="o">+</span> <span class="s">&#34;|&#34;</span> <span class="o">+</span> <span class="nx">hs</span><span class="p">.</span><span class="nx">Player</span>
+<span class="p">}</span>
+
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">memdocstore</span><span class="p">.</span><span class="nf">OpenCollectionWithKeyFunc</span><span class="p">(</span><span class="nx">nameFromDocument</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">coll</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+</div>
+    </main>
+    <nav class="Sidenav">
+      <ul class="Sidenav-list">
+        <li class="Sidenav-section">
+          <a href="/" class="Sidenav-sectionLink">Home</a>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/tutorials/" class="Sidenav-sectionLink">Tutorials</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/tutorials/cli-uploader/" class="Sidenav-pageLink">Command-Line Uploader</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/guestbook/" class="Sidenav-pageLink">Guestbook</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/order/" class="Sidenav-pageLink">Order Processor</a>
+              </li>
+              
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
+            <ul class="Sidenav-pageList">
+              
+              <li class="Sidenav-page">
+                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/docstore/" class="Sidenav-pageLink">Docstore</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/sql/" class="Sidenav-pageLink">MySQL/PostgreSQL</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/runtimevar/" class="Sidenav-pageLink">Runtime Configuration</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/server/" class="Sidenav-pageLink">Server</a>
+              </li>
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/ref/" class="Sidenav-sectionLink">Reference</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/blob/" class="Sidenav-pageLink">blob</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/mysql/" class="Sidenav-pageLink">mysql</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/postgres/" class="Sidenav-pageLink">postgres</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/pubsub/" class="Sidenav-pageLink">pubsub</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/runtimevar/" class="Sidenav-pageLink">runtimevar</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/secrets/" class="Sidenav-pageLink">secrets</a>
+              </li>
+              <li class="Sidenav-page Sidenav-refPage">
+                <a href="/ref/server/" class="Sidenav-pageLink">server</a>
+              </li>
+              
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/concepts/" class="Sidenav-sectionLink">Concepts</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/concepts/structure/" class="Sidenav-pageLink">Structuring Portable Code</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/concepts/urls/" class="Sidenav-pageLink">URLs</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/concepts/as/" class="Sidenav-pageLink">Using provider-specific APIs</a>
+              </li>
+              
+            </ul>
+        </li>
+      </ul>
+    </nav>
+    <footer class="PageFooter">
+      <nav>
+        <ul class="FooterLinks">
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
+          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
+          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+        </ul>
+      </nav>
+
+      <p class="PageFooter-paragraph">
+        Copyright © 2018–2019 The Go Cloud Development Kit Authors.
+        All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
+      </p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/howto/docstore/_index.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+    </footer>
+  </div>
+</body>
+</html>

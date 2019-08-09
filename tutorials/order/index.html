@@ -5,7 +5,7 @@
   <meta name="generator" content="Hugo 0.54.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Tests &middot; Go CDK</title>
+  <title>Order Processor &middot; Go CDK</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Source+Code+Pro|Work+Sans:400,700">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
@@ -30,10 +30,90 @@ if (!doNotTrack) {
       <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
     </header>
     <main class="MainContent">
-      <div class="MainContent-bounds"><h1>Tests</h1>
+      <div class="MainContent-bounds"><h1>Order Processor</h1>
 
+<nav class="PageTOC">
+  <div class="PageTOC-heading">In this article</div>
+  <nav id="TableOfContents">
+<ul>
+<li>
+<ul>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#building">Building</a></li>
+<li><a href="#running-locally">Running Locally</a></li>
+<li><a href="#running-on-a-cloud-provider">Running on a Cloud Provider</a></li>
+</ul></li>
+</ul>
+</nav>
+</nav>
 
-</div>
+<p>In this tutorial, we will run a Go CDK application called Order Processor
+on a local machine.</p>
+
+<p>Order Processor is a sample application that lets users place orders to convert
+images to PNG format, and to view the results. The main business logic is
+written in a cloud-agnostic manner using the generic APIs for blob, pubsub and
+docstore.</p>
+
+<p>The Order Processor application has two parts: a web frontend, and an
+image-processing backend called a processor. They communicate over a pubsub
+topic, store order information in a docstore collection, and store image files
+in a blob bucket.</p>
+
+<h2 id="prerequisites"> Prerequisites<a class="anchor" href="#prerequisites" aria-label="Link to Section">🔗</a></h2>
+
+<p>You will need to install the following software for this tutorial:</p>
+
+<ul>
+<li><a href="https://git-scm.com/">Git</a></li>
+<li><a href="https://golang.org/doc/install">Go</a></li>
+</ul>
+
+<p>Then you need to clone the Go CDK repository. The
+repository contains the Order Processor sample.</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">git clone https://github.com/google/go-cloud.git
+<span class="nb">cd</span> go-cloud/samples/order</code></pre></div>
+<h2 id="building"> Building<a class="anchor" href="#building" aria-label="Link to Section">🔗</a></h2>
+
+<p>Run the following in the <code>samples/order</code> directory:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go build</code></pre></div>
+<h2 id="running-locally"> Running Locally<a class="anchor" href="#running-locally" aria-label="Link to Section">🔗</a></h2>
+
+<p>If you run <code>order</code> with no arguments, both the frontend and the processor will
+run together in the same process.</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">./order</code></pre></div>
+<p>The frontend is now running on <a href="http://localhost:10538">http://localhost:10538</a>.</p>
+
+<p>Visit the home page in your browser and click &ldquo;Convert an Image&rdquo;.</p>
+
+<p>Enter an email address (it need not be real) and select any image file from your
+computer. Then click Submit.</p>
+
+<p>Now visit the order list page by returning to the home page and clicking &ldquo;List
+Conversions&rdquo;. It may take a few seconds to process the order (thanks to an
+artificial delay in the processor), so refresh the page until you see your order
+in the list.</p>
+
+<p>Then click on the output image link to see the converted image in your browser.</p>
+
+<h2 id="running-on-a-cloud-provider"> Running on a Cloud Provider<a class="anchor" href="#running-on-a-cloud-provider" aria-label="Link to Section">🔗</a></h2>
+
+<p>To run the Order Processor application on a cloud provider like Google Cloud
+Platform, Amazon AWS or Microsoft Azure, you will have to provision
+some resources:</p>
+
+<ul>
+<li>A storage bucket, to hold the image files. (See the
+<a href="https://gocloud.dev/howto/blob/"><code>blob</code> How-To Guide</a>.)</li>
+<li>A Pub/Sub topic and subscription, for requests from the frontend to the
+processor. (See the <a href="https://gocloud.dev/howto/pubsub/"><code>pubsub</code> How-To Guide</a>.)</li>
+<li>A document store collection to store order metadata. (See the <a href="https://gocloud.dev/howto/docstore/"><code>docstore</code> How-To
+Guide</a>.)
+<br /></li>
+</ul>
+
+<p>Then launch the <code>order</code> program with flags that provide the URLs to your
+resources. Run <code>order -help</code> to see the list of flags.</p></div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">
@@ -139,7 +219,7 @@ if (!doNotTrack) {
         Copyright © 2018–2019 The Go Cloud Development Kit Authors.
         All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
       </p>
-      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/tutorials/order.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
     </footer>
   </div>
 </body>
