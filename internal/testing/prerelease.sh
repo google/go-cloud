@@ -26,7 +26,7 @@ set -euo pipefail
 
 function usage() {
   echo
-  echo "Usage: prereleasechecks.sh <init | run | cleanup>" 1>&2
+  echo "Usage: prerelease.sh <init | run | cleanup>" 1>&2
   echo "  init: creates any needed resources; rerun until it succeeds"
   echo "  run: runs all needed checks"
   echo "  cleanup: cleans up resources created in init"
