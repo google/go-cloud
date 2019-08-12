@@ -20,6 +20,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"net/url"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 	"gocloud.dev/internal/openurl"
@@ -46,7 +47,7 @@ func (*URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error)
 }
 
 func openWithURL(url *url.URL) (*sql.DB, error) {
-	return sql.OpenDB(connector{dsn: url.String()}), nil
+	return sql.OpenDB(connector{dsn: strings.TrimLeft(url.String(), Scheme+"://")}), nil
 }
 
 type connector struct {
