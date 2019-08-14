@@ -182,11 +182,13 @@ const SNSScheme = "awssns"
 // pubsub.DefaultMux.
 const SQSScheme = "awssqs"
 
-// URLOpener opens AWS SNS/SQS URLs like "awssns://sns-topic-arn" for
+// URLOpener opens AWS SNS/SQS URLs like "awssns:///sns-topic-arn" for
 // SNS topics or "awssqs://sqs-queue-url" for SQS topics and subscriptions.
 //
 // For SNS topics, the URL's host+path is used as the topic Amazon Resource Name
-// (ARN).
+// (ARN). Since ARNs have ":" in them, and ":" precedes a port in URL
+// hostnames, leave the host blank and put the ARN in the path
+// (e.g., "awssns:///arn:aws:service:region:accountid:resourceType/resourcePath").
 //
 // For SQS topics and subscriptions, the URL's host+path is prefixed with
 // "https://" to create the queue URL.

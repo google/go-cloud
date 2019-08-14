@@ -414,11 +414,11 @@ func TestOpenTopicFromURL(t *testing.T) {
 		// SNS...
 
 		// OK.
-		{"awssns://arn:aws:service:region:accountid:resourceType/resourcePath", false},
+		{"awssns:///arn:aws:service:region:accountid:resourceType/resourcePath", false},
 		// OK, setting region.
-		{"awssns://arn:aws:service:region:accountid:resourceType/resourcePath?region=us-east-2", false},
+		{"awssns:///arn:aws:service:region:accountid:resourceType/resourcePath?region=us-east-2", false},
 		// Invalid parameter.
-		{"awssns://arn:aws:service:region:accountid:resourceType/resourcePath?param=value", true},
+		{"awssns:///arn:aws:service:region:accountid:resourceType/resourcePath?param=value", true},
 
 		// SQS...
 		// OK.

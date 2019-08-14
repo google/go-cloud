@@ -73,7 +73,9 @@ func Example_openSNSTopicFromURL() {
 	ctx := context.Background()
 
 	const topicARN = "arn:aws:sns:us-east-2:123456789012:mytopic"
-	topic, err := pubsub.OpenTopic(ctx, "awssns://"+topicARN+"?region=us-east-2")
+	// Note the 3 slashes; ARNs have multiple colons and therefore aren't valid
+	// as hostnames in the URL.
+	topic, err := pubsub.OpenTopic(ctx, "awssns:///"+topicARN+"?region=us-east-2")
 	if err != nil {
 		log.Fatal(err)
 	}
