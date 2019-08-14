@@ -236,7 +236,9 @@ alternatives, including using environment variables.</p>
 <span class="p">)</span>
 
 <span class="kd">const</span> <span class="nx">topicARN</span> <span class="p">=</span> <span class="s">&#34;arn:aws:sns:us-east-2:123456789012:mytopic&#34;</span>
-<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssns://&#34;</span><span class="o">+</span><span class="nx">topicARN</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
+<span class="c1">// Note the 3 slashes; ARNs have multiple colons and therefore aren&#39;t valid
+</span><span class="c1">// as hostnames in the URL.
+</span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssns:///&#34;</span><span class="o">+</span><span class="nx">topicARN</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
