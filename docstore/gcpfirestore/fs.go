@@ -17,12 +17,11 @@
 // Use OpenCollection to construct a *docstore.Collection.
 //
 // Docstore types not supported by the Go firestore client, cloud.google.com/go/firestore:
-// - unsigned integers: encoded is int64s
-// - arrays: encoded as Firestore array values
+//  - unsigned integers: encoded is int64s
+//  - arrays: encoded as Firestore array values
 //
 // Firestore types not supported by Docstore:
-// - Document reference (a pointer to another Firestore document)
-// TODO(jba): figure out how to support this
+//  - Document reference (a pointer to another Firestore document)
 //
 //
 // URLs
@@ -42,11 +41,11 @@
 // gcpfirestore exposes the following types for as functions.
 // The pb package is google.golang.org/genproto/googleapis/firestore/v1.
 // The firestore  package is cloud.google.com/go/firestore/apiv1.
-// - Collection.As: *firestore.Client
-// - ActionList.BeforeDo: *pb.BatchGetDocumentsRequest or *pb.CommitRequest.
-// - Query.BeforeQuery: *pb.RunQueryRequest
-// - DocumentIterator: firestore.Firestore_RunQueryClient
-// - Error: *google.golang.org/grpc/status.Status
+//  - Collection.As: *firestore.Client
+//  - ActionList.BeforeDo: *pb.BatchGetDocumentsRequest or *pb.CommitRequest.
+//  - Query.BeforeQuery: *pb.RunQueryRequest
+//  - DocumentIterator: firestore.Firestore_RunQueryClient
+//  - Error: *google.golang.org/grpc/status.Status
 //
 //
 // Queries

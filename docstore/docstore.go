@@ -259,9 +259,9 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 
 // Mods is a map from field paths to modifications.
 // At present, a modification is one of:
-// - nil, to delete the field
-// - an Increment value, to add a number to the field
-// - any other value, to set the field to that value
+//  - nil, to delete the field
+//  - an Increment value, to add a number to the field
+//  - any other value, to set the field to that value
 // See ActionList.Update.
 type Mods map[FieldPath]interface{}
 
