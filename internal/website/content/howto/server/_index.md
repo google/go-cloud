@@ -65,3 +65,8 @@ func (h *customHealthCheck) CheckHealth() error {
 ```
 
 {{< goexample src="gocloud.dev/server.ExampleServer_HealthChecks" >}}
+
+## Other Usage Samples
+
+* [Minimal server sample](https://github.com/google/go-cloud/tree/master/samples/server)
+* [Guestbook sample](https://gocloud.dev/tutorials/guestbook/)
