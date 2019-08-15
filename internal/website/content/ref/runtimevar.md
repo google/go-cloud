@@ -10,9 +10,10 @@ remote configuration variables.
 
 <!--more-->
 
-Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
+[How-to guide]({{< ref "/howto/runtimevar/_index.md" >}})<br>
+[Top-level package documentation](https://godoc.org/gocloud.dev/runtimevar)
 
-## Supported Providers
+## Supported Services
 
 * [GCP Runtime
   Configurator](https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig)
@@ -31,7 +32,5 @@ Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
 ## Usage Samples
 
 * [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-runtimevar)
-* [Guestbook
-  sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
-* [runtimevar package
-  examples](https://godoc.org/gocloud.dev/runtimevar#pkg-examples)
+* [Guestbook sample](https://gocloud.dev/tutorials/guestbook/)
+* [runtimevar package examples](https://godoc.org/gocloud.dev/runtimevar#pkg-examples)

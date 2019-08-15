@@ -16,10 +16,10 @@ delivery](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overvi
 
 <!--more-->
 
-[Top-level package documentation](https://godoc.org/gocloud.dev/pubsub)<br>
-[How-to guides]({{< ref "/howto/pubsub/_index.md" >}})
+[How-to guide]({{< ref "/howto/pubsub/_index.md" >}})<br>
+[Top-level package documentation](https://godoc.org/gocloud.dev/pubsub)
 
-## Supported Providers
+## Supported Services
 
 * [Google Cloud Pub/Sub](https://godoc.org/gocloud.dev/pubsub/gcppubsub)
 * [Amazon SNS+SQS](https://godoc.org/gocloud.dev/pubsub/awssnssqs)
@@ -33,4 +33,5 @@ delivery](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overvi
 ## Usage Samples
 
 * [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-pubsub)
+* [Order Processor sample](https://gocloud.dev/tutorials/order/)
 * [pubsub package examples](https://godoc.org/gocloud.dev/pubsub#pkg-examples)

@@ -17,9 +17,10 @@ activites.
 
 <!--more-->
 
-Top-level package documentation: <https://godoc.org/gocloud.dev/secrets>
+[How-to guide]({{< ref "/howto/secrets/_index.md" >}})<br>
+[Top-level package documentation](https://godoc.org/gocloud.dev/secrets)
 
-## Supported Providers
+## Supported Services
 
 * [Google Cloud KMS](https://godoc.org/gocloud.dev/secrets/gcpkms)
 * [AWS KMS](https://godoc.org/gocloud.dev/secrets/awskms)

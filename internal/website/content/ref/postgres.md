@@ -11,13 +11,14 @@ using this package will automatically collect diagnostic information via
 
 <!--more-->
 
-Top-level package documentation: https://godoc.org/gocloud.dev/postgres.
+[How-to guide]({{< ref "/howto/sql/_index.md" >}})<br>
+[Top-level package documentation](https://godoc.org/gocloud.dev/postgres)
 
 [`*sql.DB`]: https://godoc.org/database/sql#DB
 [OpenCensus]: https://opencensus.io/
 [PostgreSQL]: https://www.postgresql.org/
 
-## Supported Providers
+## Supported Services
 
 * [GCP Cloud SQL for PostgreSQL](https://godoc.org/gocloud.dev/postgres/gcppostgres)
 * [AWS RDS for PostgreSQL](https://godoc.org/gocloud.dev/postgres/awspostgres)

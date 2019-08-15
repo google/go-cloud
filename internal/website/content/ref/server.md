@@ -9,9 +9,10 @@ Package `server` provides a preconfigured HTTP server with diagnostic hooks.
 
 <!--more-->
 
-Top-level package documentation: https://godoc.org/gocloud.dev/server
+[How-to guide]({{< ref "/howto/server/_index.md" >}})<br>
+[Top-level package documentation](https://godoc.org/gocloud.dev/server)
 
-## Supported Providers
+## Supported Services
 
 * [Stackdriver](https://godoc.org/gocloud.dev/server/sdserver)
 * [AWS X-Ray](https://godoc.org/gocloud.dev/server/xrayserver)
@@ -19,5 +20,4 @@ Top-level package documentation: https://godoc.org/gocloud.dev/server
 ## Usage Samples
 
 * [Minimal server sample](https://github.com/google/go-cloud/tree/master/samples/server)
-* [Guestbook
-  sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
+* [Guestbook sample](https://gocloud.dev/tutorials/guestbook/)

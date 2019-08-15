@@ -13,13 +13,14 @@ will automatically collect diagnostic information via [OpenCensus][].
 
 <!--more-->
 
-Top-level package documentation: https://godoc.org/gocloud.dev/mysql
+[How-to guide]({{< ref "/howto/sql/_index.md" >}})<br>
+[Top-level package documentation](https://godoc.org/gocloud.dev/mysql)
 
 [`*sql.DB`]: https://godoc.org/database/sql#DB
 [MySQL]: https://www.mysql.com/
 [OpenCensus]: https://opencensus.io/
 
-## Supported Providers
+## Supported Services
 
 * [GCP Cloud SQL for MySQL](https://godoc.org/gocloud.dev/mysql/gcpmysql)
 * [AWS RDS for MySQL](https://godoc.org/gocloud.dev/mysql/awsmysql)
@@ -28,5 +29,4 @@ Top-level package documentation: https://godoc.org/gocloud.dev/mysql
 
 ## Usage Samples
 
-* [Guestbook
-  sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
+* [Guestbook sample](https://gocloud.dev/tutorials/guestbook/)
