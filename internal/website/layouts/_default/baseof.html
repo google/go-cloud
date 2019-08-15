@@ -47,7 +47,7 @@
             <ul class="Sidenav-pageList">
               {{- range .Pages.GroupBy "Weight" }}
               {{- range .Pages.ByTitle }}
-              <li class="Sidenav-page {{- if eq .Section "ref" }} Sidenav-refPage{{ end }}">
+              <li class="Sidenav-page">
                 <a href="{{.RelPermalink}}" class="Sidenav-pageLink">{{.LinkTitle}}</a>
               </li>
               {{- end }}

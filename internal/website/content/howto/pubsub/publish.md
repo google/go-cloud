@@ -81,6 +81,12 @@ Note that the [semantics of message delivery][] can vary by backing service.
 
 [semantics of message delivery]: https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 
+## Other Usage Samples
+
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-pubsub)
+* [Order Processor sample](https://gocloud.dev/tutorials/order/)
+* [pubsub package examples](https://godoc.org/gocloud.dev/pubsub#pkg-examples)
+
 ## Supported Pub/Sub Services {#services}
 
 ### Google Cloud Pub/Sub {#gcp}

@@ -68,3 +68,7 @@ Users of [Azure Database for MySQL][] should import the `gocloud.dev/mysql/azure
 {{< goexample "gocloud.dev/mysql/azuremysql.Example" >}}
 
 [Azure Database for MySQL]: https://azure.microsoft.com/en-us/services/mysql/
+
+## Other Usage Samples
+
+* [Guestbook sample](https://gocloud.dev/tutorials/guestbook/)

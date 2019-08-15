@@ -235,6 +235,12 @@ See
 [the Revisions section of the package documentation](https://godoc.org/gocloud.dev/docstore#hdr-Revisions)
 for more on revisions.
 
+## Other Usage Samples
+
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-docstore)
+* [Order Processor sample](https://gocloud.dev/tutorials/order/)
+* [docstore package examples](https://godoc.org/gocloud.dev/docstore#pkg-examples)
+
 ## Supported Docstore Services {#services}
 
 ### Google Cloud Firestore {#firestore}

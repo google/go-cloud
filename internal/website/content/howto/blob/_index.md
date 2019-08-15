@@ -140,6 +140,13 @@ You can delete blobs using the `Bucket.Delete` method.
 
 {{< goexample src="gocloud.dev/blob.ExampleBucket_Delete" imports="0" >}}
 
+## Other Usage Samples
+
+* [CLI Tutorial]({{< ref "/tutorials/cli-uploader.md" >}})
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-blob)
+* [Guestbook sample](https://gocloud.dev/tutorials/guestbook/)
+* [blob package examples](https://godoc.org/gocloud.dev/blob#pkg-examples)
+
 ## Supported Storage Services {#services}
 
 ### Google Cloud Storage {#gcs}
@@ -309,3 +316,4 @@ You can use a local filesystem directory with [`fileblob.OpenBucket`][]:
 
 [`fileblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/fileblob#OpenBucket
 [`memblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/memblob#OpenBucket
+

@@ -110,6 +110,12 @@ recommend starting with `Latest` as it's conceptually simpler to work with.
 
 [`Watch`]: https://godoc.org/gocloud.dev/runtimevar#Variable.Watch
 
+## Other Usage Samples
+
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-runtimevar)
+* [Guestbook sample](https://gocloud.dev/tutorials/guestbook/)
+* [runtimevar package examples](https://godoc.org/gocloud.dev/runtimevar#pkg-examples)
+
 ## Supported Services {#services}
 
 ### GCP Runtime Configurator {#gcprc}

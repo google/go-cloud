@@ -150,6 +150,11 @@ runtime configuration.
 [`*runtimevar.Decoder`]: https://godoc.org/gocloud.dev/runtimevar#Decoder
 [`runtimevar.DecryptDecode`]: https://godoc.org/gocloud.dev/runtimevar#DecryptDecode
 
+## Other Usage Samples
+
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-secrets)
+* [Secrets package examples](https://godoc.org/gocloud.dev/secrets#example-package)
+
 ## Supported Services {#services}
 
 ### Google Cloud Key Management Service {#gcp}
