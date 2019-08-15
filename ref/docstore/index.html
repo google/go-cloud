@@ -5,7 +5,7 @@
   <meta name="generator" content="Hugo 0.54.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Using provider-specific APIs &middot; Go CDK</title>
+  <title>docstore &middot; Go CDK</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Source+Code+Pro|Work+Sans:400,700">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
@@ -30,42 +30,35 @@ if (!doNotTrack) {
       <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
     </header>
     <main class="MainContent">
-      <div class="MainContent-bounds"><h1>Using provider-specific APIs</h1>
+      <div class="MainContent-bounds"><h1>docstore</h1>
 
-<p>It is not feasible or desirable for APIs like <code>blob.Bucket</code> to encompass the
-full functionality of every provider. Rather, we intend to provide a subset
-of the most commonly used functionality. There will be cases where a
-developer wants to access provider-specific functionality, such as unexposed
-APIs or data fields, errors, or options. This can be accomplished using <code>As</code>
-functions.</p>
+<p>The docstore package provides an abstraction layer over common document stores
+like Google Cloud Firestore, Amazon DynamoDB, and MongoDB.</p>
 
-<h2 id="as"> <code>As</code><a class="anchor" href="#as" aria-label="Link to Section">🔗</a></h2>
+<p><a href="https://gocloud.dev/howto/docstore/">How-to guide</a><br>
+<a href="https://godoc.org/gocloud.dev/docstore">Top-level package documentation</a></p>
 
-<p><code>As</code> functions in the APIs provide the user a way to escape the Go CDK
-abstraction to access provider-specific types. They might be used as an
-interim solution until a feature request to the Go CDK is implemented. Or,
-the Go CDK may choose not to support specific features, and the use of <code>As</code>
-will be permanent.</p>
+<h2 id="supported-services"> Supported Services<a class="anchor" href="#supported-services" aria-label="Link to Section">🔗</a></h2>
 
-<p>Using <code>As</code> implies that the resulting code is no longer portable; the
-provider-specific code will need to be ported in order to switch providers.
-Therefore, it should be avoided if possible.</p>
+<ul>
+<li><a href="https://godoc.org/gocloud.dev/docstore/gcpfirestore">GCP Firestore</a></li>
+<li><a href="https://godoc.org/gocloud.dev/docstore/awsdynamodb">AWS DynamoDB</a></li>
+<li><a href="https://godoc.org/gocloud.dev/docstore/mongodocstore">MongoDB</a>
 
-<p>Each API includes examples demonstrating how to use its various <code>As</code>
-functions, and each provider implementation documents what types it supports
-for each.</p>
+<ul>
+<li>AWS DocumentDB and Azure Cosmos DB have MongoDB-compatible APIs.</li>
+</ul></li>
+<li><a href="https://godoc.org/gocloud.dev/docstore/memdocstore">In-memory</a> - mainly
+useful for local testing</li>
+</ul>
 
-<p>Usage:</p>
+<h2 id="usage-samples"> Usage Samples<a class="anchor" href="#usage-samples" aria-label="Link to Section">🔗</a></h2>
 
-<ol>
-<li>Declare a variable of the provider-specific type you want to access.</li>
-<li>Pass a pointer to it to <code>As</code>.</li>
-<li>If the type is supported, <code>As</code> will return <code>true</code> and copy the
-provider-specific type into your variable. Otherwise, it will return <code>false</code>.</li>
-</ol>
-
-<p>Provider-specific types that are intended to be mutable will be exposed
-as a pointer to the underlying type.</p></div>
+<ul>
+<li><a href="https://github.com/google/go-cloud/tree/master/samples/gocdk-docstore">CLI Sample</a></li>
+<li><a href="https://gocloud.dev/tutorials/order/">Order Processor sample</a></li>
+<li><a href="https://godoc.org/gocloud.dev/docstore#pkg-examples">docstore package examples</a></li>
+</ul></div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">
@@ -174,7 +167,7 @@ as a pointer to the underlying type.</p></div>
         Copyright © 2018–2019 The Go Cloud Development Kit Authors.
         All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
       </p>
-      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/concepts/as.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/ref/docstore.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
     </footer>
   </div>
 </body>
