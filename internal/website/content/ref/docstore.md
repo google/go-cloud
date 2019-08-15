@@ -17,7 +17,6 @@ like Google Cloud Firestore, Amazon DynamoDB, and MongoDB.
 
 * [GCP Firestore](https://godoc.org/gocloud.dev/docstore/gcpfirestore)
 * [AWS DynamoDB](https://godoc.org/gocloud.dev/docstore/awsdynamodb)
-* [Azure blob](https://godoc.org/gocloud.dev/docstore/azureblob)
 * [MongoDB](https://godoc.org/gocloud.dev/docstore/mongodocstore)
   * AWS DocumentDB and Azure Cosmos DB have MongoDB-compatible APIs.
 * [In-memory](https://godoc.org/gocloud.dev/docstore/memdocstore) - mainly
