@@ -25,7 +25,7 @@
 // in a separate goroutine.
 //
 // memdocstore calls the BeforeDo function of an ActionList once before executing the
-// actions. Its as function never returns true.
+// actions. Its As function never returns true.
 //
 //
 // URLs
