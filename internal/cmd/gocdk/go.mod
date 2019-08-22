@@ -13,7 +13,7 @@ require (
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/sys v0.0.0-20190620070143-6f217b454f45
 	golang.org/x/tools v0.0.0-20190606174628-0139d5756a7d // indirect
-	golang.org/x/xerrors v0.0.0-20190513163551-3ee3066db522
+	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 	google.golang.org/api v0.6.0
 )
 
