@@ -702,9 +702,9 @@ whose name is the combination of two or more fields.</p>
 package implements an in-memory document store suitable for testing and
 development.</p>
 
-<p>URLs for the in-memory store have a <code>mem:</code> scheme and provide the name of the
-document field to use as a primary key. There is no collection name; each call
-to one of the <code>OpenCollection</code> functions creates a distinct collection.</p>
+<p>URLs for the in-memory store have a <code>mem:</code> scheme. The URL host is used as the
+the collection name, and the URL path is used as the name of the document field
+to use as a primary key.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
@@ -714,7 +714,7 @@ to one of the <code>OpenCollection</code> functions creates a distinct collectio
 <span class="p">)</span>
 
 <span class="c1">// docstore.OpenCollection creates a *docstore.Collection from a URL.
-</span><span class="c1"></span><span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://userID&#34;</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">docstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://collection/keyField&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -731,7 +731,7 @@ taking the name of the key field.</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/docstore/memdocstore&#34;</span>
 
-<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">memdocstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="s">&#34;userID&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="nx">coll</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">memdocstore</span><span class="p">.</span><span class="nf">OpenCollection</span><span class="p">(</span><span class="s">&#34;keyField&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
