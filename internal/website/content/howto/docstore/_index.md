@@ -408,9 +408,9 @@ The [`memdocstore`](https://godoc.org/gocloud.dev/docstore/mongodocstore)
 package implements an in-memory document store suitable for testing and
 development.
 
-URLs for the in-memory store have a `mem:` scheme and provide the name of the
-document field to use as a primary key. There is no collection name; each call
-to one of the `OpenCollection` functions creates a distinct collection.
+URLs for the in-memory store have a `mem:` scheme. The URL host is used as the
+the collection name, and the URL path is used as the name of the document field
+to use as a primary key.
 
 {{< goexample
 "gocloud.dev/docstore/memdocstore.Example_openCollectionFromURL" >}}
