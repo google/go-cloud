@@ -109,7 +109,7 @@
 	},
 	"gocloud.dev/docstore/memdocstore.Example_openCollectionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/memdocstore\"\n)",
-		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mem://collection/_keyField\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"mem://collection/keyField\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
 	"gocloud.dev/docstore/mongodocstore.ExampleOpenCollection": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore/mongodocstore\"\n)",
