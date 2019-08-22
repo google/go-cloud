@@ -25,11 +25,13 @@ import (
 func ExampleOpenCollection() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	coll, err := memdocstore.OpenCollection("userID", nil)
+	coll, err := memdocstore.OpenCollection("keyField", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer coll.Close()
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	// Output:
 }
 
 func ExampleOpenCollectionWithKeyFunc() {
@@ -51,6 +53,8 @@ func ExampleOpenCollectionWithKeyFunc() {
 		log.Fatal(err)
 	}
 	defer coll.Close()
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	// Output:
 }
 
 func Example_openCollectionFromURL() {
@@ -60,9 +64,11 @@ func Example_openCollectionFromURL() {
 	ctx := context.Background()
 
 	// docstore.OpenCollection creates a *docstore.Collection from a URL.
-	coll, err := docstore.OpenCollection(ctx, "mem://userID")
+	coll, err := docstore.OpenCollection(ctx, "mem://collection/keyField")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer coll.Close()
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	// Output:
 }
