@@ -48,7 +48,7 @@ gocdk: [0m[1mPlan:[0m 1 to add, 0 to change, 0 to destroy.[0m
 gocdk: Success!
 
 # Now cleanup is needed. Reject it.
-$ echof stdin notyes
+$ fecho stdin notyes
 $ gocdk biome cleanup dev < stdin --> FAIL
 gocdk: Checking to see if resource changes are needed...
 gocdk: Resources changes are needed; re-run with --verbose for more details.

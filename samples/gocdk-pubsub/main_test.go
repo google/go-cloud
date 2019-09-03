@@ -19,8 +19,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmdtest"
 	"github.com/streadway/amqp"
-	"gocloud.dev/internal/testing/cmdtest"
 	"gocloud.dev/internal/testing/setup"
 )
 

@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"gocloud.dev/internal/testing/cmdtest"
+	"github.com/google/go-cmdtest"
 )
 
 var update = flag.Bool("update", false, "replace test file contents with output")

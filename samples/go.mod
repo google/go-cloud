@@ -6,12 +6,13 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.6.0
 	github.com/aws/aws-sdk-go v1.19.45
 	github.com/go-sql-driver/mysql v1.4.1
-	github.com/google/go-cmp v0.3.0
+	github.com/google/go-cmdtest v0.0.0-20190903171304-6f1d2cce5266
+	github.com/google/go-cmp v0.3.1
 	github.com/google/subcommands v1.0.1
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.3.0
 	github.com/gorilla/mux v1.7.2
-	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
+	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	go.opencensus.io v0.22.0
 	gocloud.dev v0.16.0
 	gocloud.dev/docstore/mongodocstore v0.16.0
