@@ -15,7 +15,7 @@
 # Tests of the gocdk-pubsub program.
 
 
-$ echof msg this is the message
+$ fecho msg this is the message
 
 $ gocdk-pubsub pub rabbit://sample-topic < msg
 Enter messages, one per line, to be published to "rabbit://sample-topic".

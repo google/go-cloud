@@ -20,7 +20,7 @@ $ gocdk biome list
 dev
 
 # "biome add" prompts for a launcher.
-$ echof stdin
+$ fecho stdin
 $ gocdk biome add localbiomeprompt < stdin
 gocdk: Adding biome "localbiomeprompt"...
 
@@ -34,7 +34,7 @@ gocdk: Adding biome "localbiome"...
 gocdk: Success!
 
 # Cloudrun launcher; requires projectID and service name.
-$ echof stdin myprojectid\n
+$ fecho stdin myprojectid\n
 $ gocdk biome add cloudrunbiome --launcher cloudrun < stdin
 gocdk: Adding biome "cloudrunbiome"...
 gocdk: 
@@ -47,7 +47,7 @@ Please enter a service name
 Enter a value, or "cancel": gocdk: Success!
 
 # ECS launcher; requires region.
-$ echof stdin
+$ fecho stdin
 $ gocdk biome add ecsbiome --launcher ecs < stdin
 gocdk: Adding biome "ecsbiome"...
 gocdk: 

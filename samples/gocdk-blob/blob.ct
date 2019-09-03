@@ -23,7 +23,7 @@ $ mkdir bucket
 # List an empty bucket: valid, but no output.
 $ gocdk-blob ls ${ROOTDIR_URL}/bucket
 
-$ echof hello.txt hello world
+$ fecho hello.txt hello world
 $ gocdk-blob upload ${ROOTDIR_URL}/bucket hw < hello.txt
 
 $ gocdk-blob ls ${ROOTDIR_URL}/bucket

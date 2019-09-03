@@ -17,14 +17,14 @@
 $ gocdk-runtimevar cat constant://?val=foo&decoder=string
 (string) foo
 
-$ echof fvar contents
+$ fecho fvar contents
 
 $ gocdk-runtimevar cat file:///${ROOTDIR}/fvar?decoder=string
 (string) contents
 
 $ gocdk-runtimevar& watch file:///${ROOTDIR}/fvar?decoder=string
 $ sleep 1s
-$ echof fvar new contents
+$ fecho fvar new contents
 $ sleep 1s
 $ stop
 Watching file:///${ROOTDIR}/fvar?decoder=string for changes...

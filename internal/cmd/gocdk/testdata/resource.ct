@@ -44,7 +44,7 @@ $ gocdk resource add dev blob/foo --> FAIL
 gocdk: Adding "blob/foo" to "dev"...
 Error: resource add: "blob/foo" is not a supported type; use 'gocdk resource list' to see available types
 
-$ echof stdin
+$ fecho stdin
 $ gocdk resource add dev blob/azureblob < stdin
 gocdk: Adding "blob/azureblob" to "dev"...
 
@@ -66,7 +66,7 @@ gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
 gocdk:   added a new file "fileblob.tf"
 gocdk: Success!
 
-$ echof stdin myprojectid\n
+$ fecho stdin myprojectid\n
 $ gocdk resource add dev blob/gcsblob < stdin
 gocdk: Adding "blob/gcsblob" to "dev"...
 
@@ -80,7 +80,7 @@ gocdk:   added an output variable "BLOB_BUCKET_URL" to "outputs.tf"
 gocdk:   added a new file "gcsblob.tf"
 gocdk: Success!
 
-$ echof stdin
+$ fecho stdin
 $ gocdk resource add dev blob/s3blob < stdin
 gocdk: Adding "blob/s3blob" to "dev"...
 
