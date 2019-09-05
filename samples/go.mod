@@ -6,7 +6,7 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.6.0
 	github.com/aws/aws-sdk-go v1.19.45
 	github.com/go-sql-driver/mysql v1.4.1
-	github.com/google/go-cmdtest v0.0.0-20190903171304-6f1d2cce5266
+	github.com/google/go-cmdtest v0.1.0
 	github.com/google/go-cmp v0.3.1
 	github.com/google/subcommands v1.0.1
 	github.com/google/uuid v1.1.1
