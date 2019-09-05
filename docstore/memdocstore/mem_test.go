@@ -18,6 +18,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -163,40 +164,42 @@ func TestSortDocs(t *testing.T) {
 }
 
 func TestSaveAndLoad(t *testing.T) {
-	f, err := ioutil.TempFile("", "testSaveAndLoad")
+	// Save and then load into a file.
+	dir, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
-	docs := map[interface{}]storedDoc{
-		"k1": {"key": "k1", "a": 1},
-		"k2": {"key": "k2", "b": 2},
-	}
-	if err := saveDocs(f.Name(), docs); err != nil {
-		t.Fatal(err)
-	}
-	got, err := loadDocs(f.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !cmp.Equal(got, docs) {
-		t.Errorf("\ngot  %v\nwant %v", got, docs)
-	}
+	defer os.RemoveAll(dir)
 
-	nofname := "nosuchfile"
 	// Load from nonexistent file should return empty data.
-	if got, err = loadDocs(nofname); err != nil {
+	f := filepath.Join(dir, "saveAndLoad")
+	got, err := loadDocs(f)
+	if err != nil {
 		t.Fatalf("loading from nonexistent file, got %v, want nil", err)
 	}
 	if len(got) != 0 {
 		t.Fatalf("loading from nonexistent file, got %v, want empty map", got)
 	}
-	// Save to nonexistent file should create it.
-	if err := saveDocs(nofname, docs); err != nil {
-		t.Fatalf("saving to nonexistent file: got %v, want nil", err)
+
+	// Save some data into the file.
+	docs := map[interface{}]storedDoc{
+		"k1": {"key": "k1", "a": 1},
+		"k2": {"key": "k2", "b": 2},
 	}
-	defer os.Remove(nofname)
-	if _, err := os.Lstat(nofname); err != nil {
+	if err := saveDocs(f, docs); err != nil {
 		t.Fatal(err)
+	}
+	// File should exist now.
+	if _, err := os.Lstat(f); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reload the data.
+	got, err = loadDocs(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(got, docs) {
+		t.Errorf("\ngot  %v\nwant %v", got, docs)
 	}
 }
