@@ -14,6 +14,8 @@
 
 module gocloud.dev/runtimevar/etcdvar
 
+go 1.12
+
 require (
 	github.com/coreos/bbolt v1.3.2 // indirect
 	github.com/coreos/etcd v3.3.13+incompatible // indirect

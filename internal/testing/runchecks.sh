@@ -171,13 +171,13 @@ else
 fi;
 
 
-if [[ $(go version) == *go1\.12* ]]; then
+if [[ $(go version) == *go1\.13* ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
   ( ./internal/testing/listdeps.sh | diff -u ./internal/testing/alldeps - && echo "  OK" ) || {
     echo "FAIL: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
     # Module behavior may differ across versions.
-    echo "using go version 1.12."
+    echo "using go version 1.13."
   }
 fi
 
