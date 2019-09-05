@@ -40,6 +40,7 @@ package memdocstore // import "gocloud.dev/docstore/memdocstore"
 import (
 	"context"
 	"encoding/gob"
+	"fmt"
 	"os"
 	"reflect"
 	"sort"
@@ -502,7 +503,7 @@ func loadDocs(filename string) (mapOfDocs, error) {
 	defer f.Close()
 	var m mapOfDocs
 	if err := gob.NewDecoder(f).Decode(&m); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode from %q: %v", filename, err)
 	}
 	return m, nil
 }
@@ -518,7 +519,7 @@ func saveDocs(filename string, m mapOfDocs) error {
 	}
 	if err := gob.NewEncoder(f).Encode(m); err != nil {
 		_ = f.Close()
-		return err
+		return fmt.Errorf("failed to encode to %q: %v", filename, err)
 	}
 	return f.Close()
 }
