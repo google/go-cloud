@@ -171,19 +171,6 @@ else
 fi;
 
 
-echo
-echo "Ensuring that gocdk compiled assets are up to date..."
-tmpvfsdatago=$(mktemp)
-function cleanupstaticgo() {
-  rm -rf "$tmpvfsdatago"
-}
-trap cleanupstaticgo EXIT
-(cd internal/cmd/gocdk && go run -mod=readonly generate_static.go -- "$tmpvfsdatago") &> /dev/null
-( diff -u internal/cmd/gocdk/internal/static/vfsdata.go - < "$tmpvfsdatago" && echo "  OK" ) || {
-  echo "FAIL: gocdk compiled assets are out of date; please run go generate in internal/cmd/gocdk and commit the updated internal/cmd/gocdk/internal/static/vfsdata.go" && result=1
-}
-
-
 if [[ $(go version) == *go1\.12* ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
