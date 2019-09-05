@@ -145,12 +145,6 @@ popd &> /dev/null
 # This verifies that we can generate a fresh recording against the live service.
 while read -r TESTDIR; do
   # Skip some packages that have a testdata/ dir but aren't record/replay.
-  if [ "$TESTDIR" == "./internal/cmd/gocdk" ]; then
-    continue;
-  fi
-  if [ "$TESTDIR" == "./internal/testing/cmdtest" ]; then
-    continue;
-  fi
   if [ "$TESTDIR" == "./samples/order" ]; then
     continue;
   fi
