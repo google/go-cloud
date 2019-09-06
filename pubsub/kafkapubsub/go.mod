@@ -20,7 +20,7 @@ require (
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Shopify/sarama v1.22.1
 	github.com/google/go-cmp v0.3.0
-	gocloud.dev v0.16.0
+	gocloud.dev v0.17.0
 )
 
 replace gocloud.dev => ../../
