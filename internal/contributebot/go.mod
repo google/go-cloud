@@ -30,5 +30,3 @@ require (
 	google.golang.org/api v0.6.0
 	google.golang.org/appengine v1.6.1
 )
-
-replace gocloud.dev => ../../
