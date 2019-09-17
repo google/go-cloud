@@ -131,8 +131,9 @@ instruments the connection with <a href="https://opencensus.io/integrations/sql/
 	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/postgres/gcppostgres&#34;</span>
 <span class="p">)</span>
 
-<span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">postgres</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-	<span class="s">&#34;gcppostgres://myrole@example-project/us-central1/my-instance01/testdb&#34;</span><span class="p">)</span>
+<span class="c1">// Replace this with your actual settings.
+</span><span class="c1"></span><span class="nx">db</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">postgres</span><span class="p">.</span><span class="nf">Open</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+	<span class="s">&#34;gcppostgres://user:password@example-project/region/my-instance01/testdb&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
