@@ -28,8 +28,9 @@ func Example() {
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
+	// Replace this with your actual settings.
 	db, err := postgres.Open(ctx,
-		"gcppostgres://myrole@example-project/us-central1/my-instance01/testdb")
+		"gcppostgres://user:password@example-project/region/my-instance01/testdb")
 	if err != nil {
 		log.Fatal(err)
 	}

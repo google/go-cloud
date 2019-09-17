@@ -149,7 +149,7 @@
 	},
 	"gocloud.dev/postgres/gcppostgres.Example": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/gcppostgres\"\n)",
-		"code": "db, err := postgres.Open(ctx,\n\t\"gcppostgres://myrole@example-project/us-central1/my-instance01/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
+		"code": "// Replace this with your actual settings.\ndb, err := postgres.Open(ctx,\n\t\"gcppostgres://user:password@example-project/region/my-instance01/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"
 	},
 	"gocloud.dev/pubsub.ExampleSubscription_Receive": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/pubsub\"\n)",
