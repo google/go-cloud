@@ -223,7 +223,7 @@ const sniffLen = 512
 // Writes may happen asynchronously, so the returned error can be nil
 // even if the actual write eventually fails. The write is only guaranteed to
 // have succeeded if Close returns no error.
-func (w *Writer) Write(p []byte) (n int, err error) {
+func (w *Writer) Write(p []byte) (int, error) {
 	if len(w.contentMD5) > 0 {
 		if _, err := w.md5hash.Write(p); err != nil {
 			return 0, err
@@ -243,11 +243,18 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 	// Store p in w.buf and detect the content-type when the size of content in
 	// w.buf is at least 512 bytes.
-	w.buf.Write(p)
-	if w.buf.Len() >= sniffLen {
-		return w.open(w.buf.Bytes())
+	n, err := w.buf.Write(p)
+	if err != nil {
+		return 0, err
 	}
-	return len(p), nil
+	if w.buf.Len() >= sniffLen {
+		// Note that w.open will return the full length of the buffer; we don't want
+		// to return that as the length of this write since some of them were written in
+		// previous writes. Instead, we return the n from this write, above.
+		_, err := w.open(w.buf.Bytes())
+		return n, err
+	}
+	return n, nil
 }
 
 // Close closes the blob writer. The write operation is not guaranteed to have succeeded until
