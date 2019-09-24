@@ -637,13 +637,15 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*driver.Message, error) {
 
 	g, ctx := errgroup.WithContext(s.backgroundCtx)
 	for _, maxMessagesInBatch := range batches {
+		// Make a copy of the loop variable since it will be used by a goroutine.
+		curMaxMessagesInBatch := maxMessagesInBatch
 		g.Go(func() error {
 			var msgs []*driver.Message
 			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 				var err error
 				ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
 				defer func() { s.tracer.End(ctx2, err) }()
-				msgs, err = s.driver.ReceiveBatch(ctx2, maxMessagesInBatch)
+				msgs, err = s.driver.ReceiveBatch(ctx2, curMaxMessagesInBatch)
 				return err
 			})
 			if err != nil {

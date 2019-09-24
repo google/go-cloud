@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/pubsub"
@@ -302,6 +303,9 @@ func isRetryable(err error) bool {
 
 const nRetryCalls = 2
 
+// failTopic helps test retries for SendBatch.
+//
+// SendBatch will fail nRetryCall times before succeeding.
 type failTopic struct {
 	driver.Topic
 	calls int
@@ -321,7 +325,7 @@ func (*failTopic) Close() error                       { return nil }
 
 func TestRetryReceive(t *testing.T) {
 	ctx := context.Background()
-	fs := &failSub{}
+	fs := &failSub{start: true}
 	sub := pubsub.NewSubscription(fs, nil, nil)
 	defer sub.Shutdown(ctx)
 	m, err := sub.Receive(ctx)
@@ -334,15 +338,59 @@ func TestRetryReceive(t *testing.T) {
 	}
 }
 
+// TestRetryReceiveBatches verifies that batching and retries work without races
+// (see https://github.com/google/go-cloud/issues/2676).
+func TestRetryReceiveInBatchesDoesntRace(t *testing.T) {
+	ctx := context.Background()
+	fs := &failSub{}
+	// Allow multiple handlers and cap max batch size to ensure we get concurrency.
+	sub := pubsub.NewSubscription(fs, &batcher.Options{MaxHandlers: 10, MaxBatchSize: 2}, nil)
+	defer sub.Shutdown(ctx)
+
+	// Do some receives to allow the number of batches to increase past 1.
+	for n := 0; n < 100; n++ {
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			t.Fatalf("Receive: got %v, want nil", err)
+		}
+		m.Ack()
+	}
+	// Tell the failSub to start failing.
+	fs.mu.Lock()
+	fs.start = true
+	fs.mu.Unlock()
+
+	// This call to Receive should result in nRetryCalls+1 calls to ReceiveBatch for
+	// each batch. In the issue noted above, this would cause a race.
+	for n := 0; n < 100; n++ {
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			t.Fatalf("Receive: got %v, want nil", err)
+		}
+		m.Ack()
+	}
+	// Don't try to verify the exact number of calls, as it is unpredictable
+	// based on the timing of the batching.
+}
+
+// failSub helps test retries for ReceiveBatch.
+//
+// Once start=true, ReceiveBatch will fail nRetryCalls times before succeeding.
 type failSub struct {
 	driver.Subscription
+	start bool
 	calls int
+	mu    sync.Mutex
 }
 
 func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	t.calls++
-	if t.calls <= nRetryCalls {
-		return nil, errRetry
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.start {
+		t.calls++
+		if t.calls <= nRetryCalls {
+			return nil, errRetry
+		}
 	}
 	return []*driver.Message{{Body: []byte("")}}, nil
 }
