@@ -106,8 +106,8 @@ type Variable struct {
 	backgroundCancel context.CancelFunc
 	backgroundDone   chan struct{}
 
-	// haveGood is closed when we get the first good value for the variable.
-	haveGood chan struct{}
+	// haveGoodCh is closed when we get the first good value for the variable.
+	haveGoodCh chan struct{}
 	// A reference to changed at the last time Watch was called.
 	// Not protected by mu because it's only referenced in Watch, which is not
 	// supposed to be called from multiple goroutines.
@@ -132,7 +132,7 @@ func newVar(w driver.Watcher) *Variable {
 		provider:         oc.ProviderName(w),
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
-		haveGood:         make(chan struct{}),
+		haveGoodCh:       make(chan struct{}),
 		changed:          changed,
 		lastWatch:        changed,
 		lastErr:          gcerr.Newf(gcerr.FailedPrecondition, nil, "no value yet"),
@@ -223,11 +223,11 @@ func (c *Variable) background(ctx context.Context) {
 			}
 			c.lastErr = nil
 			c.lastGood = c.last
-			// Close c.haveGood if it's not already closed.
+			// Close c.haveGoodCh if it's not already closed.
 			select {
-			case <-c.haveGood:
+			case <-c.haveGoodCh:
 			default:
-				close(c.haveGood)
+				close(c.haveGoodCh)
 			}
 		} else {
 			// We got an error value.
@@ -240,6 +240,15 @@ func (c *Variable) background(ctx context.Context) {
 	}
 }
 
+func (c *Variable) haveGood() bool {
+	select {
+	case <-c.haveGoodCh:
+		return true
+	default:
+		return false
+	}
+}
+
 // Latest is intended to be called per request, with the request context.
 // It returns the latest good Snapshot of the variable value, blocking if no
 // good value has ever been received. If ctx is Done, it returns the latest
@@ -248,12 +257,14 @@ func (c *Variable) background(ctx context.Context) {
 //
 // Latest returns ErrClosed if the Variable has been closed.
 func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
-	var haveGood bool
-	select {
-	case <-c.haveGood:
-		haveGood = true
-	case <-ctx.Done():
-		// We don't return ctx.Err().
+	haveGood := c.haveGood()
+	if !haveGood {
+		select {
+		case <-c.haveGoodCh:
+			haveGood = true
+		case <-ctx.Done():
+			// We don't return ctx.Err().
+		}
 	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -266,12 +277,7 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 // CheckHealth returns an error unless Latest will return a good value
 // without blocking.
 func (c *Variable) CheckHealth() error {
-	haveGood := false
-	select {
-	case <-c.haveGood:
-		haveGood = true
-	default:
-	}
+	haveGood := c.haveGood()
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if haveGood && c.lastErr != ErrClosed {
@@ -293,11 +299,11 @@ func (c *Variable) Close() error {
 
 	// Close any remaining channels to wake up any callers that are waiting on them.
 	close(c.changed)
-	// If it's the first good value, close haveGood so that Latest doesn't block.
+	// If it's the first good value, close haveGoodCh so that Latest doesn't block.
 	select {
-	case <-c.haveGood:
+	case <-c.haveGoodCh:
 	default:
-		close(c.haveGood)
+		close(c.haveGoodCh)
 	}
 	c.mu.Unlock()
 
