@@ -22,10 +22,10 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.12.1
 	contrib.go.opencensus.io/integrations/ocsql v0.1.4
 	github.com/Azure/azure-amqp-common-go/v2 v2.1.0
-	github.com/Azure/azure-pipeline-go v0.1.9
+	github.com/Azure/azure-pipeline-go v0.2.1
 	github.com/Azure/azure-sdk-for-go v30.1.0+incompatible
 	github.com/Azure/azure-service-bus-go v0.9.1
-	github.com/Azure/azure-storage-blob-go v0.6.0
+	github.com/Azure/azure-storage-blob-go v0.8.0
 	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190605020000-c4ba1fdf4d36
 	github.com/aws/aws-sdk-go v1.19.45
