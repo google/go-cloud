@@ -89,7 +89,7 @@ import (
 type Options struct {
 	// Credential represents the authorizer for SignedURL.
 	// Required to use SignedURL.
-	Credential *azblob.SharedKeyCredential
+	Credential azblob.StorageAccountCredential
 
 	// SASToken can be provided along with anonymous credentials to use
 	// delegated privileges.
@@ -164,14 +164,14 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 	// or anonymous credentials. If the former, we will also fill in
 	// Options.Credential so that SignedURL will work.
 	var credential azblob.Credential
-	var sharedKeyCred *azblob.SharedKeyCredential
+	var storageAccountCredential azblob.StorageAccountCredential
 	if accountKey != "" {
-		var err error
-		sharedKeyCred, err = NewCredential(accountName, accountKey)
+		sharedKeyCred, err := NewCredential(accountName, accountKey)
 		if err != nil {
 			return nil, fmt.Errorf("invalid credentials %s/%s: %v", accountName, accountKey, err)
 		}
 		credential = sharedKeyCred
+		storageAccountCredential = sharedKeyCred
 	} else {
 		credential = azblob.NewAnonymousCredential()
 	}
@@ -179,7 +179,7 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
 		Options: Options{
-			Credential: sharedKeyCred,
+			Credential: storageAccountCredential,
 			SASToken:   sasToken,
 		},
 	}, nil
