@@ -70,6 +70,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -222,7 +223,10 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	switch u.Scheme {
 	case SNSScheme:
-		topicARN := path.Join(u.Host, u.Path)
+		// Trim leading "/" if host is empty, so that
+		// awssns:///arn:aws:service:region:accountid:resourceType/resourcePath
+		// gives "arn:..." instead of "/arn:...".
+		topicARN := strings.TrimPrefix(path.Join(u.Host, u.Path), "/")
 		return OpenSNSTopic(ctx, configProvider, topicARN, &o.TopicOptions), nil
 	case SQSScheme:
 		qURL := "https://" + path.Join(u.Host, u.Path)
