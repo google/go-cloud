@@ -534,14 +534,14 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 	var errs []string
 	for _, lockTokens := range partitions {
 		sem <- struct{}{}
-		go func() {
+		go func(lockTokens []amqp.UUID) {
 			defer func() { <-sem }() // Release the semaphore.
 			if err := s.updateMessageDispositionsInPartition(ctx, lockTokens, disposition); err != nil {
 				mu.Lock()
 				defer mu.Unlock()
 				errs = append(errs, err.Error())
 			}
-		}()
+		}(lockTokens)
 	}
 	for n := 0; n < maxConcurrency; n++ {
 		sem <- struct{}{}
