@@ -25,7 +25,6 @@ import (
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -147,9 +146,9 @@ func TestEquivalentError(t *testing.T) {
 	}{
 		{Err1: errors.New("not grpc"), Err2: errors.New("not grpc"), Want: true},
 		{Err1: errors.New("not grpc"), Err2: errors.New("not grpc but different")},
-		{Err1: errors.New("not grpc"), Err2: grpc.Errorf(codes.Internal, "fail")},
-		{Err1: grpc.Errorf(codes.Internal, "fail"), Err2: grpc.Errorf(codes.InvalidArgument, "fail")},
-		{Err1: grpc.Errorf(codes.Internal, "fail"), Err2: grpc.Errorf(codes.Internal, "fail"), Want: true},
+		{Err1: errors.New("not grpc"), Err2: status.Errorf(codes.Internal, "fail")},
+		{Err1: status.Errorf(codes.Internal, "fail"), Err2: status.Errorf(codes.InvalidArgument, "fail")},
+		{Err1: status.Errorf(codes.Internal, "fail"), Err2: status.Errorf(codes.Internal, "fail"), Want: true},
 	}
 
 	for _, test := range tests {

@@ -278,7 +278,7 @@ func equivalentError(err1, err2 error) bool {
 	if err1 == err2 || err1.Error() == err2.Error() {
 		return true
 	}
-	code1, code2 := grpc.Code(err1), grpc.Code(err2)
+	code1, code2 := status.Code(err1), status.Code(err2)
 	return code1 != codes.OK && code1 != codes.Unknown && code1 == code2
 }
 
