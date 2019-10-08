@@ -433,13 +433,12 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if rerr != nil {
 		return nil, rerr
 	}
-	modTime, _ := r.LastModified()
 	return &reader{
 		body: r,
 		attrs: driver.ReaderAttributes{
-			ContentType: r.ContentType(),
-			ModTime:     modTime,
-			Size:        r.Size(),
+			ContentType: r.Attrs.ContentType,
+			ModTime:     r.Attrs.LastModified,
+			Size:        r.Attrs.Size,
 		},
 		raw: r,
 	}, nil
