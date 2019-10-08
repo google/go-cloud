@@ -27,6 +27,8 @@ import (
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/requestlog"
 
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/stats/view"
 	"go.opencensus.io/trace"
 )
 
@@ -47,6 +49,7 @@ type Server struct {
 	healthHandler health.Handler
 	te            trace.Exporter
 	sampler       trace.Sampler
+	ve            view.Exporter
 	once          sync.Once
 	driver        driver.Server
 }
@@ -63,6 +66,9 @@ type Options struct {
 	// TraceExporter exports sampled trace spans.
 	TraceExporter trace.Exporter
 
+	// ViewExporter exports views.
+	ViewExporter view.Exporter
+
 	// DefaultSamplingPolicy is a function that takes a
 	// trace.SamplingParameters struct and returns a true or false decision about
 	// whether it should be sampled and exported.
@@ -78,6 +84,7 @@ func New(h http.Handler, opts *Options) *Server {
 	if opts != nil {
 		srv.reqlog = opts.RequestLogger
 		srv.te = opts.TraceExporter
+		srv.ve = opts.ViewExporter
 		for _, c := range opts.HealthChecks {
 			srv.healthHandler.Add(c)
 		}
@@ -87,10 +94,18 @@ func New(h http.Handler, opts *Options) *Server {
 	return srv
 }
 
-func (srv *Server) init() {
+func (srv *Server) init() error {
+	var err error
 	srv.once.Do(func() {
 		if srv.te != nil {
 			trace.RegisterExporter(srv.te)
+		}
+		if srv.ve != nil {
+			view.RegisterExporter(srv.ve)
+			view.SetReportingPeriod(60 * time.Second)
+			if err = view.Register(ochttp.DefaultServerViews...); err != nil {
+				return
+			}
 		}
 		if srv.sampler != nil {
 			trace.ApplyConfig(trace.Config{DefaultSampler: srv.sampler})
@@ -102,6 +117,7 @@ func (srv *Server) init() {
 			srv.handler = http.DefaultServeMux
 		}
 	})
+	return err
 }
 
 // ListenAndServe is a wrapper to use wherever http.ListenAndServe is used.
@@ -109,7 +125,9 @@ func (srv *Server) init() {
 // request logging. If the handler is nil, then http.DefaultServeMux will be used.
 // A configured Requestlogger will log all requests except HealthChecks.
 func (srv *Server) ListenAndServe(addr string) error {
-	srv.init()
+	if err := srv.init(); err != nil {
+		return err
+	}
 
 	// Setup health checks, /healthz route is taken by health checks by default.
 	// Note: App Engine Flex uses /_ah/health by default, which can be changed
@@ -173,7 +191,9 @@ func NewDefaultDriver() *DefaultDriver {
 // then calls ListenAndServe on it.
 func (dd *DefaultDriver) ListenAndServe(addr string, h http.Handler) error {
 	dd.Server.Addr = addr
-	dd.Server.Handler = h
+	dd.Server.Handler = &ochttp.Handler{
+		Handler: h,
+	}
 	return dd.Server.ListenAndServe()
 }
 
