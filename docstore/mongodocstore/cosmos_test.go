@@ -47,7 +47,11 @@ func TestConformanceCosmos(t *testing.T) {
 	if err := client.Ping(ctx, nil); err != nil {
 		t.Fatalf("connecting to %s: %v", cosmosConnString, err)
 	}
-	defer client.Disconnect(context.Background())
+	defer func() {
+		// Cleanup any resource to avoid wastes.
+		client.Database(dbName).Drop(ctx)
+		client.Disconnect(ctx)
+	}()
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{client.Database(dbName)}, nil
