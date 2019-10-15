@@ -693,6 +693,7 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	q.Set("obj", key)
 	q.Set("expiry", strconv.FormatInt(time.Now().Add(opts.Expiry).Unix(), 10))
 	q.Set("method", opts.Method)
+	q.Set("contentType", opts.ContentType)
 	q.Set("signature", h.getMAC(q))
 	sURL.RawQuery = q.Encode()
 

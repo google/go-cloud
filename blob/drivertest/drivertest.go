@@ -2066,7 +2066,14 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}
 	getURLNoParamsURL.RawQuery = ""
 	getURLNoParams := getURLNoParamsURL.String()
-	putURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodPut})
+	const (
+		goodContentType = "text/plain"
+		badContentType  = "application/octet-stream"
+	)
+	putURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+		Method:      http.MethodPut,
+		ContentType: goodContentType,
+	})
 	if err != nil {
 		t.Fatal(err)
 	} else if putURL == "" {
@@ -2087,24 +2094,30 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	// PUT the blob. Try with all URLs, only putURL should work.
 	for _, test := range []struct {
 		urlMethod   string
+		contentType string
 		url         string
 		wantSuccess bool
 	}{
-		{http.MethodGet, getURL, false},
-		{http.MethodDelete, deleteURL, false},
-		{http.MethodPut, putURL, true},
+		{http.MethodGet, "", getURL, false},
+		{http.MethodDelete, "", deleteURL, false},
+		{http.MethodPut, goodContentType, putURL, true},
+		{http.MethodPut, badContentType, putURL, false},
+		{http.MethodPut, "", putURL, false},
 	} {
 		req, err := http.NewRequest(http.MethodPut, test.url, strings.NewReader(contents))
 		if err != nil {
-			t.Fatalf("failed to create PUT HTTP request using %s URL: %v", test.urlMethod, err)
+			t.Fatalf("failed to create PUT HTTP request using %s URL (content-type=%q): %v", test.urlMethod, test.contentType, err)
+		}
+		if test.contentType != "" {
+			req.Header.Set("Content-Type", test.contentType)
 		}
 		if resp, err := client.Do(req); err != nil {
-			t.Fatalf("PUT failed with %s URL: %v", test.urlMethod, err)
+			t.Fatalf("PUT failed with %s URL (content-type=%q): %v", test.urlMethod, test.contentType, err)
 		} else {
 			defer resp.Body.Close()
 			success := resp.StatusCode >= 200 && resp.StatusCode < 300
 			if success != test.wantSuccess {
-				t.Errorf("PUT with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				t.Errorf("PUT with %s URL (content-type=%q) got status code %d, want 2xx? %v", test.urlMethod, test.contentType, resp.StatusCode, test.wantSuccess)
 				gotBody, _ := ioutil.ReadAll(resp.Body)
 				t.Errorf(string(gotBody))
 			}

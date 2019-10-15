@@ -661,6 +661,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		ContainerName: b.name,
 		BlobName:      srcBlobParts.BlobName,
 		Permissions:   perms.String(),
+		ContentType:   opts.ContentType,
 	}.NewSASQueryParameters(b.opts.Credential)
 	if err != nil {
 		return "", err

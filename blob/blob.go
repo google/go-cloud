@@ -852,35 +852,36 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 	if !utf8.ValidString(key) {
 		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SignedURL key must be a valid UTF-8 string: %q", key)
 	}
+	dopts := new(driver.SignedURLOptions)
 	if opts == nil {
-		opts = &SignedURLOptions{}
+		opts = new(SignedURLOptions)
 	}
-	if opts.Expiry < 0 {
+	switch {
+	case opts.Expiry < 0:
 		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SignedURLOptions.Expiry must be >= 0 (%v)", opts.Expiry)
-	}
-	if opts.Expiry == 0 {
-		opts.Expiry = DefaultSignedURLExpiry
-	}
-	if opts.Method == "" {
-		opts.Method = http.MethodGet
+	case opts.Expiry == 0:
+		dopts.Expiry = DefaultSignedURLExpiry
+	default:
+		dopts.Expiry = opts.Expiry
 	}
 	switch opts.Method {
-	case http.MethodGet:
-	case http.MethodPut:
-	case http.MethodDelete:
+	case "":
+		dopts.Method = http.MethodGet
+	case http.MethodGet, http.MethodPut, http.MethodDelete:
+		dopts.Method = opts.Method
 	default:
-		return "", fmt.Errorf("unsupported SignedURLOptions.Method %q", opts.Method)
+		return "", fmt.Errorf("blob: unsupported SignedURLOptions.Method %q", opts.Method)
 	}
-	dopts := driver.SignedURLOptions{
-		Expiry: opts.Expiry,
-		Method: opts.Method,
+	dopts.ContentType = opts.ContentType
+	if opts.ContentType != "" && opts.Method != http.MethodPut {
+		return "", fmt.Errorf("blob: content type must be empty for signing a %s URL", opts.Method)
 	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
 		return "", errClosed
 	}
-	url, err := b.b.SignedURL(ctx, key, &dopts)
+	url, err := b.b.SignedURL(ctx, key, dopts)
 	return url, wrapError(b.b, err, key)
 }
 
@@ -904,9 +905,15 @@ type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for.
 	// Defaults to DefaultSignedURLExpiry.
 	Expiry time.Duration
+
 	// Method is the HTTP method that can be used on the URL; one of "GET", "PUT",
 	// or "DELETE". Defaults to "GET".
 	Method string
+
+	// ContentType specifies the Content-Type HTTP header the user agent is
+	// permitted to use in the PUT request. It must match exactly. Empty means
+	// the Content-Type header is not permitted.
+	ContentType string
 }
 
 // ReaderOptions sets options for NewReader and NewRangeReader.

@@ -579,6 +579,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.Signed
 	opts := &storage.SignedURLOptions{
 		Expires:        time.Now().Add(dopts.Expiry),
 		Method:         dopts.Method,
+		ContentType:    dopts.ContentType,
 		GoogleAccessID: b.opts.GoogleAccessID,
 		PrivateKey:     b.opts.PrivateKey,
 		SignBytes:      b.opts.SignBytes,
