@@ -2067,16 +2067,25 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	getURLNoParamsURL.RawQuery = ""
 	getURLNoParams := getURLNoParamsURL.String()
 	const (
-		goodContentType = "text/plain"
-		badContentType  = "application/octet-stream"
+		allowedContentType   = "text/plain"
+		differentContentType = "application/octet-stream"
 	)
-	putURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+	putURLWithContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
 		Method:      http.MethodPut,
-		ContentType: goodContentType,
+		ContentType: allowedContentType,
 	})
 	if err != nil {
 		t.Fatal(err)
-	} else if putURL == "" {
+	} else if putURLWithContentType == "" {
+		t.Fatal("got empty PUT url")
+	}
+	putURLWithoutContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+		Method:      http.MethodPut,
+		ContentType: "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	} else if putURLWithoutContentType == "" {
 		t.Fatal("got empty PUT url")
 	}
 	deleteURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodDelete})
@@ -2091,7 +2100,8 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal("can't verify SignedURL, Harness.HTTPClient() returned nil")
 	}
 
-	// PUT the blob. Try with all URLs, only putURL should work.
+	// PUT the blob. Try with all URLs, only putURL should work when given the
+	// content type used in the signature.
 	for _, test := range []struct {
 		urlMethod   string
 		contentType string
@@ -2099,10 +2109,15 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		wantSuccess bool
 	}{
 		{http.MethodGet, "", getURL, false},
+
 		{http.MethodDelete, "", deleteURL, false},
-		{http.MethodPut, goodContentType, putURL, true},
-		{http.MethodPut, badContentType, putURL, false},
-		{http.MethodPut, "", putURL, false},
+
+		{http.MethodPut, allowedContentType, putURLWithContentType, true},
+		{http.MethodPut, differentContentType, putURLWithContentType, false},
+		{http.MethodPut, "", putURLWithContentType, false},
+
+		{http.MethodPut, "", putURLWithoutContentType, true},
+		{http.MethodPut, differentContentType, putURLWithoutContentType, false},
 	} {
 		req, err := http.NewRequest(http.MethodPut, test.url, strings.NewReader(contents))
 		if err != nil {
@@ -2131,7 +2146,8 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		wantSuccess bool
 	}{
 		{http.MethodDelete, deleteURL, false},
-		{http.MethodPut, putURL, false},
+		{http.MethodPut, putURLWithContentType, false},
+		{http.MethodPut, putURLWithoutContentType, false},
 		{http.MethodGet, getURLNoParams, false},
 		{http.MethodGet, getURL, true},
 	} {
@@ -2162,7 +2178,8 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		wantSuccess bool
 	}{
 		{http.MethodGet, getURL, false},
-		{http.MethodPut, putURL, false},
+		{http.MethodPut, putURLWithContentType, false},
+		{http.MethodPut, putURLWithoutContentType, false},
 		{http.MethodDelete, deleteURL, true},
 	} {
 		req, err := http.NewRequest(http.MethodDelete, test.url, nil)

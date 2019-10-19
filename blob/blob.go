@@ -872,10 +872,10 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 	default:
 		return "", fmt.Errorf("blob: unsupported SignedURLOptions.Method %q", opts.Method)
 	}
-	dopts.ContentType = opts.ContentType
 	if opts.ContentType != "" && opts.Method != http.MethodPut {
-		return "", fmt.Errorf("blob: content type must be empty for signing a %s URL", opts.Method)
+		return "", fmt.Errorf("blob: SignedURLOptions.ContentType must be empty for signing a %s URL", opts.Method)
 	}
+	dopts.ContentType = opts.ContentType
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
@@ -913,6 +913,8 @@ type SignedURLOptions struct {
 	// ContentType specifies the Content-Type HTTP header the user agent is
 	// permitted to use in the PUT request. It must match exactly. Empty means
 	// the Content-Type header is not permitted.
+	//
+	// Must be empty for non-PUT requests.
 	ContentType string
 }
 

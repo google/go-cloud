@@ -314,6 +314,8 @@ type SignedURLOptions struct {
 	// ContentType specifies the Content-Type HTTP header the user agent is
 	// permitted to use in the PUT request. It must match exactly. Empty means
 	// the Content-Type header is not permitted.
+	//
+	// This field will not be set for any non-PUT requests.
 	ContentType string
 }
 
