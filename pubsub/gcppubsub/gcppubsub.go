@@ -17,7 +17,7 @@
 // to construct a *pubsub.Subscription.
 //
 // URLs
-// 
+//
 // For pubsub.OpenTopic and pubsub.OpenSubscription, gcppubsub registers
 // for the scheme "gcppubsub".
 // The default URL opener will creating a connection using use default
@@ -27,10 +27,10 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// GCP Pub/Sub emulator is supported as per https://cloud.google.com/pubsub/docs/emulator 
-// So, when environment variable 'PUBSUB_EMULATOR_HOST' is set 
+// GCP Pub/Sub emulator is supported as per https://cloud.google.com/pubsub/docs/emulator
+// So, when environment variable 'PUBSUB_EMULATOR_HOST' is set
 // driver connects to the specified emulator host by default.
-// 
+//
 // Message Delivery Semantics
 //
 // GCP Pub/Sub supports at-least-once semantics; applications must
