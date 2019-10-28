@@ -347,7 +347,7 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 type MultiError []error
 
 func (m MultiError) Error() string {
-	var s []string
+	s := make([]string, 0, len(m))
 	for _, e := range m {
 		s = append(s, e.Error())
 	}

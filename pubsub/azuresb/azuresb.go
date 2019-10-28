@@ -531,7 +531,7 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 	const maxConcurrency = 5
 	sem := make(chan struct{}, maxConcurrency)
 	var mu sync.Mutex
-	var errs []string
+	errs := make([]string, 0, len(partitions))
 	for _, lockTokens := range partitions {
 		sem <- struct{}{}
 		go func(lockTokens []amqp.UUID) {
