@@ -247,7 +247,7 @@ for more on revisions.
 
 The [`gcpfirestore`](https://godoc.org/gocloud.dev/docstore/gcpfirestore)
 package supports
-[Google Cloud Firestore](https://https://cloud.google.com/firestore). Firestore
+[Google Cloud Firestore](https://cloud.google.com/firestore). Firestore
 documents are uniquely named by paths that are not part of the document content.
 In Docstore, these unique names are represented as part of the document. You
 must supply a way to extract a document's name from its contents. This can be
