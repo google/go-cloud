@@ -256,7 +256,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 		Want        string
 	}{
 		// Bucket doesn't exist -> error at construction time.
-		{"file:///bucket-not-found", "myfile.txt", true, false, ""},
+		{"file:///bucket-not-found", "", true, false, ""},
 		// File doesn't exist -> error at read time.
 		{"file://" + dirpath, "filenotfound.txt", false, true, ""},
 		// OK.
