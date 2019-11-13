@@ -1,4 +1,5 @@
 cloud.google.com/go
+cloud.google.com/go/pubsub
 contrib.go.opencensus.io/exporter/aws
 contrib.go.opencensus.io/exporter/ocagent
 contrib.go.opencensus.io/exporter/stackdriver
@@ -9,7 +10,6 @@ github.com/Azure/azure-sdk-for-go
 github.com/Azure/azure-service-bus-go
 github.com/Azure/azure-storage-blob-go
 github.com/Azure/go-autorest
-github.com/DataDog/zstd
 github.com/GoogleCloudPlatform/cloudsql-proxy
 github.com/Shopify/sarama
 github.com/aws/aws-sdk-go
@@ -26,6 +26,7 @@ github.com/fsnotify/fsnotify
 github.com/go-sql-driver/mysql
 github.com/go-stack/stack
 github.com/gogo/protobuf
+github.com/golang/groupcache
 github.com/golang/protobuf
 github.com/golang/snappy
 github.com/google/go-cmp
@@ -47,15 +48,19 @@ github.com/hashicorp/go-multierror
 github.com/hashicorp/go-retryablehttp
 github.com/hashicorp/go-rootcerts
 github.com/hashicorp/go-sockaddr
+github.com/hashicorp/go-uuid
 github.com/hashicorp/golang-lru
 github.com/hashicorp/hcl
 github.com/hashicorp/vault/api
 github.com/hashicorp/vault/sdk
+github.com/jcmturner/gofork
 github.com/jmespath/go-jmespath
+github.com/klauspost/compress
 github.com/lib/pq
 github.com/mattn/go-ieproxy
 github.com/mitchellh/go-homedir
 github.com/mitchellh/mapstructure
+github.com/nats-io/jwt
 github.com/nats-io/nats.go
 github.com/nats-io/nkeys
 github.com/nats-io/nuid
@@ -91,6 +96,10 @@ google.golang.org/api
 google.golang.org/appengine
 google.golang.org/genproto
 google.golang.org/grpc
+gopkg.in/jcmturner/aescts.v1
+gopkg.in/jcmturner/dnsutils.v1
+gopkg.in/jcmturner/gokrb5.v7
+gopkg.in/jcmturner/rpc.v1
 gopkg.in/pipe.v2
 gopkg.in/square/go-jose.v2
 pack.ag/amqp

@@ -281,34 +281,6 @@ func TestErrorCode(t *testing.T) {
 	}
 }
 
-func TestBadSubjects(t *testing.T) {
-	ctx := context.Background()
-	dh, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer dh.Close()
-	h := dh.(*harness)
-
-	sub, err := OpenSubscription(h.nc, "..bad", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sub.Shutdown(ctx)
-	if _, err = sub.Receive(ctx); err == nil {
-		t.Fatal("Expected an error with bad subject")
-	}
-
-	pt, err := OpenTopic(h.nc, "..bad", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pt.Shutdown(ctx)
-	if err = pt.Send(ctx, &pubsub.Message{}); err == nil {
-		t.Fatal("Expected an error with bad subject")
-	}
-}
-
 func BenchmarkNatsPubSub(b *testing.B) {
 	ctx := context.Background()
 
