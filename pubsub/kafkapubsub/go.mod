@@ -22,3 +22,5 @@ require (
 	github.com/google/go-cmp v0.3.0
 	gocloud.dev v0.18.0
 )
+
+replace gocloud.dev => ../../
