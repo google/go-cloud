@@ -76,6 +76,14 @@ fi
 result=0
 rootdir="$(pwd)"
 
+# Update the regexp below when upgrading to a
+# new Go version. Some checks below we only run
+# for the latest Go version.
+latest_go_version=0
+if [[ $(go version) == *go1\.13* ]]; then
+  latest_go_version=1
+fi
+
 # Build the test-summary app, which is used inside the loop to summarize results
 # from Go tests.
 (cd internal/testing/test-summary && go build)
@@ -94,13 +102,20 @@ while read -r path || [[ -n "$path" ]]; do
     continue
   fi
 
-  gotestflags=("-mod=readonly" "-json" "-race")
+  gotestflags=("-json" "-race")
   testsummaryflags=("-progress")
 
   # Only do coverage for the Linux build on Travis because it is slow, and
   # codecov will only save the last one anyway.
   if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
     gotestflags+=("-coverpkg=./..." "-coverprofile=$rootdir/modcoverage.out")
+  fi
+
+  # Previous versions of the "go" command may have
+  # different opinions about what go.mod should look
+  # like.
+  if [[ $latest_go_version -eq 1 ]]; then
+    gotestflags+=("-mod=readonly")
   fi
 
   # Run the tests.
@@ -128,18 +143,19 @@ if [[ "${TRAVIS_OS_NAME:-linux}" != "linux" ]]; then
   exit $result
 fi
 
-
-echo
-echo "************************"
-echo "* Checking go mod tidy"
-echo "************************"
-echo
-while read -r path || [[ -n "$path" ]]; do
-  echo "Module: $path"
-  ( cd "$path" && "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
-done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
-# The above filters out comments and empty lines from allmodules and only takes
-# the first (whitespace-separated) field from each line.
+if [[ ${latest_go_version} -eq 1 ]]; then
+  echo
+  echo "************************"
+  echo "* Checking go mod tidy"
+  echo "************************"
+  echo
+  while read -r path || [[ -n "$path" ]]; do
+    echo "Module: $path"
+    ( cd "$path" && "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
+  done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
+  # The above filters out comments and empty lines from allmodules and only takes
+  # the first (whitespace-separated) field from each line.
+fi
 
 
 echo
@@ -171,13 +187,13 @@ else
 fi;
 
 
-if [[ $(go version) == *go1\.13* ]]; then
+if [[ ${latest_go_version} -eq 1 ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
   ( ./internal/testing/listdeps.sh | diff -u ./internal/testing/alldeps - && echo "  OK" ) || {
     echo "FAIL: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
     # Module behavior may differ across versions.
-    echo "using go version 1.13."
+    echo "using the most recent go version."
   }
 fi
 
