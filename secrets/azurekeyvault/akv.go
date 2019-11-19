@@ -278,7 +278,7 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	return base64.StdEncoding.DecodeString(*keyOpsResult.Result)
+	return base64.RawURLEncoding.DecodeString(*keyOpsResult.Result)
 }
 
 // Close implements driver.Keeper.Close.
