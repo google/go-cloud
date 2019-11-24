@@ -2074,16 +2074,30 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		Method:      http.MethodPut,
 		ContentType: allowedContentType,
 	})
-	if err != nil {
+	if gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Log("PUT URLs with content type not supported")
+	} else if err != nil {
 		t.Fatal(err)
 	} else if putURLWithContentType == "" {
 		t.Fatal("got empty PUT url")
 	}
-	putURLWithoutContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
-		Method:      http.MethodPut,
-		ContentType: "",
+	putURLEnforcedAbsentContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+		Method:                   http.MethodPut,
+		EnforceAbsentContentType: true,
 	})
-	if err != nil {
+	if gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Log("PUT URLs with enforced absent content type not supported")
+	} else if err != nil {
+		t.Fatal(err)
+	} else if putURLEnforcedAbsentContentType == "" {
+		t.Fatal("got empty PUT url")
+	}
+	putURLWithoutContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+		Method: http.MethodPut,
+	})
+	if gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Log("PUT URLs without content type not supported")
+	} else if err != nil {
 		t.Fatal(err)
 	} else if putURLWithoutContentType == "" {
 		t.Fatal("got empty PUT url")
@@ -2102,23 +2116,29 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 	// PUT the blob. Try with all URLs, only putURL should work when given the
 	// content type used in the signature.
-	for _, test := range []struct {
+	type signedURLTest struct {
 		urlMethod   string
 		contentType string
 		url         string
 		wantSuccess bool
-	}{
+	}
+	tests := []signedURLTest{
 		{http.MethodGet, "", getURL, false},
-
 		{http.MethodDelete, "", deleteURL, false},
-
-		{http.MethodPut, allowedContentType, putURLWithContentType, true},
-		{http.MethodPut, differentContentType, putURLWithContentType, false},
-		{http.MethodPut, "", putURLWithContentType, false},
-
-		{http.MethodPut, "", putURLWithoutContentType, true},
-		{http.MethodPut, differentContentType, putURLWithoutContentType, false},
-	} {
+	}
+	if putURLWithContentType != "" {
+		tests = append(tests, signedURLTest{http.MethodPut, allowedContentType, putURLWithContentType, true})
+		tests = append(tests, signedURLTest{http.MethodPut, differentContentType, putURLWithContentType, false})
+		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithContentType, false})
+	}
+	if putURLEnforcedAbsentContentType != "" {
+		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithoutContentType, true})
+		tests = append(tests, signedURLTest{http.MethodPut, differentContentType, putURLWithoutContentType, false})
+	}
+	if putURLWithoutContentType != "" {
+		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithoutContentType, true})
+	}
+	for _, test := range tests {
 		req, err := http.NewRequest(http.MethodPut, test.url, strings.NewReader(contents))
 		if err != nil {
 			t.Fatalf("failed to create PUT HTTP request using %s URL (content-type=%q): %v", test.urlMethod, test.contentType, err)

@@ -312,11 +312,20 @@ type SignedURLOptions struct {
 	Method string
 
 	// ContentType specifies the Content-Type HTTP header the user agent is
-	// permitted to use in the PUT request. It must match exactly. Empty means
-	// the Content-Type header is not permitted.
+	// permitted to use in the PUT request. It must match exactly. See
+	// EnforceAbsentContentType for behavior when ContentType is the empty string.
 	//
 	// This field will not be set for any non-PUT requests.
 	ContentType string
+
+	// If EnforceAbsentContentType is true and ContentType is the empty string,
+	// then PUTing to the signed URL must fail if the Content-Type header is
+	// present or the implementation must return an error if it cannot enforce
+	// this. If EnforceAbsentContentType is false and ContentType is the empty
+	// string, implementations should validate the Content-Type header if possible.
+	//
+	// This field will always be false for non-PUT requests.
+	EnforceAbsentContentType bool
 }
 
 // prefixedBucket implements Bucket by prepending prefix to all keys.

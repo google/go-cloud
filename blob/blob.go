@@ -875,7 +875,11 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 	if opts.ContentType != "" && opts.Method != http.MethodPut {
 		return "", fmt.Errorf("blob: SignedURLOptions.ContentType must be empty for signing a %s URL", opts.Method)
 	}
+	if opts.EnforceAbsentContentType && opts.Method != http.MethodPut {
+		return "", fmt.Errorf("blob: SignedURLOptions.EnforceAbsentContentType must be false for signing a %s URL", opts.Method)
+	}
 	dopts.ContentType = opts.ContentType
+	dopts.EnforceAbsentContentType = opts.EnforceAbsentContentType
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
@@ -911,11 +915,20 @@ type SignedURLOptions struct {
 	Method string
 
 	// ContentType specifies the Content-Type HTTP header the user agent is
-	// permitted to use in the PUT request. It must match exactly. Empty means
-	// the Content-Type header is not permitted.
+	// permitted to use in the PUT request. It must match exactly. See
+	// EnforceAbsentContentType for behavior when ContentType is the empty string.
 	//
 	// Must be empty for non-PUT requests.
 	ContentType string
+
+	// If EnforceAbsentContentType is true and ContentType is the empty string,
+	// then PUTing to the signed URL will fail if the Content-Type header is
+	// present. If EnforceAbsentContentType is false and ContentType is the empty
+	// string, then PUTing without a Content-Type header will succeed, but it is
+	// implementation-specific whether providing a Content-Type header will fail.
+	//
+	// Must be false for non-PUT requests.
+	EnforceAbsentContentType bool
 }
 
 // ReaderOptions sets options for NewReader and NewRangeReader.
