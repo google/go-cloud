@@ -27,6 +27,10 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
+// GCP Pub/Sub emulator is supported as per https://cloud.google.com/pubsub/docs/emulator
+// So, when environment variable 'PUBSUB_EMULATOR_HOST' is set
+// driver connects to the specified emulator host by default.
+//
 // Message Delivery Semantics
 //
 // GCP Pub/Sub supports at-least-once semantics; applications must
@@ -48,6 +52,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -71,7 +76,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const endPoint = "pubsub.googleapis.com:443"
+var endPoint = "pubsub.googleapis.com:443"
 
 var sendBatcherOpts = &batcher.Options{
 	MaxBatchSize: 1000, // The PubSub service limits the number of messages in a single Publish RPC
@@ -122,6 +127,15 @@ func (o *lazyCredsOpener) defaultConn(ctx context.Context) (*URLOpener, error) {
 			o.err = err
 			return
 		}
+
+		// Connect to the GCP pubsub emulator by overriding the default endpoint
+		// if the 'PUBSUB_EMULATOR_HOST' environment variable is set.
+		// Check https://cloud.google.com/pubsub/docs/emulator for more info.
+		emulatorEndPoint := os.Getenv("PUBSUB_EMULATOR_HOST")
+		if emulatorEndPoint != "" {
+			endPoint = emulatorEndPoint
+		}
+
 		conn, _, err := Dial(ctx, creds.TokenSource)
 		if err != nil {
 			o.err = err

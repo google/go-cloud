@@ -72,16 +72,16 @@ func TestCompareNumbers(t *testing.T) {
 		{2, 1.1, 1},
 
 		// large numbers
-		{math.MaxInt64, math.MaxInt64, 0},
+		{int64(math.MaxInt64), int64(math.MaxInt64), 0},
 		{uint64(math.MaxUint64), uint64(math.MaxUint64), 0},
-		{math.MaxFloat64, math.MaxFloat64, 0},
-		{math.MaxInt64, math.MaxInt64 - 1, 1},
-		{math.MaxInt64, float64(math.MaxInt64 - 1), -1}, // float is bigger because it gets rounded up
-		{math.MaxInt64, uint64(math.MaxUint64), -1},
+		{float64(math.MaxFloat64), float64(math.MaxFloat64), 0},
+		{int64(math.MaxInt64), int64(math.MaxInt64 - 1), 1},
+		{int64(math.MaxInt64), float64(math.MaxInt64 - 1), -1}, // float is bigger because it gets rounded up
+		{int64(math.MaxInt64), uint64(math.MaxUint64), -1},
 
 		// special floats
-		{math.MaxInt64, math.Inf(1), -1},
-		{math.MinInt64, math.Inf(-1), 1},
+		{int64(math.MaxInt64), math.Inf(1), -1},
+		{int64(math.MinInt64), math.Inf(-1), 1},
 	} {
 		check(test.in1, test.in2, test.want)
 		if test.want != 0 {

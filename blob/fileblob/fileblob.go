@@ -163,18 +163,21 @@ type bucket struct {
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
 func openBucket(dir string, opts *Options) (driver.Bucket, error) {
-	dir = filepath.Clean(dir)
-	info, err := os.Stat(dir)
+	absdir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert %s into an absolute path: %v", dir, err)
+	}
+	info, err := os.Stat(absdir)
 	if err != nil {
 		return nil, err
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("%s is not a directory", dir)
+		return nil, fmt.Errorf("%s is not a directory", absdir)
 	}
 	if opts == nil {
 		opts = &Options{}
 	}
-	return &bucket{dir: dir, opts: opts}, nil
+	return &bucket{dir: absdir, opts: opts}, nil
 }
 
 // OpenBucket creates a *blob.Bucket backed by the filesystem and rooted at

@@ -150,7 +150,7 @@ func TestEvaluateFilter(t *testing.T) {
 		"s":  "32",
 		"t":  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
 		"b":  true,
-		"mi": math.MaxInt64,
+		"mi": int64(math.MaxInt64),
 	}
 	doc := drivertest.MustDocument(m)
 	for _, test := range []struct {
