@@ -2075,7 +2075,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		ContentType: allowedContentType,
 	})
 	if gcerrors.Code(err) == gcerrors.Unimplemented {
-		t.Log("PUT URLs with content type not supported")
+		t.Log("PUT URLs with content type not supported, skipping")
 	} else if err != nil {
 		t.Fatal(err)
 	} else if putURLWithContentType == "" {
@@ -2086,7 +2086,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		EnforceAbsentContentType: true,
 	})
 	if gcerrors.Code(err) == gcerrors.Unimplemented {
-		t.Log("PUT URLs with enforced absent content type not supported")
+		t.Log("PUT URLs with enforced absent content type not supported, skipping")
 	} else if err != nil {
 		t.Fatal(err)
 	} else if putURLEnforcedAbsentContentType == "" {
@@ -2095,9 +2095,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	putURLWithoutContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
 		Method: http.MethodPut,
 	})
-	if gcerrors.Code(err) == gcerrors.Unimplemented {
-		t.Log("PUT URLs without content type not supported")
-	} else if err != nil {
+	if err != nil {
 		t.Fatal(err)
 	} else if putURLWithoutContentType == "" {
 		t.Fatal("got empty PUT url")
@@ -2166,7 +2164,6 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		wantSuccess bool
 	}{
 		{http.MethodDelete, deleteURL, false},
-		{http.MethodPut, putURLWithContentType, false},
 		{http.MethodPut, putURLWithoutContentType, false},
 		{http.MethodGet, getURLNoParams, false},
 		{http.MethodGet, getURL, true},
@@ -2198,7 +2195,6 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		wantSuccess bool
 	}{
 		{http.MethodGet, getURL, false},
-		{http.MethodPut, putURLWithContentType, false},
 		{http.MethodPut, putURLWithoutContentType, false},
 		{http.MethodDelete, deleteURL, true},
 	} {
