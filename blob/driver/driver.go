@@ -306,9 +306,30 @@ type Bucket interface {
 type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.
 	Expiry time.Duration
+
 	// Method is the HTTP method that can be used on the URL; one of "GET", "PUT",
 	// or "DELETE". Drivers must implement all 3.
 	Method string
+
+	// ContentType specifies the Content-Type HTTP header the user agent is
+	// permitted to use in the PUT request. It must match exactly. See
+	// EnforceAbsentContentType for behavior when ContentType is the empty string.
+	// If this field is not empty and the bucket cannot enforce the Content-Type
+	// header, it must return an Unimplemented error.
+	//
+	// This field will not be set for any non-PUT requests.
+	ContentType string
+
+	// If EnforceAbsentContentType is true and ContentType is the empty string,
+	// then PUTing to the signed URL must fail if the Content-Type header is
+	// present or the implementation must return an error if it cannot enforce
+	// this. If EnforceAbsentContentType is false and ContentType is the empty
+	// string, implementations should validate the Content-Type header if possible.
+	// If EnforceAbsentContentType is true and the bucket cannot enforce the
+	// Content-Type header, it must return an Unimplemented error.
+	//
+	// This field will always be false for non-PUT requests.
+	EnforceAbsentContentType bool
 }
 
 // prefixedBucket implements Bucket by prepending prefix to all keys.
