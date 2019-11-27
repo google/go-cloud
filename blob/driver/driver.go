@@ -314,6 +314,8 @@ type SignedURLOptions struct {
 	// ContentType specifies the Content-Type HTTP header the user agent is
 	// permitted to use in the PUT request. It must match exactly. See
 	// EnforceAbsentContentType for behavior when ContentType is the empty string.
+	// If this field is not empty and the bucket cannot enforce the Content-Type
+	// header, it must return an Unimplemented error.
 	//
 	// This field will not be set for any non-PUT requests.
 	ContentType string
@@ -323,6 +325,8 @@ type SignedURLOptions struct {
 	// present or the implementation must return an error if it cannot enforce
 	// this. If EnforceAbsentContentType is false and ContentType is the empty
 	// string, implementations should validate the Content-Type header if possible.
+	// If EnforceAbsentContentType is true and the bucket cannot enforce the
+	// Content-Type header, it must return an Unimplemented error.
 	//
 	// This field will always be false for non-PUT requests.
 	EnforceAbsentContentType bool

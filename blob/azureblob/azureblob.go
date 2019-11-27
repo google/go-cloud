@@ -642,7 +642,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if b.opts.Credential == nil {
 		return "", errors.New("azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
-	if opts != nil && (opts.ContentType != "" || opts.EnforceAbsentContentType) {
+	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
 	}
 	key = escapeKey(key, false)
@@ -668,7 +668,6 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		ContainerName: b.name,
 		BlobName:      srcBlobParts.BlobName,
 		Permissions:   perms.String(),
-		ContentType:   opts.ContentType,
 	}.NewSASQueryParameters(b.opts.Credential)
 	if err != nil {
 		return "", err
