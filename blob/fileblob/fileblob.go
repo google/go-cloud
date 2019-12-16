@@ -253,6 +253,7 @@ func (b *bucket) path(key string) (string, error) {
 		return "", errAttrsExt
 	}
 	return path, nil
+
 }
 
 // forKey returns the full path, os.FileInfo, and attributes for key.
