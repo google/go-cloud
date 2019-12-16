@@ -1046,7 +1046,8 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 // testAttributes tests Attributes.
 func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	const (
-		key                = "blob-for-attributes"
+		dirKey             = "someDir"
+		key                = dirKey + "/blob-for-attributes"
 		contentType        = "text/plain"
 		cacheControl       = "no-cache"
 		contentDisposition = "inline"
@@ -1089,14 +1090,21 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	b, done := init(t)
 	defer done()
 
-	_, err := b.Attributes(ctx, "not-found")
-	if err == nil {
-		t.Errorf("got nil want error")
-	} else if gcerrors.Code(err) != gcerrors.NotFound {
-		t.Errorf("got %v want NotFound error", err)
-	} else if !strings.Contains(err.Error(), "not-found") {
-		t.Errorf("got %v want error to include missing key", err)
+	for _, badKey := range []string{
+		"not-found",
+		dirKey,
+		dirKey + "/",
+	} {
+		_, err := b.Attributes(ctx, badKey)
+		if err == nil {
+			t.Errorf("got nil want error")
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), badKey) {
+			t.Errorf("got %v want error to include missing key", err)
+		}
 	}
+
 	a, err := b.Attributes(ctx, key)
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)

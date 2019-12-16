@@ -265,6 +265,9 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	if err != nil {
 		return "", nil, nil, err
 	}
+	if info.IsDir() {
+		return "", nil, nil, os.ErrNotExist
+	}
 	xa, err := getAttrs(path)
 	if err != nil {
 		return "", nil, nil, err
