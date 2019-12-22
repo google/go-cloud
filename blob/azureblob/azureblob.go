@@ -96,6 +96,8 @@ type Options struct {
 	// delegated privileges.
 	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
 	SASToken SASToken
+
+	CloudEnvironment CloudEnvironment
 }
 
 const (
@@ -131,8 +133,8 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		accountName, _ := DefaultAccountName()
 		accountKey, _ := DefaultAccountKey()
 		sasToken, _ := DefaultSASToken()
-
-		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken)
+		cloudEnvironment, _ := DefaultCloudEnvironment()
+		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, cloudEnvironment)
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
@@ -160,7 +162,7 @@ type URLOpener struct {
 	Options Options
 }
 
-func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken) (*URLOpener, error) {
+func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken, cloudEnv CloudEnvironment) (*URLOpener, error) {
 	// azblob.Credential is an interface; we will use either a SharedKeyCredential
 	// or anonymous credentials. If the former, we will also fill in
 	// Options.Credential so that SignedURL will work.
@@ -182,6 +184,7 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 		Options: Options{
 			Credential: storageAccountCredential,
 			SASToken:   sasToken,
+			CloudEnvironment: cloudEnv,
 		},
 	}, nil
 }
@@ -223,6 +226,17 @@ type AccountKey string
 // https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1
 type SASToken string
 
+// CloudEnvironment is an Azure Cloud Environment to target (i.e. AzureCloud, AzureUSGovernment, AzureChinaCloud).
+// It is read from the AZURE_CLOUD_ENVIRONMENT environment variable. 
+type CloudEnvironment string
+
+// Mappings from the AZURE_CLOUD_ENVIRONMENT value to their respective blob storage domains. 
+var cloudEnvMap = map[CloudEnvironment]string{
+	CloudEnvironment("AzureCloud"): "blob.core.windows.net",
+	CloudEnvironment("AzureUSGovernment"): "blob.core.usgovcloudapi.net",
+	CloudEnvironment("AzureChinaCloud"): "blob.core.chinacloudapi.cn",
+	CloudEnvironment("AzureGermanCloud"): "blob.core.cloudapi.de",
+}
 // DefaultAccountName loads the Azure storage account name from the
 // AZURE_STORAGE_ACCOUNT environment variable.
 func DefaultAccountName() (AccountName, error) {
@@ -251,6 +265,16 @@ func DefaultSASToken() (SASToken, error) {
 		return "", errors.New("azureblob: environment variable AZURE_STORAGE_SAS_TOKEN not set")
 	}
 	return SASToken(s), nil
+}
+
+// DefaultCloudEnvironment loads the desired Azure Cloud to target from 
+// the AZURE_CLOUD_ENVIRONMENT environment variable. 
+func DefaultCloudEnvironment() (CloudEnvironment, error) {
+	s := os.Getenv("AZURE_CLOUD_ENVIRONMENT")
+	if s == "" {
+		return CloudEnvironment("AzureCloud"), nil
+	}
+	return CloudEnvironment(s), nil
 }
 
 // NewCredential creates a SharedKeyCredential.
@@ -299,8 +323,12 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}
 	if opts == nil {
 		opts = &Options{}
+	} 
+	if opts.CloudEnvironment == "" {
+		// If opts waas nil or no Cloud Environment was specified, default to public Azure cloud endpoint.
+		opts.CloudEnvironment = CloudEnvironment("AzureCloud")
 	}
-	blobURL, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", accountName))
+	blobURL, err := url.Parse(fmt.Sprintf("https://%s.%s", accountName, cloudEnvMap[opts.CloudEnvironment]))
 	if err != nil {
 		return nil, err
 	}

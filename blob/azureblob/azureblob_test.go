@@ -52,7 +52,7 @@ import (
 
 const (
 	bucketName  = "go-cloud-bucket"
-	accountName = AccountName("gocloudblobtests")
+	accountName = AccountName("lbsaccount")
 )
 
 type harness struct {
@@ -325,10 +325,12 @@ func TestOpenerFromEnv(t *testing.T) {
 		name        string
 		accountName AccountName
 		accountKey  AccountKey
+		cloudEnvironment CloudEnvironment
 		sasToken    SASToken
 
 		wantSharedCreds bool
 		wantSASToken    SASToken
+		wantCloudEnvironment CloudEnvironment
 	}{
 		{
 			name:            "AccountKey",
@@ -340,13 +342,15 @@ func TestOpenerFromEnv(t *testing.T) {
 			name:            "SASToken",
 			accountName:     "myaccount",
 			sasToken:        "borkborkbork",
+			cloudEnvironment: "mycloudenv",
 			wantSharedCreds: false,
 			wantSASToken:    "borkborkbork",
+			wantCloudEnvironment: "mycloudenv",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken)
+			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, test.cloudEnvironment)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -370,6 +374,9 @@ func TestOpenerFromEnv(t *testing.T) {
 			}
 			if o.Options.SASToken != test.wantSASToken {
 				t.Errorf("Options.SASToken = %q; want %q", o.Options.SASToken, test.wantSASToken)
+			}
+			if o.Options.CloudEnvironment != test.wantCloudEnvironment {
+				t.Errorf("Options.CloudEnvironment = %q; want %q", o.Options.CloudEnvironment, test.wantCloudEnvironment)
 			}
 		})
 	}
