@@ -54,7 +54,7 @@ import (
 
 const (
 	bucketName  = "go-cloud-bucket"
-	accountName = AccountName("my-account")
+	accountName = AccountName("gocloudblobtests")
 	cloudEnv    = CloudEnvironment("")
 )
 
