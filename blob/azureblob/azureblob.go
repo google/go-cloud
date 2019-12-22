@@ -182,8 +182,8 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
 		Options: Options{
-			Credential: storageAccountCredential,
-			SASToken:   sasToken,
+			Credential:       storageAccountCredential,
+			SASToken:         sasToken,
 			CloudEnvironment: cloudEnv,
 		},
 	}, nil
@@ -227,16 +227,17 @@ type AccountKey string
 type SASToken string
 
 // CloudEnvironment is an Azure Cloud Environment to target (i.e. AzureCloud, AzureUSGovernment, AzureChinaCloud).
-// It is read from the AZURE_CLOUD_ENVIRONMENT environment variable. 
+// It is read from the AZURE_CLOUD_ENVIRONMENT environment variable.
 type CloudEnvironment string
 
-// Mappings from the AZURE_CLOUD_ENVIRONMENT value to their respective blob storage domains. 
+// Mappings from the AZURE_CLOUD_ENVIRONMENT value to their respective blob storage domains.
 var cloudEnvMap = map[CloudEnvironment]string{
-	CloudEnvironment("AzureCloud"): "blob.core.windows.net",
+	CloudEnvironment("AzureCloud"):        "blob.core.windows.net",
 	CloudEnvironment("AzureUSGovernment"): "blob.core.usgovcloudapi.net",
-	CloudEnvironment("AzureChinaCloud"): "blob.core.chinacloudapi.cn",
-	CloudEnvironment("AzureGermanCloud"): "blob.core.cloudapi.de",
+	CloudEnvironment("AzureChinaCloud"):   "blob.core.chinacloudapi.cn",
+	CloudEnvironment("AzureGermanCloud"):  "blob.core.cloudapi.de",
 }
+
 // DefaultAccountName loads the Azure storage account name from the
 // AZURE_STORAGE_ACCOUNT environment variable.
 func DefaultAccountName() (AccountName, error) {
@@ -267,12 +268,12 @@ func DefaultSASToken() (SASToken, error) {
 	return SASToken(s), nil
 }
 
-// DefaultCloudEnvironment loads the desired Azure Cloud to target from 
-// the AZURE_CLOUD_ENVIRONMENT environment variable. 
+// DefaultCloudEnvironment loads the desired Azure Cloud to target from
+// the AZURE_CLOUD_ENVIRONMENT environment variable.
 func DefaultCloudEnvironment() (CloudEnvironment, error) {
 	s := os.Getenv("AZURE_CLOUD_ENVIRONMENT")
-	if s == "" {
-		return CloudEnvironment("AzureCloud"), nil
+	if _, exists := cloudEnvMap[CloudEnvironment(s)]; s != "" && !exists { // If AZURE_CLOUD_ENVIRONMENT is set but the value is not recognized
+		return "", errors.New("azureblob: environment variable AZURE_CLOUD_ENVIRONMENT has invalid value... Must be one of (AzureCloud, AzureUSGovernment, AzureChinaCloud, AzureGermanCloud)")
 	}
 	return CloudEnvironment(s), nil
 }
@@ -323,9 +324,9 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}
 	if opts == nil {
 		opts = &Options{}
-	} 
+	}
 	if opts.CloudEnvironment == "" {
-		// If opts waas nil or no Cloud Environment was specified, default to public Azure cloud endpoint.
+		// If opts was nil or no Cloud Environment was specified, default to public Azure cloud endpoint.
 		opts.CloudEnvironment = CloudEnvironment("AzureCloud")
 	}
 	blobURL, err := url.Parse(fmt.Sprintf("https://%s.%s", accountName, cloudEnvMap[opts.CloudEnvironment]))
