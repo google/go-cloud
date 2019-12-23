@@ -39,10 +39,8 @@ import (
 //
 // 3. Locate the Access Key (Primary or Secondary) under your Storage Account > Settings > Access Keys.
 //
-// 4. Set the environment variables AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_CLOUD_ENVIRONMENT to
-//    the storage account name, your access key, and the Azure Cloud Environment. Possible cloud environments
-// 	  are "AzureCloud", "AzureUSGovernment", "AzureChinaCloud", and "AzureGermanCloud". If you want to leave
-// 	  AZURE_CLOUD_ENVIRONMENT unset, use "" for cloudEnv
+// 4. Set the environment variables AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY to
+//    the storage account name and your access key.
 //
 // 5. Create a container in your Storage Account > Blob. Update the bucketName
 // constant to your container name.
@@ -54,8 +52,7 @@ import (
 
 const (
 	bucketName  = "go-cloud-bucket"
-	accountName = AccountName("gocloudblobtests")
-	cloudEnv    = CloudEnvironment("")
+	accountName = AccountName("lbsaccount")
 )
 
 type harness struct {
@@ -78,13 +75,6 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		key, err = DefaultAccountKey()
 		if err != nil {
 			t.Fatal(err)
-		}
-		env, err := DefaultCloudEnvironment()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if env != cloudEnv {
-			t.Fatalf("Please update the cloudEnv constant to match your settings file so future records work (%q vs %q)", env, cloudEnv)
 		}
 	} else {
 		// In replay mode, we use fake credentials.
@@ -123,7 +113,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, h.pipeline, accountName, bucketName, &Options{Credential: h.credential, CloudEnvironment: cloudEnv})
+	return openBucket(ctx, h.pipeline, accountName, bucketName, &Options{Credential: h.credential})
 }
 
 func (h *harness) Close() {

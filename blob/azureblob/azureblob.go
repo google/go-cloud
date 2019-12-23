@@ -26,6 +26,9 @@
 // The default URL opener will use credentials from the environment variables
 // AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
 // AZURE_STORAGE_ACCOUNT is required, along with one of the other two.
+// AZURE_BLOB_DOMAIN can optionally be used to provide an Azure Environment
+// blob storage domain to use. If no AZURE_BLOB_DOMAIN is provided, the
+// default Azure public domain "blob.core.windows.net" will be used.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -97,6 +100,9 @@ type Options struct {
 	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
 	SASToken SASToken
 
+	// CloudEnvironment can be provided to specify an Azure Cloud Environment
+	// domain to target for the blob storage account (i.e. public, government, china).
+	// The default value is "blob.core.windows.net".
 	CloudEnvironment CloudEnvironment
 }
 
@@ -226,17 +232,9 @@ type AccountKey string
 // https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1
 type SASToken string
 
-// CloudEnvironment is an Azure Cloud Environment to target (i.e. AzureCloud, AzureUSGovernment, AzureChinaCloud).
-// It is read from the AZURE_CLOUD_ENVIRONMENT environment variable.
+// CloudEnvironment is an Azure Cloud Environment domain name to target (i.e. AzureCloud, AzureUSGovernment, AzureChinaCloud).
+// It is read from the AZURE_BLOB_DOMAIN environment variable.
 type CloudEnvironment string
-
-// Mappings from the AZURE_CLOUD_ENVIRONMENT value to their respective blob storage domains.
-var cloudEnvMap = map[CloudEnvironment]string{
-	CloudEnvironment("AzureCloud"):        "blob.core.windows.net",
-	CloudEnvironment("AzureUSGovernment"): "blob.core.usgovcloudapi.net",
-	CloudEnvironment("AzureChinaCloud"):   "blob.core.chinacloudapi.cn",
-	CloudEnvironment("AzureGermanCloud"):  "blob.core.cloudapi.de",
-}
 
 // DefaultAccountName loads the Azure storage account name from the
 // AZURE_STORAGE_ACCOUNT environment variable.
@@ -269,11 +267,11 @@ func DefaultSASToken() (SASToken, error) {
 }
 
 // DefaultCloudEnvironment loads the desired Azure Cloud to target from
-// the AZURE_CLOUD_ENVIRONMENT environment variable.
+// the AZURE_BLOB_DOMAIN environment variable.
 func DefaultCloudEnvironment() (CloudEnvironment, error) {
-	s := os.Getenv("AZURE_CLOUD_ENVIRONMENT")
-	if _, exists := cloudEnvMap[CloudEnvironment(s)]; s != "" && !exists { // If AZURE_CLOUD_ENVIRONMENT is set but the value is not recognized
-		return "", errors.New("azureblob: environment variable AZURE_CLOUD_ENVIRONMENT has invalid value... Must be one of (AzureCloud, AzureUSGovernment, AzureChinaCloud, AzureGermanCloud)")
+	s := os.Getenv("AZURE_BLOB_DOMAIN")
+	if s == "" {
+		return CloudEnvironment("blob.core.windows.net"), nil // If unspecified, use default public domain.
 	}
 	return CloudEnvironment(s), nil
 }
@@ -326,10 +324,10 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 		opts = &Options{}
 	}
 	if opts.CloudEnvironment == "" {
-		// If opts was nil or no Cloud Environment was specified, default to public Azure cloud endpoint.
-		opts.CloudEnvironment = CloudEnvironment("AzureCloud")
+		// If opts.CloudEnvironment is missing, use default domain.
+		opts.CloudEnvironment = "blob.core.windows.net"
 	}
-	blobURL, err := url.Parse(fmt.Sprintf("https://%s.%s", accountName, cloudEnvMap[opts.CloudEnvironment]))
+	blobURL, err := url.Parse(fmt.Sprintf("https://%s.%s", accountName, opts.CloudEnvironment))
 	if err != nil {
 		return nil, err
 	}
