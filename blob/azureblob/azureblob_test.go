@@ -52,7 +52,7 @@ import (
 
 const (
 	bucketName  = "go-cloud-bucket"
-	accountName = AccountName("lbsaccount")
+	accountName = AccountName("gocloudblobtests")
 )
 
 type harness struct {
