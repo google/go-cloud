@@ -28,7 +28,9 @@
 // AZURE_STORAGE_ACCOUNT is required, along with one of the other two.
 // AZURE_BLOB_DOMAIN can optionally be used to provide an Azure Environment
 // blob storage domain to use. If no AZURE_BLOB_DOMAIN is provided, the
-// default Azure public domain "blob.core.windows.net" will be used.
+// default Azure public domain "blob.core.windows.net" will be used. Check
+// the Azure Developer Guide for your particular cloud environment to see
+// the proper blob storage domain name to provide.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
