@@ -102,7 +102,9 @@ type Options struct {
 
 	// CloudEnvironment can be provided to specify an Azure Cloud Environment
 	// domain to target for the blob storage account (i.e. public, government, china).
-	// The default value is "blob.core.windows.net".
+	// The default value is "blob.core.windows.net". Possible values will look similar
+	// to this but are different for each cloud (i.e. "blob.core.govcloudapi.net" for USGovernment). 
+	// Check the Azure developer guide for the cloud environment where your bucket resides. 
 	CloudEnvironment CloudEnvironment
 }
 
