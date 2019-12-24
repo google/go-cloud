@@ -385,14 +385,14 @@ func TestOpenerFromEnv(t *testing.T) {
 func TestOpenBucketFromURL(t *testing.T) {
 	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
 	prevKey := os.Getenv("AZURE_STORAGE_KEY")
-	prevEnv := os.Getenv("AZURE_CLOUD_ENVIRONMENT")
+	prevEnv := os.Getenv("AZURE_STORAGE_DOMAIN")
 	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
 	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
-	os.Setenv("AZURE_CLOUD_ENVIRONMENT", "my-cloud")
+	os.Setenv("AZURE_STORAGE_DOMAIN", "my-cloud")
 	defer func() {
 		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
 		os.Setenv("AZURE_STORAGE_KEY", prevKey)
-		os.Setenv("AZURE_CLOUD_ENVIRONMENT", prevEnv)
+		os.Setenv("AZURE_STORAGE_DOMAIN", prevEnv)
 	}()
 
 	tests := []struct {
