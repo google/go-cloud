@@ -322,15 +322,15 @@ func TestOpenBucket(t *testing.T) {
 
 func TestOpenerFromEnv(t *testing.T) {
 	tests := []struct {
-		name             string
-		accountName      AccountName
-		accountKey       AccountKey
-		cloudEnvironment CloudEnvironment
-		sasToken         SASToken
+		name          string
+		accountName   AccountName
+		accountKey    AccountKey
+		storageDomain StorageDomain
+		sasToken      SASToken
 
-		wantSharedCreds      bool
-		wantSASToken         SASToken
-		wantCloudEnvironment CloudEnvironment
+		wantSharedCreds   bool
+		wantSASToken      SASToken
+		wantStorageDomain StorageDomain
 	}{
 		{
 			name:            "AccountKey",
@@ -339,18 +339,18 @@ func TestOpenerFromEnv(t *testing.T) {
 			wantSharedCreds: true,
 		},
 		{
-			name:                 "SASToken",
-			accountName:          "myaccount",
-			sasToken:             "borkborkbork",
-			cloudEnvironment:     "mycloudenv",
-			wantSharedCreds:      false,
-			wantSASToken:         "borkborkbork",
-			wantCloudEnvironment: "mycloudenv",
+			name:              "SASToken",
+			accountName:       "myaccount",
+			sasToken:          "borkborkbork",
+			storageDomain:     "mycloudenv",
+			wantSharedCreds:   false,
+			wantSASToken:      "borkborkbork",
+			wantStorageDomain: "mycloudenv",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, test.cloudEnvironment)
+			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, test.storageDomain)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -375,8 +375,8 @@ func TestOpenerFromEnv(t *testing.T) {
 			if o.Options.SASToken != test.wantSASToken {
 				t.Errorf("Options.SASToken = %q; want %q", o.Options.SASToken, test.wantSASToken)
 			}
-			if o.Options.CloudEnvironment != test.wantCloudEnvironment {
-				t.Errorf("Options.CloudEnvironment = %q; want %q", o.Options.CloudEnvironment, test.wantCloudEnvironment)
+			if o.Options.StorageDomain != test.wantStorageDomain {
+				t.Errorf("Options.StorageDomain = %q; want %q", o.Options.StorageDomain, test.wantStorageDomain)
 			}
 		})
 	}
