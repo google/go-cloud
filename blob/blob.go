@@ -139,6 +139,41 @@ func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
 }
 
+// WriteTo reads from r and writes to w until there's no more data or
+// an error occurs.
+// The return value is the number of bytes written to w.
+//
+// It implements the io.WriterTo interface.
+func (r *Reader) WriteTo(w io.Writer) (int64, error) {
+	_, nw, err := readFromWriteTo(r, w)
+	return nw, err
+}
+
+// readFromWriteTo is a helper for ReadFrom and WriteTo.
+// It reads data from r and writes to w, until EOF or a read/write error.
+// It returns the number of bytes read from r and the number of bytes
+// written to w.
+func readFromWriteTo(r io.Reader, w io.Writer) (int64, int64, error) {
+	buf := make([]byte, 1024)
+	var nr, nw int64
+	for {
+		nb, err := r.Read(buf)
+		nr += int64(nb)
+		if err == io.EOF {
+			// Done!
+			return nr, nw, nil
+		}
+		if err != nil {
+			return nr, nw, fmt.Errorf("failed to read: %v", err)
+		}
+		nb, err = w.Write(buf[0:nb])
+		nw += int64(nb)
+		if err != nil {
+			return nr, nw, fmt.Errorf("failed to write: %v", err)
+		}
+	}
+}
+
 // Attributes contains attributes about a blob.
 type Attributes struct {
 	// CacheControl specifies caching attributes that services may use
@@ -310,6 +345,15 @@ func (w *Writer) write(p []byte) (int, error) {
 	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, w.provider)},
 		bytesWrittenMeasure.M(int64(n)))
 	return n, wrapError(w.b, err, w.key)
+}
+
+// ReadFrom reads from r and writes to w until EOF or error.
+// The return value is the number of bytes read from r.
+//
+// It implements the io.ReaderFrom interface.
+func (w *Writer) ReadFrom(r io.Reader) (int64, error) {
+	nr, _, err := readFromWriteTo(r, w)
+	return nr, err
 }
 
 // ListOptions sets options for listing blobs via Bucket.List.
