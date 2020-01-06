@@ -155,21 +155,23 @@ func (r *Reader) WriteTo(w io.Writer) (int64, error) {
 // written to w.
 func readFromWriteTo(r io.Reader, w io.Writer) (int64, int64, error) {
 	buf := make([]byte, 1024)
-	var nr, nw int64
+	var totalRead, totalWritten int64
 	for {
-		nb, err := r.Read(buf)
-		nr += int64(nb)
-		if err == io.EOF {
+		numRead, rerr := r.Read(buf)
+		if numRead > 0 {
+			totalRead += int64(numRead)
+			numWritten, werr := w.Write(buf[0:numRead])
+			totalWritten += int64(numWritten)
+			if werr != nil {
+				return totalRead, totalWritten, fmt.Errorf("failed to write: %v", werr)
+			}
+		}
+		if rerr == io.EOF {
 			// Done!
-			return nr, nw, nil
+			return totalRead, totalWritten, nil
 		}
-		if err != nil {
-			return nr, nw, fmt.Errorf("failed to read: %v", err)
-		}
-		nb, err = w.Write(buf[0:nb])
-		nw += int64(nb)
-		if err != nil {
-			return nr, nw, fmt.Errorf("failed to write: %v", err)
+		if rerr != nil {
+			return totalRead, totalWritten, fmt.Errorf("failed to read: %v", rerr)
 		}
 	}
 }
