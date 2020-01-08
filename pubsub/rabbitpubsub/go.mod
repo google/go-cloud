@@ -19,7 +19,6 @@ go 1.12
 require (
 	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
-	go.opencensus.io v0.22.2 // indirect
 	gocloud.dev v0.18.0
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect

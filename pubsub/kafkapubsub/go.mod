@@ -25,7 +25,6 @@ require (
 	github.com/klauspost/compress v1.9.2 // indirect
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563 // indirect
-	go.opencensus.io v0.22.2 // indirect
 	gocloud.dev v0.18.0
 	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708 // indirect
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
