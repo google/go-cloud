@@ -18,7 +18,6 @@ package server // import "gocloud.dev/server"
 import (
 	"context"
 	"net/http"
-	"path"
 	"sync"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/requestlog"
 
+	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/trace"
 )
 
@@ -114,18 +114,19 @@ func (srv *Server) ListenAndServe(addr string) error {
 	// Setup health checks, /healthz route is taken by health checks by default.
 	// Note: App Engine Flex uses /_ah/health by default, which can be changed
 	// in app.yaml. We may want to do an auto-detection for flex in future.
-	hr := "/healthz/"
-	hcMux := http.NewServeMux()
-	hcMux.HandleFunc(path.Join(hr, "liveness"), health.HandleLive)
-	hcMux.Handle(path.Join(hr, "readiness"), &srv.healthHandler)
+	const healthPrefix = "/healthz/"
 
 	mux := http.NewServeMux()
-	mux.Handle(hr, hcMux)
+	mux.HandleFunc(healthPrefix+"liveness", health.HandleLive)
+	mux.Handle(healthPrefix+"readiness", &srv.healthHandler)
 	h := srv.handler
 	if srv.reqlog != nil {
 		h = requestlog.NewHandler(srv.reqlog, h)
 	}
-	h = http.Handler(handler{h})
+	h = &ochttp.Handler{
+		Handler:          h,
+		IsPublicEndpoint: true,
+	}
 	mux.Handle("/", h)
 
 	return srv.driver.ListenAndServe(addr, mux)
@@ -137,20 +138,6 @@ func (srv *Server) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	return srv.driver.Shutdown(ctx)
-}
-
-// handler is a handler wrapper that handles tracing through OpenCensus for users.
-// TODO(shantuo): unify handler types from trace, requestlog, health checks, etc together.
-type handler struct {
-	handler http.Handler
-}
-
-func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), r.URL.Host+r.URL.Path)
-	defer span.End()
-
-	r = r.WithContext(ctx)
-	h.handler.ServeHTTP(w, r)
 }
 
 // DefaultDriver implements the driver.Server interface. The zero value is a valid http.Server.

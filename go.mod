@@ -42,9 +42,9 @@ require (
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	go.opencensus.io v0.22.0
+	go.opencensus.io v0.22.2
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
-	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b
+	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
