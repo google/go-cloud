@@ -22,7 +22,6 @@ require (
 	github.com/nats-io/nats-server/v2 v2.0.0
 	github.com/nats-io/nats.go v1.9.1
 	github.com/nats-io/nkeys v0.1.3 // indirect
-	go.opencensus.io v0.22.2 // indirect
 	gocloud.dev v0.18.0
 	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708 // indirect
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
