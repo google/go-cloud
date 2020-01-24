@@ -437,6 +437,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 					r, rerr = makeReader()
 					madeReader = true
 				}
+				if r == nil {
+					return false
+				}
 				*p = r
 				return true
 			}
