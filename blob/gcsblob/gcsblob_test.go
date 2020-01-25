@@ -312,6 +312,41 @@ func TestOpenBucket(t *testing.T) {
 	}
 }
 
+// TestBeforeReadNonExistentKey tests using BeforeRead on a nonexistent key.
+func TestBeforeReadNonExistentKey(t *testing.T) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bucket := blob.NewBucket(drv)
+	defer bucket.Close()
+
+	// Try reading a nonexistent key.
+	_, err = bucket.NewReader(ctx, "nonexistent-key", &blob.ReaderOptions{
+		BeforeRead: func(asFunc func(interface{}) bool) error {
+			var objp **storage.ObjectHandle
+			if !asFunc(&objp) {
+				return errors.New("Reader.As failed to get ObjectHandle")
+			}
+			var rp *storage.Reader
+			if asFunc(&rp) {
+				return errors.New("Reader.As unexpectedly got storage.Reader")
+			}
+			return nil
+		},
+	})
+	if err == nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v, wanted NotFound for Read", err)
+	}
+}
+
 // TestPreconditions tests setting of ObjectHandle preconditions via As.
 func TestPreconditions(t *testing.T) {
 	const (
