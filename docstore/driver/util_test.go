@@ -91,6 +91,10 @@ func TestGroupActions(t *testing.T) {
 			},
 			want: [][]int{{0}, {1}, {2, 3}, {4}},
 		},
+		{
+			in:   []*Action{{Kind: Create}, {Kind: Create}, {Kind: Create}},
+			want: [][]int{nil, nil, {0, 1, 2}, nil},
+		},
 	} {
 		got := make([][]*Action, 4)
 		got[0], got[1], got[2], got[3] = GroupActions(test.in)
@@ -106,10 +110,11 @@ func TestGroupActions(t *testing.T) {
 				if a1.Kind != a2.Kind {
 					return a1.Kind < a2.Kind
 				}
-				return a1.Key.(int) < a2.Key.(int)
+				a1k, _ := a1.Key.(int)
+				a2k, _ := a2.Key.(int)
+				return a1k < a2k
 			}))
 		if diff != "" {
-
 			t.Errorf("%v: %s", test.in, diff)
 		}
 	}
