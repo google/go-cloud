@@ -323,12 +323,13 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if len(objects) > 0 {
 		page.Objects = make([]*driver.ListObject, len(objects))
 		for i, obj := range objects {
-			asFunc := func(i interface{}) bool {
-				p, ok := i.(*storage.ObjectAttrs)
+			toCopy := objects[i]
+			asFunc := func(val interface{}) bool {
+				p, ok := val.(*storage.ObjectAttrs)
 				if !ok {
 					return false
 				}
-				*p = *obj
+				*p = *toCopy
 				return true
 			}
 			if obj.Prefix == "" {
