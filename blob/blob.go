@@ -163,7 +163,7 @@ func readFromWriteTo(r io.Reader, w io.Writer) (int64, int64, error) {
 			numWritten, werr := w.Write(buf[0:numRead])
 			totalWritten += int64(numWritten)
 			if werr != nil {
-				return totalRead, totalWritten, fmt.Errorf("failed to write: %v", werr)
+				return totalRead, totalWritten, werr
 			}
 		}
 		if rerr == io.EOF {
@@ -171,7 +171,7 @@ func readFromWriteTo(r io.Reader, w io.Writer) (int64, int64, error) {
 			return totalRead, totalWritten, nil
 		}
 		if rerr != nil {
-			return totalRead, totalWritten, fmt.Errorf("failed to read: %v", rerr)
+			return totalRead, totalWritten, rerr
 		}
 	}
 }
