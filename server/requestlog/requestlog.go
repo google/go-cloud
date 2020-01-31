@@ -67,7 +67,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		RemoteIP:          ipFromHostPort(r.RemoteAddr),
 		TraceID:           sc.TraceID,
 		SpanID:            sc.SpanID,
-		Request:           r,
+		Header:            r.Header,
+		Body:              r.Body,
 	}
 	if addr, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
 		ent.ServerIP = ipFromHostPort(addr.String())
@@ -115,7 +116,8 @@ type Entry struct {
 	Latency            time.Duration
 	TraceID            trace.TraceID
 	SpanID             trace.SpanID
-	Request            *http.Request
+	Header             http.Header
+	Body               io.ReadCloser
 }
 
 func ipFromHostPort(hp string) string {
