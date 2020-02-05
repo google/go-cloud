@@ -17,6 +17,7 @@
 package requestlog // import "gocloud.dev/server/requestlog"
 
 import (
+	"bufio"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -80,7 +81,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.h.ServeHTTP(w2, r2)
 
 	ent.Latency = time.Since(start)
-	if rcc.err == nil && rcc.r != nil {
+	if rcc.err == nil && rcc.r != nil && !w2.hijacked {
 		// If the handler hasn't encountered an error in the Body (like EOF),
 		// then consume the rest of the Body to provide an accurate rcc.n.
 		io.Copy(ioutil.Discard, rcc)
@@ -161,10 +162,11 @@ func headerSize(h http.Header) int64 {
 }
 
 type responseStats struct {
-	w     http.ResponseWriter
-	hsize int64
-	wc    writeCounter
-	code  int
+	w        http.ResponseWriter
+	hsize    int64
+	wc       writeCounter
+	code     int
+	hijacked bool
 }
 
 func (r *responseStats) Header() http.Header {
@@ -197,4 +199,16 @@ func (r *responseStats) size() (hdr, body int64) {
 	// The Header map can be mutated after the call to add HTTP Trailers,
 	// which we don't want to count.
 	return r.hsize, int64(r.wc)
+}
+
+func (r *responseStats) Hijack() (_ net.Conn, _ *bufio.ReadWriter, err error) {
+	defer func() {
+		if err == nil {
+			r.hijacked = true
+		}
+	}()
+	if hj, ok := r.w.(http.Hijacker); ok {
+		return hj.Hijack()
+	}
+	return nil, nil, errors.New("underlying ResponseWriter does not support hijacking")
 }
