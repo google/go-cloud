@@ -31,10 +31,12 @@ type encoder struct {
 	av *dyn.AttributeValue
 }
 
-func (e *encoder) EncodeNil()            { e.av = nullValue }
-func (e *encoder) EncodeBool(x bool)     { e.av = new(dyn.AttributeValue).SetBOOL(x) }
-func (e *encoder) EncodeInt(x int64)     { e.av = new(dyn.AttributeValue).SetN(strconv.FormatInt(x, 10)) }
-func (e *encoder) EncodeUint(x uint64)   { e.av = new(dyn.AttributeValue).SetN(strconv.FormatUint(x, 10)) }
+func (e *encoder) EncodeNil()        { e.av = nullValue }
+func (e *encoder) EncodeBool(x bool) { e.av = new(dyn.AttributeValue).SetBOOL(x) }
+func (e *encoder) EncodeInt(x int64) { e.av = new(dyn.AttributeValue).SetN(strconv.FormatInt(x, 10)) }
+func (e *encoder) EncodeUint(x uint64) {
+	e.av = new(dyn.AttributeValue).SetN(strconv.FormatUint(x, 10))
+}
 func (e *encoder) EncodeBytes(x []byte)  { e.av = new(dyn.AttributeValue).SetB(x) }
 func (e *encoder) EncodeFloat(x float64) { e.av = encodeFloat(x) }
 
