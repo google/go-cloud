@@ -21,7 +21,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/google/go-cmp v0.4.0
 	go.opencensus.io v0.22.3 // indirect
-	gocloud.dev v0.18.0
+	gocloud.dev v0.19.0
 	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
