@@ -28,6 +28,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.4.0
 	github.com/gorilla/mux v1.7.2
+	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
 	go.opencensus.io v0.22.3
 	gocloud.dev v0.19.0
