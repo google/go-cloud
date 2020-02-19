@@ -41,6 +41,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	go.opencensus.io v0.22.2
