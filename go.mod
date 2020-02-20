@@ -44,6 +44,7 @@ require (
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/nats-io/nats.go v1.9.1
 	go.opencensus.io v0.22.2
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7

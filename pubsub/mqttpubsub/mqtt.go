@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub/driver"
 	"sync"
@@ -13,76 +14,59 @@ import (
 )
 
 const (
-	defaultQOS byte = 1
+	defaultQOS byte = 0
 	pubID           = "publisher"
 	subID           = "subscriber"
 )
 
+// TODO init sub and pub
+
 var (
+	errNoURLEnv         = errors.New("mqttpubsub: no url env provided ")
 	errInvalidMessage   = errors.New("mqttpubsub: invalid or empty message")
 	errConnRequired     = errors.New("mqttpubsub: mqtt connection is required")
-	errNotInitialized   = errors.New("mqttpubsub: topic not initialized")
-	errStillConnected   = errors.New("mqttpubsub:  still connected. Kill all processes manually")
+	errStillConnected   = errors.New("mqttpubsub: still connected. Kill all processes manually")
 	errMQTTDisconnected = errors.New("mqttpubsub: disconnected")
 )
 
-type MQTTMessenger interface {
-	GetSubscriber() Subscriber
-	GetPublisher() Publisher
-}
-
-type messenger struct {
-	Subscriber
-	Publisher
-}
-
-func (m *messenger) GetSubscriber() Subscriber {
-	return m.Subscriber
-}
-
-func (m *messenger) GetPublisher() Publisher {
-	return m.Publisher
-}
-
-type Subscriber interface {
-	Subscribe(topic string, handler mqtt.MessageHandler) error
-	Close() error
-}
-
-type Publisher interface {
-	Publish(topic string, payload interface{}) error
-	Stop() error
-}
-
-type subscriber struct {
-	subTopic string
-
-	subConnect mqtt.Client
-}
-
-type publisher struct {
-	pubConnect mqtt.Client
-
-	isStopped bool
-	wg        *sync.WaitGroup
-}
-
-func defaultConn(url string) (MQTTMessenger, error) {
-	pub, err := defaultPubClient(url)
-	if err != nil {
-		return nil, err
+type (
+	MQTTMessenger interface {
+		Subscriber
+		Publisher
 	}
-	sub, err := defaultSubClient(url)
-	if err != nil {
-		return nil, err
+
+	messenger interface {
+		Subscriber
+		Publisher
 	}
-	return &messenger{
-		Subscriber: sub,
-		Publisher:  pub,
-	}, nil
-}
+
+	Subscriber interface {
+		Subscribe(topic string, handler mqtt.MessageHandler) error
+		UnSubscribe(topic string) error
+		Close() error
+	}
+
+	Publisher interface {
+		Publish(topic string, payload interface{}) error
+		Stop() error
+	}
+
+	subscriber struct {
+		subConnect mqtt.Client
+	}
+
+	publisher struct {
+		pubConnect mqtt.Client
+
+		isStopped bool
+		wg        *sync.WaitGroup
+	}
+)
 
 func defaultSubClient(url string) (_ Subscriber, err error) {
+	if url == "" {
+		return nil, errNoURLEnv
+	}
 	var subConnect mqtt.Client
 
 	subConnect, err = makeConnect(subID, url)
@@ -95,6 +79,9 @@ func defaultSubClient(url string) (_ Subscriber, err error) {
 }
 
 func defaultPubClient(url string) (_ Publisher, err error) {
+	if url == "" {
+		return nil, errNoURLEnv
+	}
 	var pubConnect mqtt.Client
 
 	pubConnect, err = makeConnect(pubID, url)
@@ -128,18 +115,27 @@ func (c *publisher) Publish(topic string, payload interface{}) error {
 	if c.isStopped {
 		return nil
 	}
+
 	token := c.pubConnect.Publish(topic, defaultQOS, false, payload)
-	token.Wait()
-	return token.Error()
+	if token.Wait() && token.Error() != nil {
+		fmt.Println(topic, token.Error(),"@@@@@@@@@@@")
+		return token.Error()
+	}
+	return nil
 }
 
 func (c *publisher) Stop() error {
+	if c.pubConnect == nil {
+		return errConnRequired
+	}
 	c.isStopped = true
 	c.wg.Wait()
 	c.pubConnect.Disconnect(0)
 	if c.pubConnect.IsConnected() {
 		return errStillConnected
 	}
+	fmt.Println("STOPPED")
+
 	return nil
 }
 
@@ -149,18 +145,40 @@ func (c *subscriber) Subscribe(topic string, handler mqtt.MessageHandler) error 
 	}
 
 	token := c.subConnect.Subscribe(topic, defaultQOS, handler)
+
+	if token.Wait() && token.Error() != nil {
+		fmt.Println(topic, token.Error(),"############")
+
+		return token.Error()
+	}
+	return nil
+}
+
+func (c *subscriber) UnSubscribe(topic string) error {
+	if !c.subConnect.IsConnected() {
+		return errMQTTDisconnected
+	}
+
+	token := c.subConnect.Unsubscribe(topic)
 	if token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-	c.subTopic = topic
 	return nil
 }
 
 func (c *subscriber) Close() error {
+	fmt.Println("CLOSING")
+
+	if c.subConnect == nil {
+		return errConnRequired
+	}
+
 	c.subConnect.Disconnect(0)
 	if c.subConnect.IsConnected() {
 		return errStillConnected
 	}
+	fmt.Println("CLOSED")
+
 	return nil
 }
 
@@ -222,7 +240,7 @@ func whichError(err error) gcerrors.ErrorCode {
 		return gcerrors.OK
 	case context.Canceled:
 		return gcerrors.Canceled
-	case errNotInitialized, errMQTTDisconnected, errConnRequired:
+	case errMQTTDisconnected, errConnRequired:
 		return gcerrors.NotFound
 	case mqtt.ErrInvalidTopicEmptyString, mqtt.ErrInvalidQos, mqtt.ErrInvalidTopicMultilevel, errInvalidMessage:
 		return gcerrors.FailedPrecondition

@@ -16,7 +16,6 @@ package mqttpubsub
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/hashicorp/go-multierror"
@@ -50,7 +49,8 @@ const Scheme = "mqtt"
 // No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
-	Connection MQTTMessenger
+	SubConn Subscriber
+	PubConn Publisher
 
 	// TopicOptions specifies the options to pass to OpenTopic.
 	TopicOptions TopicOptions
@@ -61,35 +61,41 @@ type URLOpener struct {
 // defaultDialer dials a default MQTT server based on the environment
 // variable "MQTT_SERVER_URL".
 type defaultDialer struct {
-	init   sync.Once
 	opener *URLOpener
 	err    error
 }
 
-func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
-	o.init.Do(func() {
-		serverURL := os.Getenv("MQTT_SERVER_URL")
-		if serverURL == "" {
-			o.err = errors.New("MQTT_SERVER_URL environment variable not set")
-			return
-		}
-		_, cancelF := context.WithTimeout(ctx, time.Second*3)
-		defer cancelF()
+func (o *defaultDialer) defaultSubscriber(ctx context.Context) (*URLOpener, error) {
+	_, cancelF := context.WithTimeout(ctx, time.Second*3)
+	defer cancelF()
 
-		conn, err := defaultConn(serverURL)
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{
-			Connection: conn,
-		}
-	})
+	conn, err := defaultSubClient(os.Getenv("MQTT_SERVER_URL"))
+	if err != nil {
+		return nil, err
+	}
+
+	o.opener = &URLOpener{
+		SubConn: conn,
+	}
+	return o.opener, o.err
+}
+
+func (o *defaultDialer) defaultPublisher(ctx context.Context) (*URLOpener, error) {
+	_, cancelF := context.WithTimeout(ctx, time.Second*3)
+	defer cancelF()
+
+	conn, err := defaultPubClient(os.Getenv("MQTT_SERVER_URL"))
+	if err != nil {
+		return nil, err
+	}
+	o.opener = &URLOpener{
+		PubConn: conn,
+	}
 	return o.opener, o.err
 }
 
 func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
-	opener, err := o.defaultConn(ctx)
+	opener, err := o.defaultPublisher(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("open topic %v: failed to open default connection: %v", u, err)
 	}
@@ -97,7 +103,7 @@ func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.T
 }
 
 func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	opener, err := o.defaultConn(ctx)
+	opener, err := o.defaultSubscriber(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %v", u, err)
 	}
@@ -110,7 +116,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	exchangeName := path.Join(u.Host, u.Path)
-	return OpenTopic(o.Connection.GetPublisher(), exchangeName, &o.TopicOptions)
+	return OpenTopic(o.PubConn, exchangeName, &o.TopicOptions)
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
@@ -119,15 +125,15 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	queueName := path.Join(u.Host, u.Path)
-	return OpenSubscription(o.Connection.GetSubscriber(), queueName, &o.SubscriptionOptions)
+	return OpenSubscription(o.SubConn, queueName, &o.SubscriptionOptions)
 }
 
 type topic struct {
 	name string
 	conn Publisher
 
-	wg *sync.WaitGroup
-	mu *sync.Mutex
+	wg   *sync.WaitGroup
+	mu   *sync.Mutex
 	errs *multierror.Error
 }
 
@@ -140,23 +146,31 @@ type TopicOptions struct{}
 type SubscriptionOptions struct{}
 
 func OpenTopic(conn Publisher, name string, _ *TopicOptions) (*pubsub.Topic, error) {
+	dt, err := openTopic(conn, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return pubsub.NewTopic(dt, nil), nil
+}
+
+func openTopic(conn Publisher, name string) (driver.Topic, error) {
 	if conn == nil {
 		return nil, errConnRequired
 	}
-	dt := &topic{
+	return &topic{
 		name,
 		conn,
 		new(sync.WaitGroup),
 		new(sync.Mutex),
 		new(multierror.Error),
-	}
-	return pubsub.NewTopic(dt, nil), nil
+	}, nil
 }
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 	if t == nil || t.conn == nil {
-		return errNotInitialized
+		return errConnRequired
 	}
 
 	for _, m := range msgs {
@@ -177,16 +191,17 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		}
 		go func() {
 			defer t.wg.Done()
-			t.mu.Lock()
 			err = t.conn.Publish(t.name, payload)
 			if err != nil {
+				t.mu.Lock()
 				t.errs.Errors = append(t.errs.Errors, err)
+				t.mu.Unlock()
+
 			}
-			t.mu.Unlock()
 		}()
 	}
 	t.wg.Wait()
-	
+
 	return t.errs.ErrorOrNil()
 }
 
@@ -195,11 +210,10 @@ func (*topic) IsRetryable(error) bool { return false }
 
 // As implements driver.Topic.As.
 func (t *topic) As(i interface{}) bool {
-	c, ok := i.(*MQTTMessenger)
+	_, ok := i.(*MQTTMessenger)
 	if !ok {
 		return false
 	}
-	*c = MQTTMessenger(&messenger{Publisher: t.conn})
 	return true
 }
 
@@ -211,11 +225,13 @@ func (*topic) ErrorAs(error, interface{}) bool {
 // ErrorCode implements driver.Topic.ErrorCode
 func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return whichError(err)
-
 }
 
 // Close implements driver.Topic.Close.
 func (t *topic) Close() error {
+	if t == nil || t.conn == nil {
+		return errConnRequired
+	}
 	return t.conn.Stop()
 }
 
@@ -232,6 +248,14 @@ type subscription struct {
 }
 
 func OpenSubscription(conn Subscriber, topicName string, _ *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(conn, topicName)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewSubscription(ds, nil, nil), nil
+}
+
+func openSubscription(conn Subscriber, topicName string) (driver.Subscription, error) {
 	ds := &subscription{
 		conn,
 		topicName,
@@ -241,6 +265,7 @@ func OpenSubscription(conn Subscriber, topicName string, _ *SubscriptionOptions)
 		new(multierror.Error),
 	}
 	err := ds.conn.Subscribe(topicName, func(client mqtt.Client, m mqtt.Message) {
+		fmt.Println(m.Topic(), string(m.Payload()), "MESSAGE")
 		ds.mu.Lock()
 		ds.unackedMsgs = append(ds.unackedMsgs, m)
 		ds.mu.Unlock()
@@ -252,14 +277,15 @@ func OpenSubscription(conn Subscriber, topicName string, _ *SubscriptionOptions)
 		for {
 			select {
 			case <-time.Tick(5 * time.Minute): // unhandled messages cleaning
+				ds.mu.Lock()
 				ds.unackedMsgs = make([]mqtt.Message, 0)
+				ds.mu.Unlock()
 			case <-ds.stopChan:
 				return
 			}
 		}
 	}()
-
-	return pubsub.NewSubscription(ds, nil, nil), nil
+	return ds, nil
 }
 
 // ReceiveBatch implements driver.ReceiveBatch.
@@ -270,8 +296,14 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (dms [
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-
+	fmt.Println(len(s.unackedMsgs), "LEN MSG!!!!!")
 	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.unackedMsgs) == 0 {
+		return dms, s.errs.ErrorOrNil()
+	}
+
 	for i, m := range s.unackedMsgs {
 		if i >= maxMessages {
 			break
@@ -282,13 +314,15 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (dms [
 		}
 		dms = append(dms, dm)
 	}
-	s.mu.RUnlock()
-
+	fmt.Println(dms, "DMS!!!!!!")
 	return dms, s.errs.ErrorOrNil()
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	if s == nil || s.conn == nil {
+		return errConnRequired
+	}
 	if len(ids) == 0 {
 		return nil
 	}
@@ -308,6 +342,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 
 		s.mu.RLock()
 		for _, m := range s.unackedMsgs {
+			if m == nil {
+				continue
+			}
 			if m.MessageID() == msgID {
 				m.Ack()
 			}
@@ -341,6 +378,9 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 
 		s.mu.Lock()
 		for i, m := range s.unackedMsgs {
+			if m == nil {
+				continue
+			}
 			if m.MessageID() == msgID {
 				s.unackedMsgs[i] = nil
 			}
@@ -355,11 +395,10 @@ func (s *subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool {
-	c, ok := i.(*MQTTMessenger)
+	_, ok := i.(*MQTTMessenger)
 	if !ok {
 		return false
 	}
-	*c = MQTTMessenger(&messenger{Subscriber: s.conn})
 	return true
 }
 
@@ -375,6 +414,9 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // Close implements driver.Subscription.Close.
 func (s *subscription) Close() error {
+	if s == nil {
+		return errConnRequired
+	}
 	if _, ok := <-s.stopChan; ok {
 		s.stopChan <- struct{}{}
 		close(s.stopChan)

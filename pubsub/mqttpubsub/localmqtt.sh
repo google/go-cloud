@@ -13,17 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Starts all local instances needed for Go CDK tests.
-# You must have Docker installed.
-# Run this script from the top level of the tree, e.g.:
-#   ./internal/testing/start_local_deps.sh
+# Starts a local VerneMQ instance via Docker.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euo pipefail
 
-./pubsub/mqttpubsub/localmqtt.sh
-./pubsub/kafkapubsub/localkafka.sh
-./pubsub/rabbitpubsub/localrabbit.sh
-./runtimevar/etcdvar/localetcd.sh
-./docstore/mongodocstore/localmongo.sh
-./secrets/hashivault/localvault.sh
+# Clean up and run VerneMQ.
+echo "Starting VerneMQ..."
+docker rm -f vernemq &> /dev/null || :
+docker run -d -p 1883:1883 -e DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on -e DOCKER_VERNEMQ_ACCEPT_EULA=yes --name vernemq erlio/docker-vernemq &> /dev/null
+echo "...done. Run \"docker rm -f vernemq\" to clean up the container."
+echo

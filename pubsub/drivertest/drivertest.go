@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"testing"
@@ -181,6 +182,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		"TestNonUTF8MessageBody": testNonUTF8MessageBody,
 	}
 	for name, test := range tests {
+		fmt.Println(name, "WHAAAAAAT")
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
 	}
 
