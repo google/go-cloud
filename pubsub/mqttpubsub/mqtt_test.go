@@ -45,16 +45,11 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 	}
 
-	fmt.Println(url, "FFFFFFFFF")
 	sub, err := defaultSubClient(url)
-	fmt.Println("CONNECT", err)
-
 	if err != nil {
 		return nil, err
 	}
 	pub, err := defaultPubClient(url)
-	fmt.Println("CONNECT", err)
-
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +60,6 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 func (h *harness) CreateTopic(ctx context.Context, testName string) (driver.Topic, func(), error) {
 	cleanup := func() {}
 	dt, err := openTopic(h.Publisher, testName)
-	fmt.Println("CreateTopic", err, "??????")
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,15 +74,13 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
 	ds, err := openSubscription(h.Subscriber, testName)
-	fmt.Println("CreateSubscription", err, "??????")
-
 	if err != nil {
 		return nil, nil, err
 	}
 	cleanup := func() {
 		var sub Subscriber
 		if ds.As(&sub) {
-			sub.UnSubscribe(testName)
+			h.Subscriber.UnSubscribe(testName)
 		}
 	}
 	return ds, cleanup, nil

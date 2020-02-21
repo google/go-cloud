@@ -19,8 +19,6 @@ const (
 	subID           = "subscriber"
 )
 
-// TODO init sub and pub
-
 var (
 	errNoURLEnv         = errors.New("mqttpubsub: no url env provided ")
 	errInvalidMessage   = errors.New("mqttpubsub: invalid or empty message")
@@ -111,27 +109,29 @@ func makeConnect(clientID, url string) (mqtt.Client, error) {
 	return mqttClient, nil
 }
 
-func (c *publisher) Publish(topic string, payload interface{}) error {
-	if c.isStopped {
+func (p *publisher) Publish(topic string, payload interface{}) error {
+	if p.isStopped {
 		return nil
 	}
 
-	token := c.pubConnect.Publish(topic, defaultQOS, false, payload)
+	token := p.pubConnect.Publish(topic, defaultQOS, false, payload)
 	if token.Wait() && token.Error() != nil {
-		fmt.Println(topic, token.Error(),"@@@@@@@@@@@")
 		return token.Error()
 	}
 	return nil
 }
 
-func (c *publisher) Stop() error {
-	if c.pubConnect == nil {
+func (p *publisher) Stop() error {
+	if p.pubConnect == nil {
 		return errConnRequired
 	}
-	c.isStopped = true
-	c.wg.Wait()
-	c.pubConnect.Disconnect(0)
-	if c.pubConnect.IsConnected() {
+	if p.isStopped {
+		return nil
+	}
+	p.isStopped = true
+	p.wg.Wait()
+	p.pubConnect.Disconnect(0)
+	if p.pubConnect.IsConnected() {
 		return errStillConnected
 	}
 	fmt.Println("STOPPED")
@@ -139,46 +139,42 @@ func (c *publisher) Stop() error {
 	return nil
 }
 
-func (c *subscriber) Subscribe(topic string, handler mqtt.MessageHandler) error {
-	if !c.subConnect.IsConnected() {
+func (s *subscriber) Subscribe(topic string, handler mqtt.MessageHandler) error {
+	if !s.subConnect.IsConnected() {
 		return errMQTTDisconnected
 	}
 
-	token := c.subConnect.Subscribe(topic, defaultQOS, handler)
+	token := s.subConnect.Subscribe(topic, defaultQOS, handler)
 
-	if token.Wait() && token.Error() != nil {
-		fmt.Println(topic, token.Error(),"############")
-
-		return token.Error()
-	}
-	return nil
-}
-
-func (c *subscriber) UnSubscribe(topic string) error {
-	if !c.subConnect.IsConnected() {
-		return errMQTTDisconnected
-	}
-
-	token := c.subConnect.Unsubscribe(topic)
 	if token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
 	return nil
 }
 
-func (c *subscriber) Close() error {
-	fmt.Println("CLOSING")
+func (s *subscriber) UnSubscribe(topic string) error {
+	if !s.subConnect.IsConnected() {
+		return errMQTTDisconnected
+	}
 
-	if c.subConnect == nil {
+	token := s.subConnect.Unsubscribe(topic)
+	if token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+	return nil
+}
+
+func (s *subscriber) Close() error {
+	if s.subConnect == nil {
 		return errConnRequired
 	}
-
-	c.subConnect.Disconnect(0)
-	if c.subConnect.IsConnected() {
+	if !s.subConnect.IsConnected() {
+		return nil
+	}
+	s.subConnect.Disconnect(0)
+	if s.subConnect.IsConnected() {
 		return errStillConnected
 	}
-	fmt.Println("CLOSED")
-
 	return nil
 }
 
@@ -226,7 +222,6 @@ func decodeMessage(data []byte, dm *driver.Message) error {
 	buf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buf)
 	if err := dec.Decode(&dm.Metadata); err != nil {
-		// This may indicate a normal NATS message, so just treat as the body.
 		dm.Metadata = nil
 		dm.Body = data
 		return nil

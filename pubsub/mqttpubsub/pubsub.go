@@ -19,15 +19,13 @@ import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/hashicorp/go-multierror"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 	"net/url"
 	"os"
 	"path"
 	"sync"
-	"time"
-
-	"gocloud.dev/gcerrors"
-	"gocloud.dev/pubsub"
-	"gocloud.dev/pubsub/driver"
 )
 
 func init() {
@@ -66,8 +64,9 @@ type defaultDialer struct {
 }
 
 func (o *defaultDialer) defaultSubscriber(ctx context.Context) (*URLOpener, error) {
-	_, cancelF := context.WithTimeout(ctx, time.Second*3)
-	defer cancelF()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	conn, err := defaultSubClient(os.Getenv("MQTT_SERVER_URL"))
 	if err != nil {
@@ -81,8 +80,9 @@ func (o *defaultDialer) defaultSubscriber(ctx context.Context) (*URLOpener, erro
 }
 
 func (o *defaultDialer) defaultPublisher(ctx context.Context) (*URLOpener, error) {
-	_, cancelF := context.WithTimeout(ctx, time.Second*3)
-	defer cancelF()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	conn, err := defaultPubClient(os.Getenv("MQTT_SERVER_URL"))
 	if err != nil {
@@ -201,7 +201,6 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		}()
 	}
 	t.wg.Wait()
-
 	return t.errs.ErrorOrNil()
 }
 
@@ -210,7 +209,7 @@ func (*topic) IsRetryable(error) bool { return false }
 
 // As implements driver.Topic.As.
 func (t *topic) As(i interface{}) bool {
-	_, ok := i.(*MQTTMessenger)
+	_, ok := i.(*Publisher)
 	if !ok {
 		return false
 	}
@@ -239,10 +238,9 @@ type subscription struct {
 	conn      Subscriber
 	topicName string
 
-	mu          *sync.RWMutex
+	mu          *sync.Mutex
+	msgs []mqtt.Message
 	unackedMsgs []mqtt.Message
-
-	stopChan chan struct{}
 
 	errs *multierror.Error
 }
@@ -259,33 +257,18 @@ func openSubscription(conn Subscriber, topicName string) (driver.Subscription, e
 	ds := &subscription{
 		conn,
 		topicName,
-		new(sync.RWMutex),
+		new(sync.Mutex),
 		make([]mqtt.Message, 0),
-		make(chan struct{}),
+		make([]mqtt.Message, 0),
 		new(multierror.Error),
 	}
 	err := ds.conn.Subscribe(topicName, func(client mqtt.Client, m mqtt.Message) {
-		fmt.Println(m.Topic(), string(m.Payload()), "MESSAGE")
 		ds.mu.Lock()
 		ds.unackedMsgs = append(ds.unackedMsgs, m)
 		ds.mu.Unlock()
 	})
-	if err != nil {
-		return nil, err
-	}
-	go func() {
-		for {
-			select {
-			case <-time.Tick(5 * time.Minute): // unhandled messages cleaning
-				ds.mu.Lock()
-				ds.unackedMsgs = make([]mqtt.Message, 0)
-				ds.mu.Unlock()
-			case <-ds.stopChan:
-				return
-			}
-		}
-	}()
-	return ds, nil
+
+	return ds, err
 }
 
 // ReceiveBatch implements driver.ReceiveBatch.
@@ -296,16 +279,17 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (dms [
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	fmt.Println(len(s.unackedMsgs), "LEN MSG!!!!!")
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 
-	if len(s.unackedMsgs) == 0 {
-		return dms, s.errs.ErrorOrNil()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(s.msgs) == 0 {
+		return nil, nil
 	}
-
-	for i, m := range s.unackedMsgs {
+	for i, m := range s.msgs {
 		if i >= maxMessages {
+			s.unackedMsgs = s.msgs[:i]
+			s.msgs = s.msgs[(i-1):]
 			break
 		}
 		dm, err := decode(m)
@@ -314,7 +298,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (dms [
 		}
 		dms = append(dms, dm)
 	}
-	fmt.Println(dms, "DMS!!!!!!")
 	return dms, s.errs.ErrorOrNil()
 }
 
@@ -340,49 +323,12 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 			return nil
 		}
 
-		s.mu.RLock()
-		for _, m := range s.unackedMsgs {
-			if m == nil {
-				continue
-			}
-			if m.MessageID() == msgID {
-				m.Ack()
-			}
-		}
-		s.mu.RUnlock()
-	}
-	return nil
-}
-
-// CanNack implements driver.CanNack.
-func (s *subscription) CanNack() bool { return true }
-
-// SendNacks implements driver.Subscription.SendNacks. MQTT doesn't have implementation for NACK
-// so below method just removes unACKed messages
-func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	for _, id := range ids {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		msgID, ok := id.(uint16)
-		if !ok {
-			continue
-		}
-
-		if len(s.unackedMsgs) == 0 {
-			return nil
-		}
-
 		s.mu.Lock()
-		for i, m := range s.unackedMsgs {
-			if m == nil {
-				continue
-			}
-			if m.MessageID() == msgID {
-				s.unackedMsgs[i] = nil
+		for i := 0; i < len(s.unackedMsgs); i++ {
+			if s.unackedMsgs[i].MessageID() == msgID {
+				s.unackedMsgs[i].Ack()
+				s.unackedMsgs = append(s.unackedMsgs[:i], s.unackedMsgs[(i+1):]...)
+				i--
 			}
 		}
 		s.mu.Unlock()
@@ -390,12 +336,19 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 	return nil
 }
 
+// CanNack implements driver.CanNack.
+func (*subscription) CanNack() bool { return false }
+
+// SendNacks implements driver.Subscription.SendNacks. MQTT doesn't have implementation for NACK
+// so below method just removes unACKed messages
+func (*subscription) SendNacks(ctx context.Context, ids []driver.AckID) error { return nil }
+
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (s *subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool {
-	_, ok := i.(*MQTTMessenger)
+	_, ok := i.(*Subscriber)
 	if !ok {
 		return false
 	}
@@ -417,10 +370,5 @@ func (s *subscription) Close() error {
 	if s == nil {
 		return errConnRequired
 	}
-	if _, ok := <-s.stopChan; ok {
-		s.stopChan <- struct{}{}
-		close(s.stopChan)
-		return s.Close()
-	}
-	return nil
+	return s.conn.Close()
 }
