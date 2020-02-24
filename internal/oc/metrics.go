@@ -16,8 +16,6 @@
 package oc
 
 import (
-	"fmt"
-
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -35,18 +33,10 @@ func LatencyMeasure(pkg string) *stats.Float64Measure {
 
 // Tag keys used for the standard Go CDK views.
 var (
-	MethodKey   = mustKey("gocdk_method")
-	StatusKey   = mustKey("gocdk_status")
-	ProviderKey = mustKey("gocdk_provider")
+	MethodKey   = tag.MustNewKey("gocdk_method")
+	StatusKey   = tag.MustNewKey("gocdk_status")
+	ProviderKey = tag.MustNewKey("gocdk_provider")
 )
-
-func mustKey(name string) tag.Key {
-	k, err := tag.NewKey(name)
-	if err != nil {
-		panic(fmt.Sprintf("tag.NewKey(%q): %v", name, err))
-	}
-	return k
-}
 
 // Views returns the views supported by Go CDK APIs.
 func Views(pkg string, latencyMeasure *stats.Float64Measure) []*view.View {
