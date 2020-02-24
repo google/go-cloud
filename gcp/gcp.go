@@ -45,6 +45,15 @@ type HTTPClient struct {
 	http.Client
 }
 
+// NewAnonymousHTTPClient creates a new anonymous HTTP client.
+func NewAnonymousHTTPClient(transport http.RoundTripper) *HTTPClient {
+	return &HTTPClient{
+		Client: http.Client{
+			Transport: transport,
+		},
+	}
+}
+
 // NewHTTPClient creates a new authenticated HTTP client.
 func NewHTTPClient(transport http.RoundTripper, ts TokenSource) (*HTTPClient, error) {
 	if ts == nil {
