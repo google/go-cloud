@@ -214,10 +214,12 @@ func (*topic) IsRetryable(error) bool { return false }
 
 // As implements driver.Topic.As.
 func (t *topic) As(i interface{}) bool {
-	_, ok := i.(*Publisher)
+	c, ok := i.(*Publisher)
 	if !ok {
 		return false
 	}
+	*c = t.conn
+
 	return true
 }
 
@@ -267,6 +269,7 @@ func openSubscription(conn Subscriber, topicName string) (driver.Subscription, e
 		make([]mqtt.Message, 0),
 		new(multierror.Error),
 	}
+
 	err := ds.conn.Subscribe(topicName, func(client mqtt.Client, m mqtt.Message) {
 		ds.mu.Lock()
 		ds.msgs = append(ds.msgs, m)
@@ -360,10 +363,12 @@ func (s *subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool {
-	_, ok := i.(*Subscriber)
+	c, ok := i.(*Subscriber)
 	if !ok {
 		return false
 	}
+	*c = s.conn
+
 	return true
 }
 

@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	publicTestHost = "test.mosquitto.org"
+	publicTestHost = "test.mosquitto.org" // officially for testing
 	localTestHost  = "localhost"
 	testPort       = 1883
 )
@@ -47,7 +47,6 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 	sub, err := defaultSubClient(url)
 	if err != nil {
-		fmt.Println("ERRRRRRRRRR", err)
 		return nil, err
 	}
 	pub, err := defaultPubClient(url)
@@ -98,7 +97,8 @@ func (h *harness) Close() {
 
 func (*harness) MaxBatchSizes() (int, int) { return 0, 0 }
 
-func (*harness) SupportsMultipleSubscriptions() bool { return true }
+// supported from MQTT v5.0. Not supported by "github.com/eclipse/paho.mqtt.golang" driver
+func (*harness) SupportsMultipleSubscriptions() bool { return false }
 
 type mqttAsTest struct{}
 
@@ -107,7 +107,7 @@ func (mqttAsTest) Name() string {
 }
 
 func (mqttAsTest) TopicCheck(topic *pubsub.Topic) error {
-	var pub Publisher
+	var pub *Publisher
 	if topic.As(&pub) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &pub)
 	}
@@ -119,7 +119,7 @@ func (mqttAsTest) TopicCheck(topic *pubsub.Topic) error {
 }
 
 func (mqttAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
-	var sub1 Subscriber
+	var sub1 *Subscriber
 	if sub.As(&sub1) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &sub1)
 	}
@@ -147,7 +147,7 @@ func (mqttAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) erro
 }
 
 func (mqttAsTest) MessageCheck(m *pubsub.Message) error {
-	var pm mqtt.Message
+	var pm *mqtt.Message
 	if m.As(&pm) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
 	}
@@ -166,172 +166,3 @@ func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{mqttAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
 }
-
-
-//func TestErrorCode(t *testing.T) {
-//	ctx := context.Background()
-//	dh, err := newHarness(ctx, t)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	defer dh.Close()
-//	h := dh.(*harness)
-//
-//	Topics
-	//dt, err := openTopic(h.Publisher, "bar")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//
-	//if gce := dt.ErrorCode(nil); gce != gcerrors.OK {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.OK, gce)
-	//}
-	//if gce := dt.ErrorCode(context.Canceled); gce != gcerrors.Canceled {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.Canceled, gce)
-	//}
-	//if gce := dt.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
-	//}
-	//if gce := dt.ErrorCode(nats.ErrAuthorization); gce != gcerrors.PermissionDenied {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.PermissionDenied, gce)
-	//}
-	//if gce := dt.ErrorCode(nats.ErrMaxPayload); gce != gcerrors.ResourceExhausted {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
-	//}
-	//if gce := dt.ErrorCode(nats.ErrReconnectBufExceeded); gce != gcerrors.ResourceExhausted {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
-	//}
-	//
-	//Subscriptions
-	//ds, err := openSubscription(h.Subscriber, "bar")
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//if gce := ds.ErrorCode(nil); gce != gcerrors.OK {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.OK, gce)
-	//}
-	//if gce := ds.ErrorCode(context.Canceled); gce != gcerrors.Canceled {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.Canceled, gce)
-	//}
-	//if gce := ds.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
-	//}
-	//if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.NotFound {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.NotFound, gce)
-	//}
-	//if gce := ds.ErrorCode(nats.ErrTypeSubscription); gce != gcerrors.FailedPrecondition {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
-	//}
-	//if gce := ds.ErrorCode(nats.ErrAuthorization); gce != gcerrors.PermissionDenied {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.PermissionDenied, gce)
-	//}
-	//if gce := ds.ErrorCode(nats.ErrMaxMessages); gce != gcerrors.ResourceExhausted {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
-	//}
-	//if gce := ds.ErrorCode(nats.ErrSlowConsumer); gce != gcerrors.ResourceExhausted {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
-	//}
-	//if gce := ds.ErrorCode(nats.ErrTimeout); gce != gcerrors.DeadlineExceeded {
-	//	t.Fatalf("Expected %v, got %v", gcerrors.DeadlineExceeded, gce)
-	//}
-//}
-
-
-//func fakeConnectionStringInEnv() func() {
-//	oldEnvVal := os.Getenv("MQTT_SERVER_URL")
-//	os.Setenv("MQTT_SERVER_URL", fmt.Sprintf("mqtt://localhost:%d", testPort))
-//	return func() {
-//		os.Setenv("MQTT_SERVER_URL", oldEnvVal)
-//	}
-//}
-//
-//func TestOpenTopicFromURL(t *testing.T) {
-//	ctx := context.Background()
-//	dh, err := newHarness(ctx, t)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	defer dh.Close()
-//	fmt.Println("??????????/")
-//	cleanup := fakeConnectionStringInEnv()
-//	defer cleanup()
-//
-//	tests := []struct {
-//		URL     string
-//		WantErr bool
-//	}{
-//		OK.
-		//{"mqtt://mytopic", false},
-		//Invalid parameter.
-		//{"mqtt://mytopic?param=value", true},
-	//}
-	//
-	//for _, test := range tests {
-	//	topic, err := pubsub.OpenTopic(ctx, test.URL)
-	//	if (err != nil) != test.WantErr {
-	//		t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-	//	}
-	//	if topic != nil {
-	//		topic.Shutdown(ctx)
-	//	}
-	//}
-//}
-//
-//func TestOpenSubscriptionFromURL(t *testing.T) {
-//	ctx := context.Background()
-//	dh, err := newHarness(ctx, t)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	defer dh.Close()
-//
-//	cleanup := fakeConnectionStringInEnv()
-//	defer cleanup()
-//
-//	tests := []struct {
-//		URL     string
-//		WantErr bool
-//	}{
-//		OK.
-		//{"mqtt://mytopic", false},
-		//Invalid parameter.
-		//{"mqtt://mytopic?param=value", true},
-	//}
-	//
-	//for _, test := range tests {
-	//	sub, err := pubsub.OpenSubscription(ctx, test.URL)
-	//	if (err != nil) != test.WantErr {
-	//		t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-	//	}
-	//	if sub != nil {
-	//		sub.Shutdown(ctx)
-	//	}
-	//}
-//}
-//
-//func TestCodec(t *testing.T) {
-//	for _, dm := range []*driver.Message{
-//		{Metadata: nil, Body: nil},
-//		{Metadata: map[string]string{"a": "1"}, Body: nil},
-//		{Metadata: nil, Body: []byte("hello")},
-//		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello")},
-//		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello"),
-//			AckID: "foo", AsFunc: func(interface{}) bool { return true }},
-//	} {
-//		bytes, err := encodeMessage(dm)
-//		if err != nil {
-//			t.Fatal(err)
-//		}
-//		var got driver.Message
-//		if err := decodeMessage(bytes, &got); err != nil {
-//			t.Fatal(err)
-//		}
-//		want := *dm
-//		want.AckID = nil
-//		want.AsFunc = nil
-//		if diff := cmp.Diff(got, want); diff != "" {
-//			t.Errorf("%+v:\n%s", want, diff)
-//		}
-//	}
-//}
-//

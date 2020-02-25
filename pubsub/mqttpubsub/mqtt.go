@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/gob"
 	"errors"
+	"github.com/google/uuid"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub/driver"
+	"strings"
 	"sync"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -14,8 +16,9 @@ import (
 
 const (
 	defaultQOS byte = 0
-	pubID           = "publisher"
-	subID           = "subscriber"
+	pubID           = "go-cloud-publisher"
+	subID           = "go-cloud-subscriber"
+	delimiter       = "-"
 )
 
 var (
@@ -27,16 +30,6 @@ var (
 )
 
 type (
-	MQTTMessenger interface {
-		Subscriber
-		Publisher
-	}
-
-	messenger interface {
-		Subscriber
-		Publisher
-	}
-
 	Subscriber interface {
 		Subscribe(topic string, handler mqtt.MessageHandler) error
 		UnSubscribe(topic string) error
@@ -92,9 +85,10 @@ func defaultPubClient(url string) (_ Publisher, err error) {
 }
 
 func makeConnect(clientID, url string) (mqtt.Client, error) {
+	connID := uuid.New().String()
 	opts := mqtt.NewClientOptions()
 	opts = opts.AddBroker(url)
-	opts.ClientID = clientID
+	opts.ClientID = clientID + delimiter + connID
 	mqttClient := mqtt.NewClient(opts)
 	token := mqttClient.Connect()
 	token.Wait()
@@ -141,11 +135,18 @@ func (s *subscriber) Subscribe(topic string, handler mqtt.MessageHandler) error 
 		return errMQTTDisconnected
 	}
 
-	token := s.subConnect.Subscribe(topic, defaultQOS, handler)
+	topic = strings.TrimSuffix(strings.TrimPrefix(topic, "/"), "/")
+
+	token := s.subConnect.Subscribe(
+		topic,
+		defaultQOS,
+		handler,
+	)
 
 	if token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
+
 	return nil
 }
 
