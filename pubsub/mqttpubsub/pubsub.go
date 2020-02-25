@@ -178,19 +178,24 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-
-		payload, err := encodeMessage(m)
-		if err != nil {
-			return err
-		}
-		if m.BeforeSend != nil {
-			asFunc := func(i interface{}) bool { return false }
-			if err := m.BeforeSend(asFunc); err != nil {
-				return err
-			}
-		}
-		go func() {
+		go func(msg *driver.Message) {
 			defer t.wg.Done()
+
+			payload, err := encodeMessage(msg)
+			if err != nil {
+				t.mu.Lock()
+				t.errs.Errors = append(t.errs.Errors, err)
+				t.mu.Unlock()
+			}
+			if m.BeforeSend != nil {
+				asFunc := func(i interface{}) bool { return false }
+				if err := m.BeforeSend(asFunc); err != nil {
+					t.mu.Lock()
+					t.errs.Errors = append(t.errs.Errors, err)
+					t.mu.Unlock()
+				}
+			}
+
 			err = t.conn.Publish(t.name, payload)
 			if err != nil {
 				t.mu.Lock()
@@ -198,7 +203,7 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 				t.mu.Unlock()
 
 			}
-		}()
+		}(m)
 	}
 	t.wg.Wait()
 	return t.errs.ErrorOrNil()
@@ -229,7 +234,7 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 // Close implements driver.Topic.Close.
 func (t *topic) Close() error {
 	if t == nil || t.conn == nil {
-		return errConnRequired
+		return nil
 	}
 	return t.conn.Stop()
 }
@@ -239,7 +244,7 @@ type subscription struct {
 	topicName string
 
 	mu          *sync.Mutex
-	msgs []mqtt.Message
+	msgs        []mqtt.Message
 	unackedMsgs []mqtt.Message
 
 	errs *multierror.Error
@@ -264,7 +269,7 @@ func openSubscription(conn Subscriber, topicName string) (driver.Subscription, e
 	}
 	err := ds.conn.Subscribe(topicName, func(client mqtt.Client, m mqtt.Message) {
 		ds.mu.Lock()
-		ds.unackedMsgs = append(ds.unackedMsgs, m)
+		ds.msgs = append(ds.msgs, m)
 		ds.mu.Unlock()
 	})
 
@@ -286,18 +291,22 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (dms [
 	if len(s.msgs) == 0 {
 		return nil, nil
 	}
-	for i, m := range s.msgs {
+
+	for i := 0; i < len(s.msgs); i++ {
 		if i >= maxMessages {
-			s.unackedMsgs = s.msgs[:i]
-			s.msgs = s.msgs[(i-1):]
 			break
 		}
-		dm, err := decode(m)
+		dm, err := decode(s.msgs[i])
 		if err != nil {
 			s.errs.Errors = append(s.errs.Errors, err)
 		}
 		dms = append(dms, dm)
+		s.unackedMsgs = append(s.unackedMsgs, s.msgs[i])
+		// pop
+		s.msgs = append(s.msgs[:i], s.msgs[(i+1):]...)
+		i--
 	}
+
 	return dms, s.errs.ErrorOrNil()
 }
 
@@ -318,6 +327,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		if !ok {
 			continue
 		}
+		if msgID == 0 {
+			continue
+		}
 
 		if len(s.unackedMsgs) == 0 {
 			return nil
@@ -326,6 +338,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		s.mu.Lock()
 		for i := 0; i < len(s.unackedMsgs); i++ {
 			if s.unackedMsgs[i].MessageID() == msgID {
+				// pop and ack
 				s.unackedMsgs[i].Ack()
 				s.unackedMsgs = append(s.unackedMsgs[:i], s.unackedMsgs[(i+1):]...)
 				i--
@@ -340,7 +353,6 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 func (*subscription) CanNack() bool { return false }
 
 // SendNacks implements driver.Subscription.SendNacks. MQTT doesn't have implementation for NACK
-// so below method just removes unACKed messages
 func (*subscription) SendNacks(ctx context.Context, ids []driver.AckID) error { return nil }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
@@ -367,8 +379,8 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // Close implements driver.Subscription.Close.
 func (s *subscription) Close() error {
-	if s == nil {
-		return errConnRequired
+	if s == nil || s.conn == nil {
+		return nil
 	}
 	return s.conn.Close()
 }

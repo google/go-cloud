@@ -47,6 +47,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 	sub, err := defaultSubClient(url)
 	if err != nil {
+		fmt.Println("ERRRRRRRRRR", err)
 		return nil, err
 	}
 	pub, err := defaultPubClient(url)

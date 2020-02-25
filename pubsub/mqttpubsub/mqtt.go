@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub/driver"
 	"sync"
@@ -123,7 +122,7 @@ func (p *publisher) Publish(topic string, payload interface{}) error {
 
 func (p *publisher) Stop() error {
 	if p.pubConnect == nil {
-		return errConnRequired
+		return nil
 	}
 	if p.isStopped {
 		return nil
@@ -134,8 +133,6 @@ func (p *publisher) Stop() error {
 	if p.pubConnect.IsConnected() {
 		return errStillConnected
 	}
-	fmt.Println("STOPPED")
-
 	return nil
 }
 
@@ -166,7 +163,7 @@ func (s *subscriber) UnSubscribe(topic string) error {
 
 func (s *subscriber) Close() error {
 	if s.subConnect == nil {
-		return errConnRequired
+		return nil
 	}
 	if !s.subConnect.IsConnected() {
 		return nil
@@ -183,6 +180,7 @@ func decode(msg mqtt.Message) (*driver.Message, error) {
 	if msg == nil {
 		return nil, errInvalidMessage
 	}
+
 	var dm driver.Message
 	if err := decodeMessage(msg.Payload(), &dm); err != nil {
 		return nil, err
@@ -212,6 +210,7 @@ func encodeMessage(dm *driver.Message) ([]byte, error) {
 	if err := enc.Encode(dm.Metadata); err != nil {
 		return nil, err
 	}
+
 	if err := enc.Encode(dm.Body); err != nil {
 		return nil, err
 	}
