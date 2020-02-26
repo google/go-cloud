@@ -53,6 +53,19 @@ type (
 	}
 )
 
+func NewSubscriber(cli mqtt.Client) Subscriber {
+	return &subscriber{
+		subConnect: cli,
+	}
+}
+
+func NewPublisher(cli mqtt.Client) Publisher {
+	return &publisher{
+		pubConnect: cli,
+		wg:         new(sync.WaitGroup),
+	}
+}
+
 func defaultSubClient(url string) (_ Subscriber, err error) {
 	if url == "" {
 		return nil, errNoURLEnv

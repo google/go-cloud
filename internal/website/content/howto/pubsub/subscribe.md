@@ -249,6 +249,35 @@ topic. You must first create an [`*nats.Conn`][] to your NATS instance.
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription
 
+### MQTT {#mqtt}
+
+The Go CDK can publish to a [MQTT][] subject. A MQTT URL only includes the
+subject name. The MQTT server is discovered from the `MQTT_SERVER_URL`
+environment variable (which is something like `mqtt://mqtt.example.com`).
+
+{{< goexample "gocloud.dev/pubsub/mqttspubsub.Example_openSubscriptionFromURL" >}}
+
+By default MQTT guarantees at-most-once delivery.
+
+To parse messages [published via the Go CDK][publish#mqtt], the MQTT driver
+will first attempt to decode the payload using [gob][]. Failing that, it will
+return the message payload as the `Data` with no metadata to accomodate
+subscribing to messages coming from a source not using the Go CDK.
+
+[gob]: https://golang.org/pkg/encoding/gob/
+[NATS]: http://mqtt.org/
+[publish#mqtt]: {{< ref "./publish.md#mqtt" >}}
+
+#### NATS Constructor {#nats-ctor}
+
+The [`natspubsub.OpenSubscription`][] constructor opens a NATS subject as a
+topic. You must first create an [`*nats.Conn`][] to your NATS instance.
+
+{{< goexample "gocloud.dev/pubsub/natspubsub.ExampleOpenSubscription" >}}
+
+[`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
+[`natspubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription
+
 ### Kafka {#kafka}
 
 The Go CDK can receive messages from a [Kafka][] cluster.

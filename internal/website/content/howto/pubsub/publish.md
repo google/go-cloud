@@ -261,6 +261,30 @@ must first create an [`*nats.Conn`][] to your NATS instance.
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenTopic
 
+### MQTT {#mqtt}
+
+The Go CDK can publish to a [MQTT][] subject. A NATS URL only includes the
+subject name. The NATS server is discovered from the `MQTT_SERVER_URL`
+environment variable (which is something like `mqtt://nats.example.com`).
+
+{{< goexample "gocloud.dev/pubsub/mqttpubsub.Example_openTopicFromURL" >}}
+
+Because MQTT does not natively support metadata, messages sent to NATS will
+be encoded with [gob][].
+
+[gob]: https://golang.org/pkg/encoding/gob/
+[MQTT]: http://mqtt.org/
+
+#### MQTT Constructor {#mqtt-ctor}
+
+The [`mqttpubsub.OpenTopic`][] constructor opens a MQTT subject as a topic. You
+must first create an [`mqtt.Client`][] to your NATS instance.
+
+{{< goexample "gocloud.dev/pubsub/mqttpubsub.ExampleOpenTopic" >}}
+
+[`mqtt.Client`]: https://github.com/eclipse/paho.mqtt.golang#Client
+[`mqttpubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/mqttpubsub#OpenTopic
+
 ### Kafka {#kafka}
 
 The Go CDK can publish to a [Kafka][] cluster. A Kafka URL only includes the
