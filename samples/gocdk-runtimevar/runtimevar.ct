@@ -21,15 +21,3 @@ $ fecho fvar contents
 
 $ gocdk-runtimevar cat file:///${ROOTDIR}/fvar?decoder=string
 (string) contents
-
-$ gocdk-runtimevar& watch file:///${ROOTDIR}/fvar?decoder=string
-$ sleep 1s
-$ fecho fvar new contents
-$ sleep 1s
-$ stop
-Watching file:///${ROOTDIR}/fvar?decoder=string for changes...
-
-(string) contents
-
-(string) new contents
-
