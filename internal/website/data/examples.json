@@ -251,6 +251,22 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/mempubsub\"\n)",
 		"code": "topic, err := pubsub.OpenTopic(ctx, \"mem://topicA\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/pubsub/mqttpubsub.ExampleOpenSubscription": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/eclipse/paho.mqtt.golang\"\n\t\"gocloud.dev/pubsub/mqttpubsub\"\n)",
+		"code": "opts := mqtt.NewClientOptions()\nopts = opts.AddBroker(\"mqtt://mqtt.example.com\")\nopts.ClientID = \"exampleClient\"\ncli := mqtt.NewClient(opts)\ntoken := cli.Connect()\nif token.Wait() \u0026\u0026 token.Error() != nil {\n\tlog.Fatal(token.Error())\n}\n\ndefer cli.Disconnect(0)\n\nsubscription, err := mqttpubsub.OpenSubscription(\n\tmqttpubsub.NewSubscriber(cli),\n\t\"example.mysubject\",\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/mqttpubsub.ExampleOpenTopic": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/eclipse/paho.mqtt.golang\"\n\t\"gocloud.dev/pubsub/mqttpubsub\"\n)",
+		"code": "opts := mqtt.NewClientOptions()\nopts = opts.AddBroker(\"mqtt://mqtt.example.com\")\nopts.ClientID = \"exampleClient\"\ncli := mqtt.NewClient(opts)\ntoken := cli.Connect()\nif token.Wait() \u0026\u0026 token.Error() != nil {\n\tlog.Fatal(token.Error())\n}\n\ndefer cli.Disconnect(0)\n\ntopic, err := mqttpubsub.OpenTopic(mqttpubsub.NewPublisher(cli), \"example.mysubject\", nil)\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/mqttpubsub.Example_openSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/mqttpubsub\"\n)",
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the MQTT server at the URL in the environment variable\n// MQTT_SERVER_URL and receive messages with subject \"example.mysubject\".\nsubscription, err := pubsub.OpenSubscription(ctx, \"mqtt://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/mqttpubsub.Example_openTopicFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/mqttpubsub\"\n)",
+		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the MQTT server at the URL in the environment variable\n// MQTT_SERVER_URL and send messages with subject \"example.mysubject\".\ntopic, err := pubsub.OpenTopic(ctx, \"mqtt://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
 		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscription(\n\tnatsConn,\n\t\"example.mysubject\",\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"

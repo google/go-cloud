@@ -17,8 +17,8 @@ package mqttpubsub_test
 import (
 	"context"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/filinvadim/go-cloud/pubsub/mqttpubsub"
 	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/mqttpubsub"
 	"log"
 )
 
