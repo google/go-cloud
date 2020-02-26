@@ -180,28 +180,24 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		}
 		go func(msg *driver.Message) {
 			defer t.wg.Done()
+			t.mu.Lock()
+			defer t.mu.Unlock()
 
 			payload, err := encodeMessage(msg)
 			if err != nil {
-				t.mu.Lock()
 				t.errs.Errors = append(t.errs.Errors, err)
-				t.mu.Unlock()
 			}
-			if m.BeforeSend != nil {
+
+			if msg.BeforeSend != nil {
 				asFunc := func(i interface{}) bool { return false }
-				if err := m.BeforeSend(asFunc); err != nil {
-					t.mu.Lock()
+				if err := msg.BeforeSend(asFunc); err != nil {
 					t.errs.Errors = append(t.errs.Errors, err)
-					t.mu.Unlock()
 				}
 			}
 
 			err = t.conn.Publish(t.name, payload)
 			if err != nil {
-				t.mu.Lock()
 				t.errs.Errors = append(t.errs.Errors, err)
-				t.mu.Unlock()
-
 			}
 		}(m)
 	}
