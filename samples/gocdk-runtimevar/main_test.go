@@ -16,10 +16,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmdtest"
 )
@@ -37,61 +35,11 @@ func Test(t *testing.T) {
 		err error
 	}
 
-	var (
-		ctx    context.Context = context.Background()
-		cancel func()
-		outc   chan result
-	)
+	ctx := context.Background()
 
 	runtimevar := cmdtest.InProcessProgram("gocdk-runtimevar", func() int {
 		return run(ctx)
 	})
 	ts.Commands["gocdk-runtimevar"] = runtimevar
-
-	// "gocdk-runtimevar&" starts runtimevar in a separate goroutine.
-	ts.Commands["gocdk-runtimevar&"] = func(args []string, infile string) ([]byte, error) {
-		if cancel != nil {
-			return nil, errors.New("go already in progress")
-		}
-
-		outc = make(chan result, 1)
-		ctx, cancel = context.WithCancel(context.Background())
-		go func() {
-			out, err := runtimevar(args, infile)
-			outc <- result{out, err}
-		}()
-		return nil, nil
-	}
-
-	// "stop" stops the command started with "gocdk-runtimevar&" and returns its output and error.
-	ts.Commands["stop"] = func(args []string, _ string) ([]byte, error) {
-		if cancel == nil {
-			return nil, errors.New("no 'go' in progress")
-		}
-		cancel()
-		res := <-outc
-		if res.err == context.Canceled {
-			res.err = nil
-		}
-
-		ctx = context.Background()
-		cancel = nil
-		outc = nil
-
-		return res.out, res.err
-	}
-
-	// "sleep <duration>" sleeps for <duration>
-	ts.Commands["sleep"] = func(args []string, _ string) ([]byte, error) {
-		if len(args) != 1 {
-			return nil, errors.New("need exactly 1 argument")
-		}
-		dur, err := time.ParseDuration(args[0])
-		if err != nil {
-			return nil, err
-		}
-		time.Sleep(dur)
-		return nil, nil
-	}
 	ts.Run(t, *update)
 }

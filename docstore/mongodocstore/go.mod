@@ -18,7 +18,7 @@ go 1.12
 
 require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/google/go-cmp v0.3.0
+	github.com/google/go-cmp v0.4.0
 	github.com/google/wire v0.4.0
 	github.com/klauspost/compress v1.9.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -30,7 +30,6 @@ require (
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
-	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
 	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
 	google.golang.org/grpc v1.27.1 // indirect
 )
