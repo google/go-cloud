@@ -92,18 +92,21 @@ import (
 // It implements io.ReadCloser, and must be closed after
 // reads are finished.
 type Reader struct {
-	b        driver.Bucket
-	r        driver.Reader
-	key      string
-	end      func(error) // called at Close to finish trace and metric collection
-	provider string      // for metric collection; refers to driver package
-	closed   bool
+	b   driver.Bucket
+	r   driver.Reader
+	key string
+	end func(error) // called at Close to finish trace and metric collection
+	// for metric collection;
+	statsTagMutators []tag.Mutator
+	closed           bool
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
 func (r *Reader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
-	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, r.provider)},
+	stats.RecordWithTags(
+		context.Background(),
+		r.statsTagMutators,
 		bytesReadMeasure.M(int64(n)))
 	return n, wrapError(r.b, err, r.key)
 }
@@ -228,15 +231,15 @@ func (a *Attributes) As(i interface{}) bool {
 // It implements io.WriteCloser (https://golang.org/pkg/io/#Closer), and must be
 // closed after all writes are done.
 type Writer struct {
-	b          driver.Bucket
-	w          driver.Writer
-	key        string
-	end        func(error) // called at Close to finish trace and metric collection
-	cancel     func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
-	contentMD5 []byte
-	md5hash    hash.Hash
-	provider   string // for metric collection, refers to driver package name
-	closed     bool
+	b                driver.Bucket
+	w                driver.Writer
+	key              string
+	end              func(error) // called at Close to finish trace and metric collection
+	cancel           func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
+	contentMD5       []byte
+	md5hash          hash.Hash
+	statsTagMutators []tag.Mutator // for metric collection
+	closed           bool
 
 	// These fields are non-zero values only when w is nil (not yet created).
 	//
@@ -344,7 +347,9 @@ func (w *Writer) open(p []byte) (int, error) {
 
 func (w *Writer) write(p []byte) (int, error) {
 	n, err := w.w.Write(p)
-	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, w.provider)},
+	stats.RecordWithTags(
+		context.Background(),
+		w.statsTagMutators,
 		bytesWrittenMeasure.M(int64(n)))
 	return n, wrapError(w.b, err, w.key)
 }
@@ -689,7 +694,13 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 		return nil, wrapError(b.b, err, key)
 	}
 	end := func(err error) { b.tracer.End(tctx, err) }
-	r := &Reader{b: b.b, r: dr, key: key, end: end, provider: b.tracer.Provider}
+	r := &Reader{
+		b:                b.b,
+		r:                dr,
+		key:              key,
+		end:              end,
+		statsTagMutators: []tag.Mutator{tag.Upsert(oc.ProviderKey, b.tracer.Provider)},
+	}
 	_, file, lineno, ok := runtime.Caller(2)
 	runtime.SetFinalizer(r, func(r *Reader) {
 		if !r.closed {
@@ -796,13 +807,13 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	}()
 
 	w := &Writer{
-		b:          b.b,
-		end:        end,
-		cancel:     cancel,
-		key:        key,
-		contentMD5: opts.ContentMD5,
-		md5hash:    md5.New(),
-		provider:   b.tracer.Provider,
+		b:                b.b,
+		end:              end,
+		cancel:           cancel,
+		key:              key,
+		contentMD5:       opts.ContentMD5,
+		md5hash:          md5.New(),
+		statsTagMutators: []tag.Mutator{tag.Upsert(oc.ProviderKey, b.tracer.Provider)},
 	}
 	if opts.ContentType != "" {
 		t, p, err := mime.ParseMediaType(opts.ContentType)
