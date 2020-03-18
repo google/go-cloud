@@ -113,16 +113,33 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	mysql.RegisterDial(dialerName, client.Dial)
 
 	password, _ := u.User.Password()
-	cfg := &mysql.Config{
-		AllowNativePasswords: true,
-		Net:                  dialerName,
-		Addr:                 instance,
-		User:                 u.User.Username(),
-		Passwd:               password,
-		DBName:               dbName,
+
+	cfg, err := configWithOptions(u)
+	if err != nil {
+		return nil, fmt.Errorf("gcpmysql: open config %v", err)
 	}
+
+	cfg.AllowNativePasswords = true
+	cfg.Net = dialerName
+	cfg.Addr = instance
+	cfg.User = u.User.Username()
+	cfg.Passwd = password
+	cfg.DBName = dbName
+
 	db := sql.OpenDB(connector{cfg.FormatDSN(), uo.TraceOpts})
 	return db, nil
+}
+
+func configWithOptions(u *url.URL) (*mysql.Config, error) {
+	if len(u.RawQuery) == 0 {
+		return &mysql.Config{}, nil
+	}
+	optDsn := fmt.Sprintf("/db?%s", u.RawQuery)
+	cfg, err := mysql.ParseDSN(optDsn)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func instanceFromURL(u *url.URL) (instance, db string, _ error) {

@@ -18,8 +18,10 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"testing"
 
+	drvr "github.com/go-sql-driver/mysql"
 	"gocloud.dev/internal/testing/terraform"
 	"gocloud.dev/mysql"
 )
@@ -126,6 +128,83 @@ func TestInstanceFromURL(t *testing.T) {
 			}
 			if instance != test.wantInstance || database != test.wantDatabase {
 				t.Errorf("instanceFromURL(url.Parse(%q)) = %q, %q, <nil>; want %q, %q, <nil>", test.urlString, instance, database, test.wantInstance, test.wantDatabase)
+			}
+		})
+	}
+}
+
+func Test_configWithOptions(t *testing.T) {
+	type args struct {
+		urlStr string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *drvr.Config
+		wantErr bool
+	}{
+		{
+			name: "no options",
+			args: args{
+				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db",
+			},
+			want:    &drvr.Config{},
+			wantErr: false,
+		},
+		{
+			name: "single option",
+			args: args{
+				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db?parseTime=true",
+			},
+			want: func() *drvr.Config {
+				cfg := drvr.NewConfig()
+				cfg.Net = "tcp"
+				cfg.Addr = "127.0.0.1:3306"
+				cfg.DBName = "db"
+				cfg.ParseTime = true
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "multiple options",
+			args: args{
+				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db?columnsWithAlias=true&parseTime=true",
+			},
+			want: func() *drvr.Config {
+				cfg := drvr.NewConfig()
+				cfg.Net = "tcp"
+				cfg.Addr = "127.0.0.1:3306"
+				cfg.DBName = "db"
+				cfg.ParseTime = true
+				cfg.ColumnsWithAlias = true
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "error",
+			args: args{
+				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db?columnsWithAlias=nope&parseTime=true",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u, err := url.Parse(tt.args.urlStr)
+			if err != nil {
+				t.Errorf("configWithOptions() url parse error = %v", err)
+				return
+			}
+			got, err := configWithOptions(u)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("configWithOptions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("configWithOptions() = %v, want %v", got, tt.want)
 			}
 		})
 	}
