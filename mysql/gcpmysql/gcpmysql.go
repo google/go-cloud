@@ -97,27 +97,45 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("gcpmysql: URLOpener CertSource is nil")
 	}
-	instance, dbName, err := instanceFromURL(u)
-	if err != nil {
-		return nil, fmt.Errorf("gcpmysql: open %v: %v", u, err)
-	}
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
 	dialerCounter.mu.Unlock()
+	dialerName := fmt.Sprintf("gocloud.dev/mysql/gcpmysql/%d", dialerNum)
+
+	cfg, err := configFromURL(u, dialerName)
+	if err != nil {
+		return nil, fmt.Errorf("gcpmysql: open config %v", err)
+	}
+
 	client := &proxy.Client{
 		Port:  3307,
 		Certs: uo.CertSource,
 	}
-	dialerName := fmt.Sprintf("gocloud.dev/mysql/gcpmysql/%d", dialerNum)
 	mysql.RegisterDial(dialerName, client.Dial)
 
-	password, _ := u.User.Password()
+	db := sql.OpenDB(connector{cfg.FormatDSN(), uo.TraceOpts})
+	return db, nil
+}
 
-	cfg, err := configWithOptions(u)
+func configFromURL(u *url.URL, dialerName string) (*mysql.Config, error) {
+	instance, dbName, err := instanceFromURL(u)
 	if err != nil {
-		return nil, fmt.Errorf("gcpmysql: open config %v", err)
+		return nil, err
 	}
+
+	var cfg *mysql.Config
+	switch {
+	case len(u.RawQuery) > 0:
+		optDsn := fmt.Sprintf("/%s?%s", dbName, u.RawQuery)
+		if cfg, err = mysql.ParseDSN(optDsn); err != nil {
+			return nil, err
+		}
+	default:
+		cfg = mysql.NewConfig()
+	}
+
+	password, _ := u.User.Password()
 
 	cfg.AllowNativePasswords = true
 	cfg.Net = dialerName
@@ -126,19 +144,6 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	cfg.Passwd = password
 	cfg.DBName = dbName
 
-	db := sql.OpenDB(connector{cfg.FormatDSN(), uo.TraceOpts})
-	return db, nil
-}
-
-func configWithOptions(u *url.URL) (*mysql.Config, error) {
-	if len(u.RawQuery) == 0 {
-		return &mysql.Config{}, nil
-	}
-	optDsn := fmt.Sprintf("/db?%s", u.RawQuery)
-	cfg, err := mysql.ParseDSN(optDsn)
-	if err != nil {
-		return nil, err
-	}
 	return cfg, nil
 }
 

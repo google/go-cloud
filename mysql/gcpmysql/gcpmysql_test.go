@@ -133,9 +133,10 @@ func TestInstanceFromURL(t *testing.T) {
 	}
 }
 
-func Test_configWithOptions(t *testing.T) {
+func Test_configFromURL(t *testing.T) {
 	type args struct {
-		urlStr string
+		urlStr     string
+		dialerName string
 	}
 	tests := []struct {
 		name    string
@@ -144,48 +145,76 @@ func Test_configWithOptions(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "no options",
+			name: "ConfigWithNoOptions",
 			args: args{
-				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db",
-			},
-			want:    &drvr.Config{},
-			wantErr: false,
-		},
-		{
-			name: "single option",
-			args: args{
-				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db?parseTime=true",
+				urlStr:     "gcpmysql://user:password@my-project-id/us-central1/my-instance-id/my-db",
+				dialerName: "gocloud.dev/mysql/gcpmysql/1",
 			},
 			want: func() *drvr.Config {
 				cfg := drvr.NewConfig()
-				cfg.Net = "tcp"
-				cfg.Addr = "127.0.0.1:3306"
-				cfg.DBName = "db"
-				cfg.ParseTime = true
+				cfg.AllowNativePasswords = true
+				cfg.Net = "gocloud.dev/mysql/gcpmysql/1"
+				cfg.Addr = "my-project-id:us-central1:my-instance-id"
+				cfg.User = "user"
+				cfg.Passwd = "password"
+				cfg.DBName = "my-db"
 				return cfg
 			}(),
 			wantErr: false,
 		},
 		{
-			name: "multiple options",
+			name: "ConfigWithSignalOptions",
 			args: args{
-				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db?columnsWithAlias=true&parseTime=true",
+				urlStr:     "gcpmysql://user:password@my-project-id/us-central1/my-instance-id/my-db?parseTime=true",
+				dialerName: "gocloud.dev/mysql/gcpmysql/1",
 			},
 			want: func() *drvr.Config {
 				cfg := drvr.NewConfig()
-				cfg.Net = "tcp"
-				cfg.Addr = "127.0.0.1:3306"
-				cfg.DBName = "db"
+				cfg.AllowNativePasswords = true
 				cfg.ParseTime = true
+				cfg.Net = "gocloud.dev/mysql/gcpmysql/1"
+				cfg.Addr = "my-project-id:us-central1:my-instance-id"
+				cfg.User = "user"
+				cfg.Passwd = "password"
+				cfg.DBName = "my-db"
+				return cfg
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "ConfigWithMultipleOptions",
+			args: args{
+				urlStr:     "gcpmysql://user:password@my-project-id/us-central1/my-instance-id/my-db?columnsWithAlias=true&parseTime=true",
+				dialerName: "gocloud.dev/mysql/gcpmysql/1",
+			},
+			want: func() *drvr.Config {
+				cfg := drvr.NewConfig()
+				cfg.AllowNativePasswords = true
 				cfg.ColumnsWithAlias = true
+				cfg.ParseTime = true
+				cfg.Net = "gocloud.dev/mysql/gcpmysql/1"
+				cfg.Addr = "my-project-id:us-central1:my-instance-id"
+				cfg.User = "user"
+				cfg.Passwd = "password"
+				cfg.DBName = "my-db"
 				return cfg
 			}(),
 			wantErr: false,
 		},
 		{
-			name: "error",
+			name: "InstanceFromURLError",
 			args: args{
-				urlStr: "gcpmysql://my-project-id/us-central1/my-instance-id/my-db?columnsWithAlias=nope&parseTime=true",
+				urlStr:     "gcpmysql://user:password@my-project-id/us-central1/my-db",
+				dialerName: "gocloud.dev/mysql/gcpmysql/1",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "DNSParseError",
+			args: args{
+				urlStr:     "gcpmysql://user:password@my-project-id/us-central1/my-instance-id/my-db?parseTime=nope",
+				dialerName: "gocloud.dev/mysql/gcpmysql/1",
 			},
 			want:    nil,
 			wantErr: true,
@@ -195,16 +224,15 @@ func Test_configWithOptions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			u, err := url.Parse(tt.args.urlStr)
 			if err != nil {
-				t.Errorf("configWithOptions() url parse error = %v", err)
-				return
+				t.Fatalf("failed to parse URL %q: %v", tt.args.urlStr, err)
 			}
-			got, err := configWithOptions(u)
+			got, err := configFromURL(u, tt.args.dialerName)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("configWithOptions() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("configFromURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("configWithOptions() = %v, want %v", got, tt.want)
+				t.Errorf("configFromURL() = %v, want %v", got, tt.want)
 			}
 		})
 	}
