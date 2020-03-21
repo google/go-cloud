@@ -41,10 +41,10 @@
 //  - ListObject: storage.ObjectAttrs
 //  - ListOptions.BeforeList: *storage.Query
 //  - Reader: *storage.Reader
-//  - ReaderOptions.BeforeRead: **storage.ObjectHandle, *storage.Reader
+//  - ReaderOptions.BeforeRead: **storage.ObjectHandle, *storage.Reader (if accessing both, must be in that order)
 //  - Attributes: storage.ObjectAttrs
-//  - CopyOptions.BeforeCopy: *CopyObjectHandles, *storage.Copier
-//  - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer
+//  - CopyOptions.BeforeCopy: *CopyObjectHandles, *storage.Copier (if accessing both, must be in that order)
+//  - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer (if accessing both, must be in that order)
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (
