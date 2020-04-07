@@ -51,7 +51,7 @@ if [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]];
   # tests.
   echo "The following files changed:"
   cat "$tmpfile"
-  if grep -vP "(^internal/website|.md$)" "$tmpfile"; then
+  if grep -v "^internal/website" "$tmpfile" | grep -v ".md$"; then
     echo "--> Found some non-trivial changes, running tests"
   else
     echo "--> Diff doesn't affect tests; not running them"
