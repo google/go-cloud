@@ -151,6 +151,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	// but that would require copying all the messages.
 	for i, m := range ms {
 		m.AckID = t.nextAckID + i
+		m.AsFunc = func(interface{}) bool { return false }
 
 		if m.BeforeSend != nil {
 			if err := m.BeforeSend(func(interface{}) bool { return false }); err != nil {
@@ -239,7 +240,6 @@ func (s *subscription) add(ms []*driver.Message) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, m := range ms {
-		m.AsFunc = func(interface{}) bool { return false }
 		// The new message will expire at the zero time, which means it will be
 		// immediately eligible for delivery.
 		s.msgs[m.AckID] = &message{msg: m}
