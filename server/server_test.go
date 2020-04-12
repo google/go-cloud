@@ -111,7 +111,7 @@ func TestMiddleware(t *testing.T) {
 	}
 
 	// Repeat with TLS.
-	err = s.ListenAndServeTLS(":8081", "certFile", "keyFile")
+	err = s.ListenAndServeTLS(":8081", certFile, keyFile)
 	if err != nil {
 		t.Fatal(err)
 	}
