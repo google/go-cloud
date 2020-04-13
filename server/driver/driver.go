@@ -32,10 +32,20 @@ type Server interface {
 	// requests to the given http.Handler, and be interruptable by Shutdown.
 	// Drivers should use the given address if they serve using TCP directly.
 	ListenAndServe(addr string, h http.Handler) error
+
 	// Shutdown gracefully shuts down the server without interrupting
 	// any active connections. If the provided context expires before
 	// the shutdown is complete, Shutdown returns the context's error,
 	// otherwise it returns any error returned from closing the Server's
 	// underlying Listener(s).
 	Shutdown(ctx context.Context) error
+}
+
+// TLSServer is an optional interface for Server drivers, that adds support
+// for serving TLS.
+type TLSServer interface {
+	// ListenAndServeTLS is similar to Server.ListenAndServe, but should
+	// serve using TLS.
+	// See http://go/godoc/net/http/#Server.ListenAndServeTLS.
+	ListenAndServeTLS(addr, certFile, keyFile string, h http.Handler) error
 }
