@@ -98,16 +98,14 @@ type Reader struct {
 	end func(error) // called at Close to finish trace and metric collection
 	// for metric collection;
 	statsTagMutators []tag.Mutator
+	bytesRead        int
 	closed           bool
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
 func (r *Reader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
-	stats.RecordWithTags(
-		context.Background(),
-		r.statsTagMutators,
-		bytesReadMeasure.M(int64(n)))
+	r.bytesRead += n
 	return n, wrapError(r.b, err, r.key)
 }
 
@@ -116,6 +114,10 @@ func (r *Reader) Close() error {
 	r.closed = true
 	err := wrapError(r.b, r.r.Close(), r.key)
 	r.end(err)
+	stats.RecordWithTags(
+		context.Background(),
+		r.statsTagMutators,
+		bytesReadMeasure.M(int64(r.bytesRead)))
 	return err
 }
 
@@ -239,6 +241,7 @@ type Writer struct {
 	contentMD5       []byte
 	md5hash          hash.Hash
 	statsTagMutators []tag.Mutator // for metric collection
+	bytesWritten     int
 	closed           bool
 
 	// These fields are non-zero values only when w is nil (not yet created).
@@ -303,7 +306,13 @@ func (w *Writer) Write(p []byte) (int, error) {
 // canceled or reaches its deadline.
 func (w *Writer) Close() (err error) {
 	w.closed = true
-	defer func() { w.end(err) }()
+	defer func() {
+		w.end(err)
+		stats.RecordWithTags(
+			context.Background(),
+			w.statsTagMutators,
+			bytesWrittenMeasure.M(int64(w.bytesWritten)))
+	}()
 	if len(w.contentMD5) > 0 {
 		// Verify the MD5 hash of what was written matches the ContentMD5 provided
 		// by the user.
@@ -347,10 +356,7 @@ func (w *Writer) open(p []byte) (int, error) {
 
 func (w *Writer) write(p []byte) (int, error) {
 	n, err := w.w.Write(p)
-	stats.RecordWithTags(
-		context.Background(),
-		w.statsTagMutators,
-		bytesWrittenMeasure.M(int64(n)))
+	w.bytesWritten += n
 	return n, wrapError(w.b, err, w.key)
 }
 
