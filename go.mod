@@ -28,10 +28,10 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.8.0
 	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20191009163259-e802c2cb94ae
-	github.com/aws/aws-sdk-go v1.19.45
+	github.com/aws/aws-sdk-go v1.30.7
 	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/go-sql-driver/mysql v1.4.1
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-replayers/grpcreplay v0.1.0
@@ -44,7 +44,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	go.opencensus.io v0.22.2
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
-	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
