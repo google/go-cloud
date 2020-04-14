@@ -114,6 +114,7 @@ func (r *Reader) Close() error {
 	r.closed = true
 	err := wrapError(r.b, r.r.Close(), r.key)
 	r.end(err)
+	// Emit only on close to avoid an allocation on each call to Read().
 	stats.RecordWithTags(
 		context.Background(),
 		r.statsTagMutators,
@@ -308,6 +309,7 @@ func (w *Writer) Close() (err error) {
 	w.closed = true
 	defer func() {
 		w.end(err)
+		// Emit only on close to avoid an allocation on each call to Write().
 		stats.RecordWithTags(
 			context.Background(),
 			w.statsTagMutators,
