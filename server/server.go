@@ -17,6 +17,7 @@ package server // import "gocloud.dev/server"
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -42,13 +43,14 @@ var Set = wire.NewSet(
 // Server is a preconfigured HTTP server with diagnostic hooks.
 // The zero value is a server with the default options.
 type Server struct {
-	reqlog        requestlog.Logger
-	handler       http.Handler
-	healthHandler health.Handler
-	te            trace.Exporter
-	sampler       trace.Sampler
-	once          sync.Once
-	driver        driver.Server
+	reqlog         requestlog.Logger
+	handler        http.Handler
+	wrappedHandler http.Handler
+	healthHandler  health.Handler
+	te             trace.Exporter
+	sampler        trace.Sampler
+	once           sync.Once
+	driver         driver.Server
 }
 
 // Options is the set of optional parameters.
@@ -101,35 +103,48 @@ func (srv *Server) init() {
 		if srv.handler == nil {
 			srv.handler = http.DefaultServeMux
 		}
+		// Setup health checks, /healthz route is taken by health checks by default.
+		// Note: App Engine Flex uses /_ah/health by default, which can be changed
+		// in app.yaml. We may want to do an auto-detection for flex in future.
+		const healthPrefix = "/healthz/"
+
+		mux := http.NewServeMux()
+		mux.HandleFunc(healthPrefix+"liveness", health.HandleLive)
+		mux.Handle(healthPrefix+"readiness", &srv.healthHandler)
+		h := srv.handler
+		if srv.reqlog != nil {
+			h = requestlog.NewHandler(srv.reqlog, h)
+		}
+		h = &ochttp.Handler{
+			Handler:          h,
+			IsPublicEndpoint: true,
+		}
+		mux.Handle("/", h)
+		srv.wrappedHandler = mux
 	})
 }
 
 // ListenAndServe is a wrapper to use wherever http.ListenAndServe is used.
-// It wraps the passed-in http.Handler with a handler that handles tracing and
+// It wraps the http.Handler provided to New with a handler that handles tracing and
 // request logging. If the handler is nil, then http.DefaultServeMux will be used.
 // A configured Requestlogger will log all requests except HealthChecks.
 func (srv *Server) ListenAndServe(addr string) error {
 	srv.init()
+	return srv.driver.ListenAndServe(addr, srv.wrappedHandler)
+}
 
-	// Setup health checks, /healthz route is taken by health checks by default.
-	// Note: App Engine Flex uses /_ah/health by default, which can be changed
-	// in app.yaml. We may want to do an auto-detection for flex in future.
-	const healthPrefix = "/healthz/"
-
-	mux := http.NewServeMux()
-	mux.HandleFunc(healthPrefix+"liveness", health.HandleLive)
-	mux.Handle(healthPrefix+"readiness", &srv.healthHandler)
-	h := srv.handler
-	if srv.reqlog != nil {
-		h = requestlog.NewHandler(srv.reqlog, h)
+// ListenAndServeTLS is a wrapper to use wherever http.ListenAndServeTLS is used.
+// It wraps the http.Handler provided to New with a handler that handles tracing and
+// request logging. If the handler is nil, then http.DefaultServeMux will be used.
+// A configured Requestlogger will log all requests except HealthChecks.
+func (srv *Server) ListenAndServeTLS(addr, certFile, keyFile string) error {
+	// Check if the driver implements the optional interface.
+	tlsDriver, ok := srv.driver.(driver.TLSServer)
+	if !ok {
+		return fmt.Errorf("driver %T does not support ListenAndServeTLS", srv.driver)
 	}
-	h = &ochttp.Handler{
-		Handler:          h,
-		IsPublicEndpoint: true,
-	}
-	mux.Handle("/", h)
-
-	return srv.driver.ListenAndServe(addr, mux)
+	srv.init()
+	return tlsDriver.ListenAndServeTLS(addr, certFile, keyFile, srv.wrappedHandler)
 }
 
 // Shutdown gracefully shuts down the server without interrupting any active connections.
@@ -162,6 +177,16 @@ func (dd *DefaultDriver) ListenAndServe(addr string, h http.Handler) error {
 	dd.Server.Addr = addr
 	dd.Server.Handler = h
 	return dd.Server.ListenAndServe()
+}
+
+// ListenAndServeTLS sets the address and handler on DefaultDriver's http.Server,
+// then calls ListenAndServeTLS on it.
+//
+// DefaultDriver.Server.TLSConfig may be set to configure additional TLS settings.
+func (dd *DefaultDriver) ListenAndServeTLS(addr, certFile, keyFile string, h http.Handler) error {
+	dd.Server.Addr = addr
+	dd.Server.Handler = h
+	return dd.Server.ListenAndServeTLS(certFile, keyFile)
 }
 
 // Shutdown gracefully shuts down the server without interrupting any active connections,

@@ -25,7 +25,6 @@ require (
 	go.opencensus.io v0.22.3 // indirect
 	gocloud.dev v0.19.0
 	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect

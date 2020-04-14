@@ -251,7 +251,11 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	}
 	// GetParameter from S3 to get the current value and version.
 	svc := ssm.New(w.sess)
-	getResp, err := svc.GetParameter(&ssm.GetParameterInput{Name: aws.String(w.name)})
+	getResp, err := svc.GetParameter(&ssm.GetParameterInput{
+		Name: aws.String(w.name),
+		// Ignored if the parameter is not encrypted.
+		WithDecryption: aws.Bool(true),
+	})
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}

@@ -24,6 +24,11 @@ import (
 	"gocloud.dev/server/requestlog"
 )
 
+const (
+	certFile = "my-cert"
+	keyFile  = "my-key"
+)
+
 func TestListenAndServe(t *testing.T) {
 	td := new(testDriver)
 	s := New(http.NotFoundHandler(), &Options{Driver: td})
@@ -34,17 +39,50 @@ func TestListenAndServe(t *testing.T) {
 	if !td.listenAndServeCalled {
 		t.Error("ListenAndServe was not called from the supplied driver")
 	}
+	if td.certFile != "" || td.keyFile != "" {
+		t.Errorf("ListenAndServe got non-empty certFile or keyFile (%q, %q), wanted empty", td.certFile, td.keyFile)
+	}
+	if td.handler == nil {
+		t.Error("testDriver must set handler, got nil")
+	}
+}
+
+func TestListenAndServeTLSNoSupported(t *testing.T) {
+	td := new(testDriverNoTLS)
+	s := New(http.NotFoundHandler(), &Options{Driver: td})
+	err := s.ListenAndServeTLS(":8080", certFile, keyFile)
+	if err == nil {
+		t.Fatal("expected TLS not supported error")
+	}
+}
+
+func TestListenAndServeTLS(t *testing.T) {
+	td := new(testDriver)
+	s := New(http.NotFoundHandler(), &Options{Driver: td})
+	err := s.ListenAndServeTLS(":8080", certFile, keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !td.listenAndServeCalled {
+		t.Error("ListenAndServe was not called from the supplied driver")
+	}
+	if td.certFile != certFile {
+		t.Errorf("ListenAndServe got certFile %q, want %q", td.certFile, certFile)
+	}
+	if td.keyFile != keyFile {
+		t.Errorf("ListenAndServe got keyFile %q, want %q", td.keyFile, keyFile)
+	}
 	if td.handler == nil {
 		t.Error("testDriver must set handler, got nil")
 	}
 }
 
 func TestMiddleware(t *testing.T) {
-	onLogCalled := false
+	onLogCalled := 0
 
 	tl := &testLogger{
 		onLog: func(ent *requestlog.Entry) {
-			onLogCalled = true
+			onLogCalled++
 			if ent.TraceID.String() == "" {
 				t.Error("TraceID is empty")
 			}
@@ -68,18 +106,53 @@ func TestMiddleware(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	td.handler.ServeHTTP(rr, req)
-	if !onLogCalled {
+	if onLogCalled != 1 {
 		t.Fatal("logging middleware was not called")
 	}
+
+	// Repeat with TLS.
+	err = s.ListenAndServeTLS(":8081", certFile, keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err = http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	td.handler.ServeHTTP(rr, req)
+	if onLogCalled != 2 {
+		t.Fatal("logging middleware was not called for TLS")
+	}
+
+}
+
+type testDriverNoTLS string
+
+func (td *testDriverNoTLS) ListenAndServe(addr string, h http.Handler) error {
+	return errors.New("this is a method for satisfying the interface")
+}
+
+func (td *testDriverNoTLS) Shutdown(ctx context.Context) error {
+	return errors.New("this is a method for satisfying the interface")
 }
 
 type testDriver struct {
 	listenAndServeCalled bool
+	certFile, keyFile    string
 	handler              http.Handler
 }
 
 func (td *testDriver) ListenAndServe(addr string, h http.Handler) error {
 	td.listenAndServeCalled = true
+	td.handler = h
+	return nil
+}
+
+func (td *testDriver) ListenAndServeTLS(addr, certFile, keyFile string, h http.Handler) error {
+	td.listenAndServeCalled = true
+	td.certFile = certFile
+	td.keyFile = keyFile
 	td.handler = h
 	return nil
 }
