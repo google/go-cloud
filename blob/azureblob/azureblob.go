@@ -28,7 +28,10 @@
 // AZURE_STORAGE_ACCOUNT is required, along with one of the other two.
 // AZURE_STORAGE_DOMAIN can optionally be used to provide an Azure Environment
 // blob storage domain to use. If no AZURE_STORAGE_DOMAIN is provided, the
-// default Azure public domain "blob.core.windows.net" will be used. Check
+// default Azure public domain "blob.core.windows.net" will be used.
+// The credentials from the environment variables can optionally be
+// overriden by specifing query parameters on the URL
+// (account_name, account_key, sas_token and storage_domain). Check
 // the Azure Developer Guide for your particular cloud environment to see
 // the proper blob storage domain name to provide.
 // To customize the URL opener, or for more details on the URL format,
@@ -144,6 +147,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		accountKey, _ := DefaultAccountKey()
 		sasToken, _ := DefaultSASToken()
 		storageDomain, _ := DefaultStorageDomain()
+		credentialsFromParams(u.Query(), &accountName, &accountKey, &sasToken, &storageDomain)
 		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, storageDomain)
 	})
 	if o.err != nil {
@@ -170,6 +174,21 @@ type URLOpener struct {
 
 	// Options specifies the options to pass to OpenBucket.
 	Options Options
+}
+
+func credentialsFromParams(q url.Values, accountName *AccountName, accountKey *AccountKey, sasToken *SASToken, storageDomain *StorageDomain) {
+	if val := q.Get("account_name"); val != "" {
+		*accountName = AccountName(val)
+	}
+	if val := q.Get("account_key"); val != "" {
+		*accountKey = AccountKey(val)
+	}
+	if val := q.Get("sas_token"); val != "" {
+		*sasToken = SASToken(val)
+	}
+	if val := q.Get("storage_domain"); val != "" {
+		*storageDomain = StorageDomain(val)
+	}
 }
 
 func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken, storageDomain StorageDomain) (*URLOpener, error) {
@@ -202,7 +221,9 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 // OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	for k := range u.Query() {
-		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, k)
+		if k != "account_name" && k != "account_key" && k != "sas_token" && k != "storage_domain" {
+			return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, k)
+		}
 	}
 	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, &o.Options)
 }

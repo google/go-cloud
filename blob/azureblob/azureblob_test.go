@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -401,6 +402,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"azblob://mybucket", false},
+		// OK.
+		{"azblob://mybucket?account_name=value&account_key=value&sas_token=value&storage_domain=value", false},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}
@@ -413,6 +416,53 @@ func TestOpenBucketFromURL(t *testing.T) {
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestCredentialsFromParams(t *testing.T) {
+	tests := []struct{
+		url string
+		wantAccountName AccountName
+		wantAccountKey AccountKey
+		wantSasToken SASToken
+		wantStorageDomain StorageDomain
+	}{
+		{
+			url: "azblob://mybucket",
+			wantAccountName: "",
+			wantAccountKey: "",
+			wantSasToken: "",
+			wantStorageDomain: "",
+		},
+		{
+			url: "azblob://mybucket?account_name=my-account&account_key=bXlrZXk%3D&sas_token=my-token&storage_domain=my-domain",
+			wantAccountName: "my-account",
+			wantAccountKey: "bXlrZXk=",
+			wantSasToken: "my-token",
+			wantStorageDomain: "my-domain",
+		},
+	}
+
+	for _, test := range tests {
+		var accountName AccountName
+		var accountKey AccountKey
+		var sasToken SASToken
+		var storageDomain StorageDomain
+
+		u, _ := url.Parse(test.url)
+		credentialsFromParams(u.Query(), &accountName, &accountKey, &sasToken, &storageDomain)
+		if accountName != test.wantAccountName {
+			t.Errorf("accountName = %q, want %q", accountName, test.wantAccountName)
+		}
+		if accountKey != test.wantAccountKey {
+			t.Errorf("accountKey = %q, want %q", accountKey, test.wantAccountKey)
+		}
+		if sasToken != test.wantSasToken {
+			t.Errorf("sasToken = %q, want %q", sasToken, test.wantSasToken)
+		}
+		if storageDomain != test.wantStorageDomain {
+			t.Errorf("storageDomain = %q, want %q", storageDomain, test.wantStorageDomain)
 		}
 	}
 }
