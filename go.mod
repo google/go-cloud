@@ -32,7 +32,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-replayers/grpcreplay v0.1.0
 	github.com/google/go-replayers/httpreplay v0.1.0
@@ -40,16 +40,20 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible
+	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	go.opencensus.io v0.22.2
-	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sys v0.0.0-20190726091711-fc99dfbffb4e // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 	google.golang.org/api v0.9.0
 	google.golang.org/genproto v0.0.0-20190801165951-fa694d86fc64
 	google.golang.org/grpc v1.21.1
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 	pack.ag/amqp v0.11.2
 )

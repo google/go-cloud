@@ -25,10 +25,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/mempubsub"
 )

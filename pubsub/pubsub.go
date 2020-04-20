@@ -78,11 +78,11 @@ import (
 
 	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/internal/retry"
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 	"golang.org/x/sync/errgroup"
 )

@@ -57,8 +57,8 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/batcher"
 	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 )
 

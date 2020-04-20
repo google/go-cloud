@@ -65,9 +65,9 @@ import (
 
 	"github.com/Shopify/sarama"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 )
 
