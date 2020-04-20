@@ -17,8 +17,11 @@ module gocloud.dev/internal/contributebot
 go 1.12
 
 require (
-	cloud.google.com/go/pubsub v1.2.0
+	cloud.google.com/go v0.56.0 // indirect
+	cloud.google.com/go/pubsub v1.3.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
@@ -26,11 +29,11 @@ require (
 	go.opencensus.io v0.22.3
 	gocloud.dev v0.19.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
-	google.golang.org/api v0.17.0
+	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4
+	google.golang.org/api v0.21.0
 	google.golang.org/appengine v1.6.5
-	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
-	google.golang.org/grpc v1.27.1 // indirect
+	google.golang.org/genproto v0.0.0-20200413115906-b5235f65be36 // indirect
+	google.golang.org/grpc v1.28.1 // indirect
 )
 
 replace gocloud.dev => ../../
