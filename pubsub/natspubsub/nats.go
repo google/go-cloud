@@ -169,7 +169,11 @@ type TopicOptions struct{}
 
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by NATS.
-type SubscriptionOptions struct{}
+type SubscriptionOptions struct {
+	//Queue sets the subscription as a QueueSubcription
+	//For more info, see https://docs.nats.io/nats-concepts/queue
+	Queue string
+}
 
 type topic struct {
 	nc   *nats.Conn
@@ -277,21 +281,25 @@ type subscription struct {
 	nsub *nats.Subscription
 }
 
-// OpenSubscription returns a *pubsub.Subscription representing a NATS subscription.
-// The subject is the NATS Subject to subscribe to; for more info, see
-// https://nats.io/documentation/writing_applications/subjects.
-//
-// TODO(dlc) - Options for queue groups?
-func OpenSubscription(nc *nats.Conn, subject string, _ *SubscriptionOptions) (*pubsub.Subscription, error) {
-	ds, err := openSubscription(nc, subject)
+// OpenSubscription returns a *pubsub.Subscription representing a NATS subscription or NATS queue subscription.
+// The subject is the NATS Subject to subscribe to;
+// for more info, see https://nats.io/documentation/writing_applications/subjects.
+func OpenSubscription(nc *nats.Conn, subject string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(nc, subject, opts)
 	if err != nil {
 		return nil, err
 	}
 	return pubsub.NewSubscription(ds, recvBatcherOpts, nil), nil
 }
 
-func openSubscription(nc *nats.Conn, subject string) (driver.Subscription, error) {
-	sub, err := nc.SubscribeSync(subject)
+func openSubscription(nc *nats.Conn, subject string, opts *SubscriptionOptions) (driver.Subscription, error) {
+	var sub *nats.Subscription
+	var err error
+	if opts != nil && opts.Queue != "" {
+		sub, err = nc.QueueSubscribeSync(subject, opts.Queue)
+	} else {
+		sub, err = nc.SubscribeSync(subject)
+	}
 	if err != nil {
 		return nil, err
 	}
