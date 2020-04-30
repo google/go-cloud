@@ -170,7 +170,6 @@ type TopicOptions struct{}
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by NATS.
 type SubscriptionOptions struct {
-
 	// Queue sets the subscription as a QueueSubcription.
 	// For more info, see https://docs.nats.io/nats-concepts/queue.
 	Queue string
