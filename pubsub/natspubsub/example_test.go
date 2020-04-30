@@ -62,6 +62,27 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
+func ExampleOpenQueueSubscription() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	natsConn, err := nats.Connect("nats://nats.example.com")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer natsConn.Close()
+
+	subscription, err := natspubsub.OpenSubscription(
+		natsConn,
+		"example.mysubject",
+		&natspubsub.SubscriptionOptions{Queue: "queue1"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
+}
+
 func Example_openTopicFromURL() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
