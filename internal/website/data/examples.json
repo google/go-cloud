@@ -263,6 +263,10 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
 		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\ntopic, err := natspubsub.OpenTopic(natsConn, \"example.mysubject\", nil)\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/pubsub/natspubsub.Example_openQueueSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and receive messages with subject \"example.mysubject\"\n// This URL will be parsed and the queue attribute will be used as the Queue parameter when creating the NATS Subscription.\nsubscription, err := pubsub.OpenSubscription(ctx, \"nats://example.mysubject?queue=myqueue\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+	},
 	"gocloud.dev/pubsub/natspubsub.Example_openSubscriptionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
 		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and receive messages with subject \"example.mysubject\".\nsubscription, err := pubsub.OpenSubscription(ctx, \"nats://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
