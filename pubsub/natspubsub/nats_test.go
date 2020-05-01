@@ -456,6 +456,8 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"nats://mytopic", false},
 		// Invalid parameter.
 		{"nats://mytopic?param=value", true},
+		// Queue URL Parameter for QueueSubscription.
+		{"nats://mytopic?queue=queue1", false},
 	}
 
 	for _, test := range tests {

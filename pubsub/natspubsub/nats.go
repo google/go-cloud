@@ -52,6 +52,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -157,11 +158,16 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
+	opts := o.SubscriptionOptions
+	for param, values := range u.Query() {
+		if strings.ToLower(param) == "queue" && values != nil {
+			opts.Queue = values[0]
+		} else {
+			return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
+		}
 	}
 	subject := path.Join(u.Host, u.Path)
-	return OpenSubscription(o.Connection, subject, &o.SubscriptionOptions)
+	return OpenSubscription(o.Connection, subject, &opts)
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by NATS.
