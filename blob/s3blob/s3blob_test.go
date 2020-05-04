@@ -199,6 +199,9 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 	if !o.As(&obj) {
 		return errors.New("ListObject.As for object returned false")
 	}
+	if obj.Key == nil || o.Key != *obj.Key {
+		return errors.New("ListObject.As for object returned a different item")
+	}
 	// Nothing to check.
 	return nil
 }
