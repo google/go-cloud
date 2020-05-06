@@ -33,7 +33,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"net/url"
-	"strings"
 	"sync"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
@@ -78,27 +77,21 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		return nil, fmt.Errorf("open RDS: empty endpoint")
 	}
 	password, _ := u.User.Password()
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)%s?%s", u.User.Username(), password, u.Host, u.Path, u.RawQuery)
 	c := &connector{
-		addr:     u.Host,
-		user:     u.User.Username(),
-		password: password,
-		dbName:   strings.TrimPrefix(u.Path, "/"),
 		// Make a copy of TraceOpts to avoid caller modifying.
 		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
 		provider:  source,
 
 		sem:   make(chan struct{}, 1),
 		ready: make(chan struct{}),
+		dsn:   dsn,
 	}
 	c.sem <- struct{}{}
 	return sql.OpenDB(c), nil
 }
 
 type connector struct {
-	addr      string
-	user      string
-	password  string
-	dbName    string
 	traceOpts []ocsql.TraceOption
 
 	sem      chan struct{} // receive to acquire, send to release
@@ -129,16 +122,14 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect RDS: register TLS: %v", err)
 		}
-		cfg := &mysql.Config{
-			Net:                     "tcp",
-			Addr:                    c.addr,
-			User:                    c.user,
-			Passwd:                  c.password,
-			TLSConfig:               tlsConfigName,
-			AllowCleartextPasswords: true,
-			AllowNativePasswords:    true,
-			DBName:                  c.dbName,
+		cfg, err := mysql.ParseDSN(c.dsn)
+		if err != nil {
+			return nil, fmt.Errorf("connect RDS: parse DSN: %v", err)
 		}
+		cfg.Net = "tcp"
+		cfg.TLSConfig = tlsConfigName
+		cfg.AllowCleartextPasswords = true
+		cfg.AllowNativePasswords = true
 		c.dsn = cfg.FormatDSN()
 		close(c.ready)
 		// Don't release sem: make it block forever, so this case won't be run again.
