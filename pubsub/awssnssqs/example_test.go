@@ -89,7 +89,7 @@ func Example_openSQSTopicFromURL() {
 	ctx := context.Background()
 
 	// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
-	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/myqueue"
+	const queueURL = "sqs.us-east-2.amazonaws.com/123456789012/myqueue"
 	topic, err := pubsub.OpenTopic(ctx, "awssqs://"+queueURL+"?region=us-east-2")
 	if err != nil {
 		log.Fatal(err)

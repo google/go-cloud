@@ -181,7 +181,7 @@
 	},
 	"gocloud.dev/pubsub/awssnssqs.Example_openSQSTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/awssnssqs\"\n)",
-		"code": "// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/myqueue\"\ntopic, err := pubsub.OpenTopic(ctx, \"awssqs://\"+queueURL+\"?region=us-east-2\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+		"code": "// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html\nconst queueURL = \"sqs.us-east-2.amazonaws.com/123456789012/myqueue\"\ntopic, err := pubsub.OpenTopic(ctx, \"awssqs://\"+queueURL+\"?region=us-east-2\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/awssnssqs.Example_openSubscriptionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/awssnssqs\"\n)",
