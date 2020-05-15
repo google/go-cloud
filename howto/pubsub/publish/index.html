@@ -308,7 +308,7 @@ variables or your AWS CLI configuration.</p>
 <span class="p">)</span>
 
 <span class="c1">// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
-</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;sqs.us-east-2.amazonaws.com/123456789012/myqueue&#34;</span>
 <span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssqs://&#34;</span><span class="o">+</span><span class="nx">queueURL</span><span class="o">+</span><span class="s">&#34;?region=us-east-2&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
