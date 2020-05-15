@@ -208,7 +208,7 @@ func dial(useCLI bool) (*keyvault.BaseClient, error) {
 
 var (
 	// Note that the last binding may be just a key, or key/version.
-	keyIDRE = regexp.MustCompile("^(https://.+\\.vault\\.azure\\.net/)keys/(.+)$")
+	keyIDRE = regexp.MustCompile(`^(https://.+\.vault\.(?:azure\.net|azure\.cn|usgovcloudapi\.net|microsoftazure\.de)/)keys/(.+)$`)
 )
 
 // OpenKeeper returns a *secrets.Keeper that uses Azure keyVault.
@@ -278,7 +278,7 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	return base64.StdEncoding.DecodeString(*keyOpsResult.Result)
+	return base64.RawURLEncoding.DecodeString(*keyOpsResult.Result)
 }
 
 // Close implements driver.Keeper.Close.
