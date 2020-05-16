@@ -61,8 +61,12 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets 
 	agets := map[interface{}]*Action{}
 	cgets := map[interface{}]*Action{}
 	writes := map[interface{}]*Action{}
+	var nilkeys []*Action
 	for _, a := range actions {
-		if a.Kind == Get {
+		if a.Key == nil {
+			// Probably a Create.
+			nilkeys = append(nilkeys, a)
+		} else if a.Kind == Get {
 			// If there was a prior write with this key, make sure this get
 			// happens after the writes.
 			if _, ok := writes[a.Key]; ok {
@@ -91,7 +95,7 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets 
 		return as
 	}
 
-	return vals(bgets), vals(cgets), vals(writes), vals(agets)
+	return vals(bgets), vals(cgets), append(vals(writes), nilkeys...), vals(agets)
 }
 
 // AsFunc creates and returns an "as function" that behaves as follows:

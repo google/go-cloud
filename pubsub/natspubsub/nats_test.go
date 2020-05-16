@@ -68,7 +68,21 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := openSubscription(h.nc, testName)
+	ds, err := openSubscription(h.nc, testName, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	cleanup := func() {
+		var sub *nats.Subscription
+		if ds.As(&sub) {
+			sub.Unsubscribe()
+		}
+	}
+	return ds, cleanup, nil
+}
+
+func (h *harness) CreateQueueSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
+	ds, err := openSubscription(h.nc, testName, &SubscriptionOptions{Queue: testName})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -248,7 +262,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds, err := openSubscription(h.nc, "bar")
+	ds, err := openSubscription(h.nc, "bar", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,6 +293,74 @@ func TestErrorCode(t *testing.T) {
 	if gce := ds.ErrorCode(nats.ErrTimeout); gce != gcerrors.DeadlineExceeded {
 		t.Fatalf("Expected %v, got %v", gcerrors.DeadlineExceeded, gce)
 	}
+
+	// Queue Subscription
+	qs, err := openSubscription(h.nc, "bar", &SubscriptionOptions{Queue: t.Name()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gce := qs.ErrorCode(nil); gce != gcerrors.OK {
+		t.Fatalf("Expected %v, got %v", gcerrors.OK, gce)
+	}
+	if gce := qs.ErrorCode(context.Canceled); gce != gcerrors.Canceled {
+		t.Fatalf("Expected %v, got %v", gcerrors.Canceled, gce)
+	}
+	if gce := qs.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
+		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	}
+	if gce := qs.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.NotFound {
+		t.Fatalf("Expected %v, got %v", gcerrors.NotFound, gce)
+	}
+	if gce := qs.ErrorCode(nats.ErrTypeSubscription); gce != gcerrors.FailedPrecondition {
+		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	}
+	if gce := qs.ErrorCode(nats.ErrAuthorization); gce != gcerrors.PermissionDenied {
+		t.Fatalf("Expected %v, got %v", gcerrors.PermissionDenied, gce)
+	}
+	if gce := qs.ErrorCode(nats.ErrMaxMessages); gce != gcerrors.ResourceExhausted {
+		t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
+	}
+	if gce := qs.ErrorCode(nats.ErrSlowConsumer); gce != gcerrors.ResourceExhausted {
+		t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
+	}
+	if gce := qs.ErrorCode(nats.ErrTimeout); gce != gcerrors.DeadlineExceeded {
+		t.Fatalf("Expected %v, got %v", gcerrors.DeadlineExceeded, gce)
+	}
+}
+
+func BenchmarkNatsQueuePubSub(b *testing.B) {
+	ctx := context.Background()
+
+	opts := gnatsd.DefaultTestOptions
+	opts.Port = benchPort
+	s := gnatsd.RunServer(&opts)
+	defer s.Shutdown()
+
+	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", benchPort))
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer nc.Close()
+
+	h := &harness{s, nc}
+	dt, cleanup, err := h.CreateTopic(ctx, b.Name())
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+
+	qs, cleanup, err := h.CreateQueueSubscription(ctx, dt, b.Name())
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+
+	topic := pubsub.NewTopic(dt, nil)
+	defer topic.Shutdown(ctx)
+	queueSub := pubsub.NewSubscription(qs, recvBatcherOpts, nil)
+	defer queueSub.Shutdown(ctx)
+
+	drivertest.RunBenchmarks(b, topic, queueSub)
 }
 
 func BenchmarkNatsPubSub(b *testing.B) {
@@ -374,6 +456,8 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"nats://mytopic", false},
 		// Invalid parameter.
 		{"nats://mytopic?param=value", true},
+		// Queue URL Parameter for QueueSubscription.
+		{"nats://mytopic?queue=queue1", false},
 	}
 
 	for _, test := range tests {

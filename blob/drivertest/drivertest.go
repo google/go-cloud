@@ -1046,7 +1046,8 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 // testAttributes tests Attributes.
 func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	const (
-		key                = "blob-for-attributes"
+		dirKey             = "someDir"
+		key                = dirKey + "/blob-for-attributes"
 		contentType        = "text/plain"
 		cacheControl       = "no-cache"
 		contentDisposition = "inline"
@@ -1089,14 +1090,21 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	b, done := init(t)
 	defer done()
 
-	_, err := b.Attributes(ctx, "not-found")
-	if err == nil {
-		t.Errorf("got nil want error")
-	} else if gcerrors.Code(err) != gcerrors.NotFound {
-		t.Errorf("got %v want NotFound error", err)
-	} else if !strings.Contains(err.Error(), "not-found") {
-		t.Errorf("got %v want error to include missing key", err)
+	for _, badKey := range []string{
+		"not-found",
+		dirKey,
+		dirKey + "/",
+	} {
+		_, err := b.Attributes(ctx, badKey)
+		if err == nil {
+			t.Errorf("got nil want error")
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("got %v want NotFound error", err)
+		} else if !strings.Contains(err.Error(), badKey) {
+			t.Errorf("got %v want error to include missing key", err)
+		}
 	}
+
 	a, err := b.Attributes(ctx, key)
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
@@ -2066,10 +2074,38 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}
 	getURLNoParamsURL.RawQuery = ""
 	getURLNoParams := getURLNoParamsURL.String()
-	putURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodPut})
+	const (
+		allowedContentType   = "text/plain"
+		differentContentType = "application/octet-stream"
+	)
+	putURLWithContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+		Method:      http.MethodPut,
+		ContentType: allowedContentType,
+	})
+	if gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Log("PUT URLs with content type not supported, skipping")
+	} else if err != nil {
+		t.Fatal(err)
+	} else if putURLWithContentType == "" {
+		t.Fatal("got empty PUT url")
+	}
+	putURLEnforcedAbsentContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+		Method:                   http.MethodPut,
+		EnforceAbsentContentType: true,
+	})
+	if gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Log("PUT URLs with enforced absent content type not supported, skipping")
+	} else if err != nil {
+		t.Fatal(err)
+	} else if putURLEnforcedAbsentContentType == "" {
+		t.Fatal("got empty PUT url")
+	}
+	putURLWithoutContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
+		Method: http.MethodPut,
+	})
 	if err != nil {
 		t.Fatal(err)
-	} else if putURL == "" {
+	} else if putURLWithoutContentType == "" {
 		t.Fatal("got empty PUT url")
 	}
 	deleteURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodDelete})
@@ -2084,27 +2120,45 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal("can't verify SignedURL, Harness.HTTPClient() returned nil")
 	}
 
-	// PUT the blob. Try with all URLs, only putURL should work.
-	for _, test := range []struct {
+	// PUT the blob. Try with all URLs, only putURL should work when given the
+	// content type used in the signature.
+	type signedURLTest struct {
 		urlMethod   string
+		contentType string
 		url         string
 		wantSuccess bool
-	}{
-		{http.MethodGet, getURL, false},
-		{http.MethodDelete, deleteURL, false},
-		{http.MethodPut, putURL, true},
-	} {
+	}
+	tests := []signedURLTest{
+		{http.MethodGet, "", getURL, false},
+		{http.MethodDelete, "", deleteURL, false},
+	}
+	if putURLWithContentType != "" {
+		tests = append(tests, signedURLTest{http.MethodPut, allowedContentType, putURLWithContentType, true})
+		tests = append(tests, signedURLTest{http.MethodPut, differentContentType, putURLWithContentType, false})
+		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithContentType, false})
+	}
+	if putURLEnforcedAbsentContentType != "" {
+		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithoutContentType, true})
+		tests = append(tests, signedURLTest{http.MethodPut, differentContentType, putURLWithoutContentType, false})
+	}
+	if putURLWithoutContentType != "" {
+		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithoutContentType, true})
+	}
+	for _, test := range tests {
 		req, err := http.NewRequest(http.MethodPut, test.url, strings.NewReader(contents))
 		if err != nil {
-			t.Fatalf("failed to create PUT HTTP request using %s URL: %v", test.urlMethod, err)
+			t.Fatalf("failed to create PUT HTTP request using %s URL (content-type=%q): %v", test.urlMethod, test.contentType, err)
+		}
+		if test.contentType != "" {
+			req.Header.Set("Content-Type", test.contentType)
 		}
 		if resp, err := client.Do(req); err != nil {
-			t.Fatalf("PUT failed with %s URL: %v", test.urlMethod, err)
+			t.Fatalf("PUT failed with %s URL (content-type=%q): %v", test.urlMethod, test.contentType, err)
 		} else {
 			defer resp.Body.Close()
 			success := resp.StatusCode >= 200 && resp.StatusCode < 300
 			if success != test.wantSuccess {
-				t.Errorf("PUT with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				t.Errorf("PUT with %s URL (content-type=%q) got status code %d, want 2xx? %v", test.urlMethod, test.contentType, resp.StatusCode, test.wantSuccess)
 				gotBody, _ := ioutil.ReadAll(resp.Body)
 				t.Errorf(string(gotBody))
 			}
@@ -2118,7 +2172,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		wantSuccess bool
 	}{
 		{http.MethodDelete, deleteURL, false},
-		{http.MethodPut, putURL, false},
+		{http.MethodPut, putURLWithoutContentType, false},
 		{http.MethodGet, getURLNoParams, false},
 		{http.MethodGet, getURL, true},
 	} {
@@ -2149,7 +2203,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		wantSuccess bool
 	}{
 		{http.MethodGet, getURL, false},
-		{http.MethodPut, putURL, false},
+		{http.MethodPut, putURLWithoutContentType, false},
 		{http.MethodDelete, deleteURL, true},
 	} {
 		req, err := http.NewRequest(http.MethodDelete, test.url, nil)

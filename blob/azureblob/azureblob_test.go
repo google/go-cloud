@@ -32,7 +32,7 @@ import (
 	"gocloud.dev/internal/testing/setup"
 )
 
-// Prerequisites for --record mode
+// Prerequisites for -record mode
 // 1. Sign-in to your Azure Subscription at http://portal.azure.com.
 //
 // 2. Create a Storage Account.
@@ -322,13 +322,15 @@ func TestOpenBucket(t *testing.T) {
 
 func TestOpenerFromEnv(t *testing.T) {
 	tests := []struct {
-		name        string
-		accountName AccountName
-		accountKey  AccountKey
-		sasToken    SASToken
+		name          string
+		accountName   AccountName
+		accountKey    AccountKey
+		storageDomain StorageDomain
+		sasToken      SASToken
 
-		wantSharedCreds bool
-		wantSASToken    SASToken
+		wantSharedCreds   bool
+		wantSASToken      SASToken
+		wantStorageDomain StorageDomain
 	}{
 		{
 			name:            "AccountKey",
@@ -337,16 +339,18 @@ func TestOpenerFromEnv(t *testing.T) {
 			wantSharedCreds: true,
 		},
 		{
-			name:            "SASToken",
-			accountName:     "myaccount",
-			sasToken:        "borkborkbork",
-			wantSharedCreds: false,
-			wantSASToken:    "borkborkbork",
+			name:              "SASToken",
+			accountName:       "myaccount",
+			sasToken:          "borkborkbork",
+			storageDomain:     "mycloudenv",
+			wantSharedCreds:   false,
+			wantSASToken:      "borkborkbork",
+			wantStorageDomain: "mycloudenv",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken)
+			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, test.storageDomain)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -371,6 +375,9 @@ func TestOpenerFromEnv(t *testing.T) {
 			if o.Options.SASToken != test.wantSASToken {
 				t.Errorf("Options.SASToken = %q; want %q", o.Options.SASToken, test.wantSASToken)
 			}
+			if o.Options.StorageDomain != test.wantStorageDomain {
+				t.Errorf("Options.StorageDomain = %q; want %q", o.Options.StorageDomain, test.wantStorageDomain)
+			}
 		})
 	}
 }
@@ -378,11 +385,14 @@ func TestOpenerFromEnv(t *testing.T) {
 func TestOpenBucketFromURL(t *testing.T) {
 	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
 	prevKey := os.Getenv("AZURE_STORAGE_KEY")
+	prevEnv := os.Getenv("AZURE_STORAGE_DOMAIN")
 	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
 	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
+	os.Setenv("AZURE_STORAGE_DOMAIN", "my-cloud")
 	defer func() {
 		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
 		os.Setenv("AZURE_STORAGE_KEY", prevKey)
+		os.Setenv("AZURE_STORAGE_DOMAIN", prevEnv)
 	}()
 
 	tests := []struct {

@@ -52,6 +52,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -157,11 +158,16 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
+	opts := o.SubscriptionOptions
+	for param, values := range u.Query() {
+		if strings.ToLower(param) == "queue" && values != nil {
+			opts.Queue = values[0]
+		} else {
+			return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
+		}
 	}
 	subject := path.Join(u.Host, u.Path)
-	return OpenSubscription(o.Connection, subject, &o.SubscriptionOptions)
+	return OpenSubscription(o.Connection, subject, &opts)
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by NATS.
@@ -169,7 +175,11 @@ type TopicOptions struct{}
 
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by NATS.
-type SubscriptionOptions struct{}
+type SubscriptionOptions struct {
+	// Queue sets the subscription as a QueueSubcription.
+	// For more info, see https://docs.nats.io/nats-concepts/queue.
+	Queue string
+}
 
 type topic struct {
 	nc   *nats.Conn
@@ -277,21 +287,25 @@ type subscription struct {
 	nsub *nats.Subscription
 }
 
-// OpenSubscription returns a *pubsub.Subscription representing a NATS subscription.
-// The subject is the NATS Subject to subscribe to; for more info, see
-// https://nats.io/documentation/writing_applications/subjects.
-//
-// TODO(dlc) - Options for queue groups?
-func OpenSubscription(nc *nats.Conn, subject string, _ *SubscriptionOptions) (*pubsub.Subscription, error) {
-	ds, err := openSubscription(nc, subject)
+// OpenSubscription returns a *pubsub.Subscription representing a NATS subscription or NATS queue subscription.
+// The subject is the NATS Subject to subscribe to;
+// for more info, see https://nats.io/documentation/writing_applications/subjects.
+func OpenSubscription(nc *nats.Conn, subject string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(nc, subject, opts)
 	if err != nil {
 		return nil, err
 	}
 	return pubsub.NewSubscription(ds, recvBatcherOpts, nil), nil
 }
 
-func openSubscription(nc *nats.Conn, subject string) (driver.Subscription, error) {
-	sub, err := nc.SubscribeSync(subject)
+func openSubscription(nc *nats.Conn, subject string, opts *SubscriptionOptions) (driver.Subscription, error) {
+	var sub *nats.Subscription
+	var err error
+	if opts != nil && opts.Queue != "" {
+		sub, err = nc.QueueSubscribeSync(subject, opts.Queue)
+	} else {
+		sub, err = nc.SubscribeSync(subject)
+	}
 	if err != nil {
 		return nil, err
 	}

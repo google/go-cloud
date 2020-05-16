@@ -265,6 +265,9 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	if err != nil {
 		return "", nil, nil, err
 	}
+	if info.IsDir() {
+		return "", nil, nil, os.ErrNotExist
+	}
 	xa, err := getAttrs(path)
 	if err != nil {
 		return "", nil, nil, err
@@ -696,6 +699,9 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	q.Set("obj", key)
 	q.Set("expiry", strconv.FormatInt(time.Now().Add(opts.Expiry).Unix(), 10))
 	q.Set("method", opts.Method)
+	if opts.ContentType != "" {
+		q.Set("contentType", opts.ContentType)
+	}
 	q.Set("signature", h.getMAC(q))
 	sURL.RawQuery = q.Encode()
 
@@ -707,6 +713,9 @@ func (h *URLSignerHMAC) getMAC(q url.Values) string {
 	signedVals.Set("obj", q.Get("obj"))
 	signedVals.Set("expiry", q.Get("expiry"))
 	signedVals.Set("method", q.Get("method"))
+	if contentType := q.Get("contentType"); contentType != "" {
+		signedVals.Set("contentType", contentType)
+	}
 	msg := signedVals.Encode()
 
 	hsh := hmac.New(sha256.New, h.secretKey)

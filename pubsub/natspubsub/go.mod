@@ -17,20 +17,18 @@ module gocloud.dev/pubsub/natspubsub
 go 1.12
 
 require (
-	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
-	github.com/google/go-cmp v0.3.0
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/google/go-cmp v0.4.0
+	github.com/nats-io/jwt v0.3.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.0.0
 	github.com/nats-io/nats.go v1.9.1
-	github.com/nats-io/nkeys v0.1.3 // indirect
-	go.opencensus.io v0.22.2 // indirect
-	gocloud.dev v0.18.0
-	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708 // indirect
-	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
+	go.opencensus.io v0.22.3 // indirect
+	gocloud.dev v0.19.0
+	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	golang.org/x/sys v0.0.0-20191112214154-59a1497f0cea // indirect
-	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
-	google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a // indirect
-	google.golang.org/grpc v1.25.1 // indirect
+	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
+	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
+	google.golang.org/grpc v1.27.1 // indirect
 )
 
 replace gocloud.dev => ../../

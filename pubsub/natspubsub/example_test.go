@@ -62,6 +62,27 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
+func ExampleOpenQueueSubscription() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	natsConn, err := nats.Connect("nats://nats.example.com")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer natsConn.Close()
+
+	subscription, err := natspubsub.OpenSubscription(
+		natsConn,
+		"example.mysubject",
+		&natspubsub.SubscriptionOptions{Queue: "queue1"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
+}
+
 func Example_openTopicFromURL() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
@@ -88,6 +109,23 @@ func Example_openSubscriptionFromURL() {
 	// This URL will Dial the NATS server at the URL in the environment variable
 	// NATS_SERVER_URL and receive messages with subject "example.mysubject".
 	subscription, err := pubsub.OpenSubscription(ctx, "nats://example.mysubject")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
+}
+
+func Example_openQueueSubscriptionFromURL() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will Dial the NATS server at the URL in the environment variable
+	// NATS_SERVER_URL and receive messages with subject "example.mysubject"
+	// This URL will be parsed and the queue attribute will be used as the Queue parameter when creating the NATS Subscription.
+	subscription, err := pubsub.OpenSubscription(ctx, "nats://example.mysubject?queue=myqueue")
 	if err != nil {
 		log.Fatal(err)
 	}

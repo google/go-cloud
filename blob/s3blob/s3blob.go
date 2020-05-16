@@ -342,6 +342,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
 		page.Objects = make([]*driver.ListObject, n)
 		for i, obj := range resp.Contents {
+			obj := obj
 			page.Objects[i] = &driver.ListObject{
 				Key:     unescapeKey(aws.StringValue(obj.Key)),
 				ModTime: *obj.LastModified,
@@ -358,6 +359,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			}
 		}
 		for i, prefix := range resp.CommonPrefixes {
+			prefix := prefix
 			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
 				Key:   unescapeKey(aws.StringValue(prefix.Prefix)),
 				IsDir: true,
@@ -730,8 +732,9 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		return req.Presign(opts.Expiry)
 	case http.MethodPut:
 		in := &s3.PutObjectInput{
-			Bucket: aws.String(b.name),
-			Key:    aws.String(key),
+			Bucket:      aws.String(b.name),
+			Key:         aws.String(key),
+			ContentType: aws.String(opts.ContentType),
 		}
 		req, _ := b.client.PutObjectRequest(in)
 		return req.Presign(opts.Expiry)
