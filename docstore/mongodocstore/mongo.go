@@ -49,7 +49,7 @@
 //
 // MongoDB represents times to millisecond precision, while Go's time.Time type has
 // nanosecond precision. To save time.Times to MongoDB without loss of precision,
-// save the result of calling  UnixNano on the time.
+// save the result of calling UnixNano on the time.
 //
 // The official Go driver for MongoDB, go.mongodb.org/mongo-driver/mongo, lowercases
 // struct field names; other docstore drivers do not. This means that you have to choose
