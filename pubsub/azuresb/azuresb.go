@@ -70,9 +70,9 @@ import (
 	"github.com/Azure/azure-amqp-common-go/v2/uuid"
 	servicebus "github.com/Azure/azure-service-bus-go"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 	"pack.ag/amqp"
 )
