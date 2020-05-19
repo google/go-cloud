@@ -33,23 +33,23 @@
 // (These implementation choices are subject to change.)
 // It calls the BeforeDo function once before each call to the underlying driver. The as function passed
 // to the BeforeDo function exposes the following types:
-// - Gets: *options.FindOptions
-// - writes: []mongo.WriteModel and *options.BulkWriteOptions
+//  - Gets: *options.FindOptions
+//  - writes: []mongo.WriteModel and *options.BulkWriteOptions
 //
 // As
 //
 // mongodocstore exposes the following types for As:
-// - Collection: *mongo.Collection
-// - Query.BeforeQuery: *options.FindOptions or bson.D (the filter for Delete and Update queries)
-// - DocumentIterator: *mongo.Cursor
-// - Error: mongo.CommandError, mongo.BulkWriteError, mongo.BulkWriteException
+//  - Collection: *mongo.Collection
+//  - Query.BeforeQuery: *options.FindOptions or bson.D (the filter for Delete and Update queries)
+//  - DocumentIterator: *mongo.Cursor
+//  - Error: mongo.CommandError, mongo.BulkWriteError, mongo.BulkWriteException
 //
 //
 // Special Considerations
 //
 // MongoDB represents times to millisecond precision, while Go's time.Time type has
 // nanosecond precision. To save time.Times to MongoDB without loss of precision,
-// save the result of calling  UnixNano on the time.
+// save the result of calling UnixNano on the time.
 //
 // The official Go driver for MongoDB, go.mongodb.org/mongo-driver/mongo, lowercases
 // struct field names; other docstore drivers do not. This means that you have to choose
