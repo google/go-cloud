@@ -83,10 +83,10 @@ import (
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 )
 

@@ -16,7 +16,7 @@
 // add items to it. Items are accumulated while handler calls are in progress; when
 // the handler returns, it will be called again with items accumulated since the last
 // call. Multiple concurrent calls to the handler are supported.
-package batcher // import "gocloud.dev/internal/batcher"
+package batcher // import "gocloud.dev/pubsub/batcher"
 
 import (
 	"context"
