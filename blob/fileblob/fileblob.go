@@ -75,7 +75,8 @@ const Scheme = "file"
 
 // URLOpener opens file bucket URLs like "file:///foo/bar/baz".
 //
-// The URL's host is ignored.
+// The URL's host is ignored unless it is ".", which is used to signal a
+// relative path. For example, "file://./../.." uses "../.." as the path.
 //
 // If os.PathSeparator != "/", any leading "/" from the path is dropped
 // and remaining '/' characters are converted to os.PathSeparator.
@@ -92,6 +93,8 @@ const Scheme = "file"
 //    -> Passes "/a/directory" to OpenBucket.
 //  - file://localhost/a/directory
 //    -> Also passes "/a/directory".
+//  - file://./../..
+//    -> The hostname is ".", signaling a relative path; passes "../..".
 //  - file:///c:/foo/bar on Windows.
 //    -> Passes "c:\foo\bar".
 //  - file://localhost/c:/foo/bar on Windows.
@@ -108,7 +111,9 @@ type URLOpener struct {
 // OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	path := u.Path
-	if os.PathSeparator != '/' {
+	// Hostname == "." means a relative path, so drop the leading "/".
+	// Also drop the leading "/" on Windows.
+	if u.Host == "." || os.PathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
 	}
 	opts, err := o.forParams(ctx, u.Query())
