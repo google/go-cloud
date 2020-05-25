@@ -64,17 +64,17 @@ import (
 	"sync"
 	"time"
 
-	common "github.com/Azure/azure-amqp-common-go/v2"
-	"github.com/Azure/azure-amqp-common-go/v2/cbs"
-	"github.com/Azure/azure-amqp-common-go/v2/rpc"
-	"github.com/Azure/azure-amqp-common-go/v2/uuid"
+	common "github.com/Azure/azure-amqp-common-go/v3"
+	"github.com/Azure/azure-amqp-common-go/v3/cbs"
+	"github.com/Azure/azure-amqp-common-go/v3/rpc"
+	"github.com/Azure/azure-amqp-common-go/v3/uuid"
 	servicebus "github.com/Azure/azure-service-bus-go"
+	"github.com/Azure/go-amqp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
-	"pack.ag/amqp"
 )
 
 const (
