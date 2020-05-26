@@ -26,6 +26,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/google/go-cmp/cmp"
@@ -565,6 +566,30 @@ func TestURLOpenerForParams(t *testing.T) {
 			},
 			wantOpts: Options{PrivateKey: privateKey},
 		},
+		{
+			name:     "PrivateKey cleared",
+			currOpts: Options{PrivateKey: privateKey},
+			query: url.Values{
+				"private_key_path": {""},
+			},
+			wantOpts: Options{},
+		},
+		{
+			name: "AccessID change clears PrivateKey and MakeSignBytes",
+			currOpts: Options{
+				GoogleAccessID: "foo",
+				PrivateKey:     privateKey,
+				MakeSignBytes: func(context.Context) SignBytesFunc {
+					return func([]byte) ([]byte, error) {
+						return nil, context.DeadlineExceeded
+					}
+				},
+			},
+			query: url.Values{
+				"access_id": {"bar"},
+			},
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
 	}
 
 	for _, test := range tests {
@@ -607,6 +632,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"gs://mybucket?access_id=foo", false},
 		// OK, setting private_key_path.
 		{"gs://mybucket?private_key_path=" + pkFile.Name(), false},
+		// OK, clearing any pre-existing private key.
+		{"gs://mybucket?private_key_path=", false},
 		// Invalid private_key_path.
 		{"gs://mybucket?private_key_path=invalid-path", true},
 		// Invalid parameter.
@@ -685,5 +712,84 @@ func TestReadDefaultCredentials(t *testing.T) {
 				test.WantAccessID, test.WantPrivateKey,
 			)
 		}
+	}
+}
+
+func TestRemainingSignedURLSchemes(t *testing.T) {
+	tests := []struct {
+		name          string
+		currOpts      Options
+		wantSignedURL string // Not the actual URL, which is subject to change, but a mimickry.
+		wantErr       bool
+	}{
+		{
+			name:    "no scheme available, error",
+			wantErr: true,
+		},
+		{
+			name: "too many schemes configured",
+			currOpts: Options{
+				GoogleAccessID: "foo",
+				PrivateKey:     []byte("private-key"),
+				SignBytes: func([]byte) ([]byte, error) {
+					return []byte("signed"), nil
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SignBytes",
+			currOpts: Options{
+				GoogleAccessID: "foo",
+				SignBytes: func([]byte) ([]byte, error) {
+					return []byte("signed"), nil
+				},
+			},
+			wantSignedURL: "https://host/go-cloud-blob-test-bucket/some-key?GoogleAccessId=foo&Signature=c2lnbmVk",
+		},
+		{
+			name: "MakeSignBytes is being used",
+			currOpts: Options{
+				GoogleAccessID: "foo",
+				MakeSignBytes: func(context.Context) SignBytesFunc {
+					return func([]byte) ([]byte, error) {
+						return []byte("signed"), nil
+					}
+				},
+			},
+			wantSignedURL: "https://host/go-cloud-blob-test-bucket/some-key?GoogleAccessId=foo&Signature=c2lnbmVk",
+		},
+	}
+
+	ctx := context.Background()
+	signOpts := &driver.SignedURLOptions{
+		Expiry: 30 * time.Second,
+		Method: http.MethodGet,
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			bucket := bucket{name: bucketName, opts: &test.currOpts}
+
+			// SignedURL doesn't check whether a key exists.
+			gotURL, gotErr := bucket.SignedURL(ctx, "some-key", signOpts)
+			if (gotErr != nil) != test.wantErr {
+				t.Errorf("Got unexpected error %v", gotErr)
+			}
+			if test.wantSignedURL == "" {
+				return
+			}
+
+			got, _ := url.Parse(gotURL)
+			want, _ := url.Parse(test.wantSignedURL)
+			gotParams, wantParams := got.Query(), want.Query()
+			for _, param := range []string{"GoogleAccessId", "Signature"} {
+				if gotParams.Get(param) != wantParams.Get(param) {
+					// Print the full URL because the parameter might've not been set at all.
+					t.Errorf("Query parameter in SignedURL differs: %v\n -- got URL:  %v\n -- want URL: %v",
+						param, got, want)
+				}
+			}
+		})
 	}
 }

@@ -41,6 +41,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible
+	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/lib/pq v1.1.1
 	go.opencensus.io v0.22.2
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
