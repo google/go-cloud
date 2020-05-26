@@ -49,6 +49,7 @@ package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -87,6 +88,48 @@ var Set = wire.NewSet(
 	wire.Struct(new(URLOpener), "Client"),
 )
 
+// readDefaultCredentials gets the field values from the supplied JSON data.
+// For its possible formats please see
+// https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-go
+//
+// Use "golang.org/x/oauth2/google".DefaultCredentials.JSON to get
+// the contents of the preferred credential file.
+//
+// Returns null-values for fields that have not been obtained.
+func readDefaultCredentials(credFileAsJSON []byte) (AccessID string, PrivateKey []byte) {
+	// For example, a credentials file as generated for service accounts through the web console.
+	var contentVariantA struct {
+		ClientEmail string `json:"client_email"`
+		PrivateKey  string `json:"private_key"`
+	}
+	if err := json.Unmarshal(credFileAsJSON, &contentVariantA); err == nil {
+		AccessID = contentVariantA.ClientEmail
+		PrivateKey = []byte(contentVariantA.PrivateKey)
+	}
+	if AccessID != "" {
+		return
+	}
+
+	// If obtained through the REST API.
+	var contentVariantB struct {
+		Name           string `json:"name"`
+		PrivateKeyData string `json:"privateKeyData"`
+	}
+	if err := json.Unmarshal(credFileAsJSON, &contentVariantB); err == nil {
+		nextFieldIsAccessID := false
+		for _, s := range strings.Split(contentVariantB.Name, "/") {
+			if nextFieldIsAccessID {
+				AccessID = s
+				break
+			}
+			nextFieldIsAccessID = s == "serviceAccounts"
+		}
+		PrivateKey = []byte(contentVariantB.PrivateKeyData)
+	}
+
+	return
+}
+
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenBucketURL.
 type lazyCredsOpener struct {
@@ -97,6 +140,7 @@ type lazyCredsOpener struct {
 
 func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	o.init.Do(func() {
+		var opts Options
 		var creds *google.Credentials
 		if os.Getenv("STORAGE_EMULATOR_HOST") != "" {
 			creds, _ = google.CredentialsFromJSON(ctx, []byte(`{"type": "service_account", "project_id": "my-project-id"}`))
@@ -107,6 +151,9 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 				o.err = err
 				return
 			}
+
+			// Populate default values from credentials files, where available.
+			opts.GoogleAccessID, opts.PrivateKey = readDefaultCredentials(creds.JSON)
 		}
 
 		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
@@ -114,7 +161,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 			o.err = err
 			return
 		}
-		o.opener = &URLOpener{Client: client}
+		o.opener = &URLOpener{Client: client, Options: opts}
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
@@ -134,6 +181,8 @@ const Scheme = "gs"
 //
 //   - access_id: sets Options.GoogleAccessID
 //   - private_key_path: path to read for Options.PrivateKey
+//
+// Currently their use is limited to SignedURL.
 type URLOpener struct {
 	// Client must be set to a non-nil HTTP client authenticated with
 	// Cloud Storage scope or equivalent.
@@ -160,8 +209,9 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 	}
 	opts := new(Options)
 	*opts = o.Options
-	if accessID := q.Get("access_id"); accessID != "" {
+	if accessID := q.Get("access_id"); accessID != "" && accessID != opts.GoogleAccessID {
 		opts.GoogleAccessID = accessID
+		opts.PrivateKey = nil // Clear any previous key unrelated to the new accessID.
 	}
 	if keyPath := q.Get("private_key_path"); keyPath != "" {
 		pk, err := ioutil.ReadFile(keyPath)

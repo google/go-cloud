@@ -624,3 +624,66 @@ func TestOpenBucketFromURL(t *testing.T) {
 		}
 	}
 }
+
+func TestReadDefaultCredentials(t *testing.T) {
+	tests := []struct {
+		givenJSON      string
+		WantAccessID   string
+		WantPrivateKey []byte
+	}{
+		// Variant A: service account file
+		{`{
+			"type": "service_account",
+			"project_id": "project-id",
+			"private_key_id": "key-id",
+			"private_key": "-----BEGIN PRIVATE KEY-----\nprivate-key\n-----END PRIVATE KEY-----\n",
+			"client_email": "service-account-email",
+			"client_id": "client-id",
+			"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+			"token_uri": "https://accounts.google.com/o/oauth2/token",
+			"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+			"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/service-account-email"
+		  }`,
+			"service-account-email",
+			[]byte("-----BEGIN PRIVATE KEY-----\nprivate-key\n-----END PRIVATE KEY-----\n"),
+		},
+		// Variant A: credentials file absent a private key (stripped)
+		{`{
+			"google": {},
+			"client_email": "service-account-email",
+			"client_id": "client-id"
+		  }`,
+			"service-account-email",
+			[]byte(""),
+		},
+		// Variant B: obtained through the REST API
+		{`{
+			"name": "projects/project-id/serviceAccounts/service-account-email/keys/key-id",
+			"privateKeyType": "TYPE_GOOGLE_CREDENTIALS_FILE",
+			"privateKeyData": "private-key",
+			"validAfterTime": "date",
+			"validBeforeTime": "date",
+			"keyAlgorithm": "KEY_ALG_RSA_2048"
+		  }`,
+			"service-account-email",
+			[]byte("private-key"),
+		},
+		// An empty input shall not throw an exception
+		{"", "", nil},
+	}
+
+	for i, test := range tests {
+		inJSON := []byte(test.givenJSON)
+		if len(test.givenJSON) == 0 {
+			inJSON = nil
+		}
+
+		gotAccessID, gotPrivateKey := readDefaultCredentials(inJSON)
+		if gotAccessID != test.WantAccessID || string(gotPrivateKey) != string(test.WantPrivateKey) {
+			t.Errorf("Mismatched field values in case %d:\n -- got:  %v, %v\n -- want: %v, %v", i,
+				gotAccessID, gotPrivateKey,
+				test.WantAccessID, test.WantPrivateKey,
+			)
+		}
+	}
+}
