@@ -26,6 +26,7 @@ require (
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.14.5 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
@@ -44,7 +45,7 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
 	gocloud.dev v0.19.0
-	google.golang.org/grpc v1.21.1
+	google.golang.org/grpc v1.24.0
 )
 
 replace gocloud.dev => ../../
