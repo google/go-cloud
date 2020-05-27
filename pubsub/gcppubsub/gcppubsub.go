@@ -122,24 +122,30 @@ type lazyCredsOpener struct {
 
 func (o *lazyCredsOpener) defaultConn(ctx context.Context) (*URLOpener, error) {
 	o.init.Do(func() {
-		creds, err := gcp.DefaultCredentials(ctx)
-		if err != nil {
-			o.err = err
-			return
-		}
+		var conn *grpc.ClientConn
+		var err error
+		if e := os.Getenv("PUBSUB_EMULATOR_HOST"); e != "" {
+			// Connect to the GCP pubsub emulator by overriding the default endpoint
+			// if the 'PUBSUB_EMULATOR_HOST' environment variable is set.
+			// Check https://cloud.google.com/pubsub/docs/emulator for more info.
+			endPoint = e
+			conn, err = dialEmulator(ctx, e)
+			if err != nil {
+				o.err = err
+				return
+			}
+		} else {
+			creds, err := gcp.DefaultCredentials(ctx)
+			if err != nil {
+				o.err = err
+				return
+			}
 
-		// Connect to the GCP pubsub emulator by overriding the default endpoint
-		// if the 'PUBSUB_EMULATOR_HOST' environment variable is set.
-		// Check https://cloud.google.com/pubsub/docs/emulator for more info.
-		emulatorEndPoint := os.Getenv("PUBSUB_EMULATOR_HOST")
-		if emulatorEndPoint != "" {
-			endPoint = emulatorEndPoint
-		}
-
-		conn, _, err := Dial(ctx, creds.TokenSource)
-		if err != nil {
-			o.err = err
-			return
+			conn, _, err = Dial(ctx, creds.TokenSource)
+			if err != nil {
+				o.err = err
+				return
+			}
 		}
 		o.opener = &URLOpener{Conn: conn}
 	})
@@ -238,6 +244,15 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*grpc.ClientConn, func(), er
 		return nil, nil, err
 	}
 	return conn, func() { conn.Close() }, nil
+}
+
+// dialEmulator opens a gRPC connection to the GCP Pub Sub API.
+func dialEmulator(ctx context.Context, e string) (*grpc.ClientConn, error) {
+	conn, err := grpc.DialContext(ctx, e, grpc.WithInsecure(), useragent.GRPCDialOption("pubsub"))
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
 }
 
 // PublisherClient returns a *raw.PublisherClient that can be used in OpenTopic.
