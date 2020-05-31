@@ -266,6 +266,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file:///bucket-not-found", "", true, false, ""},
 		// File doesn't exist -> error at read time.
 		{"file://" + dirpath, "filenotfound.txt", false, true, ""},
+		// Relative path using host="."; bucket is created but error at read time.
+		{"file://./../..", "filenotfound.txt", false, true, ""},
 		// OK.
 		{"file://" + dirpath, "myfile.txt", false, false, "hello world"},
 		// OK, host is ignored.
