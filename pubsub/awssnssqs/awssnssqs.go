@@ -84,7 +84,6 @@ import (
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
-	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
@@ -569,51 +568,51 @@ func (*sqsTopic) Close() error { return nil }
 func errorCode(err error) gcerrors.ErrorCode {
 	ae, ok := err.(awserr.Error)
 	if !ok {
-		return gcerr.Unknown
+		return gcerrors.Unknown
 	}
 	ec, ok := errorCodeMap[ae.Code()]
 	if !ok {
-		return gcerr.Unknown
+		return gcerrors.Unknown
 	}
 	return ec
 }
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
-	sns.ErrCodeAuthorizationErrorException:          gcerr.PermissionDenied,
-	sns.ErrCodeKMSAccessDeniedException:             gcerr.PermissionDenied,
-	sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
-	sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
-	sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
-	sqs.ErrCodeMessageNotInflight:                   gcerr.FailedPrecondition,
-	sqs.ErrCodePurgeQueueInProgress:                 gcerr.FailedPrecondition,
-	sqs.ErrCodeQueueDeletedRecently:                 gcerr.FailedPrecondition,
-	sqs.ErrCodeQueueNameExists:                      gcerr.FailedPrecondition,
-	sns.ErrCodeInternalErrorException:               gcerr.Internal,
-	sns.ErrCodeInvalidParameterException:            gcerr.InvalidArgument,
-	sns.ErrCodeInvalidParameterValueException:       gcerr.InvalidArgument,
-	sqs.ErrCodeBatchEntryIdsNotDistinct:             gcerr.InvalidArgument,
-	sqs.ErrCodeBatchRequestTooLong:                  gcerr.InvalidArgument,
-	sqs.ErrCodeEmptyBatchRequest:                    gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidAttributeName:                 gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidBatchEntryId:                  gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidIdFormat:                      gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidMessageContents:               gcerr.InvalidArgument,
-	sqs.ErrCodeReceiptHandleIsInvalid:               gcerr.InvalidArgument,
-	sqs.ErrCodeTooManyEntriesInBatchRequest:         gcerr.InvalidArgument,
-	sqs.ErrCodeUnsupportedOperation:                 gcerr.InvalidArgument,
-	sns.ErrCodeInvalidSecurityException:             gcerr.PermissionDenied,
-	sns.ErrCodeKMSNotFoundException:                 gcerr.NotFound,
-	sns.ErrCodeNotFoundException:                    gcerr.NotFound,
-	sqs.ErrCodeQueueDoesNotExist:                    gcerr.NotFound,
-	sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
-	sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
-	sns.ErrCodeTopicLimitExceededException:          gcerr.ResourceExhausted,
-	sqs.ErrCodeOverLimit:                            gcerr.ResourceExhausted,
-	sns.ErrCodeKMSThrottlingException:               gcerr.ResourceExhausted,
-	sns.ErrCodeThrottledException:                   gcerr.ResourceExhausted,
-	"RequestCanceled":                               gcerr.Canceled,
-	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
-	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
+	sns.ErrCodeAuthorizationErrorException:          gcerrors.PermissionDenied,
+	sns.ErrCodeKMSAccessDeniedException:             gcerrors.PermissionDenied,
+	sns.ErrCodeKMSDisabledException:                 gcerrors.FailedPrecondition,
+	sns.ErrCodeKMSInvalidStateException:             gcerrors.FailedPrecondition,
+	sns.ErrCodeKMSOptInRequired:                     gcerrors.FailedPrecondition,
+	sqs.ErrCodeMessageNotInflight:                   gcerrors.FailedPrecondition,
+	sqs.ErrCodePurgeQueueInProgress:                 gcerrors.FailedPrecondition,
+	sqs.ErrCodeQueueDeletedRecently:                 gcerrors.FailedPrecondition,
+	sqs.ErrCodeQueueNameExists:                      gcerrors.FailedPrecondition,
+	sns.ErrCodeInternalErrorException:               gcerrors.Internal,
+	sns.ErrCodeInvalidParameterException:            gcerrors.InvalidArgument,
+	sns.ErrCodeInvalidParameterValueException:       gcerrors.InvalidArgument,
+	sqs.ErrCodeBatchEntryIdsNotDistinct:             gcerrors.InvalidArgument,
+	sqs.ErrCodeBatchRequestTooLong:                  gcerrors.InvalidArgument,
+	sqs.ErrCodeEmptyBatchRequest:                    gcerrors.InvalidArgument,
+	sqs.ErrCodeInvalidAttributeName:                 gcerrors.InvalidArgument,
+	sqs.ErrCodeInvalidBatchEntryId:                  gcerrors.InvalidArgument,
+	sqs.ErrCodeInvalidIdFormat:                      gcerrors.InvalidArgument,
+	sqs.ErrCodeInvalidMessageContents:               gcerrors.InvalidArgument,
+	sqs.ErrCodeReceiptHandleIsInvalid:               gcerrors.InvalidArgument,
+	sqs.ErrCodeTooManyEntriesInBatchRequest:         gcerrors.InvalidArgument,
+	sqs.ErrCodeUnsupportedOperation:                 gcerrors.InvalidArgument,
+	sns.ErrCodeInvalidSecurityException:             gcerrors.PermissionDenied,
+	sns.ErrCodeKMSNotFoundException:                 gcerrors.NotFound,
+	sns.ErrCodeNotFoundException:                    gcerrors.NotFound,
+	sqs.ErrCodeQueueDoesNotExist:                    gcerrors.NotFound,
+	sns.ErrCodeFilterPolicyLimitExceededException:   gcerrors.ResourceExhausted,
+	sns.ErrCodeSubscriptionLimitExceededException:   gcerrors.ResourceExhausted,
+	sns.ErrCodeTopicLimitExceededException:          gcerrors.ResourceExhausted,
+	sqs.ErrCodeOverLimit:                            gcerrors.ResourceExhausted,
+	sns.ErrCodeKMSThrottlingException:               gcerrors.ResourceExhausted,
+	sns.ErrCodeThrottledException:                   gcerrors.ResourceExhausted,
+	"RequestCanceled":                               gcerrors.Canceled,
+	sns.ErrCodeEndpointDisabledException:            gcerrors.Unknown,
+	sns.ErrCodePlatformApplicationDisabledException: gcerrors.Unknown,
 }
 
 type subscription struct {

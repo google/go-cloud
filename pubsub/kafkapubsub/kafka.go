@@ -65,7 +65,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
@@ -302,9 +301,9 @@ func errorCode(err error) gcerrors.ErrorCode {
 		return errorCode(pe.Err)
 	}
 	if err == sarama.ErrUnknownTopicOrPartition {
-		return gcerr.NotFound
+		return gcerrors.NotFound
 	}
-	return gcerr.Unknown
+	return gcerrors.Unknown
 }
 
 type subscription struct {
