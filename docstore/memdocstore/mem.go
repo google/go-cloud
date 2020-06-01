@@ -162,7 +162,7 @@ func (c *collection) RevisionField() string {
 }
 
 // ErrorCode implements driver.ErrorCode.
-func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
+func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerrors.Code(err)
 }
 

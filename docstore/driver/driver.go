@@ -20,7 +20,7 @@ package driver // import "gocloud.dev/docstore/driver"
 import (
 	"context"
 
-	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/gcerrors"
 )
 
 // A Collection is a set of documents.
@@ -88,7 +88,7 @@ type Collection interface {
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
-	ErrorCode(error) gcerr.ErrorCode
+	ErrorCode(error) gcerrors.ErrorCode
 
 	// Close cleans up any resources used by the Collection. Once Close is called,
 	// there will be no method calls to the Collection other than As, ErrorAs, and
