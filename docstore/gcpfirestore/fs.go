@@ -80,6 +80,7 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
@@ -725,7 +726,7 @@ func preconditionFromTimestamp(ts *tspb.Timestamp) *pb.Precondition {
 	return &pb.Precondition{ConditionType: &pb.Precondition_UpdateTime{ts}}
 }
 
-func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
+func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
 

@@ -698,30 +698,30 @@ func (c *collection) ErrorAs(err error, i interface{}) bool {
 	return true
 }
 
-func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
+func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 	ae, ok := err.(awserr.Error)
 	if !ok {
-		return gcerr.Unknown
+		return gcerrors.Unknown
 	}
 	ec, ok := errorCodeMap[ae.Code()]
 	if !ok {
-		return gcerr.Unknown
+		return gcerrors.Unknown
 	}
 	return ec
 }
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
-	dyn.ErrCodeConditionalCheckFailedException:          gcerr.FailedPrecondition,
-	dyn.ErrCodeProvisionedThroughputExceededException:   gcerr.ResourceExhausted,
-	dyn.ErrCodeResourceNotFoundException:                gcerr.NotFound,
-	dyn.ErrCodeItemCollectionSizeLimitExceededException: gcerr.ResourceExhausted,
-	dyn.ErrCodeTransactionConflictException:             gcerr.Internal,
-	dyn.ErrCodeRequestLimitExceeded:                     gcerr.ResourceExhausted,
-	dyn.ErrCodeInternalServerError:                      gcerr.Internal,
-	dyn.ErrCodeTransactionCanceledException:             gcerr.FailedPrecondition,
-	dyn.ErrCodeTransactionInProgressException:           gcerr.InvalidArgument,
-	dyn.ErrCodeIdempotentParameterMismatchException:     gcerr.InvalidArgument,
-	"ValidationException":                               gcerr.InvalidArgument,
+	dyn.ErrCodeConditionalCheckFailedException:          gcerrors.FailedPrecondition,
+	dyn.ErrCodeProvisionedThroughputExceededException:   gcerrors.ResourceExhausted,
+	dyn.ErrCodeResourceNotFoundException:                gcerrors.NotFound,
+	dyn.ErrCodeItemCollectionSizeLimitExceededException: gcerrors.ResourceExhausted,
+	dyn.ErrCodeTransactionConflictException:             gcerrors.Internal,
+	dyn.ErrCodeRequestLimitExceeded:                     gcerrors.ResourceExhausted,
+	dyn.ErrCodeInternalServerError:                      gcerrors.Internal,
+	dyn.ErrCodeTransactionCanceledException:             gcerrors.FailedPrecondition,
+	dyn.ErrCodeTransactionInProgressException:           gcerrors.InvalidArgument,
+	dyn.ErrCodeIdempotentParameterMismatchException:     gcerrors.InvalidArgument,
+	"ValidationException":                               gcerrors.InvalidArgument,
 }
 
 // Close implements driver.Collection.Close.
