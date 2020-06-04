@@ -19,7 +19,7 @@ go 1.12
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.12.1
 	github.com/Azure/azure-pipeline-go v0.2.1
-	github.com/Azure/azure-storage-blob-go v0.8.0
+	github.com/Azure/azure-storage-blob-go v0.9.0
 	github.com/aws/aws-sdk-go v1.30.7
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/go-cmdtest v0.1.0

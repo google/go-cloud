@@ -26,7 +26,7 @@ require (
 	go.opencensus.io v0.22.3
 	gocloud.dev v0.19.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
+	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
 	google.golang.org/api v0.17.0
 	google.golang.org/appengine v1.6.5
 	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
