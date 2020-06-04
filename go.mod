@@ -25,7 +25,7 @@ require (
 	github.com/Azure/azure-pipeline-go v0.2.1
 	github.com/Azure/azure-sdk-for-go v37.1.0+incompatible
 	github.com/Azure/azure-service-bus-go v0.10.1
-	github.com/Azure/azure-storage-blob-go v0.8.0
+	github.com/Azure/azure-storage-blob-go v0.9.0
 	github.com/Azure/go-amqp v0.12.7
 	github.com/Azure/go-autorest/autorest v0.9.3
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
@@ -44,7 +44,7 @@ require (
 	github.com/lib/pq v1.1.1
 	go.opencensus.io v0.22.2
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
