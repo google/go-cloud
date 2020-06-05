@@ -120,8 +120,12 @@ func TestOpenKeeper(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
-		// OK.
+		// OK, by alias.
 		{"awskms://alias/my-key", false},
+		// OK, by ARN with empty Host.
+		{"awskms:///arn:aws:kms:us-east-1:932528106278:alias/gocloud-test", false},
+		// OK, by ARN with empty Host.
+		{"awskms:///arn:aws:kms:us-east-1:932528106278:key/8be0dcc5-da0a-4164-a99f-649015e344b5", false},
 		// OK, overriding region.
 		{"awskms://alias/my-key?region=us-west1", false},
 		// Unknown parameter.

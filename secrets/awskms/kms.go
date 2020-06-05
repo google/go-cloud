@@ -37,6 +37,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -96,12 +97,13 @@ func (o *lazySessionOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*sec
 // Scheme is the URL scheme awskms registers its URLOpener under on secrets.DefaultMux.
 const Scheme = "awskms"
 
-// URLOpener opens AWS KMS URLs like "awskms://keyID".
+// URLOpener opens AWS KMS URLs like "awskms://keyID" or "awskms:///keyID".
 //
 // The URL Host + Path are used as the key ID, which can be in the form of an
 // Amazon Resource Name (ARN), alias name, or alias ARN. See
 // https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-// for more details.
+// for more details. Note that ARNs may contain ":" characters, which cannot be
+// escaped in the Host part of a URL, so the "awskms:///<ARN>" form should be used.
 //
 // See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // for overriding the aws.Session from the URL.
@@ -127,7 +129,11 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if err != nil {
 		return nil, err
 	}
-	return OpenKeeper(client, path.Join(u.Host, u.Path), &o.Options), nil
+	// A leading "/" means the Host was empty; trim the slash.
+	// This is so that awskms:///foo:bar results in "foo:bar" instead of
+	// "/foo:bar".
+	keyID := strings.TrimPrefix(path.Join(u.Host, u.Path), "/")
+	return OpenKeeper(client, keyID, &o.Options), nil
 }
 
 // OpenKeeper returns a *secrets.Keeper that uses AWS KMS.
