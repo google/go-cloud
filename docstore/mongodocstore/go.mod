@@ -18,17 +18,18 @@ go 1.12
 
 require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/go-cmp v0.4.0
 	github.com/google/wire v0.4.0
-	github.com/klauspost/compress v1.9.8 // indirect
+	github.com/klauspost/compress v1.10.8 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
-	go.mongodb.org/mongo-driver v1.3.0
+	go.mongodb.org/mongo-driver v1.3.4
 	go.opencensus.io v0.22.3 // indirect
 	gocloud.dev v0.19.0
-	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a // indirect
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	google.golang.org/genproto v0.0.0-20200205142000-a86caf926a67 // indirect
-	google.golang.org/grpc v1.27.1 // indirect
+	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
+	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
+	google.golang.org/genproto v0.0.0-20200605102947-12044bf5ea91 // indirect
+	google.golang.org/grpc v1.29.1 // indirect
 )
 
 replace gocloud.dev => ../../
