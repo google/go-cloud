@@ -18,18 +18,12 @@ go 1.12
 
 require (
 	github.com/Shopify/sarama v1.26.4
-	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/google/go-cmp v0.4.0
+	github.com/google/go-cmp v0.4.1
 	github.com/klauspost/compress v1.10.8 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
-	go.opencensus.io v0.22.3 // indirect
 	gocloud.dev v0.19.0
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
-	google.golang.org/genproto v0.0.0-20200605102947-12044bf5ea91 // indirect
-	google.golang.org/grpc v1.29.1 // indirect
 )
 
 replace gocloud.dev => ../../

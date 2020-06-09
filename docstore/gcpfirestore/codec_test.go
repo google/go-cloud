@@ -19,8 +19,9 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	ts "github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/drivertest"
 	"google.golang.org/genproto/googleapis/type/latlng"
@@ -34,7 +35,7 @@ func TestCodecSpecial(t *testing.T) {
 	type S struct {
 		Name    string
 		T       time.Time
-		TS, TSn *ts.Timestamp
+		TS, TSn *timestamp.Timestamp
 		LL, LLn *latlng.LatLng
 	}
 	tm := time.Date(2019, 3, 14, 0, 0, 0, 0, time.UTC)
@@ -62,7 +63,7 @@ func TestCodecSpecial(t *testing.T) {
 	if err := decodeDoc(enc, gotdoc, nameField, docstore.DefaultRevisionField); err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(&got, in); diff != "" {
+	if diff := cmp.Diff(&got, in, cmpopts.IgnoreUnexported(timestamp.Timestamp{}, latlng.LatLng{})); diff != "" {
 		t.Error(diff)
 	}
 
@@ -80,7 +81,7 @@ func TestCodecSpecial(t *testing.T) {
 		"LL":   in.LL,
 		"LLn":  nil,
 	}
-	if diff := cmp.Diff(gotmap, wantmap); diff != "" {
+	if diff := cmp.Diff(gotmap, wantmap, cmpopts.IgnoreUnexported(latlng.LatLng{})); diff != "" {
 		t.Error(diff)
 	}
 }
