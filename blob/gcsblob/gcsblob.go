@@ -69,6 +69,7 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/storage"
 	"github.com/google/wire"
 	"golang.org/x/oauth2/google"
@@ -161,6 +162,12 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 
 			// Populate default values from credentials files, where available.
 			opts.GoogleAccessID, opts.PrivateKey = readDefaultCredentials(creds.JSON)
+
+			// … else, on GCE, at least get the instance's main service account.
+			if opts.GoogleAccessID == "" && metadata.OnGCE() {
+				mc := metadata.NewClient(nil)
+				opts.GoogleAccessID, _ = mc.Email("")
+			}
 		}
 
 		// Provide a default factory for SignBytes for environments without a private key.
