@@ -25,11 +25,9 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/wire v0.4.0
 	go.opencensus.io v0.22.3
-	gocloud.dev v0.19.0
+	gocloud.dev v0.20.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
 	google.golang.org/api v0.26.0
 	google.golang.org/appengine v1.6.6
 )
-
-replace gocloud.dev => ../../
