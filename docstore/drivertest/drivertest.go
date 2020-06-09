@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore"
@@ -798,7 +799,7 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 			}
 			checkHasRevisionField(t, tc.doc, revField)
 			setRevision(tc.want, revision(got, revField), revField)
-			if diff := cmp.Diff(got, tc.want); diff != "" {
+			if diff := cmp.Diff(got, tc.want, cmpopts.IgnoreUnexported(timestamp.Timestamp{})); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -1574,7 +1575,7 @@ func testMultipleActions(t *testing.T, coll *ds.Collection, revField string) {
 			got := gots[i]
 			want := clone(wants[i])
 			want[revField] = got[revField]
-			if !cmp.Equal(got, want) {
+			if !cmp.Equal(got, want, cmpopts.IgnoreUnexported(timestamp.Timestamp{})) {
 				t.Errorf("index #%d:\ngot  %v\nwant %v", i, got, want)
 			}
 		}

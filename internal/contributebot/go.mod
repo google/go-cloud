@@ -30,7 +30,6 @@ require (
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
 	google.golang.org/api v0.26.0
 	google.golang.org/appengine v1.6.6
-	google.golang.org/genproto v0.0.0-20200605102947-12044bf5ea91 // indirect
 )
 
 replace gocloud.dev => ../../

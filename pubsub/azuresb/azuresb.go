@@ -49,7 +49,7 @@
 //  - Subscription: *servicebus.Subscription
 //  - Message.BeforeSend: *servicebus.Message
 //  - Message: *servicebus.Message
-//  - Error: common.Retryable
+//  - Error: common.Retryable, *amqp.Error, *amqp.DetachError
 package azuresb // import "gocloud.dev/pubsub/azuresb"
 
 import (
@@ -303,6 +303,11 @@ func (*topic) ErrorAs(err error, i interface{}) bool {
 
 func errorAs(err error, i interface{}) bool {
 	switch v := err.(type) {
+	case *amqp.DetachError:
+		if p, ok := i.(**amqp.DetachError); ok {
+			*p = v
+			return true
+		}
 	case *amqp.Error:
 		if p, ok := i.(**amqp.Error); ok {
 			*p = v
@@ -379,18 +384,18 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 		amqp.ConnProperty("user-agent", useragent.AzureUserAgentPrefix("pubsub")),
 	)
 	if err != nil {
-		sub.linkErr = fmt.Errorf("failed to dial AMQP: %v", err)
+		sub.linkErr = err
 		return sub, nil
 	}
 	entityPath := sbTop.Name + "/Subscriptions/" + sbSub.Name
 	audience := host + entityPath
 	if err = cbs.NegotiateClaim(ctx, audience, amqpClient, sbNs.TokenProvider); err != nil {
-		sub.linkErr = fmt.Errorf("failed to negotiate claim with AMQP: %v", err)
+		sub.linkErr = err
 		return sub, nil
 	}
 	link, err := rpc.NewLink(amqpClient, sbSub.ManagementPath())
 	if err != nil {
-		sub.linkErr = fmt.Errorf("failed to create link to AMQP %s: %v", sbSub.ManagementPath(), err)
+		sub.linkErr = err
 		return sub, nil
 	}
 	sub.amqpLink = link
@@ -606,13 +611,18 @@ func errorCode(err error) gcerrors.ErrorCode {
 	if strings.Contains(err.Error(), "status code 404") {
 		return gcerrors.NotFound
 	}
-	aerr, ok := err.(*amqp.Error)
-	if !ok {
-		return gcerrors.Unknown
+	var cond amqp.ErrorCondition
+	if aerr, ok := err.(*amqp.DetachError); ok {
+		if aerr.RemoteError == nil {
+			return gcerrors.NotFound
+		}
+		cond = aerr.RemoteError.Condition
 	}
-	switch aerr.Condition {
+	if aerr, ok := err.(*amqp.Error); ok {
+		cond = aerr.Condition
+	}
+	switch cond {
 	case amqp.ErrorCondition(servicebus.ErrorNotFound):
-		return gcerrors.NotFound
 
 	case amqp.ErrorCondition(servicebus.ErrorPreconditionFailed):
 		return gcerrors.FailedPrecondition
@@ -631,10 +641,8 @@ func errorCode(err error) gcerrors.ErrorCode {
 
 	case amqp.ErrorCondition(servicebus.ErrorInvalidField):
 		return gcerrors.InvalidArgument
-
-	default:
-		return gcerrors.Unknown
 	}
+	return gcerrors.Unknown
 }
 
 // Close implements driver.Subscription.Close.
