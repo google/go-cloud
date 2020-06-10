@@ -327,6 +327,7 @@ func TestOpenerFromEnv(t *testing.T) {
 		accountKey    AccountKey
 		storageDomain StorageDomain
 		sasToken      SASToken
+		protocol      Protocol
 
 		wantSharedCreds   bool
 		wantSASToken      SASToken
@@ -350,7 +351,7 @@ func TestOpenerFromEnv(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, test.storageDomain)
+			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, test.storageDomain, test.protocol)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -382,17 +383,76 @@ func TestOpenerFromEnv(t *testing.T) {
 	}
 }
 
+func Test_openBucket(t *testing.T) {
+	tests := []struct {
+		name     string
+		protocol Protocol
+		want     Protocol
+		wantErr  bool
+	}{
+		{
+			name:     "empty",
+			protocol: "",
+			want:     "https",
+			wantErr:  false,
+		},
+		{
+			name:     "http",
+			protocol: "http",
+			want:     "http",
+			wantErr:  false,
+		},
+		{
+			name:     "https",
+			protocol: "https",
+			want:     "https",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid",
+			protocol: "invalid",
+			wantErr:  true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			accountName := AccountName("myaccount")
+			accountKey := base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))
+			cred, err := azblob.NewSharedKeyCredential(string(accountName), accountKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pipeline := azblob.NewPipeline(cred, azblob.PipelineOptions{})
+			containerName := "mycontiner"
+			o := &Options{Protocol: test.protocol}
+			b, err := openBucket(ctx, pipeline, accountName, containerName, o)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("wantErr=%v but got=%v, Options=%#v", test.wantErr, err, b.opts)
+			}
+			if !test.wantErr {
+				if b.opts.Protocol != test.want {
+					t.Errorf("Options.Protocol = %#v; want %q", o.Protocol, test.want)
+				}
+			}
+		})
+	}
+}
+
 func TestOpenBucketFromURL(t *testing.T) {
 	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
 	prevKey := os.Getenv("AZURE_STORAGE_KEY")
 	prevEnv := os.Getenv("AZURE_STORAGE_DOMAIN")
+	prevProtocol := os.Getenv("AZURE_STORAGE_PROTOCOL")
 	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
 	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
 	os.Setenv("AZURE_STORAGE_DOMAIN", "my-cloud")
+	os.Setenv("AZURE_STORAGE_PROTOCOL", "http")
 	defer func() {
 		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
 		os.Setenv("AZURE_STORAGE_KEY", prevKey)
 		os.Setenv("AZURE_STORAGE_DOMAIN", prevEnv)
+		os.Setenv("AZURE_STORAGE_PROTOCOL", prevProtocol)
 	}()
 
 	tests := []struct {
