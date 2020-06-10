@@ -22,8 +22,6 @@ require (
 	github.com/nats-io/nats-server/v2 v2.0.0
 	github.com/nats-io/nats.go v1.10.0
 	github.com/nats-io/nkeys v0.2.0 // indirect
-	gocloud.dev v0.19.0
+	gocloud.dev v0.20.0
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
 )
-
-replace gocloud.dev => ../../

@@ -22,8 +22,6 @@ require (
 	github.com/klauspost/compress v1.10.8 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
-	gocloud.dev v0.19.0
+	gocloud.dev v0.20.0
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
 )
-
-replace gocloud.dev => ../../
