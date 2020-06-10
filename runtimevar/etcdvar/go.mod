@@ -47,3 +47,5 @@ require (
 	gocloud.dev v0.20.0
 	google.golang.org/grpc v1.29.1
 )
+
+replace gocloud.dev => ../../
