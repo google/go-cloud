@@ -108,6 +108,11 @@ type Options struct {
 	// to this but are different for each cloud (i.e. "blob.core.govcloudapi.net" for USGovernment).
 	// Check the Azure developer guide for the cloud environment where your bucket resides.
 	StorageDomain StorageDomain
+
+	// Protocol can be provided to specify protocol to access Azure Blob Storage.
+	// Protocols that can be specified are "http" for local emulator and "https" for general.
+	// If blank is specified, "https" will be used.
+	Protocol Protocol
 }
 
 const (
@@ -144,7 +149,8 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		accountKey, _ := DefaultAccountKey()
 		sasToken, _ := DefaultSASToken()
 		storageDomain, _ := DefaultStorageDomain()
-		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, storageDomain)
+		protocol, _ := DefaultProtocol()
+		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, storageDomain, protocol)
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
@@ -172,7 +178,7 @@ type URLOpener struct {
 	Options Options
 }
 
-func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken, storageDomain StorageDomain) (*URLOpener, error) {
+func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken, storageDomain StorageDomain, protocol Protocol) (*URLOpener, error) {
 	// azblob.Credential is an interface; we will use either a SharedKeyCredential
 	// or anonymous credentials. If the former, we will also fill in
 	// Options.Credential so that SignedURL will work.
@@ -195,6 +201,7 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 			Credential:    storageAccountCredential,
 			SASToken:      sasToken,
 			StorageDomain: storageDomain,
+			Protocol:      protocol,
 		},
 	}, nil
 }
@@ -241,6 +248,11 @@ type SASToken string
 // It is read from the AZURE_STORAGE_DOMAIN environment variable.
 type StorageDomain string
 
+// Protocol is an protocol to access Azure Blob Storage.
+// It must be "http" or "https".
+// It is read from the AZURE_STORAGE_PROTOCOL environment variable.
+type Protocol string
+
 // DefaultAccountName loads the Azure storage account name from the
 // AZURE_STORAGE_ACCOUNT environment variable.
 func DefaultAccountName() (AccountName, error) {
@@ -276,6 +288,13 @@ func DefaultSASToken() (SASToken, error) {
 func DefaultStorageDomain() (StorageDomain, error) {
 	s := os.Getenv("AZURE_STORAGE_DOMAIN")
 	return StorageDomain(s), nil
+}
+
+// DefaultAccountKey loads the protocol to access Azure Blob Storage from the
+// AZURE_STORAGE_PROTOCOL environment variable.
+func DefaultProtocol() (Protocol, error) {
+	s := os.Getenv("AZURE_STORAGE_PROTOCOL")
+	return Protocol(s), nil
 }
 
 // NewCredential creates a SharedKeyCredential.
@@ -329,7 +348,15 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 		// If opts.StorageDomain is missing, use default domain.
 		opts.StorageDomain = "blob.core.windows.net"
 	}
-	blobURL, err := url.Parse(fmt.Sprintf("https://%s.%s", accountName, opts.StorageDomain))
+	switch opts.Protocol {
+	case "":
+		// If opts.Protocol is missing, use "https".
+		opts.Protocol = "https"
+	case "https", "http":
+	default:
+		return nil, errors.New("azureblob.OpenBucket: protocol must be http or https")
+	}
+	blobURL, err := url.Parse(fmt.Sprintf("%s://%s.%s", opts.Protocol, accountName, opts.StorageDomain))
 	if err != nil {
 		return nil, err
 	}
