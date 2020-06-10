@@ -17,8 +17,14 @@ module gocloud.dev/secrets/hashivault
 go 1.12
 
 require (
-	github.com/hashicorp/vault/api v1.0.2
+	github.com/frankban/quicktest v1.10.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.0 // indirect
+	github.com/hashicorp/go-retryablehttp v0.6.6 // indirect
+	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
+	github.com/hashicorp/vault/api v1.0.4
+	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	gocloud.dev v0.20.0
+	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
 
 replace gocloud.dev => ../../

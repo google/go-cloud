@@ -23,7 +23,6 @@ require (
 	github.com/xdg/stringprep v1.0.0 // indirect
 	go.mongodb.org/mongo-driver v1.3.4
 	gocloud.dev v0.20.0
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
 )
 
 replace gocloud.dev => ../../
