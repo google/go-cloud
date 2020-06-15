@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -317,5 +318,43 @@ func TestOpenBucketFromURL(t *testing.T) {
 		if string(got) != test.Want {
 			t.Errorf("%s: got %q want %q", test.URL, got, test.Want)
 		}
+	}
+}
+
+func TestListAtRoot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("/ as root is a unix concept")
+	}
+
+	ctx := context.Background()
+	b, err := OpenBucket("/", nil)
+	if err != nil {
+		t.Fatalf("Got error creating bucket; %#v", err)
+	}
+	defer b.Close()
+
+	dir, err := ioutil.TempDir("", "fileblob")
+	if err != nil {
+		t.Fatalf("Got error creating temp dir: %#v", err)
+	}
+	f, err := os.Create(filepath.Join(dir, "file.txt"))
+	if err != nil {
+		t.Fatalf("Got error creating file: %#v", err)
+	}
+	defer f.Close()
+
+	it := b.List(&blob.ListOptions{
+		Prefix: dir[1:],
+	})
+	obj, err := it.Next(ctx)
+	if err != nil {
+		t.Fatalf("Got error reading next item from list: %#v", err)
+	}
+	if obj.Key != filepath.Join(dir, "file.txt")[1:] {
+		t.Fatalf("Got unexpected filename in list: %q", obj.Key)
+	}
+	_, err = it.Next(ctx)
+	if err != io.EOF {
+		t.Fatalf("Expecting an EOF on next item in list, got: %#v", err)
 	}
 }
