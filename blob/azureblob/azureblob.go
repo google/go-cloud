@@ -356,7 +356,15 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	default:
 		return nil, errors.New("azureblob.OpenBucket: protocol must be http or https")
 	}
-	blobURL, err := url.Parse(fmt.Sprintf("%s://%s.%s", opts.Protocol, accountName, opts.StorageDomain))
+	d := string(opts.StorageDomain)
+	var u string
+	// The URL structure of the local emulator is a bit different from the real one.
+	if strings.HasPrefix(d, "127.0.0.1") || strings.HasPrefix(d, "localhost") {
+		u = fmt.Sprintf("%s://%s/%s", opts.Protocol, opts.StorageDomain, accountName) // http://127.0.0.1:10000/devstoreaccount1
+	} else {
+		u = fmt.Sprintf("%s://%s.%s", opts.Protocol, accountName, opts.StorageDomain) // https://myaccount.blob.core.windows.net
+	}
+	blobURL, err := url.Parse(u)
 	if err != nil {
 		return nil, err
 	}
