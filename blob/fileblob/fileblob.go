@@ -322,7 +322,11 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil
 		}
 		// Strip the <b.dir> prefix from path; +1 is to include the separator.
-		path = path[len(b.dir)+1:]
+		prefixLen := len(b.dir)
+		if b.dir != "/" {
+			prefixLen++
+		}
+		path = path[prefixLen:]
 		// Unescape the path to get the key.
 		key := unescapeKey(path)
 		// Skip all directories. If opts.Delimiter is set, we'll create
