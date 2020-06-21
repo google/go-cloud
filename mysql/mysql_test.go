@@ -34,3 +34,16 @@ func TestOpen(t *testing.T) {
 		t.Error("Close:", err)
 	}
 }
+
+func TestURLMuxFromScheme(t *testing.T) {
+	opener, err := DefaultURLMux().FromScheme(Scheme)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opener == nil {
+		t.Fatal("got nil opener")
+	}
+	if _, ok := opener.(*URLOpener); !ok {
+		t.Errorf("wanted *URLOpener, got %T", opener)
+	}
+}

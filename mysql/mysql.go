@@ -106,6 +106,15 @@ func (mux *URLMux) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error
 	return opener.(MySQLURLOpener).OpenMySQLURL(ctx, u)
 }
 
+// FromScheme returns a opener for a given scheme.
+func (mux *URLMux) FromScheme(scheme string) (MySQLURLOpener, error) {
+	opener, err := mux.schemes.FromURL("DB", &url.URL{Scheme: scheme})
+	if err != nil {
+		return nil, err
+	}
+	return opener.(MySQLURLOpener), nil
+}
+
 var defaultURLMux = new(URLMux)
 
 // DefaultURLMux returns the URLMux used by OpenMySql.
