@@ -130,6 +130,8 @@ func TestOpenKeeper(t *testing.T) {
 		{"base64key://c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c3NlY3JldHNlY3JldHNlY3JldHNlY3JldHNlY3JldHM=", true},
 		// Invalid base64 key.
 		{"base64key://not-valid-base64", true},
+		// Valid base64 key (but invalid if using Std encoding instead of URL encoding).
+		{"base64Key://UKcmEoZW7nKl0uPHr8yV__KJm0ANhiFz8PzDN-gYWq8=", false},
 		// Invalid parameter.
 		{"base64key://?param=value", true},
 	}
