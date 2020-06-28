@@ -17,6 +17,7 @@ package awsmysql
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"gocloud.dev/internal/testing/terraform"
@@ -54,5 +55,23 @@ func TestOpen(t *testing.T) {
 	}
 	if err := db.Close(); err != nil {
 		t.Error("Close:", err)
+	}
+}
+
+func TestConfigFromURL(t *testing.T) {
+	const urlstr = "awsmysql://localhost/db?parseTime=true&interpolateParams=true"
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := configFromURL(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.ParseTime {
+		t.Error("ParseTime is false, want true")
+	}
+	if !cfg.InterpolateParams {
+		t.Error("InterpolateParams is false, want true")
 	}
 }

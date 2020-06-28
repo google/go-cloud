@@ -34,7 +34,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"sync"
+	"sync/atomic"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
@@ -69,7 +69,7 @@ func init() {
 }
 
 // OpenMySQLURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
-func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
 	source := uo.CertSource
 	if source == nil {
 		source = new(rds.CertFetcher)
@@ -77,12 +77,13 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	if u.Host == "" {
 		return nil, fmt.Errorf("open RDS: empty endpoint")
 	}
-	password, _ := u.User.Password()
+
+	cfg, err := configFromURL(u)
+	if err != nil {
+		return nil, err
+	}
 	c := &connector{
-		addr:     u.Host,
-		user:     u.User.Username(),
-		password: password,
-		dbName:   strings.TrimPrefix(u.Path, "/"),
+		dsn: cfg.FormatDSN(),
 		// Make a copy of TraceOpts to avoid caller modifying.
 		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
 		provider:  source,
@@ -94,17 +95,33 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	return sql.OpenDB(c), nil
 }
 
+func configFromURL(u *url.URL) (cfg *mysql.Config, err error) {
+	dbName := strings.TrimPrefix(u.Path, "/")
+	if u.RawQuery != "" {
+		optDsn := fmt.Sprintf("/%s?%s", dbName, u.RawQuery)
+		if cfg, err = mysql.ParseDSN(optDsn); err != nil {
+			return nil, err
+		}
+	} else {
+		cfg = mysql.NewConfig()
+	}
+	cfg.Net = "tcp"
+	cfg.Addr = u.Host
+	cfg.User = u.User.Username()
+	cfg.Passwd, _ = u.User.Password()
+	cfg.DBName = dbName
+	cfg.AllowCleartextPasswords = true
+	cfg.AllowNativePasswords = true
+	return cfg, nil
+}
+
 type connector struct {
-	addr      string
-	user      string
-	password  string
-	dbName    string
 	traceOpts []ocsql.TraceOption
 
 	sem      chan struct{} // receive to acquire, send to release
 	provider CertPoolProvider
 
-	ready chan struct{} // closed after writing dsn
+	ready chan struct{} // closed after resolving dsn
 	dsn   string
 }
 
@@ -117,11 +134,10 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			return nil, fmt.Errorf("connect RDS: %v", err)
 		}
 		// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
-		tlsConfigCounter.mu.Lock()
-		tlsConfigNum := tlsConfigCounter.n
-		tlsConfigCounter.n++
-		tlsConfigCounter.mu.Unlock()
-		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/awsmysql/%d", tlsConfigNum)
+		tlsConfigName := fmt.Sprintf(
+			"gocloud.dev/mysql/awsmysql/%d",
+			atomic.AddUint32(&tlsConfigCounter, 1),
+		)
 		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
 			RootCAs: certPool,
 		})
@@ -129,16 +145,8 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect RDS: register TLS: %v", err)
 		}
-		cfg := &mysql.Config{
-			Net:                     "tcp",
-			Addr:                    c.addr,
-			User:                    c.user,
-			Passwd:                  c.password,
-			TLSConfig:               tlsConfigName,
-			AllowCleartextPasswords: true,
-			AllowNativePasswords:    true,
-			DBName:                  c.dbName,
-		}
+		cfg, _ := mysql.ParseDSN(c.dsn)
+		cfg.TLSConfig = tlsConfigName
 		c.dsn = cfg.FormatDSN()
 		close(c.ready)
 		// Don't release sem: make it block forever, so this case won't be run again.
@@ -154,10 +162,7 @@ func (c *connector) Driver() driver.Driver {
 	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
-var tlsConfigCounter struct {
-	mu sync.Mutex
-	n  int
-}
+var tlsConfigCounter uint32
 
 // A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.
 type CertPoolProvider = rds.CertPoolProvider
