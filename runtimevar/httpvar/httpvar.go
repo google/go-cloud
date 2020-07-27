@@ -200,7 +200,11 @@ type watcher struct {
 
 // WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
-	resp, err := w.client.Get(w.endpoint.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, w.endpoint.String(), nil)
+	if err != nil {
+		return errorState(err, prev), w.wait
+	}
+	resp, err := w.client.Do(req)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
