@@ -50,7 +50,7 @@
 //  - ReaderOptions.BeforeRead: *s3.GetObjectInput
 //  - Attributes: s3.HeadObjectOutput
 //  - CopyOptions.BeforeCopy: *s3.CopyObjectInput
-//  - WriterOptions.BeforeWrite: *s3manager.UploadInput
+//  - WriterOptions.BeforeWrite: *s3manager.UploadInput, *s3manager.Uploader
 package s3blob // import "gocloud.dev/blob/s3blob"
 
 import (
@@ -661,12 +661,17 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}
 	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
-			p, ok := i.(**s3manager.UploadInput)
-			if !ok {
-				return false
+			pu, ok := i.(**s3manager.Uploader)
+			if ok {
+				*pu = uploader
+				return true
 			}
-			*p = req
-			return true
+			pui, ok := i.(**s3manager.UploadInput)
+			if ok {
+				*pui = req
+				return true
+			}
+			return false
 		}
 		if err := opts.BeforeWrite(asFunc); err != nil {
 			return nil, err
