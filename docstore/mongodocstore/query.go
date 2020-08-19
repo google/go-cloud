@@ -130,7 +130,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 func (it *docIterator) nextMap(ctx context.Context) (map[string]interface{}, error) {
 	if !it.cursor.Next(ctx) {
 		if it.cursor.Err() != nil {
-			return nil, it.cursor.Err()
+			return nil, fmt.Errorf("NEXT error %v", it.cursor.Err())
 		}
 		return nil, io.EOF
 	}

@@ -49,6 +49,8 @@ jobs:
   include:
     - go: "1.14.x"
       os: linux
+    - go: "1.15.x"
+      os: linux
     # Deploy to GitHub Pages.
     - stage: website
       os: linux
