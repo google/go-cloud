@@ -47,13 +47,13 @@ env:
 
 jobs:
   include:
-    - go: "1.13.x"
-      os: linux
     - go: "1.14.x"
       os: linux
-    - go: "1.14.x"
+    - go: "1.15.x"
+      os: linux
+    - go: "1.15.x"
       os: osx
-    - go: "1.14.x"
+    - go: "1.15.x"
       os: windows
       # TODO(rvangent): Remove filter_secrets: false once the Travis issue is fixed:
       # https://travis-ci.community/t/current-known-issues-please-read-this-before-posting-a-new-topic/264/10
