@@ -105,7 +105,7 @@ while read -r path || [[ -n "$path" ]]; do
     continue
   fi
 
-  (cd "$path" && go test ./...) || result=1
+  (cd "$path" && go test -v ./...) || result=1
 done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
 # The above filters out comments and empty lines from allmodules and only takes
 # the first (whitespace-separated) field from each line.
