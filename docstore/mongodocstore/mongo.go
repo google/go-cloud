@@ -294,7 +294,10 @@ func (c *collection) bulkFind(ctx context.Context, gets []*driver.Action, errs [
 func (c *collection) projectionDoc(fps [][]string) bson.D {
 	proj := bson.D{{Key: c.revisionField, Value: 1}}
 	for _, fp := range fps {
-		proj = append(proj, bson.E{Key: c.toMongoFieldPath(fp), Value: 1})
+		path := c.toMongoFieldPath(fp)
+		if path != c.revisionField {
+			proj = append(proj, bson.E{Key: path, Value: 1})
+		}
 	}
 	return proj
 }
