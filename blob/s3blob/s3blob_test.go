@@ -135,9 +135,13 @@ func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var req *s3manager.UploadInput
 	if !as(&req) {
-		return errors.New("Writer.As failed")
+		return errors.New("Writer.As failed for UploadInput")
 	}
 	req.ContentLanguage = aws.String(language)
+	var u *s3manager.Uploader
+	if !as(&u) {
+		return errors.New("Writer.As failed for Uploader")
+	}
 	return nil
 }
 
