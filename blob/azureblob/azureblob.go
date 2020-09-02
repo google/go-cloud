@@ -166,7 +166,8 @@ const Scheme = "azblob"
 //
 // The URL host is used as the bucket name.
 //
-// No query parameters are supported.
+// The following query options are supported:
+//  - domain: The domain name used to access the Azure Blob storage (e.g. blob.core.windows.net)
 type URLOpener struct {
 	// AccountName must be specified.
 	AccountName AccountName
@@ -208,10 +209,33 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 
 // OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	for k := range u.Query() {
-		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, k)
+	opts := new(Options)
+	*opts = o.Options
+
+	err := setOptionsFromURLParams(u.Query(), opts)
+	if err != nil {
+		return nil, err
 	}
-	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, &o.Options)
+
+	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, opts)
+}
+
+func setOptionsFromURLParams(q url.Values, o *Options) error {
+	for param, values := range q {
+		if len(values) > 1 {
+			return fmt.Errorf("multiple values of %v not allowed", param)
+		}
+
+		value := values[0]
+		switch param {
+		case "domain":
+			o.StorageDomain = StorageDomain(value)
+		default:
+			return fmt.Errorf("unknown query parameter %q", param)
+		}
+	}
+
+	return nil
 }
 
 // DefaultIdentity is a Wire provider set that provides an Azure storage
