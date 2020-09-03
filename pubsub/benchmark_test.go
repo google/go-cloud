@@ -50,6 +50,10 @@ type fakeSub struct {
 	msgs    []*driver.Message
 }
 
+func (*fakeSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
+func (*fakeSub) CanNack() bool                                             { return false }
+func (*fakeSub) Close() error                                              { return nil }
+
 func (s *fakeSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	n, delay := s.profile(s.inMiddleThird(), maxMessages)
 	if delay > 0 {
