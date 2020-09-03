@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package pubsub_test
+package pubsub
 
 import (
 	"context"
@@ -27,10 +27,8 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
-	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
-	"gocloud.dev/pubsub/mempubsub"
 )
 
 type driverTopic struct {
@@ -115,14 +113,14 @@ func TestSendReceive(t *testing.T) {
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(dt, nil)
+	topic := NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
-	m := &pubsub.Message{Body: []byte("user signed up")}
+	m := &Message{Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
 
-	sub := pubsub.NewSubscription(ds, nil, nil)
+	sub := NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -146,7 +144,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Make a subscription.
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
-	s := pubsub.NewSubscription(ds, nil, nil)
+	s := NewSubscription(ds, nil, nil)
 	defer s.Shutdown(ctx)
 
 	// Start 10 goroutines to receive from it.
@@ -177,11 +175,11 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	}
 
 	// Send messages. Each message has a unique body used as a key to receivedMsgs.
-	topic := pubsub.NewTopic(dt, nil)
+	topic := NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 	for i := 0; i < howManyToSend; i++ {
 		key := fmt.Sprintf("message #%d", i)
-		m := &pubsub.Message{Body: []byte(key)}
+		m := &Message{Body: []byte(key)}
 		if err := topic.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
@@ -207,9 +205,9 @@ func TestCancelSend(t *testing.T) {
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(dt, nil)
+	topic := NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
-	m := &pubsub.Message{}
+	m := &Message{}
 
 	// Intentionally break the driver subscription by acquiring its semaphore.
 	// Now topic.Send will have to wait for cancellation.
@@ -224,7 +222,7 @@ func TestCancelSend(t *testing.T) {
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
-	s := pubsub.NewSubscription(ds, nil, nil)
+	s := NewSubscription(ds, nil, nil)
 	defer s.Shutdown(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.
@@ -256,7 +254,7 @@ func TestCancelTwoReceives(t *testing.T) {
 	// We expect Goroutine 2's Receive to exit immediately. That won't
 	// happen if Receive holds the lock during the call to ReceiveBatch.
 	inReceiveBatch := make(chan struct{})
-	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, nil, nil)
+	s := NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, nil, nil)
 	defer s.Shutdown(context.Background())
 	go func() {
 		_, err := s.Receive(context.Background())
@@ -284,9 +282,9 @@ func TestRetryTopic(t *testing.T) {
 	// Test that Send is retried if the driver returns a retryable error.
 	ctx := context.Background()
 	ft := &failTopic{}
-	topic := pubsub.NewTopic(ft, nil)
+	topic := NewTopic(ft, nil)
 	defer topic.Shutdown(ctx)
-	err := topic.Send(ctx, &pubsub.Message{})
+	err := topic.Send(ctx, &Message{})
 	if err != nil {
 		t.Errorf("Send: got %v, want nil", err)
 	}
@@ -325,8 +323,8 @@ func (*failTopic) Close() error                       { return nil }
 
 func TestRetryReceive(t *testing.T) {
 	ctx := context.Background()
-	fs := &failSub{start: true}
-	sub := pubsub.NewSubscription(fs, nil, nil)
+	fs := &failSub{fail: true}
+	sub := NewSubscription(fs, nil, nil)
 	defer sub.Shutdown(ctx)
 	m, err := sub.Receive(ctx)
 	if err != nil {
@@ -338,13 +336,75 @@ func TestRetryReceive(t *testing.T) {
 	}
 }
 
+// TestBatchSizeDecay verifies that the batch size decays when no messages are available.
+// (see https://github.com/google/go-cloud/issues/2849).
+func TestBatchSizeDecays(t *testing.T) {
+	ctx := context.Background()
+	fs := &failSub{}
+	// Allow multiple handlers and cap max batch size to ensure we get concurrency.
+	sub := NewSubscription(fs, &batcher.Options{MaxHandlers: 10, MaxBatchSize: 2}, nil)
+	defer sub.Shutdown(ctx)
+
+	// Records the last batch size.
+	var mu sync.Mutex
+	lastMaxMessages := 0
+	sub.preReceiveBatchHook = func(maxMessages int) {
+		mu.Lock()
+		defer mu.Unlock()
+		lastMaxMessages = maxMessages
+	}
+
+	// Do some receives to allow the number of batches to increase past 1.
+	for n := 0; n < 100; n++ {
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			t.Fatalf("Receive: got %v, want nil", err)
+		}
+		m.Ack()
+	}
+
+	// Tell the failSub to start returning no messages.
+	fs.mu.Lock()
+	fs.empty = true
+	fs.mu.Unlock()
+
+	mu.Lock()
+	highWaterMarkBatchSize := lastMaxMessages
+	if lastMaxMessages <= 1 {
+		t.Fatal("max messages wasn't greater than 1")
+	}
+	mu.Unlock()
+
+	// Make a bunch of calls to Receive to drain any outstanding
+	// messages, and wait some extra time during which we should
+	// continue polling, and the batch size should decay.
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			// Expected: no more messages, and timed out.
+			break
+		}
+		// Drained a message.
+		m.Ack()
+	}
+
+	// Verify that the batch size decayed.
+	mu.Lock()
+	if lastMaxMessages >= highWaterMarkBatchSize {
+		t.Fatalf("wanted batch size to decay; high water mark was %d, now %d", highWaterMarkBatchSize, lastMaxMessages)
+	}
+	mu.Unlock()
+}
+
 // TestRetryReceiveBatches verifies that batching and retries work without races
 // (see https://github.com/google/go-cloud/issues/2676).
 func TestRetryReceiveInBatchesDoesntRace(t *testing.T) {
 	ctx := context.Background()
 	fs := &failSub{}
 	// Allow multiple handlers and cap max batch size to ensure we get concurrency.
-	sub := pubsub.NewSubscription(fs, &batcher.Options{MaxHandlers: 10, MaxBatchSize: 2}, nil)
+	sub := NewSubscription(fs, &batcher.Options{MaxHandlers: 10, MaxBatchSize: 2}, nil)
 	defer sub.Shutdown(ctx)
 
 	// Do some receives to allow the number of batches to increase past 1.
@@ -357,7 +417,7 @@ func TestRetryReceiveInBatchesDoesntRace(t *testing.T) {
 	}
 	// Tell the failSub to start failing.
 	fs.mu.Lock()
-	fs.start = true
+	fs.fail = true
 	fs.mu.Unlock()
 
 	// This call to Receive should result in nRetryCalls+1 calls to ReceiveBatch for
@@ -378,7 +438,8 @@ func TestRetryReceiveInBatchesDoesntRace(t *testing.T) {
 // Once start=true, ReceiveBatch will fail nRetryCalls times before succeeding.
 type failSub struct {
 	driver.Subscription
-	start bool
+	fail  bool
+	empty bool
 	calls int
 	mu    sync.Mutex
 }
@@ -386,11 +447,15 @@ type failSub struct {
 func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.start {
+	if t.fail {
 		t.calls++
 		if t.calls <= nRetryCalls {
 			return nil, errRetry
 		}
+	}
+	if t.empty {
+		t.calls++
+		return nil, nil
 	}
 	return []*driver.Message{{Body: []byte("")}}, nil
 }
@@ -448,12 +513,12 @@ func TestErrorsAreWrapped(t *testing.T) {
 		}
 	}
 
-	topic := pubsub.NewTopic(erroringTopic{}, nil)
-	verify(topic.Send(ctx, &pubsub.Message{}))
+	topic := NewTopic(erroringTopic{}, nil)
+	verify(topic.Send(ctx, &Message{}))
 	err := topic.Shutdown(ctx)
 	verify(err)
 
-	sub := pubsub.NewSubscription(erroringSubscription{}, nil, nil)
+	sub := NewSubscription(erroringSubscription{}, nil, nil)
 	_, err = sub.Receive(ctx)
 	verify(err)
 	err = sub.Shutdown(ctx)
@@ -462,14 +527,18 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 func TestOpenCensus(t *testing.T) {
 	ctx := context.Background()
-	te := octest.NewTestExporter(pubsub.OpenCensusViews)
+	te := octest.NewTestExporter(OpenCensusViews)
 	defer te.Unregister()
 
-	topic := mempubsub.NewTopic()
+	ds := NewDriverSub()
+	dt := &driverTopic{
+		subs: []*driverSub{ds},
+	}
+	topic := NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
-	sub := mempubsub.NewSubscription(topic, time.Second)
+	sub := NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
-	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
+	if err := topic.Send(ctx, &Message{Body: []byte("x")}); err != nil {
 		t.Fatal(err)
 	}
 	if err := topic.Shutdown(ctx); err != nil {
@@ -485,7 +554,7 @@ func TestOpenCensus(t *testing.T) {
 	}
 	_, _ = sub.Receive(ctx)
 
-	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/pubsub", "gocloud.dev/pubsub/mempubsub", []octest.Call{
+	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/pubsub", "gocloud.dev/pubsub", []octest.Call{
 		{Method: "driver.Topic.SendBatch", Code: gcerrors.OK},
 		{Method: "Topic.Send", Code: gcerrors.OK},
 		{Method: "Topic.Shutdown", Code: gcerrors.OK},
@@ -508,7 +577,7 @@ var (
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
 
-	mux := new(pubsub.URLMux)
+	mux := new(URLMux)
 	fake := &fakeOpener{}
 	mux.RegisterTopic("foo", fake)
 	mux.RegisterTopic("err", fake)
@@ -644,7 +713,7 @@ type fakeOpener struct {
 	u *url.URL // last url passed to OpenTopicURL/OpenSubscriptionURL
 }
 
-func (o *fakeOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+func (o *fakeOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error) {
 	if u.Scheme == "err" {
 		return nil, errors.New("fail")
 	}
@@ -652,7 +721,7 @@ func (o *fakeOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topi
 	return nil, nil
 }
 
-func (o *fakeOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+func (o *fakeOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error) {
 	if u.Scheme == "err" {
 		return nil, errors.New("fail")
 	}
