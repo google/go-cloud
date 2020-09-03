@@ -197,6 +197,7 @@ const SQSScheme = "awssqs"
 //
 //   - raw (for "awssqs" Subscriptions only): sets SubscriberOptions.Raw. The
 //     value must be parseable by `strconv.ParseBool`.
+//   - waittime: sets SubscriberOptions.WaitTime, in time.ParseDuration formats.
 //
 // See gocloud.dev/aws/ConfigFromURLParams for other query parameters
 // that affect the default AWS session.
@@ -250,6 +251,14 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 			return nil, fmt.Errorf("invalid value %q for raw: %v", rawStr, err)
 		}
 		q.Del("raw")
+	}
+	if waitTimeStr := q.Get("waittime"); waitTimeStr != "" {
+		var err error
+		opts.WaitTime, err = time.ParseDuration(waitTimeStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for waittime: %v", waitTimeStr, err)
+		}
+		q.Del("waittime")
 	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(q)
 	if err != nil {
@@ -635,6 +644,10 @@ type SubscriptionOptions struct {
 	//
 	// See https://aws.amazon.com/sns/faqs/#Raw_message_delivery.
 	Raw bool
+
+	// WaitTime passed to ReceiveMessage to enable long polling.
+	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html#sqs-long-polling.
+	WaitTime time.Duration
 }
 
 // OpenSubscription opens a subscription based on AWS SQS for the given SQS
@@ -654,11 +667,15 @@ func openSubscription(ctx context.Context, sess client.ConfigProvider, qURL stri
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
+	req := &sqs.ReceiveMessageInput{
 		QueueUrl:              aws.String(s.qURL),
 		MaxNumberOfMessages:   aws.Int64(int64(maxMessages)),
 		MessageAttributeNames: []*string{aws.String("All")},
-	})
+	}
+	if s.opts.WaitTime != 0 {
+		req.WaitTimeSeconds = aws.Int64(int64(s.opts.WaitTime.Seconds()))
+	}
+	output, err := s.client.ReceiveMessageWithContext(ctx, req)
 	if err != nil {
 		return nil, err
 	}

@@ -456,6 +456,10 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=1", false},
 		// Invalid raw.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=foo", true},
+		// OK, setting waittime.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?waittime=5s", false},
+		// Invalid waittime.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?waittime=foo", true},
 		// Invalid parameter.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?param=value", true},
 	}
