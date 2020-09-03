@@ -50,6 +50,10 @@ type fakeSub struct {
 	msgs    []*driver.Message
 }
 
+func (*fakeSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
+func (*fakeSub) CanNack() bool                                             { return false }
+func (*fakeSub) Close() error                                              { return nil }
+
 func (s *fakeSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	n, delay := s.profile(s.inMiddleThird(), maxMessages)
 	if delay > 0 {
@@ -80,7 +84,6 @@ func TestReceivePerformance(t *testing.T) {
 		numGoRoutines  int
 		receiveProfile func(bool, int) (int, time.Duration)
 		processProfile func(bool) time.Duration
-		noAck          bool
 	}{
 		{
 			description: "baseline",
@@ -88,10 +91,6 @@ func TestReceivePerformance(t *testing.T) {
 		{
 			description:   "1 goroutine",
 			numGoRoutines: 1,
-		},
-		{
-			description: "no ack",
-			noAck:       true,
 		},
 		{
 			description:    "receive 100ms",
@@ -173,12 +172,12 @@ func TestReceivePerformance(t *testing.T) {
 			test.processProfile = defaultProcessProfile
 		}
 		t.Run(test.description, func(t *testing.T) {
-			runBenchmark(t, test.description, test.numGoRoutines, test.receiveProfile, test.processProfile, test.noAck)
+			runBenchmark(t, test.description, test.numGoRoutines, test.receiveProfile, test.processProfile)
 		})
 	}
 }
 
-func runBenchmark(t *testing.T, description string, numGoRoutines int, receiveProfile func(bool, int) (int, time.Duration), processProfile func(bool) time.Duration, noAck bool) {
+func runBenchmark(t *testing.T, description string, numGoRoutines int, receiveProfile func(bool, int) (int, time.Duration), processProfile func(bool) time.Duration) {
 	msgs := make([]*driver.Message, maxBatchSize)
 	for i := range msgs {
 		msgs[i] = &driver.Message{}
@@ -288,9 +287,7 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 				if delay > 0 {
 					time.Sleep(delay)
 				}
-				if !noAck {
-					m.Ack()
-				}
+				m.Ack()
 			}
 		})
 	}
