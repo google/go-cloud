@@ -16,6 +16,7 @@ package mysql
 
 import (
 	"context"
+	"net/url"
 	"testing"
 )
 
@@ -32,5 +33,23 @@ func TestOpen(t *testing.T) {
 	}
 	if err := dbByURL.Close(); err != nil {
 		t.Error("Close:", err)
+	}
+}
+
+func TestConfigFromURL(t *testing.T) {
+	const urlstr = "mysql://localhost/db?parseTime=true&interpolateParams=true"
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := ConfigFromURL(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.ParseTime {
+		t.Error("ParseTime is false, want true")
+	}
+	if !cfg.InterpolateParams {
+		t.Error("InterpolateParams is false, want true")
 	}
 }

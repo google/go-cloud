@@ -19,6 +19,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -44,10 +45,35 @@ type URLOpener struct {
 
 // OpenMySQLURL opens a new database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
+	cfg, err := ConfigFromURL(u)
+	if err != nil {
+		return nil, err
+	}
 	return sql.OpenDB(connector{
-		dsn:       strings.TrimPrefix(u.String(), Scheme+"://"),
+		dsn:       cfg.FormatDSN(),
 		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
 	}), nil
+}
+
+// ConfigFromURL creates a mysql.Config from URL.
+func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
+	dbName := strings.TrimPrefix(u.Path, "/")
+	if u.RawQuery != "" {
+		optDsn := fmt.Sprintf("/%s?%s", dbName, u.RawQuery)
+		if cfg, err = mysql.ParseDSN(optDsn); err != nil {
+			return nil, err
+		}
+	} else {
+		cfg = mysql.NewConfig()
+	}
+	cfg.Net = "tcp"
+	cfg.Addr = u.Host
+	cfg.User = u.User.Username()
+	cfg.Passwd, _ = u.User.Password()
+	cfg.DBName = dbName
+	cfg.AllowCleartextPasswords = true
+	cfg.AllowNativePasswords = true
+	return cfg, nil
 }
 
 type connector struct {
