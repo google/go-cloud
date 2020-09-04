@@ -20,12 +20,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
@@ -462,6 +464,54 @@ func Test_openBucket(t *testing.T) {
 	}
 }
 
+func TestURLOpenerForParams(t *testing.T) {
+	tests := []struct {
+		name     string
+		currOpts Options
+		query    url.Values
+		wantOpts Options
+		wantErr  bool
+	}{
+		{
+			name: "InvalidParam",
+			query: url.Values{
+				"foo": {"bar"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "StorageDomain",
+			query: url.Values{
+				"domain": {"blob.core.usgovcloudapi.net"},
+			},
+			wantOpts: Options{StorageDomain: "blob.core.usgovcloudapi.net"},
+		},
+		{
+			name: "duplicate StorageDomain",
+			query: url.Values{
+				"domain": {"blob.core.usgovcloudapi.net", "blob.core.windows.net"},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			o := &URLOpener{Options: test.currOpts}
+			err := setOptionsFromURLParams(test.query, &o.Options)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if diff := cmp.Diff(o.Options, test.wantOpts); diff != "" {
+				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestOpenBucketFromURL(t *testing.T) {
 	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
 	prevKey := os.Getenv("AZURE_STORAGE_KEY")
@@ -484,6 +534,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"azblob://mybucket", false},
+		// With storage domain.
+		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net", false},
+		// With duplicate storage domain.
+		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net&domain=blob.core.windows.net", true},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}
