@@ -33,7 +33,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"net/url"
-	"strings"
 	"sync/atomic"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
@@ -78,7 +77,7 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 		return nil, fmt.Errorf("open RDS: empty endpoint")
 	}
 
-	cfg, err := configFromURL(u)
+	cfg, err := gcmysql.ConfigFromURL(u)
 	if err != nil {
 		return nil, err
 	}
@@ -93,26 +92,6 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	}
 	c.sem <- struct{}{}
 	return sql.OpenDB(c), nil
-}
-
-func configFromURL(u *url.URL) (cfg *mysql.Config, err error) {
-	dbName := strings.TrimPrefix(u.Path, "/")
-	if u.RawQuery != "" {
-		optDsn := fmt.Sprintf("/%s?%s", dbName, u.RawQuery)
-		if cfg, err = mysql.ParseDSN(optDsn); err != nil {
-			return nil, err
-		}
-	} else {
-		cfg = mysql.NewConfig()
-	}
-	cfg.Net = "tcp"
-	cfg.Addr = u.Host
-	cfg.User = u.User.Username()
-	cfg.Passwd, _ = u.User.Password()
-	cfg.DBName = dbName
-	cfg.AllowCleartextPasswords = true
-	cfg.AllowNativePasswords = true
-	return cfg, nil
 }
 
 type connector struct {

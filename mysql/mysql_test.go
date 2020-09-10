@@ -16,21 +16,61 @@ package mysql
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"testing"
+
+	"gocloud.dev/internal/testing/terraform"
 )
 
 func TestOpen(t *testing.T) {
-	t.Skip("Test not hermetic yet")
+	// This test will be skipped unless the project is set up with Terraform.
+	// Before running go test, run in this directory:
+	//
+	// terraform init
+	// terraform apply
+
+	tfOut, err := terraform.ReadOutput(".")
+	if err != nil || len(tfOut) == 0 {
+		t.Skipf("Could not obtain harness info: %v", err)
+	}
+	endpoint, _ := tfOut["endpoint"].Value.(string)
+	username, _ := tfOut["username"].Value.(string)
+	password, _ := tfOut["password"].Value.(string)
+	databaseName, _ := tfOut["database"].Value.(string)
+	if endpoint == "" || username == "" || databaseName == "" {
+		t.Fatalf("Missing one or more required Terraform outputs; got endpoint=%q username=%q database=%q", endpoint, username, databaseName)
+	}
 
 	ctx := context.Background()
-	dbByURL, err := Open(ctx, "mysql://root@localhost/mysql")
+	urlstr := fmt.Sprintf("%s://%s:%s@%s/%s", Scheme, username, password, endpoint, databaseName)
+	t.Log("Connecting to:", urlstr)
+	db, err := Open(ctx, urlstr)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := dbByURL.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		t.Error("Ping:", err)
 	}
-	if err := dbByURL.Close(); err != nil {
+	if err := db.Close(); err != nil {
 		t.Error("Close:", err)
+	}
+}
+
+func TestConfigFromURL(t *testing.T) {
+	const urlstr = "mysql://localhost/db?parseTime=true&interpolateParams=true"
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := ConfigFromURL(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.ParseTime {
+		t.Error("ParseTime is false, want true")
+	}
+	if !cfg.InterpolateParams {
+		t.Error("InterpolateParams is false, want true")
 	}
 }
