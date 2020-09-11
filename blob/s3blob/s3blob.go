@@ -565,7 +565,7 @@ func eTagToMD5(etag *string) []byte {
 	}
 	// Strip the expected leading and trailing quotes.
 	quoted := *etag
-	if quoted[0] != '"' || quoted[len(quoted)-1] != '"' {
+	if len(quoted) < 2 || quoted[0] != '"' || quoted[len(quoted)-1] != '"' {
 		return nil
 	}
 	unquoted := quoted[1 : len(quoted)-1]
