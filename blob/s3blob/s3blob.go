@@ -730,7 +730,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return err
 }
 
-func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+func (b *bucket) SignedURL(_ context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	key = escapeKey(key)
 	var req *request.Request
 	switch opts.Method {
@@ -792,6 +792,5 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	default:
 		return "", fmt.Errorf("unsupported Method %q", opts.Method)
 	}
-	req.SetContext(ctx)
 	return req.Presign(opts.Expiry)
 }
