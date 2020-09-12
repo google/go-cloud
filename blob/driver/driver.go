@@ -330,6 +330,12 @@ type SignedURLOptions struct {
 	//
 	// This field will always be false for non-PUT requests.
 	EnforceAbsentContentType bool
+
+	// BeforeSign is a callback that will be called before each call to the
+	// the underlying service's sign functionality.
+	// asFunc converts its argument to driver-specific types.
+	// See https://gocloud.dev/concepts/as/ for background information.
+	BeforeSign func(asFunc func(interface{}) bool) error
 }
 
 // prefixedBucket implements Bucket by prepending prefix to all keys.
