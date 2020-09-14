@@ -75,6 +75,8 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 //    on the single blob entry returned.
 // 7. Tries to read a non-existent blob, and calls ErrorCheck with the error.
 // 8. Makes a copy of the blob, using BeforeCopy as a CopyOption.
+// 9. Calls SignedURL using BeforeSign as a SignedURLOption for each supported
+//    signing method (i.e. GET, PUT and DELETE).
 //
 // For example, an AsTest might set a driver-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
@@ -98,6 +100,9 @@ type AsTest interface {
 	// BeforeList will be passed directly to ListOptions as part of listing the
 	// test blob.
 	BeforeList(as func(interface{}) bool) error
+	// BeforeSign will be passed directly to SignedURLOptions as part of
+	// generating a signed URL to the test blob.
+	BeforeSign(as func(interface{}) bool) error
 	// AttributesCheck will be called after fetching the test blob's attributes.
 	// It should call attrs.As and verify the results.
 	AttributesCheck(attrs *blob.Attributes) error
@@ -156,6 +161,13 @@ func (verifyAsFailsOnNil) BeforeCopy(as func(interface{}) bool) error {
 func (verifyAsFailsOnNil) BeforeList(as func(interface{}) bool) error {
 	if as(nil) {
 		return errors.New("want BeforeList's As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeSign(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want BeforeSign's As to return false when passed nil")
 	}
 	return nil
 }
@@ -2342,6 +2354,13 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	} else {
 		defer func() { _ = b.Delete(ctx, copyKey) }()
+	}
+
+	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
+		_, err = b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: method, BeforeSign: st.BeforeSign})
+		if err != nil && gcerrors.Code(err) != gcerrors.Unimplemented {
+			t.Errorf("got err %v when signing url with method %q", err, method)
+		}
 	}
 }
 

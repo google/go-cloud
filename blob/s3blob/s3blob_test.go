@@ -169,6 +169,18 @@ func (v verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	return nil
 }
 
+func (v verifyContentLanguage) BeforeSign(as func(interface{}) bool) error {
+	var (
+		get *s3.GetObjectInput
+		put *s3.PutObjectInput
+		del *s3.DeleteObjectInput
+	)
+	if as(&get) || as(&put) || as(&del) {
+		return nil
+	}
+	return errors.New("BeforeSign.As failed")
+}
+
 func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
 	var hoo s3.HeadObjectOutput
 	if !attrs.As(&hoo) {

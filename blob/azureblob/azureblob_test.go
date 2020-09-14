@@ -221,6 +221,14 @@ func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeSign(as func(interface{}) bool) error {
+	var azOpts *azblob.BlobSASSignatureValues
+	if !as(&azOpts) {
+		return errors.New("BeforeSign.As failed")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
 	var resp azblob.BlobGetPropertiesResponse
 	if !attrs.As(&resp) {

@@ -651,6 +651,11 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if b.opts.URLSigner == nil {
 		return "", errors.New("sign fileblob url: bucket does not have an Options.URLSigner")
 	}
+	if opts.BeforeSign != nil {
+		if err := opts.BeforeSign(func(interface{}) bool { return false }); err != nil {
+			return "", err
+		}
+	}
 	surl, err := b.opts.URLSigner.URLFromKey(ctx, key, opts)
 	if err != nil {
 		return "", err
