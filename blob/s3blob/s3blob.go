@@ -295,9 +295,44 @@ func (w *writer) Close() error {
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
 type bucket struct {
+	sync.RWMutex
+
 	name          string
 	client        *s3.S3
 	useLegacyList bool
+
+	// cachedUploader stores a cached uploader along with a key specifying its
+	// configuration. Reusing the same upload over and over again (when possible)
+	// is important because the uploader maintains an internal buffer pool for
+	// multi-part uploads and creating a new uploader for each upload results
+	// in a large number of temporary []byte allocations.
+	cachedUploader *cachedUploader
+}
+
+// cachedUploader represent a cached uploader that can be reused as long as its
+// key matches the desired uploader configuration.
+type cachedUploader struct {
+	key      uploaderKey
+	uploader *s3manager.Uploader
+}
+
+func newCachedUploader(key uploaderKey, uploader *s3manager.Uploader) *cachedUploader {
+	return &cachedUploader{
+		key:      key,
+		uploader: uploader,
+	}
+}
+
+// uploaderKey contains all custom configuration for the uploader so that
+// it can be determined if a cached uploader can serve a callers request.
+type uploaderKey struct {
+	partSize int
+}
+
+func newUploaderKey(partSize int) uploaderKey {
+	return uploaderKey{
+		partSize: partSize,
+	}
 }
 
 func (b *bucket) Close() error {
@@ -628,11 +663,33 @@ func unescapeKey(key string) string {
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key)
-	uploader := s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
-		if opts.BufferSize != 0 {
-			u.PartSize = int64(opts.BufferSize)
-		}
-	})
+
+	// Check if a cached uploader already exists.
+	b.RLock()
+	cachedUploader := b.cachedUploader
+	b.RUnlock()
+
+	var (
+		uploader    *s3manager.Uploader
+		uploaderKey = newUploaderKey(opts.BufferSize)
+	)
+	if cachedUploader != nil && uploaderKey == cachedUploader.key {
+		// If a cached uploader already exists *and* it has the same key/configuration
+		// as requested by the caller then reuse it.
+		uploader = cachedUploader.uploader
+	} else {
+		// Otherwise create a new uploader.
+		b.Lock()
+		uploader = s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
+			if opts.BufferSize != 0 {
+				u.PartSize = int64(opts.BufferSize)
+			}
+		})
+		cachedUploader = newCachedUploader(uploaderKey, uploader)
+		b.cachedUploader = cachedUploader
+		b.Unlock()
+	}
+
 	md := make(map[string]*string, len(opts.Metadata))
 	for k, v := range opts.Metadata {
 		// See the package comments for more details on escaping of metadata
