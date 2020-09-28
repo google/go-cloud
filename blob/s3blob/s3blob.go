@@ -679,13 +679,13 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		uploader = cachedUploader.uploader
 	} else {
 		// Otherwise create a new uploader.
-		b.Lock()
 		uploader = s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
 			if opts.BufferSize != 0 {
 				u.PartSize = int64(opts.BufferSize)
 			}
 		})
 		cachedUploader = newCachedUploader(uploaderKey, uploader)
+		b.Lock()
 		b.cachedUploader = cachedUploader
 		b.Unlock()
 	}
