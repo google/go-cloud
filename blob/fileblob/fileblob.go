@@ -61,6 +61,7 @@ import (
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
+	"gocloud.dev/internal/gcerr"
 )
 
 const defaultPageSize = 1000
@@ -649,7 +650,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 // SignedURL implements driver.SignedURL
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.URLSigner == nil {
-		return "", errors.New("sign fileblob url: bucket does not have an Options.URLSigner")
+		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "fileblob.SignedURL: bucket does not have an Options.URLSigner")
 	}
 	if opts.BeforeSign != nil {
 		if err := opts.BeforeSign(func(interface{}) bool { return false }); err != nil {
