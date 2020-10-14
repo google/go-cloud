@@ -52,6 +52,7 @@
 //  - Attributes: storage.ObjectAttrs
 //  - CopyOptions.BeforeCopy: *CopyObjectHandles, *storage.Copier (if accessing both, must be in that order)
 //  - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer (if accessing both, must be in that order)
+//  - SignedURLOptions.BeforeSign: *storage.SignedURLOptions
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (
@@ -712,6 +713,18 @@ func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.Signed
 	}
 	if b.opts.MakeSignBytes != nil {
 		opts.SignBytes = b.opts.MakeSignBytes(ctx)
+	}
+	if dopts.BeforeSign != nil {
+		asFunc := func(i interface{}) bool {
+			v, ok := i.(**storage.SignedURLOptions)
+			if ok {
+				*v = opts
+			}
+			return ok
+		}
+		if err := dopts.BeforeSign(asFunc); err != nil {
+			return "", err
+		}
 	}
 	return storage.SignedURL(b.name, key, opts)
 }

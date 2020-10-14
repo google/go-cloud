@@ -62,6 +62,7 @@
 //  - Attributes: azblob.BlobGetPropertiesResponse
 //  - CopyOptions.BeforeCopy: azblob.Metadata, *azblob.ModifiedAccessConditions, *azblob.BlobAccessConditions
 //  - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
+//  - SignedURLOptions.BeforeSign: *azblob.BlobSASSignatureValues
 package azureblob
 
 import (
@@ -746,15 +747,27 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	default:
 		return "", fmt.Errorf("unsupported Method %s", opts.Method)
 	}
-	var err error
-	srcBlobParts.SAS, err = azblob.BlobSASSignatureValues{
+	signVals := &azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().UTC().Add(opts.Expiry),
 		ContainerName: b.name,
 		BlobName:      srcBlobParts.BlobName,
 		Permissions:   perms.String(),
-	}.NewSASQueryParameters(b.opts.Credential)
-	if err != nil {
+	}
+	if opts.BeforeSign != nil {
+		asFunc := func(i interface{}) bool {
+			v, ok := i.(**azblob.BlobSASSignatureValues)
+			if ok {
+				*v = signVals
+			}
+			return ok
+		}
+		if err := opts.BeforeSign(asFunc); err != nil {
+			return "", err
+		}
+	}
+	var err error
+	if srcBlobParts.SAS, err = signVals.NewSASQueryParameters(b.opts.Credential); err != nil {
 		return "", err
 	}
 	srcBlobURLWithSAS := srcBlobParts.URL()

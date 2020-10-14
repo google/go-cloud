@@ -232,6 +232,7 @@ func (verifyPathError) BeforeRead(as func(interface{}) bool) error   { return ni
 func (verifyPathError) BeforeWrite(as func(interface{}) bool) error  { return nil }
 func (verifyPathError) BeforeCopy(as func(interface{}) bool) error   { return nil }
 func (verifyPathError) BeforeList(as func(interface{}) bool) error   { return nil }
+func (verifyPathError) BeforeSign(as func(interface{}) bool) error   { return nil }
 func (verifyPathError) AttributesCheck(attrs *blob.Attributes) error { return nil }
 func (verifyPathError) ReaderCheck(r *blob.Reader) error             { return nil }
 func (verifyPathError) ListObjectCheck(o *blob.ListObject) error     { return nil }

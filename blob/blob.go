@@ -945,6 +945,7 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 	}
 	dopts.ContentType = opts.ContentType
 	dopts.EnforceAbsentContentType = opts.EnforceAbsentContentType
+	dopts.BeforeSign = opts.BeforeSign
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
@@ -999,6 +1000,12 @@ type SignedURLOptions struct {
 	//
 	// Must be false for non-PUT requests.
 	EnforceAbsentContentType bool
+
+	// BeforeSign is a callback that will be called before each call to the
+	// the underlying service's sign functionality.
+	// asFunc converts its argument to driver-specific types.
+	// See https://gocloud.dev/concepts/as/ for background information.
+	BeforeSign func(asFunc func(interface{}) bool) error
 }
 
 // ReaderOptions sets options for NewReader and NewRangeReader.

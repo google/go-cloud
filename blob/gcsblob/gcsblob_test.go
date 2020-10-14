@@ -196,6 +196,15 @@ func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeSign(as func(interface{}) bool) error {
+	var opts *storage.SignedURLOptions
+	if !as(&opts) {
+		return errors.New("BeforeSign.As failed")
+	}
+	// Nothing to do.
+	return nil
+}
+
 func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
 	var oa storage.ObjectAttrs
 	if !attrs.As(&oa) {
