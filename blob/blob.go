@@ -1189,7 +1189,11 @@ func wrapError(b driver.Bucket, err error, key string) error {
 	if key != "" {
 		msg += fmt.Sprintf(" (key %q)", key)
 	}
-	return gcerr.New(b.ErrorCode(err), err, 2, msg)
+	code := gcerrors.Code(err)
+	if code == gcerrors.Unknown {
+		code = b.ErrorCode(err)
+	}
+	return gcerr.New(code, err, 2, msg)
 }
 
 var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been closed")

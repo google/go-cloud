@@ -589,9 +589,6 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
-	if code := gcerrors.Code(err); code != gcerrors.Unknown {
-		return code
-	}
 	serr, ok := err.(azblob.StorageError)
 	switch {
 	case !ok:
@@ -728,7 +725,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.Credential == nil {
-		return "", errors.New("azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
+		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")

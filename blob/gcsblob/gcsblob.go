@@ -82,6 +82,7 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/escape"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 )
 
@@ -697,7 +698,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.Signed
 		numSigners++
 	}
 	if b.opts.GoogleAccessID == "" || numSigners != 1 {
-		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey, Options.SignBytes, or Options.MakeSignBytes")
+		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "gcsblob: to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey, Options.SignBytes, or Options.MakeSignBytes")
 	}
 
 	key = escapeKey(key)

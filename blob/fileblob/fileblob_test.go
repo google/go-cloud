@@ -32,6 +32,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/gcerrors"
 )
 
 type harness struct {
@@ -201,6 +202,23 @@ func TestNewBucket(t *testing.T) {
 			t.Errorf("got nil want error")
 		}
 	})
+}
+
+func TestSignedURLReturnsUnimplementedWithNoURLSigner(t *testing.T) {
+	dir, err := ioutil.TempDir("", "fileblob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	b, err := OpenBucket(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	_, gotErr := b.SignedURL(context.Background(), "key", nil)
+	if gcerrors.Code(gotErr) != gcerrors.Unimplemented {
+		t.Errorf("want Unimplemented error, got %v", gotErr)
+	}
 }
 
 type verifyPathError struct {
