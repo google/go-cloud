@@ -69,7 +69,7 @@ compile but are not supported.
 Documentation for the project lives primarily on https://gocloud.dev/, including
 [tutorials][].
 
-You can also browse Go package reference on [godoc.org][godoc].
+You can also browse Go package reference on [pkg.go.dev][PkgGoDev].
 
 [tutorials]: https://gocloud.dev/tutorials/
 
