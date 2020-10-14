@@ -49,7 +49,7 @@ talk at Next 2018:
 [![Video: Building Go Applications for the Open Cloud (Cloud Next '18)](https://img.youtube.com/vi/_2ZwhvIkgek/0.jpg)][video]
 
 [announcement blog post]: https://blog.golang.org/go-cloud
-[godoc]: https://godoc.org/github.com/google/go-cloud
+[godoc]: https://pkg.go.dev/gocloud.dev
 [travis]: https://travis-ci.com/google/go-cloud
 [video]: https://www.youtube.com/watch?v=_2ZwhvIkgek
 
