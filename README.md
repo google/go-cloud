@@ -3,7 +3,7 @@
 _Write once, run on any cloud ☁️_
 
 [![Build Status](https://travis-ci.com/google/go-cloud.svg?branch=master)][travis]
-[![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
+[![PkgGoDev](https://pkg.go.dev/badge/mod/gocloud.dev)][PkgGoDev]
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
 [![Go Report Card](https://goreportcard.com/badge/github.com/google/go-cloud)](https://goreportcard.com/report/github.com/google/go-cloud)
 
@@ -49,7 +49,7 @@ talk at Next 2018:
 [![Video: Building Go Applications for the Open Cloud (Cloud Next '18)](https://img.youtube.com/vi/_2ZwhvIkgek/0.jpg)][video]
 
 [announcement blog post]: https://blog.golang.org/go-cloud
-[godoc]: https://pkg.go.dev/gocloud.dev
+[PkgGoDev]: https://pkg.go.dev/mod/gocloud.dev
 [travis]: https://travis-ci.com/google/go-cloud
 [video]: https://www.youtube.com/watch?v=_2ZwhvIkgek
 
