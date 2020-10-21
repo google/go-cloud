@@ -21,12 +21,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/Azure/go-amqp"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
+	common "github.com/Azure/azure-amqp-common-go/v3"
 	servicebus "github.com/Azure/azure-service-bus-go"
 )
 
@@ -199,9 +199,9 @@ func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 }
 
 func (sbAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
-	var sbError *amqp.DetachError
+	var sbError common.Retryable
 	if !t.ErrorAs(err, &sbError) {
-		return fmt.Errorf("failed to convert %v (%T) to a *amqp.DetachError", err, err)
+		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, err)
 	}
 	return nil
 }
