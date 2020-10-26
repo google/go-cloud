@@ -404,7 +404,7 @@ whose name is the combination of two or more fields.
 
 ### In-Memory Document Store {#mem}
 
-The [`memdocstore`](https://godoc.org/gocloud.dev/docstore/mongodocstore)
+The [`memdocstore`](https://godoc.org/gocloud.dev/docstore/memdocstore)
 package implements an in-memory document store suitable for testing and
 development.
 
