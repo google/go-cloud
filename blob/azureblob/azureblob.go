@@ -422,6 +422,9 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	md := azblob.Metadata{}
 	mac := azblob.ModifiedAccessConditions{}
 	bac := azblob.BlobAccessConditions{}
+	at := azblob.AccessTierNone
+	btm := azblob.BlobTagsMap{}
+
 	if opts.BeforeCopy != nil {
 		asFunc := func(i interface{}) bool {
 			switch v := i.(type) {
@@ -441,7 +444,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 			return err
 		}
 	}
-	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, md, mac, bac)
+	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, md, mac, bac, at, btm)
 	if err != nil {
 		return err
 	}
@@ -700,7 +703,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			MD5:     blobInfo.Properties.ContentMD5,
 			IsDir:   false,
 			AsFunc: func(i interface{}) bool {
-				p, ok := i.(*azblob.BlobItem)
+				p, ok := i.(*azblob.BlobItemInternal)
 				if !ok {
 					return false
 				}
