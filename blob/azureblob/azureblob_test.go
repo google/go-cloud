@@ -259,7 +259,7 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 		}
 		return nil
 	}
-	var item azblob.BlobItem
+	var item azblob.BlobItemInternal
 	if !o.As(&item) {
 		return errors.New("ListObject.As for object returned false")
 	}

@@ -1,7 +1,10 @@
 {
-  "Initial": "AQAAAA7WcSPSLCwFIv5c",
+  "Initial": "AQAAAA7XNkjbJJCSE/4g",
   "Version": "0.2",
   "Converter": {
+    "ScrubBody": [
+      "\u003cBlock(l|L)ist\u003e\u003cLatest\u003e.*\u003c/Latest\u003e\u003c/Block(l|L)ist\u003e"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Ms-Date$",
@@ -26,7 +29,9 @@
       "^X-Google-.*$",
       "^X-Gfe-.*$"
     ],
-    "ClearParams": null,
+    "ClearParams": [
+      "^blockid$"
+    ],
     "RemoveParams": [
       "^se$",
       "^sig$",
@@ -35,7 +40,7 @@
   },
   "Entries": [
     {
-      "ID": "dda579edd7523215",
+      "ID": "fb8fcdadbbb2c1c8",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
@@ -50,12 +55,12 @@
             "CLEARED"
           ],
           "X-Ms-Version": [
-            "2018-11-09"
+            "2019-12-12"
           ]
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -71,7 +76,7 @@
             "application/xml"
           ],
           "Date": [
-            "Tue, 09 Jun 2020 06:31:46 GMT"
+            "Thu, 05 Nov 2020 19:26:19 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -80,13 +85,13 @@
             "BlobNotFound"
           ],
           "X-Ms-Request-Id": [
-            "e48a3057-801e-0004-4d27-3ea156000000"
+            "a504906d-601e-0068-0ba9-b30a85000000"
           ],
           "X-Ms-Version": [
-            "2018-11-09"
+            "2019-12-12"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOmU0OGEzMDU3LTgwMWUtMDAwNC00ZDI3LTNlYTE1NjAwMDAwMApUaW1lOjIwMjAtMDYtMDlUMDY6MzE6NDYuNzg0MjMyN1o8L01lc3NhZ2U+PC9FcnJvcj4="
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOmE1MDQ5MDZkLTYwMWUtMDA2OC0wYmE5LWIzMGE4NTAwMDAwMApUaW1lOjIwMjAtMTEtMDVUMTk6MjY6MTkuNjQyNDc3Mlo8L01lc3NhZ2U+PC9FcnJvcj4="
       }
     }
   ]

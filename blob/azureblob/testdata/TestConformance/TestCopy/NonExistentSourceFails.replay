@@ -1,7 +1,10 @@
 {
-  "Initial": "AQAAAA7WcSPVCmy9UP5c",
+  "Initial": "AQAAAA7XNkjdGssA2f4g",
   "Version": "0.2",
   "Converter": {
+    "ScrubBody": [
+      "\u003cBlock(l|L)ist\u003e\u003cLatest\u003e.*\u003c/Latest\u003e\u003c/Block(l|L)ist\u003e"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Ms-Date$",
@@ -26,7 +29,9 @@
       "^X-Google-.*$",
       "^X-Gfe-.*$"
     ],
-    "ClearParams": null,
+    "ClearParams": [
+      "^blockid$"
+    ],
     "RemoveParams": [
       "^se$",
       "^sig$",
@@ -35,7 +40,7 @@
   },
   "Entries": [
     {
-      "ID": "39b9c892c00598f0",
+      "ID": "a62ed82039f4d373",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest",
@@ -55,13 +60,16 @@
           "X-Ms-Date": [
             "CLEARED"
           ],
+          "X-Ms-Tags": [
+            ""
+          ],
           "X-Ms-Version": [
-            "2018-11-09"
+            "2019-12-12"
           ]
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -77,7 +85,7 @@
             "application/xml"
           ],
           "Date": [
-            "Tue, 09 Jun 2020 06:31:48 GMT"
+            "Thu, 05 Nov 2020 19:26:20 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -86,13 +94,13 @@
             "BlobNotFound"
           ],
           "X-Ms-Request-Id": [
-            "98540f3f-d01e-007a-1c27-3e3e99000000"
+            "efc7d6f7-c01e-0003-62a9-b357d3000000"
           ],
           "X-Ms-Version": [
-            "2018-11-09"
+            "2019-12-12"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjk4NTQwZjNmLWQwMWUtMDA3YS0xYzI3LTNlM2U5OTAwMDAwMApUaW1lOjIwMjAtMDYtMDlUMDY6MzE6NDkuMjI5MTg3OVo8L01lc3NhZ2U+PC9FcnJvcj4="
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOmVmYzdkNmY3LWMwMWUtMDAwMy02MmE5LWIzNTdkMzAwMDAwMApUaW1lOjIwMjAtMTEtMDVUMTk6MjY6MjEuNDkwNjExM1o8L01lc3NhZ2U+PC9FcnJvcj4="
       }
     }
   ]
