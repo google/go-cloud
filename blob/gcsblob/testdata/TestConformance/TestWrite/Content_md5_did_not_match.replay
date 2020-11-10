@@ -1,7 +1,8 @@
 {
-  "Initial": "AQAAAA7WcSDuOqsLfv5c",
+  "Initial": "AQAAAA7XPQiCHMxCQP4g",
   "Version": "0.2",
   "Converter": {
+    "ScrubBody": null,
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Expires$",
@@ -34,7 +35,7 @@
   },
   "Entries": [
     {
-      "ID": "5d73c315e9c6c3f9",
+      "ID": "155816f43627eb48",
       "Request": {
         "Method": "GET",
         "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-reading",
@@ -58,7 +59,7 @@
         "ProtoMinor": 1,
         "Header": {
           "Alt-Svc": [
-            "h3-27=\":443\"; ma=2592000,h3-25=\":443\"; ma=2592000,h3-T050=\":443\"; ma=2592000,h3-Q050=\":443\"; ma=2592000,h3-Q049=\":443\"; ma=2592000,h3-Q048=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\""
+            "h3-Q050=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000,h3-T051=\":443\"; ma=2592000,h3-T050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\""
           ],
           "Cache-Control": [
             "private, max-age=0"
@@ -70,7 +71,7 @@
             "application/xml; charset=UTF-8"
           ],
           "Date": [
-            "Tue, 09 Jun 2020 06:19:27 GMT"
+            "Tue, 10 Nov 2020 22:17:38 GMT"
           ],
           "Expires": [
             "CLEARED"
@@ -88,7 +89,7 @@
             "agent_rejected"
           ],
           "X-Guploader-Uploadid": [
-            "AAANsUlsUHtZTewc0dZBvdM08We6b6peU-XVE-ZP5txRoIozwuzEsmt-TUIjerg6oZDQcN6-RkMJFQlJMzBibfO1SPc"
+            "ABg5-Uzm_Vy8PtPmXk5GShksXO1st0U1GyVCagG0kwsNq04EhR_OsXHmcxNW5KZRBM_DhcVwl9-94_r7CKxBu5K0TwQ"
           ]
         },
         "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+Tm9TdWNoS2V5PC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQga2V5IGRvZXMgbm90IGV4aXN0LjwvTWVzc2FnZT48RGV0YWlscz5ObyBzdWNoIG9iamVjdDogZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9ibG9iLWZvci1yZWFkaW5nPC9EZXRhaWxzPjwvRXJyb3I+"

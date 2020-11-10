@@ -17,19 +17,21 @@ module gocloud.dev/samples
 go 1.12
 
 require (
-	contrib.go.opencensus.io/exporter/stackdriver v0.13.1
+	contrib.go.opencensus.io/exporter/stackdriver v0.13.4
 	github.com/Azure/azure-pipeline-go v0.2.3
 	github.com/Azure/azure-storage-blob-go v0.11.0
-	github.com/aws/aws-sdk-go v1.31.14
+	github.com/aws/aws-sdk-go v1.35.25
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/go-cmdtest v0.1.0
-	github.com/google/go-cmp v0.4.1
+	github.com/google/go-cmp v0.5.2
 	github.com/google/subcommands v1.2.0
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/google/wire v0.4.0
-	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/mux v1.8.0
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
 	github.com/streadway/amqp v1.0.0
-	go.opencensus.io v0.22.3
+	go.opencensus.io v0.22.5
 	gocloud.dev v0.20.0
 	gocloud.dev/docstore/mongodocstore v0.20.0
 	gocloud.dev/pubsub/kafkapubsub v0.20.0
@@ -37,7 +39,7 @@ require (
 	gocloud.dev/pubsub/rabbitpubsub v0.20.0
 	gocloud.dev/runtimevar/etcdvar v0.20.0
 	gocloud.dev/secrets/hashivault v0.20.0
-	google.golang.org/genproto v0.0.0-20200610104632-a5b850bcf112
+	google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
 

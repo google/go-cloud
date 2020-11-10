@@ -17,11 +17,10 @@ module gocloud.dev/pubsub/natspubsub
 go 1.12
 
 require (
-	github.com/google/go-cmp v0.4.1
-	github.com/nats-io/jwt v1.0.1 // indirect
+	github.com/google/go-cmp v0.5.2
+	github.com/nats-io/jwt v1.2.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.0.0
 	github.com/nats-io/nats.go v1.10.0
-	github.com/nats-io/nkeys v0.2.0 // indirect
 	gocloud.dev v0.20.0
 )
 
