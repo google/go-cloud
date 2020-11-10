@@ -25,10 +25,10 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.1
 	contrib.go.opencensus.io/integrations/ocsql v0.1.6
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.0
-	github.com/Azure/azure-pipeline-go v0.2.2
+	github.com/Azure/azure-pipeline-go v0.2.3
 	github.com/Azure/azure-sdk-for-go v43.1.0+incompatible
 	github.com/Azure/azure-service-bus-go v0.10.2
-	github.com/Azure/azure-storage-blob-go v0.9.0
+	github.com/Azure/azure-storage-blob-go v0.11.0
 	github.com/Azure/go-amqp v0.12.7
 	github.com/Azure/go-autorest/autorest v0.10.2
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
@@ -39,21 +39,19 @@ require (
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-cmp v0.4.1
 	github.com/google/go-replayers/grpcreplay v1.0.0
-	github.com/google/go-replayers/httpreplay v0.1.1
+	github.com/google/go-replayers/httpreplay v0.1.2
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/uuid v1.1.1
 	github.com/google/wire v0.4.0
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/lib/pq v1.7.0
-	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	go.opencensus.io v0.22.3
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
-	golang.org/x/sys v0.0.0-20200610111108-226ff32320da // indirect
 	golang.org/x/tools v0.0.0-20200610052024-8d7dbee4c8ae // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 	google.golang.org/api v0.26.0
