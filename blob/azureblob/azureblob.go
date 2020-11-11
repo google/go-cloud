@@ -81,6 +81,8 @@ import (
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/google/uuid"
 	"github.com/google/wire"
 	"gocloud.dev/blob"
@@ -90,6 +92,10 @@ import (
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
+)
+
+const (
+	tokenRefreshTolerance = 300
 )
 
 // Options sets options for constructing a *blob.Bucket backed by Azure Block Blob.
@@ -151,7 +157,16 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		sasToken, _ := DefaultSASToken()
 		storageDomain, _ := DefaultStorageDomain()
 		protocol, _ := DefaultProtocol()
-		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, storageDomain, protocol)
+
+		isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+
+		if accountKey != "" {
+			o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, storageDomain, protocol)
+		} else if isMSIEnvironment {
+			o.opener, o.err = openerFromMSI(accountName, storageDomain, protocol)
+		} else {
+			o.opener, o.err = openerFromAnon(accountName, storageDomain, protocol)
+		}
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
@@ -206,6 +221,73 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 			Protocol:      protocol,
 		},
 	}, nil
+}
+
+// openerFromAnon creates an anonymous credential backend URLOpener
+func openerFromAnon(accountName AccountName, storageDomain StorageDomain, protocol Protocol) (*URLOpener, error) {
+	return &URLOpener{
+		AccountName: accountName,
+		Pipeline:    NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{}),
+		Options: Options{
+			StorageDomain: storageDomain,
+			Protocol:      protocol,
+		},
+	}, nil
+}
+
+var defaultTokenRefreshFunction = func(spToken *adal.ServicePrincipalToken) func(credential azblob.TokenCredential) time.Duration {
+	return func(credential azblob.TokenCredential) time.Duration {
+		err := spToken.Refresh()
+		if err != nil {
+			return 0
+		}
+		expiresIn, err := strconv.ParseInt(string(spToken.Token().ExpiresIn), 10, 64)
+		if err != nil {
+			return 0
+		}
+		credential.SetToken(spToken.Token().AccessToken)
+		return time.Duration(expiresIn-tokenRefreshTolerance) * time.Second
+	}
+}
+
+// openerFromMSI acquires an MSI token and returns TokenCredential backed URLOpener
+func openerFromMSI(accountName AccountName, storageDomain StorageDomain, protocol Protocol) (*URLOpener, error) {
+
+	spToken, err := getMSIServicePrincipalToken(azure.PublicCloud.ResourceIdentifiers.Storage)
+	if err != nil {
+		return nil, fmt.Errorf("failure acquiring token from MSI endpoint %w", err)
+	}
+
+	err = spToken.Refresh()
+	if err != nil {
+		return nil, fmt.Errorf("failure refreshing token from MSI endpoint %w", err)
+	}
+
+	credential := azblob.NewTokenCredential(spToken.Token().AccessToken, defaultTokenRefreshFunction(spToken))
+	return &URLOpener{
+		AccountName: accountName,
+		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
+		Options: Options{
+			StorageDomain: storageDomain,
+			Protocol:      protocol,
+		},
+	}, nil
+}
+
+// getMSIServicePrincipalToken retrieves Azure API Service Principal token.
+func getMSIServicePrincipalToken(resource string) (*adal.ServicePrincipalToken, error) {
+
+	msiEndpoint, err := adal.GetMSIEndpoint()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the managed service identity endpoint: %v", err)
+	}
+
+	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the managed service identity token: %v", err)
+	}
+	return token, nil
+
 }
 
 // OpenBucketURL opens a blob.Bucket based on u.
@@ -315,7 +397,7 @@ func DefaultStorageDomain() (StorageDomain, error) {
 	return StorageDomain(s), nil
 }
 
-// DefaultAccountKey loads the protocol to access Azure Blob Storage from the
+// DefaultProtocol loads the protocol to access Azure Blob Storage from the
 // AZURE_STORAGE_PROTOCOL environment variable.
 func DefaultProtocol() (Protocol, error) {
 	s := os.Getenv("AZURE_STORAGE_PROTOCOL")
