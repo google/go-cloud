@@ -36,7 +36,15 @@
 // As
 //
 // fileblob exposes the following types for As:
+//  - Bucket: os.FileInfo
 //  - Error: *os.PathError
+//  - ListObject: os.FileInfo
+//  - Reader: io.Reader
+//  - ReaderOptions.BeforeRead: *os.File
+//  - Attributes: os.FileInfo
+//  - CopyOptions.BeforeCopy: *os.File
+//  - WriterOptions.BeforeWrite: *os.File
+
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
@@ -378,11 +386,20 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			// For other blobs, md5 will remain nil.
 			md5 = xa.MD5
 		}
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(*os.FileInfo)
+			if !ok {
+				return false
+			}
+			*p = info
+			return true
+		}
 		obj := &driver.ListObject{
 			Key:     key,
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
 			MD5:     md5,
+			AsFunc:  asFunc,
 		}
 		// If using Delimiter, collapse "directories".
 		if opts.Delimiter != "" {
@@ -400,8 +417,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 				}
 				// Update the object to be a "directory".
 				obj = &driver.ListObject{
-					Key:   prefix,
-					IsDir: true,
+					Key:    prefix,
+					IsDir:  true,
+					AsFunc: asFunc,
 				}
 				lastPrefix = prefix
 			}
@@ -425,7 +443,18 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 }
 
 // As implements driver.As.
-func (b *bucket) As(i interface{}) bool { return false }
+func (b *bucket) As(i interface{}) bool {
+	p, ok := i.(*os.FileInfo)
+	if !ok {
+		return false
+	}
+	fi, err := os.Stat(b.dir)
+	if err != nil {
+		return false
+	}
+	*p = fi
+	return true
+}
 
 // As implements driver.ErrorAs.
 func (b *bucket) ErrorAs(err error, i interface{}) bool {
@@ -454,6 +483,14 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		ModTime:            info.ModTime(),
 		Size:               info.Size(),
 		MD5:                xa.MD5,
+		AsFunc: func(i interface{}) bool {
+			p, ok := i.(*os.FileInfo)
+			if !ok {
+				return false
+			}
+			*p = info
+			return true
+		},
 	}, nil
 }
 
@@ -468,7 +505,14 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, err
 	}
 	if opts.BeforeRead != nil {
-		if err := opts.BeforeRead(func(interface{}) bool { return false }); err != nil {
+		if err := opts.BeforeRead(func(i interface{}) bool {
+			p, ok := i.(**os.File)
+			if !ok {
+				return false
+			}
+			*p = f
+			return true
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -516,7 +560,14 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 	return &r.attrs
 }
 
-func (r *reader) As(i interface{}) bool { return false }
+func (r *reader) As(i interface{}) bool {
+	p, ok := i.(*io.Reader)
+	if !ok {
+		return false
+	}
+	*p = r.r
+	return true
+}
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
@@ -532,7 +583,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		return nil, err
 	}
 	if opts.BeforeWrite != nil {
-		if err := opts.BeforeWrite(func(interface{}) bool { return false }); err != nil {
+		if err := opts.BeforeWrite(func(i interface{}) bool {
+			p, ok := i.(**os.File)
+			if !ok {
+				return false
+			}
+			*p = f
+			return true
+		}); err != nil {
 			return nil, err
 		}
 	}
