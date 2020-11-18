@@ -84,11 +84,13 @@ const Scheme = "file"
 //
 // The following query parameters are supported:
 //
+//   - create_dir: (any non-empty value) the directory is created (using os.MkDirAll)
+//     if it does not already exist.
 //   - base_url: the base URL to use to construct signed URLs; see URLSignerHMAC
 //   - secret_key_path: path to read for the secret key used to construct signed URLs;
 //     see URLSignerHMAC
 //
-// If either of these is provided, both must be.
+// If either of base_url / secret_key_path are provided, both must be.
 //
 //  - file:///a/directory
 //    -> Passes "/a/directory" to OpenBucket.
@@ -126,13 +128,16 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 
 func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
 	for k := range q {
-		if k != "base_url" && k != "secret_key_path" {
+		if k != "create_dir" && k != "base_url" && k != "secret_key_path" {
 			return nil, fmt.Errorf("invalid query parameter %q", k)
 		}
 	}
 	opts := new(Options)
 	*opts = o.Options
 
+	if q.Get("create_dir") != "" {
+		opts.CreateDir = true
+	}
 	baseURL := q.Get("base_url")
 	keyPath := q.Get("secret_key_path")
 	if (baseURL == "") != (keyPath == "") {
@@ -159,6 +164,10 @@ type Options struct {
 	// contains a signature produced by the URLSigner.
 	// URLSigner is only required for utilizing the SignedURL API.
 	URLSigner URLSigner
+
+	// If true, create the directory backing the Bucket if it does not exist
+	// (using os.MkdirAll).
+	CreateDir bool
 }
 
 type bucket struct {
@@ -169,19 +178,28 @@ type bucket struct {
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
 func openBucket(dir string, opts *Options) (driver.Bucket, error) {
+	if opts == nil {
+		opts = &Options{}
+	}
 	absdir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert %s into an absolute path: %v", dir, err)
 	}
 	info, err := os.Stat(absdir)
+
+	// Optionally, create the directory if it does not already exist.
+	if err != nil && opts.CreateDir && os.IsNotExist(err) {
+		err = os.MkdirAll(absdir, os.ModeDir)
+		if err != nil {
+			return nil, fmt.Errorf("tried to create directory but failed: %v", err)
+		}
+		info, err = os.Stat(absdir)
+	}
 	if err != nil {
 		return nil, err
 	}
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", absdir)
-	}
-	if opts == nil {
-		opts = &Options{}
 	}
 	return &bucket{dir: absdir, opts: opts}, nil
 }
