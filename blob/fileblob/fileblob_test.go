@@ -191,6 +191,17 @@ func TestNewBucket(t *testing.T) {
 			t.Errorf("got nil want error")
 		}
 	})
+	t.Run("BucketDirMissingWithCreateDir", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"), &Options{CreateDir: true})
+		if gotErr != nil {
+			t.Errorf("got error %v", gotErr)
+		}
+	})
 	t.Run("BucketIsFile", func(t *testing.T) {
 		f, err := ioutil.TempFile("", "fileblob")
 		if err != nil {
@@ -294,6 +305,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file://localhost" + dirpath, "myfile.txt", false, false, "hello world"},
 		// OK, with prefix.
 		{"file://" + dirpath + "?prefix=" + subdir + "/", "myfileinsubdir.txt", false, false, "hello world in subdir"},
+		// Subdir does not exist.
+		{"file://" + dirpath + "subdir", "", true, false, ""},
+		// Subdir does not exist, but create_dir creates it. Error is at file read time.
+		{"file://" + dirpath + "subdir2?create_dir=true", "filenotfound.txt", false, true, ""},
 		// Invalid query parameter.
 		{"file://" + dirpath + "?param=value", "myfile.txt", true, false, ""},
 		// OK, with params.
