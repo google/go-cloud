@@ -480,9 +480,11 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		ContentLanguage:    xa.ContentLanguage,
 		ContentType:        xa.ContentType,
 		Metadata:           xa.Metadata,
-		ModTime:            info.ModTime(),
-		Size:               info.Size(),
-		MD5:                xa.MD5,
+		// CreateTime left as the zero time.
+		ModTime: info.ModTime(),
+		Size:    info.Size(),
+		MD5:     xa.MD5,
+		ETag:    fmt.Sprintf("W/%d", info.ModTime().UnixNano()),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*os.FileInfo)
 			if !ok {

@@ -489,9 +489,11 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		ContentLanguage:    attrs.ContentLanguage,
 		ContentType:        attrs.ContentType,
 		Metadata:           attrs.Metadata,
+		CreateTime:         attrs.Created,
 		ModTime:            attrs.Updated,
 		Size:               attrs.Size,
 		MD5:                attrs.MD5,
+		ETag:               attrs.Etag,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*storage.ObjectAttrs)
 			if !ok {
