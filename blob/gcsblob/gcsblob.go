@@ -482,6 +482,12 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 	if err != nil {
 		return nil, err
 	}
+	// GCS seems to unquote the ETag; restore them.
+	// It should be of the form "xxxx" or W/"xxxx".
+	eTag := attrs.Etag
+	if !strings.HasPrefix(eTag, "W/\"") && !strings.HasPrefix(eTag, "\"") && !strings.HasSuffix(eTag, "\"") {
+		eTag = fmt.Sprintf("%q", eTag)
+	}
 	return &driver.Attributes{
 		CacheControl:       attrs.CacheControl,
 		ContentDisposition: attrs.ContentDisposition,
@@ -493,7 +499,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		ModTime:            attrs.Updated,
 		Size:               attrs.Size,
 		MD5:                attrs.MD5,
-		ETag:               attrs.Etag,
+		ETag:               eTag,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*storage.ObjectAttrs)
 			if !ok {

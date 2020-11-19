@@ -1162,6 +1162,14 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	if a.ETag == "" {
 		t.Error("ETag not set")
 	}
+	// Some basic syntax checks on ETag based on https://en.wikipedia.org/wiki/HTTP_ETag.
+	// It should be of the form "xxxx" or W/"xxxx".
+	if !strings.HasPrefix(a.ETag, "W/\"") && !strings.HasPrefix(a.ETag, "\"") {
+		t.Errorf("ETag should start with W/\" or \" (got %s)", a.ETag)
+	}
+	if !strings.HasSuffix(a.ETag, "\"") {
+		t.Errorf("ETag should end with \" (got %s)", a.ETag)
+	}
 	r.Close()
 
 	// Modify and re-fetch attributes.

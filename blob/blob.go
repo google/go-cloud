@@ -218,7 +218,6 @@ type Attributes struct {
 	// MD5 is an MD5 hash of the blob contents or nil if not available.
 	MD5 []byte
 	// ETag for the blob; see https://en.wikipedia.org/wiki/HTTP_ETag.
-	// Surrounding quotes, if any, will have been stripped.
 	ETag string
 
 	asFunc func(interface{}) bool
@@ -643,11 +642,6 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 			md[strings.ToLower(k)] = v
 		}
 	}
-	// Strip surrounding quotes.
-	eTag := a.ETag
-	if strings.HasPrefix(eTag, "\"") && strings.HasSuffix(eTag, "\"") {
-		eTag = eTag[1 : len(eTag)-1]
-	}
 	return &Attributes{
 		CacheControl:       a.CacheControl,
 		ContentDisposition: a.ContentDisposition,
@@ -659,7 +653,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 		ModTime:            a.ModTime,
 		Size:               a.Size,
 		MD5:                a.MD5,
-		ETag:               eTag,
+		ETag:               a.ETag,
 		asFunc:             a.AsFunc,
 	}, nil
 }
