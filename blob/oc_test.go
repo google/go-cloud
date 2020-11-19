@@ -45,6 +45,9 @@ func TestOpenCensus(t *testing.T) {
 	if _, err := b.Attributes(ctx, "key"); err != nil {
 		t.Fatal(err)
 	}
+	if _, _, err := b.ListPage(ctx, blob.FirstPageToken, 3, nil); err != nil {
+		t.Fatal(err)
+	}
 	if err := b.Delete(ctx, "key"); err != nil {
 		t.Fatal(err)
 	}
@@ -58,6 +61,7 @@ func TestOpenCensus(t *testing.T) {
 		{Method: "NewWriter", Code: gcerrors.OK},
 		{Method: "NewRangeReader", Code: gcerrors.OK},
 		{Method: "Attributes", Code: gcerrors.OK},
+		{Method: "ListPage", Code: gcerrors.OK},
 		{Method: "Delete", Code: gcerrors.OK},
 		{Method: "NewRangeReader", Code: gcerrors.NotFound},
 	})

@@ -150,13 +150,11 @@ func TestListPage(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(page) > 0 {
-			gotPage := make([]string, len(page))
-			for i, o := range page {
-				gotPage[i] = o.Key
-			}
-			got = append(got, gotPage)
+		gotPage := make([]string, len(page))
+		for i, o := range page {
+			gotPage[i] = o.Key
 		}
+		got = append(got, gotPage)
 		nextToken = token
 	}
 	if !cmp.Equal(got, want) {

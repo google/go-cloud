@@ -302,7 +302,7 @@ func ExampleBucket_ListPage() {
 	}
 	defer bucket.Close()
 
-	// Create some blob objects for listing: "foo[0..4].txt".
+	// Create some blob objects for listing: "foo[0..7].txt".
 	ctx := context.Background()
 	for i := 0; i < 8; i++ {
 		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud Development Kit"), nil); err != nil {

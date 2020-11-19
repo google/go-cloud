@@ -39,6 +39,7 @@
 //  - Attributes
 //  - Copy
 //  - Delete
+//  - ListPage
 //  - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
 //    are included because they call NewRangeReader.)
 //  - NewWriter, from creation until the call to Close.
@@ -602,15 +603,23 @@ var FirstPageToken = []byte("first page")
 // ListPage returns a page of ListObject results for blobs in a bucket, in lexicographical
 // order of UTF-8 encoded keys.
 //
-// To fetch the first page, pass FirstPageToken as the pageToken. For subsequent pages, pass the pageToken
-// returned from a previous call to ListPage. It is not possible to "skip ahead" pages.
+// To fetch the first page, pass FirstPageToken as the pageToken. For subsequent pages, pass
+// the pageToken returned from a previous call to ListPage.
+// It is not possible to "skip ahead" pages.
 //
 // Each call will return pageSize results, unless there are not enough blobs to fill the
-// page. If there are no more blobs available, the returned pageToken will be nil. Calling List
-// Page with a nil pageToken will return io.EOF.
+// page, in which case it will return fewer results (possibly 0).
 //
-// The underlying implementation fetches results in pages, but one call to LastPage may
-// require multiple page fetches (and multiple calls to the BeforeList callback).
+// If there are no more blobs available, ListPage will return an empty pageToken. Note that
+// this may happen regardless of the number of returned results -- the last page might have
+// 0 results (i.e., if the last item was deleted), pageSize results, or anything in between.
+//
+// Calling ListPage with an empty pageToken will immediately return io.EOF. When looping
+// over pages, callers can either check for an empty pageToken, or they can make one more
+// call and check for io.EOF.
+//
+// The underlying implementation fetches results in pages, but one call to ListPage may
+// require multiple page fetches (and therefore, multiple calls to the BeforeList callback).
 //
 // A nil ListOptions is treated the same as the zero value.
 //
@@ -640,6 +649,10 @@ func (b *Bucket) ListPage(ctx context.Context, pageToken []byte, pageSize int, o
 	if b.closed {
 		return nil, nil, errClosed
 	}
+
+	ctx = b.tracer.Start(ctx, "ListPage")
+	defer func() { b.tracer.End(ctx, err) }()
+
 	dopts := &driver.ListOptions{
 		Prefix:     opts.Prefix,
 		Delimiter:  opts.Delimiter,
