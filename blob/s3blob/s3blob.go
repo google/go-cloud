@@ -494,9 +494,11 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		ContentLanguage:    aws.StringValue(resp.ContentLanguage),
 		ContentType:        aws.StringValue(resp.ContentType),
 		Metadata:           md,
-		ModTime:            aws.TimeValue(resp.LastModified),
-		Size:               aws.Int64Value(resp.ContentLength),
-		MD5:                eTagToMD5(resp.ETag),
+		// CreateTime not supported; left as the zero time.
+		ModTime: aws.TimeValue(resp.LastModified),
+		Size:    aws.Int64Value(resp.ContentLength),
+		MD5:     eTagToMD5(resp.ETag),
+		ETag:    aws.StringValue(resp.ETag),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*s3.HeadObjectOutput)
 			if !ok {
