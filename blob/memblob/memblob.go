@@ -322,6 +322,7 @@ func (w *writer) Close() error {
 
 	md5sum := w.md5hash.Sum(nil)
 	content := w.buf.Bytes()
+	now := time.Now()
 	entry := &blobEntry{
 		Content: content,
 		Attributes: &driver.Attributes{
@@ -332,12 +333,17 @@ func (w *writer) Close() error {
 			ContentType:        w.contentType,
 			Metadata:           w.metadata,
 			Size:               int64(len(content)),
-			ModTime:            time.Now(),
+			CreateTime:         now,
+			ModTime:            now,
 			MD5:                md5sum,
+			ETag:               fmt.Sprintf("\"%x-%x\"", now.UnixNano(), len(content)),
 		},
 	}
 	w.b.mu.Lock()
 	defer w.b.mu.Unlock()
+	if prev := w.b.blobs[w.key]; prev != nil {
+		entry.Attributes.CreateTime = prev.Attributes.CreateTime
+	}
 	w.b.blobs[w.key] = entry
 	return nil
 }
