@@ -336,7 +336,7 @@ func (w *writer) Close() error {
 			CreateTime:         now,
 			ModTime:            now,
 			MD5:                md5sum,
-			ETag:               fmt.Sprintf("W/%d", now.UnixNano()),
+			ETag:               fmt.Sprintf("%x-%x", now.UnixNano(), len(content)),
 		},
 	}
 	w.b.mu.Lock()
