@@ -591,6 +591,88 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 	return &ListIterator{b: b, opts: dopts}
 }
 
+// FirstPageToken is the pageToken to pass to ListPage to retrieve the first page of results.
+var FirstPageToken = []byte("first page")
+
+// ListPage returns a page of ListObject results for blobs in a bucket, in lexicographical
+// order of UTF-8 encoded keys.
+//
+// To fetch the first page, pass FirstPageToken as the pageToken. For subsequent pages, pass the pageToken
+// returned from a previous call to ListPage. It is not possible to "skip ahead" pages.
+//
+// Each call will return pageSize results, unless there are not enough blobs to fill the
+// page. If there are no more blobs available, the returned pageToken will be nil. Calling List
+// Page with a nil pageToken will return io.EOF.
+//
+// The underlying implementation fetches results in pages, but one call to LastPage may
+// require multiple page fetches (and multiple calls to the BeforeList callback).
+//
+// A nil ListOptions is treated the same as the zero value.
+//
+// ListPage is not guaranteed to include all recently-written blobs;
+// some services are only eventually consistent.
+func (b *Bucket) ListPage(ctx context.Context, pageToken []byte, pageSize int, opts *ListOptions) (retval []*ListObject, nextPageToken []byte, err error) {
+	if opts == nil {
+		opts = &ListOptions{}
+	}
+	if pageSize <= 0 {
+		return nil, nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: pageSize must be > 0")
+	}
+
+	// Nil pageToken means no more results.
+	if len(pageToken) == 0 {
+		return nil, nil, io.EOF
+	}
+
+	// FirstPageToken fetches the first page. Drivers use nil.
+	// The public API doesn't use nil for the first page because it would be too easy to
+	// keep fetching forever (since the last page return nil for the next pageToken).
+	if bytes.Equal(pageToken, FirstPageToken) {
+		pageToken = nil
+	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, nil, errClosed
+	}
+	dopts := &driver.ListOptions{
+		Prefix:     opts.Prefix,
+		Delimiter:  opts.Delimiter,
+		BeforeList: opts.BeforeList,
+		PageToken:  pageToken,
+		PageSize:   pageSize,
+	}
+	retval = make([]*ListObject, 0, pageSize)
+	for len(retval) < pageSize {
+		p, err := b.b.ListPaged(ctx, dopts)
+		if err != nil {
+			return nil, nil, wrapError(b.b, err, "")
+		}
+		for _, dobj := range p.Objects {
+			retval = append(retval, &ListObject{
+				Key:     dobj.Key,
+				ModTime: dobj.ModTime,
+				Size:    dobj.Size,
+				MD5:     dobj.MD5,
+				IsDir:   dobj.IsDir,
+				asFunc:  dobj.AsFunc,
+			})
+		}
+		// ListPaged may return fewer results than pageSize. If there are more results
+		// available, signalled by non-empty p.NextPageToken, try to fetch the remainder
+		// of the page.
+		// It does not work to ask for more results than we need, because then we'd have
+		// a NextPageToken on a non-page boundary.
+		dopts.PageSize = pageSize - len(retval)
+		dopts.PageToken = p.NextPageToken
+		if len(dopts.PageToken) == 0 {
+			dopts.PageToken = nil
+			break
+		}
+	}
+	return retval, dopts.PageToken, nil
+}
+
 // Exists returns true if a blob exists at key, false if it does not exist, or
 // an error.
 // It is a shortcut for calling Attributes and checking if it returns an error
