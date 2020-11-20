@@ -207,9 +207,9 @@ func createSQSQueue(ctx context.Context, sqsClient *sqs.SQS, topicName string) (
 	return qURL, qARN, nil
 }
 
-func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
+func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, func(), error) {
 	const fakeSubscriptionQueueURL = "https://" + region + ".amazonaws.com/" + accountNumber + "/nonexistent-subscription"
-	return openSubscription(ctx, h.sess, fakeSubscriptionQueueURL, nil), nil
+	return openSubscription(ctx, h.sess, fakeSubscriptionQueueURL, nil), func() {}, nil
 }
 
 func (h *harness) Close() {

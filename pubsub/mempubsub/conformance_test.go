@@ -45,8 +45,8 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	return ds, cleanup, nil
 }
 
-func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	return newSubscription(nil, time.Second), nil
+func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, func(), error) {
+	return newSubscription(nil, time.Second), func() {}, nil
 }
 
 func (h *harness) Close() {}
