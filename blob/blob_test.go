@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -105,14 +106,10 @@ func (b *fakeAttributes) Close() error { return nil }
 func TestListIterator(t *testing.T) {
 	ctx := context.Background()
 	want := []string{"a", "b", "c"}
-	db := &fakeLister{pages: [][]string{
-		{"a"},
-		{},
-		{},
-		{"b", "c"},
-		{},
-		{},
-	}}
+	db := &fakeLister{
+		pages:         [][]string{{"a"}, {}, {}, {"b", "c"}, {}, {}},
+		wantPageSizes: []int{0, 0, 0, 0, 0, 0},
+	}
 	b := NewBucket(db)
 	defer b.Close()
 	iter := b.List(nil)
@@ -132,19 +129,61 @@ func TestListIterator(t *testing.T) {
 	}
 }
 
+// Verify that ListPage works even if driver.ListPaged returns empty pages.
+func TestListPage(t *testing.T) {
+	ctx := context.Background()
+	want := [][]string{{"a", "b"}, {"c", "d"}, {"e"}}
+	db := &fakeLister{
+		pages:         [][]string{{}, {"a", "b"}, {}, {}, {"c"}, {}, {"d"}, {}, {}, {"e"}},
+		wantPageSizes: []int{2, 2, 2, 2, 2, 1, 1, 2, 2, 2},
+	}
+	b := NewBucket(db)
+	defer b.Close()
+
+	nextToken := FirstPageToken
+	got := [][]string{}
+	for {
+		page, token, err := b.ListPage(ctx, nextToken, 2, nil)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotPage := make([]string, len(page))
+		for i, o := range page {
+			gotPage[i] = o.Key
+		}
+		got = append(got, gotPage)
+		nextToken = token
+	}
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
 // fakeLister implements driver.Bucket. Only ListPaged is implemented,
 // returning static data from pages.
 type fakeLister struct {
 	driver.Bucket
-	pages [][]string
+	pages         [][]string
+	wantPageSizes []int
 }
 
 func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	if len(b.pages) != len(b.wantPageSizes) {
+		return nil, fmt.Errorf("invalid fakeLister setup")
+	}
 	if len(b.pages) == 0 {
 		return &driver.ListPage{}, nil
 	}
 	page := b.pages[0]
+	wantPageSize := b.wantPageSizes[0]
 	b.pages = b.pages[1:]
+	b.wantPageSizes = b.wantPageSizes[1:]
+	if opts.PageSize != wantPageSize {
+		return nil, fmt.Errorf("got page size %d, want %d", opts.PageSize, wantPageSize)
+	}
 	var objs []*driver.ListObject
 	for _, key := range page {
 		objs = append(objs, &driver.ListObject{Key: key})
@@ -152,7 +191,8 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 	return &driver.ListPage{Objects: objs, NextPageToken: []byte{1}}, nil
 }
 
-func (b *fakeLister) Close() error { return nil }
+func (*fakeLister) Close() error                           { return nil }
+func (*fakeLister) ErrorCode(err error) gcerrors.ErrorCode { return gcerrors.Unknown }
 
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
