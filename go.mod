@@ -31,6 +31,7 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.11.0
 	github.com/Azure/go-amqp v0.12.7
 	github.com/Azure/go-autorest/autorest v0.10.2
+	github.com/Azure/go-autorest/autorest/adal v0.9.2
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.17.0
 	github.com/aws/aws-sdk-go v1.31.14
