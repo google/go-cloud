@@ -484,7 +484,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			if rctx.Err() != nil && ctx.Err() == nil {
 				continue
 			}
-			return nil, err
+			return messages, err
 		}
 	}
 	return messages, nil
