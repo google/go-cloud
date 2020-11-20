@@ -449,13 +449,14 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	defer cancel()
 	var messages []*driver.Message
 
-	// Loop until rctx is Done, or until we've received maxMessages.
-	for len(messages) < maxMessages && rctx.Err() == nil {
+	// Loop until ctx is Done, or until we've received maxMessages.
+	for len(messages) < maxMessages && ctx.Err() == nil {
 		// NOTE: there's also a Receive method, but it starts two goroutines
 		// that aren't necessarily finished when Receive returns, which causes
 		// data races if Receive is called again quickly. ReceiveOne is more
 		// straightforward.
-		_ = s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
+
+		err := s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
 			metadata := map[string]string{}
 			for key, value := range sbmsg.GetKeyValues() {
 				if strVal, ok := value.(string); ok {
@@ -476,6 +477,15 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			})
 			return nil
 		}))
+
+		if err != nil {
+			// If rctx is done, we retry again. This can cause ReceiveBatch to never return
+			// if the provided context never expire and `listenerTimeout` is too small.
+			if rctx.Err() != nil {
+				continue
+			}
+			return nil, err
+		}
 	}
 	return messages, nil
 }
@@ -623,7 +633,7 @@ func errorCode(err error) gcerrors.ErrorCode {
 	}
 	switch cond {
 	case amqp.ErrorCondition(servicebus.ErrorNotFound):
-
+		return gcerrors.NotFound
 	case amqp.ErrorCondition(servicebus.ErrorPreconditionFailed):
 		return gcerrors.FailedPrecondition
 
