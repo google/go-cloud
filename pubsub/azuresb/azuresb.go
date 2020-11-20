@@ -479,9 +479,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}))
 
 		if err != nil {
-			// If rctx is done, we retry again. This can cause ReceiveBatch to never return
+			// If rctx is done and ctx is not, we retry again. This can cause ReceiveBatch to never return
 			// if the provided context never expire and `listenerTimeout` is too small.
-			if rctx.Err() != nil {
+			if rctx.Err() != nil && ctx.Err() == nil {
 				continue
 			}
 			return nil, err
