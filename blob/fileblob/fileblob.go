@@ -36,7 +36,15 @@
 // As
 //
 // fileblob exposes the following types for As:
+//  - Bucket: os.FileInfo
 //  - Error: *os.PathError
+//  - ListObject: os.FileInfo
+//  - Reader: io.Reader
+//  - ReaderOptions.BeforeRead: *os.File
+//  - Attributes: os.FileInfo
+//  - CopyOptions.BeforeCopy: *os.File
+//  - WriterOptions.BeforeWrite: *os.File
+
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
@@ -84,11 +92,13 @@ const Scheme = "file"
 //
 // The following query parameters are supported:
 //
+//   - create_dir: (any non-empty value) the directory is created (using os.MkDirAll)
+//     if it does not already exist.
 //   - base_url: the base URL to use to construct signed URLs; see URLSignerHMAC
 //   - secret_key_path: path to read for the secret key used to construct signed URLs;
 //     see URLSignerHMAC
 //
-// If either of these is provided, both must be.
+// If either of base_url / secret_key_path are provided, both must be.
 //
 //  - file:///a/directory
 //    -> Passes "/a/directory" to OpenBucket.
@@ -126,13 +136,16 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 
 func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
 	for k := range q {
-		if k != "base_url" && k != "secret_key_path" {
+		if k != "create_dir" && k != "base_url" && k != "secret_key_path" {
 			return nil, fmt.Errorf("invalid query parameter %q", k)
 		}
 	}
 	opts := new(Options)
 	*opts = o.Options
 
+	if q.Get("create_dir") != "" {
+		opts.CreateDir = true
+	}
 	baseURL := q.Get("base_url")
 	keyPath := q.Get("secret_key_path")
 	if (baseURL == "") != (keyPath == "") {
@@ -159,6 +172,10 @@ type Options struct {
 	// contains a signature produced by the URLSigner.
 	// URLSigner is only required for utilizing the SignedURL API.
 	URLSigner URLSigner
+
+	// If true, create the directory backing the Bucket if it does not exist
+	// (using os.MkdirAll).
+	CreateDir bool
 }
 
 type bucket struct {
@@ -169,19 +186,28 @@ type bucket struct {
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
 func openBucket(dir string, opts *Options) (driver.Bucket, error) {
+	if opts == nil {
+		opts = &Options{}
+	}
 	absdir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert %s into an absolute path: %v", dir, err)
 	}
 	info, err := os.Stat(absdir)
+
+	// Optionally, create the directory if it does not already exist.
+	if err != nil && opts.CreateDir && os.IsNotExist(err) {
+		err = os.MkdirAll(absdir, os.ModeDir)
+		if err != nil {
+			return nil, fmt.Errorf("tried to create directory but failed: %v", err)
+		}
+		info, err = os.Stat(absdir)
+	}
 	if err != nil {
 		return nil, err
 	}
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", absdir)
-	}
-	if opts == nil {
-		opts = &Options{}
 	}
 	return &bucket{dir: absdir, opts: opts}, nil
 }
@@ -360,11 +386,20 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			// For other blobs, md5 will remain nil.
 			md5 = xa.MD5
 		}
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(*os.FileInfo)
+			if !ok {
+				return false
+			}
+			*p = info
+			return true
+		}
 		obj := &driver.ListObject{
 			Key:     key,
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
 			MD5:     md5,
+			AsFunc:  asFunc,
 		}
 		// If using Delimiter, collapse "directories".
 		if opts.Delimiter != "" {
@@ -382,8 +417,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 				}
 				// Update the object to be a "directory".
 				obj = &driver.ListObject{
-					Key:   prefix,
-					IsDir: true,
+					Key:    prefix,
+					IsDir:  true,
+					AsFunc: asFunc,
 				}
 				lastPrefix = prefix
 			}
@@ -407,7 +443,18 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 }
 
 // As implements driver.As.
-func (b *bucket) As(i interface{}) bool { return false }
+func (b *bucket) As(i interface{}) bool {
+	p, ok := i.(*os.FileInfo)
+	if !ok {
+		return false
+	}
+	fi, err := os.Stat(b.dir)
+	if err != nil {
+		return false
+	}
+	*p = fi
+	return true
+}
 
 // As implements driver.ErrorAs.
 func (b *bucket) ErrorAs(err error, i interface{}) bool {
@@ -433,9 +480,19 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		ContentLanguage:    xa.ContentLanguage,
 		ContentType:        xa.ContentType,
 		Metadata:           xa.Metadata,
-		ModTime:            info.ModTime(),
-		Size:               info.Size(),
-		MD5:                xa.MD5,
+		// CreateTime left as the zero time.
+		ModTime: info.ModTime(),
+		Size:    info.Size(),
+		MD5:     xa.MD5,
+		ETag:    fmt.Sprintf("\"%x-%x\"", info.ModTime().UnixNano(), info.Size()),
+		AsFunc: func(i interface{}) bool {
+			p, ok := i.(*os.FileInfo)
+			if !ok {
+				return false
+			}
+			*p = info
+			return true
+		},
 	}, nil
 }
 
@@ -450,7 +507,14 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, err
 	}
 	if opts.BeforeRead != nil {
-		if err := opts.BeforeRead(func(interface{}) bool { return false }); err != nil {
+		if err := opts.BeforeRead(func(i interface{}) bool {
+			p, ok := i.(**os.File)
+			if !ok {
+				return false
+			}
+			*p = f
+			return true
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -498,7 +562,14 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 	return &r.attrs
 }
 
-func (r *reader) As(i interface{}) bool { return false }
+func (r *reader) As(i interface{}) bool {
+	p, ok := i.(*io.Reader)
+	if !ok {
+		return false
+	}
+	*p = r.r
+	return true
+}
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
@@ -514,7 +585,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		return nil, err
 	}
 	if opts.BeforeWrite != nil {
-		if err := opts.BeforeWrite(func(interface{}) bool { return false }); err != nil {
+		if err := opts.BeforeWrite(func(i interface{}) bool {
+			p, ok := i.(**os.File)
+			if !ok {
+				return false
+			}
+			*p = f
+			return true
+		}); err != nil {
 			return nil, err
 		}
 	}
