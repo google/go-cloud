@@ -359,7 +359,7 @@ func (r *reader) As(i interface{}) bool {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
-	if err == storage.ErrObjectNotExist {
+	if err == storage.ErrObjectNotExist || err == storage.ErrBucketNotExist {
 		return gcerrors.NotFound
 	}
 	if gerr, ok := err.(*googleapi.Error); ok {

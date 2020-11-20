@@ -50,6 +50,9 @@ type Harness interface {
 	// same storage bucket; i.e., a blob created using one driver.Bucket must
 	// be readable by a subsequent driver.Bucket.
 	MakeDriver(ctx context.Context) (driver.Bucket, error)
+	// MakeDriverForNonexistentBucket creates a driver.Bucket for a nonexistent
+	// bucket. If that concept doesn't make sense for a driver, return (nil, nil).
+	MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error)
 	// HTTPClient should return an unauthorized *http.Client, or nil.
 	// Required if the service supports SignedURL.
 	HTTPClient() *http.Client
@@ -195,6 +198,9 @@ func (verifyAsFailsOnNil) ListObjectCheck(o *blob.ListObject) error {
 
 // RunConformanceTests runs conformance tests for driver implementations of blob.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
+	t.Run("TestNonexistentBucket", func(t *testing.T) {
+		testNonexistentBucket(t, newHarness)
+	})
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
 	})
@@ -258,6 +264,54 @@ func RunBenchmarks(b *testing.B, bkt *blob.Bucket) {
 	b.Run("BenchmarkWriteReadDelete", func(b *testing.B) {
 		benchmarkWriteReadDelete(b, bkt)
 	})
+}
+
+// testNonexistentBucket tests the functionality of IsAccessible.
+func testNonexistentBucket(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	// Get a driver instance pointing to a nonexistent bucket.
+	{
+		drv, err := h.MakeDriverForNonexistentBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if drv == nil {
+			// No such thing as a "nonexistent bucket" for this driver.
+			t.Skip()
+		}
+		b := blob.NewBucket(drv)
+		defer b.Close()
+		exists, err := b.IsAccessible(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if exists {
+			t.Error("got IsAccessible true for nonexistent bucket, want false")
+		}
+	}
+
+	// Verify that IsAccessible returns true for a real bucket.
+	{
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		defer b.Close()
+		exists, err := b.IsAccessible(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Error("got IsAccessible false for real bucket, want true")
+		}
+	}
 }
 
 // testList tests the functionality of List.

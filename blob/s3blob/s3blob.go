@@ -310,7 +310,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.Unknown
 	}
 	switch {
-	case e.Code() == "NoSuchKey" || e.Code() == "NotFound" || e.Code() == s3.ErrCodeObjectNotInActiveTierError:
+	case e.Code() == "NoSuchBucket" || e.Code() == "NoSuchKey" || e.Code() == "NotFound" || e.Code() == s3.ErrCodeObjectNotInActiveTierError:
 		return gcerrors.NotFound
 	default:
 		return gcerrors.Unknown

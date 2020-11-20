@@ -118,6 +118,10 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 	return openBucket(ctx, h.pipeline, accountName, bucketName, &Options{Credential: h.credential})
 }
 
+func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
+	return openBucket(ctx, h.pipeline, accountName, "bucket-does-not-exist", &Options{Credential: h.credential})
+}
+
 func (h *harness) Close() {
 	h.closer()
 }

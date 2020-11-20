@@ -147,6 +147,12 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 	return driver.NewPrefixedBucket(drv, h.prefix), nil
 }
 
+func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
+	// Does not make sense for this driver, as it verifies
+	// that the directory exists in OpenBucket.
+	return nil, nil
+}
+
 func (h *harness) Close() {
 	h.closer()
 }

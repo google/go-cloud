@@ -70,6 +70,10 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 	return openBucket(ctx, h.session, bucketName, h.opts)
 }
 
+func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
+	return openBucket(ctx, h.session, "bucket-does-not-exist", h.opts)
+}
+
 func (h *harness) Close() {
 	h.closer()
 }
