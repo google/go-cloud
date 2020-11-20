@@ -208,12 +208,17 @@ type Attributes struct {
 	// case-insensitive keys (e.g., "foo" and "FOO"), only one value
 	// will be kept, and it is undefined which one.
 	Metadata map[string]string
+	// CreateTime is the time the blob was created, if available. If not available,
+	// CreateTime will be the zero time.
+	CreateTime time.Time
 	// ModTime is the time the blob was last modified.
 	ModTime time.Time
 	// Size is the size of the blob's content in bytes.
 	Size int64
 	// MD5 is an MD5 hash of the blob contents or nil if not available.
 	MD5 []byte
+	// ETag for the blob; see https://en.wikipedia.org/wiki/HTTP_ETag.
+	ETag string
 
 	asFunc func(interface{}) bool
 }
@@ -644,9 +649,11 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 		ContentLanguage:    a.ContentLanguage,
 		ContentType:        a.ContentType,
 		Metadata:           md,
+		CreateTime:         a.CreateTime,
 		ModTime:            a.ModTime,
 		Size:               a.Size,
 		MD5:                a.MD5,
+		ETag:               a.ETag,
 		asFunc:             a.AsFunc,
 	}, nil
 }

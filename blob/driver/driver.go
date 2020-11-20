@@ -138,12 +138,17 @@ type Attributes struct {
 	// "foo" and "FOO"), only one value will be kept, and it is undefined
 	// which one.
 	Metadata map[string]string
+	// CreateTime is the time the blob object was created. If not available,
+	// leave as the zero time.
+	CreateTime time.Time
 	// ModTime is the time the blob object was last modified.
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
 	// MD5 is an MD5 hash of the blob contents or nil if not available.
 	MD5 []byte
+	// ETag for the blob; see https://en.wikipedia.org/wiki/HTTP_ETag.
+	ETag string
 	// AsFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	// If not set, no driver-specific types are supported.
