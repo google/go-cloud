@@ -691,6 +691,20 @@ func (b *Bucket) ListPage(ctx context.Context, pageToken []byte, pageSize int, o
 	return retval, dopts.PageToken, nil
 }
 
+// IsAccessible returns true if the bucket is accessible, false otherwise.
+// It is a shortcut for calling ListPage and checking if it returns an error
+// with code gcerrors.NotFound.
+func (b *Bucket) IsAccessible(ctx context.Context) (bool, error) {
+	_, _, err := b.ListPage(ctx, FirstPageToken, 1, nil)
+	if err == nil {
+		return true, nil
+	}
+	if gcerrors.Code(err) == gcerrors.NotFound {
+		return false, nil
+	}
+	return false, err
+}
+
 // Exists returns true if a blob exists at key, false if it does not exist, or
 // an error.
 // It is a shortcut for calling Attributes and checking if it returns an error

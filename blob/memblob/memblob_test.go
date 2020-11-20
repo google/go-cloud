@@ -44,6 +44,11 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 	return driver.NewPrefixedBucket(drv, h.prefix), nil
 }
 
+func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
+	// Does not make sense for this driver.
+	return nil, nil
+}
+
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
