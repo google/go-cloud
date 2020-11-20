@@ -289,6 +289,80 @@ func ExampleBucket_List_withDelimiter() {
 	//   dir2/c.txt
 }
 
+func ExampleBucket_ListPage() {
+	// Connect to a bucket when your program starts up.
+	// This example uses the file-based implementation.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	// Create the file-based bucket.
+	bucket, err := fileblob.OpenBucket(dir, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bucket.Close()
+
+	// Create some blob objects for listing: "foo[0..7].txt".
+	ctx := context.Background()
+	for i := 0; i < 8; i++ {
+		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud Development Kit"), nil); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Iterate over them in pages.
+	// This will list the blobs created above because fileblob is strongly
+	// consistent, but is not guaranteed to work on all services.
+
+	// The first page of 3 results.
+	objs, token, err := bucket.ListPage(ctx, blob.FirstPageToken, 3, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, obj := range objs {
+		fmt.Println(obj.Key)
+	}
+	fmt.Println("END OF PAGE 1")
+
+	// The second page of 3 results.
+	objs, token, err = bucket.ListPage(ctx, token, 3, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, obj := range objs {
+		fmt.Println(obj.Key)
+	}
+	fmt.Println("END OF PAGE 2")
+
+	// The third page with the last 2 results.
+	objs, token, err = bucket.ListPage(ctx, token, 3, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, obj := range objs {
+		fmt.Println(obj.Key)
+	}
+	fmt.Println("END OF PAGE 3")
+
+	// There are no more pages, so token is now nil. Calling ListPage again will return io.EOF.
+	if token != nil {
+		fmt.Println("Token was not nil.")
+	}
+
+	// Output:
+	// foo0.txt
+	// foo1.txt
+	// foo2.txt
+	// END OF PAGE 1
+	// foo3.txt
+	// foo4.txt
+	// foo5.txt
+	// END OF PAGE 2
+	// foo6.txt
+	// foo7.txt
+	// END OF PAGE 3
+}
+
 func ExampleBucket_As() {
 	// This example is specific to the gcsblob implementation; it demonstrates
 	// access to the underlying cloud.google.com/go/storage.Client type.

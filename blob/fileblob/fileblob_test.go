@@ -155,7 +155,7 @@ func TestConformance(t *testing.T) {
 	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return newHarness(ctx, t, "")
 	}
-	drivertest.RunConformanceTests(t, newHarnessNoPrefix, []drivertest.AsTest{verifyPathError{}})
+	drivertest.RunConformanceTests(t, newHarnessNoPrefix, []drivertest.AsTest{verifyAs{}})
 }
 
 func TestConformanceWithPrefix(t *testing.T) {
@@ -163,7 +163,7 @@ func TestConformanceWithPrefix(t *testing.T) {
 	newHarnessWithPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return newHarness(ctx, t, prefix)
 	}
-	drivertest.RunConformanceTests(t, newHarnessWithPrefix, []drivertest.AsTest{verifyPathError{prefix: prefix}})
+	drivertest.RunConformanceTests(t, newHarnessWithPrefix, []drivertest.AsTest{verifyAs{prefix: prefix}})
 }
 
 func BenchmarkFileblob(b *testing.B) {
@@ -189,6 +189,17 @@ func TestNewBucket(t *testing.T) {
 		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"), nil)
 		if gotErr == nil {
 			t.Errorf("got nil want error")
+		}
+	})
+	t.Run("BucketDirMissingWithCreateDir", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"), &Options{CreateDir: true})
+		if gotErr != nil {
+			t.Errorf("got error %v", gotErr)
 		}
 	})
 	t.Run("BucketIsFile", func(t *testing.T) {
@@ -221,23 +232,65 @@ func TestSignedURLReturnsUnimplementedWithNoURLSigner(t *testing.T) {
 	}
 }
 
-type verifyPathError struct {
+type verifyAs struct {
 	prefix string
 }
 
-func (verifyPathError) Name() string { return "verify ErrorAs handles os.PathError" }
+func (verifyAs) Name() string { return "verify As types for fileblob" }
 
-func (verifyPathError) BucketCheck(b *blob.Bucket) error             { return nil }
-func (verifyPathError) BeforeRead(as func(interface{}) bool) error   { return nil }
-func (verifyPathError) BeforeWrite(as func(interface{}) bool) error  { return nil }
-func (verifyPathError) BeforeCopy(as func(interface{}) bool) error   { return nil }
-func (verifyPathError) BeforeList(as func(interface{}) bool) error   { return nil }
-func (verifyPathError) BeforeSign(as func(interface{}) bool) error   { return nil }
-func (verifyPathError) AttributesCheck(attrs *blob.Attributes) error { return nil }
-func (verifyPathError) ReaderCheck(r *blob.Reader) error             { return nil }
-func (verifyPathError) ListObjectCheck(o *blob.ListObject) error     { return nil }
+func (verifyAs) BucketCheck(b *blob.Bucket) error {
+	var fi os.FileInfo
+	if !b.As(&fi) {
+		return errors.New("Bucket.As failed")
+	}
+	return nil
+}
+func (verifyAs) BeforeRead(as func(interface{}) bool) error {
+	var f *os.File
+	if !as(&f) {
+		return errors.New("BeforeRead.As failed")
+	}
+	return nil
+}
+func (verifyAs) BeforeWrite(as func(interface{}) bool) error {
+	var f *os.File
+	if !as(&f) {
+		return errors.New("BeforeWrite.As failed")
+	}
+	return nil
+}
+func (verifyAs) BeforeCopy(as func(interface{}) bool) error {
+	var f *os.File
+	if !as(&f) {
+		return errors.New("BeforeCopy.As failed")
+	}
+	return nil
+}
+func (verifyAs) BeforeList(as func(interface{}) bool) error { return nil }
+func (verifyAs) BeforeSign(as func(interface{}) bool) error { return nil }
+func (verifyAs) AttributesCheck(attrs *blob.Attributes) error {
+	var fi os.FileInfo
+	if !attrs.As(&fi) {
+		return errors.New("Attributes.As failed")
+	}
+	return nil
+}
+func (verifyAs) ReaderCheck(r *blob.Reader) error {
+	var ior io.Reader
+	if !r.As(&ior) {
+		return errors.New("Reader.As failed")
+	}
+	return nil
+}
+func (verifyAs) ListObjectCheck(o *blob.ListObject) error {
+	var fi os.FileInfo
+	if !o.As(&fi) {
+		return errors.New("ListObject.As failed")
+	}
+	return nil
+}
 
-func (v verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
+func (v verifyAs) ErrorCheck(b *blob.Bucket, err error) error {
 	var perr *os.PathError
 	if !b.ErrorAs(err, &perr) {
 		return errors.New("want ErrorAs to succeed for PathError")
@@ -294,6 +347,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file://localhost" + dirpath, "myfile.txt", false, false, "hello world"},
 		// OK, with prefix.
 		{"file://" + dirpath + "?prefix=" + subdir + "/", "myfileinsubdir.txt", false, false, "hello world in subdir"},
+		// Subdir does not exist.
+		{"file://" + dirpath + "subdir", "", true, false, ""},
+		// Subdir does not exist, but create_dir creates it. Error is at file read time.
+		{"file://" + dirpath + "subdir2?create_dir=true", "filenotfound.txt", false, true, ""},
 		// Invalid query parameter.
 		{"file://" + dirpath + "?param=value", "myfile.txt", true, false, ""},
 		// OK, with params.

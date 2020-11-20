@@ -709,8 +709,10 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		ContentLanguage:    blobPropertiesResponse.ContentLanguage(),
 		ContentType:        blobPropertiesResponse.ContentType(),
 		Size:               blobPropertiesResponse.ContentLength(),
-		MD5:                blobPropertiesResponse.ContentMD5(),
+		CreateTime:         blobPropertiesResponse.CreationTime(),
 		ModTime:            blobPropertiesResponse.LastModified(),
+		MD5:                blobPropertiesResponse.ContentMD5(),
+		ETag:               fmt.Sprintf("%v", blobPropertiesResponse.ETag()),
 		Metadata:           md,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*azblob.BlobGetPropertiesResponse)

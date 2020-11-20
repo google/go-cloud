@@ -1145,25 +1145,44 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	if r.ContentType() != contentType {
 		t.Errorf("got Reader.ContentType() %q want %q", r.ContentType(), contentType)
 	}
+	if !a.CreateTime.IsZero() {
+		if a.CreateTime.After(a.ModTime) {
+			t.Errorf("CreateTime %v is after ModTime %v", a.CreateTime, a.ModTime)
+		}
+	}
+	if a.ModTime.IsZero() {
+		t.Errorf("ModTime not set")
+	}
 	if a.Size != int64(len(content)) {
 		t.Errorf("got Size %d want %d", a.Size, len(content))
 	}
 	if r.Size() != int64(len(content)) {
 		t.Errorf("got Reader.Size() %d want %d", r.Size(), len(content))
 	}
+	if a.ETag == "" {
+		t.Error("ETag not set")
+	}
+	// Some basic syntax checks on ETag based on https://en.wikipedia.org/wiki/HTTP_ETag.
+	// It should be of the form "xxxx" or W/"xxxx".
+	if !strings.HasPrefix(a.ETag, "W/\"") && !strings.HasPrefix(a.ETag, "\"") {
+		t.Errorf("ETag should start with W/\" or \" (got %s)", a.ETag)
+	}
+	if !strings.HasSuffix(a.ETag, "\"") {
+		t.Errorf("ETag should end with \" (got %s)", a.ETag)
+	}
 	r.Close()
 
-	t1 := a.ModTime
+	// Modify and re-fetch attributes.
 	if err := b.WriteAll(ctx, key, content, nil); err != nil {
 		t.Fatal(err)
 	}
+
 	a2, err := b.Attributes(ctx, key)
 	if err != nil {
 		t.Errorf("failed Attributes#2: %v", err)
 	}
-	t2 := a2.ModTime
-	if t2.Before(t1) {
-		t.Errorf("ModTime %v is before %v", t2, t1)
+	if a2.ModTime.Before(a.ModTime) {
+		t.Errorf("ModTime %v is before %v", a2.ModTime, a.ModTime)
 	}
 }
 
@@ -1752,7 +1771,14 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantAttr.ModTime = time.Time{} // don't compare this field
+
+		// Clear uncomparable fields.
+		clearUncomparableFields := func(a *blob.Attributes) {
+			a.CreateTime = time.Time{}
+			a.ModTime = time.Time{}
+			a.ETag = ""
+		}
+		clearUncomparableFields(wantAttr)
 
 		// Create another blob that we're going to overwrite.
 		if err := b.WriteAll(ctx, dstKeyExists, []byte("clobber me"), nil); err != nil {
@@ -1776,7 +1802,7 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		gotAttr.ModTime = time.Time{} // don't compare this field
+		clearUncomparableFields(gotAttr)
 		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
 			t.Errorf("got %v want %v diff %s", gotAttr, wantAttr, diff)
 		}
@@ -1799,7 +1825,7 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		gotAttr.ModTime = time.Time{} // don't compare this field
+		clearUncomparableFields(gotAttr)
 		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
 			t.Errorf("got %v want %v diff %s", gotAttr, wantAttr, diff)
 		}
