@@ -126,8 +126,8 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 	return ds, cleanup, nil
 }
 
-func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	return openSubscription(h.subClient, path.Join("projects", projectID, "subscriptions", "nonexistent-subscription")), nil
+func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, func(), error) {
+	return openSubscription(h.subClient, path.Join("projects", projectID, "subscriptions", "nonexistent-subscription")), func() {}, nil
 }
 
 func (h *harness) Close() {

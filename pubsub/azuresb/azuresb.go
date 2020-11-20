@@ -455,7 +455,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		// that aren't necessarily finished when Receive returns, which causes
 		// data races if Receive is called again quickly. ReceiveOne is more
 		// straightforward.
-
 		err := s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
 			metadata := map[string]string{}
 			for key, value := range sbmsg.GetKeyValues() {
@@ -477,7 +476,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			})
 			return nil
 		}))
-
 		if err != nil {
 			return messages, err
 		}
@@ -629,6 +627,7 @@ func errorCode(err error) gcerrors.ErrorCode {
 	switch cond {
 	case amqp.ErrorCondition(servicebus.ErrorNotFound):
 		return gcerrors.NotFound
+
 	case amqp.ErrorCondition(servicebus.ErrorPreconditionFailed):
 		return gcerrors.FailedPrecondition
 

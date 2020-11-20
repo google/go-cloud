@@ -136,10 +136,18 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	return ds, cleanup, nil
 }
 
-func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	sbTopic, _ := NewTopic(h.ns, nonexistentTopicName, nil)
-	sbSub, _ := NewSubscription(sbTopic, "nonexistent-subscription", nil)
-	return openSubscription(ctx, h.ns, sbTopic, sbSub, nil)
+func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, func(), error) {
+	dt, cleanup, err := h.CreateTopic(ctx, "topic-for-nonexistent-sub")
+	if err != nil {
+		return nil, nil, err
+	}
+	sbTopic := dt.(*topic).sbTopic
+	sbSub, err := NewSubscription(sbTopic, "nonexistent-subscription", nil)
+	if err != nil {
+		return nil, cleanup, err
+	}
+	sub, err := openSubscription(ctx, h.ns, sbTopic, sbSub, nil)
+	return sub, cleanup, err
 }
 
 func (h *harness) Close() {
