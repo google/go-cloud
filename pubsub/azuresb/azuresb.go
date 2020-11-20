@@ -449,8 +449,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	defer cancel()
 	var messages []*driver.Message
 
-	// Loop until ctx is Done, or until we've received maxMessages.
-	for len(messages) < maxMessages && ctx.Err() == nil {
+	// Loop until rctx is Done, or until we've received maxMessages.
+	for len(messages) < maxMessages && rctx.Err() == nil {
 		// NOTE: there's also a Receive method, but it starts two goroutines
 		// that aren't necessarily finished when Receive returns, which causes
 		// data races if Receive is called again quickly. ReceiveOne is more
@@ -479,11 +479,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}))
 
 		if err != nil {
-			// If rctx is done and ctx is not, we retry again. This can cause ReceiveBatch to never return
-			// if the provided context never expire and `listenerTimeout` is too small.
-			if rctx.Err() != nil && ctx.Err() == nil {
-				continue
-			}
 			return messages, err
 		}
 	}
