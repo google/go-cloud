@@ -285,8 +285,8 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 }
 
 func (t *topic) IsRetryable(err error) bool {
-	// Let the Service Bus SDK recover from any transient connectivity issue.
-	return false
+	_, retryable := errorCode(err)
+	return retryable
 }
 
 func (t *topic) As(i interface{}) bool {
@@ -325,7 +325,8 @@ func errorAs(err error, i interface{}) bool {
 }
 
 func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
-	return errorCode(err)
+	code, _ := errorCode(err)
+	return code
 }
 
 // Close implements driver.Topic.Close.
@@ -405,9 +406,9 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(error) bool {
-	// Let the Service Bus SDK recover from any transient connectivity issue.
-	return false
+func (s *subscription) IsRetryable(err error) bool {
+	_, retryable := errorCode(err)
+	return retryable
 }
 
 // As implements driver.Subscription.As.
@@ -426,7 +427,8 @@ func (s *subscription) ErrorAs(err error, i interface{}) bool {
 }
 
 func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
-	return errorCode(err)
+	code, _ := errorCode(err)
+	return code
 }
 
 // partitionAckID is used as the driver.AckID.
@@ -600,17 +602,18 @@ func isNotFoundErr(err error) bool {
 	return strings.Contains(err.Error(), "status code 410")
 }
 
-func errorCode(err error) gcerrors.ErrorCode {
+// errorCode returns an error code and whether err is retryable.
+func errorCode(err error) (gcerrors.ErrorCode, bool) {
 	// Unfortunately Azure sometimes returns common.Retryable or even
 	// errors.errorString, which don't expose anything other than the error
 	// string :-(.
 	if strings.Contains(err.Error(), "status code 404") {
-		return gcerrors.NotFound
+		return gcerrors.NotFound, false
 	}
 	var cond amqp.ErrorCondition
 	if aerr, ok := err.(*amqp.DetachError); ok {
 		if aerr.RemoteError == nil {
-			return gcerrors.NotFound
+			return gcerrors.NotFound, false
 		}
 		cond = aerr.RemoteError.Condition
 	}
@@ -619,27 +622,27 @@ func errorCode(err error) gcerrors.ErrorCode {
 	}
 	switch cond {
 	case amqp.ErrorCondition(servicebus.ErrorNotFound):
-		return gcerrors.NotFound
+		return gcerrors.NotFound, false
 
 	case amqp.ErrorCondition(servicebus.ErrorPreconditionFailed):
-		return gcerrors.FailedPrecondition
+		return gcerrors.FailedPrecondition, false
 
 	case amqp.ErrorCondition(servicebus.ErrorInternalError):
-		return gcerrors.Internal
+		return gcerrors.Internal, true
 
 	case amqp.ErrorCondition(servicebus.ErrorNotImplemented):
-		return gcerrors.Unimplemented
+		return gcerrors.Unimplemented, false
 
 	case amqp.ErrorCondition(servicebus.ErrorUnauthorizedAccess), amqp.ErrorCondition(servicebus.ErrorNotAllowed):
-		return gcerrors.PermissionDenied
+		return gcerrors.PermissionDenied, false
 
 	case amqp.ErrorCondition(servicebus.ErrorResourceLimitExceeded):
-		return gcerrors.ResourceExhausted
+		return gcerrors.ResourceExhausted, true
 
 	case amqp.ErrorCondition(servicebus.ErrorInvalidField):
-		return gcerrors.InvalidArgument
+		return gcerrors.InvalidArgument, false
 	}
-	return gcerrors.Unknown
+	return gcerrors.Unknown, true
 }
 
 // Close implements driver.Subscription.Close.
