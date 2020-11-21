@@ -62,7 +62,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	common "github.com/Azure/azure-amqp-common-go/v3"
 	"github.com/Azure/azure-amqp-common-go/v3/cbs"
@@ -81,13 +80,16 @@ const (
 	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-amqp-request-response#update-disposition-status
 	dispositionForAck  = "completed"
 	dispositionForNack = "abandoned"
-
-	listenerTimeout = 1 * time.Second
 )
 
 var sendBatcherOpts = &batcher.Options{
 	MaxBatchSize: 1,   // SendBatch only supports one message at a time
 	MaxHandlers:  100, // max concurrency for sends
+}
+
+var recvBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1,   // ReceiveBatch only returns one message at a time
+	MaxHandlers:  100, // max concurrency for reads
 }
 
 func init() {
@@ -352,7 +354,7 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, nil, nil), nil
+	return pubsub.NewSubscription(ds, recvBatcherOpts, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.
@@ -445,42 +447,33 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, s.linkErr
 	}
 
-	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
-	defer cancel()
-	var messages []*driver.Message
-
-	// Loop until rctx is Done, or until we've received maxMessages.
-	for len(messages) < maxMessages && rctx.Err() == nil {
-		// NOTE: there's also a Receive method, but it starts two goroutines
-		// that aren't necessarily finished when Receive returns, which causes
-		// data races if Receive is called again quickly. ReceiveOne is more
-		// straightforward.
-		err := s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
-			metadata := map[string]string{}
-			for key, value := range sbmsg.GetKeyValues() {
-				if strVal, ok := value.(string); ok {
-					metadata[key] = strVal
-				}
+	// NOTE: there's also a Receive method, but it starts two goroutines
+	// that aren't necessarily finished when Receive returns, which causes
+	// data races if Receive is called again quickly. ReceiveOne is more
+	// straightforward.
+	var message *driver.Message
+	err := s.sbSub.ReceiveOne(ctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
+		metadata := map[string]string{}
+		for key, value := range sbmsg.GetKeyValues() {
+			if strVal, ok := value.(string); ok {
+				metadata[key] = strVal
 			}
-			// partitionID is only available if partitioning is enabled; otherwise,
-			// it defaults to 0.
-			var partitionID int16
-			if sbmsg.SystemProperties != nil && sbmsg.SystemProperties.PartitionID != nil {
-				partitionID = *sbmsg.SystemProperties.PartitionID
-			}
-			messages = append(messages, &driver.Message{
-				Body:     sbmsg.Data,
-				Metadata: metadata,
-				AckID:    &partitionAckID{partitionID, sbmsg.LockToken},
-				AsFunc:   messageAsFunc(sbmsg),
-			})
-			return nil
-		}))
-		if err != nil {
-			return messages, err
 		}
-	}
-	return messages, nil
+		// partitionID is only available if partitioning is enabled; otherwise,
+		// it defaults to 0.
+		var partitionID int16
+		if sbmsg.SystemProperties != nil && sbmsg.SystemProperties.PartitionID != nil {
+			partitionID = *sbmsg.SystemProperties.PartitionID
+		}
+		message = &driver.Message{
+			Body:     sbmsg.Data,
+			Metadata: metadata,
+			AckID:    &partitionAckID{partitionID, sbmsg.LockToken},
+			AsFunc:   messageAsFunc(sbmsg),
+		}
+		return nil
+	}))
+	return []*driver.Message{message}, err
 }
 
 func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
