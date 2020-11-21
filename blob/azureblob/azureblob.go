@@ -677,6 +677,8 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	serr, ok := err.(azblob.StorageError)
 	switch {
 	case !ok:
+		// This happens with an invalid storage account name; the host
+		// is something like invalidstorageaccount.blob.core.windows.net.
 		if strings.Contains(err.Error(), "no such host") {
 			return gcerrors.NotFound
 		}
