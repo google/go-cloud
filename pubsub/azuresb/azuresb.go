@@ -62,6 +62,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	common "github.com/Azure/azure-amqp-common-go/v3"
 	"github.com/Azure/azure-amqp-common-go/v3/cbs"
@@ -80,6 +81,8 @@ const (
 	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-amqp-request-response#update-disposition-status
 	dispositionForAck  = "completed"
 	dispositionForNack = "abandoned"
+
+	listenerTimeout = 1 * time.Second
 )
 
 var sendBatcherOpts = &batcher.Options{
@@ -449,12 +452,18 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, s.linkErr
 	}
 
+	// ReceiveOne will block until ctx is Done; we want to return after
+	// a reasonably short delay even if there are no messages. So, create a
+	// sub context for the RPC.
+	rCtx, cancel := context.WithTimeout(ctx, listenerTimeout)
+	defer cancel()
+
 	// NOTE: there's also a Receive method, but it starts two goroutines
 	// that aren't necessarily finished when Receive returns, which causes
 	// data races if Receive is called again quickly. ReceiveOne is more
 	// straightforward.
 	var message *driver.Message
-	err := s.sbSub.ReceiveOne(ctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
+	err := s.sbSub.ReceiveOne(rCtx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
 		metadata := map[string]string{}
 		for key, value := range sbmsg.GetKeyValues() {
 			if strVal, ok := value.(string); ok {
@@ -475,6 +484,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}
 		return nil
 	}))
+	// Mask rCtx timeouts, they are expected if no messages are available.
+	if err == rCtx.Err() {
+		err = nil
+	}
 	return []*driver.Message{message}, err
 }
 

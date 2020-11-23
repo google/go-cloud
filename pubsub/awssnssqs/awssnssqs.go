@@ -647,6 +647,8 @@ type SubscriptionOptions struct {
 
 	// WaitTime passed to ReceiveMessage to enable long polling.
 	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html#sqs-long-polling.
+	// Note that a non-zero WaitTime can delay delivery of messages
+	// by up to that duration.
 	WaitTime time.Duration
 }
 
