@@ -676,7 +676,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	s.mu.Lock()
 	if s.err == errSubscriptionShutdown {
 		// Already Shutdown.
-		s.mu.Unlock()
+		defer s.mu.Unlock()
 		return s.err
 	}
 	s.err = errSubscriptionShutdown
