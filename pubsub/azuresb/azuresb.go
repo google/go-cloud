@@ -455,7 +455,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	// ReceiveOne will block until ctx is Done; we want to return after
 	// a reasonably short delay even if there are no messages. So, create a
 	// sub context for the RPC.
-	rCtx, cancel := context.WithTimeout(ctx, listenerTimeout)
+	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
 	defer cancel()
 
 	// NOTE: there's also a Receive method, but it starts two goroutines
@@ -463,7 +463,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	// data races if Receive is called again quickly. ReceiveOne is more
 	// straightforward.
 	var message *driver.Message
-	err := s.sbSub.ReceiveOne(rCtx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
+	err := s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
 		metadata := map[string]string{}
 		for key, value := range sbmsg.GetKeyValues() {
 			if strVal, ok := value.(string); ok {
@@ -484,8 +484,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}
 		return nil
 	}))
-	// Mask rCtx timeouts, they are expected if no messages are available.
-	if err == rCtx.Err() {
+	// Mask rctx timeouts, they are expected if no messages are available.
+	if err == rctx.Err() {
 		err = nil
 	}
 	return []*driver.Message{message}, err
