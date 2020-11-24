@@ -97,7 +97,7 @@ while read -r path || [[ -n "$path" ]]; do
   # TODO(rvangent): Special case modules to skip for Windows. Perhaps
   # this should be data-driven by allmodules?
   # (https://github.com/google/go-cloud/issues/2111).
-  if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && ([[ "$path" == "internal/contributebot" ]] || [[ "$path" == "internal/website" ]]); then
+  if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && "$path" == "internal/website" ]]; then
     echo "  Skipping on Windows"
     continue
   fi
