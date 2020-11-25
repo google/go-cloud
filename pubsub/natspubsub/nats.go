@@ -341,6 +341,8 @@ func decode(msg *nats.Msg) (*driver.Message, error) {
 	if err := decodeMessage(msg.Data, &dm); err != nil {
 		return nil, err
 	}
+
+	dm.ID = ""
 	dm.AckID = -1 // Not applicable to NATS
 	dm.AsFunc = messageAsFunc(msg)
 	return &dm, nil

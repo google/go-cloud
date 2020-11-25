@@ -520,6 +520,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}
 		ack := &ackInfo{msg: msg}
 		dm := &driver.Message{
+			ID:       "", // Kafka messages don't have an ID.
 			Body:     msg.Value,
 			Metadata: md,
 			AckID:    ack,

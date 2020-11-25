@@ -37,6 +37,10 @@ type AckInfo struct {
 // Message is data to be published (sent) to a topic and later received from
 // subscriptions on that topic.
 type Message struct {
+	// ID uniquely identify a message.
+	// ID must be populated on messages returned from ReceiveBatch.
+	ID string
+
 	// Body contains the content of the message.
 	Body []byte
 

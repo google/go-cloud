@@ -469,6 +469,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				partitionID = *sbmsg.SystemProperties.PartitionID
 			}
 			messages = append(messages, &driver.Message{
+				ID:       sbmsg.ID,
 				Body:     sbmsg.Data,
 				Metadata: metadata,
 				AckID:    &partitionAckID{partitionID, sbmsg.LockToken},

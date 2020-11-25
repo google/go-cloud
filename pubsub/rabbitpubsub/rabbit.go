@@ -627,6 +627,7 @@ func toMessage(d amqp.Delivery) *driver.Message {
 		md[k] = fmt.Sprint(v)
 	}
 	return &driver.Message{
+		ID:       d.MessageId,
 		Body:     d.Body,
 		AckID:    d.DeliveryTag,
 		Metadata: md,

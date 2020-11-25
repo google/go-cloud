@@ -62,7 +62,7 @@ type amqpChannel interface {
 	QueueDelete(qname string) error
 }
 
-// connection adapts an *amqp.Connection to the amqpConnection interface.
+// connection adapts an *amqp.Connection to the amqpConnection in terface.
 type connection struct {
 	conn *amqp.Connection
 }

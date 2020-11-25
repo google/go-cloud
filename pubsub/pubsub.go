@@ -89,6 +89,10 @@ import (
 
 // Message contains data to be published.
 type Message struct {
+	// ID uniquely identify a message.
+	// ID must be populated on messages returned from ReceiveBatch.
+	ID string
+
 	// Body contains the content of the message.
 	Body []byte
 
@@ -584,6 +588,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 				md = nil
 			}
 			m2 := &Message{
+				ID:       m.ID,
 				Body:     m.Body,
 				Metadata: md,
 				asFunc:   m.AsFunc,

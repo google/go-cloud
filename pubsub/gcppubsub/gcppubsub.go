@@ -427,6 +427,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	for _, rm := range resp.ReceivedMessages {
 		rmm := rm.Message
 		m := &driver.Message{
+			ID:       rmm.MessageId,
 			Body:     rmm.Data,
 			Metadata: rmm.Attributes,
 			AckID:    rm.AckId,
