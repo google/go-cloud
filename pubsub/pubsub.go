@@ -258,7 +258,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 
 	t.mu.Lock()
 	if t.err == errTopicShutdown {
-		t.mu.Unlock()
+		defer t.mu.Unlock()
 		return t.err
 	}
 	t.err = errTopicShutdown
