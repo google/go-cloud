@@ -907,6 +907,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		opts.BufferSize = defaultUploadBlockSize
 	}
 
+	b.containerURL.Create(ctx, nil, azblob.PublicAccessNone)
+
 	md := make(map[string]string, len(opts.Metadata))
 	for k, v := range opts.Metadata {
 		// See the package comments for more details on escaping of metadata
