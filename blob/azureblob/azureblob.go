@@ -677,10 +677,17 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	serr, ok := err.(azblob.StorageError)
 	switch {
 	case !ok:
+		// This happens with an invalid storage account name; the host
+		// is something like invalidstorageaccount.blob.core.windows.net.
+		if strings.Contains(err.Error(), "no such host") {
+			return gcerrors.NotFound
+		}
 		return gcerrors.Unknown
 	case serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404:
 		// Check and fail both the SDK ServiceCode and the Http Response Code for NotFound
 		return gcerrors.NotFound
+	case serr.ServiceCode() == azblob.ServiceCodeAuthenticationFailed:
+		return gcerrors.PermissionDenied
 	default:
 		return gcerrors.Unknown
 	}
