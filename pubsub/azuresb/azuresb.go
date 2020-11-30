@@ -90,6 +90,11 @@ var sendBatcherOpts = &batcher.Options{
 	MaxHandlers:  100, // max concurrency for sends
 }
 
+var recvBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1,   // ReceiveBatch only returns one message at a time
+	MaxHandlers:  100, // max concurrency for reads
+}
+
 func init() {
 	o := new(defaultOpener)
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
@@ -283,8 +288,8 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 }
 
 func (t *topic) IsRetryable(err error) bool {
-	// Let the Service Bus SDK recover from any transient connectivity issue.
-	return false
+	_, retryable := errorCode(err)
+	return retryable
 }
 
 func (t *topic) As(i interface{}) bool {
@@ -323,7 +328,8 @@ func errorAs(err error, i interface{}) bool {
 }
 
 func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
-	return errorCode(err)
+	code, _ := errorCode(err)
+	return code
 }
 
 // Close implements driver.Topic.Close.
@@ -352,7 +358,7 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, nil, nil), nil
+	return pubsub.NewSubscription(ds, recvBatcherOpts, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.
@@ -403,9 +409,9 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(error) bool {
-	// Let the Service Bus SDK recover from any transient connectivity issue.
-	return false
+func (s *subscription) IsRetryable(err error) bool {
+	_, retryable := errorCode(err)
+	return retryable
 }
 
 // As implements driver.Subscription.As.
@@ -424,7 +430,8 @@ func (s *subscription) ErrorAs(err error, i interface{}) bool {
 }
 
 func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
-	return errorCode(err)
+	code, _ := errorCode(err)
+	return code
 }
 
 // partitionAckID is used as the driver.AckID.
@@ -445,42 +452,43 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, s.linkErr
 	}
 
+	// ReceiveOne will block until ctx is Done; we want to return after
+	// a reasonably short delay even if there are no messages. So, create a
+	// sub context for the RPC.
 	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
 	defer cancel()
-	var messages []*driver.Message
 
-	// Loop until rctx is Done, or until we've received maxMessages.
-	for len(messages) < maxMessages && rctx.Err() == nil {
-		// NOTE: there's also a Receive method, but it starts two goroutines
-		// that aren't necessarily finished when Receive returns, which causes
-		// data races if Receive is called again quickly. ReceiveOne is more
-		// straightforward.
-		err := s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
-			metadata := map[string]string{}
-			for key, value := range sbmsg.GetKeyValues() {
-				if strVal, ok := value.(string); ok {
-					metadata[key] = strVal
-				}
+	// NOTE: there's also a Receive method, but it starts two goroutines
+	// that aren't necessarily finished when Receive returns, which causes
+	// data races if Receive is called again quickly. ReceiveOne is more
+	// straightforward.
+	var message *driver.Message
+	err := s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
+		metadata := map[string]string{}
+		for key, value := range sbmsg.GetKeyValues() {
+			if strVal, ok := value.(string); ok {
+				metadata[key] = strVal
 			}
-			// partitionID is only available if partitioning is enabled; otherwise,
-			// it defaults to 0.
-			var partitionID int16
-			if sbmsg.SystemProperties != nil && sbmsg.SystemProperties.PartitionID != nil {
-				partitionID = *sbmsg.SystemProperties.PartitionID
-			}
-			messages = append(messages, &driver.Message{
-				Body:     sbmsg.Data,
-				Metadata: metadata,
-				AckID:    &partitionAckID{partitionID, sbmsg.LockToken},
-				AsFunc:   messageAsFunc(sbmsg),
-			})
-			return nil
-		}))
-		if err != nil {
-			return messages, err
 		}
+		// partitionID is only available if partitioning is enabled; otherwise,
+		// it defaults to 0.
+		var partitionID int16
+		if sbmsg.SystemProperties != nil && sbmsg.SystemProperties.PartitionID != nil {
+			partitionID = *sbmsg.SystemProperties.PartitionID
+		}
+		message = &driver.Message{
+			Body:     sbmsg.Data,
+			Metadata: metadata,
+			AckID:    &partitionAckID{partitionID, sbmsg.LockToken},
+			AsFunc:   messageAsFunc(sbmsg),
+		}
+		return nil
+	}))
+	// Mask rctx timeouts, they are expected if no messages are available.
+	if err == rctx.Err() {
+		err = nil
 	}
-	return messages, nil
+	return []*driver.Message{message}, err
 }
 
 func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
@@ -607,17 +615,18 @@ func isNotFoundErr(err error) bool {
 	return strings.Contains(err.Error(), "status code 410")
 }
 
-func errorCode(err error) gcerrors.ErrorCode {
+// errorCode returns an error code and whether err is retryable.
+func errorCode(err error) (gcerrors.ErrorCode, bool) {
 	// Unfortunately Azure sometimes returns common.Retryable or even
 	// errors.errorString, which don't expose anything other than the error
 	// string :-(.
 	if strings.Contains(err.Error(), "status code 404") {
-		return gcerrors.NotFound
+		return gcerrors.NotFound, false
 	}
 	var cond amqp.ErrorCondition
 	if aerr, ok := err.(*amqp.DetachError); ok {
 		if aerr.RemoteError == nil {
-			return gcerrors.NotFound
+			return gcerrors.NotFound, false
 		}
 		cond = aerr.RemoteError.Condition
 	}
@@ -626,27 +635,27 @@ func errorCode(err error) gcerrors.ErrorCode {
 	}
 	switch cond {
 	case amqp.ErrorCondition(servicebus.ErrorNotFound):
-		return gcerrors.NotFound
+		return gcerrors.NotFound, false
 
 	case amqp.ErrorCondition(servicebus.ErrorPreconditionFailed):
-		return gcerrors.FailedPrecondition
+		return gcerrors.FailedPrecondition, false
 
 	case amqp.ErrorCondition(servicebus.ErrorInternalError):
-		return gcerrors.Internal
+		return gcerrors.Internal, true
 
 	case amqp.ErrorCondition(servicebus.ErrorNotImplemented):
-		return gcerrors.Unimplemented
+		return gcerrors.Unimplemented, false
 
 	case amqp.ErrorCondition(servicebus.ErrorUnauthorizedAccess), amqp.ErrorCondition(servicebus.ErrorNotAllowed):
-		return gcerrors.PermissionDenied
+		return gcerrors.PermissionDenied, false
 
 	case amqp.ErrorCondition(servicebus.ErrorResourceLimitExceeded):
-		return gcerrors.ResourceExhausted
+		return gcerrors.ResourceExhausted, true
 
 	case amqp.ErrorCondition(servicebus.ErrorInvalidField):
-		return gcerrors.InvalidArgument
+		return gcerrors.InvalidArgument, false
 	}
-	return gcerrors.Unknown
+	return gcerrors.Unknown, true
 }
 
 // Close implements driver.Subscription.Close.
