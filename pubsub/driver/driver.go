@@ -125,7 +125,8 @@ type Subscription interface {
 	// should return a nil slice and an error. The concrete API will take
 	// care of retry logic.
 	//
-	// If no messages are currently available, this method can return an empty
+	// If no messages are currently available, this method should block for
+	// no more than about 1 second. It can return an empty
 	// slice of messages and no error. ReceiveBatch will be called again
 	// immediately, so implementations should try to wait for messages for some
 	// non-zero amount of time before returning zero messages. If the underlying
