@@ -309,8 +309,6 @@ type Bucket interface {
 
 // SignedURLOptions sets options for SignedURL.
 type SignedURLOptions struct {
-	Credential interface{}
-
 	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.
 	Expiry time.Duration
 
