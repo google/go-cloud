@@ -264,7 +264,6 @@ func openerFromMSI(accountName AccountName, storageDomain StorageDomain, protoco
 	}
 
 	credential := azblob.NewTokenCredential(spToken.Token().AccessToken, defaultTokenRefreshFunction(spToken))
-	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	return &URLOpener{
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
@@ -482,6 +481,23 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 		blobURL.RawQuery = strings.TrimPrefix(string(opts.SASToken), "?")
 	}
 	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
+
+	if opts.Credential == nil {
+		isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+
+		if isMSIEnvironment {
+			currentTime := time.Now().UTC()
+			keyInfo := azblob.NewKeyInfo(currentTime, currentTime.Add(48*time.Hour))
+			delegationCredentials, err := serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
+
+			if err == nil {
+				return nil, fmt.Errorf("azureblob.OpenBucket: error while retrieving user delegation credential: %s", err)
+			}
+
+			opts.Credential = delegationCredentials
+		}
+	}
+
 	return &bucket{
 		name:         containerName,
 		pageMarkers:  map[string]azblob.Marker{},
