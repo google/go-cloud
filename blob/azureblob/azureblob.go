@@ -264,6 +264,7 @@ func openerFromMSI(accountName AccountName, storageDomain StorageDomain, protoco
 	}
 
 	credential := azblob.NewTokenCredential(spToken.Token().AccessToken, defaultTokenRefreshFunction(spToken))
+	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	return &URLOpener{
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
@@ -819,7 +820,16 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.Credential == nil {
-		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
+		if opts.Credential == nil {
+			return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
+		} else {
+			switch t := opts.Credential.(type) {
+			case azblob.StorageAccountCredential:
+				b.opts.Credential = opts.Credential.(azblob.StorageAccountCredential)
+			default:
+				return "", gcerr.New(gcerr.Unimplemented, nil, 1, fmt.Sprintf("azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential got %+v", t))
+			}
+		}
 	}
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
