@@ -490,7 +490,7 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 			keyInfo := azblob.NewKeyInfo(currentTime, currentTime.Add(48*time.Hour))
 			delegationCredentials, err := serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
 
-			if err == nil {
+			if err != nil {
 				return nil, fmt.Errorf("azureblob.OpenBucket: error while retrieving user delegation credential: %s", err)
 			}
 
