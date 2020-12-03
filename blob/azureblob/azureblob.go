@@ -420,14 +420,11 @@ func NewPipeline(credential azblob.Credential, opts azblob.PipelineOptions) pipe
 // write and delete operations on objects within it.
 // See https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction.
 type bucket struct {
-	name         string
-	pageMarkers  map[string]azblob.Marker
-	serviceURL   *azblob.ServiceURL
-	containerURL azblob.ContainerURL
-	opts         *Options
-
-	// CredentialExpiration is when the current MSI-obtained signing credential
-	// expires so that we can refresh it on demand.
+	name                 string
+	pageMarkers          map[string]azblob.Marker
+	serviceURL           *azblob.ServiceURL
+	containerURL         azblob.ContainerURL
+	opts                 *Options
 	credentialExpiration time.Time
 }
 
