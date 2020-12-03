@@ -31,7 +31,6 @@ import (
 	_ "gocloud.dev/runtimevar/awsparamstore"
 	_ "gocloud.dev/runtimevar/blobvar"
 	_ "gocloud.dev/runtimevar/constantvar"
-	_ "gocloud.dev/runtimevar/etcdvar"
 	_ "gocloud.dev/runtimevar/filevar"
 	_ "gocloud.dev/runtimevar/gcpruntimeconfig"
 	_ "gocloud.dev/runtimevar/httpvar"
