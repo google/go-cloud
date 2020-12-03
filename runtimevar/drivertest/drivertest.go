@@ -521,6 +521,11 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := h.DeleteVariable(ctx, name); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	var jsonData []*Message
 	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
