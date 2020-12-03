@@ -1,7 +1,8 @@
 {
-  "Initial": "AQAAAA7WcSVbOMm+xP5c",
+  "Initial": "AQAAAA7XW2iIFdWBHf4g",
   "Version": "0.2",
   "Converter": {
+    "ScrubBody": null,
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Amz-Date$",
@@ -40,7 +41,7 @@
   },
   "Entries": [
     {
-      "ID": "cb0a2c5a95188554",
+      "ID": "b1fd43ff7c069f94",
       "Request": {
         "Method": "POST",
         "URL": "https://ssm.us-east-2.amazonaws.com/",
@@ -82,10 +83,13 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Tue, 09 Jun 2020 06:38:20 GMT"
+            "Thu, 03 Dec 2020 23:15:21 GMT"
+          ],
+          "Server": [
+            "Server"
           ],
           "X-Amzn-Requestid": [
-            "aebb2072-f9b2-41cc-b6c6-d519f4044a75"
+            "5d37149f-ee1c-4279-baf8-d1cb10933199"
           ]
         },
         "Body": "H4sIAAAAAAAAAKtWio8vqSxIVbJSCkgsSsxNLUkt8ssvccsvzUtRqgUAF48DRR4AAAA="

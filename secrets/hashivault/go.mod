@@ -26,8 +26,6 @@ require (
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
 	gocloud.dev v0.20.0
-	golang.org/x/text v0.3.4 // indirect
-	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
 

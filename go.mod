@@ -17,12 +17,12 @@ module gocloud.dev
 go 1.12
 
 require (
-	cloud.google.com/go v0.58.0
-	cloud.google.com/go/firestore v1.2.0
-	cloud.google.com/go/pubsub v1.4.0
-	cloud.google.com/go/storage v1.9.0
+	cloud.google.com/go v0.72.0
+	cloud.google.com/go/firestore v1.4.0
+	cloud.google.com/go/pubsub v1.9.0
+	cloud.google.com/go/storage v1.12.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20200617204711-c478e41e60e9
-	contrib.go.opencensus.io/exporter/stackdriver v0.13.1
+	contrib.go.opencensus.io/exporter/stackdriver v0.13.4
 	contrib.go.opencensus.io/integrations/ocsql v0.1.7
 	github.com/Azure/azure-amqp-common-go/v3 v3.1.0
 	github.com/Azure/azure-pipeline-go v0.2.3
@@ -31,10 +31,11 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.11.0
 	github.com/Azure/go-amqp v0.13.1
 	github.com/Azure/go-autorest/autorest v0.11.12
-	github.com/Azure/go-autorest/autorest/adal v0.9.5
+	github.com/Azure/go-autorest/autorest/adal v0.9.6
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.3
-	github.com/GoogleCloudPlatform/cloudsql-proxy v1.17.0
-	github.com/aws/aws-sdk-go v1.36.0
+	github.com/GoogleCloudPlatform/cloudsql-proxy v1.19.1
+	github.com/aws/aws-sdk-go v1.36.1
+	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.5.0
@@ -52,16 +53,14 @@ require (
 	github.com/mitchellh/mapstructure v1.4.0 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	go.opencensus.io v0.22.5
-	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
-	golang.org/x/mod v0.4.0 // indirect
+	golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
 	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20201202213521-69691e467435 // indirect
-	golang.org/x/tools v0.0.0-20201202200335-bef1c476418a // indirect
+	golang.org/x/tools v0.0.0-20201203202102-a1a1cbeaa516 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	google.golang.org/api v0.26.0
+	google.golang.org/api v0.36.0
 	google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497
-	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.25.0 // indirect
+	google.golang.org/grpc v1.34.0
 )
