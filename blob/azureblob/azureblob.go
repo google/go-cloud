@@ -851,7 +851,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if time.Now().UTC().After(b.credentialExpiration) {
 		var err error
 		if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
-			return "", err
+			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
 		}
 	}
 
