@@ -482,22 +482,6 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}
 	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 
-	if opts.Credential == nil {
-		isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
-
-		if isMSIEnvironment {
-			currentTime := time.Now().UTC()
-			keyInfo := azblob.NewKeyInfo(currentTime, currentTime.Add(48*time.Hour))
-			delegationCredentials, err := serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
-
-			if err != nil {
-				return nil, fmt.Errorf("azureblob.OpenBucket: error while retrieving user delegation credential: %s", err)
-			}
-
-			opts.Credential = delegationCredentials
-		}
-	}
-
 	return &bucket{
 		name:         containerName,
 		pageMarkers:  map[string]azblob.Marker{},
@@ -833,10 +817,31 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return page, nil
 }
 
+func (b *bucket) getDelegationCredentials(ctx context.Context) (*azblob.UserDelegationCredential, error) {
+	isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+
+	if isMSIEnvironment {
+		currentTime := time.Now().UTC()
+		keyInfo := azblob.NewKeyInfo(currentTime, currentTime.Add(48*time.Hour))
+		delegationCredentials, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
+
+		if err != nil {
+			return nil, fmt.Errorf("azureblob.OpenBucket: error while retrieving user delegation credential: %s", err)
+		}
+
+		return &delegationCredentials, nil
+	}
+	return nil, errors.New("Cannot generate credentials in a non MSI environment")
+}
+
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+
 	if b.opts.Credential == nil {
-		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
+		var err error
+		if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
+			return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
+		}
 	}
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
