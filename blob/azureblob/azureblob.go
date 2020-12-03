@@ -852,7 +852,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		}
 	}
 
-	if time.Now().UTC().Before(b.opts.CredentialExpiration) {
+	if time.Now().UTC().After(b.opts.CredentialExpiration) {
 		var err error
 		if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
 			return "", err
