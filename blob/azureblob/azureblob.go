@@ -105,6 +105,10 @@ type Options struct {
 	// attempt to be loaded lazily the first time you call SignedURL.
 	Credential azblob.StorageAccountCredential
 
+	// IsMSIEnvironment represents if the blob storage is being authenticated via
+	// a Managed System Identity.
+	IsMSIEnvironment bool
+
 	// SASToken can be provided along with anonymous credentials to use
 	// delegated privileges.
 	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
@@ -216,10 +220,11 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
 		Options: Options{
-			Credential:    storageAccountCredential,
-			SASToken:      sasToken,
-			StorageDomain: storageDomain,
-			Protocol:      protocol,
+			Credential:       storageAccountCredential,
+			SASToken:         sasToken,
+			StorageDomain:    storageDomain,
+			Protocol:         protocol,
+			IsMSIEnvironment: false,
 		},
 	}, nil
 }
@@ -230,8 +235,9 @@ func openerFromAnon(accountName AccountName, storageDomain StorageDomain, protoc
 		AccountName: accountName,
 		Pipeline:    NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{}),
 		Options: Options{
-			StorageDomain: storageDomain,
-			Protocol:      protocol,
+			StorageDomain:    storageDomain,
+			Protocol:         protocol,
+			IsMSIEnvironment: false,
 		},
 	}, nil
 }
@@ -269,8 +275,9 @@ func openerFromMSI(accountName AccountName, storageDomain StorageDomain, protoco
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
 		Options: Options{
-			StorageDomain: storageDomain,
-			Protocol:      protocol,
+			StorageDomain:    storageDomain,
+			Protocol:         protocol,
+			IsMSIEnvironment: true,
 		},
 	}, nil
 }
@@ -837,11 +844,9 @@ func (b *bucket) getDelegationCredentials(ctx context.Context) (*azblob.UserDele
 
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
-
 	if b.opts.Credential == nil {
 		var err error
-		if !isMSIEnvironment {
+		if !b.opts.IsMSIEnvironment {
 			return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 		}
 
@@ -850,7 +855,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		}
 	}
 
-	if isMSIEnvironment && time.Now().UTC().After(b.credentialExpiration) {
+	if b.opts.IsMSIEnvironment && time.Now().UTC().After(b.credentialExpiration) {
 		var err error
 		b.opts.Credential, err = b.getDelegationCredentials(ctx)
 		if err != nil {
@@ -861,8 +866,6 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
 	}
-
-	fmt.Printf("\n\n\n\ntoken: %+v\n", b.opts.Credential)
 
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
