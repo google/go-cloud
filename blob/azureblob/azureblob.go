@@ -862,6 +862,8 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
 	}
 
+	fmt.Printf("\n\n\n\ntoken: %+v\n", b.opts.Credential)
+
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
