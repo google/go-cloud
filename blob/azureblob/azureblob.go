@@ -485,11 +485,12 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 
 	return &bucket{
-		name:         containerName,
-		pageMarkers:  map[string]azblob.Marker{},
-		serviceURL:   &serviceURL,
-		containerURL: serviceURL.NewContainerURL(containerName),
-		opts:         opts,
+		name:                 containerName,
+		pageMarkers:          map[string]azblob.Marker{},
+		serviceURL:           &serviceURL,
+		containerURL:         serviceURL.NewContainerURL(containerName),
+		opts:                 opts,
+		credentialExpiration: time.Now().UTC(),
 	}, nil
 }
 
@@ -836,9 +837,10 @@ func (b *bucket) getDelegationCredentials(ctx context.Context) (*azblob.UserDele
 
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+
 	if b.opts.Credential == nil {
 		var err error
-		isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
 		if !isMSIEnvironment {
 			return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 		}
@@ -848,9 +850,10 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		}
 	}
 
-	if time.Now().UTC().After(b.credentialExpiration) {
+	if isMSIEnvironment && time.Now().UTC().After(b.credentialExpiration) {
 		var err error
-		if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
+		b.opts.Credential, err = b.getDelegationCredentials(ctx)
+		if err != nil {
 			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
 		}
 	}
@@ -858,6 +861,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
 	}
+
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
