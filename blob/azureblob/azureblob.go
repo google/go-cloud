@@ -101,7 +101,8 @@ const (
 // Options sets options for constructing a *blob.Bucket backed by Azure Block Blob.
 type Options struct {
 	// Credential represents the authorizer for SignedURL.
-	// Required to use SignedURL.
+	// Required to use SignedURL. If you're using MSI for authentication, this will
+	// attempt to be loaded lazily the first time you call SignedURL
 	Credential azblob.StorageAccountCredential
 
 	// SASToken can be provided along with anonymous credentials to use
