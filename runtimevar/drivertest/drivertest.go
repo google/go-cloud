@@ -113,7 +113,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
-	// TODO(issue #2910): Uncommend after TestUpdateWithErrors.replay will be regenerated.
+	// TODO(issue #2910): Uncomment after TestUpdateWithErrors.replay will be regenerated.
 	//t.Run("TestUpdateWithErrors", func(t *testing.T) {
 	//	testUpdateWithErrors(t, newHarness)
 	//})
@@ -522,13 +522,7 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
-	if h.Mutable() {
-		defer func() {
-			if err := h.DeleteVariable(ctx, name); err != nil {
-				t.Fatal(err)
-			}
-		}()
-	}
+	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
 	var jsonData []*Message
 	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
