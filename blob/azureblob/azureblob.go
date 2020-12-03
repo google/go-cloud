@@ -105,6 +105,10 @@ type Options struct {
 	// attempt to be loaded lazily the first time you call SignedURL
 	Credential azblob.StorageAccountCredential
 
+	// CredentialExpiration is when the current MSI-obtained signing credential
+	// expires so that we can refresh it on demand
+	CredentialExpiration time.Time
+
 	// SASToken can be provided along with anonymous credentials to use
 	// delegated privileges.
 	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
@@ -819,20 +823,18 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 }
 
 func (b *bucket) getDelegationCredentials(ctx context.Context) (*azblob.UserDelegationCredential, error) {
-	isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+	validity := 48 * time.Hour
+	currentTime := time.Now().UTC()
+	expires := currentTime.Add(validity)
+	b.opts.CredentialExpiration = expires
+	keyInfo := azblob.NewKeyInfo(currentTime, expires)
+	delegationCredentials, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
 
-	if isMSIEnvironment {
-		currentTime := time.Now().UTC()
-		keyInfo := azblob.NewKeyInfo(currentTime, currentTime.Add(48*time.Hour))
-		delegationCredentials, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
-
-		if err != nil {
-			return nil, fmt.Errorf("azureblob.OpenBucket: error while retrieving user delegation credential: %s", err)
-		}
-
-		return &delegationCredentials, nil
+	if err != nil {
+		return nil, fmt.Errorf("azureblob.OpenBucket: error while retrieving user delegation credential: %s", err)
 	}
-	return nil, errors.New("Cannot generate credentials in a non MSI environment")
+
+	return &delegationCredentials, nil
 }
 
 // SignedURL implements driver.SignedURL.
@@ -840,10 +842,23 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 
 	if b.opts.Credential == nil {
 		var err error
-		if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
+		isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+		if isMSIEnvironment {
+			if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
+				return "", err
+			}
+		} else {
 			return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 		}
 	}
+
+	if time.Now().UTC().Before(b.opts.CredentialExpiration) {
+		var err error
+		if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
+			return "", err
+		}
+	}
+
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
 	}
