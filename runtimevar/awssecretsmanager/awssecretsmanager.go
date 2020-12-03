@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2020 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// OpenVariable constructs a *runtimevar.Variable backed by the variable secretID in AWS Secrets Manager.
+// OpenVariable constructs a *runtimevar.Variable backed by the variable name in AWS Secrets Manager.
 // Secrets Manager returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
@@ -223,23 +223,23 @@ func equivalentError(err1, err2 error) bool {
 type watcher struct {
 	// sess is the AWS session to use to talk to AWS.
 	sess client.ConfigProvider
-	// secretID is an ID of a secret to retrieve.
-	secretID string
+	// name is an ID of a secret to retrieve.
+	name string
 	// wait is the amount of time to wait between querying AWS.
 	wait time.Duration
 	// decoder is the decoder that unmarshalls the value in the param.
 	decoder *runtimevar.Decoder
 }
 
-func newWatcher(sess client.ConfigProvider, secretID string, decoder *runtimevar.Decoder, opts *Options) *watcher {
+func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) *watcher {
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &watcher{
-		sess:     sess,
-		secretID: secretID,
-		wait:     driver.WaitDuration(opts.WaitDuration),
-		decoder:  decoder,
+		sess:    sess,
+		name:    name,
+		wait:    driver.WaitDuration(opts.WaitDuration),
+		decoder: decoder,
 	}
 }
 
@@ -250,7 +250,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		lastVersionID = prev.(*state).versionID
 	}
 
-	secretID := aws.String(w.secretID)
+	secretID := aws.String(w.name)
 	svc := secretsmanager.New(w.sess)
 
 	// GetSecretValueWithContext to get the current value and version.
@@ -278,7 +278,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	// which could indicate some internal Secrets Manager issues.
 	// Hence, return explicit error instead of choosing one field over another.
 	if len(getResp.SecretBinary) > 0 && getResp.SecretString != nil && len(*getResp.SecretString) > 0 {
-		err = fmt.Errorf("invalid %q response: both SecretBinary and SecretString are not empty", w.secretID)
+		err = fmt.Errorf("invalid %q response: both SecretBinary and SecretString are not empty", w.name)
 		return errorState(err, prev), w.wait
 	}
 
@@ -286,7 +286,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 
 	if len(getResp.SecretBinary) == 0 {
 		if getResp.SecretString == nil {
-			err = fmt.Errorf("invalid %q response: both SecretBinary and SecretString are empty", w.secretID)
+			err = fmt.Errorf("invalid %q response: both SecretBinary and SecretString are empty", w.name)
 			return errorState(err, prev), w.wait
 		}
 

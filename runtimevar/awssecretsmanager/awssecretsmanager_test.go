@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2020 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@ package awssecretsmanager
 
 import (
 	"context"
+	"crypto/sha1"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -45,6 +47,25 @@ type harness struct {
 	closer  func()
 }
 
+const maxClientRequestTokenLen = 64
+
+// AWS Secrets Manager requires unique token for Create and Update requests to ensure idempotency.
+// From the other side, request data must be deterministic in order to make tests reproducible.
+// generateClientRequestToken generates token which is unique per test session but deterministic.
+func generateClientRequestToken(name string, data []byte) string {
+	h := sha1.New()
+	_, _ = h.Write(data)
+
+	token := fmt.Sprintf("%s-%x", name, h.Sum(nil))
+
+	// Token must have length less than or equal to 64
+	if len(token) > maxClientRequestTokenLen {
+		token = token[:maxClientRequestTokenLen]
+	}
+
+	return token
+}
+
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	sess, _, done, _ := setup.NewAWSSession(context.Background(), t, region)
 
@@ -61,7 +82,7 @@ func (h *harness) MakeWatcher(_ context.Context, name string, decoder *runtimeva
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	svc := secretsmanager.New(h.session)
 	awsName := aws.String(name)
-	token := aws.String("test-awssecretsmanager-client-request-token-create")
+	token := aws.String(generateClientRequestToken(name, val))
 
 	// From AWS Secrets Manager docs:
 	// An asynchronous background process performs the actual secret deletion, so there
@@ -70,6 +91,7 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 	// that your code includes appropriate back off and retry logic.
 	var backoff gax.Backoff
 	if *setup.Record {
+		backoff.Initial = 5 * time.Second
 		backoff.Max = 30 * time.Second
 	} else {
 		backoff.Max = time.Millisecond
@@ -95,36 +117,19 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 	)
 }
 
-func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
-	svc := secretsmanager.New(h.session)
-	token := "test-awssecretsmanager-client-request-toke-update-" + string(val)
-
-	_, err := svc.UpdateSecretWithContext(ctx, &secretsmanager.UpdateSecretInput{
-		SecretId: aws.String(name),
-		// ClientRequestToken must be unique per test session but deterministic.
-		ClientRequestToken: aws.String(token),
-		SecretBinary:       val,
-	})
-
-	return err
+func (h *harness) UpdateVariable(_ context.Context, _ string, _ []byte) error {
+	return nil
 }
 
-func (h *harness) DeleteVariable(ctx context.Context, name string) error {
-	svc := secretsmanager.New(h.session)
-
-	_, err := svc.DeleteSecretWithContext(ctx, &secretsmanager.DeleteSecretInput{
-		SecretId:                   aws.String(name),
-		ForceDeleteWithoutRecovery: aws.Bool(true),
-	})
-
-	return err
+func (h *harness) DeleteVariable(_ context.Context, _ string) error {
+	return nil
 }
 
 func (h *harness) Close() {
 	h.closer()
 }
 
-func (h *harness) Mutable() bool { return true }
+func (h *harness) Mutable() bool { return false }
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
