@@ -427,12 +427,13 @@ func NewPipeline(credential azblob.Credential, opts azblob.PipelineOptions) pipe
 // write and delete operations on objects within it.
 // See https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction.
 type bucket struct {
-	name                 string
-	pageMarkers          map[string]azblob.Marker
-	serviceURL           *azblob.ServiceURL
-	containerURL         azblob.ContainerURL
-	opts                 *Options
-	credentialExpiration time.Time
+	name                  string
+	pageMarkers           map[string]azblob.Marker
+	serviceURL            *azblob.ServiceURL
+	containerURL          azblob.ContainerURL
+	opts                  *Options
+	credentialExpiration  time.Time
+	delegationCredentials azblob.StorageAccountCredential
 }
 
 // OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
@@ -844,23 +845,25 @@ func (b *bucket) getDelegationCredentials(ctx context.Context) (*azblob.UserDele
 
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	var credential azblob.StorageAccountCredential
 	if b.opts.Credential == nil {
 		var err error
 		if !b.opts.IsMSIEnvironment {
 			return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 		}
 
-		if b.opts.Credential, err = b.getDelegationCredentials(ctx); err != nil {
+		if b.delegationCredentials, err = b.getDelegationCredentials(ctx); err != nil {
 			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
 		}
+		credential = b.delegationCredentials
 	}
 
 	if b.opts.IsMSIEnvironment && time.Now().UTC().After(b.credentialExpiration) {
 		var err error
-		b.opts.Credential, err = b.getDelegationCredentials(ctx)
-		if err != nil {
+		if b.delegationCredentials, err = b.getDelegationCredentials(ctx); err != nil {
 			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
 		}
+		credential = b.delegationCredentials
 	}
 
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
@@ -903,7 +906,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		}
 	}
 	var err error
-	if srcBlobParts.SAS, err = signVals.NewSASQueryParameters(b.opts.Credential); err != nil {
+	if srcBlobParts.SAS, err = signVals.NewSASQueryParameters(credential); err != nil {
 		return "", err
 	}
 	srcBlobURLWithSAS := srcBlobParts.URL()
