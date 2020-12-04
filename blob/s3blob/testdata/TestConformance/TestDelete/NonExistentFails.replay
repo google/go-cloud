@@ -1,7 +1,8 @@
 {
-  "Initial": "AQAAAA7WcSPiBQ7M8v5c",
+  "Initial": "AQAAAA7XW2bmBQgwwP4g",
   "Version": "0.2",
   "Converter": {
+    "ScrubBody": null,
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Amz-Date$",
@@ -40,7 +41,7 @@
   },
   "Entries": [
     {
-      "ID": "75e7395a9d1bc10b",
+      "ID": "1216d902370b1fe7",
       "Request": {
         "Method": "HEAD",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/does-not-exist",
@@ -70,16 +71,16 @@
             "application/xml"
           ],
           "Date": [
-            "Tue, 09 Jun 2020 06:32:01 GMT"
+            "Thu, 03 Dec 2020 23:08:21 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "M/kZKjxGmpknF/ixcEwW/dNZ4WdNr3DkK22IttlcvebArbd3w8IRQwaUQbnWzszZ7iWn5HdkOe8="
+            "p+afQTurxsOX2XfYgcWoovlKcBl4KYd7TOqMZJzZkQcr4Gvpqj8Y0Z69fvh4ZhtjS1MMhj/ViJI="
           ],
           "X-Amz-Request-Id": [
-            "DD64FB58D8C7FC22"
+            "1463AAD6E319D288"
           ]
         },
         "Body": ""

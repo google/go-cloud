@@ -319,14 +319,6 @@
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/constantvar\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"constant://?val=hello+world\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
-	"gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable": {
-		"imports": "import (\n\t\"go.etcd.io/etcd/clientv3\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/etcdvar\"\n)",
-		"code": "// Connect to the etcd server.\nclient, err := clientv3.NewFromURL(\"http://your.etcd.server:9999\")\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\nv, err := etcdvar.OpenVariable(client, \"cfg-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
-	},
-	"gocloud.dev/runtimevar/etcdvar.Example_openVariableFromURL": {
-		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/etcdvar\"\n)",
-		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener connects to an etcd server based on the environment\n// variable ETCD_SERVER_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"etcd://myvarname?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
-	},
 	"gocloud.dev/runtimevar/filevar.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/filevar\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"file:///path/to/config.txt?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
