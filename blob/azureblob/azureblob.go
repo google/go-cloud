@@ -105,10 +105,6 @@ type Options struct {
 	// attempt to be loaded lazily the first time you call SignedURL.
 	Credential azblob.StorageAccountCredential
 
-	// IsMSIEnvironment represents if the blob storage is being authenticated via
-	// a Managed System Identity.
-	IsMSIEnvironment bool
-
 	// SASToken can be provided along with anonymous credentials to use
 	// delegated privileges.
 	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
@@ -220,11 +216,10 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
 		Options: Options{
-			Credential:       storageAccountCredential,
-			SASToken:         sasToken,
-			StorageDomain:    storageDomain,
-			Protocol:         protocol,
-			IsMSIEnvironment: false,
+			Credential:    storageAccountCredential,
+			SASToken:      sasToken,
+			StorageDomain: storageDomain,
+			Protocol:      protocol,
 		},
 	}, nil
 }
@@ -235,9 +230,8 @@ func openerFromAnon(accountName AccountName, storageDomain StorageDomain, protoc
 		AccountName: accountName,
 		Pipeline:    NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{}),
 		Options: Options{
-			StorageDomain:    storageDomain,
-			Protocol:         protocol,
-			IsMSIEnvironment: false,
+			StorageDomain: storageDomain,
+			Protocol:      protocol,
 		},
 	}, nil
 }
@@ -275,9 +269,8 @@ func openerFromMSI(accountName AccountName, storageDomain StorageDomain, protoco
 		AccountName: accountName,
 		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
 		Options: Options{
-			StorageDomain:    storageDomain,
-			Protocol:         protocol,
-			IsMSIEnvironment: true,
+			StorageDomain: storageDomain,
+			Protocol:      protocol,
 		},
 	}, nil
 }
@@ -432,7 +425,7 @@ type bucket struct {
 	serviceURL            *azblob.ServiceURL
 	containerURL          azblob.ContainerURL
 	opts                  *Options
-	credentialExpiration  time.Time
+	credentialExpiration  *time.Time
 	delegationCredentials azblob.StorageAccountCredential
 }
 
@@ -493,12 +486,11 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 
 	return &bucket{
-		name:                 containerName,
-		pageMarkers:          map[string]azblob.Marker{},
-		serviceURL:           &serviceURL,
-		containerURL:         serviceURL.NewContainerURL(containerName),
-		opts:                 opts,
-		credentialExpiration: time.Now().UTC(),
+		name:         containerName,
+		pageMarkers:  map[string]azblob.Marker{},
+		serviceURL:   &serviceURL,
+		containerURL: serviceURL.NewContainerURL(containerName),
+		opts:         opts,
 	}, nil
 }
 
@@ -828,42 +820,48 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return page, nil
 }
 
-func (b *bucket) getDelegationCredentials(ctx context.Context) (*azblob.UserDelegationCredential, error) {
+func (b *bucket) getDelegationCredentials(ctx context.Context) (azblob.StorageAccountCredential, error) {
+	var err error
 	validPeriod := 48 * time.Hour
 	currentTime := time.Now().UTC()
 	expires := currentTime.Add(validPeriod)
-	b.credentialExpiration = expires
+	b.credentialExpiration = &expires
 	keyInfo := azblob.NewKeyInfo(currentTime, expires)
-	delegationCredentials, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
+	b.delegationCredentials, err = b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
 
 	if err != nil {
 		return nil, fmt.Errorf("error while retrieving user delegation credential: %s", err)
 	}
 
-	return &delegationCredentials, nil
+	return b.delegationCredentials, nil
+}
+
+func (b *bucket) refreshDelegationCredentials(ctx context.Context) (azblob.StorageAccountCredential, error) {
+	var err error
+	if b.credentialExpiration != nil && time.Now().UTC().After(*b.credentialExpiration) {
+		_, err = b.getDelegationCredentials(ctx)
+	}
+	return b.delegationCredentials, err
 }
 
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	var credential azblob.StorageAccountCredential
-	if b.opts.Credential == nil {
+	isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+	if b.opts.Credential != nil {
+		credential = b.opts.Credential
+	} else if isMSIEnvironment {
 		var err error
-		if !b.opts.IsMSIEnvironment {
-			return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
-		}
-
-		if b.delegationCredentials, err = b.getDelegationCredentials(ctx); err != nil {
+		var mutex sync.Mutex
+		mutex.Lock()
+		credential, err = b.refreshDelegationCredentials(ctx)
+		if err != nil {
 			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
 		}
 		credential = b.delegationCredentials
-	}
-
-	if b.opts.IsMSIEnvironment && time.Now().UTC().After(b.credentialExpiration) {
-		var err error
-		if b.delegationCredentials, err = b.getDelegationCredentials(ctx); err != nil {
-			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
-		}
-		credential = b.delegationCredentials
+		mutex.Unlock()
+	} else {
+		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
 
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
