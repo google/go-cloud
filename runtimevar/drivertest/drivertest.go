@@ -30,7 +30,7 @@ import (
 	"gocloud.dev/runtimevar/driver"
 )
 
-// Harness descibes the functionality test harnesses must provide to run conformance tests.
+// Harness describes the functionality test harnesses must provide to run conformance tests.
 type Harness interface {
 	// MakeWatcher creates a driver.Watcher to watch the given variable.
 	MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error)
