@@ -356,7 +356,11 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = h.DeleteVariable(ctx, name) }()
+	defer func() {
+		if err := h.DeleteVariable(ctx, name); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
@@ -435,7 +439,14 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = h.DeleteVariable(ctx, name) }()
+	needToDelete := true
+	defer func() {
+		if needToDelete {
+			if err := h.DeleteVariable(ctx, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
 
 	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
@@ -465,6 +476,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	if err := h.DeleteVariable(ctx, name); err != nil {
 		t.Fatal(err)
 	}
+	needToDelete = false
 
 	// WatchVariable should return a state with an error now.
 	state, _ = drv.WatchVariable(ctx, state)
@@ -480,6 +492,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content2)); err != nil {
 		t.Fatal(err)
 	}
+	needToDelete = true
 	state, _ = drv.WatchVariable(ctx, state)
 	if state == nil {
 		t.Fatalf("got nil state, want a non-nil state with a value")
