@@ -15,6 +15,7 @@
 package awssecretsmanager
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"errors"
@@ -28,8 +29,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/googleapis/gax-go"
-	"gocloud.dev/internal/retry"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
@@ -47,7 +46,10 @@ type harness struct {
 	closer  func()
 }
 
-const maxClientRequestTokenLen = 64
+const (
+	consistencyDelay         = 30 * time.Second
+	maxClientRequestTokenLen = 64
+)
 
 // AWS Secrets Manager requires unique token for Create and Update requests to ensure idempotency.
 // From the other side, request data must be deterministic in order to make tests reproducible.
@@ -81,60 +83,92 @@ func (h *harness) MakeWatcher(_ context.Context, name string, decoder *runtimeva
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	svc := secretsmanager.New(h.session)
-	awsName := aws.String(name)
-	token := aws.String(generateClientRequestToken(name, val))
-
-	// From AWS Secrets Manager docs:
-	// An asynchronous background process performs the actual secret deletion, so there
-	// can be a short delay before the operation completes. If you write code to
-	// delete and then immediately recreate a secret with the same name, ensure
-	// that your code includes appropriate back off and retry logic.
-	var backoff gax.Backoff
-	if *setup.Record {
-		backoff.Initial = 5 * time.Second
-		backoff.Max = 30 * time.Second
-	} else {
-		backoff.Max = time.Millisecond
+	_, err := svc.CreateSecretWithContext(ctx, &secretsmanager.CreateSecretInput{
+		Name:               aws.String(name),
+		ClientRequestToken: aws.String(generateClientRequestToken(name, val)),
+		SecretBinary:       val,
+	})
+	if err != nil {
+		return err
 	}
-
-	return retry.Call(ctx, backoff,
-		func(err error) bool {
-			if awsErr, ok := err.(awserr.Error); ok {
-				return awsErr.Code() == secretsmanager.ErrCodeInvalidRequestException
-			}
-
-			return false
-		},
-		func() error {
-			_, err := svc.CreateSecretWithContext(ctx, &secretsmanager.CreateSecretInput{
-				Name:               awsName,
-				ClientRequestToken: token,
-				SecretBinary:       val,
-			})
-
-			return err
-		},
-	)
+	// Secret Manager is only eventually consistent, so we insert a delay
+	// and verification that the mutation was applied. This is still not a guarantee
+	// but in practice seems to work well enough to make tests repeatable.
+	for {
+		if *setup.Record {
+			time.Sleep(consistencyDelay)
+		}
+		_, err := svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(name),
+		})
+		if err == nil {
+			break
+		}
+	}
+	return nil
 }
 
-var errNotSupported = errors.New("method not supported")
-
-func (h *harness) UpdateVariable(_ context.Context, _ string, _ []byte) error {
-	return errNotSupported
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
+	svc := secretsmanager.New(h.session)
+	_, err := svc.PutSecretValueWithContext(ctx, &secretsmanager.PutSecretValueInput{
+		ClientRequestToken: aws.String(generateClientRequestToken(name, val)),
+		SecretBinary:       val,
+		SecretId:           aws.String(name),
+	})
+	if err != nil {
+		return err
+	}
+	// Secret Manager is only eventually consistent, so we insert a delay
+	// and verification that the mutation was applied. This is still not a guarantee
+	// but in practice seems to work well enough to make tests repeatable.
+	for {
+		if *setup.Record {
+			time.Sleep(consistencyDelay)
+		}
+		getResp, err := svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(name),
+		})
+		if err == nil && bytes.Equal(getResp.SecretBinary, val) {
+			break
+		}
+	}
+	return nil
 }
 
-func (h *harness) DeleteVariable(_ context.Context, _ string) error {
-	return errNotSupported
+func (h *harness) DeleteVariable(ctx context.Context, name string) error {
+	svc := secretsmanager.New(h.session)
+	_, err := svc.DeleteSecretWithContext(ctx, &secretsmanager.DeleteSecretInput{
+		ForceDeleteWithoutRecovery: aws.Bool(true),
+		SecretId:                   aws.String(name),
+	})
+	if err != nil {
+		return err
+	}
+	// Secret Manager is only eventually consistent, so we insert a delay
+	// and verification that the mutation was applied. This is still not a guarantee
+	// but in practice seems to work well enough to make tests repeatable.
+	for {
+		if *setup.Record {
+			time.Sleep(consistencyDelay)
+		}
+		_, err := svc.DescribeSecretWithContext(ctx, &secretsmanager.DescribeSecretInput{
+			SecretId: aws.String(name),
+		})
+		if err != nil {
+			break
+		}
+	}
+	return nil
 }
 
 func (h *harness) Close() {
 	h.closer()
 }
 
-func (h *harness) Mutable() bool { return false }
+func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	//drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
 }
 
 type verifyAs struct{}
