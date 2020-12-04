@@ -175,6 +175,14 @@ https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable
 
 ### etcd {#etcd}
 
+*NOTE*: Support for `etcd` has been temporarily dropped until they sort out
+their Go module dependency problems. See
+https://github.com/google/go-cloud/issues/2914.
+
+You can use `runtimevar.etcd` in Go CDK version `v0.20.0` or earlier.
+
+<!--
+
 To open a variable stored in [etcd][] via URL, you can use the
 `runtimevar.OpenVariable` function as follows.
 
@@ -190,6 +198,8 @@ The [`etcdvar.OpenVariable`][] constructor opens an `etcd` variable.
 https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable
 
 {{< goexample "gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable" >}}
+
+-->
 
 ### HTTP {#http}
 
