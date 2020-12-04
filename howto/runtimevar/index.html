@@ -55,10 +55,7 @@ if (!doNotTrack) {
 <ul>
 <li><a href="#awsps-ctor">AWS Constructor</a></li>
 </ul></li>
-<li><a href="#etcd">etcd</a>
-<ul>
-<li><a href="#etcd-ctor">etcd Constructor</a></li>
-</ul></li>
+<li><a href="#etcd">etcd</a></li>
 <li><a href="#http">HTTP</a>
 <ul>
 <li><a href="#http-ctor">HTTP Constructor</a></li>
@@ -309,50 +306,10 @@ variable.</p>
 
 <h3 id="etcd"> etcd<a class="anchor" href="#etcd" aria-label="Link to Section">🔗</a></h3>
 
-<p>To open a variable stored in <a href="https://etcd.io/">etcd</a> via URL, you can use the
-<code>runtimevar.OpenVariable</code> function as follows.</p>
+<p><em>NOTE</em>: Support for <code>etcd</code> has been temporarily dropped due to dependency
+issues. See <a href="https://github.com/google/go-cloud/issues/2914">https://github.com/google/go-cloud/issues/2914</a>.</p>
 
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;context&#34;</span>
-
-	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
-	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/etcdvar&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-</span><span class="c1">// The default opener connects to an etcd server based on the environment
-</span><span class="c1">// variable ETCD_SERVER_URL.
-</span><span class="c1"></span>
-<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;etcd://myvarname?decoder=string&#34;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-</code></pre></div>
-
-<h4 id="etcd-ctor"> etcd Constructor<a class="anchor" href="#etcd-ctor" aria-label="Link to Section">🔗</a></h4>
-
-<p>The <a href="https://godoc.org/gocloud.dev/runtimevar/etcdvar#OpenVariable"><code>etcdvar.OpenVariable</code></a> constructor opens an <code>etcd</code> variable.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-	<span class="s">&#34;go.etcd.io/etcd/clientv3&#34;</span>
-	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
-	<span class="s">&#34;gocloud.dev/runtimevar/etcdvar&#34;</span>
-<span class="p">)</span>
-
-<span class="c1">// Connect to the etcd server.
-</span><span class="c1"></span><span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">clientv3</span><span class="p">.</span><span class="nf">NewFromURL</span><span class="p">(</span><span class="s">&#34;http://your.etcd.server:9999&#34;</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-
-<span class="c1">// Construct a *runtimevar.Variable that watches the variable.
-</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">etcdvar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="s">&#34;cfg-variable-name&#34;</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
-</code></pre></div>
+<p>You can use <code>runtimevar.etcd</code> in Go CDK version <code>v0.20.0</code> or earlier.</p>
 
 <h3 id="http"> HTTP<a class="anchor" href="#http" aria-label="Link to Section">🔗</a></h3>
 
