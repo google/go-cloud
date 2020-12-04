@@ -61,7 +61,9 @@ var Set = wire.NewSet(
 	wire.Struct(new(URLOpener), "ConfigProvider"),
 )
 
-// URLOpener opens AWS Secrets Manager URLs like "awssecretsmanager://myvar".
+// URLOpener opens AWS Secrets Manager URLs like "awssecretsmanager://my-secret-var-name".
+// A friendly name of the secret must be specified. You can NOT specify the Amazon Resource Name (ARN).
+//
 // See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // that affect the default AWS session.
 //
@@ -142,6 +144,7 @@ type Options struct {
 }
 
 // OpenVariable constructs a *runtimevar.Variable backed by the variable name in AWS Secrets Manager.
+// A friendly name of the secret must be specified. You can NOT specify the Amazon Resource Name (ARN).
 // Secrets Manager returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.

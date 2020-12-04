@@ -32,7 +32,8 @@ func ExampleOpenVariable() {
 	}
 
 	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := awssecretsmanager.OpenVariable(sess, "cfg-variable-name", runtimevar.StringDecoder, nil)
+	// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).
+	v, err := awssecretsmanager.OpenVariable(sess, "secret-variable-name", runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +44,8 @@ func Example_openVariableFromURL() {
 	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-	v, err := runtimevar.OpenVariable(ctx, "awssecretsmanager://myvar?region=us-east-2&decoder=string")
+	// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).
+	v, err := runtimevar.OpenVariable(ctx, "awssecretsmanager://secret-variable-name?region=us-east-2&decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
