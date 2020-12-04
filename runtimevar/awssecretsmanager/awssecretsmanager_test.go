@@ -117,12 +117,14 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 	)
 }
 
+var errNotSupported = errors.New("method not supported")
+
 func (h *harness) UpdateVariable(_ context.Context, _ string, _ []byte) error {
-	return nil
+	return errNotSupported
 }
 
 func (h *harness) DeleteVariable(_ context.Context, _ string) error {
-	return nil
+	return errNotSupported
 }
 
 func (h *harness) Close() {
