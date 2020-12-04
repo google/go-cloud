@@ -427,6 +427,7 @@ type bucket struct {
 	opts                  *Options
 	credentialExpiration  *time.Time
 	delegationCredentials azblob.StorageAccountCredential
+	mtx                   sync.Mutex
 }
 
 // OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
@@ -821,27 +822,31 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 }
 
 func (b *bucket) getDelegationCredentials(ctx context.Context) (azblob.StorageAccountCredential, error) {
-	var err error
 	validPeriod := 48 * time.Hour
 	currentTime := time.Now().UTC()
 	expires := currentTime.Add(validPeriod)
 	b.credentialExpiration = &expires
 	keyInfo := azblob.NewKeyInfo(currentTime, expires)
-	b.delegationCredentials, err = b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
+	delegationCredentials, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil, nil)
 
 	if err != nil {
 		return nil, fmt.Errorf("error while retrieving user delegation credential: %s", err)
 	}
 
-	return b.delegationCredentials, nil
+	return delegationCredentials, nil
 }
 
 func (b *bucket) refreshDelegationCredentials(ctx context.Context) (azblob.StorageAccountCredential, error) {
 	var err error
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
+	creds := b.delegationCredentials
+
 	if b.credentialExpiration != nil && time.Now().UTC().After(*b.credentialExpiration) {
-		_, err = b.getDelegationCredentials(ctx)
+		creds, err = b.getDelegationCredentials(ctx)
+		b.delegationCredentials = creds
 	}
-	return b.delegationCredentials, err
+	return creds, err
 }
 
 // SignedURL implements driver.SignedURL.
@@ -852,14 +857,10 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		credential = b.opts.Credential
 	} else if isMSIEnvironment {
 		var err error
-		var mutex sync.Mutex
-		mutex.Lock()
 		credential, err = b.refreshDelegationCredentials(ctx)
 		if err != nil {
 			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
 		}
-		credential = b.delegationCredentials
-		mutex.Unlock()
 	} else {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
