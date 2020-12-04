@@ -17,10 +17,10 @@ module gocloud.dev/samples
 go 1.12
 
 require (
-	contrib.go.opencensus.io/exporter/stackdriver v0.13.1
+	contrib.go.opencensus.io/exporter/stackdriver v0.13.4
 	github.com/Azure/azure-pipeline-go v0.2.3
 	github.com/Azure/azure-storage-blob-go v0.11.0
-	github.com/aws/aws-sdk-go v1.36.0
+	github.com/aws/aws-sdk-go v1.36.1
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/go-cmdtest v0.1.0
 	github.com/google/go-cmp v0.5.4

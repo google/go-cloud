@@ -41,6 +41,7 @@ fi
 op="$1"
 case "$op" in
   init|run|cleanup);;
+  rerecord);;
   *) echo "Unknown operation '$op'" && usage;;
 esac
 
@@ -154,7 +155,7 @@ while read -r TESTDIR; do
   case "$op" in
     init)
       ;;
-    run)
+    run|rerecord)
       go test -mod=readonly -race -record -json | go run "$rootdir"/internal/testing/test-summary/test-summary.go -progress || FAILURES="$FAILURES $TESTDIR"
       ;;
     cleanup)
