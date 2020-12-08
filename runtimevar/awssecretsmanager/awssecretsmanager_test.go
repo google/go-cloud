@@ -29,6 +29,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/googleapis/gax-go"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/retry"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
@@ -46,15 +50,38 @@ type harness struct {
 	closer  func()
 }
 
-const (
-	consistencyDelay         = 30 * time.Second
-	maxClientRequestTokenLen = 64
-)
+// waitForMutation uses check to wait until a mutation has taken effect.
+func waitForMutation(ctx context.Context, check func() error) error {
+	backoff := gax.Backoff{Multiplier: 1.0}
+	var initial time.Duration
+	if *setup.Record {
+		// When recording, wait 10 seconds and then poll every 5s.
+		initial = 15 * time.Second
+		backoff.Initial = 5 * time.Second
+	} else {
+		// During replay, we don't wait at all.
+		// The recorded file may have retries, but we don't need to actually wait between them.
+		backoff.Initial = 1 * time.Millisecond
+	}
+	backoff.Max = backoff.Initial
+
+	// Sleep before the check, since we know it doesn't take effect right away.
+	time.Sleep(initial)
+
+	// retryIfNotFound returns true if err is NotFound.
+	// It is used when polling AWS to see if mutating changes have taken effect.
+	// Note that err must have been wrapped with gcerr.New.
+	var retryIfNotFound = func(err error) bool { return gcerrors.Code(err) == gcerrors.NotFound }
+
+	// Poll until the mtuation is seen.
+	return retry.Call(ctx, backoff, retryIfNotFound, check)
+}
 
 // AWS Secrets Manager requires unique token for Create and Update requests to ensure idempotency.
 // From the other side, request data must be deterministic in order to make tests reproducible.
 // generateClientRequestToken generates token which is unique per test session but deterministic.
 func generateClientRequestToken(name string, data []byte) string {
+	const maxClientRequestTokenLen = 64
 	h := sha1.New()
 	_, _ = h.Write(data)
 
@@ -91,21 +118,21 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 	if err != nil {
 		return err
 	}
-	// Secret Manager is only eventually consistent, so we insert a delay
-	// and verification that the mutation was applied. This is still not a guarantee
+	// Secret Manager is only eventually consistent, so we retry until we've
+	// verified that the mutation was applied. This is still not a guarantee
 	// but in practice seems to work well enough to make tests repeatable.
-	for {
-		if *setup.Record {
-			time.Sleep(consistencyDelay)
-		}
+	return waitForMutation(ctx, func() error {
 		_, err := svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: aws.String(name),
 		})
 		if err == nil {
-			break
+			// Create was seen.
+			return nil
 		}
-	}
-	return nil
+		// Failure; we'll retry if it's a NotFound.
+		w := &watcher{}
+		return gcerr.New(w.ErrorCode(err), err, 1, "runtimevar")
+	})
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
@@ -118,21 +145,27 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 	if err != nil {
 		return err
 	}
-	// Secret Manager is only eventually consistent, so we insert a delay
-	// and verification that the mutation was applied. This is still not a guarantee
+	// Secret Manager is only eventually consistent, so we retry until we've
+	// verified that the mutation was applied. This is still not a guarantee
 	// but in practice seems to work well enough to make tests repeatable.
-	for {
-		if *setup.Record {
-			time.Sleep(consistencyDelay)
-		}
+	return waitForMutation(ctx, func() error {
 		getResp, err := svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
 			SecretId: aws.String(name),
 		})
-		if err == nil && bytes.Equal(getResp.SecretBinary, val) {
-			break
+		if err != nil {
+			// Failure; we'll retry if it's a NotFound, but that's not
+			// really expected for an Update.
+			w := &watcher{}
+			return gcerr.New(w.ErrorCode(err), err, 1, "runtimevar")
 		}
-	}
-	return nil
+		if !bytes.Equal(getResp.SecretBinary, val) {
+			// Value hasn't been updated yet, return a NotFound to
+			// trigger retry.
+			return gcerr.Newf(gcerr.NotFound, nil, "updated value not seen yet")
+		}
+		// Update was seen.
+		return nil
+	})
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
@@ -144,21 +177,27 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	// Secret Manager is only eventually consistent, so we insert a delay
-	// and verification that the mutation was applied. This is still not a guarantee
+	// Secret Manager is only eventually consistent, so we retry until we've
+	// verified that the mutation was applied. This is still not a guarantee
 	// but in practice seems to work well enough to make tests repeatable.
-	for {
-		if *setup.Record {
-			time.Sleep(consistencyDelay)
-		}
+	// Note that "success" after a delete is a NotFound error, so we massage
+	// the err returned from DescribeSecret to reflect that.
+	return waitForMutation(ctx, func() error {
 		_, err := svc.DescribeSecretWithContext(ctx, &secretsmanager.DescribeSecretInput{
 			SecretId: aws.String(name),
 		})
-		if err != nil {
-			break
+		if err == nil {
+			// Secret still exists, return a NotFound to trigger a retry.
+			return gcerr.Newf(gcerr.NotFound, nil, "delete not seen yet")
 		}
-	}
-	return nil
+		w := &watcher{}
+		if w.ErrorCode(err) == gcerrors.NotFound {
+			// Delete was seen.
+			return nil
+		}
+		// Other errors are not retryable.
+		return gcerr.New(w.ErrorCode(err), err, 1, "runtimevar")
+	})
 }
 
 func (h *harness) Close() {
