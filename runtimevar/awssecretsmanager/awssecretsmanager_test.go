@@ -51,6 +51,7 @@ type harness struct {
 }
 
 // waitForMutation uses check to wait until a mutation has taken effect.
+// The err returned from check must have been wrapped with gcerr.New.
 func waitForMutation(ctx context.Context, check func() error) error {
 	backoff := gax.Backoff{Multiplier: 1.0}
 	var initial time.Duration
@@ -69,8 +70,6 @@ func waitForMutation(ctx context.Context, check func() error) error {
 	time.Sleep(initial)
 
 	// retryIfNotFound returns true if err is NotFound.
-	// It is used when polling AWS to see if mutating changes have taken effect.
-	// Note that err must have been wrapped with gcerr.New.
 	var retryIfNotFound = func(err error) bool { return gcerrors.Code(err) == gcerrors.NotFound }
 
 	// Poll until the mtuation is seen.
