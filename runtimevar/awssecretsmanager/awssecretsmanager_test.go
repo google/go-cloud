@@ -55,7 +55,7 @@ func waitForMutation(ctx context.Context, check func() error) error {
 	backoff := gax.Backoff{Multiplier: 1.0}
 	var initial time.Duration
 	if *setup.Record {
-		// When recording, wait 10 seconds and then poll every 5s.
+		// When recording, wait 15 seconds and then poll every 5s.
 		initial = 15 * time.Second
 		backoff.Initial = 5 * time.Second
 	} else {
