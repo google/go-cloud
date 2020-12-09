@@ -487,12 +487,11 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}
 	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	return &bucket{
-		name:                 containerName,
-		pageMarkers:          map[string]azblob.Marker{},
-		serviceURL:           &serviceURL,
-		containerURL:         serviceURL.NewContainerURL(containerName),
-		opts:                 opts,
-		credentialExpiration: time.Time{},
+		name:         containerName,
+		pageMarkers:  map[string]azblob.Marker{},
+		serviceURL:   &serviceURL,
+		containerURL: serviceURL.NewContainerURL(containerName),
+		opts:         opts,
 	}, nil
 }
 
@@ -822,32 +821,26 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return page, nil
 }
 
-func (b *bucket) getDelegationCredentials(ctx context.Context) (azblob.StorageAccountCredential, error) {
-	validPeriod := 48 * time.Hour
-	currentTime := time.Now().UTC()
-	expires := currentTime.Add(validPeriod)
-	b.credentialExpiration = expires
-	keyInfo := azblob.NewKeyInfo(currentTime, expires)
-	delegationCredentials, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil /* default timeout */, nil /* no request id */)
-
-	if err != nil {
-		return nil, fmt.Errorf("error while retrieving user delegation credential: %s", err)
-	}
-
-	return delegationCredentials, nil
-}
-
 func (b *bucket) refreshDelegationCredentials(ctx context.Context) (azblob.StorageAccountCredential, error) {
-	var err error
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	creds := b.delegationCredentials
 
 	if time.Now().UTC().After(b.credentialExpiration) {
-		creds, err = b.getDelegationCredentials(ctx)
+		validPeriod := 48 * time.Hour
+		currentTime := time.Now().UTC()
+		expires := currentTime.Add(validPeriod)
+		keyInfo := azblob.NewKeyInfo(currentTime, expires)
+
+		creds, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil /* default timeout */, nil /* no request id */)
+		if err != nil {
+			return nil, err
+		}
+
+		b.credentialExpiration = expires
 		b.delegationCredentials = creds
 	}
-	return creds, err
+
+	return b.delegationCredentials, nil
 }
 
 // SignedURL implements driver.SignedURL.
