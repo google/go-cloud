@@ -18,7 +18,5 @@ go 1.12
 
 require (
 	github.com/streadway/amqp v1.0.0
-	gocloud.dev v0.20.0
+	gocloud.dev v0.21.0
 )
-
-replace gocloud.dev => ../../

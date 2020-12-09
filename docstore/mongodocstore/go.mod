@@ -22,7 +22,5 @@ require (
 	github.com/google/wire v0.4.0
 	github.com/xdg/stringprep v1.0.0 // indirect
 	go.mongodb.org/mongo-driver v1.4.4
-	gocloud.dev v0.20.0
+	gocloud.dev v0.21.0
 )
-
-replace gocloud.dev => ../../
