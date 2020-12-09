@@ -1,0 +1,93 @@
+{
+  "Initial": "AQAAAA7XYfP3Nv9XoP4g",
+  "Version": "0.2",
+  "Converter": {
+    "ScrubBody": null,
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Amz-Date$"
+    ],
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$",
+      "^X-Amz-Security-Token$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "4f0753df82afb4f9",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "29"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ],
+          "X-Amz-Target": [
+            "secretsmanager.GetSecretValue"
+          ]
+        },
+        "MediaType": "application/x-amz-json-1.1",
+        "BodyParts": [
+          "eyJTZWNyZXRJZCI6ImRvZXMtbm90LWV4aXN0In0="
+        ]
+      },
+      "Response": {
+        "StatusCode": 400,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "99"
+          ],
+          "Content-Type": [
+            "application/x-amz-json-1.1"
+          ],
+          "Date": [
+            "Tue, 08 Dec 2020 22:23:52 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "7be19d82-b2cf-4172-8d6e-0dd17a08b88e"
+          ]
+        },
+        "Body": "eyJfX3R5cGUiOiJSZXNvdXJjZU5vdEZvdW5kRXhjZXB0aW9uIiwiTWVzc2FnZSI6IlNlY3JldHMgTWFuYWdlciBjYW4ndCBmaW5kIHRoZSBzcGVjaWZpZWQgc2VjcmV0LiJ9"
+      }
+    }
+  ]
+}
