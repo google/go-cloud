@@ -51,7 +51,9 @@ type harness struct {
 }
 
 // waitForMutation uses check to wait until a mutation has taken effect.
-// The err returned from check must have been wrapped with gcerr.New.
+// The check function should return nil to indicate success (the mutation has
+// taken effect), an error with gcerrors.ErrorCode == NotFound to trigger
+// a retry, or any other error to signal permanent failure.
 func waitForMutation(ctx context.Context, check func() error) error {
 	backoff := gax.Backoff{Multiplier: 1.0}
 	var initial time.Duration
