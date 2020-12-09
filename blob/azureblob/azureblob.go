@@ -101,7 +101,8 @@ const (
 // Options sets options for constructing a *blob.Bucket backed by Azure Block Blob.
 type Options struct {
 	// Credential represents the authorizer for SignedURL.
-	// Required to use SignedURL.
+	// Required to use SignedURL. If you're using MSI for authentication, this will
+	// attempt to be loaded lazily the first time you call SignedURL.
 	Credential azblob.StorageAccountCredential
 
 	// SASToken can be provided along with anonymous credentials to use
@@ -424,6 +425,10 @@ type bucket struct {
 	serviceURL   *azblob.ServiceURL
 	containerURL azblob.ContainerURL
 	opts         *Options
+
+	mu                    sync.Mutex // protect the fields below
+	credentialExpiration  time.Time
+	delegationCredentials azblob.StorageAccountCredential
 }
 
 // OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
@@ -816,14 +821,47 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return page, nil
 }
 
+func (b *bucket) refreshDelegationCredentials(ctx context.Context) (azblob.StorageAccountCredential, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if time.Now().UTC().After(b.credentialExpiration) {
+		validPeriod := 48 * time.Hour
+		currentTime := time.Now().UTC()
+		expires := currentTime.Add(validPeriod)
+		keyInfo := azblob.NewKeyInfo(currentTime, expires)
+
+		creds, err := b.serviceURL.GetUserDelegationCredential(ctx, keyInfo, nil /* default timeout */, nil /* no request id */)
+		if err != nil {
+			return nil, err
+		}
+
+		b.credentialExpiration = expires
+		b.delegationCredentials = creds
+	}
+
+	return b.delegationCredentials, nil
+}
+
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	if b.opts.Credential == nil {
+	var credential azblob.StorageAccountCredential
+	if b.opts.Credential != nil {
+		credential = b.opts.Credential
+	} else if isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender()); isMSIEnvironment {
+		var err error
+		credential, err = b.refreshDelegationCredentials(ctx)
+		if err != nil {
+			return "", gcerr.New(gcerr.Internal, err, 1, "azureblob: unable to generate User Delegation Credential")
+		}
+	} else {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
+
 	if opts.ContentType != "" || opts.EnforceAbsentContentType {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "azureblob: does not enforce Content-Type on PUT")
 	}
+
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
@@ -860,7 +898,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		}
 	}
 	var err error
-	if srcBlobParts.SAS, err = signVals.NewSASQueryParameters(b.opts.Credential); err != nil {
+	if srcBlobParts.SAS, err = signVals.NewSASQueryParameters(credential); err != nil {
 		return "", err
 	}
 	srcBlobURLWithSAS := srcBlobParts.URL()
