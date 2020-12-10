@@ -24,3 +24,5 @@ require (
 	go.mongodb.org/mongo-driver v1.4.4
 	gocloud.dev v0.21.0
 )
+
+replace gocloud.dev => ../../
