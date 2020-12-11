@@ -58,19 +58,36 @@ func TestOpen(t *testing.T) {
 }
 
 func TestConfigFromURL(t *testing.T) {
-	const urlstr = "mysql://localhost/db?parseTime=true&interpolateParams=true"
-	u, err := url.Parse(urlstr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := ConfigFromURL(u)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !cfg.ParseTime {
-		t.Error("ParseTime is false, want true")
-	}
-	if !cfg.InterpolateParams {
-		t.Error("InterpolateParams is false, want true")
+	for _, host := range []string{
+		"localhost",
+		"tcp(localhost)",
+	} {
+		urlstr := "mysql://user:password@" + host + "/db?parseTime=true&interpolateParams=true"
+		u, err := url.Parse(urlstr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := ConfigFromURL(u)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := cfg.User, "user"; got != want {
+			t.Errorf(`User = %q; want %q`, got, want)
+		}
+		if got, want := cfg.Passwd, "password"; got != want {
+			t.Errorf(`Passwd = %q; want %q`, got, want)
+		}
+		if got, want := cfg.Net, "tcp"; got != want {
+			t.Errorf(`Net = %q; want %q`, got, want)
+		}
+		if got, want := cfg.Addr, "localhost"; got != want {
+			t.Errorf(`Addr = %q; want %q`, got, want)
+		}
+		if !cfg.ParseTime {
+			t.Error("ParseTime = false; want true")
+		}
+		if !cfg.InterpolateParams {
+			t.Error("InterpolateParams = false; want true")
+		}
 	}
 }

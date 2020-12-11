@@ -21,6 +21,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -55,6 +56,8 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	}), nil
 }
 
+var netAddrRE = regexp.MustCompile(`^(.+)\((.+)\)$`)
+
 // ConfigFromURL creates a mysql.Config from URL.
 func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 	dbName := strings.TrimPrefix(u.Path, "/")
@@ -66,8 +69,13 @@ func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 	} else {
 		cfg = mysql.NewConfig()
 	}
-	cfg.Net = "tcp"
-	cfg.Addr = u.Host
+	if matches := netAddrRE.FindStringSubmatch(u.Host); len(matches) == 3 {
+		cfg.Net = matches[1]
+		cfg.Addr = matches[2]
+	} else {
+		cfg.Net = "tcp"
+		cfg.Addr = u.Host
+	}
 	cfg.User = u.User.Username()
 	cfg.Passwd, _ = u.User.Password()
 	cfg.DBName = dbName
