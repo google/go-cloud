@@ -39,7 +39,7 @@ func init() {
 }
 
 // URLOpener opens URLs like "mysql://" by using the underlying MySQL driver.
-// See https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details.
+// like "mysql://user:password@localhost:3306/mydb".
 type URLOpener struct {
 	TraceOpts []ocsql.TraceOption
 }
