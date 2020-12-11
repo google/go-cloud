@@ -388,8 +388,10 @@ func decode(v reflect.Value, d Decoder) error {
 		if err != nil {
 			return err
 		}
-		v.Set(reflect.ValueOf(val))
-		return nil
+		if v.Type().AssignableTo(reflect.TypeOf(val)) {
+			v.Set(reflect.ValueOf(val))
+			return nil
+		}
 	}
 
 	// Handle implemented interfaces first.
@@ -510,7 +512,12 @@ func decodeList(v reflect.Value, d Decoder) error {
 	// supports that, then do the decoding.
 	if v.Type().Elem().Kind() == reflect.Uint8 {
 		if b, ok := d.AsBytes(); ok {
-			v.SetBytes(b)
+			if v.Kind() == reflect.Slice {
+				v.SetBytes(b)
+			} else if v.Len() == len(b) {
+				// It's an Array of the right length, copy the data in.
+				reflect.Copy(v, reflect.ValueOf(b))
+			}
 			return nil
 		}
 		// Fall through to decode the []byte as an ordinary slice.

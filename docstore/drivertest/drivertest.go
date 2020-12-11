@@ -30,11 +30,15 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/uuid"
 	"gocloud.dev/docstore"
 	ds "gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 )
+
+// ByteArray is an array of 2 bytes.
+type ByteArray [2]byte
 
 // CollectionKind describes the kind of testing collection to create.
 type CollectionKind int
@@ -967,6 +971,9 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		B:  true,
 		L:  []int{3, 4, 5},
 		A:  [2]int{6, 7},
+		A2: [2]int8{1, 2},
+		At: ByteArray{1, 2},
+		Uu: uuid.NameSpaceDNS,
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
@@ -984,6 +991,9 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		St: "foo",
 		B:  true,
 		L:  []int{3, 4, 5},
+		A:  [2]int{6, 7},
+		A2: [2]int8{6, 7},
+		At: ByteArray{1, 2},
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
@@ -1146,6 +1156,9 @@ type docstoreRoundTrip struct {
 	By []byte
 	L  []int
 	A  [2]int
+	A2 [2]int8
+	At ByteArray
+	Uu uuid.UUID
 	M  map[string]bool
 	P  *string
 	T  time.Time
@@ -1163,6 +1176,9 @@ type nativeMinimal struct {
 	B  bool
 	By []byte
 	L  []int
+	A  [2]int
+	A2 [2]int8
+	At ByteArray
 	M  map[string]bool
 	P  *string
 	T  time.Time
