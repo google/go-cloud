@@ -70,6 +70,7 @@ const Scheme = "dynamodb"
 //   - partition_key (required): the path to the partition key of a table or an index.
 //   - sort_key: the path to the sort key of a table or an index.
 //   - allow_scans: if "true", allow table scans to be used for queries
+//   - consistent_read: if "true", a strongly consistent read is used whenever possible.
 //
 // See https://godoc.org/gocloud.dev/aws#ConfigFromURLParams for supported query
 // parameters for overriding the aws.Session from the URL.
@@ -98,11 +99,13 @@ func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partiti
 	sortKey = q.Get("sort_key")
 	q.Del("sort_key")
 	opts = &Options{
-		AllowScans:    q.Get("allow_scans") == "true",
-		RevisionField: q.Get("revision_field"),
+		AllowScans:     q.Get("allow_scans") == "true",
+		RevisionField:  q.Get("revision_field"),
+		ConsistentRead: q.Get("consistent_read") == "true",
 	}
 	q.Del("allow_scans")
 	q.Del("revision_field")
+	q.Del("consistent_read")
 
 	tableName = u.Host
 	if tableName == "" {
