@@ -684,6 +684,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	}
 	var ms []*driver.Message
 	for _, m := range output.Messages {
+		m := m
 		bodyStr, rawAttrs := extractBody(m, s.opts.Raw)
 
 		decodeIt := false
