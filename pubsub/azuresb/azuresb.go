@@ -452,7 +452,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, s.linkErr
 	}
 
-	// ReceiveOne will block until ctx is Done; we want to return after
+	// ReceiveOne will block until rctx is Done; we want to return after
 	// a reasonably short delay even if there are no messages. So, create a
 	// sub context for the RPC.
 	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
@@ -462,7 +462,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	// that aren't necessarily finished when Receive returns, which causes
 	// data races if Receive is called again quickly. ReceiveOne is more
 	// straightforward.
-	var message *driver.Message
+	var messages []*driver.Message
 	err := s.sbSub.ReceiveOne(rctx, servicebus.HandlerFunc(func(_ context.Context, sbmsg *servicebus.Message) error {
 		metadata := map[string]string{}
 		for key, value := range sbmsg.GetKeyValues() {
@@ -476,19 +476,19 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		if sbmsg.SystemProperties != nil && sbmsg.SystemProperties.PartitionID != nil {
 			partitionID = *sbmsg.SystemProperties.PartitionID
 		}
-		message = &driver.Message{
+		messages = append(messages, &driver.Message{
 			Body:     sbmsg.Data,
 			Metadata: metadata,
 			AckID:    &partitionAckID{partitionID, sbmsg.LockToken},
 			AsFunc:   messageAsFunc(sbmsg),
-		}
+		})
 		return nil
 	}))
 	// Mask rctx timeouts, they are expected if no messages are available.
 	if err == rctx.Err() {
 		err = nil
 	}
-	return []*driver.Message{message}, err
+	return messages, err
 }
 
 func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
