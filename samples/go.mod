@@ -22,7 +22,7 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.12.0
 	github.com/aws/aws-sdk-go v1.36.1
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/google/go-cmdtest v0.1.0
+	github.com/google/go-cmdtest v0.3.0
 	github.com/google/go-cmp v0.5.4
 	github.com/google/subcommands v1.2.0
 	github.com/google/uuid v1.1.2
