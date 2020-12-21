@@ -144,6 +144,14 @@ func encode(v reflect.Value, enc Encoder) error {
 		}
 		return nil
 	}
+	if reflect.PtrTo(v.Type()).Implements(protoMessageType) {
+		bytes, err := proto.Marshal(v.Addr().Interface().(proto.Message))
+		if err != nil {
+			return err
+		}
+		enc.EncodeBytes(bytes)
+		return nil
+	}
 	if v.Type().Implements(textMarshalerType) {
 		bytes, err := v.Interface().(encoding.TextMarshaler).MarshalText()
 		if err != nil {

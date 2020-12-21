@@ -175,6 +175,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("Delete", func(t *testing.T) { withRevCollections(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withRevCollections(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testData) })
+	t.Run("Proto", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testProto) })
 	t.Run("MultipleActions", func(t *testing.T) { withRevCollections(t, newHarness, testMultipleActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withRevCollections(t, newHarness, testGetQueryKeyField) })
 	t.Run("SerializeRevision", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testSerializeRevision) })
@@ -1184,6 +1185,36 @@ type nativeMinimal struct {
 	T  time.Time
 	LF []float64
 	LS []string
+}
+
+// testProto tests encoding/decoding of a document with protocol buffer
+// and pointer-to-protocol-buffer fields.
+func testProto(t *testing.T, _ Harness, coll *ds.Collection) {
+	ctx := context.Background()
+	type protoStruct struct {
+		Name             string `docstore:"name"`
+		Proto            timestamp.Timestamp
+		PtrToProto       *timestamp.Timestamp
+		DocstoreRevision interface{}
+	}
+	doc := &protoStruct{
+		Name:       "testing",
+		Proto:      timestamp.Timestamp{Seconds: 42},
+		PtrToProto: &timestamp.Timestamp{Seconds: 43},
+	}
+
+	err := coll.Create(ctx, doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := &protoStruct{}
+	err = coll.Query().Get(ctx).Next(ctx, got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(got, doc, cmpopts.IgnoreUnexported(timestamp.Timestamp{})); diff != "" {
+		t.Error(diff)
+	}
 }
 
 // The following is the schema for the collection where the ID is composed from
