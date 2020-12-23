@@ -145,6 +145,33 @@ variable.
 
 [`gcpruntimeconfig.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig#OpenVariable
 
+### GCP Secret Manager {#gcpsm}
+
+To open a variable stored in [GCP Secret Manager][] via a URL, you can use
+the `runtimevar.OpenVariable` function as shown in the example below.
+
+[GCP Secret Manager]: https://cloud.google.com/secret-manager
+
+`runtimevar.OpenVariable` will use Application Default Credentials; if you have
+authenticated via [`gcloud auth login`][], it will use those credentials. See
+[Application Default Credentials][GCP creds] to learn about authentication
+alternatives, including using environment variables.
+
+[GCP creds]: https://cloud.google.com/docs/authentication/production
+[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+
+{{< goexample
+"gocloud.dev/runtimevar/gcpsecretmanager.Example_openVariableFromURL" >}}
+
+#### GCP Constructor {#gcpsm-ctor}
+
+The [`gcpsecretmanager.OpenVariable`][] constructor opens a Secret Manager
+variable.
+
+{{< goexample "gocloud.dev/runtimevar/gcpsecretmanager.ExampleOpenVariable" >}}
+
+[`gcpsecretmanager.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/gcpsecretmanager#OpenVariable
+
 ### AWS Parameter Store {#awsps}
 
 To open a variable stored in [AWS Parameter Store][] via a URL, you can use the
