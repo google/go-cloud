@@ -1,7 +1,7 @@
 ---
 title: "Runtime Configuration"
 date: 2019-07-11T12:00:00-07:00
-lastmod: 2019-07-29T12:00:00-07:00
+lastmod: 2020-12-23T12:00:00-07:00
 showInSidenav: true
 toc: true
 ---
@@ -200,6 +200,9 @@ variable.
 
 [`awssecretsmanager.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/awssecretsmanager#OpenVariable
+
+Note that both `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret` actions must be allowed in 
+caller's IAM policy.
 
 ### etcd {#etcd}
 
