@@ -24,6 +24,8 @@ import (
 )
 
 func ExampleOpenVariable() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	sess, err := session.NewSession(nil)
@@ -41,6 +43,9 @@ func ExampleOpenVariable() {
 }
 
 func Example_openVariableFromURL() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/runtimevar/awssecretsmanager"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
