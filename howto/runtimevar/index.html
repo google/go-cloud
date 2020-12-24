@@ -55,6 +55,10 @@ if (!doNotTrack) {
 <ul>
 <li><a href="#awsps-ctor">AWS Constructor</a></li>
 </ul></li>
+<li><a href="#awssm">AWS Secrets Manager</a>
+<ul>
+<li><a href="#awssm-ctor">AWS Constructor</a></li>
+</ul></li>
 <li><a href="#etcd">etcd</a></li>
 <li><a href="#http">HTTP</a>
 <ul>
@@ -303,6 +307,62 @@ variable.</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
+
+<h3 id="awssm"> AWS Secrets Manager<a class="anchor" href="#awssm" aria-label="Link to Section">🔗</a></h3>
+
+<p>To open a variable stored in <a href="https://aws.amazon.com/secrets-manager">AWS Secrets Manager</a> via a URL, you can use the
+<code>runtimevar.OpenVariable</code> function as shown in the example below.</p>
+
+<p><code>runtimevar.OpenVariable</code> will create a default AWS Session with the
+<code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
+it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
+alternatives, including using environment variables.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/awssecretsmanager&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+</span><span class="c1">// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssecretsmanager://secret-variable-name?region=us-east-2&amp;decoder=string&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h4 id="awssm-ctor"> AWS Constructor<a class="anchor" href="#awssm-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/runtimevar/awssecretsmanager#OpenVariable"><code>awssecretsmanager.OpenVariable</code></a> constructor opens a Secrets Manager
+variable.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="s">&#34;gocloud.dev/runtimevar/awssecretsmanager&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Establish an AWS session.
+</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+</span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Construct a *runtimevar.Variable that watches the variable.
+</span><span class="c1">// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awssecretsmanager</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">sess</span><span class="p">,</span> <span class="s">&#34;secret-variable-name&#34;</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Note that both <code>secretsmanager:GetSecretValue</code> and <code>secretsmanager:DescribeSecret</code> actions must be allowed in
+caller&rsquo;s IAM policy.</p>
 
 <h3 id="etcd"> etcd<a class="anchor" href="#etcd" aria-label="Link to Section">🔗</a></h3>
 
