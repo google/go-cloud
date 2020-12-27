@@ -41,7 +41,7 @@ Users of [GCP Cloud SQL for MySQL][] should import the `gocloud.dev/mysql/gcpmys
 
 {{< goexample "gocloud.dev/mysql/gcpmysql.Example" >}}
 
-Users of [GCP Cloud SQL for PostgreSQL][] should import the `gocloud.dev/mysql/gcppostgres` package:
+Users of [GCP Cloud SQL for PostgreSQL][] should import the `gocloud.dev/postgres/gcppostgres` package:
 
 {{< goexample "gocloud.dev/postgres/gcppostgres.Example" >}}
 
