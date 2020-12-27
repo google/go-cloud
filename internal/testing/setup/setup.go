@@ -289,6 +289,7 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 // RPCs to the file at filename, or read the RPCs from the file and return them.
 func newGCPRecordDialOptions(t *testing.T, filename string) (opts []grpc.DialOption, done func()) {
 	path := filepath.Join("testdata", filename)
+	os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	t.Logf("Recording into golden file %s", path)
 	r, err := grpcreplay.NewRecorder(path, nil)
 	if err != nil {

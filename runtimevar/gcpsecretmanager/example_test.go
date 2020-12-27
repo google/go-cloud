@@ -36,7 +36,7 @@ func ExampleOpenVariable() {
 		log.Fatal(err)
 	}
 
-	// Connect to the Runtime Configurator service.
+	// Connect to the GCP Secret Manager service.
 	client, cleanup, err := gcpsecretmanager.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
