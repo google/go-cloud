@@ -51,6 +51,10 @@ if (!doNotTrack) {
 <ul>
 <li><a href="#gcprc-ctor">GCP Constructor</a></li>
 </ul></li>
+<li><a href="#gcpsm">GCP Secret Manager</a>
+<ul>
+<li><a href="#gcpsm-ctor">GCP Constructor</a></li>
+</ul></li>
 <li><a href="#awsps">AWS Parameter Store</a>
 <ul>
 <li><a href="#awsps-ctor">AWS Constructor</a></li>
@@ -250,6 +254,84 @@ variable.</p>
 
 <span class="c1">// Construct a *runtimevar.Variable that watches the variable.
 </span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpruntimeconfig</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">variableKey</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="gcpsm"> GCP Secret Manager<a class="anchor" href="#gcpsm" aria-label="Link to Section">🔗</a></h3>
+
+<p>To open a variable stored in <a href="https://cloud.google.com/secret-manager">GCP Secret Manager</a> via a URL, you can use
+the <code>runtimevar.OpenVariable</code> function as shown in the example below.</p>
+
+<p><code>runtimevar.OpenVariable</code> will use Application Default Credentials; if you have
+authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/login"><code>gcloud auth login</code></a>, it will use those credentials. See
+<a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
+alternatives, including using environment variables.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/runtimevar/gcpsecretmanager&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
+</span><span class="c1">// The URL Host+Path are used as the GCP Secret Manager secret key;
+</span><span class="c1">// see https://cloud.google.com/secret-manager
+</span><span class="c1">// for more details.
+</span><span class="c1"></span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;gcpsecretmanager://projects/myproject/secrets/mysecret?decoder=string&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h4 id="gcpsm-ctor"> GCP Constructor<a class="anchor" href="#gcpsm-ctor" aria-label="Link to Section">🔗</a></h4>
+
+<p>The <a href="https://godoc.org/gocloud.dev/runtimevar/gcpsecretmanager#OpenVariable"><code>gcpsecretmanager.OpenVariable</code></a> constructor opens a Secret Manager
+variable.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/gcp&#34;</span>
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="s">&#34;gocloud.dev/runtimevar/gcpsecretmanager&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Your GCP credentials.
+</span><span class="c1">// See https://cloud.google.com/docs/authentication/production
+</span><span class="c1">// for more info on alternatives.
+</span><span class="c1"></span><span class="nx">creds</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultCredentials</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Connect to the Runtime Configurator service.
+</span><span class="c1"></span><span class="nx">client</span><span class="p">,</span> <span class="nx">cleanup</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpsecretmanager</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">creds</span><span class="p">.</span><span class="nx">TokenSource</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nf">cleanup</span><span class="p">()</span>
+
+<span class="c1">// You can use the SecretKey helper to construct a secret key from
+</span><span class="c1">// your project ID and the secret ID; alternatively,
+</span><span class="c1">// you can construct the full string yourself (e.g.,
+</span><span class="c1">// &#34;projects/gcp-project-id/secrets/secret-id&#34;).
+</span><span class="c1">// gcpsecretmanager package will always use the latest secret value,
+</span><span class="c1">// so `/version/latest` postfix must NOT be added to the secret key.
+</span><span class="c1">// See https://cloud.google.com/secret-manager
+</span><span class="c1">// for more details.
+</span><span class="c1">//
+</span><span class="c1">// For this example, the GCP Secret Manager secret being
+</span><span class="c1">// referenced should have a JSON string that decodes into MyConfig.
+</span><span class="c1"></span><span class="nx">variableKey</span> <span class="o">:=</span> <span class="nx">gcpsecretmanager</span><span class="p">.</span><span class="nf">SecretKey</span><span class="p">(</span><span class="s">&#34;gcp-project-id&#34;</span><span class="p">,</span> <span class="s">&#34;secret-id&#34;</span><span class="p">)</span>
+
+<span class="c1">// Construct a *runtimevar.Variable that watches the variable.
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcpsecretmanager</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">client</span><span class="p">,</span> <span class="nx">variableKey</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
