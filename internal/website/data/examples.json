@@ -311,6 +311,14 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/awsparamstore\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"awsparamstore://myvar?region=us-west-1\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
+	"gocloud.dev/runtimevar/awssecretsmanager.ExampleOpenVariable": {
+		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awssecretsmanager\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\n// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).\nv, err := awssecretsmanager.OpenVariable(sess, \"secret-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/awssecretsmanager.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/awssecretsmanager\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).\nv, err := runtimevar.OpenVariable(ctx, \"awssecretsmanager://secret-variable-name?region=us-east-2\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
 	"gocloud.dev/runtimevar/blobvar.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/blobvar\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener opens a blob.Bucket via a URL, based on the environment\n// variable BLOBVAR_BUCKET_URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"blob://myvar.txt?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
@@ -330,6 +338,14 @@
 	"gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/gcpruntimeconfig\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL Host+Path are used as the GCP Runtime Configurator Variable key;\n// see https://cloud.google.com/deployment-manager/runtime-configurator/\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpruntimeconfig://projects/myproject/configs/myconfigid/variables/myvar?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/gcpsecretmanager.ExampleOpenVariable": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/gcpsecretmanager\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Connect to the GCP Secret Manager service.\nclient, cleanup, err := gcpsecretmanager.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// You can use the SecretKey helper to construct a secret key from\n// your project ID and the secret ID; alternatively,\n// you can construct the full string yourself (e.g.,\n// \"projects/gcp-project-id/secrets/secret-id\").\n// gcpsecretmanager package will always use the latest secret value,\n// so `/version/latest` postfix must NOT be added to the secret key.\n// See https://cloud.google.com/secret-manager\n// for more details.\n//\n// For this example, the GCP Secret Manager secret being\n// referenced should have a JSON string that decodes into MyConfig.\nvariableKey := gcpsecretmanager.SecretKey(\"gcp-project-id\", \"secret-id\")\n\n// Construct a *runtimevar.Variable that watches the variable.\nv, err := gcpsecretmanager.OpenVariable(client, variableKey, runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/gcpsecretmanager.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/gcpsecretmanager\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL Host+Path are used as the GCP Secret Manager secret key;\n// see https://cloud.google.com/secret-manager\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpsecretmanager://projects/myproject/secrets/mysecret?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
 	"gocloud.dev/runtimevar/httpvar.ExampleOpenVariable": {
 		"imports": "import (\n\t\"net/http\"\n\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/httpvar\"\n)",

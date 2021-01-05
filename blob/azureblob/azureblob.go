@@ -161,7 +161,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 
 		isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
 
-		if accountKey != "" {
+		if accountKey != "" || sasToken != "" {
 			o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, storageDomain, protocol)
 		} else if isMSIEnvironment {
 			o.opener, o.err = openerFromMSI(accountName, storageDomain, protocol)
