@@ -56,7 +56,7 @@ jobs:
         fqdn: gocloud.dev
         skip-cleanup: true
         local-dir: internal/website/public
-        github-token: $GITHUB_TOKEN  # set in the Settings page of the repo
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         keep-history: true
         verbose: true  # temporarily, while verifying
         on:
