@@ -265,11 +265,13 @@ type Options struct {
 	// PrivateKey is the Google service account private key.
 	// Exactly one of PrivateKey or SignBytes must be non-nil to use SignedURL.
 	// See https://godoc.org/cloud.google.com/go/storage#SignedURLOptions.
+	// Deprecated: Use MakeSignBytes instead.
 	PrivateKey []byte
 
 	// SignBytes is a function for implementing custom signing.
 	// Exactly one of PrivateKey, SignBytes, or MakeSignBytes must be non-nil to use SignedURL.
 	// See https://godoc.org/cloud.google.com/go/storage#SignedURLOptions.
+	// Deprecated: Use MakeSignBytes instead.
 	SignBytes func([]byte) ([]byte, error)
 
 	// MakeSignBytes is a factory for functions that are being used in place of an empty SignBytes.
