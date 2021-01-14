@@ -246,7 +246,6 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*grpc.ClientConn, func(), er
 		useragent.GRPCDialOption("pubsub"),
 	)
 
-
 	if err != nil {
 		return nil, nil, err
 	}
