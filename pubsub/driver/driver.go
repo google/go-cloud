@@ -148,6 +148,8 @@ type Subscription interface {
 	// It is acceptable for SendAcks to be a no-op for drivers that don't
 	// support message acknowledgement.
 	//
+	// Drivers should suppress errors caused by double-acking a message.
+	//
 	// SendAcks may be called concurrently from multiple goroutines.
 	//
 	// Drivers can control the maximum size of ackIDs and the concurrency
