@@ -46,7 +46,6 @@ require (
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/uuid v1.1.2
 	github.com/google/wire v0.4.0
-	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/klauspost/compress v1.11.3 // indirect
 	github.com/lib/pq v1.9.0

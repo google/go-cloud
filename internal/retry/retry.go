@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go/v2"
 )
 
 // Call calls the supplied function f repeatedly, using the isRetryable function and

@@ -76,7 +76,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go/v2"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
