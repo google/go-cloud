@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go/v2"
 	"golang.org/x/xerrors"
 )
 
