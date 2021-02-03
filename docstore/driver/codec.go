@@ -144,6 +144,14 @@ func encode(v reflect.Value, enc Encoder) error {
 		}
 		return nil
 	}
+	if reflect.PtrTo(v.Type()).Implements(protoMessageType) {
+		bytes, err := proto.Marshal(v.Addr().Interface().(proto.Message))
+		if err != nil {
+			return err
+		}
+		enc.EncodeBytes(bytes)
+		return nil
+	}
 	if v.Type().Implements(textMarshalerType) {
 		bytes, err := v.Interface().(encoding.TextMarshaler).MarshalText()
 		if err != nil {
@@ -388,8 +396,11 @@ func decode(v reflect.Value, d Decoder) error {
 		if err != nil {
 			return err
 		}
-		v.Set(reflect.ValueOf(val))
-		return nil
+		if reflect.TypeOf(val).AssignableTo(v.Type()) {
+			v.Set(reflect.ValueOf(val))
+			return nil
+		}
+		return decodingError(v, d)
 	}
 
 	// Handle implemented interfaces first.
@@ -510,7 +521,16 @@ func decodeList(v reflect.Value, d Decoder) error {
 	// supports that, then do the decoding.
 	if v.Type().Elem().Kind() == reflect.Uint8 {
 		if b, ok := d.AsBytes(); ok {
-			v.SetBytes(b)
+			if v.Kind() == reflect.Slice {
+				v.SetBytes(b)
+				return nil
+			}
+			// It's an array; copy the data in.
+			err := prepareLength(v, len(b))
+			if err != nil {
+				return err
+			}
+			reflect.Copy(v, reflect.ValueOf(b))
 			return nil
 		}
 		// Fall through to decode the []byte as an ordinary slice.
@@ -704,11 +724,11 @@ func fieldByIndexCreate(v reflect.Value, index []int) (reflect.Value, bool) {
 }
 
 func decodingError(v reflect.Value, d Decoder) error {
-	return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot set type %s to %v", v.Type(), d)
+	return gcerr.New(gcerr.InvalidArgument, nil, 2, fmt.Sprintf("cannot set type %s to %v", v.Type(), d))
 }
 
 func overflowError(x interface{}, t reflect.Type) error {
-	return gcerr.Newf(gcerr.InvalidArgument, nil, "value %v overflows type %s", x, t)
+	return gcerr.New(gcerr.InvalidArgument, nil, 2, fmt.Sprintf("value %v overflows type %s", x, t))
 }
 
 func wrap(err error, code gcerr.ErrorCode) error {

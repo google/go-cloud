@@ -30,11 +30,15 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/uuid"
 	"gocloud.dev/docstore"
 	ds "gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 )
+
+// ByteArray is an array of 2 bytes.
+type ByteArray [2]byte
 
 // CollectionKind describes the kind of testing collection to create.
 type CollectionKind int
@@ -171,6 +175,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("Delete", func(t *testing.T) { withRevCollections(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withRevCollections(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testData) })
+	t.Run("Proto", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testProto) })
 	t.Run("MultipleActions", func(t *testing.T) { withRevCollections(t, newHarness, testMultipleActions) })
 	t.Run("GetQueryKeyField", func(t *testing.T) { withRevCollections(t, newHarness, testGetQueryKeyField) })
 	t.Run("SerializeRevision", func(t *testing.T) { withCollection(t, newHarness, SingleKey, testSerializeRevision) })
@@ -967,6 +972,9 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		B:  true,
 		L:  []int{3, 4, 5},
 		A:  [2]int{6, 7},
+		A2: [2]int8{1, 2},
+		At: ByteArray{1, 2},
+		Uu: uuid.NameSpaceDNS,
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
@@ -984,6 +992,9 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		St: "foo",
 		B:  true,
 		L:  []int{3, 4, 5},
+		A:  [2]int{6, 7},
+		A2: [2]int8{6, 7},
+		At: ByteArray{1, 2},
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
@@ -1146,6 +1157,9 @@ type docstoreRoundTrip struct {
 	By []byte
 	L  []int
 	A  [2]int
+	A2 [2]int8
+	At ByteArray
+	Uu uuid.UUID
 	M  map[string]bool
 	P  *string
 	T  time.Time
@@ -1163,11 +1177,44 @@ type nativeMinimal struct {
 	B  bool
 	By []byte
 	L  []int
+	A  [2]int
+	A2 [2]int8
+	At ByteArray
 	M  map[string]bool
 	P  *string
 	T  time.Time
 	LF []float64
 	LS []string
+}
+
+// testProto tests encoding/decoding of a document with protocol buffer
+// and pointer-to-protocol-buffer fields.
+func testProto(t *testing.T, _ Harness, coll *ds.Collection) {
+	ctx := context.Background()
+	type protoStruct struct {
+		Name             string `docstore:"name"`
+		Proto            timestamp.Timestamp
+		PtrToProto       *timestamp.Timestamp
+		DocstoreRevision interface{}
+	}
+	doc := &protoStruct{
+		Name:       "testing",
+		Proto:      timestamp.Timestamp{Seconds: 42},
+		PtrToProto: &timestamp.Timestamp{Seconds: 43},
+	}
+
+	err := coll.Create(ctx, doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := &protoStruct{}
+	err = coll.Query().Get(ctx).Next(ctx, got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(got, doc, cmpopts.IgnoreUnexported(timestamp.Timestamp{})); diff != "" {
+		t.Error(diff)
+	}
 }
 
 // The following is the schema for the collection where the ID is composed from
