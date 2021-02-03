@@ -247,8 +247,6 @@ func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder, exactMatch bool
 
 func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 	switch v := d.val.(type) {
-	case primitive.Binary:
-		return true, v.Data, nil
 	case primitive.DateTime:
 		// A DateTime represents milliseconds since the Unix epoch.
 		return true, bsonDateTimeToTime(v), nil
