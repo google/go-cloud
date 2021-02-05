@@ -36,14 +36,25 @@ import (
 )
 
 type harness struct {
-	dir       string
-	prefix    string
-	server    *httptest.Server
-	urlSigner URLSigner
-	closer    func()
+	dir         string
+	prefix      string
+	metadataHow metadataOption
+	server      *httptest.Server
+	urlSigner   URLSigner
+	closer      func()
 }
 
-func newHarness(ctx context.Context, t *testing.T, prefix string) (drivertest.Harness, error) {
+func newHarness(ctx context.Context, t *testing.T, prefix string, metadataHow metadataOption) (drivertest.Harness, error) {
+	if metadataHow == MetadataDontWrite {
+		// Skip tests for if no metadata gets written.
+		// For these it is currently undefined whether any gets read (back).
+		switch name := t.Name(); {
+		case strings.HasSuffix(name, "TestAttributes"), strings.Contains(name, "TestMetadata/"):
+			t.SkipNow()
+			return nil, nil
+		}
+	}
+
 	dir := filepath.Join(os.TempDir(), "go-cloud-fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
@@ -53,7 +64,7 @@ func newHarness(ctx context.Context, t *testing.T, prefix string) (drivertest.Ha
 			return nil, err
 		}
 	}
-	h := &harness{dir: dir, prefix: prefix}
+	h := &harness{dir: dir, prefix: prefix, metadataHow: metadataHow}
 
 	localServer := httptest.NewServer(http.HandlerFunc(h.serveSignedURL))
 	h.server = localServer
@@ -136,6 +147,7 @@ func (h *harness) HTTPClient() *http.Client {
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 	opts := &Options{
 		URLSigner: h.urlSigner,
+		Metadata:  h.metadataHow,
 	}
 	drv, err := openBucket(h.dir, opts)
 	if err != nil {
@@ -159,7 +171,7 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-		return newHarness(ctx, t, "")
+		return newHarness(ctx, t, "", MetadataInSidecar)
 	}
 	drivertest.RunConformanceTests(t, newHarnessNoPrefix, []drivertest.AsTest{verifyAs{}})
 }
@@ -167,9 +179,16 @@ func TestConformance(t *testing.T) {
 func TestConformanceWithPrefix(t *testing.T) {
 	const prefix = "some/prefix/dir/"
 	newHarnessWithPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-		return newHarness(ctx, t, prefix)
+		return newHarness(ctx, t, prefix, MetadataInSidecar)
 	}
 	drivertest.RunConformanceTests(t, newHarnessWithPrefix, []drivertest.AsTest{verifyAs{prefix: prefix}})
+}
+
+func TestConformanceSkipMetadata(t *testing.T) {
+	newHarnessSkipMetadata := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarness(ctx, t, "", MetadataDontWrite)
+	}
+	drivertest.RunConformanceTests(t, newHarnessSkipMetadata, []drivertest.AsTest{verifyAs{}})
 }
 
 func BenchmarkFileblob(b *testing.B) {
@@ -445,5 +464,51 @@ func TestListAtRoot(t *testing.T) {
 	_, err = it.Next(ctx)
 	if err != io.EOF {
 		t.Fatalf("Expecting an EOF on next item in list, got: %#v", err)
+	}
+}
+
+func TestSkipMetadata(t *testing.T) {
+	dir, err := ioutil.TempDir("", "fileblob*")
+	if err != nil {
+		t.Fatalf("Got error creating temp dir: %#v", err)
+	}
+	defer os.RemoveAll(dir)
+	dirpath := filepath.ToSlash(dir)
+	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
+		dirpath = "/" + dirpath
+	}
+
+	tests := []struct {
+		URL         string
+		wantSidecar bool
+	}{
+		{"file://" + dirpath + "?metadata=skip", false},
+		{"file://" + dirpath, true},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	for _, test := range tests {
+		b, err := blob.OpenBucket(ctx, test.URL)
+		if b != nil {
+			defer b.Close()
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = b.WriteAll(ctx, "key", []byte("hello world"), &blob.WriterOptions{
+			ContentType: "text/plain",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = os.Stat(filepath.Join(dir, "key"+attrsExt))
+		if gotSidecar := !errors.Is(err, os.ErrNotExist); test.wantSidecar != gotSidecar {
+			t.Errorf("Metadata sidecar file (extension %s) exists: %v, did we want it: %v",
+				attrsExt, gotSidecar, test.wantSidecar)
+		}
+		b.Delete(ctx, "key")
 	}
 }
