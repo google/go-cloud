@@ -25,8 +25,6 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
-	gocloud.dev v0.21.0
+	gocloud.dev v0.22.0
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
-
-replace gocloud.dev => ../../
