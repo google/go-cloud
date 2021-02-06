@@ -23,5 +23,3 @@ require (
 	github.com/nats-io/nats.go v1.10.0
 	gocloud.dev v0.21.0
 )
-
-replace gocloud.dev => ../../
