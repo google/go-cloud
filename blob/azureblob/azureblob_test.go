@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 
@@ -342,30 +341,43 @@ func TestOpenerFromEnv(t *testing.T) {
 		storageDomain StorageDomain
 		sasToken      SASToken
 		protocol      Protocol
+		isCDN         bool
 
 		wantSharedCreds   bool
 		wantSASToken      SASToken
 		wantStorageDomain StorageDomain
+		wantProtocol      Protocol
+		wantIsCDN         bool
 	}{
 		{
 			name:            "AccountKey",
 			accountName:     "myaccount",
 			accountKey:      AccountKey(base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))),
 			wantSharedCreds: true,
+			wantIsCDN:       false,
 		},
 		{
 			name:              "SASToken",
 			accountName:       "myaccount",
 			sasToken:          "borkborkbork",
 			storageDomain:     "mycloudenv",
+			protocol:          "http",
+			isCDN:             true,
 			wantSharedCreds:   false,
 			wantSASToken:      "borkborkbork",
 			wantStorageDomain: "mycloudenv",
+			wantProtocol:      "http",
+			wantIsCDN:         true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, test.storageDomain, test.protocol)
+			opts := Options{
+				StorageDomain: test.storageDomain,
+				Protocol:      test.protocol,
+				IsCDN:         test.isCDN,
+			}
+			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken, opts)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -393,6 +405,12 @@ func TestOpenerFromEnv(t *testing.T) {
 			if o.Options.StorageDomain != test.wantStorageDomain {
 				t.Errorf("Options.StorageDomain = %q; want %q", o.Options.StorageDomain, test.wantStorageDomain)
 			}
+			if o.Options.Protocol != test.wantProtocol {
+				t.Errorf("Options.Protocol = %q; want %q", o.Options.Protocol, test.wantProtocol)
+			}
+			if o.Options.IsCDN != test.wantIsCDN {
+				t.Errorf("Options.IsCDN = %v; want %v", o.Options.IsCDN, test.wantIsCDN)
+			}
 		})
 	}
 }
@@ -402,6 +420,7 @@ func Test_openBucket(t *testing.T) {
 		name             string
 		protocol         Protocol
 		storageDomain    StorageDomain
+		isCDN            bool
 		wantContainerURL string
 		wantErr          bool
 	}{
@@ -445,6 +464,13 @@ func Test_openBucket(t *testing.T) {
 			wantErr:          false,
 		},
 		{
+			name:             "cdn",
+			storageDomain:    "mycdnname.azureedge.net",
+			isCDN:            true,
+			wantContainerURL: "https://mycdnname.azureedge.net/mycontainer",
+			wantErr:          false,
+		},
+		{
 			name:             "invalid",
 			protocol:         "invalid",
 			wantContainerURL: "",
@@ -461,7 +487,7 @@ func Test_openBucket(t *testing.T) {
 			}
 			pipeline := azblob.NewPipeline(cred, azblob.PipelineOptions{})
 			containerName := "mycontainer"
-			o := &Options{Protocol: test.protocol, StorageDomain: test.storageDomain}
+			o := &Options{Protocol: test.protocol, StorageDomain: test.storageDomain, IsCDN: test.isCDN}
 			b, err := openBucket(ctx, pipeline, accountName, containerName, o)
 			if (err != nil) != test.wantErr {
 				t.Fatalf("wantErr=%v but got=%v", test.wantErr, err)
@@ -525,21 +551,6 @@ func TestURLOpenerForParams(t *testing.T) {
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
-	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
-	prevKey := os.Getenv("AZURE_STORAGE_KEY")
-	prevEnv := os.Getenv("AZURE_STORAGE_DOMAIN")
-	prevProtocol := os.Getenv("AZURE_STORAGE_PROTOCOL")
-	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
-	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
-	os.Setenv("AZURE_STORAGE_DOMAIN", "my-cloud")
-	os.Setenv("AZURE_STORAGE_PROTOCOL", "http")
-	defer func() {
-		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
-		os.Setenv("AZURE_STORAGE_KEY", prevKey)
-		os.Setenv("AZURE_STORAGE_DOMAIN", prevEnv)
-		os.Setenv("AZURE_STORAGE_PROTOCOL", prevProtocol)
-	}()
-
 	tests := []struct {
 		URL     string
 		WantErr bool
@@ -550,6 +561,14 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net", false},
 		// With duplicate storage domain.
 		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net&domain=blob.core.windows.net", true},
+		// With protocol.
+		{"azblob://mybucket?protocol=http", false},
+		// With invalid protocol.
+		{"azblob://mybucket?protocol=ftp", true},
+		// With CDN.
+		{"azblob://mybucket?cdn=true", false},
+		// With invalid CDN.
+		{"azblob://mybucket?cdn=42", true},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}
