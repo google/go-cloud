@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -551,6 +552,21 @@ func TestURLOpenerForParams(t *testing.T) {
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
+	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	prevKey := os.Getenv("AZURE_STORAGE_KEY")
+	prevEnv := os.Getenv("AZURE_STORAGE_DOMAIN")
+	prevProtocol := os.Getenv("AZURE_STORAGE_PROTOCOL")
+	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
+	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
+	os.Setenv("AZURE_STORAGE_DOMAIN", "my-cloud")
+	os.Setenv("AZURE_STORAGE_PROTOCOL", "http")
+	defer func() {
+		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
+		os.Setenv("AZURE_STORAGE_KEY", prevKey)
+		os.Setenv("AZURE_STORAGE_DOMAIN", prevEnv)
+		os.Setenv("AZURE_STORAGE_PROTOCOL", prevProtocol)
+	}()
+
 	tests := []struct {
 		URL     string
 		WantErr bool
