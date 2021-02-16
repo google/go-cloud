@@ -24,7 +24,7 @@ import (
 )
 
 type fileLike interface {
-	Fd() uintptr
+	syscall.Conn
 	Seek(offset int64, whence int) (ret int64, err error)
 	Stat() (os.FileInfo, error)
 }
@@ -75,28 +75,54 @@ func ioCopyReflink(dstFile, srcFile fileLike) (written int64, err error) {
 	srcLength := srcInfo.Size() - srcPos // Remaining size.
 
 	if srcPos == 0 && dstPos == 0 {
-		for {
-			err = unix.IoctlFileClone(int(dstFile.Fd()), int(srcFile.Fd()))
-			if err != syscall.EINTR {
-				break
-			}
-		}
+		err = withFd(dstFile, srcFile, unix.IoctlFileClone)
 	} else {
 		srcRange := &unix.FileCloneRange{
-			Src_fd:      int64(srcFile.Fd()), // int64/int mismatch in API
 			Src_offset:  uint64(srcPos),
 			Src_length:  uint64(srcLength),
 			Dest_offset: uint64(dstPos),
 		}
-		for {
-			err = unix.IoctlFileCloneRange(int(dstFile.Fd()), srcRange)
-			if err != syscall.EINTR {
-				break
-			}
-		}
+		err = withFd(dstFile, srcFile, func(dst, src int) (err error) {
+			srcRange.Src_fd = int64(src)
+			return unix.IoctlFileCloneRange(dst, srcRange)
+		})
 	}
 	if err == nil {
 		written = srcLength
+	}
+	return
+}
+
+// withFd wraps innerFn providing it the file descriptors without disqualifying
+// them from polling.
+//
+// See also:
+// - https://github.com/golang/go/issues/24331
+func withFd(a, b syscall.Conn, innerFn func(aFd, bFd int) error) (err error) {
+	ac, err := a.SyscallConn()
+	if err != nil {
+		return
+	}
+	bc, err := b.SyscallConn()
+	if err != nil {
+		return
+	}
+	// Cascading this way will retain the innermost error.
+	errIn := ac.Control(func(aFd uintptr) {
+		errIn := bc.Control(func(bFd uintptr) {
+			for {
+				err = innerFn(int(aFd), int(bFd))
+				if err != syscall.EINTR {
+					break
+				}
+			}
+		})
+		if err == nil {
+			err = errIn
+		}
+	})
+	if err == nil {
+		err = errIn
 	}
 	return
 }
