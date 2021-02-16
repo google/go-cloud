@@ -556,15 +556,18 @@ func TestOpenBucketFromURL(t *testing.T) {
 	prevKey := os.Getenv("AZURE_STORAGE_KEY")
 	prevEnv := os.Getenv("AZURE_STORAGE_DOMAIN")
 	prevProtocol := os.Getenv("AZURE_STORAGE_PROTOCOL")
+	prevIsCDN := os.Getenv("AZURE_STORAGE_IS_CDN")
 	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
 	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
 	os.Setenv("AZURE_STORAGE_DOMAIN", "my-cloud")
 	os.Setenv("AZURE_STORAGE_PROTOCOL", "http")
+	os.Setenv("AZURE_STORAGE_IS_CDN", "false")
 	defer func() {
 		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
 		os.Setenv("AZURE_STORAGE_KEY", prevKey)
 		os.Setenv("AZURE_STORAGE_DOMAIN", prevEnv)
 		os.Setenv("AZURE_STORAGE_PROTOCOL", prevProtocol)
+		os.Setenv("AZURE_STORAGE_IS_CDN", prevIsCDN)
 	}()
 
 	tests := []struct {
