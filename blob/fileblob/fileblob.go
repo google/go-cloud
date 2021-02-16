@@ -63,6 +63,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gocloud.dev/blob"
@@ -181,7 +182,15 @@ type Options struct {
 type bucket struct {
 	dir  string
 	opts *Options
+
+	fsSupportsReflink int32
 }
+
+// Tracks OS and filesystem feature support.
+// Accessed and changed atomically.
+var (
+	copyReflinkSupported int32 = 1
+)
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
@@ -209,7 +218,14 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", absdir)
 	}
-	return &bucket{dir: absdir, opts: opts}, nil
+
+	b := bucket{
+		dir:  absdir,
+		opts: opts,
+		// These will be gracefully degraded if support is absent.
+		fsSupportsReflink: atomic.LoadInt32(&copyReflinkSupported),
+	}
+	return &b, nil
 }
 
 // OpenBucket creates a *blob.Bucket backed by the filesystem and rooted at
@@ -700,7 +716,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(w, f)
+	_, err = b.ioCopy(w, f)
 	if err != nil {
 		cancel() // cancel before Close cancels the write
 		w.Close()
