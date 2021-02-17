@@ -68,9 +68,6 @@ if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   echo
   echo "Starting local dependencies..."
   ./internal/testing/start_local_deps.sh
-  echo
-  echo "Installing Wire..."
-  go install -mod=readonly github.com/google/wire/cmd/wire
 fi
 
 result=0
@@ -80,7 +77,7 @@ rootdir="$(pwd)"
 # new Go version. Some checks below we only run
 # for the latest Go version.
 latest_go_version=0
-if [[ $(go version) == *go1\.15* ]]; then
+if [[ $(go version) == *go1\.16* ]]; then
   latest_go_version=1
 fi
 
@@ -158,34 +155,39 @@ if [[ ${latest_go_version} -eq 1 ]]; then
 fi
 
 
-echo
-echo "**********************"
-echo "* Checking wire diff"
-echo "**********************"
-echo
-while read -r path || [[ -n "$path" ]]; do
-  echo "Module: $path"
-  ( cd "$path" && wire diff ./... && echo "  OK" ) || { echo "FAIL: wire diff found diffs!" && result=1; }
-done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
-# The above filters out comments and empty lines from allmodules and only takes
-# the first (whitespace-separated) field from each line.
-
-
-echo
-echo "******************************"
-echo "* Doing non-module checks"
-echo "******************************"
-echo
-echo "Ensuring .go files are formatted with gofmt -s..."
-DIFF="$(gofmt -s -d .)"
-if [ -n "$DIFF" ]; then
-  echo "FAIL: please run 'gofmt -s -w .' and commit the result"
-  echo "$DIFF";
-  exit 1;
-else
-  echo "  OK"
+if [[ ${latest_go_version} -eq 1 ]]; then
+  echo
+  echo "**********************"
+  echo "* Checking wire diff"
+  echo "**********************"
+  echo
+  echo "Installing Wire..."
+  go install github.com/google/wire/cmd/wire@latest
+  echo
+  while read -r path || [[ -n "$path" ]]; do
+    echo "Module: $path"
+    ( cd "$path" && wire diff ./... && echo "  OK" ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+  done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
+  # The above filters out comments and empty lines from allmodules and only takes
+  # the first (whitespace-separated) field from each line.
 fi;
 
+if [[ ${latest_go_version} -eq 1 ]]; then
+  echo
+  echo "******************************"
+  echo "* Doing non-module checks"
+  echo "******************************"
+  echo
+  echo "Ensuring .go files are formatted with gofmt -s..."
+  DIFF="$(gofmt -s -d .)"
+  if [ -n "$DIFF" ]; then
+    echo "FAIL: please run 'gofmt -s -w .' and commit the result"
+    echo "$DIFF";
+    exit 1;
+  else
+    echo "  OK"
+  fi;
+fi;
 
 if [[ ${latest_go_version} -eq 1 ]]; then
   echo
@@ -198,29 +200,30 @@ if [[ ${latest_go_version} -eq 1 ]]; then
 fi
 
 
-echo
-echo "Ensuring that any new packages have the corresponding entries in Hugo..."
-missing_packages="$(internal/website/listnewpkgs.sh)"
-if ! [[ -z "$missing_packages" ]]; then
-  echo "FAIL: missing package meta tags for:" 1>&2
-  echo "$missing_packages" 1>&2
-  result=1
-else
-  echo "  OK"
-fi
+if [[ ${latest_go_version} -eq 1 ]]; then
+  echo
+  echo "Ensuring that any new packages have the corresponding entries in Hugo..."
+  missing_packages="$(internal/website/listnewpkgs.sh)"
+  if ! [[ -z "$missing_packages" ]]; then
+    echo "FAIL: missing package meta tags for:" 1>&2
+    echo "$missing_packages" 1>&2
+    result=1
+  else
+    echo "  OK"
+  fi
 
-
-echo
-echo "Ensuring that all examples used in Hugo match what's in source..."
-(internal/website/gatherexamples/run.sh | diff -u internal/website/data/examples.json - > /dev/null && echo "  OK") || {
-  echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
-  result=1
-}
+  echo
+  echo "Ensuring that all examples used in Hugo match what's in source..."
+  (internal/website/gatherexamples/run.sh | diff -u internal/website/data/examples.json - > /dev/null && echo "  OK") || {
+    echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
+    result=1
+  }
+fi;
 
 
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.
-if [[ ${result} -eq 0 ]] && [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]]; then
+if [[ ${latest_go_version} -eq 1 ]] && [[ ${result} -eq 0 ]] && [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]]; then
   echo
   ./internal/testing/check_api_change.sh || result=1;
 fi
