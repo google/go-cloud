@@ -70,12 +70,7 @@ if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   ./internal/testing/start_local_deps.sh
   echo
   echo "Installing Wire..."
-  # Move to a temporary directory while installing wire to avoid changing
-  # the local .mod file.
-  INSTALL_DIR="$(mktemp -d)"
-  ( cd "$INSTALL_DIR" && exec go mod init unused )
-  ( cd "$INSTALL_DIR" && exec go get github.com/google/wire/cmd/wire)
-  ( cd "$INSTALL_DIR" && exec go install github.com/google/wire/cmd/wire)
+  go install github.com/google/wire/cmd/wire@latest
 fi
 
 result=0
