@@ -70,7 +70,12 @@ if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
   ./internal/testing/start_local_deps.sh
   echo
   echo "Installing Wire..."
-  go install -mod=readonly github.com/google/wire/cmd/wire
+  # Move to a temporary directory while installing apidiff to avoid changing
+  # the local .mod file.
+  INSTALL_DIR="$(mktemp -d)"
+  ( cd "$INSTALL_DIR" && exec go mod init unused )
+  ( cd "$INSTALL_DIR" && exec go get -mod=readonly github.com/google/wire/cmd/wire)
+  ( cd "$INSTALL_DIR" && exec go install -mod=readonly github.com/google/wire/cmd/wire)
 fi
 
 result=0
