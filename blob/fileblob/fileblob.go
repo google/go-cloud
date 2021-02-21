@@ -197,7 +197,7 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 
 	// Optionally, create the directory if it does not already exist.
 	if err != nil && opts.CreateDir && os.IsNotExist(err) {
-		err = os.MkdirAll(absdir, os.ModeDir)
+		err = os.MkdirAll(absdir, os.FileMode(0777))
 		if err != nil {
 			return nil, fmt.Errorf("tried to create directory but failed: %v", err)
 		}
@@ -577,7 +577,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), os.FileMode(0777)); err != nil {
 		return nil, err
 	}
 	f, err := ioutil.TempFile(filepath.Dir(path), "fileblob")
