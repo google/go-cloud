@@ -631,10 +631,16 @@ type writer struct {
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
-	if _, err := w.md5hash.Write(p); err != nil {
-		return 0, err
+	n, err = w.f.Write(p)
+	if err != nil {
+		// Don't hash the unwritten tail twice when writing is resumed.
+		w.md5hash.Write(p[:n])
+		return n, err
 	}
-	return w.f.Write(p)
+	if _, err := w.md5hash.Write(p); err != nil {
+		return n, err
+	}
+	return n, nil
 }
 
 func (w *writer) Close() error {
