@@ -46,6 +46,7 @@ func setAttrs(path string, xa xattrs) error {
 	}
 	if err := json.NewEncoder(f).Encode(xa); err != nil {
 		f.Close()
+		os.Remove(f.Name())
 		return err
 	}
 	return f.Close()
