@@ -181,6 +181,10 @@ type Options struct {
 type bucket struct {
 	dir  string
 	opts *Options
+
+	// File descriptor of the bucket's root directory, used to resolve filenames beneath
+	// for OS that support calls the likes of openat2.
+	rootDirFd uintptr
 }
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
@@ -209,7 +213,16 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", absdir)
 	}
-	return &bucket{dir: absdir, opts: opts}, nil
+
+	b := bucket{
+		dir:  absdir,
+		opts: opts,
+	}
+	err = b.initFeatures()
+	if err != nil {
+		return nil, err
+	}
+	return &b, nil
 }
 
 // OpenBucket creates a *blob.Bucket backed by the filesystem and rooted at
@@ -220,10 +233,6 @@ func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
 		return nil, err
 	}
 	return blob.NewBucket(drv), nil
-}
-
-func (b *bucket) Close() error {
-	return nil
 }
 
 // escapeKey does all required escaping for UTF-8 strings to work the filesystem.
@@ -502,7 +511,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(path)
+	f, err := b.osOpen(path)
 	if err != nil {
 		return nil, err
 	}
@@ -682,7 +691,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	if err != nil {
 		return err
 	}
-	f, err := os.Open(srcPath)
+	f, err := b.osOpen(srcPath)
 	if err != nil {
 		return err
 	}
