@@ -15,11 +15,13 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// By default fileblob stores blob metadata in 'sidecar files' with the original
+// By default fileblob stores blob metadata in 'sidecar files' under the original
 // filename but an additional ".attrs" suffix.
 // That behaviour can be changed via Options.Metadata;
-// writing of those metadata files suppressed by setting it to "skip".
-// Absent any stored metadata many blob.Attributes fields will be set to default values.
+// writing of those metadata files can be suppressed by setting it to
+// 'MetadataDontWrite' or its equivalent "metadata=skip" in the URL for the opener.
+// In any case, absent any stored metadata many blob.Attributes fields
+// will be set to default values.
 //
 // URLs
 //
@@ -171,8 +173,10 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 	switch metadataOption(q.Get("metadata")) {
 	case MetadataDontWrite:
 		opts.Metadata = MetadataDontWrite
-	default:
+	case MetadataInSidecar:
 		opts.Metadata = MetadataInSidecar
+	default:
+		return nil, errors.New("fileblob.OpenBucket: unsupported value for query parameter 'metadata'")
 	}
 	if q.Get("create_dir") != "" {
 		opts.CreateDir = true
@@ -208,7 +212,9 @@ type Options struct {
 	// (using os.MkdirAll).
 	CreateDir bool
 
-	// Refers to the strategy for how to deal with metadata, such as blob.Attributes.
+	// Refers to the strategy for how to deal with metadata (such as blob.Attributes).
+	// For supported values please see the Metadata* constants.
+	// If left unchanged, 'MetadataInSidecar' will be used.
 	Metadata metadataOption
 }
 

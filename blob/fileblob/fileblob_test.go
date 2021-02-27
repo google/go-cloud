@@ -385,6 +385,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file://" + dirpath + "subdir2?create_dir=true", "filenotfound.txt", false, true, ""},
 		// Invalid query parameter.
 		{"file://" + dirpath + "?param=value", "myfile.txt", true, false, ""},
+		// Unrecognized value for parameter "metadata".
+		{"file://" + dirpath + "?metadata=nosuchstrategy", "myfile.txt", true, false, ""},
 		// OK, with params.
 		{
 			fmt.Sprintf("file://%s?base_url=/show&secret_key_path=%s", dirpath, secretKeyPath),
@@ -483,7 +485,8 @@ func TestSkipMetadata(t *testing.T) {
 		wantSidecar bool
 	}{
 		{"file://" + dirpath + "?metadata=skip", false},
-		{"file://" + dirpath, true},
+		{"file://" + dirpath, true},                // Implicitly sets the default strategy…
+		{"file://" + dirpath + "?metadata=", true}, // … and explicitly.
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
