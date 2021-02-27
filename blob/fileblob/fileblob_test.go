@@ -203,9 +203,16 @@ func TestNewBucket(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer os.RemoveAll(dir)
-		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"), &Options{CreateDir: true})
+		b, gotErr := OpenBucket(filepath.Join(dir, "notfound"), &Options{CreateDir: true})
 		if gotErr != nil {
 			t.Errorf("got error %v", gotErr)
+		}
+		defer b.Close()
+
+		// Make sure the subdir has gotten permissions to be used.
+		gotErr = b.WriteAll(context.Background(), "key", []byte("delme"), nil)
+		if gotErr != nil {
+			t.Errorf("got error writing to bucket from CreateDir %v", gotErr)
 		}
 	})
 	t.Run("BucketIsFile", func(t *testing.T) {
