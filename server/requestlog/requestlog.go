@@ -58,6 +58,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	sc := trace.FromContext(r.Context()).SpanContext()
 	ent := &Entry{
+		Request:           cloneRequestWithoutBody(r),
 		ReceivedTime:      start,
 		RequestMethod:     r.Method,
 		RequestURL:        r.URL.String(),
@@ -95,19 +96,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.log.Log(ent)
 }
 
+func cloneRequestWithoutBody(r *http.Request) *http.Request {
+	r = r.Clone(r.Context())
+	r.Body = nil
+	return r
+}
+
 // Entry records information about a completed HTTP request.
 type Entry struct {
-	ReceivedTime      time.Time
-	RequestMethod     string
-	RequestURL        string
-	RequestHeaderSize int64
-	RequestBodySize   int64
-	UserAgent         string
-	Referer           string
-	Proto             string
+	// Request is the http request that has been completed.
+	//
+	// This request's Body is always nil, regardless of the actual request body.
+	Request *http.Request
 
-	RemoteIP string
-	ServerIP string
+	ReceivedTime    time.Time
+	RequestBodySize int64
 
 	Status             int
 	ResponseHeaderSize int64
@@ -115,6 +118,24 @@ type Entry struct {
 	Latency            time.Duration
 	TraceID            trace.TraceID
 	SpanID             trace.SpanID
+
+	// Deprecated. This value is available by evaluating Request.Referer().
+	Referer string
+	// Deprecated. This value is available directing in Request.Proto.
+	Proto string
+	// Deprecated. This value is available directly in Request.Method.
+	RequestMethod string
+	// Deprecated. This value is available directly in Request.URL.
+	RequestURL string
+	// Deprecated. This value is available by evaluating Request.Header.
+	RequestHeaderSize int64
+	// Deprecated. This value is available by evaluating Request.Header.
+	UserAgent string
+	// Deprecated. This value is available by evaluating Request.RemoteAddr..
+	RemoteIP string
+	// Deprecated. This value is available by evaluating reading the
+	// http.LocalAddrContextKey value from the context returned by Request.Context().
+	ServerIP string
 }
 
 func ipFromHostPort(hp string) string {
