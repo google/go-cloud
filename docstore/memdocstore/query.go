@@ -44,6 +44,7 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 	if q.OrderByField != "" {
 		sortDocs(resultDocs, q.OrderByField, q.OrderAscending)
 	}
+
 	if q.Limit > 0 && len(resultDocs) > q.Limit {
 		resultDocs = resultDocs[:q.Limit]
 	}
