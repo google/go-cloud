@@ -37,9 +37,6 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 
 	var resultDocs []storedDoc
 	for _, doc := range c.docs {
-		if q.Limit > 0 && len(resultDocs) == q.Limit {
-			break
-		}
 		if filtersMatch(q.Filters, doc) {
 			resultDocs = append(resultDocs, doc)
 		}
@@ -47,6 +44,11 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 	if q.OrderByField != "" {
 		sortDocs(resultDocs, q.OrderByField, q.OrderAscending)
 	}
+
+	if q.Limit > 0 && len(resultDocs) > q.Limit {
+		resultDocs = resultDocs[:q.Limit]
+	}
+
 	// Include the key field in the field paths if there is one.
 	var fps [][]string
 	if len(q.FieldPaths) > 0 && c.keyField != "" {
