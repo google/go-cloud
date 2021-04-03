@@ -126,12 +126,12 @@ the `runtimevar.OpenVariable` function as shown in the example below.
 [GCP Runtime Configurator]: https://cloud.google.com/deployment-manager/runtime-configurator/
 
 `runtimevar.OpenVariable` will use Application Default Credentials; if you have
-authenticated via [`gcloud auth login`][], it will use those credentials. See
+authenticated via [`gcloud auth application-default login`][], it will use those credentials. See
 [Application Default Credentials][GCP creds] to learn about authentication
 alternatives, including using environment variables.
 
 [GCP creds]: https://cloud.google.com/docs/authentication/production
-[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+[`gcloud auth application-default login`]: https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
 
 {{< goexample
 "gocloud.dev/runtimevar/gcpruntimeconfig.Example_openVariableFromURL" >}}
@@ -153,12 +153,12 @@ the `runtimevar.OpenVariable` function as shown in the example below.
 [GCP Secret Manager]: https://cloud.google.com/secret-manager
 
 `runtimevar.OpenVariable` will use Application Default Credentials; if you have
-authenticated via [`gcloud auth login`][], it will use those credentials. See
+authenticated via [`gcloud auth application-default login`][], it will use those credentials. See
 [Application Default Credentials][GCP creds] to learn about authentication
 alternatives, including using environment variables.
 
 [GCP creds]: https://cloud.google.com/docs/authentication/production
-[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+[`gcloud auth application-default login`]: https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
 
 {{< goexample
 "gocloud.dev/runtimevar/gcpsecretmanager.Example_openVariableFromURL" >}}
