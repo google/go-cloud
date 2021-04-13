@@ -48,6 +48,7 @@
 //  - Topic: *servicebus.Topic
 //  - Subscription: *servicebus.Subscription
 //  - Message.BeforeSend: *servicebus.Message
+//  - Message.AfterSend: None
 //  - Message: *servicebus.Message
 //  - Error: common.Retryable, *amqp.Error, *amqp.DetachError
 package azuresb // import "gocloud.dev/pubsub/azuresb"
@@ -276,7 +277,17 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			return err
 		}
 	}
-	return t.sbTopic.Send(ctx, sbms)
+	err := t.sbTopic.Send(ctx, sbms)
+	if err != nil {
+		return err
+	}
+	if dm.AfterSend != nil {
+		asFunc := func(i interface{}) bool { return false }
+		if err := dm.AfterSend(asFunc); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *topic) IsRetryable(err error) bool {

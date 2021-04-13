@@ -240,6 +240,10 @@ func (sbAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
+func (sbAsTest) AfterSend(as func(interface{}) bool) error {
+	return nil
+}
+
 func sanitize(s string) string {
 	// First trim some not-so-useful strings that are part of all test names.
 	s = strings.Replace(s, "TestConformance/Test", "", 1)

@@ -59,6 +59,7 @@
 //  - Subscription: *sqs.SQS
 //  - Message: *sqs.Message
 //  - Message.BeforeSend: *sns.PublishInput for OpenSNSTopic; *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic
+//  - Message.AfterSend: *sns.PublishOutput for OpenSNSTopic; *sqs.SendMessageBatchResultEntry for OpenSQSTopic
 //  - Error: awserror.Error
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
@@ -415,8 +416,23 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			return err
 		}
 	}
-	_, err := t.client.PublishWithContext(ctx, input)
-	return err
+	po, err := t.client.PublishWithContext(ctx, input)
+	if err != nil {
+		return err
+	}
+	if dm.AfterSend != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**sns.PublishOutput); ok {
+				*p = po
+				return true
+			}
+			return false
+		}
+		if err := dm.AfterSend(asFunc); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -541,6 +557,22 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	if numFailed := len(resp.Failed); numFailed > 0 {
 		first := resp.Failed[0]
 		return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.SendMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+	}
+	if len(resp.Successful) == len(dms) {
+		for n, dm := range dms {
+			if dm.AfterSend != nil {
+				asFunc := func(i interface{}) bool {
+					if p, ok := i.(**sqs.SendMessageBatchResultEntry); ok {
+						*p = resp.Successful[n]
+						return true
+					}
+					return false
+				}
+				if err := dm.AfterSend(asFunc); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }

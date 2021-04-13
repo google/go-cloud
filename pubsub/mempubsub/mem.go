@@ -158,6 +158,11 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 				return err
 			}
 		}
+		if m.AfterSend != nil {
+			if err := m.AfterSend(func(interface{}) bool { return false }); err != nil {
+				return err
+			}
+		}
 	}
 	t.nextAckID += len(ms)
 	for _, s := range t.subs {

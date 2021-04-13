@@ -79,7 +79,8 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // The conformance test:
 // 1. Calls TopicCheck.
 // 2. Calls SubscriptionCheck.
-// 3. Sends a message, setting Message.BeforeSend to BeforeSend.
+// 3. Sends a message, setting Message.BeforeSend to BeforeSend
+//    and Message.AfterSend to AfterSend.
 // 4. Receives the message and calls MessageCheck.
 // 5. Calls TopicErrorCheck.
 // 6. Calls SubscriptionErrorCheck.
@@ -104,6 +105,9 @@ type AsTest interface {
 	// BeforeSend will be used as Message.BeforeSend as part of sending a test
 	// message.
 	BeforeSend(as func(interface{}) bool) error
+	// AfterSend will be used as Message.AfterSend as part of sending a test
+	// message.
+	AfterSend(as func(interface{}) bool) error
 }
 
 // Many tests set the maximum batch size to 1 to make record/replay stable.
@@ -159,6 +163,13 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 func (verifyAsFailsOnNil) BeforeSend(as func(interface{}) bool) error {
 	if as(nil) {
 		return errors.New("want Message.BeforeSend's As function to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) AfterSend(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Message.AfterSend's As function to return false when passed nil")
 	}
 	return nil
 }
@@ -927,6 +938,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	msg := &pubsub.Message{
 		Body:       []byte("x"),
 		BeforeSend: st.BeforeSend,
+		AfterSend:  st.AfterSend,
 	}
 	if err := topic.Send(ctx, msg); err != nil {
 		t.Fatal(err)

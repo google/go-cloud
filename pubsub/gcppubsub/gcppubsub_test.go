@@ -266,6 +266,14 @@ func (gcpAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
+func (gcpAsTest) AfterSend(as func(interface{}) bool) error {
+	var msgId string
+	if !as(&msgId) {
+		return fmt.Errorf("cast failed for %T", &msgId)
+	}
+	return nil
+}
+
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
 }

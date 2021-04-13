@@ -111,6 +111,16 @@ type Message struct {
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeSend func(asFunc func(interface{}) bool) error
 
+	// AfterSend is a callback used when sending a message. It will always be
+	// set to nil for received messages.
+	//
+	// The callback will be called at most once, after the message is sent.
+	// If Send returns an error, AfterSend will not be called.
+	//
+	// asFunc converts its argument to driver-specific types.
+	// See https://gocloud.dev/concepts/as/ for background information.
+	AfterSend func(asFunc func(interface{}) bool) error
+
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
 
@@ -244,6 +254,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 		Body:       m.Body,
 		Metadata:   m.Metadata,
 		BeforeSend: m.BeforeSend,
+		AfterSend:  m.AfterSend,
 	}
 	return t.batcher.Add(ctx, dm)
 }
