@@ -170,6 +170,10 @@ func (natsAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
+func (natsAsTest) AfterSend(as func(interface{}) bool) error {
+	return nil
+}
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{natsAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)

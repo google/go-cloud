@@ -266,6 +266,12 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 			cancel()
 			break
 		}
+		if m.AfterSend != nil {
+			asFunc := func(i interface{}) bool { return false }
+			if err := m.AfterSend(asFunc); err != nil {
+				return err
+			}
+		}
 	}
 	// Wait for the goroutine to finish.
 	err := <-errc

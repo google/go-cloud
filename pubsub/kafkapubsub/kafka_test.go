@@ -181,6 +181,10 @@ func (asTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
+func (asTest) AfterSend(as func(interface{}) bool) error {
+	return nil
+}
+
 // TestKafkaKey tests sending/receiving a message with the Kafka message key set.
 func TestKafkaKey(t *testing.T) {
 	if !setup.HasDockerTestEnvironment() {
