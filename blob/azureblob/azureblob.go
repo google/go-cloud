@@ -561,7 +561,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 		}
 	}
 	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, md, mac, bac, at, nil /* BlobTagsMap */)
-	 if err != nil {
+	if err != nil {
 		return err
 	}
 	copyStatus := resp.CopyStatus()
