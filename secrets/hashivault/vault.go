@@ -19,8 +19,8 @@
 // URLs
 //
 // For secrets.OpenKeeper, hashivault registers for the scheme "hashivault".
-// The default URL opener will dial a Vault server using the environment
-// variables "VAULT_SERVER_URL" and "VAULT_SERVER_TOKEN".
+// The default URL opener will dial a Vault server using the environment variables
+// "VAULT_SERVER_URL" (or "VAULT_ADDR") and "VAULT_SERVER_TOKEN" (or "VAULT_TOKEN").
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -74,8 +74,41 @@ func init() {
 	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(defaultDialer))
 }
 
+// getVaultURL ensures that we check both VAULT_SERVER_URL and VAULT_ADDR environment
+// variables for the API address for vault. VAULT_SERVER_URL takes precedence over VAULT_ADDR.
+func getVaultURL() (string, error) {
+	serverURL := os.Getenv("VAULT_SERVER_URL")
+	if serverURL != "" {
+		return serverURL, nil
+	}
+
+	vaultAddr := os.Getenv("VAULT_ADDR")
+	if vaultAddr != "" {
+		return vaultAddr, nil
+	}
+
+	return "", errors.New("neither VAULT_SERVER_URL nor VAULT_ADDR environment variables are set")
+}
+
+// getVaultToken ensures that we check both VAULT_SERVER_TOKEN and VAULT_TOKEN environment
+// variables for the API token for vault. VAULT_SERVER_TOKEN takes precedence over VAULT_TOKEN.
+// If neither environment variables are found, then we return an empty string as token is not required.
+func getVaultToken() string {
+	serverToken := os.Getenv("VAULT_SERVER_TOKEN")
+	if serverToken != "" {
+		return serverToken
+	}
+
+	vaultToken := os.Getenv("VAULT_TOKEN")
+	if vaultToken != "" {
+		return vaultToken
+	}
+
+	return ""
+}
+
 // defaultDialer dials a default Vault server based on the environment variables
-// VAULT_SERVER_URL and VAULT_SERVER_TOKEN.
+// VAULT_SERVER_URL / VAULT_ADDR and VAULT_SERVER_TOKEN / VAULT_TOKEN
 type defaultDialer struct {
 	init   sync.Once
 	opener *URLOpener
@@ -84,12 +117,12 @@ type defaultDialer struct {
 
 func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
 	o.init.Do(func() {
-		serverURL := os.Getenv("VAULT_SERVER_URL")
-		if serverURL == "" {
-			o.err = errors.New("VAULT_SERVER_URL environment variable is not set")
+		serverURL, err := getVaultURL()
+		if err != nil {
+			o.err = err
 			return
 		}
-		token := os.Getenv("VAULT_SERVER_TOKEN") // token is not required
+		token := getVaultToken()
 		cfg := Config{Token: token, APIConfig: api.Config{Address: serverURL}}
 		client, err := Dial(ctx, &cfg)
 		if err != nil {
