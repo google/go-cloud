@@ -44,6 +44,7 @@
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
 //  - Message.BeforeSend: *pb.PubsubMessage
+//  - Message.AfterSend: *string for the pb.PublishResponse.MessageIds entry corresponding to the message.
 //  - Message: *pb.PubsubMessage
 //  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
@@ -321,8 +322,25 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		ms = append(ms, psm)
 	}
 	req := &pb.PublishRequest{Topic: t.path, Messages: ms}
-	if _, err := t.client.Publish(ctx, req); err != nil {
+	pr, err := t.client.Publish(ctx, req)
+	if err != nil {
 		return err
+	}
+	if len(pr.MessageIds) == len(dms) {
+		for n, dm := range dms {
+			if dm.AfterSend != nil {
+				asFunc := func(i interface{}) bool {
+					if p, ok := i.(*string); ok {
+						*p = pr.MessageIds[n]
+						return true
+					}
+					return false
+				}
+				if err := dm.AfterSend(asFunc); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }

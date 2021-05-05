@@ -158,12 +158,12 @@ you would see in the [`gsutil`][] CLI.
 [`gsutil`]: https://cloud.google.com/storage/docs/gsutil
 
 `blob.OpenBucket` will use Application Default Credentials; if you have
-authenticated via [`gcloud auth login`][], it will use those credentials. See
+authenticated via [`gcloud auth application-default login`][], it will use those credentials. See
 [Application Default Credentials][GCP creds] to learn about authentication
 alternatives, including using environment variables.
 
 [GCP creds]: https://cloud.google.com/docs/authentication/production
-[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+[`gcloud auth application-default login`]: https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
 
 {{< goexample "gocloud.dev/blob/gcsblob.Example_openBucketFromURL" >}}
 

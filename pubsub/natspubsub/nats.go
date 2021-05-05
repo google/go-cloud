@@ -40,6 +40,7 @@
 //  - Topic: *nats.Conn
 //  - Subscription: *nats.Subscription
 //  - Message.BeforeSend: None.
+//  - Message.AfterSend: None.
 //  - Message: *nats.Msg
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
@@ -230,6 +231,12 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		}
 		if err := t.nc.Publish(t.subj, payload); err != nil {
 			return err
+		}
+		if m.AfterSend != nil {
+			asFunc := func(i interface{}) bool { return false }
+			if err := m.AfterSend(asFunc); err != nil {
+				return err
+			}
 		}
 	}
 	// Per specification this is supposed to only return after

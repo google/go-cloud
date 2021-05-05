@@ -41,26 +41,33 @@ func init() {
 // defaultDialer dials a default Rabbit server based on the environment
 // variable "RABBIT_SERVER_URL".
 type defaultDialer struct {
-	init   sync.Once
+	mu     sync.Mutex
+	conn   *amqp.Connection
 	opener *URLOpener
-	err    error
 }
 
 func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
-	o.init.Do(func() {
-		serverURL := os.Getenv("RABBIT_SERVER_URL")
-		if serverURL == "" {
-			o.err = errors.New("RABBIT_SERVER_URL environment variable not set")
-			return
-		}
-		conn, err := amqp.Dial(serverURL)
-		if err != nil {
-			o.err = fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %v", serverURL, err)
-			return
-		}
-		o.opener = &URLOpener{Connection: conn}
-	})
-	return o.opener, o.err
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	// Re-use the connection if possible.
+	if o.opener != nil && o.conn != nil && !o.conn.IsClosed() {
+		return o.opener, nil
+	}
+
+	// First time through, or last time resulted in an error, or connection
+	// was closed. Initialize the connection.
+	serverURL := os.Getenv("RABBIT_SERVER_URL")
+	if serverURL == "" {
+		return nil, errors.New("RABBIT_SERVER_URL environment variable not set")
+	}
+	conn, err := amqp.Dial(serverURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %v", serverURL, err)
+	}
+	o.conn = conn
+	o.opener = &URLOpener{Connection: conn}
+	return o.opener, nil
 }
 
 func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
@@ -258,6 +265,12 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 		if perr = ch.Publish(t.exchange, pub); perr != nil {
 			cancel()
 			break
+		}
+		if m.AfterSend != nil {
+			asFunc := func(i interface{}) bool { return false }
+			if err := m.AfterSend(asFunc); err != nil {
+				return err
+			}
 		}
 	}
 	// Wait for the goroutine to finish.

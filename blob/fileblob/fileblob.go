@@ -15,6 +15,14 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
+// By default fileblob stores blob metadata in 'sidecar files' under the original
+// filename but an additional ".attrs" suffix.
+// That behaviour can be changed via Options.Metadata;
+// writing of those metadata files can be suppressed by setting it to
+// 'MetadataDontWrite' or its equivalent "metadata=skip" in the URL for the opener.
+// In any case, absent any stored metadata many blob.Attributes fields
+// will be set to default values.
+//
 // URLs
 //
 // For blob.OpenBucket, fileblob registers for the scheme "file".
@@ -97,6 +105,8 @@ const Scheme = "file"
 //   - base_url: the base URL to use to construct signed URLs; see URLSignerHMAC
 //   - secret_key_path: path to read for the secret key used to construct signed URLs;
 //     see URLSignerHMAC
+//   - metadata: if set to "skip", won't write metadata such as blob.Attributes
+//     as per the package docstring
 //
 // If either of base_url / secret_key_path are provided, both must be.
 //
@@ -134,15 +144,40 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	return OpenBucket(filepath.FromSlash(path), opts)
 }
 
+var recognizedParams = map[string]bool{
+	"create_dir":      true,
+	"base_url":        true,
+	"secret_key_path": true,
+	"metadata":        true,
+}
+
+type metadataOption string // Not exported as subject to change.
+
+// Settings for Options.Metadata.
+const (
+	// Metadata gets written to a separate file.
+	MetadataInSidecar metadataOption = ""
+	// Writes won't carry metadata, as per the package docstring.
+	MetadataDontWrite metadataOption = "skip"
+)
+
 func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
 	for k := range q {
-		if k != "create_dir" && k != "base_url" && k != "secret_key_path" {
+		if _, ok := recognizedParams[k]; !ok {
 			return nil, fmt.Errorf("invalid query parameter %q", k)
 		}
 	}
 	opts := new(Options)
 	*opts = o.Options
 
+	switch metadataOption(q.Get("metadata")) {
+	case MetadataDontWrite:
+		opts.Metadata = MetadataDontWrite
+	case MetadataInSidecar:
+		opts.Metadata = MetadataInSidecar
+	default:
+		return nil, errors.New("fileblob.OpenBucket: unsupported value for query parameter 'metadata'")
+	}
 	if q.Get("create_dir") != "" {
 		opts.CreateDir = true
 	}
@@ -176,6 +211,11 @@ type Options struct {
 	// If true, create the directory backing the Bucket if it does not exist
 	// (using os.MkdirAll).
 	CreateDir bool
+
+	// Refers to the strategy for how to deal with metadata (such as blob.Attributes).
+	// For supported values please see the Metadata* constants.
+	// If left unchanged, 'MetadataInSidecar' will be used.
+	Metadata metadataOption
 }
 
 type bucket struct {
@@ -605,6 +645,16 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			return nil, err
 		}
 	}
+
+	if b.opts.Metadata == MetadataDontWrite {
+		w := &writer{
+			ctx:  ctx,
+			File: f,
+			path: path,
+		}
+		return w, nil
+	}
+
 	var metadata map[string]string
 	if len(opts.Metadata) > 0 {
 		metadata = opts.Metadata
@@ -617,7 +667,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		ContentType:        contentType,
 		Metadata:           metadata,
 	}
-	w := &writer{
+	w := &writerWithSidecar{
 		ctx:        ctx,
 		f:          f,
 		path:       path,
@@ -628,7 +678,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	return w, nil
 }
 
-type writer struct {
+// writerWithSidecar implements the strategy of storing metadata in a distinct file.
+type writerWithSidecar struct {
 	ctx        context.Context
 	f          *os.File
 	path       string
@@ -639,7 +690,7 @@ type writer struct {
 	md5hash hash.Hash
 }
 
-func (w *writer) Write(p []byte) (n int, err error) {
+func (w *writerWithSidecar) Write(p []byte) (n int, err error) {
 	n, err = w.f.Write(p)
 	if err != nil {
 		// Don't hash the unwritten tail twice when writing is resumed.
@@ -652,7 +703,7 @@ func (w *writer) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (w *writer) Close() error {
+func (w *writerWithSidecar) Close() error {
 	err := w.f.Close()
 	if err != nil {
 		return err
@@ -678,6 +729,38 @@ func (w *writer) Close() error {
 	// Rename the temp file to path.
 	if err := os.Rename(w.f.Name(), w.path); err != nil {
 		_ = os.Remove(w.path + attrsExt)
+		return err
+	}
+	return nil
+}
+
+// writer is a file with a temporary name until closed.
+//
+// Embedding os.File allows the likes of io.Copy to use optimizations.,
+// which is why it is not folded into writerWithSidecar.
+type writer struct {
+	*os.File
+	ctx  context.Context
+	path string
+}
+
+func (w *writer) Close() error {
+	err := w.File.Close()
+	if err != nil {
+		return err
+	}
+	// Always delete the temp file. On success, it will have been renamed so
+	// the Remove will fail.
+	tempname := w.File.Name()
+	defer os.Remove(tempname)
+
+	// Check if the write was cancelled.
+	if err := w.ctx.Err(); err != nil {
+		return err
+	}
+
+	// Rename the temp file to path.
+	if err := os.Rename(tempname, w.path); err != nil {
 		return err
 	}
 	return nil

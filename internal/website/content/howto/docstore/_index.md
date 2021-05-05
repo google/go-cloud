@@ -258,12 +258,12 @@ Firestore URLs provide the project and collection, as well as the field that
 holds the document name.
 
 `docstore.OpenCollection` will use Application Default Credentials; if you have
-authenticated via [`gcloud auth login`][], it will use those credentials. See
+authenticated via [`gcloud auth application-default login`][], it will use those credentials. See
 [Application Default Credentials][GCP creds] to learn about authentication
 alternatives, including using environment variables.
 
 [GCP creds]: https://cloud.google.com/docs/authentication/production
-[`gcloud auth login`]: https://cloud.google.com/sdk/gcloud/reference/auth/login
+[`gcloud auth application-default login`]: https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
 
 {{< goexample
 "gocloud.dev/docstore/gcpfirestore.Example_openCollectionFromURL" >}}

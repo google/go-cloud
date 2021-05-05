@@ -15,8 +15,10 @@
 package requestlog
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -45,6 +47,12 @@ func TestHandler(t *testing.T) {
 	}))
 	if err != nil {
 		t.Fatal("Could not get entry:", err)
+	}
+	if want := "test-baggage"; ent.Request.Context().Value("baggage") != want {
+		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value("baggage"), want)
+	}
+	if want := "/foo"; ent.Request.URL.Path != want {
+		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value("baggage"), want)
 	}
 	if want := "POST"; ent.RequestMethod != want {
 		t.Errorf("RequestMethod = %q; want %q", ent.RequestMethod, want)
@@ -102,7 +110,12 @@ func roundTrip(r *http.Request, h http.Handler) (*Entry, *trace.SpanContext, err
 	capture := new(captureLogger)
 	hh := NewHandler(capture, h)
 	handler := &testSpanHandler{h: hh}
-	s := httptest.NewServer(handler)
+	s := httptest.NewUnstartedServer(handler)
+	s.Config.ConnContext = func(ctx context.Context, c net.Conn) context.Context {
+		ctx = context.WithValue(ctx, "baggage", "test-baggage")
+		return ctx
+	}
+	s.Start()
 	defer s.Close()
 	r.URL.Host = s.URL[len("http://"):]
 	resp, err := http.DefaultClient.Do(r)

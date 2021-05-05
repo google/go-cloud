@@ -375,6 +375,10 @@ func (rabbitAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
+func (rabbitAsTest) AfterSend(as func(interface{}) bool) error {
+	return nil
+}
+
 func fakeConnectionStringInEnv() func() {
 	oldEnvVal := os.Getenv("RABBIT_SERVER_URL")
 	os.Setenv("RABBIT_SERVER_URL", "amqp://localhost:10000/vhost")

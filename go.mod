@@ -34,7 +34,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.6
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.3
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.19.1
-	github.com/aws/aws-sdk-go v1.36.1
+	github.com/aws/aws-sdk-go v1.37.31
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9

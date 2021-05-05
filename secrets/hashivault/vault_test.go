@@ -71,11 +71,11 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	enableTransit.Do(func() {
 		s, err := c.Logical().Read("sys/mounts")
 		if err != nil {
-			t.Fatal(err, "; run secrets/vault/localvault.sh to start a dev vault container")
+			t.Fatal(err, "; run secrets/hashivault/localvault.sh to start a dev vault container")
 		}
 		if _, ok := s.Data["transit/"]; !ok {
 			if _, err := c.Logical().Write("sys/mounts/transit", map[string]interface{}{"type": "transit"}); err != nil {
-				t.Fatal(err, "; run secrets/vault/localvault.sh to start a dev vault container")
+				t.Fatal(err, "; run secrets/hashivault/localvault.sh to start a dev vault container")
 			}
 		}
 	})
@@ -144,6 +144,34 @@ func fakeConnectionStringInEnv() func() {
 	}
 }
 
+func alternativeConnectionStringEnvVars() func() {
+	oldURLVal := os.Getenv("VAULT_ADDR")
+	oldTokenVal := os.Getenv("VAULT_TOKEN")
+	os.Setenv("VAULT_ADDR", "http://myalternativevaultserver")
+	os.Setenv("VAULT_TOKEN", "faketoken2")
+	return func() {
+		os.Setenv("VAULT_ADDR", oldURLVal)
+		os.Setenv("VAULT_TOKEN", oldTokenVal)
+	}
+}
+
+func unsetConnectionStringEnvVars() func() {
+	oldURLVal := os.Getenv("VAULT_ADDR")
+	oldTokenVal := os.Getenv("VAULT_TOKEN")
+	oldServerURLVal := os.Getenv("VAULT_SERVER_URL")
+	oldServerTokenVal := os.Getenv("VAULT_SERVER_TOKEN")
+	os.Unsetenv("VAULT_ADDR")
+	os.Unsetenv("VAULT_TOKEN")
+	os.Unsetenv("VAULT_SERVER_URL")
+	os.Unsetenv("VAULT_SERVER_TOKEN")
+	return func() {
+		os.Setenv("VAULT_ADDR", oldURLVal)
+		os.Setenv("VAULT_SERVER_URL", oldServerURLVal)
+		os.Setenv("VAULT_TOKEN", oldTokenVal)
+		os.Setenv("VAULT_SERVER_TOKEN", oldServerTokenVal)
+	}
+}
+
 func TestOpenKeeper(t *testing.T) {
 	cleanup := fakeConnectionStringInEnv()
 	defer cleanup()
@@ -170,4 +198,56 @@ func TestOpenKeeper(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestGetVaultConnectionDetails(t *testing.T) {
+	t.Run("Test Current Env Vars", func(t *testing.T) {
+		cleanup := fakeConnectionStringInEnv()
+		defer cleanup()
+
+		serverUrl, err := getVaultURL()
+		if err != nil {
+			t.Errorf("got unexpected error: %v", err)
+		}
+		if serverUrl != "http://myvaultserver" {
+			t.Errorf("expected 'http://myvaultserver': got %q", serverUrl)
+		}
+
+		vaultToken := getVaultToken()
+		if vaultToken != "faketoken" {
+			t.Errorf("export 'faketoken': got %q", vaultToken)
+		}
+	})
+
+	t.Run("Test Alternative Env Vars", func(t *testing.T) {
+		cleanup := alternativeConnectionStringEnvVars()
+		defer cleanup()
+
+		serverUrl, err := getVaultURL()
+		if err != nil {
+			t.Errorf("got unexpected error: %v", err)
+		}
+		if serverUrl != "http://myalternativevaultserver" {
+			t.Errorf("export '': got %q", serverUrl)
+		}
+
+		vaultToken := getVaultToken()
+		if vaultToken != "faketoken2" {
+			t.Errorf("export 'faketoken2': got %q", vaultToken)
+		}
+	})
+	t.Run("Test Unset Env Vars Throws Error", func(t *testing.T) {
+		cleanup := unsetConnectionStringEnvVars()
+		defer cleanup()
+
+		serverUrl, err := getVaultURL()
+		if err == nil {
+			t.Errorf("expected error but got a url: %s", serverUrl)
+		}
+
+		vaultToken := getVaultToken()
+		if vaultToken != "" {
+			t.Errorf("export '': got %q", vaultToken)
+		}
+	})
 }

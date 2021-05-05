@@ -352,6 +352,24 @@ func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
+func (t awsAsTest) AfterSend(as func(interface{}) bool) error {
+	switch t.topicKind {
+	case topicKindSNS, topicKindSNSRaw:
+		var pub *sns.PublishOutput
+		if !as(&pub) {
+			return fmt.Errorf("cast failed for %T", &pub)
+		}
+	case topicKindSQS:
+		var entry *sqs.SendMessageBatchResultEntry
+		if !as(&entry) {
+			return fmt.Errorf("cast failed for %T", &entry)
+		}
+	default:
+		panic("unreachable")
+	}
+	return nil
+}
+
 func sanitize(s string) string {
 	// AWS doesn't like names that are too long; trim some not-so-useful stuff.
 	const maxNameLen = 80

@@ -48,6 +48,7 @@
 //  - Subscription: sarama.ConsumerGroup, sarama.ConsumerGroupSession (may be nil during session renegotiation, and session may go stale at any time)
 //  - Message: *sarama.ConsumerMessage
 //  - Message.BeforeSend: *sarama.ProducerMessage
+//  - Message.AfterSend: None
 //  - Error: sarama.ConsumerError, sarama.ConsumerErrors, sarama.ProducerError, sarama.ProducerErrors, sarama.ConfigurationError, sarama.PacketDecodingError, sarama.PacketEncodingError, sarama.KError
 package kafkapubsub // import "gocloud.dev/pubsub/kafkapubsub"
 
@@ -261,7 +262,19 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		ms = append(ms, pm)
 
 	}
-	return t.producer.SendMessages(ms)
+	err := t.producer.SendMessages(ms)
+	if err != nil {
+		return err
+	}
+	for _, dm := range dms {
+		if dm.AfterSend != nil {
+			asFunc := func(i interface{}) bool { return false }
+			if err := dm.AfterSend(asFunc); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Close implements io.Closer.
