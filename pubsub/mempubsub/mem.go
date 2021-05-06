@@ -36,7 +36,7 @@
 //
 // As
 //
-// mempubsub does not support any types for As.
+// mempubsub support As for message types.
 package mempubsub // import "gocloud.dev/pubsub/mempubsub"
 
 import (
@@ -51,6 +51,8 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+
+	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 func init() {
@@ -151,7 +153,9 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	// but that would require copying all the messages.
 	for i, m := range ms {
 		m.AckID = t.nextAckID + i
-		m.AsFunc = func(interface{}) bool { return false }
+
+		psm := &pb.PubsubMessage{Data: m.Body, Attributes: m.Metadata}
+		m.AsFunc = messageAsFunc(psm)
 
 		if m.BeforeSend != nil {
 			if err := m.BeforeSend(func(interface{}) bool { return false }); err != nil {
@@ -169,6 +173,17 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 		s.add(ms)
 	}
 	return nil
+}
+
+func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
+	return func(i interface{}) bool {
+		p, ok := i.(**pb.PubsubMessage)
+		if !ok {
+			return false
+		}
+		*p = pm
+		return true
+	}
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
