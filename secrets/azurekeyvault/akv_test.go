@@ -168,8 +168,8 @@ func TestNoConnectionError(t *testing.T) {
 	}
 }
 
+// This test no longer works on MacOS, as OpenKeeper always fails with "MSI not available".
 /*
-  This test no longer works on MacOS, as OpenKeeper always fails with "MSI not available".
 func TestOpenKeeper(t *testing.T) {
 	tests := []struct {
 		URL     string
