@@ -17,10 +17,8 @@ module gocloud.dev/pubsub/kafkapubsub
 go 1.12
 
 require (
-	github.com/Shopify/sarama v1.27.2
-	github.com/golang/snappy v0.0.2 // indirect
-	github.com/google/go-cmp v0.5.4
-	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
+	github.com/Shopify/sarama v1.28.0
+	github.com/google/go-cmp v0.5.5
 	gocloud.dev v0.22.0
 )
 
