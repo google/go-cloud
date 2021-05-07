@@ -92,23 +92,22 @@ func (h *harness) Close() {
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	// Use initEnv to setup your environment variables.
+	var client *keyvault.BaseClient
 	if *setup.Record {
 		initEnv()
+		var err error
+		client, err = Dial()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Use a null authorizer for replay mode.
+		c := keyvault.NewWithoutDefaults()
+		client = &c
+		client.Authorizer = &autorest.NullAuthorizer{}
 	}
-
 	sender, done := setup.NewAzureKeyVaultTestClient(ctx, t)
-	client, err := Dial()
-	if err != nil {
-		return nil, err
-	}
 	client.Sender = sender
-
-	// Use a null authorizer for replay mode.
-	if !*setup.Record {
-		na := &autorest.NullAuthorizer{}
-		client.Authorizer = na
-	}
-
 	return &harness{
 		client: client,
 		close:  done,
