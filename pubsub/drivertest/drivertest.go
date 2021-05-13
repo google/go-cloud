@@ -292,6 +292,13 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	want := publishN(ctx, t, topic, 3)
 	got := receiveN(ctx, t, sub, len(want))
 
+	// Verify LoggableID is set.
+	for _, msg := range got {
+		if msg.LoggableID == "" {
+			t.Errorf("msg.LoggableID was empty, should be set")
+		}
+	}
+
 	// Check that the received messages match the sent ones.
 	if diff := diffMessageSets(got, want); diff != "" {
 		t.Error(diff)
@@ -374,7 +381,7 @@ func testSendReceiveJSON(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	receiveM.Ack()
-	if diff := cmp.Diff(receiveM, sendM, cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
+	if diff := diffMessageSets([]*pubsub.Message{receiveM}, []*pubsub.Message{sendM}); diff != "" {
 		t.Error(diff)
 	}
 }
@@ -662,6 +669,9 @@ func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int
 
 // Find the differences between two sets of messages.
 func diffMessageSets(got, want []*pubsub.Message) string {
+	for _, m := range got {
+		m.LoggableID = ""
+	}
 	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
 	return cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{}))
 }

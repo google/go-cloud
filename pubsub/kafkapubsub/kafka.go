@@ -532,10 +532,17 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			md[s.opts.KeyName] = string(msg.Key)
 		}
 		ack := &ackInfo{msg: msg}
+		var loggableID string
+		if len(msg.Key) == 0 {
+			loggableID = fmt.Sprintf("partition %d offset %d", msg.Partition, msg.Offset)
+		} else {
+			loggableID = string(msg.Key)
+		}
 		dm := &driver.Message{
-			Body:     msg.Value,
-			Metadata: md,
-			AckID:    ack,
+			LoggableID: loggableID,
+			Body:       msg.Value,
+			Metadata:   md,
+			AckID:      ack,
 			AsFunc: func(i interface{}) bool {
 				if p, ok := i.(**sarama.ConsumerMessage); ok {
 					*p = msg

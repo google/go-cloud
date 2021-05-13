@@ -37,6 +37,10 @@ type AckInfo struct {
 // Message is data to be published (sent) to a topic and later received from
 // subscriptions on that topic.
 type Message struct {
+	// LoggableID should be set to an opaque message identifer for
+	// received messages.
+	LoggableID string
+
 	// Body contains the content of the message.
 	Body []byte
 
