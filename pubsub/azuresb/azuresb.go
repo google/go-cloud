@@ -425,10 +425,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			}
 		}
 		messages = append(messages, &driver.Message{
-			Body:     sbmsg.Data,
-			Metadata: metadata,
-			AckID:    sbmsg.LockToken,
-			AsFunc:   messageAsFunc(sbmsg),
+			LoggableID: sbmsg.ID,
+			Body:       sbmsg.Data,
+			Metadata:   metadata,
+			AckID:      sbmsg.LockToken,
+			AsFunc:     messageAsFunc(sbmsg),
 		})
 		return nil
 	}))

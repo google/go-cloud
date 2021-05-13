@@ -290,8 +290,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 func (*topic) Close() error { return nil }
 
 type subscription struct {
-	nc   *nats.Conn
-	nsub *nats.Subscription
+	nc     *nats.Conn
+	nsub   *nats.Subscription
+	nextID int
 }
 
 // OpenSubscription returns a *pubsub.Subscription representing a NATS subscription or NATS queue subscription.
@@ -316,7 +317,7 @@ func openSubscription(nc *nats.Conn, subject string, opts *SubscriptionOptions) 
 	if err != nil {
 		return nil, err
 	}
-	return &subscription{nc, sub}, nil
+	return &subscription{nc, sub, 1}, nil
 }
 
 // ReceiveBatch implements driver.ReceiveBatch.
@@ -336,6 +337,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	if err != nil {
 		return nil, err
 	}
+	dm.LoggableID = fmt.Sprintf("msg #%d", s.nextID)
+	s.nextID++
 	return []*driver.Message{dm}, nil
 }
 

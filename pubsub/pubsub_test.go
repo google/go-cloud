@@ -115,7 +115,11 @@ func TestSendReceive(t *testing.T) {
 	}
 	topic := NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
-	m := &Message{Body: []byte("user signed up")}
+	m := &Message{LoggableID: "foo", Body: []byte("user signed up")}
+	if err := topic.Send(ctx, m); err == nil {
+		t.Fatalf("expected a Send with a non-empty LoggableID to fail")
+	}
+	m.LoggableID = ""
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}

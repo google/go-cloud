@@ -745,9 +745,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}
 
 		m2 := &driver.Message{
-			Body:     b,
-			Metadata: attrs,
-			AckID:    m.ReceiptHandle,
+			LoggableID: aws.StringValue(m.MessageId),
+			Body:       b,
+			Metadata:   attrs,
+			AckID:      m.ReceiptHandle,
 			AsFunc: func(i interface{}) bool {
 				p, ok := i.(**sqs.Message)
 				if !ok {

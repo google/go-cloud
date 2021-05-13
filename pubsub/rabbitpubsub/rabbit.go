@@ -639,10 +639,18 @@ func toMessage(d amqp.Delivery) *driver.Message {
 	for k, v := range d.Headers {
 		md[k] = fmt.Sprint(v)
 	}
+	loggableID := d.MessageId
+	if loggableID == "" {
+		loggableID = d.CorrelationId
+	}
+	if loggableID == "" {
+		loggableID = fmt.Sprintf("DeliveryTag %d", d.DeliveryTag)
+	}
 	return &driver.Message{
-		Body:     d.Body,
-		AckID:    d.DeliveryTag,
-		Metadata: md,
+		LoggableID: loggableID,
+		Body:       d.Body,
+		AckID:      d.DeliveryTag,
+		Metadata:   md,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*amqp.Delivery)
 			if !ok {

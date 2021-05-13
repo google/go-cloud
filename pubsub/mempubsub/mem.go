@@ -151,6 +151,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	// but that would require copying all the messages.
 	for i, m := range ms {
 		m.AckID = t.nextAckID + i
+		m.LoggableID = fmt.Sprintf("msg #%d", m.AckID)
 		m.AsFunc = func(interface{}) bool { return false }
 
 		if m.BeforeSend != nil {
