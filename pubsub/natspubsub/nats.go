@@ -317,7 +317,7 @@ func openSubscription(nc *nats.Conn, subject string, opts *SubscriptionOptions) 
 	if err != nil {
 		return nil, err
 	}
-	return &subscription{nc, sub}, nil
+	return &subscription{nc, sub, 1}, nil
 }
 
 // ReceiveBatch implements driver.ReceiveBatch.
