@@ -24,7 +24,5 @@ require (
 	github.com/hashicorp/vault/api v1.1.0
 	github.com/hashicorp/vault/sdk v0.2.0 // indirect
 	github.com/pierrec/lz4 v2.6.0+incompatible // indirect
-	gocloud.dev v0.22.0
+	gocloud.dev v0.23.0
 )
-
-replace gocloud.dev => ../../
