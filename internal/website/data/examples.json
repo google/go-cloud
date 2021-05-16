@@ -275,6 +275,42 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and send messages with subject \"example.mysubject\".\ntopic, err := pubsub.OpenTopic(ctx, \"nats://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/pubsub/stanpubsub.ExampleOpenQueueSubscription": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer stanConn.Close()\n\n\tsubscription, err := stanpubsub.OpenSubscription(\n\t\tstanConn,\n\t\t\"example.mysubject\",\n\t\t\"exampleQueueGroup\",\n\t)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.ExampleOpenSubscription": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer stanConn.Close()\n\n\tsubscription, err := stanpubsub.OpenSubscription(\n\t\tstanConn,\n\t\t\"example.mysubject\",\n\t\t\"\",\n\t)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.ExampleOpenManualAckSubscription": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer stanConn.Close()\n\n\tsubscription, err := stanpubsub.OpenSubscription(\n\t\tstanConn,\n\t\t\"example.mysubject\",\n\t\t\"\",\n\t\tstan.SetManualAckMode(),\n\t)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.ExampleOpenTopic": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\nif err != nil {\n\tlog.Fatal(err)\n}\ndefer stanConn.Close()\n\ntopic, err := stanpubsub.OpenTopic(stanConn, \"example.mysubject\", nil)\nif err != nil {\n\tlog.Fatal(err)\n}\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.Example_openQueueSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n\t// This URL will Dial the NATS Streaming server with the connection details defined in environment variables:\n\t// STAN_SERVER_URL \t- url address of the NATS server.\n\t// STAN_CLUSTER_ID \t- NATS Streaming cluster id.\n\t// STAN_CLIENT_ID \t- NAST Streaming client id.\n\t// The message would be received from the subject: `example.mysubject`\n\t// This URL will be parsed and the queue attribute will be used as the QueueGroup parameter when\n\t// creating the NATS Streaming Subscription.\n\tsubscription, err := pubsub.OpenSubscription(ctx, \"stan://example.mysubject?queue=myqueue\")\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.Example_openQueueDurableNameSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS Streaming server with the connection details defined in environment variables:\n// STAN_SERVER_URL \t- url address of the NATS server.\n// STAN_CLUSTER_ID \t- NATS Streaming cluster id.\n// STAN_CLIENT_ID \t- NAST Streaming client id.\n// The message would be received from the subject: `example.mysubject`\n// This URL will be parsed and the queue attribute will be used as the Queue parameter with DurableName\n// when creating the NATS Streaming Subscription.\nsubscription, err := pubsub.OpenSubscription(ctx, \"stan://example.mysubject?queue=myqueue&durableName=mydurablename\")\nif err != nil {\n\tlog.Fatal(err)\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.Example_openManualAckSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS Streaming server with the connection details defined in environment variables:\n// STAN_SERVER_URL \t- url address of the NATS server.\n// STAN_CLUSTER_ID \t- NATS Streaming cluster id.\n// STAN_CLIENT_ID \t- NAST Streaming client id.\n// The message would be received from the subject: `example.mysubject`\n// This URL will be parsed and the subscription would be using manual message acks.\nsubscription, err := pubsub.OpenSubscription(ctx, \"stan://example.mysubject?manualAck\")\nif err != nil {\n\tlog.Fatal(err)\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.Example_openSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n// This URL will Dial the NATS Streaming server with the connection details defined in environment variables:\n// STAN_SERVER_URL \t- url address of the NATS server.\n// STAN_CLUSTER_ID \t- NATS Streaming cluster id.\n// STAN_CLIENT_ID \t- NAST Streaming client id.\n// The message would be received from the subject: `example.mysubject`\nsubscription, err := pubsub.OpenSubscription(ctx, \"stan://example.mysubject\")\nif err != nil {\n\tlog.Fatal(err)\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/stanpubsub.Example_openTopicFromURL": {
+		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
+		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the NATS Streaming server with the connection details defined in environment variables:\n// STAN_SERVER_URL \t- url address of the NATS server.\n// STAN_CLUSTER_ID \t- NATS Streaming cluster id.\n// STAN_CLIENT_ID \t- NAST Streaming client id.\n// The message would be sent on the topic: `example.mysubject`\ntopic, err := pubsub.OpenTopic(ctx, \"stan://example.mysubject\")\nif err != nil {\n\tlog.Fatal(err)\n}\ndefer topic.Shutdown(ctx)"
+	},
 	"gocloud.dev/pubsub/rabbitpubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/streadway/amqp\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "rabbitConn, err := amqp.Dial(\"amqp://guest:guest@localhost:5672/\")\nif err != nil {\n\treturn err\n}\ndefer rabbitConn.Close()\nsubscription := rabbitpubsub.OpenSubscription(rabbitConn, \"myqueue\", nil)\ndefer subscription.Shutdown(ctx)"

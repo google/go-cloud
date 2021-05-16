@@ -261,6 +261,34 @@ must first create an [`*nats.Conn`][] to your NATS instance.
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenTopic
 
+### NATS Streaming {#nats-streaming}
+
+The Go CDK can publish to a [NATS Streaming][] subject. A NATS URL is using schema name: `stan` 
+and only includes the subject name i.e.: `stan://subject.name`
+
+The NATS Streaming server connection is initialized from environment variables:
+- `STAN_SERVER_URL` - url address for the nats server i.e.: `nats://nats.example.com`
+- `STAN_CLUSTER_ID` - nats streaming cluster id
+- `STAN_CLIENT_ID`  - unique client id for the nats streaming.
+
+{{< goexample "gocloud.dev/pubsub/stanpubsub.Example_openTopicFromURL" >}}
+
+Because NATS does not natively support metadata, messages sent to NATS will
+be encoded with [gob][].
+
+[gob]: https://golang.org/pkg/encoding/gob/
+[NATS]: https://nats.io/
+
+#### NATS Streaming Constructor {#nats-streaming-ctor}
+
+The [`stanpubsub.OpenTopic`][] constructor opens a NATS Streaming subject as a topic. You
+must first create an [`stan.Conn`][] to your NATS Streaming instance.
+
+{{< goexample "gocloud.dev/pubsub/stanpubsub.ExampleOpenTopic" >}}
+
+[`stan.Conn`]: https://godoc.org/github.com/nats-io/stan.go#Conn
+[`stanpubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/stanpubsub#OpenTopic
+
 ### Kafka {#kafka}
 
 The Go CDK can publish to a [Kafka][] cluster. A Kafka URL only includes the

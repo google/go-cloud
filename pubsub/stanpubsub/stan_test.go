@@ -387,7 +387,7 @@ func TestErrorCode(t *testing.T) {
 	}
 }
 
-func BenchmarkNatsQueuePubSub(b *testing.B) {
+func BenchmarkNatsStreamingQueuePubSub(b *testing.B) {
 	ctx := context.Background()
 
 	o := nsserver.GetDefaultOptions()
@@ -429,7 +429,7 @@ func BenchmarkNatsQueuePubSub(b *testing.B) {
 	drivertest.RunBenchmarks(b, topic, queueSub)
 }
 
-func BenchmarkNatsPubSub(b *testing.B) {
+func BenchmarkNatsStreamingPubSub(b *testing.B) {
 	ctx := context.Background()
 
 	o := nsserver.GetDefaultOptions()

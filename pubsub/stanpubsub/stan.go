@@ -41,8 +41,8 @@
 // As
 //
 // stanpubsub exposes the following types for As:
-//  - Topic: *stan.Conn
-//  - Subscription: *stan.Subscription
+//  - Topic: stan.Conn
+//  - Subscription: stan.Subscription
 //  - Message.BeforeSend: None.
 //  - Message.AfterSend: None.
 //  - Message: *stan.Msg

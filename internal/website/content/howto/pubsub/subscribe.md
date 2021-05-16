@@ -249,6 +249,48 @@ topic. You must first create an [`*nats.Conn`][] to your NATS instance.
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription
 
+### NATS Streaming {#nats-streaming}
+
+The Go CDK can publish to a [NATS Streaming][] subject.  A NATS URL is using schema name: `stan`
+and subject name i.e.: `stan://subject.name` as well as the following query parameters: 
+- queue 		- name of the queue group.
+- durableName	- durable name for the subscription.
+- maxInflight 	- maximum number of messages the cluster will send without an ACK.
+- startSequence - desired start sequence position and state
+- ackWait 		- timeout for waiting for an ACK from the cluster's point of view for delivered messages
+ 
+The NATS Streaming server connection is initialized from environment variables:
+- `STAN_SERVER_URL` - url address for the nats server i.e.: `nats://nats.example.com`
+- `STAN_CLUSTER_ID` - nats streaming cluster id
+- `STAN_CLIENT_ID`  - unique client id for the nats streaming.
+
+{{< goexample "gocloud.dev/pubsub/stanpubsub.Example_openSubscriptionFromURL" >}}
+
+NATS Streaming supports at-least-once semantics; by default applications doesn't need to call Message.Ack,
+and must not call Message.Nack.
+Optionally a user can set a subscription to be manually acked by using `stan.SetManualAckMode` option
+or by setting `manualAck` query parameter when setting from URL.
+
+To parse messages [published via the Go CDK][publish#nats-streaming], the NATS driver
+will first attempt to decode the payload using [gob][]. Failing that, it will
+return the message payload as the `Data` with no metadata to accomodate
+subscribing to messages coming from a source not using the Go CDK.
+
+[gob]: https://golang.org/pkg/encoding/gob/
+[NATS]: https://nats.io/
+[NATS]: https://nats.io/
+[publish#nats-streaming]: {{< ref "./publish.md#nats-streaming" >}}
+
+#### NATS Streaming Constructor {#nats-streaming-ctor}
+
+The [`stanpubsub.OpenSubscription`][] constructor opens a NATS Streaming subject as a
+subscription. You must first create an [`stan.Conn`][] to your NATS Streaming instance.
+
+{{< goexample "gocloud.dev/pubsub/stanpubsub.ExampleOpenSubscription" >}}
+
+[`stan.Conn`]: https://godoc.org/github.com/nats-io/stan.go#Conn
+[`stanpubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/stanpubsub#OpenSubscription
+
 ### Kafka {#kafka}
 
 The Go CDK can receive messages from a [Kafka][] cluster.
