@@ -1,7 +1,7 @@
 ---
 title: "Publish Messages to a Topic"
 date: 2019-03-26T09:44:15-07:00
-lastmod: 2019-07-29T12:00:00-07:00
+lastmod: 2021-05-18T11:43:42+02:00
 weight: 1
 toc: true
 ---
@@ -277,7 +277,7 @@ Because NATS does not natively support metadata, messages sent to NATS will
 be encoded with [gob][].
 
 [gob]: https://golang.org/pkg/encoding/gob/
-[NATS]: https://nats.io/
+[NATS Streaming]: https://docs.nats.io/nats-streaming-concepts/intro
 
 #### NATS Streaming Constructor {#nats-streaming-ctor}
 

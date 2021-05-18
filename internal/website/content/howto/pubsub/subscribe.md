@@ -1,7 +1,7 @@
 ---
 title: "Subscribe to Messages from a Topic"
 date: 2019-03-26T09:44:33-07:00
-lastmod: 2019-07-29T12:00:00-07:00
+lastmod: 2021-05-18T11:43:42+02:00
 weight: 2
 toc: true
 ---
@@ -271,14 +271,13 @@ and must not call Message.Nack.
 Optionally a user can set a subscription to be manually acked by using `stan.SetManualAckMode` option
 or by setting `manualAck` query parameter when setting from URL.
 
-To parse messages [published via the Go CDK][publish#nats-streaming], the NATS driver
+To parse messages [published via the Go CDK][publish#nats-streaming], the NATS Streaming driver
 will first attempt to decode the payload using [gob][]. Failing that, it will
 return the message payload as the `Data` with no metadata to accomodate
 subscribing to messages coming from a source not using the Go CDK.
 
 [gob]: https://golang.org/pkg/encoding/gob/
-[NATS]: https://nats.io/
-[NATS]: https://nats.io/
+[NATS Streaming]: https://docs.nats.io/nats-streaming-concepts/intro
 [publish#nats-streaming]: {{< ref "./publish.md#nats-streaming" >}}
 
 #### NATS Streaming Constructor {#nats-streaming-ctor}
