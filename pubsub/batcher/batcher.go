@@ -74,6 +74,10 @@ type Batcher struct {
 	shutdown  bool
 }
 
+type sizableItem interface {
+	ByteSize() int
+}
+
 type waiter struct {
 	item interface{}
 	errc chan error
@@ -87,6 +91,8 @@ type Options struct {
 	MinBatchSize int
 	// Maximum size of a batch. 0 means no limit.
 	MaxBatchSize int
+	// Maximum bytesize of a batch. 0 means no limit.
+	MaxBatchByteSize int
 }
 
 // newOptionsWithDefaults returns Options with defaults applied to opts.
@@ -174,14 +180,26 @@ func (b *Batcher) nextBatch() []waiter {
 	if len(b.pending) < b.opts.MinBatchSize {
 		return nil
 	}
-	if b.opts.MaxBatchSize == 0 || len(b.pending) <= b.opts.MaxBatchSize {
-		// Send it all!
-		batch := b.pending
-		b.pending = nil
-		return batch
+
+	batch := make([]waiter, 0, len(b.pending))
+	batchByteSize := 1
+	for _, msg := range b.pending {
+		itemByteSize := 0
+		if sizable, ok := msg.item.(sizableItem); ok {
+			itemByteSize = sizable.ByteSize()
+		}
+		reachedMaxSize := b.opts.MaxBatchSize > 0 && len(batch)+1 > b.opts.MaxBatchSize
+		reachedMaxByteSize := b.opts.MaxBatchByteSize > 0 && batchByteSize+itemByteSize > b.opts.MaxBatchByteSize
+
+		if reachedMaxSize || reachedMaxByteSize {
+			break
+		} else {
+			batch = append(batch, msg)
+			batchByteSize = batchByteSize + itemByteSize
+		}
 	}
-	batch := b.pending[:b.opts.MaxBatchSize]
-	b.pending = b.pending[b.opts.MaxBatchSize:]
+
+	b.pending = b.pending[len(batch):]
 	return batch
 }
 
