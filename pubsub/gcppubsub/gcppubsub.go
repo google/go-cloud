@@ -56,6 +56,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -210,8 +211,63 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+	// Set subscription options to use defaults
+	o.SubscriptionOptions = SubscriptionOptions{
+		ReceiveMaxHandlers:  recvBatcherOpts.MaxHandlers,
+		ReceiveMinBatchSize: recvBatcherOpts.MinBatchSize,
+		ReceiveMaxBatchSize: recvBatcherOpts.MaxBatchSize,
+		AckMaxHandlers:      ackBatcherOpts.MaxHandlers,
+		AckMinBatchSize:     ackBatcherOpts.MinBatchSize,
+		AckMaxBatchSize:     ackBatcherOpts.MaxBatchSize,
+	}
+
+	for param, value := range u.Query() {
+		switch param {
+		case "receive-max-handlers":
+			maxHandlers, err := queryParameterInt(value)
+			if err != nil {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+			}
+
+			o.SubscriptionOptions.ReceiveMaxHandlers = int(maxHandlers)
+		case "receive-min-batch-size":
+			minBatchSize, err := queryParameterInt(value)
+			if err != nil {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+			}
+
+			o.SubscriptionOptions.ReceiveMinBatchSize = int(minBatchSize)
+		case "receive-max-batch-size":
+			maxBatchSize, err := queryParameterInt(value)
+			if err != nil {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+			}
+
+			o.SubscriptionOptions.ReceiveMaxBatchSize = int(maxBatchSize)
+		case "ack-max-handlers":
+			maxHandlers, err := queryParameterInt(value)
+			if err != nil {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+			}
+
+			o.SubscriptionOptions.AckMaxHandlers = int(maxHandlers)
+		case "ack-min-batch-size":
+			minBatchSize, err := queryParameterInt(value)
+			if err != nil {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+			}
+
+			o.SubscriptionOptions.AckMinBatchSize = int(minBatchSize)
+		case "ack-max-batch-size":
+			maxBatchSize, err := queryParameterInt(value)
+			if err != nil {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+			}
+
+			o.SubscriptionOptions.AckMaxBatchSize = int(maxBatchSize)
+		default:
+			return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+		}
 	}
 	sc, err := SubscriberClient(ctx, o.Conn)
 	if err != nil {
@@ -392,14 +448,34 @@ type subscription struct {
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
-type SubscriptionOptions struct{}
+type SubscriptionOptions struct {
+	ReceiveMaxHandlers  int
+	ReceiveMinBatchSize int
+	ReceiveMaxBatchSize int
+	AckMaxHandlers      int
+	AckMinBatchSize     int
+	AckMaxBatchSize     int
+}
 
 // OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
 // PubSub subscription subscriptionName in the given projectID. See the package
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	return pubsub.NewSubscription(openSubscription(client, path), nil, ackBatcherOpts)
+
+	recvOpts := &batcher.Options{
+		MaxHandlers:  opts.ReceiveMaxHandlers,
+		MinBatchSize: opts.ReceiveMinBatchSize,
+		MaxBatchSize: opts.ReceiveMaxBatchSize,
+	}
+
+	ackOpts := &batcher.Options{
+		MaxHandlers:  opts.AckMaxHandlers,
+		MinBatchSize: opts.AckMinBatchSize,
+		MaxBatchSize: opts.AckMaxBatchSize,
+	}
+
+	return pubsub.NewSubscription(openSubscription(client, path), recvOpts, ackOpts)
 }
 
 var subscriptionPathRE = regexp.MustCompile("^projects/.+/subscriptions/.+$")
@@ -412,7 +488,20 @@ func OpenSubscriptionByPath(client *raw.SubscriberClient, subscriptionPath strin
 	if !subscriptionPathRE.MatchString(subscriptionPath) {
 		return nil, fmt.Errorf("invalid subscriptionPath %q; must match %v", subscriptionPath, subscriptionPathRE)
 	}
-	return pubsub.NewSubscription(openSubscription(client, subscriptionPath), nil, ackBatcherOpts), nil
+
+	recvOpts := &batcher.Options{
+		MaxHandlers:  opts.ReceiveMaxHandlers,
+		MinBatchSize: opts.ReceiveMinBatchSize,
+		MaxBatchSize: opts.ReceiveMaxBatchSize,
+	}
+
+	ackOpts := &batcher.Options{
+		MaxHandlers:  opts.AckMaxHandlers,
+		MinBatchSize: opts.AckMinBatchSize,
+		MaxBatchSize: opts.AckMaxBatchSize,
+	}
+
+	return pubsub.NewSubscription(openSubscription(client, subscriptionPath), recvOpts, ackOpts), nil
 }
 
 // openSubscription returns a driver.Subscription.
@@ -525,3 +614,11 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // Close implements driver.Subscription.Close.
 func (*subscription) Close() error { return nil }
+
+func queryParameterInt(value []string) (int64, error) {
+	if len(value) > 1 {
+		return 0, fmt.Errorf("expected only one parameter value, got: %v", len(value))
+	}
+
+	return strconv.ParseInt(value[0], 10, 64)
+}
