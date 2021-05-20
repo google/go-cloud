@@ -148,12 +148,21 @@ func (b *Batcher) Add(ctx context.Context, item interface{}) error {
 func (b *Batcher) AddNoWait(item interface{}) <-chan error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	// Create a channel to receive the error from the handler.
 	c := make(chan error, 1)
 	if b.shutdown {
 		c <- errors.New("batcher: shut down")
 		return c
 	}
+
+	if sizable, ok := item.(sizableItem); b.opts.MaxBatchByteSize > 0 && ok {
+		if sizable.ByteSize() > b.opts.MaxBatchByteSize {
+			c <- errors.New("batcher: message too large")
+			return c
+		}
+	}
+
 	// Add the item to the pending list.
 	b.pending = append(b.pending, waiter{item, c})
 	if b.nHandlers < b.opts.MaxHandlers {
