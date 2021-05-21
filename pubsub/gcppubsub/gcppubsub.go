@@ -424,6 +424,10 @@ type SubscriptionOptions struct {
 func OpenSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 
+	if opts == nil {
+		opts = &SubscriptionOptions{MaxBatchSize: defaultRecvBatcherOpts.MaxBatchSize}
+	}
+
 	recvOpts := &batcher.Options{
 		MaxHandlers:  defaultRecvBatcherOpts.MaxHandlers,
 		MinBatchSize: defaultRecvBatcherOpts.MinBatchSize,
@@ -444,6 +448,10 @@ func OpenSubscriptionByPath(client *raw.SubscriberClient, subscriptionPath strin
 		return nil, fmt.Errorf("invalid subscriptionPath %q; must match %v", subscriptionPath, subscriptionPathRE)
 	}
 
+	if opts == nil {
+		opts = &SubscriptionOptions{MaxBatchSize: defaultRecvBatcherOpts.MaxBatchSize}
+	}
+
 	recvOpts := &batcher.Options{
 		MaxHandlers:  defaultRecvBatcherOpts.MaxHandlers,
 		MinBatchSize: defaultRecvBatcherOpts.MinBatchSize,
@@ -455,6 +463,10 @@ func OpenSubscriptionByPath(client *raw.SubscriberClient, subscriptionPath strin
 
 // openSubscription returns a driver.Subscription.
 func openSubscription(client *raw.SubscriberClient, subscriptionPath string, opts *SubscriptionOptions) driver.Subscription {
+	if opts == nil {
+		opts = &SubscriptionOptions{MaxBatchSize: defaultRecvBatcherOpts.MaxBatchSize}
+	}
+
 	return &subscription{client, subscriptionPath, opts}
 }
 
