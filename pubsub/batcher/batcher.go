@@ -74,6 +74,9 @@ type Batcher struct {
 	shutdown  bool
 }
 
+// Message is larger than the maximum batch byte size
+var ErrMessageTooLarge = errors.New("batcher: message too large")
+
 type sizableItem interface {
 	ByteSize() int
 }
@@ -158,7 +161,7 @@ func (b *Batcher) AddNoWait(item interface{}) <-chan error {
 
 	if sizable, ok := item.(sizableItem); b.opts.MaxBatchByteSize > 0 && ok {
 		if sizable.ByteSize() > b.opts.MaxBatchByteSize {
-			c <- errors.New("batcher: message too large")
+			c <- ErrMessageTooLarge
 			return c
 		}
 	}
