@@ -85,7 +85,7 @@ var sendBatcherOpts = &batcher.Options{
 	MaxHandlers:  2,
 }
 
-var recvBatcherOpts = &batcher.Options{
+var defaultRecvBatcherOpts = &batcher.Options{
 	// GCP Pub/Sub returns at most 1000 messages per RPC.
 	MaxBatchSize: 1000,
 	MaxHandlers:  10,
@@ -213,58 +213,22 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	// Set subscription options to use defaults
 	o.SubscriptionOptions = SubscriptionOptions{
-		ReceiveMaxHandlers:  recvBatcherOpts.MaxHandlers,
-		ReceiveMinBatchSize: recvBatcherOpts.MinBatchSize,
-		ReceiveMaxBatchSize: recvBatcherOpts.MaxBatchSize,
-		AckMaxHandlers:      ackBatcherOpts.MaxHandlers,
-		AckMinBatchSize:     ackBatcherOpts.MinBatchSize,
-		AckMaxBatchSize:     ackBatcherOpts.MaxBatchSize,
+		MaxBatchSize: defaultRecvBatcherOpts.MaxBatchSize,
 	}
 
 	for param, value := range u.Query() {
 		switch param {
-		case "receive-max-handlers":
-			maxHandlers, err := queryParameterInt(value)
-			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
-			}
-
-			o.SubscriptionOptions.ReceiveMaxHandlers = int(maxHandlers)
-		case "receive-min-batch-size":
-			minBatchSize, err := queryParameterInt(value)
-			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
-			}
-
-			o.SubscriptionOptions.ReceiveMinBatchSize = int(minBatchSize)
-		case "receive-max-batch-size":
+		case "max-batch-size":
 			maxBatchSize, err := queryParameterInt(value)
 			if err != nil {
 				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
 			}
 
-			o.SubscriptionOptions.ReceiveMaxBatchSize = int(maxBatchSize)
-		case "ack-max-handlers":
-			maxHandlers, err := queryParameterInt(value)
-			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+			if maxBatchSize <= 0 || maxBatchSize > 1000 {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: must be between 1 and 1000", u, param)
 			}
 
-			o.SubscriptionOptions.AckMaxHandlers = int(maxHandlers)
-		case "ack-min-batch-size":
-			minBatchSize, err := queryParameterInt(value)
-			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
-			}
-
-			o.SubscriptionOptions.AckMinBatchSize = int(minBatchSize)
-		case "ack-max-batch-size":
-			maxBatchSize, err := queryParameterInt(value)
-			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
-			}
-
-			o.SubscriptionOptions.AckMaxBatchSize = int(maxBatchSize)
+			o.SubscriptionOptions.MaxBatchSize = int(maxBatchSize)
 		default:
 			return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 		}
@@ -443,18 +407,15 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 func (*topic) Close() error { return nil }
 
 type subscription struct {
-	client *raw.SubscriberClient
-	path   string
+	client  *raw.SubscriberClient
+	path    string
+	options *SubscriptionOptions
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
-	ReceiveMaxHandlers  int
-	ReceiveMinBatchSize int
-	ReceiveMaxBatchSize int
-	AckMaxHandlers      int
-	AckMinBatchSize     int
-	AckMaxBatchSize     int
+	// MaxBatchSize caps the maximum batch sized used when retrieving messages. It defaults to 1000.
+	MaxBatchSize int
 }
 
 // OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
@@ -464,18 +425,12 @@ func OpenSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, sub
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 
 	recvOpts := &batcher.Options{
-		MaxHandlers:  opts.ReceiveMaxHandlers,
-		MinBatchSize: opts.ReceiveMinBatchSize,
-		MaxBatchSize: opts.ReceiveMaxBatchSize,
+		MaxHandlers:  defaultRecvBatcherOpts.MaxHandlers,
+		MinBatchSize: defaultRecvBatcherOpts.MinBatchSize,
+		MaxBatchSize: opts.MaxBatchSize,
 	}
 
-	ackOpts := &batcher.Options{
-		MaxHandlers:  opts.AckMaxHandlers,
-		MinBatchSize: opts.AckMinBatchSize,
-		MaxBatchSize: opts.AckMaxBatchSize,
-	}
-
-	return pubsub.NewSubscription(openSubscription(client, path), recvOpts, ackOpts)
+	return pubsub.NewSubscription(openSubscription(client, path, opts), recvOpts, ackBatcherOpts)
 }
 
 var subscriptionPathRE = regexp.MustCompile("^projects/.+/subscriptions/.+$")
@@ -490,23 +445,17 @@ func OpenSubscriptionByPath(client *raw.SubscriberClient, subscriptionPath strin
 	}
 
 	recvOpts := &batcher.Options{
-		MaxHandlers:  opts.ReceiveMaxHandlers,
-		MinBatchSize: opts.ReceiveMinBatchSize,
-		MaxBatchSize: opts.ReceiveMaxBatchSize,
+		MaxHandlers:  defaultRecvBatcherOpts.MaxHandlers,
+		MinBatchSize: defaultRecvBatcherOpts.MinBatchSize,
+		MaxBatchSize: opts.MaxBatchSize,
 	}
 
-	ackOpts := &batcher.Options{
-		MaxHandlers:  opts.AckMaxHandlers,
-		MinBatchSize: opts.AckMinBatchSize,
-		MaxBatchSize: opts.AckMaxBatchSize,
-	}
-
-	return pubsub.NewSubscription(openSubscription(client, subscriptionPath), recvOpts, ackOpts), nil
+	return pubsub.NewSubscription(openSubscription(client, subscriptionPath, opts), recvOpts, ackBatcherOpts), nil
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(client *raw.SubscriberClient, subscriptionPath string) driver.Subscription {
-	return &subscription{client, subscriptionPath}
+func openSubscription(client *raw.SubscriberClient, subscriptionPath string, opts *SubscriptionOptions) driver.Subscription {
+	return &subscription{client, subscriptionPath, opts}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
@@ -516,7 +465,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	// we might have gotten messages from one of the other RPCs.
 	// maxMessages will only be high enough to set this to true in high-throughput
 	// situations, so the likelihood of getting 0 messages is small anyway.
-	returnImmediately := maxMessages == recvBatcherOpts.MaxBatchSize
+	returnImmediately := maxMessages == s.options.MaxBatchSize
 
 	req := &pb.PullRequest{
 		Subscription:      s.path,
