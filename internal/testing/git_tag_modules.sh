@@ -37,9 +37,7 @@ sed -e '/^#/d' -e '/^$/d' allmodules | awk '{ print $1, $2}' |  while read -r pa
    fi
 
    tag="$version"
-   if [[ "$path" == "." ]]; then
-     tag="$version"
-   else
+   if [[ "$path" != "." ]]; then
      tag="$path/$version"
    fi
    echo "Creating tag: ${tag}"
