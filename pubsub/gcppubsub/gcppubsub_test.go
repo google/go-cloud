@@ -409,7 +409,11 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		// Invalid parameter.
 		{"gcppubsub://myproject/mysub?param=value", true},
 		// Valid parameters
-		{"gcppubsub://projects/myproject/subscriptions/mysub?max-batch-size=1", false},
+		{"gcppubsub://projects/myproject/subscriptions/mysub?max_recv_batch_size=1", false},
+		// Invalid parameters
+		{"gcppubsub://projects/myproject/subscriptions/mysub?max_recv_batch_size=0", true},
+		// Invalid parameters
+		{"gcppubsub://projects/myproject/subscriptions/mysub?max_recv_batch_size=1001", true},
 	}
 
 	ctx := context.Background()
