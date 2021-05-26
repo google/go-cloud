@@ -119,7 +119,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 	if err != nil {
 		return nil, nil, err
 	}
-	ds = openSubscription(subClient, path.Join("projects", projectID, "subscriptions", subName))
+	ds = openSubscription(subClient, path.Join("projects", projectID, "subscriptions", subName), nil)
 	cleanup = func() {
 		subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{Subscription: subPath})
 	}
@@ -127,7 +127,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, func(), error) {
-	return openSubscription(h.subClient, path.Join("projects", projectID, "subscriptions", "nonexistent-subscription")), func() {}, nil
+	return openSubscription(h.subClient, path.Join("projects", projectID, "subscriptions", "nonexistent-subscription"), nil), func() {}, nil
 }
 
 func (h *harness) Close() {
@@ -188,7 +188,7 @@ func BenchmarkGcpPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup2()
-	sub := pubsub.NewSubscription(ds, recvBatcherOpts, ackBatcherOpts)
+	sub := pubsub.NewSubscription(ds, defaultRecvBatcherOpts, ackBatcherOpts)
 	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)
@@ -408,6 +408,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"gcppubsub://projects/myproject/subscriptions/mysub", false},
 		// Invalid parameter.
 		{"gcppubsub://myproject/mysub?param=value", true},
+		// Valid parameters
+		{"gcppubsub://projects/myproject/subscriptions/mysub?max_recv_batch_size=1", false},
+		// Invalid parameters
+		{"gcppubsub://projects/myproject/subscriptions/mysub?max_recv_batch_size=0", true},
+		// Invalid parameters
+		{"gcppubsub://projects/myproject/subscriptions/mysub?max_recv_batch_size=1001", true},
 	}
 
 	ctx := context.Background()
