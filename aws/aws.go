@@ -105,3 +105,33 @@ func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 	}
 	return &cfg, nil
 }
+
+// NewSessionFromURLParams returns an session.Session with session.Options initialized based on the URL
+// parameters in q. It is intended to be used by URLOpeners for AWS services.
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#Session
+//
+// It should be used before ConfigFromURLParams as it strips the query
+// parameters it knows about
+//
+// The following query options are supported:
+//  - profile: The AWS profile to use from the AWS configs (shared config file and
+//             shared credentials file)
+func NewSessionFromURLParams(q url.Values) (*session.Session, url.Values, error) {
+	// always enable shared config (~/.aws/config by default)
+	opts := session.Options{SharedConfigState: session.SharedConfigEnable}
+	rest := url.Values{}
+	for param, values := range q {
+		value := values[0]
+		switch param {
+		case "profile":
+			opts.Profile = value
+		default:
+			rest.Add(param, value)
+		}
+	}
+	sess, err := session.NewSessionWithOptions(opts)
+	if err != nil {
+		return nil, nil, fmt.Errorf("couldn't create session %w", err)
+	}
+	return sess, rest, nil
+}
