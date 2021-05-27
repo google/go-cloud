@@ -78,7 +78,7 @@ type Message struct {
 	AfterSend func(asFunc func(interface{}) bool) error
 }
 
-// Implement batcher item for byte sized based batching
+// ByteSize estimates the size in bytes of the message for the purpose of restricting batch sizes.
 func (m *Message) ByteSize() int {
 	return len(m.Body)
 }

@@ -81,9 +81,13 @@ import (
 var endPoint = "pubsub.googleapis.com:443"
 
 var sendBatcherOpts = &batcher.Options{
-	MaxBatchSize:     1000, // The PubSub service limits the number of messages in a single Publish RPC
-	MaxHandlers:      2,
-	MaxBatchByteSize: 10 * 1000 * 1000, // The PubSub service limits the size of request body in a single Publish RPC
+	MaxBatchSize: 1000, // The PubSub service limits the number of messages in a single Publish RPC
+	MaxHandlers:  2,
+	// The PubSub service limits the size of the request body in a single Publish RPC.
+	// The limit is currently documented as "10MB (total size)" and "10MB (data field)" per message.
+	// We are enforcing 9MiB to give ourselves some headroom for message attributes since those
+	// are currently not considered when computing the byte size of a message.
+	MaxBatchByteSize: 9 * 1024 * 1024,
 }
 
 var defaultRecvBatcherOpts = &batcher.Options{

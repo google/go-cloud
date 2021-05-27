@@ -159,10 +159,12 @@ func (b *Batcher) AddNoWait(item interface{}) <-chan error {
 		return c
 	}
 
-	if sizable, ok := item.(sizableItem); b.opts.MaxBatchByteSize > 0 && ok {
-		if sizable.ByteSize() > b.opts.MaxBatchByteSize {
-			c <- ErrMessageTooLarge
-			return c
+	if b.opts.MaxBatchByteSize > 0 {
+		if sizable, ok := item.(sizableItem); ok {
+			if sizable.ByteSize() > b.opts.MaxBatchByteSize {
+				c <- ErrMessageTooLarge
+				return c
+			}
 		}
 	}
 
@@ -193,8 +195,15 @@ func (b *Batcher) nextBatch() []waiter {
 		return nil
 	}
 
+	if b.opts.MaxBatchByteSize == 0 && (b.opts.MaxBatchSize == 0 || len(b.pending) <= b.opts.MaxBatchSize) {
+		// Send it all!
+		batch := b.pending
+		b.pending = nil
+		return batch
+	}
+
 	batch := make([]waiter, 0, len(b.pending))
-	batchByteSize := 1
+	batchByteSize := 0
 	for _, msg := range b.pending {
 		itemByteSize := 0
 		if sizable, ok := msg.item.(sizableItem); ok {
@@ -205,10 +214,9 @@ func (b *Batcher) nextBatch() []waiter {
 
 		if reachedMaxSize || reachedMaxByteSize {
 			break
-		} else {
-			batch = append(batch, msg)
-			batchByteSize = batchByteSize + itemByteSize
 		}
+		batch = append(batch, msg)
+		batchByteSize = batchByteSize + itemByteSize
 	}
 
 	b.pending = b.pending[len(batch):]
