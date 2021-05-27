@@ -18,10 +18,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	nsserver "github.com/nats-io/nats-streaming-server/server"
@@ -50,13 +52,12 @@ func nextClientID() string {
 }
 
 type harness struct {
-	ns         *nsserver.StanServer
-	sc         stan.Conn
-	options    []stan.SubscriptionOption
-	queueGroup string
+	ns      *nsserver.StanServer
+	sc      stan.Conn
+	options *SubscriptionOptions
 }
 
-func newHarness(ctx context.Context, t *testing.T, queueGroup string, options ...stan.SubscriptionOption) (drivertest.Harness, error) {
+func newHarness(ctx context.Context, t *testing.T, options *SubscriptionOptions) (drivertest.Harness, error) {
 	o := nsserver.GetDefaultOptions()
 	o.ID = testClusterID
 	ns, err := newStanServer(o)
@@ -68,7 +69,7 @@ func newHarness(ctx context.Context, t *testing.T, queueGroup string, options ..
 	if err != nil {
 		return nil, err
 	}
-	return &harness{ns: ns, sc: sc, queueGroup: queueGroup, options: options}, nil
+	return &harness{ns: ns, sc: sc, options: options}, nil
 }
 
 func newStanServer(o *nsserver.Options) (*nsserver.StanServer, error) {
@@ -100,7 +101,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
 	testName = strings.Replace(testName, "/", ".", -1)
-	ds, _, err := openSubscription(h.sc, testName, "")
+	ds, err := openSubscription(h.sc, testName, h.options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -124,7 +125,14 @@ func (h *harness) Close() {
 
 func (h *harness) MaxBatchSizes() (int, int) { return 10, 0 }
 
-func (*harness) SupportsMultipleSubscriptions() bool { return true }
+func (h *harness) SupportsMultipleSubscriptions() bool {
+	if h.options != nil {
+		if h.options.DurableName != "" || h.options.Queue != "" {
+			return false
+		}
+	}
+	return true
+}
 
 type stanAsTest struct{}
 
@@ -196,40 +204,35 @@ func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{stanAsTest{}}
 
 	testCases := []struct {
-		testName   string
-		queueGroup string
-		options    []stan.SubscriptionOption
+		testName string
+		queue    string
+		options  *SubscriptionOptions
 	}{
 		{
-			testName:   "Standard",
-			queueGroup: "",
-			options:    nil,
+			testName: "Standard",
+			queue:    "",
+			options:  nil,
 		},
-		// {
-		// 	testName:   "QueueGroup",
-		// 	queueGroup: "exampleQueue",
-		// 	options:    nil,
-		// },
-		// {
-		// 	testName:   "ManualAck",
-		// 	queueGroup: "",
-		// 	options:    []stan.SubscriptionOption{stan.SetManualAckMode()},
-		// },
-		// {
-		// 	testName:   "DurableNameQueueGroup",
-		// 	queueGroup: "durableNameQG",
-		// 	options:    []stan.SubscriptionOption{stan.DurableName("durableName")},
-		// },
-		// {
-		// 	testName: "ManualAckMaxInflights",
-		// 	options:  []stan.SubscriptionOption{stan.SetManualAckMode(), stan.MaxInflight(100)},
-		// },
+		{
+			testName: "Queue",
+			queue:    "exampleQueue",
+			options:  nil,
+		},
+		{
+			testName: "CustomOptions",
+			options: &SubscriptionOptions{
+				ManualAcks:  true,
+				Queue:       "durableQueue",
+				DurableName: "DurableName",
+				MaxInflight: 100,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
 			drivertest.RunConformanceTests(t, func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-				return newHarness(ctx, t, tc.queueGroup, tc.options...)
+				return newHarness(ctx, t, tc.options)
 			}, asTests)
 		})
 	}
@@ -240,7 +243,7 @@ func TestConformance(t *testing.T) {
 // If we only send a body we should be able to get that from a direct STAN subscriber.
 func TestInteropWithDirectSTAN(t *testing.T) {
 	ctx := context.Background()
-	dh, err := newHarness(ctx, t, "")
+	dh, err := newHarness(ctx, t, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +270,7 @@ func TestInteropWithDirectSTAN(t *testing.T) {
 	nsub.Close()
 
 	// Send a message using STAN directly and receive it using Go CDK.
-	ps, err := OpenSubscription(conn, topic, "")
+	ps, err := OpenSubscription(conn, topic, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +290,7 @@ func TestInteropWithDirectSTAN(t *testing.T) {
 
 func TestErrorCode(t *testing.T) {
 	ctx := context.Background()
-	dh, err := newHarness(ctx, t, "")
+	dh, err := newHarness(ctx, t, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +323,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds, _, err := openSubscription(h.sc, "bar", "")
+	ds, err := openSubscription(h.sc, "bar", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +357,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Queue Subscription
-	qs, _, err := openSubscription(h.sc, "bar", t.Name())
+	qs, err := openSubscription(h.sc, "bar", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,7 +409,9 @@ func BenchmarkNatsStreamingQueuePubSub(b *testing.B) {
 	}
 	defer nc.Close()
 
-	h := &harness{ns: s, sc: nc, queueGroup: b.Name()}
+	op := DefaultSubscriptionOptions
+	op.Queue = b.Name()
+	h := &harness{ns: s, sc: nc, options: &op}
 	dt, cleanup, err := h.CreateTopic(ctx, b.Name())
 	if err != nil {
 		b.Fatal(err)
@@ -470,34 +475,23 @@ func BenchmarkNatsStreamingPubSub(b *testing.B) {
 	drivertest.RunBenchmarks(b, topic, sub)
 }
 
-func testOpenerConnection() func() {
-	// NOTE: Due to the nature of the NATS Streaming - the reconnection prevents any buffering - which may cause a published
-	// 	message to be flushed on reconnect while the API may have returned an error due	to PubAck timeout.
-	// 	In the test condition in this package, when the streaming server is shutdown the connection of the
-	// 	opener is trying to reconnect, and it returns an error 'nats: outbound buffer limit exceeded'.
-	// 	For the tests purpose only the defaultDialer connection needs to be reset, so that subsequent tests passes.
-	if dd.opener != nil {
-		dd.opener.Connection.Close()
-	}
+func testURLOpener() (*URLOpener, error) {
 	oldEnvVal := os.Getenv("STAN_SERVER_URL")
 	os.Setenv("STAN_SERVER_URL", fmt.Sprintf("nats://localhost:%d", testPort))
+	defer os.Setenv("STAN_SERVER_URL", oldEnvVal)
 	oldCLVal := os.Getenv("STAN_CLUSTER_ID")
 	os.Setenv("STAN_CLUSTER_ID", testClusterID)
+	defer os.Setenv("STAN_CLUSTER_ID", oldCLVal)
 	oldCVal := os.Getenv("STAN_CLIENT_ID")
 	os.Setenv("STAN_CLIENT_ID", nextClientID())
-
-	if dd.opener != nil {
-		dd.createdOpener()
-	}
-	return func() {
-		os.Setenv("STAN_SERVER_URL", oldEnvVal)
-		os.Setenv("STAN_CLUSTER_ID", oldCLVal)
-		os.Setenv("STAN_CLIENT_ID", oldCVal)
-	}
+	defer os.Setenv("STAN_CLIENT_ID", oldCVal)
+	return connect()
 }
 
 func TestOpenTopicFromURL(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	o := nsserver.GetDefaultOptions()
 	o.ID = testClusterID
 	ns, err := newStanServer(o)
@@ -506,8 +500,10 @@ func TestOpenTopicFromURL(t *testing.T) {
 	}
 	defer ns.Shutdown()
 
-	cleanup := testOpenerConnection()
-	defer cleanup()
+	u, err := testURLOpener()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		URL     string
@@ -520,18 +516,27 @@ func TestOpenTopicFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		topic, err := pubsub.OpenTopic(ctx, test.URL)
+		tu, err := url.Parse(test.URL)
+		if err != nil {
+			t.Errorf("parsing: %s failed: %v", test.URL, err)
+			continue
+		}
+		topic, err := u.OpenTopicURL(ctx, tu)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 		if topic != nil {
-			topic.Shutdown(ctx)
+			if err = topic.Shutdown(ctx); err != nil {
+				t.Errorf("closing topic: %s failed: %v", test.URL, err)
+			}
 		}
+
 	}
 }
 
 func TestOpenSubscriptionFromURL(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	o := nsserver.GetDefaultOptions()
 	o.ID = testClusterID
@@ -541,8 +546,10 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}
 	defer ns.Shutdown()
 
-	cleanup := testOpenerConnection()
-	defer cleanup()
+	uo, err := testURLOpener()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		TestName string
@@ -554,22 +561,28 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		// Invalid parameter.
 		{"InvalidParameter", "stan://mytopic?param=value", true},
 		// Queue URL Parameter for QueueSubscription.
-		{"QueueGroup", "stan://mytopic?queue=queue1", false},
-		// DurableName URL Parameter for DurableName.
-		{"DurableName", "stan://mytopic?durableName=durableName", false},
-		// MaxInflight URL Parameter for MaxInflight.
-		{"MaxInflight", "stan://mytopic?maxInflight=200", false},
-		// StartSequence URL Parameter for MaxInflight.
-		{"StartSequence", "stan://mytopic?startSequence=1", false},
-		// AckWait URL Parameter for MaxInflight.
-		{"AckWait", "stan://mytopic?ackWait=5s", false},
-		// ManualAck Parameter for MaxInflight.
-		{"ManualAck", "stan://mytopic?manualAck", false},
+		{"Queue", "stan://mytopic?queue=queue1", false},
+		// DurableName URL Parameter.
+		{"DurableName", "stan://mytopic?durable_name=durableName", false},
+		// MaxInflight URL Parameter.
+		{"MaxInflight", "stan://mytopic?max_inflight=200", false},
+		// StartSequence URL Parameter.
+		{"StartSequence", "stan://mytopic?start_sequence=1", false},
+		// AckWait URL Parameter.
+		{"AckWait", "stan://mytopic?ack_wait=5s", false},
+		// ManualAcks Parameter.
+		{"ManualAcks", "stan://mytopic?manual_acks", false},
 	}
 
 	for _, test := range tests {
 		t.Run(test.TestName, func(t *testing.T) {
-			sub, err := pubsub.OpenSubscription(ctx, test.URL)
+			u, err := url.Parse(test.URL)
+			if err != nil {
+				t.Errorf("parsing URL: '%s' failed: %v", test.URL, err)
+				return
+			}
+
+			sub, err := uo.OpenSubscriptionURL(ctx, u)
 			if (err != nil) != test.WantErr {
 				t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 			}

@@ -52,11 +52,7 @@ func ExampleOpenSubscription() {
 	}
 	defer stanConn.Close()
 
-	subscription, err := stanpubsub.OpenSubscription(
-		stanConn,
-		"example.mysubject",
-		"",
-	)
+	subscription, err := stanpubsub.OpenSubscription(stanConn, "example.mysubject", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,18 +70,16 @@ func ExampleOpenQueueSubscription() {
 	}
 	defer stanConn.Close()
 
-	subscription, err := stanpubsub.OpenSubscription(
-		stanConn,
-		"example.mysubject",
-		"exampleQueueGroup",
-	)
+	o := stanpubsub.DefaultSubscriptionOptions
+	o.Queue = "exampleQueue"
+	subscription, err := stanpubsub.OpenSubscription(stanConn, "example.mysubject", &o)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer subscription.Shutdown(ctx)
 }
 
-func ExampleOpenManualAckSubscription() {
+func ExampleOpenSubscriptionWithCustomOptions() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
@@ -96,12 +90,11 @@ func ExampleOpenManualAckSubscription() {
 	}
 	defer stanConn.Close()
 
-	subscription, err := stanpubsub.OpenSubscription(
-		stanConn,
-		"example.mysubject",
-		"",
-		stan.SetManualAckMode(),
-	)
+	options := stanpubsub.DefaultSubscriptionOptions
+	options.ManualAcks = true
+	options.DurableName = "my-durable-name"
+
+	subscription, err := stanpubsub.OpenSubscription(stanConn, "example.mysubject", &options)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -158,7 +151,7 @@ func Example_openQueueSubscriptionFromURL() {
 	// STAN_CLUSTER_ID 	- NATS Streaming cluster id.
 	// STAN_CLIENT_ID 	- NAST Streaming client id.
 	// The message would be received from the subject: `example.mysubject`
-	// This URL will be parsed and the queue attribute will be used as the QueueGroup parameter when
+	// This URL will be parsed and the queue attribute will be used as the Queue parameter when
 	// creating the NATS Streaming Subscription.
 	subscription, err := pubsub.OpenSubscription(ctx, "stan://example.mysubject?queue=myqueue")
 	if err != nil {

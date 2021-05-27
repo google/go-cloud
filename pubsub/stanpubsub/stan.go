@@ -13,6 +13,8 @@
 // limitations under the License.
 
 // Package stanpubsub provides a pubsub implementation for NATS Streaming client.
+// See https://docs.nats.io/nats-streaming-concepts/intro for an overview.
+//
 // Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription to construct a
 // *pubsub.Subscription. This package uses gob to encode and decode driver.Message to
 // []byte.
@@ -31,7 +33,7 @@
 //
 // Message Delivery Semantics
 //
-// NATS Streaming supports at-least-once semantics; by default applications doesn't need to call Message.Ack,
+// NATS Streaming supports at-least-once semantics; by default applications don't need to call Message.Ack,
 // and must not call Message.Nack.
 // Optionally a user can set a subscription to be manually acked by using `stan.SetManualAckMode` option
 // or by setting `manualAck` query parameter when setting from URL.
@@ -64,7 +66,6 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
-
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/batcher"
@@ -72,13 +73,30 @@ import (
 )
 
 func init() {
-	dd = new(defaultDialer)
+	dd := new(defaultDialer)
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, dd)
 	pubsub.DefaultURLMux().RegisterSubscription(Scheme, dd)
 }
 
-// This defaultDialer variable is used only for the test purpose.
-var dd *defaultDialer
+func connect() (*URLOpener, error) {
+	serverURL := os.Getenv("STAN_SERVER_URL")
+	if serverURL == "" {
+		return nil, errors.New("STAN_SERVER_URL environment variable not set")
+	}
+	clusterID := os.Getenv("STAN_CLUSTER_ID")
+	if clusterID == "" {
+		return nil, errors.New("STAN_CLUSTER_ID environment variable not set")
+	}
+	clientID := os.Getenv("STAN_CLIENT_ID")
+	if clientID == "" {
+		return nil, errors.New("STAN_CLIENT_ID environment variable not set")
+	}
+	conn, err := stan.Connect(clusterID, clientID, stan.NatsURL(serverURL))
+	if err != nil {
+		return nil, fmt.Errorf("failed to dial STAN_SERVER_URL %q: STAN_CLUSTER_ID: %q STAN_CLIENT_ID: %q,  %v", serverURL, clusterID, clientID, err)
+	}
+	return &URLOpener{Connection: conn, SubscriptionOptions: DefaultSubscriptionOptions}, nil
+}
 
 // errNotInitialized is an error returned when the topic or subscription is not initialized.
 var errNotInitialized = errors.New("stanpubsub: not initialized")
@@ -112,34 +130,10 @@ func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*p
 }
 
 func (o *defaultDialer) defaultConn() (*URLOpener, error) {
-	o.init.Do(o.createdOpener)
+	o.init.Do(func() {
+		o.opener, o.err = connect()
+	})
 	return o.opener, o.err
-}
-
-func (o *defaultDialer) createdOpener() {
-	serverURL := os.Getenv("STAN_SERVER_URL")
-	if serverURL == "" {
-		o.err = errors.New("STAN_SERVER_URL environment variable not set")
-		return
-	}
-	clusterID := os.Getenv("STAN_CLUSTER_ID")
-	if clusterID == "" {
-		o.err = errors.New("STAN_CLUSTER_ID environment variable not set")
-	}
-	clientID := os.Getenv("STAN_CLIENT_ID")
-	if clientID == "" {
-		o.err = errors.New("STAN_CLIENT_ID environment variable not set")
-	}
-	o.connect(serverURL, clusterID, clientID)
-}
-
-func (o *defaultDialer) connect(serverURL, clusterID, clientID string) {
-	conn, err := stan.Connect(clusterID, clientID, stan.NatsURL(serverURL))
-	if err != nil {
-		o.err = fmt.Errorf("failed to dial STAN_SERVER_URL %q: STAN_CLUSTER_ID: %q STAN_CLIENT_ID: %q,  %v", serverURL, clusterID, clientID, err)
-		return
-	}
-	o.opener = &URLOpener{Connection: conn}
 }
 
 // Scheme is the URL scheme stanpubsub registers its URLOpeners under on pubsub.DefaultMux.
@@ -151,19 +145,23 @@ const Scheme = "stan"
 //
 // No topic query parameters are supported.
 //
-// Following query parameters are supported for subscription:
-//	- queue 		- sets the name of the queue group.
-//	- durableName	- sets the durable name for the subscription.
-//	- maxInflight 	- sets the maximum number of messages the cluster will send without an ACK.
-//	- startSequence - sets the desired start sequence position and state
-//	- ackWait 		- sets the timeout for waiting for an ACK from the cluster's point of view for delivered messages
+// The following query parameters are supported for subscription:
+//	- queue	 		 - sets the name of the queue.
+//						see: https://docs.nats.io/developing-with-nats-streaming/queues for more information.
+//	- durable_name	 - sets the durable name for the subscription -
+//					   	see: https://docs.nats.io/developing-with-nats-streaming/durables for more information.
+//	- max_inflight 	 - sets the maximum number of messages the cluster will send without an ACK.
+//						see: https://docs.nats.io/developing-with-nats-streaming/acks#max-in-flight for more information.
+//	- start_sequence - sets the desired start sequence position and state
+//	- ack_wait 		 - sets the timeout for waiting for an ACK from the cluster's point of view for delivered messages
+//	- manual_acks	 - sets the subscription to handle message acks manually by using pubsub.Message.Ack().
 type URLOpener struct {
 	// Connection to use for communication with the server.
 	Connection stan.Conn
 	// TopicOptions specifies the options to pass to OpenTopic.
 	TopicOptions TopicOptions
 	// SubscriptionOptions specifies the options to pass to OpenSubscription.
-	SubscriptionOptions []stan.SubscriptionOption
+	SubscriptionOptions SubscriptionOptions
 }
 
 // OpenTopicURL opens a pubsub.Topic based on u.
@@ -178,47 +176,47 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 // OpenSubscriptionURL opens a pubsub.Subscription based on input url.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	opts := o.SubscriptionOptions
-	var queue string
 	for param, values := range u.Query() {
 		switch param {
 		case "queue":
-			queue = values[0]
-		case "durableName":
-			opts = append(opts, stan.DurableName(values[0]))
-		case "maxInflight":
+			opts.Queue = values[0]
+		case "durable_name":
+			opts.DurableName = values[0]
+		case "max_inflight":
 			maxInflight, err := strconv.Atoi(values[0])
 			if err != nil {
 				return nil, fmt.Errorf("open subscription %v: invalid value for maxInflight query parameter: %s, %w", u, values[0], err)
 			}
-			opts = append(opts, stan.MaxInflight(maxInflight))
-		case "startSequence":
+			opts.MaxInflight = maxInflight
+		case "start_sequence":
 			startSequence, err := strconv.ParseUint(values[0], 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("open subscription %v: invalid value for startSequence query parameter: %s, %w", u, values[0], err)
 			}
-			opts = append(opts, stan.StartAtSequence(startSequence))
-		case "ackWait":
+			opts.StartSequence = startSequence
+			opts.StartAt = StartPositionSequenceStart
+		case "ack_wait":
 			ackWait, err := time.ParseDuration(values[0])
 			if err != nil {
 				return nil, fmt.Errorf("open subscription %v: invalid value for ackWait query parameter: %s, %w", u, values[0], err)
 			}
-			opts = append(opts, stan.AckWait(ackWait))
-		case "manualAck":
+			opts.AckWait = ackWait
+		case "manual_acks":
 			if values[0] != "" {
 				return nil, fmt.Errorf("open subscription %v: no values are permitted for the manualAck query parameter", u)
 			}
-			opts = append(opts, stan.SetManualAckMode())
+			opts.ManualAcks = true
 		default:
 			return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
 		}
 	}
 	subject := path.Join(u.Host, u.Path)
 
-	sub, maxInflight, err := openSubscription(o.Connection, subject, queue, opts...)
+	sub, err := openSubscription(o.Connection, subject, &opts)
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(sub, &batcher.Options{MaxBatchSize: maxInflight}, &batcher.Options{MaxBatchSize: maxInflight}), nil
+	return pubsub.NewSubscription(sub, &batcher.Options{MaxBatchSize: opts.MaxInflight}, &batcher.Options{MaxBatchSize: opts.MaxInflight}), nil
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by NATS Streaming.
@@ -235,13 +233,96 @@ func OpenTopic(nc stan.Conn, subject string, _ *TopicOptions) (*pubsub.Topic, er
 	return pubsub.NewTopic(dt, nil), nil
 }
 
+// SubscriptionOptions sets options for constructing a *pubsub.Subscription backed by NATS Streaming.
+type SubscriptionOptions struct {
+	// Queue defines the subscription queue name.
+	// See: https://docs.nats.io/developing-with-nats-streaming/queues for more information.
+	Queue string
+	// DurableName,defines the durable subscription name.
+	// See: https://docs.nats.io/developing-with-nats-streaming/durables for more information.
+	DurableName string
+	// MaxInflight controls the maximum number of messages the cluster will have inflight without an ACK.
+	// See: https://docs.nats.io/developing-with-nats-streaming/acks#max-in-flight for more information.
+	MaxInflight int
+	// AckWait defines the duration the cluster will wait for an ACK for a given message.
+	AckWait time.Duration
+	// StartPosition defines the position where the subscription would start..
+	// By default it sets the position to take only new messages.
+	StartAt StartPosition
+	// StartSequence is an option used together with the StartPositionSequenceStart
+	// which defines what is the sequence start position.
+	StartSequence uint64
+	// StartTime is the option used together with the StartPositionTimeStart
+	// which sets the desired start time position and state.
+	StartTime time.Time
+	// ManualAcks is an option that requires the user to manually ack pubsub.Messages.
+	ManualAcks bool
+}
+
+// Validate checks if the subscription options are valid.
+func (s *SubscriptionOptions) Validate() error {
+	if s.StartSequence != 0 && s.StartAt != StartPositionSequenceStart {
+		return errors.New("stanpubsub: subscription option StartSequence should be paired with the StartAt = StartPositionSequenceStart")
+	}
+	if !s.StartTime.IsZero() && s.StartAt != StartPositionTimeStart {
+		return errors.New("stanpubsub: subscription option StartTime should be paired with the StartAt = StartPositionTimeDeltaStart")
+	}
+	return nil
+}
+
+// StartWithLastReceived sets start position to last received.
+func (s *SubscriptionOptions) StartWithLastReceived() {
+	s.StartAt = StartPositionLastReceived
+}
+
+// DeliverAllAvailable sets the start subscription position to the first available message.
+// This should result in delivery of all available messages.
+func (s *SubscriptionOptions) DeliverAllAvailable() {
+	s.StartAt = StartPositionFirst
+}
+
+// StartAtTime sets the desired start time position and state.
+func (s *SubscriptionOptions) StartAtTime(ts time.Time) {
+	s.StartAt = StartPositionTimeStart
+	s.StartTime = ts
+}
+
+// StartAtSequence starts the subscription at given sequence number.
+func (s *SubscriptionOptions) StartAtSequence(sequence uint64) {
+	s.StartAt = StartPositionSequenceStart
+	s.StartSequence = sequence
+}
+
+// StartPosition is the enum that defines start position of subscription.
+type StartPosition int
+
+const (
+	// StartPositionNewOnly is the default subscription start position which delivers only new messages.
+	StartPositionNewOnly StartPosition = iota
+	// StartPositionLastReceived sets the subscription start position to the last received message.
+	StartPositionLastReceived
+	// StartPositionTimeStart  sets the subscription start position at given StartTime option.
+	StartPositionTimeStart
+	// StartPositionSequenceStart sets subscription start position to provided StartSequence option.
+	StartPositionSequenceStart
+	// StartPositionFirst sets subscription start position to the first available message, which results in delivery of all available messages..
+	StartPositionFirst
+)
+
+// DefaultSubscriptionOptions are the default subscription options used in the NATS Streaming.
+var DefaultSubscriptionOptions = SubscriptionOptions{MaxInflight: stan.DefaultMaxInflight}
+
 // OpenSubscription returns a *pubsub.Subscription representing a NATS subscription or NATS queue subscription.
 // The subject is the NATS Subject to subscribe to;
 // for more info, see https://nats.io/documentation/writing_applications/subjects.
-func OpenSubscription(nc stan.Conn, subject, queueGroup string, opts ...stan.SubscriptionOption) (*pubsub.Subscription, error) {
-	ds, maxInflight, err := openSubscription(nc, subject, queueGroup, opts...)
+func OpenSubscription(nc stan.Conn, subject string, options *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(nc, subject, options)
 	if err != nil {
 		return nil, err
+	}
+	maxInflight := stan.DefaultMaxInflight
+	if options != nil {
+		maxInflight = options.MaxInflight
 	}
 	return pubsub.NewSubscription(ds, &batcher.Options{MaxBatchSize: maxInflight}, nil), nil
 }
@@ -337,35 +418,36 @@ func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
 // Close implements driver.Topic interface.
 func (t *topic) Close() error { return nil }
 
-func openSubscription(nc stan.Conn, subject, queueGroup string, options ...stan.SubscriptionOption) (_ driver.Subscription, maxInflight int, err error) {
-	so := &stan.SubscriptionOptions{}
-	for _, o := range options {
-		if err = o(so); err != nil {
-			return nil, 0, err
-		}
+func openSubscription(nc stan.Conn, subject string, options *SubscriptionOptions) (_ driver.Subscription, err error) {
+	if options == nil {
+		o := DefaultSubscriptionOptions
+		options = &o
+	}
+	// Validate if options are composed correctly.
+	if err = options.Validate(); err != nil {
+		return nil, err
 	}
 
-	maxInflight = so.MaxInflight
-	if maxInflight == 0 {
-		maxInflight = stan.DefaultMaxInflight
+	// MaxInflight option controls how many messages could be received at given
+	// client without an ack. This perfectly matches with the size of the message channel.
+	if options.MaxInflight == 0 {
+		options.MaxInflight = stan.DefaultMaxInflight
 	}
-
 	s := &subscription{
 		nc:        nc,
-		msgChan:   make(chan *stan.Msg, so.MaxInflight),
-		manualAck: so.ManualAcks,
+		msgChan:   make(chan *stan.Msg, options.MaxInflight),
+		manualAck: options.ManualAcks,
 	}
 
-	if queueGroup != "" {
-		s.sub, err = nc.QueueSubscribe(subject, queueGroup, s.enqueue, options...)
+	if options.Queue != "" {
+		s.sub, err = nc.QueueSubscribe(subject, options.Queue, s.enqueue, extractSubscriptionOptions(options)...)
 	} else {
-		s.sub, err = nc.Subscribe(subject, s.enqueue, options...)
+		s.sub, err = nc.Subscribe(subject, s.enqueue, extractSubscriptionOptions(options)...)
 	}
 	if err != nil {
-		fmt.Printf("This %v", err)
-		return nil, 0, err
+		return nil, err
 	}
-	return s, maxInflight, nil
+	return s, nil
 }
 
 type subscription struct {
@@ -462,7 +544,6 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	case nats.ErrTimeout, stan.ErrTimeout, stan.ErrSubReqTimeout, stan.ErrCloseReqTimeout:
 		return gcerrors.DeadlineExceeded
 	}
-	fmt.Printf("ERR: %v\n\n", err)
 	return gcerrors.Unknown
 }
 
@@ -535,4 +616,30 @@ func decodeMessage(data []byte, dm *driver.Message) error {
 		return nil
 	}
 	return dec.Decode(&dm.Body)
+}
+
+func extractSubscriptionOptions(o *SubscriptionOptions) (options []stan.SubscriptionOption) {
+	if o.AckWait != 0 {
+		options = append(options, stan.AckWait(o.AckWait))
+	}
+	if o.ManualAcks {
+		options = append(options, stan.SetManualAckMode())
+	}
+	if o.MaxInflight != 0 {
+		options = append(options, stan.MaxInflight(o.MaxInflight))
+	}
+	if o.DurableName != "" {
+		options = append(options, stan.DurableName(o.DurableName))
+	}
+	switch o.StartAt {
+	case StartPositionSequenceStart:
+		options = append(options, stan.StartAtSequence(o.StartSequence))
+	case StartPositionFirst:
+		options = append(options, stan.DeliverAllAvailable())
+	case StartPositionLastReceived:
+		options = append(options, stan.StartWithLastReceived())
+	case StartPositionTimeStart:
+		options = append(options, stan.StartAtTime(o.StartTime))
+	}
+	return options
 }
