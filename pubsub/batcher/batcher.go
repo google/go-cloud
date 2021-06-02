@@ -74,6 +74,13 @@ type Batcher struct {
 	shutdown  bool
 }
 
+// Message is larger than the maximum batch byte size
+var ErrMessageTooLarge = errors.New("batcher: message too large")
+
+type sizableItem interface {
+	ByteSize() int
+}
+
 type waiter struct {
 	item interface{}
 	errc chan error
@@ -87,6 +94,8 @@ type Options struct {
 	MinBatchSize int
 	// Maximum size of a batch. 0 means no limit.
 	MaxBatchSize int
+	// Maximum bytesize of a batch. 0 means no limit.
+	MaxBatchByteSize int
 }
 
 // newOptionsWithDefaults returns Options with defaults applied to opts.
@@ -142,12 +151,23 @@ func (b *Batcher) Add(ctx context.Context, item interface{}) error {
 func (b *Batcher) AddNoWait(item interface{}) <-chan error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
 	// Create a channel to receive the error from the handler.
 	c := make(chan error, 1)
 	if b.shutdown {
 		c <- errors.New("batcher: shut down")
 		return c
 	}
+
+	if b.opts.MaxBatchByteSize > 0 {
+		if sizable, ok := item.(sizableItem); ok {
+			if sizable.ByteSize() > b.opts.MaxBatchByteSize {
+				c <- ErrMessageTooLarge
+				return c
+			}
+		}
+	}
+
 	// Add the item to the pending list.
 	b.pending = append(b.pending, waiter{item, c})
 	if b.nHandlers < b.opts.MaxHandlers {
@@ -174,14 +194,32 @@ func (b *Batcher) nextBatch() []waiter {
 	if len(b.pending) < b.opts.MinBatchSize {
 		return nil
 	}
-	if b.opts.MaxBatchSize == 0 || len(b.pending) <= b.opts.MaxBatchSize {
+
+	if b.opts.MaxBatchByteSize == 0 && (b.opts.MaxBatchSize == 0 || len(b.pending) <= b.opts.MaxBatchSize) {
 		// Send it all!
 		batch := b.pending
 		b.pending = nil
 		return batch
 	}
-	batch := b.pending[:b.opts.MaxBatchSize]
-	b.pending = b.pending[b.opts.MaxBatchSize:]
+
+	batch := make([]waiter, 0, len(b.pending))
+	batchByteSize := 0
+	for _, msg := range b.pending {
+		itemByteSize := 0
+		if sizable, ok := msg.item.(sizableItem); ok {
+			itemByteSize = sizable.ByteSize()
+		}
+		reachedMaxSize := b.opts.MaxBatchSize > 0 && len(batch)+1 > b.opts.MaxBatchSize
+		reachedMaxByteSize := b.opts.MaxBatchByteSize > 0 && batchByteSize+itemByteSize > b.opts.MaxBatchByteSize
+
+		if reachedMaxSize || reachedMaxByteSize {
+			break
+		}
+		batch = append(batch, msg)
+		batchByteSize = batchByteSize + itemByteSize
+	}
+
+	b.pending = b.pending[len(batch):]
 	return batch
 }
 

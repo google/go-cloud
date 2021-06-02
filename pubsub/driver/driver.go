@@ -78,6 +78,11 @@ type Message struct {
 	AfterSend func(asFunc func(interface{}) bool) error
 }
 
+// ByteSize estimates the size in bytes of the message for the purpose of restricting batch sizes.
+func (m *Message) ByteSize() int {
+	return len(m.Body)
+}
+
 // Topic publishes messages.
 // Drivers may optionally also implement io.Closer; Close will be called
 // when the pubsub.Topic is Shutdown.
