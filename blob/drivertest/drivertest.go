@@ -2239,7 +2239,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		tests = append(tests, signedURLTest{"putURLWithContentType", putURLWithContentType, "", false})
 	}
 	/*
-	*/
+	 */
 	if putURLEnforcedAbsentContentType != "" {
 		tests = append(tests, signedURLTest{"putURLEnforcedAbsentContentType", putURLEnforcedAbsentContentType, "", true})
 		tests = append(tests, signedURLTest{"putURLEnforcedAbsentContentType", putURLEnforcedAbsentContentType, differentContentType, false})
@@ -2275,9 +2275,9 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 	// GET it. Try with all URLs, only getURL should work.
 	for _, test := range []struct {
-		urlDescription   string
-		url         string
-		wantSuccess bool
+		urlDescription string
+		url            string
+		wantSuccess    bool
 	}{
 		{"deleteURL", deleteURL, false},
 		{"putURLWithoutContentType", putURLWithoutContentType, false},
@@ -2306,9 +2306,9 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 	// DELETE it. Try with all URLs, only deleteURL should work.
 	for _, test := range []struct {
-		urlDescription   string
-		url         string
-		wantSuccess bool
+		urlDescription string
+		url            string
+		wantSuccess    bool
 	}{
 		{"getURL", getURL, false},
 		{"putURLWithoutContentType", putURLWithoutContentType, false},
