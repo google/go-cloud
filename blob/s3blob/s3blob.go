@@ -748,9 +748,11 @@ func (b *bucket) SignedURL(_ context.Context, key string, opts *driver.SignedURL
 		req, _ = b.client.GetObjectRequest(in)
 	case http.MethodPut:
 		in := &s3.PutObjectInput{
-			Bucket:      aws.String(b.name),
-			Key:         aws.String(key),
-			ContentType: aws.String(opts.ContentType),
+			Bucket: aws.String(b.name),
+			Key:    aws.String(key),
+		}
+		if opts.EnforceAbsentContentType || opts.ContentType != "" {
+			in.ContentType = aws.String(opts.ContentType)
 		}
 		if opts.BeforeSign != nil {
 			asFunc := func(i interface{}) bool {

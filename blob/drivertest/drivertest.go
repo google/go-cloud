@@ -2147,7 +2147,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
 	}
 
-	// Generate real signed URLs for GET, GET with the query params remvoed, PUT, and DELETE.
+	// Generate a signed URL for GET.
 	getURL, err := b.SignedURL(ctx, key, nil)
 	if err != nil {
 		if gcerrors.Code(err) == gcerrors.Unimplemented {
@@ -2158,6 +2158,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	} else if getURL == "" {
 		t.Fatal("got empty GET url")
 	}
+
 	// Copy getURL, but remove all query params. This URL should not be allowed
 	// to GET since the client is unauthorized.
 	getURLNoParamsURL, err := url.Parse(getURL)
@@ -2170,6 +2171,8 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		allowedContentType   = "text/plain"
 		differentContentType = "application/octet-stream"
 	)
+
+	// Generate a signed URL for PUT, with a non-empty ContentType.
 	putURLWithContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
 		Method:      http.MethodPut,
 		ContentType: allowedContentType,
@@ -2181,6 +2184,8 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	} else if putURLWithContentType == "" {
 		t.Fatal("got empty PUT url")
 	}
+
+	// Generate a signed URL for PUT, with an empty ContentType that's enforced.
 	putURLEnforcedAbsentContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
 		Method:                   http.MethodPut,
 		EnforceAbsentContentType: true,
@@ -2192,6 +2197,8 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	} else if putURLEnforcedAbsentContentType == "" {
 		t.Fatal("got empty PUT url")
 	}
+
+	// Same as above, but not enforced.
 	putURLWithoutContentType, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{
 		Method: http.MethodPut,
 	})
@@ -2200,6 +2207,8 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	} else if putURLWithoutContentType == "" {
 		t.Fatal("got empty PUT url")
 	}
+
+	// Generate a signed URL for DELETE.
 	deleteURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodDelete})
 	if err != nil {
 		t.Fatal(err)
@@ -2215,42 +2224,49 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	// PUT the blob. Try with all URLs, only putURL should work when given the
 	// content type used in the signature.
 	type signedURLTest struct {
-		urlMethod   string
-		contentType string
-		url         string
-		wantSuccess bool
+		urlDescription string
+		url            string
+		contentType    string
+		wantSuccess    bool
 	}
 	tests := []signedURLTest{
-		{http.MethodGet, "", getURL, false},
-		{http.MethodDelete, "", deleteURL, false},
+		{"getURL", getURL, "", false},
+		{"deleteURL", deleteURL, "", false},
 	}
 	if putURLWithContentType != "" {
-		tests = append(tests, signedURLTest{http.MethodPut, allowedContentType, putURLWithContentType, true})
-		tests = append(tests, signedURLTest{http.MethodPut, differentContentType, putURLWithContentType, false})
-		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithContentType, false})
+		tests = append(tests, signedURLTest{"putURLWithContentType", putURLWithContentType, allowedContentType, true})
+		tests = append(tests, signedURLTest{"putURLWithContentType", putURLWithContentType, differentContentType, false})
+		tests = append(tests, signedURLTest{"putURLWithContentType", putURLWithContentType, "", false})
 	}
+	/*
+	 */
 	if putURLEnforcedAbsentContentType != "" {
-		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithoutContentType, true})
-		tests = append(tests, signedURLTest{http.MethodPut, differentContentType, putURLWithoutContentType, false})
+		tests = append(tests, signedURLTest{"putURLEnforcedAbsentContentType", putURLEnforcedAbsentContentType, "", true})
+		tests = append(tests, signedURLTest{"putURLEnforcedAbsentContentType", putURLEnforcedAbsentContentType, differentContentType, false})
 	}
 	if putURLWithoutContentType != "" {
-		tests = append(tests, signedURLTest{http.MethodPut, "", putURLWithoutContentType, true})
+		tests = append(tests, signedURLTest{"putURLWithoutContentType", putURLWithoutContentType, "", true})
+		// From the SignedURLOptions docstring:
+		// If EnforceAbsentContentType is false and ContentType is the empty string,
+		// then PUTing without a Content-Type header will succeed, but it is
+		// implementation-specific whether providing a Content-Type header will fail.
+		// --> so, we don't have a test for putURLWithoutContentType and a non-empty ContentType.
 	}
 	for _, test := range tests {
 		req, err := http.NewRequest(http.MethodPut, test.url, strings.NewReader(contents))
 		if err != nil {
-			t.Fatalf("failed to create PUT HTTP request using %s URL (content-type=%q): %v", test.urlMethod, test.contentType, err)
+			t.Fatalf("failed to create PUT HTTP request using %q: %v", test.urlDescription, err)
 		}
 		if test.contentType != "" {
 			req.Header.Set("Content-Type", test.contentType)
 		}
 		if resp, err := client.Do(req); err != nil {
-			t.Fatalf("PUT failed with %s URL (content-type=%q): %v", test.urlMethod, test.contentType, err)
+			t.Fatalf("PUT to %q with ContentType %q failed: %v", test.urlDescription, test.contentType, err)
 		} else {
 			defer resp.Body.Close()
 			success := resp.StatusCode >= 200 && resp.StatusCode < 300
 			if success != test.wantSuccess {
-				t.Errorf("PUT with %s URL (content-type=%q) got status code %d, want 2xx? %v", test.urlMethod, test.contentType, resp.StatusCode, test.wantSuccess)
+				t.Errorf("PUT to %q with ContentType %q got status code %d, wanted 2xx? %v", test.urlDescription, test.contentType, resp.StatusCode, test.wantSuccess)
 				gotBody, _ := ioutil.ReadAll(resp.Body)
 				t.Errorf(string(gotBody))
 			}
@@ -2259,30 +2275,30 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 	// GET it. Try with all URLs, only getURL should work.
 	for _, test := range []struct {
-		urlMethod   string
-		url         string
-		wantSuccess bool
+		urlDescription string
+		url            string
+		wantSuccess    bool
 	}{
-		{http.MethodDelete, deleteURL, false},
-		{http.MethodPut, putURLWithoutContentType, false},
-		{http.MethodGet, getURLNoParams, false},
-		{http.MethodGet, getURL, true},
+		{"deleteURL", deleteURL, false},
+		{"putURLWithoutContentType", putURLWithoutContentType, false},
+		{"getURLNoParams", getURLNoParams, false},
+		{"getURL", getURL, true},
 	} {
 		if resp, err := client.Get(test.url); err != nil {
-			t.Fatalf("GET with %s URL failed: %v", test.urlMethod, err)
+			t.Fatalf("GET with %s URL failed: %v", test.urlDescription, err)
 		} else {
 			defer resp.Body.Close()
 			success := resp.StatusCode >= 200 && resp.StatusCode < 300
 			if success != test.wantSuccess {
-				t.Errorf("GET with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				t.Errorf("GET to %q got status code %d, want 2xx? %v", test.urlDescription, resp.StatusCode, test.wantSuccess)
 				gotBody, _ := ioutil.ReadAll(resp.Body)
 				t.Errorf(string(gotBody))
 			} else if success {
 				gotBody, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
-					t.Errorf("GET with %s URL failed to read response body: %v", test.urlMethod, err)
+					t.Errorf("GET to %q failed to read response body: %v", test.urlDescription, err)
 				} else if gotBodyStr := string(gotBody); gotBodyStr != contents {
-					t.Errorf("GET with %s URL got body %q, want %q", test.urlMethod, gotBodyStr, contents)
+					t.Errorf("GET to %q got body %q, want %q", test.urlDescription, gotBodyStr, contents)
 				}
 			}
 		}
@@ -2290,25 +2306,25 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 	// DELETE it. Try with all URLs, only deleteURL should work.
 	for _, test := range []struct {
-		urlMethod   string
-		url         string
-		wantSuccess bool
+		urlDescription string
+		url            string
+		wantSuccess    bool
 	}{
-		{http.MethodGet, getURL, false},
-		{http.MethodPut, putURLWithoutContentType, false},
-		{http.MethodDelete, deleteURL, true},
+		{"getURL", getURL, false},
+		{"putURLWithoutContentType", putURLWithoutContentType, false},
+		{"deleteURL", deleteURL, true},
 	} {
 		req, err := http.NewRequest(http.MethodDelete, test.url, nil)
 		if err != nil {
-			t.Fatalf("failed to create DELETE HTTP request using %s URL: %v", test.urlMethod, err)
+			t.Fatalf("failed to create DELETE HTTP request using %q: %v", test.urlDescription, err)
 		}
 		if resp, err := client.Do(req); err != nil {
-			t.Fatalf("DELETE with %s URL failed: %v", test.urlMethod, err)
+			t.Fatalf("DELETE to %q failed: %v", test.urlDescription, err)
 		} else {
 			defer resp.Body.Close()
 			success := resp.StatusCode >= 200 && resp.StatusCode < 300
 			if success != test.wantSuccess {
-				t.Fatalf("DELETE with %s URL got status code %d, want 2xx? %v", test.urlMethod, resp.StatusCode, test.wantSuccess)
+				t.Fatalf("DELETE to %q got status code %d, want 2xx? %v", test.urlDescription, resp.StatusCode, test.wantSuccess)
 				gotBody, _ := ioutil.ReadAll(resp.Body)
 				t.Errorf(string(gotBody))
 			}
