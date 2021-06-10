@@ -52,15 +52,8 @@ To do a release:
     GitHub settings and force-merge the PR. Note that this does not affect
     users, since a new version hasn't been tagged yet.
 
--   Tag new versions for all released modules (i.e., `yes` in the `released`
-    column in `./allmodules`) (TODO(eliben): script this?):
-
-    ```bash
-    $ git tag v0.x.0
-    $ git tag secrets/hashivault/v0.x.0
-    $ git tag runtimevar/etcdvar/v0.x.0
-    ...
-    ```
+-   Tag new versions for all modules marked to be released (`yes` in the `released` column)
+    in the `./allmodules` file with `./internal/testing/git_tag_modules.sh v0.X.0`.
 
 -   Push tags to upstream with `git push upstream --tags`
 

@@ -21,7 +21,7 @@ require (
 	github.com/nats-io/jwt v1.2.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.1.9
 	github.com/nats-io/nats.go v1.11.0
-	gocloud.dev v0.22.0
+	gocloud.dev v0.23.0
 )
 
 replace gocloud.dev => ../../

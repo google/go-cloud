@@ -37,6 +37,10 @@ type AckInfo struct {
 // Message is data to be published (sent) to a topic and later received from
 // subscriptions on that topic.
 type Message struct {
+	// LoggableID should be set to an opaque message identifer for
+	// received messages.
+	LoggableID string
+
 	// Body contains the content of the message.
 	Body []byte
 
@@ -72,6 +76,11 @@ type Message struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	AfterSend func(asFunc func(interface{}) bool) error
+}
+
+// ByteSize estimates the size in bytes of the message for the purpose of restricting batch sizes.
+func (m *Message) ByteSize() int {
+	return len(m.Body)
 }
 
 // Topic publishes messages.

@@ -264,6 +264,7 @@ func TestKafkaKey(t *testing.T) {
 	got.Ack()
 
 	m.BeforeSend = nil // don't expect this in the received message
+	m.LoggableID = keyValue
 	if diff := cmp.Diff(got, m, cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
 		t.Errorf("got\n%v\nwant\n%v\ndiff\n%v", got, m, diff)
 	}

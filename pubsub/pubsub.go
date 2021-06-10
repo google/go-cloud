@@ -89,6 +89,11 @@ import (
 
 // Message contains data to be published.
 type Message struct {
+	// LoggableID will be set to an opaque message identifer for
+	// received messages, useful for debug logging. No assumptions should
+	// be made about the content.
+	LoggableID string
+
 	// Body contains the content of the message.
 	Body []byte
 
@@ -241,6 +246,9 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 	t.mu.Unlock()
 	if err != nil {
 		return err // t.err wrapped when set
+	}
+	if m.LoggableID != "" {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "pubsub: Message.LoggableID should not be set when sending a message")
 	}
 	for k, v := range m.Metadata {
 		if !utf8.ValidString(k) {
@@ -594,11 +602,17 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			if len(md) == 0 {
 				md = nil
 			}
+			loggableID := m.LoggableID
+			if loggableID == "" {
+				// This shouldn't happen, but just in case it's better to be explicit.
+				loggableID = "unknown"
+			}
 			m2 := &Message{
-				Body:     m.Body,
-				Metadata: md,
-				asFunc:   m.AsFunc,
-				nackable: s.canNack,
+				LoggableID: loggableID,
+				Body:       m.Body,
+				Metadata:   md,
+				asFunc:     m.AsFunc,
+				nackable:   s.canNack,
 			}
 			m2.ack = func(isAck bool) {
 				// Ignore the error channel. Errors are dealt with

@@ -88,6 +88,72 @@ func TestSequential(t *testing.T) {
 	}
 }
 
+type sizableItem struct {
+	byteSize int
+}
+
+func (i *sizableItem) ByteSize() int {
+	return i.byteSize
+}
+
+func TestPreventsAddingItemsLargerThanBatchMaxByteSize(t *testing.T) {
+	ctx := context.Background()
+	itemType := reflect.TypeOf(&sizableItem{})
+	b := batcher.New(itemType, &batcher.Options{MaxBatchByteSize: 1}, func(items interface{}) error {
+		return nil
+	})
+
+	err := b.Add(ctx, &sizableItem{2})
+	e := batcher.ErrMessageTooLarge
+	if err != e {
+		t.Errorf("got %v, want %v", err, e)
+	}
+
+	err = b.Add(ctx, &sizableItem{1})
+	if err != nil {
+		t.Errorf("got error %v, want nil", err)
+	}
+}
+
+func TestBatchingConsidersMaxSizeAndMaxByteSize(t *testing.T) {
+	ctx := context.Background()
+	itemType := reflect.TypeOf(&sizableItem{})
+	tests := []struct {
+		itemCount      int
+		itemSize       int
+		opts           *batcher.Options
+		wantBatchCount int
+	}{
+		{10, 0, &batcher.Options{MaxBatchSize: 2, MinBatchSize: 2}, 5},
+		{10, 10, &batcher.Options{MaxBatchByteSize: 10, MinBatchSize: 1}, 10},
+		{10, 5, &batcher.Options{MaxBatchByteSize: 10, MinBatchSize: 2}, 5},
+	}
+
+	for _, test := range tests {
+		var got [][]*sizableItem
+		b := batcher.New(itemType, test.opts, func(items interface{}) error {
+			got = append(got, items.([]*sizableItem))
+			return nil
+		})
+
+		var wg sync.WaitGroup
+		item := &sizableItem{test.itemSize}
+		for i := 0; i < test.itemCount; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := b.Add(ctx, item); err != nil {
+					t.Errorf("b.Add(ctx, item) error: %v", err)
+				}
+			}()
+		}
+		wg.Wait()
+		if len(got) != test.wantBatchCount {
+			t.Errorf("got %d batches, want %d", len(got), test.wantBatchCount)
+		}
+	}
+}
+
 func TestMinBatchSize(t *testing.T) {
 	// Verify the MinBatchSize option works.
 	var got [][]int

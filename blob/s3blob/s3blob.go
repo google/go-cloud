@@ -69,7 +69,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -88,7 +87,7 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazySessionOpener))
+	blob.DefaultURLMux().RegisterBucket(Scheme, new(urlSessionOpener))
 }
 
 // Set holds Wire providers for this package.
@@ -96,28 +95,21 @@ var Set = wire.NewSet(
 	wire.Struct(new(URLOpener), "ConfigProvider"),
 )
 
-// lazySessionOpener obtains the AWS session from the environment on the first
-// call to OpenBucketURL.
-type lazySessionOpener struct {
-	init   sync.Once
+type urlSessionOpener struct {
 	opener *URLOpener
-	err    error
 }
 
-func (o *lazySessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	o.init.Do(func() {
-		sess, err := gcaws.NewDefaultSession()
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{
-			ConfigProvider: sess,
-		}
-	})
-	if o.err != nil {
-		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
+func (o *urlSessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	sess, rest, err := gcaws.NewSessionFromURLParams(u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
+
+	o.opener = &URLOpener{
+		ConfigProvider: sess,
+	}
+
+	u.RawQuery = rest.Encode()
 	return o.opener.OpenBucketURL(ctx, u)
 }
 
@@ -756,9 +748,11 @@ func (b *bucket) SignedURL(_ context.Context, key string, opts *driver.SignedURL
 		req, _ = b.client.GetObjectRequest(in)
 	case http.MethodPut:
 		in := &s3.PutObjectInput{
-			Bucket:      aws.String(b.name),
-			Key:         aws.String(key),
-			ContentType: aws.String(opts.ContentType),
+			Bucket: aws.String(b.name),
+			Key:    aws.String(key),
+		}
+		if opts.EnforceAbsentContentType || opts.ContentType != "" {
+			in.ContentType = aws.String(opts.ContentType)
 		}
 		if opts.BeforeSign != nil {
 			asFunc := func(i interface{}) bool {
