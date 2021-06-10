@@ -281,11 +281,11 @@
 	},
 	"gocloud.dev/pubsub/stanpubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
-		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer stanConn.Close()\n\n\tsubscription, err := stanpubsub.OpenSubscription(stanConn, \"example.mysubject\", nil)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
+		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer stanConn.Close()\n\n\to := stanpubsub.SubscriptionOptions{Queue: \"exampleQueue\"}\n\tsubscription, err := stanpubsub.OpenSubscription(stanConn, \"example.mysubject\", &o)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/stanpubsub.ExampleOpenSubscriptionWithCustomOptions": {
 		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",
-		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer stanConn.Close()\n\n\toptions := stanpubsub.DefaultSubscriptionOptions\n\toptions.ManualAcks = true\n\toptions.DurableName = \"my-durable-name\"\n\n\tsubscription, err := stanpubsub.OpenSubscription(stanConn, \"example.mysubject\", &options)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
+		"code": "stanConn, err := stan.Connect(\"cluster-id\", \"client-id\", stan.NatsURL(\"nats://nats.example.com\"))\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer stanConn.Close()\n\n\toptions := stanpubsub.SubscriptionOptions{\n\t\tManualAcks:  true,\n\t\tDurableName: \"my-durable-name\",\n\t}\n\n\tsubscription, err := stanpubsub.OpenSubscription(stanConn, \"example.mysubject\", &options)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/stanpubsub.ExampleOpenTopic": {
 		"imports": "import (\n\t\"context\"\n\t\"log\"\n\n\t\"github.com/nats-io/stan.go\"\n\t\"gocloud.dev/pubsub\"\n\t\"gocloud.dev/pubsub/stanpubsub\"\n)",

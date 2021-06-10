@@ -70,8 +70,7 @@ func ExampleOpenQueueSubscription() {
 	}
 	defer stanConn.Close()
 
-	o := stanpubsub.DefaultSubscriptionOptions
-	o.Queue = "exampleQueue"
+	o := stanpubsub.SubscriptionOptions{Queue: "exampleQueue"}
 	subscription, err := stanpubsub.OpenSubscription(stanConn, "example.mysubject", &o)
 	if err != nil {
 		log.Fatal(err)
@@ -90,9 +89,10 @@ func ExampleOpenSubscriptionWithCustomOptions() {
 	}
 	defer stanConn.Close()
 
-	options := stanpubsub.DefaultSubscriptionOptions
-	options.ManualAcks = true
-	options.DurableName = "my-durable-name"
+	options := stanpubsub.SubscriptionOptions{
+		ManualAcks:  true,
+		DurableName: "my-durable-name",
+	}
 
 	subscription, err := stanpubsub.OpenSubscription(stanConn, "example.mysubject", &options)
 	if err != nil {

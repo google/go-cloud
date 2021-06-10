@@ -409,8 +409,7 @@ func BenchmarkNatsStreamingQueuePubSub(b *testing.B) {
 	}
 	defer nc.Close()
 
-	op := DefaultSubscriptionOptions
-	op.Queue = b.Name()
+	op := SubscriptionOptions{Queue: b.Name()}
 	h := &harness{ns: s, sc: nc, options: &op}
 	dt, cleanup, err := h.CreateTopic(ctx, b.Name())
 	if err != nil {
