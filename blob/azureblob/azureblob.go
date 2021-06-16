@@ -24,8 +24,10 @@
 //
 // For blob.OpenBucket, azureblob registers for the scheme "azblob".
 // The default URL opener will use credentials from the environment variables
-// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
-// AZURE_STORAGE_ACCOUNT is required, along with one of the other two.
+// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN or from the Azure CLI if AZURE_BLOB_AUTH_VIA_CLI is set to True.
+// AZURE_STORAGE_ACCOUNT is required if "storage_account" is not set in the URL parameter.
+// If authentication via CLI is not used, then with one of AZURE_STORAGE_KEY or AZURE_STORAGE_SAS_TOKEN is required as well.
+// If "subscription_id" is set in the URL parameter, the azblob opener uses CLI authentication implicitly.
 // AZURE_STORAGE_DOMAIN can optionally be used to provide an Azure Environment
 // blob storage domain to use. If no AZURE_STORAGE_DOMAIN is provided, the
 // default Azure public domain "blob.core.windows.net" will be used. Check
@@ -85,6 +87,7 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/cli"
 	"github.com/google/uuid"
 	"github.com/google/wire"
 	"gocloud.dev/blob"
@@ -162,36 +165,85 @@ type lazyCredsOpener struct {
 }
 
 func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	o.init.Do(func() {
-		// Use default credential info from the environment.
-		// Ignore errors, as we'll get errors from OpenBucket later.
-		accountName, _ := DefaultAccountName()
-		accountKey, _ := DefaultAccountKey()
-		clientId, _ := DefaultClientId()
-		sasToken, _ := DefaultSASToken()
-		storageDomain, _ := DefaultStorageDomain()
-		isCDN, _ := DefaultIsCDN()
-		protocol, _ := DefaultProtocol()
+	// Use default credential info from the environment.
+	// Ignore errors, as we'll get errors from OpenBucket later.
+	accountName, _ := DefaultAccountName()
+	accountKey, _ := DefaultAccountKey()
+	clientId, _ := DefaultClientId()
+	sasToken, _ := DefaultSASToken()
+	storageDomain, _ := DefaultStorageDomain()
+	isCDN, _ := DefaultIsCDN()
+	protocol, _ := DefaultProtocol()
 
-		isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
-		opts := Options{
-			StorageDomain: storageDomain,
-			Protocol:      protocol,
-			IsCDN:         isCDN,
-		}
+	isMSIEnvironment := adal.MSIAvailable(ctx, adal.CreateSender())
+	opts := Options{
+		StorageDomain: storageDomain,
+		Protocol:      protocol,
+		IsCDN:         isCDN,
+	}
+	globalOptions := new(GlobalOptions)
+	// allow to set global options from URL params
+	rest, err := setGlobalOptionsFromURLParams(u.Query(), globalOptions)
+	if err != nil {
+		return nil, fmt.Errorf("can't parse global options")
+	}
+	// pass the rest of the options
+	u.RawQuery = rest.Encode()
 
-		if accountKey != "" || sasToken != "" {
-			o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, opts)
-		} else if isMSIEnvironment {
-			o.opener, o.err = openerFromMSI(accountName, clientId, opts)
-		} else {
-			o.opener, o.err = openerFromAnon(accountName, opts)
+	if globalOptions.AccountName != "" {
+		accountName = globalOptions.AccountName
+	}
+
+	var useCLI bool
+	useCLIStr := os.Getenv("AZURE_BLOB_AUTH_VIA_CLI")
+	if useCLIStr != "" {
+		if useCLI, err = strconv.ParseBool(useCLIStr); err != nil {
+			return nil, fmt.Errorf("invalid value %q for environment variable AZURE_BLOB_AUTH_VIA_CLI: %v", useCLIStr, err)
 		}
-	})
+	}
+
+	// if subscription_id is set in the URL params,
+	// it only makes sense in the CLI authorizer context
+	if useCLI || globalOptions.SubscriptionId != "" {
+		o.opener, o.err = openerFromCLI(accountName, globalOptions.SubscriptionId, opts)
+	} else if accountKey != "" || sasToken != "" {
+		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, opts)
+	} else if isMSIEnvironment {
+		o.opener, o.err = openerFromMSI(accountName, clientId, opts)
+	} else {
+		o.opener, o.err = openerFromAnon(accountName, opts)
+	}
 	if o.err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
+}
+
+type GlobalOptions struct {
+	AccountName    AccountName
+	SubscriptionId SubscriptionId
+}
+
+// sets options that affect credentials getting logic
+func setGlobalOptionsFromURLParams(q url.Values, o *GlobalOptions) (url.Values, error) {
+	rest := url.Values{}
+	for param, values := range q {
+		if len(values) > 1 {
+			return nil, fmt.Errorf("multiple values of %v not allowed", param)
+		}
+
+		value := values[0]
+		switch param {
+		case "account_name":
+			o.AccountName = AccountName(value)
+		case "subscription_id":
+			o.SubscriptionId = SubscriptionId(value)
+		default:
+			rest.Add(param, value)
+		}
+	}
+
+	return rest, nil
 }
 
 // Scheme is the URL scheme gcsblob registers its URLOpener under on
@@ -217,6 +269,30 @@ type URLOpener struct {
 
 	// Options specifies the options to pass to OpenBucket.
 	Options Options
+}
+
+// openerFromCLI acquires an MSI token and returns TokenCredential backed URLOpener
+func openerFromCLI(accountName AccountName, subscriptionId SubscriptionId, opts Options) (*URLOpener, error) {
+
+	token, err := cli.GetTokenFromCLIWithParams(
+		cli.GetAccessTokenParams{Resource: azure.PublicCloud.ResourceIdentifiers.Storage, Subscription: string(subscriptionId)},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	adalToken, err := token.ToADALToken()
+
+	if err != nil {
+		return nil, err
+	}
+
+	credential := azblob.NewTokenCredential(adalToken.AccessToken, nil)
+	return &URLOpener{
+		AccountName: accountName,
+		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
+		Options:     opts,
+	}, nil
 }
 
 func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken, opts Options) (*URLOpener, error) {
@@ -374,6 +450,9 @@ var SASTokenIdentity = wire.NewSet(
 
 // AccountName is an Azure storage account name.
 type AccountName string
+
+// SubscriptionId is an Azure subscripiton id to use with az cli login
+type SubscriptionId string
 
 // AccountKey is an Azure storage account key (primary or secondary).
 type AccountKey string
