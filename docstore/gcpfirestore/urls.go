@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"sync"
 
@@ -39,12 +40,17 @@ type lazyCredsOpener struct {
 
 func (o *lazyCredsOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
 	o.init.Do(func() {
-		creds, err := gcp.DefaultCredentials(ctx)
-		if err != nil {
-			o.err = err
-			return
+		var tokenSource gcp.TokenSource
+		if e := os.Getenv("FIRESTORE_EMULATOR_HOST"); e == "" {
+			// Connect to the GCP default endpoint if the 'FIRESTORE_EMULATOR_HOST' environment variable is not set.
+			creds, err := gcp.DefaultCredentials(ctx)
+			if err != nil {
+				o.err = err
+				return
+			}
+			tokenSource = creds.TokenSource
 		}
-		client, _, err := Dial(ctx, creds.TokenSource)
+		client, _, err := Dial(ctx, tokenSource)
 		if err != nil {
 			o.err = err
 			return
