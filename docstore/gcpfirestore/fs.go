@@ -70,6 +70,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -86,14 +87,32 @@ import (
 	"gocloud.dev/internal/useragent"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 // Dial returns a client to use with Firestore and a clean-up function to close
 // the client after used.
+// If the 'FIRESTORE_EMULATOR_HOST' environment variable is set the client connects
+// to the GCP firestore emulator by overriding the default endpoint.
 func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error) {
-	c, err := vkit.NewClient(ctx, option.WithTokenSource(ts), useragent.ClientOption("docstore"))
+	opts := []option.ClientOption{
+		useragent.ClientOption("docstore"),
+	}
+	if host := os.Getenv("FIRESTORE_EMULATOR_HOST"); host != "" {
+		conn, err := grpc.DialContext(ctx, host, grpc.WithInsecure())
+		if err != nil {
+			return nil, nil, err
+		}
+		opts = append(opts,
+			option.WithEndpoint(host),
+			option.WithGRPCConn(conn),
+		)
+	} else {
+		opts = append(opts, option.WithTokenSource(ts))
+	}
+	c, err := vkit.NewClient(ctx, opts...)
 	return c, func() { c.Close() }, err
 }
 
