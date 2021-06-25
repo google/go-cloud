@@ -414,5 +414,45 @@
 	"gocloud.dev/server.ExampleServer_RequestLogger": {
 		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\t\"os\"\n\n\t\"gocloud.dev/server\"\n\t\"gocloud.dev/server/requestlog\"\n)",
 		"code": "// Create a logger, and assign it to the RequestLogger field of a\n// server.Options struct.\nsrvOptions := \u0026server.Options{\n\tRequestLogger: requestlog.NewNCSALogger(os.Stdout, func(error) {}),\n}\n\n// Pass the options to the Server constructor.\nsrv := server.New(http.DefaultServeMux, srvOptions)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. You will see requests logged to STDOUT.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
+	},
+	"gocloud.dev/signers.ExampleSigner_Sign": {
+		"imports": "import (\n\t\"context\"\n\t\"crypto/sha512\"\n\n\t\"gocloud.dev/signers\"\n)",
+		"code": "plainText := []byte(\"How now brow cow\")\ndigest := sha512.Sum512(plainText)\ncipherText, err := signer.Sign(ctx, digest[:])\nif err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/signers.ExampleSigner_Verify": {
+		"imports": "import (\n\t\"context\"\n\t\"crypto/sha512\"\n\n\t\"gocloud.dev/signers\"\n)",
+		"code": "plainText := []byte(\"How now brow cow\")\ndigest := sha512.Sum512(plainText)\nvar signature []byte // obtained from elsewhere and random-looking\nok, err := signer.Verify(ctx, digest[:], signature)\nif err != nil {\n\treturn err\n}\nif !ok {\n\tlog.Fatal(\"Signature verification failed\")\n}"
+	},
+	"gocloud.dev/signers/awssig.ExampleOpenSigner": {
+		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/signers/awssig\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\nsess, err := session.NewSession(nil)\nif err != nil {\n\treturn err\n}\n\n// Get a client to use with the KMS API.\nclient, err := awssig.Dial(sess)\nif err != nil {\n\treturn err\n}\n\n// Construct a *signers.Signer.\nsigner := awssig.OpenSigner(client, \"RSASSA_PKCS1_V1_5_SHA_512\", \"alias/test-secrets\", nil)\ndefer signer.Close()"
+	},
+	"gocloud.dev/signers/awssig.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/signers\"\n\t_ \"gocloud.dev/signers/awssig\"\n)",
+		"code": "// Use one of the following:\n\n// 1. By ID.\nsignerByID, err := signers.OpenSigner(ctx,\n\t\"awssig://RSASSA_PKCS1_V1_5_SHA_512/1234abcd-12ab-34cd-56ef-1234567890ab?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer signerByID.Close()\n\n// 2. By alias.\nsignerByAlias, err := signers.OpenSigner(ctx,\n\t\"awssig://RSASSA_PSS_SHA_256/alias/ExampleAlias?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer signerByAlias.Close()\n\n// 3. By ARN.\nconst arn = \"arn:aws:kms:us-east-1:111122223333:key/\" +\n\t\"1234abcd-12ab-34bc-56ef-1234567890ab\"\nsignerByARN, err := signers.OpenSigner(ctx,\n\t\"awssig://RSASSA_PSS_SHA_384/\"+arn+\"?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer signerByARN.Close()"
+	},
+	"gocloud.dev/signers/azuresig.ExampleOpenSigner": {
+		"imports": "import \"gocloud.dev/signers/azuresig\"",
+		"code": "// Get a client to use with the Azure KeyVault API, using default\n// authorization from the environment.\n//\n// You can alternatively use DialUsingCLIAuth to use auth from the\n// \"az\" CLI.\nclient, err := azuresig.Dial()\nif err != nil {\n\treturn err\n}\n\n// Construct a *signers.Signer.\nsigner, err := azuresig.OpenSigner(client, \"https://mykeyvaultname.vault.azure.net/keys/mykeyname\", nil)\nif err != nil {\n\treturn err\n}\ndefer signer.Close()"
+	},
+	"gocloud.dev/signers/azuresig.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/signers\"\n\t_ \"gocloud.dev/signers/azuresig\"\n)",
+		"code": "// The \"azuresig\" URL scheme is replaced with \"https\" to construct an Azure\n// Key Vault keyID, as described in https://docs.microsoft.com/en-us/azure/key-vault/about-keys-signers-and-certificates.\n// You can add an optional \"/{key-version}\" to the path to use a specific\n// version of the key; it defaults to the latest version.\nsigner, err := signers.OpenSigner(ctx, \"azuresig://mykeyvaultname.vault.azure.net/keys/mykeyname\")\nif err != nil {\n\treturn err\n}\ndefer signer.Close()"
+	},
+	"gocloud.dev/signers/gcpsig.ExampleOpenSigner": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/signers/gcpsig\"\n)",
+		"code": "// Get a client to use with the KMS API.\nclient, done, err := gcpsig.Dial(ctx, nil)\nif err != nil {\n\treturn err\n}\n// Close the connection when done.\ndefer done()\n\n// You can also use gcpsig.KeyResourceID to construct this string.\nconst keyID = \"projects/MYPROJECT/\" +\n\t\"locations/MYLOCATION/\" +\n\t\"keyRings/MYKEYRING/\" +\n\t\"cryptoKeys/MYKEY/\" +\n\t\"cryptoKeyVersions/MYVERSION\"\n\n// Construct a *secrets.Signer.\nsigner, err := gcpsig.OpenSigner(client, \"SHA512\", keyID, nil)\nif err != nil {\n\treturn err\n}\ndefer signer.Close()"
+	},
+	"gocloud.dev/signers/gcpsig.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/signers\"\n\t_ \"gocloud.dev/signers/gcpsig\"\n)",
+		"code": "signer, err := signers.OpenSigner(ctx,\n\t\"gcpsig://SHA512\"+\n\t\t\"/projects/MYPROJECT/\"+\n\t\t\"locations/MYLOCATION/\"+\n\t\t\"keyRings/MYKEYRING/\"+\n\t\t\"cryptoKeys/MYKEY\"+\n\t\t\"cryptoKeyVersions/MYVERSION\")\nif err != nil {\n\treturn err\n}\ndefer signer.Close()"
+	},
+	"gocloud.dev/signers/localsigners.ExampleNewSigner": {
+		"imports": "import (\n\t\"crypto\"\n\n\t\"gocloud.dev/signers/localsigners\"\n)",
+		"code": "pepper, err := localsigners.NewRandomPepper()\nif err != nil {\n\treturn err\n}\nsigner, err := localsigners.NewSigner(crypto.MD4, pepper)\nif err != nil {\n\treturn err\n}\ndefer signer.Close()"
+	},
+	"gocloud.dev/signers/localsigners.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/signers\"\n\t_ \"gocloud.dev/signers/localsigners\"\n)",
+		"code": "// Using \"base64signer://\", a new random key will be generated.\nrandomKeySigner, err := signers.OpenSigner(ctx, \"base64signer://\")\nif err != nil {\n\treturn err\n}\ndefer randomKeySigner.Close()\n\n// Otherwise, the URL hostname must be a base64-encoded pepper.\nsavedKeySigner, err := signers.OpenSigner(ctx, \"base64signer://MD5/smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=\")\nif err != nil {\n\treturn err\n}\ndefer savedKeySigner.Close()"
 	}
 }

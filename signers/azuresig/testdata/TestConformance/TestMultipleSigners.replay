@@ -1,0 +1,179 @@
+{
+  "Initial": "AQAAAA7YaXIgBvp72P5c",
+  "Version": "0.2",
+  "Converter": {
+    "ScrubBody": null,
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Ms-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": null,
+    "RemoveParams": [
+      "^se$",
+      "^sig$",
+      "^X-Ms-Date$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "73df1a8a4e3ae81e",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://gcloud.vault.azure.net/keys/rick//sign?api-version=7.0",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "112"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/json",
+        "BodyParts": [
+          "eyJhbGciOiJSUzUxMiIsInZhbHVlIjoiTXIwN2hNMlhiblE0YmtHa3hQX3RlUUlFLUM3d09EdjRmWDBjR05wT0hvNmVnLThqUTJuRHE2ZzNISmRXQmRmbWZlQ3FDS1VyRFd6cDFIc3hxRjVXQVEifQ=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Cache-Control": [
+            "no-cache"
+          ],
+          "Content-Length": [
+            "436"
+          ],
+          "Content-Type": [
+            "application/json; charset=utf-8"
+          ],
+          "Date": [
+            "Sat, 26 Jun 2021 19:08:16 GMT"
+          ],
+          "Expires": [
+            "-1"
+          ],
+          "Pragma": [
+            "no-cache"
+          ],
+          "Strict-Transport-Security": [
+            "max-age=31536000;includeSubDomains"
+          ],
+          "X-Content-Type-Options": [
+            "nosniff"
+          ],
+          "X-Ms-Keyvault-Network-Info": [
+            "conn_type=Ipv4;addr=73.202.127.85;act_addr_fam=InterNetwork;"
+          ],
+          "X-Ms-Keyvault-Region": [
+            "eastus"
+          ],
+          "X-Ms-Keyvault-Service-Version": [
+            "1.9.12.0"
+          ],
+          "X-Ms-Request-Id": [
+            "58e1e445-3464-49bb-bb1e-9efefc93cc43"
+          ],
+          "X-Powered-By": [
+            "ASP.NET"
+          ]
+        },
+        "Body": "eyJraWQiOiJodHRwczovL2djbG91ZC52YXVsdC5henVyZS5uZXQva2V5cy9yaWNrL2Y0YzYwMjg0MWEyMjRkMDBiNjA2OWJiYmZmOTE5Zjg5IiwidmFsdWUiOiJKU1dpMjhoajQyWVNVbWlBM1dleHNfWHlpRERUdktYSnVMb01JS3NaTlF3Mk92bkNmOEVyUzJWRmw5VUFRQTFDcDFxSUQ1RFFRVWI5OTZfTDFINjByOTVpMHdkWlZ1Y3NVQzJHSVNhRjB6RzN0eUdnQ1dsYmp2NDFWNEZwVkhqTkZ2c1pUTXFTeEd1Zmw5TElZLU53NnctZjByU1piNnU5VDAxbnJiT3dNMlY2MlBuSENaZy1pWHh6QnA5STQxQ0dVcEpzdGtnaTVkeEFSWE5QSlpwNzZkbXdIZWQ2TFRfWDlGS1BCd01LLXNpZjZZblBRbDVwQ0wtenFvZlBPcmVPR2M4NGhaWk1wek1xeVRsNFY0T1NCRjdkMWlHLXctS0NjMlZPdmEtOFY2UkxhYkZCb3d4UUVYeTVFd1l0V29IUk93TGpLVkR3T2U5UUcwaFVSRS1Ec3cifQ=="
+      }
+    },
+    {
+      "ID": "0e05d5e2e3eff4b9",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://gcloud.vault.azure.net/keys/morty//verify?api-version=7.0",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "466"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/json",
+        "BodyParts": [
+          "eyJhbGciOiJSUzUxMiIsImRpZ2VzdCI6Ik1yMDdoTTJYYm5RNGJrR2t4UF90ZVFJRS1DN3dPRHY0ZlgwY0dOcE9IbzZlZy04alEybkRxNmczSEpkV0JkZm1mZUNxQ0tVckRXenAxSHN4cUY1V0FRIiwidmFsdWUiOiJKU1dpMjhoajQyWVNVbWlBM1dleHNfWHlpRERUdktYSnVMb01JS3NaTlF3Mk92bkNmOEVyUzJWRmw5VUFRQTFDcDFxSUQ1RFFRVWI5OTZfTDFINjByOTVpMHdkWlZ1Y3NVQzJHSVNhRjB6RzN0eUdnQ1dsYmp2NDFWNEZwVkhqTkZ2c1pUTXFTeEd1Zmw5TElZLU53NnctZjByU1piNnU5VDAxbnJiT3dNMlY2MlBuSENaZy1pWHh6QnA5STQxQ0dVcEpzdGtnaTVkeEFSWE5QSlpwNzZkbXdIZWQ2TFRfWDlGS1BCd01LLXNpZjZZblBRbDVwQ0wtenFvZlBPcmVPR2M4NGhaWk1wek1xeVRsNFY0T1NCRjdkMWlHLXctS0NjMlZPdmEtOFY2UkxhYkZCb3d4UUVYeTVFd1l0V29IUk93TGpLVkR3T2U5UUcwaFVSRS1Ec3cifQ=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Cache-Control": [
+            "no-cache"
+          ],
+          "Content-Length": [
+            "15"
+          ],
+          "Content-Type": [
+            "application/json; charset=utf-8"
+          ],
+          "Date": [
+            "Sat, 26 Jun 2021 19:08:16 GMT"
+          ],
+          "Expires": [
+            "-1"
+          ],
+          "Pragma": [
+            "no-cache"
+          ],
+          "Strict-Transport-Security": [
+            "max-age=31536000;includeSubDomains"
+          ],
+          "X-Content-Type-Options": [
+            "nosniff"
+          ],
+          "X-Ms-Keyvault-Network-Info": [
+            "conn_type=Ipv4;addr=73.202.127.85;act_addr_fam=InterNetwork;"
+          ],
+          "X-Ms-Keyvault-Region": [
+            "eastus"
+          ],
+          "X-Ms-Keyvault-Service-Version": [
+            "1.9.12.0"
+          ],
+          "X-Ms-Request-Id": [
+            "af1717ba-b6c5-4251-8b68-cdb5f1ccb197"
+          ],
+          "X-Powered-By": [
+            "ASP.NET"
+          ]
+        },
+        "Body": "eyJ2YWx1ZSI6ZmFsc2V9"
+      }
+    }
+  ]
+}
