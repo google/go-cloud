@@ -26,7 +26,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"gocloud.dev/internal/testing/setup"
-	"gocloud.dev/signers"
 	"gocloud.dev/signers/driver"
 	"gocloud.dev/signers/drivertest"
 	"gocloud.dev/signers/internal"
@@ -152,41 +151,6 @@ func TestNoConnectionError(t *testing.T) {
 	defer k.Close()
 	if _, err := k.Sign(context.Background(), []byte("secrets")); err == nil {
 		t.Error("Sign: got nil, want no connection error")
-	}
-}
-
-// This test no longer works on MacOS, as OpenKeeper always fails with "MSI not available".
-
-func TestOpenKeeper(t *testing.T) {
-	tests := []struct {
-		URL     string
-		WantErr bool
-	}{
-		// OK.
-		{"azuresig://mykeyvault.vault.azure.net/keys/mykey/myversion", false},
-		// No version -> OK.
-		{"azuresig://mykeyvault.vault.azure.net/keys/mykey", false},
-		// Setting algorithm query param -> OK.
-		{"azuresig://mykeyvault.vault.azure.net/keys/mykey/myversion?algorithm=RSA-OAEP", false},
-		// Invalid query parameter.
-		{"azuresig://mykeyvault.vault.azure.net/keys/mykey/myversion?param=value", true},
-		// Missing key vault name.
-		{"azuresig:///vault.azure.net/keys/mykey/myversion", true},
-		// Missing "keys".
-		{"azuresig://mykeyvault.vault.azure.net/mykey/myversion", true},
-	}
-
-	ctx := context.Background()
-	for _, test := range tests {
-		keeper, err := signers.OpenSigner(ctx, test.URL)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
-		if err == nil {
-			if err = keeper.Close(); err != nil {
-				t.Errorf("%s: got error during close: %v", test.URL, err)
-			}
-		}
 	}
 }
 
