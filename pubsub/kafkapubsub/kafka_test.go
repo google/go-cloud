@@ -498,14 +498,28 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		WantErr bool
 	}{
 		// OK, but still error because broker doesn't exist.
-		{"kafka://mygroup?topic=mytopic", true},
+		{"kafka://mygroup?topic=mytopic", false},
+		// OK, specifying initial offset, but still error because broker doesn't exist.
+		{"kafka://mygroup?topic=mytopic&offset=oldest", false},
+		{"kafka://mygroup?topic=mytopic&offset=newest", false},
+		// Invalid offset specified
+		{"kafka://mygroup?topic=mytopic&offset=value", true},
 		// Invalid parameter.
 		{"kafka://mygroup?topic=mytopic&param=value", true},
 	}
 
 	ctx := context.Background()
+	const ignore = "kafka: client has run out of available brokers to talk to (Is your cluster reachable?)"
+
 	for _, test := range tests {
 		sub, err := pubsub.OpenSubscription(ctx, test.URL)
+		if err != nil && err.Error() == ignore {
+			// Since we don't have a real kafka broker to talk to, we will always get an error when
+			// opening a subscription. This test is checking specifically for query parameter usage, so
+			// we treat the "no brokers" error message as a nil error.
+			err = nil
+		}
+
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
