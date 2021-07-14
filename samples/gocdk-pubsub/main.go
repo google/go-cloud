@@ -34,6 +34,7 @@ import (
 	_ "gocloud.dev/pubsub/kafkapubsub"
 	_ "gocloud.dev/pubsub/natspubsub"
 	_ "gocloud.dev/pubsub/rabbitpubsub"
+	_ "gocloud.dev/pubsub/stanpubsub"
 )
 
 const helpSuffix = `
