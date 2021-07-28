@@ -128,3 +128,14 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		}
 	}
 }
+
+func TestSendNoSubs(t *testing.T) {
+	// It's OK to send a message to a topic with no subscribers.
+	// (But it will log a warning: untested.)
+	ctx := context.Background()
+	topic := NewTopic()
+	defer topic.Shutdown(ctx)
+	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("OK")}); err != nil {
+		t.Fatal(err)
+	}
+}
