@@ -131,7 +131,7 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 
 func TestSendNoSubs(t *testing.T) {
 	// It's OK to send a message to a topic with no subscribers.
-	// (But it will log a warning: untested.)
+	// (But it will log a warning: that is untested.)
 	ctx := context.Background()
 	topic := NewTopic()
 	defer topic.Shutdown(ctx)
