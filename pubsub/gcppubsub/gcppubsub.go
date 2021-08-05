@@ -267,10 +267,11 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*grpc.ClientConn, func(), er
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: ts}),
 		// The default message size limit for gRPC is 4MB, while GCP
-		// PubSub supports messages up to 10MB. Tell gRPC to support up
-		// to 10MB.
+		// PubSub supports messages up to 10MB. Aside from the message itself
+		// there is also other data in the gRPC response, bringing the maximum
+		// response size above 10MB. Tell gRPC to support up to 11MB.
 		// https://github.com/googleapis/google-cloud-node/issues/1991
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*10)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*11)),
 		useragent.GRPCDialOption("pubsub"),
 	)
 
