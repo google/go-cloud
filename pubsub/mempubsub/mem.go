@@ -43,6 +43,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"path"
 	"sync"
@@ -146,6 +147,12 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	// Log a warning if there are no subscribers.
+	if len(t.subs) == 0 {
+		log.Print("warning: message sent to topic with no subscribers")
+	}
+
 	// Associate ack IDs with messages here. It would be a bit better if each subscription's
 	// messages had their own ack IDs, so we could catch one subscription using ack IDs from another,
 	// but that would require copying all the messages.
