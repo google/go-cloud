@@ -371,6 +371,14 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/awskms\"\n)",
 		"code": "// Use one of the following:\n\n// 1. By ID.\nkeeperByID, err := secrets.OpenKeeper(ctx,\n\t\"awskms://1234abcd-12ab-34cd-56ef-1234567890ab?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByID.Close()\n\n// 2. By alias.\nkeeperByAlias, err := secrets.OpenKeeper(ctx,\n\t\"awskms://alias/ExampleAlias?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByAlias.Close()\n\n// 3. By ARN.\nconst arn = \"arn:aws:kms:us-east-1:111122223333:key/\" +\n\t\"1234abcd-12ab-34bc-56ef-1234567890ab\"\nkeeperByARN, err := secrets.OpenKeeper(ctx,\n\t\"awskms://\"+arn+\"?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByARN.Close()"
 	},
+	"gocloud.dev/secrets/awskmsv2.ExampleOpenKeeper": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/kms\"\n\t\"gocloud.dev/secrets/awskmsv2\"\n)",
+		"code": "// Load an AWS Config and use it to create a service client.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\nctx := context.Background()\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\nclient := kms.NewFromConfig(cfg)\n\n// Construct a *secrets.Keeper.\nkeeper := awskmsv2.OpenKeeper(client, \"alias/test-secrets\", nil)\ndefer keeper.Close()"
+	},
+	"gocloud.dev/secrets/awskmsv2.Example_openFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/awskmsv2\"\n)",
+		"code": "// Use one of the following:\n\n// 1. By ID.\nkeeperByID, err := secrets.OpenKeeper(ctx,\n\t\"awskmsv2://1234abcd-12ab-34cd-56ef-1234567890ab?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByID.Close()\n\n// 2. By alias.\nkeeperByAlias, err := secrets.OpenKeeper(ctx,\n\t\"awskmsv2://alias/ExampleAlias?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByAlias.Close()\n\n// 3. By ARN.\nconst arn = \"arn:aws:kms:us-east-1:111122223333:key/\" +\n\t\"1234abcd-12ab-34bc-56ef-1234567890ab\"\nkeeperByARN, err := secrets.OpenKeeper(ctx,\n\t\"awskmsv2://\"+arn+\"?region=us-east-1\")\nif err != nil {\n\treturn err\n}\ndefer keeperByARN.Close()"
+	},
 	"gocloud.dev/secrets/azurekeyvault.ExampleOpenKeeper": {
 		"imports": "import \"gocloud.dev/secrets/azurekeyvault\"",
 		"code": "// Get a client to use with the Azure KeyVault API, using default\n// authorization from the environment.\n//\n// You can alternatively use DialUsingCLIAuth to use auth from the\n// \"az\" CLI.\nclient, err := azurekeyvault.Dial()\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper, err := azurekeyvault.OpenKeeper(client, \"https://mykeyvaultname.vault.azure.net/keys/mykeyname\", nil)\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"

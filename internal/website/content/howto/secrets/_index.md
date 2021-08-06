@@ -195,6 +195,8 @@ application connects to the correct region.
 
 [AWS KMS]: https://aws.amazon.com/kms/
 
+#### AWSv1
+
 `secrets.OpenKeeper` will create a default AWS Session with the
 `SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See [AWS Session][] to learn about authentication
@@ -204,7 +206,7 @@ alternatives, including using environment variables.
 
 {{< goexample "gocloud.dev/secrets/awskms.Example_openFromURL" >}}
 
-#### AWS Constructor {#aws-ctor}
+#### AWS V1 Constructor {#aws-ctor}
 
 The [`awskms.OpenKeeper`][] constructor opens a customer master key. You must
 first create an [AWS session][] with the same region as your key and then
@@ -214,6 +216,22 @@ connect to KMS:
 
 [`awskms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/awskms#OpenKeeper
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+
+#### AWSv2
+
+`secrets.OpenKeeper` will create a default AWS Config; see [AWSv2 Config][] to
+learn more.
+
+#### AWSv2 Constructor {#awsv2-ctor}
+
+The [`awskmsv2.OpenKeeper`][] constructor opens a customer master key. You must
+first create an [AWSv2 Config][] with the same region as your key and then
+connect to KMS:
+
+{{< goexample "gocloud.dev/secrets/awskmsv2.ExampleOpenKeeper" >}}
+
+[`awskmsv2.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/awskmsv2#OpenKeeper
+[AWSv2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
 
 ### Azure KeyVault {#azure}
 
