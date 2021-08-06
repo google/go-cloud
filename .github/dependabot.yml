@@ -12,6 +12,11 @@ updates:
       interval: weekly
   - package-ecosystem: gomod
     open-pull-requests-limit: 30
+    directory: /internal/website
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 30
     directory: /samples
     schedule:
       interval: weekly
