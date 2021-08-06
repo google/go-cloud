@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7XW2bVG3u9lP4g",
+  "Initial": "AQAAAA7Yn1vdJg7Rs/5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -8,6 +8,7 @@
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Ms-Date$",
+      "^X-Ms-Version$",
       "^User-Agent$"
     ],
     "RemoveRequestHeaders": [
@@ -40,7 +41,7 @@
   },
   "Entries": [
     {
-      "ID": "e2002a936ef9d83b",
+      "ID": "f6ca97a00d9bd3bd",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading?comp=blocklist",
@@ -73,7 +74,7 @@
             "CLEARED"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "MediaType": "application/xml",
@@ -91,13 +92,13 @@
             "0"
           ],
           "Date": [
-            "Thu, 03 Dec 2020 23:08:04 GMT"
+            "Fri, 06 Aug 2021 16:35:41 GMT"
           ],
           "Etag": [
-            "\"0x8D897E04AB948A2\""
+            "\"0x8D958F83B206AA8\""
           ],
           "Last-Modified": [
-            "Thu, 03 Dec 2020 23:08:05 GMT"
+            "Fri, 06 Aug 2021 16:35:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -106,20 +107,20 @@
             "MdkAm9d35B8="
           ],
           "X-Ms-Request-Id": [
-            "8a057404-f01e-00a1-74c9-c99a4f000000"
+            "ab627dfa-b01e-00c0-29e1-8ade90000000"
           ],
           "X-Ms-Request-Server-Encrypted": [
             "true"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "b9b2f33356591a6a",
+      "ID": "cbcf6a34344a8cef",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
@@ -134,7 +135,7 @@
             "CLEARED"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "MediaType": "",
@@ -161,13 +162,13 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Thu, 03 Dec 2020 23:08:04 GMT"
+            "Fri, 06 Aug 2021 16:35:41 GMT"
           ],
           "Etag": [
-            "\"0x8D897E04AB948A2\""
+            "\"0x8D958F83B206AA8\""
           ],
           "Last-Modified": [
-            "Thu, 03 Dec 2020 23:08:05 GMT"
+            "Fri, 06 Aug 2021 16:35:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -176,7 +177,7 @@
             "BlockBlob"
           ],
           "X-Ms-Creation-Time": [
-            "Thu, 03 Dec 2020 23:08:05 GMT"
+            "Fri, 06 Aug 2021 16:35:41 GMT"
           ],
           "X-Ms-Lease-State": [
             "available"
@@ -185,20 +186,20 @@
             "unlocked"
           ],
           "X-Ms-Request-Id": [
-            "8a057413-f01e-00a1-7cc9-c99a4f000000"
+            "ab627e00-b01e-00c0-2ee1-8ade90000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "4142a8f09ffaddca",
+      "ID": "932ecdf2f4fb3e80",
       "Request": {
         "Method": "DELETE",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
@@ -216,7 +217,7 @@
             "include"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "MediaType": "",
@@ -234,7 +235,7 @@
             "0"
           ],
           "Date": [
-            "Thu, 03 Dec 2020 23:08:04 GMT"
+            "Fri, 06 Aug 2021 16:35:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -243,10 +244,10 @@
             "true"
           ],
           "X-Ms-Request-Id": [
-            "8a057416-f01e-00a1-7dc9-c99a4f000000"
+            "ab627e02-b01e-00c0-2fe1-8ade90000000"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "Body": ""

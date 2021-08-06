@@ -8,36 +8,36 @@ updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /docstore/mongodocstore
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /internal/website
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /pubsub/kafkapubsub
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /pubsub/natspubsub
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /pubsub/rabbitpubsub
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /runtimevar/etcdvar
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /secrets/hashivault
     schedule:
-      interval: weekly
+      interval: monthly
   - package-ecosystem: gomod
     directory: /samples
     schedule:
-      interval: weekly
+      interval: monthly

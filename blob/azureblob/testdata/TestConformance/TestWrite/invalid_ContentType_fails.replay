@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7XW2bVJavk9f4g",
+  "Initial": "AQAAAA7Yn1vdLX51K/5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -8,6 +8,7 @@
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Ms-Date$",
+      "^X-Ms-Version$",
       "^User-Agent$"
     ],
     "RemoveRequestHeaders": [
@@ -40,7 +41,7 @@
   },
   "Entries": [
     {
-      "ID": "57683ab927277436",
+      "ID": "1a1dd1573b8f903c",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
@@ -55,7 +56,7 @@
             "CLEARED"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "MediaType": "",
@@ -76,7 +77,7 @@
             "application/xml"
           ],
           "Date": [
-            "Thu, 03 Dec 2020 23:08:05 GMT"
+            "Fri, 06 Aug 2021 16:35:41 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -85,13 +86,13 @@
             "BlobNotFound"
           ],
           "X-Ms-Request-Id": [
-            "975dde8c-501e-00a7-3dc9-c96d37000000"
+            "be3ce223-201e-002b-48e1-8a206c000000"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjk3NWRkZThjLTUwMWUtMDBhNy0zZGM5LWM5NmQzNzAwMDAwMApUaW1lOjIwMjAtMTItMDNUMjM6MDg6MDUuNjc2ODQzN1o8L01lc3NhZ2U+PC9FcnJvcj4="
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOmJlM2NlMjIzLTIwMWUtMDAyYi00OGUxLThhMjA2YzAwMDAwMApUaW1lOjIwMjEtMDgtMDZUMTY6MzU6NDEuNzkwMTIzMFo8L01lc3NhZ2U+PC9FcnJvcj4="
       }
     }
   ]

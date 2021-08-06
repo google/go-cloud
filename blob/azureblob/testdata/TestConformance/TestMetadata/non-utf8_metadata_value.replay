@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7XW2bYAI/v4v4g",
+  "Initial": "AQAAAA7Yn1vfESaVuf5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -8,6 +8,7 @@
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Ms-Date$",
+      "^X-Ms-Version$",
       "^User-Agent$"
     ],
     "RemoveRequestHeaders": [

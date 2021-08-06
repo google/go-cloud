@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7XW2bROGB7gf4g",
+  "Initial": "AQAAAA7Yn1vbDgX+6f5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -8,6 +8,7 @@
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^X-Ms-Date$",
+      "^X-Ms-Version$",
       "^User-Agent$"
     ],
     "RemoveRequestHeaders": [
@@ -40,7 +41,7 @@
   },
   "Entries": [
     {
-      "ID": "6b3264753cb4b4c3",
+      "ID": "c1556d3d7f233d61",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/bucket-does-not-exist?comp=list\u0026delimiter=\u0026maxresults=1\u0026restype=container",
@@ -55,7 +56,7 @@
             "CLEARED"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "MediaType": "",
@@ -76,7 +77,7 @@
             "application/xml"
           ],
           "Date": [
-            "Thu, 03 Dec 2020 23:08:01 GMT"
+            "Fri, 06 Aug 2021 16:35:38 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -85,17 +86,17 @@
             "ContainerNotFound"
           ],
           "X-Ms-Request-Id": [
-            "158b538b-601e-00eb-59c9-c9aa28000000"
+            "03c92bb8-901e-0032-27e1-8a0c04000000"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+Q29udGFpbmVyTm90Rm91bmQ8L0NvZGU+PE1lc3NhZ2U+VGhlIHNwZWNpZmllZCBjb250YWluZXIgZG9lcyBub3QgZXhpc3QuClJlcXVlc3RJZDoxNThiNTM4Yi02MDFlLTAwZWItNTljOS1jOWFhMjgwMDAwMDAKVGltZToyMDIwLTEyLTAzVDIzOjA4OjAyLjYzMjcyODdaPC9NZXNzYWdlPjwvRXJyb3I+"
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+Q29udGFpbmVyTm90Rm91bmQ8L0NvZGU+PE1lc3NhZ2U+VGhlIHNwZWNpZmllZCBjb250YWluZXIgZG9lcyBub3QgZXhpc3QuClJlcXVlc3RJZDowM2M5MmJiOC05MDFlLTAwMzItMjdlMS04YTBjMDQwMDAwMDAKVGltZToyMDIxLTA4LTA2VDE2OjM1OjM5LjYzNjUyNzFaPC9NZXNzYWdlPjwvRXJyb3I+"
       }
     },
     {
-      "ID": "518359cf9d72bb6a",
+      "ID": "9fb627cad385cef5",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket?comp=list\u0026delimiter=\u0026maxresults=1\u0026restype=container",
@@ -110,7 +111,7 @@
             "CLEARED"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
         "MediaType": "",
@@ -128,19 +129,19 @@
             "application/xml"
           ],
           "Date": [
-            "Thu, 03 Dec 2020 23:08:01 GMT"
+            "Fri, 06 Aug 2021 16:35:38 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Request-Id": [
-            "158b5399-601e-00eb-63c9-c9aa28000000"
+            "03c92bc0-901e-0032-2de1-8a0c04000000"
           ],
           "X-Ms-Version": [
-            "2019-12-12"
+            "CLEARED"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RW51bWVyYXRpb25SZXN1bHRzIFNlcnZpY2VFbmRwb2ludD0iaHR0cHM6Ly9nb2Nsb3VkYmxvYnRlc3RzLmJsb2IuY29yZS53aW5kb3dzLm5ldC8iIENvbnRhaW5lck5hbWU9ImdvLWNsb3VkLWJ1Y2tldCI+PE1heFJlc3VsdHM+MTwvTWF4UmVzdWx0cz48QmxvYnM+PEJsb2I+PE5hbWU+YmxvYi1mb3ItY29weWluZy1kZXN0PC9OYW1lPjxQcm9wZXJ0aWVzPjxDcmVhdGlvbi1UaW1lPk1vbiwgMTUgSnVsIDIwMTkgMTY6MTA6MjcgR01UPC9DcmVhdGlvbi1UaW1lPjxMYXN0LU1vZGlmaWVkPlRodSwgMDUgTm92IDIwMjAgMTk6MjY6MjEgR01UPC9MYXN0LU1vZGlmaWVkPjxFdGFnPjB4OEQ4ODFDMEFENjlDQTRGPC9FdGFnPjxDb250ZW50LUxlbmd0aD4xMTwvQ29udGVudC1MZW5ndGg+PENvbnRlbnQtVHlwZT50ZXh0L3BsYWluPC9Db250ZW50LVR5cGU+PENvbnRlbnQtRW5jb2Rpbmc+aWRlbnRpdHk8L0NvbnRlbnQtRW5jb2Rpbmc+PENvbnRlbnQtTGFuZ3VhZ2U+ZW48L0NvbnRlbnQtTGFuZ3VhZ2U+PENvbnRlbnQtQ1JDNjQgLz48Q29udGVudC1NRDU+c1FxTnNXVGdkVUVGdDZtYjV5NC81UT09PC9Db250ZW50LU1ENT48Q2FjaGUtQ29udHJvbD5uby1jYWNoZTwvQ2FjaGUtQ29udHJvbD48Q29udGVudC1EaXNwb3NpdGlvbj5pbmxpbmU8L0NvbnRlbnQtRGlzcG9zaXRpb24+PEJsb2JUeXBlPkJsb2NrQmxvYjwvQmxvYlR5cGU+PEFjY2Vzc1RpZXI+SG90PC9BY2Nlc3NUaWVyPjxBY2Nlc3NUaWVySW5mZXJyZWQ+dHJ1ZTwvQWNjZXNzVGllckluZmVycmVkPjxMZWFzZVN0YXR1cz51bmxvY2tlZDwvTGVhc2VTdGF0dXM+PExlYXNlU3RhdGU+YXZhaWxhYmxlPC9MZWFzZVN0YXRlPjxTZXJ2ZXJFbmNyeXB0ZWQ+dHJ1ZTwvU2VydmVyRW5jcnlwdGVkPjwvUHJvcGVydGllcz48T3JNZXRhZGF0YSAvPjwvQmxvYj48L0Jsb2JzPjxOZXh0TWFya2VyPjIhOTYhTURBd01ESTRJV0pzYjJJdFptOXlMV052Y0hscGJtY3RaR1Z6ZEMxbGVHbHpkSE1oTURBd01ESTRJVGs1T1RrdE1USXRNekZVTWpNNk5UazZOVGt1T1RrNU9UazVPVm9oPC9OZXh0TWFya2VyPjwvRW51bWVyYXRpb25SZXN1bHRzPg=="
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RW51bWVyYXRpb25SZXN1bHRzIFNlcnZpY2VFbmRwb2ludD0iaHR0cHM6Ly9nb2Nsb3VkYmxvYnRlc3RzLmJsb2IuY29yZS53aW5kb3dzLm5ldC8iIENvbnRhaW5lck5hbWU9ImdvLWNsb3VkLWJ1Y2tldCI+PE1heFJlc3VsdHM+MTwvTWF4UmVzdWx0cz48QmxvYnM+PEJsb2I+PE5hbWU+YmxvYi1mb3ItY29weWluZy1kZXN0PC9OYW1lPjxQcm9wZXJ0aWVzPjxDcmVhdGlvbi1UaW1lPk1vbiwgMTUgSnVsIDIwMTkgMTY6MTA6MjcgR01UPC9DcmVhdGlvbi1UaW1lPjxMYXN0LU1vZGlmaWVkPkZyaSwgMTYgQXByIDIwMjEgMTk6MTU6NDggR01UPC9MYXN0LU1vZGlmaWVkPjxFdGFnPjB4OEQ5MDEwQzBBRDA1RENCPC9FdGFnPjxDb250ZW50LUxlbmd0aD4xMTwvQ29udGVudC1MZW5ndGg+PENvbnRlbnQtVHlwZT50ZXh0L3BsYWluPC9Db250ZW50LVR5cGU+PENvbnRlbnQtRW5jb2Rpbmc+aWRlbnRpdHk8L0NvbnRlbnQtRW5jb2Rpbmc+PENvbnRlbnQtTGFuZ3VhZ2U+ZW48L0NvbnRlbnQtTGFuZ3VhZ2U+PENvbnRlbnQtQ1JDNjQgLz48Q29udGVudC1NRDU+c1FxTnNXVGdkVUVGdDZtYjV5NC81UT09PC9Db250ZW50LU1ENT48Q2FjaGUtQ29udHJvbD5uby1jYWNoZTwvQ2FjaGUtQ29udHJvbD48Q29udGVudC1EaXNwb3NpdGlvbj5pbmxpbmU8L0NvbnRlbnQtRGlzcG9zaXRpb24+PEJsb2JUeXBlPkJsb2NrQmxvYjwvQmxvYlR5cGU+PEFjY2Vzc1RpZXI+SG90PC9BY2Nlc3NUaWVyPjxBY2Nlc3NUaWVySW5mZXJyZWQ+dHJ1ZTwvQWNjZXNzVGllckluZmVycmVkPjxMZWFzZVN0YXR1cz51bmxvY2tlZDwvTGVhc2VTdGF0dXM+PExlYXNlU3RhdGU+YXZhaWxhYmxlPC9MZWFzZVN0YXRlPjxTZXJ2ZXJFbmNyeXB0ZWQ+dHJ1ZTwvU2VydmVyRW5jcnlwdGVkPjwvUHJvcGVydGllcz48T3JNZXRhZGF0YSAvPjwvQmxvYj48L0Jsb2JzPjxOZXh0TWFya2VyPjIhOTYhTURBd01ESTRJV0pzYjJJdFptOXlMV052Y0hscGJtY3RaR1Z6ZEMxbGVHbHpkSE1oTURBd01ESTRJVGs1T1RrdE1USXRNekZVTWpNNk5UazZOVGt1T1RrNU9UazVPVm9oPC9OZXh0TWFya2VyPjwvRW51bWVyYXRpb25SZXN1bHRzPg=="
       }
     }
   ]
