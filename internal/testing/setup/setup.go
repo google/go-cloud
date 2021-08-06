@@ -222,6 +222,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 		r.RemoveQueryParams("X-Ms-Date")
 		r.ClearQueryParams("blockid")
 		r.ClearHeaders("X-Ms-Date")
+		r.ClearHeaders("X-Ms-Version")
 		r.ClearHeaders("User-Agent") // includes the full Go version
 		// Yes, it's true, Azure does not appear to be internally
 		// consistent about casing for BLock(l|L)ist.
