@@ -25,10 +25,10 @@ import (
 func TestURLOpenerForParams(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name        string
-		query       url.Values
-		wantRegion  string
-		wantErr     bool
+		name       string
+		query      url.Values
+		wantRegion string
+		wantErr    bool
 	}{
 		{
 			name:  "No overrides",
