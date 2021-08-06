@@ -48,7 +48,7 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/klauspost/compress v1.12.2 // indirect
-	github.com/lib/pq v1.10.1
+	github.com/lib/pq v1.10.2
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	go.opencensus.io v0.23.0
