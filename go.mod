@@ -33,7 +33,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.19
 	github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
-	github.com/GoogleCloudPlatform/cloudsql-proxy v1.22.0
+	github.com/GoogleCloudPlatform/cloudsql-proxy v1.24.0
 	github.com/aws/aws-sdk-go v1.38.35
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.6.0
@@ -51,9 +51,8 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	go.opencensus.io v0.23.0
-	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
-	golang.org/x/net v0.0.0-20210505214959-0714010a04ed
+	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
 	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
