@@ -40,7 +40,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
-	github.com/google/go-replayers/grpcreplay v1.0.0
+	github.com/google/go-replayers/grpcreplay v1.1.0
 	github.com/google/go-replayers/httpreplay v0.1.2
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/uuid v1.3.0
