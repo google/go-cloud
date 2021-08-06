@@ -17,7 +17,7 @@ module gocloud.dev
 go 1.12
 
 require (
-	cloud.google.com/go v0.84.0
+	cloud.google.com/go v0.90.0
 	cloud.google.com/go/firestore v1.5.0
 	cloud.google.com/go/pubsub v1.10.3
 	cloud.google.com/go/storage v1.16.0
@@ -54,11 +54,11 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
 	golang.org/x/net v0.0.0-20210505214959-0714010a04ed
-	golang.org/x/oauth2 v0.0.0-20210615190721-d04028783cf1
+	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	google.golang.org/api v0.49.0
-	google.golang.org/genproto v0.0.0-20210624174822-c5cf32407d0a
-	google.golang.org/grpc v1.38.0
+	google.golang.org/api v0.51.0
+	google.golang.org/genproto v0.0.0-20210728212813-7823e685a01f
+	google.golang.org/grpc v1.39.0
 	nhooyr.io/websocket v1.8.7 // indirect
 )
