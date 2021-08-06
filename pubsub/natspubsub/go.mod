@@ -17,9 +17,9 @@ module gocloud.dev/pubsub/natspubsub
 go 1.12
 
 require (
-	github.com/google/go-cmp v0.5.5
-	github.com/nats-io/nats-server/v2 v2.2.0
-	github.com/nats-io/nats.go v1.11.0
+	github.com/google/go-cmp v0.5.6
+	github.com/nats-io/nats-server/v2 v2.3.4
+	github.com/nats-io/nats.go v1.11.1-0.20210623165838-4b75fc59ae30
 	gocloud.dev v0.23.0
 )
 
