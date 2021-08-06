@@ -59,6 +59,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.52.0
 	google.golang.org/genproto v0.0.0-20210728212813-7823e685a01f
-	google.golang.org/grpc v1.39.0
+	google.golang.org/grpc v1.39.1
 	nhooyr.io/websocket v1.8.7 // indirect
 )
