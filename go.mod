@@ -22,7 +22,7 @@ require (
 	cloud.google.com/go/pubsub v1.10.3
 	cloud.google.com/go/storage v1.16.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20200617204711-c478e41e60e9
-	contrib.go.opencensus.io/exporter/stackdriver v0.13.5
+	contrib.go.opencensus.io/exporter/stackdriver v0.13.8
 	contrib.go.opencensus.io/integrations/ocsql v0.1.7
 	github.com/Azure/azure-amqp-common-go/v3 v3.1.0
 	github.com/Azure/azure-pipeline-go v0.2.3
@@ -35,7 +35,6 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.22.0
 	github.com/aws/aws-sdk-go v1.38.35
-	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
