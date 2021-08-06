@@ -17,6 +17,36 @@ updates:
       interval: weekly
   - package-ecosystem: gomod
     open-pull-requests-limit: 30
+    directory: /pubsub/natspubsub
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 30
+    directory: /pubsub/kafkapubsub
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 30
+    directory: /runtimevar/etcdvar
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 30
+    directory: /secrets/hashivault
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 30
+    directory: /pubsub/rabbitpubsub
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 30
+    directory: /docstore/mongodocstore
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    open-pull-requests-limit: 30
     directory: /samples
     schedule:
       interval: weekly
