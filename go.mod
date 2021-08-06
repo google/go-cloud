@@ -34,7 +34,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.24.0
-	github.com/aws/aws-sdk-go v1.38.35
+	github.com/aws/aws-sdk-go v1.40.16
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
