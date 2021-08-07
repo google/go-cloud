@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package awskms provides a secrets implementation backed by AWS KMS.
-// Use OpenKeeper to construct a *secrets.Keeper.
+// Use OpenKeeper to construct a *secrets.Keeper, or OpenKeeperV2 to
+// use AWS SDK V2.
 //
 // URLs
 //
@@ -21,6 +22,7 @@
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 // for more details.
+// Use "awssdk=v1" or "awssdk=v2" to force a specific AWS SDK version.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -60,7 +62,7 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	wire.Struct(new(URLOpener), "ConfigProvider", "ConfigV2"),
+	wire.Struct(new(URLOpener), "ConfigProvider"),
 	Dial,
 	DialV2,
 )

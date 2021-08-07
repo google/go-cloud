@@ -166,8 +166,10 @@ func NewDefaultV2Config(ctx context.Context) (awsv2.Config, error) {
 	return awsv2cfg.LoadDefaultConfig(ctx)
 }
 
-// V2ConfigFromURLParams returns an aws.Config for AWS SKK v2 initialized based on the URL
-// parameters in q. It is intended to be used by URLOpeners for AWS services.
+// V2ConfigFromURLParams returns an aws.Config for AWS SDK v2 initialized based on the URL
+// parameters in q. It is intended to be used by URLOpeners for AWS services if
+// UseV2 returns true.
+//
 // https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/aws#Config
 //
 // It returns an error if q contains any unknown query parameters; callers
