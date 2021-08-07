@@ -21,12 +21,12 @@ import (
 	"net/url"
 	"strconv"
 
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	awsv2cfg "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
-	awsv2cfg "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/google/wire"
 )
 
