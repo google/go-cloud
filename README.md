@@ -79,12 +79,12 @@ actively looking for feedback from early adopters. If you have comments or
 questions, you can post to the [go-cloud mailing list][] or email us at
 go-cdk-feedback@google.com.
 
-At this time we prefer to focus on maintaining the existing APIs and drivers and
-are unlikely to accept new ones into the `go-cloud` repository. The modular
+At this time we prefer to focus on maintaining the existing APIs and drivers,
+and are unlikely to accept new ones into the `go-cloud` repository. The modular
 nature of the Go CDK makes it simple to host new APIs and drivers for existing
 APIs externally, in separate repositories. If you have a new API or driver that
-you believe are important and mature enough to be included, feel free to open
-an issue to discuss this; our default will likely be to suggest starting in a
+you believe are important and mature enough to be included, feel free to open an
+issue to discuss this; our default will likely be to suggest starting in a
 separate repository.
 
 ## Current features
