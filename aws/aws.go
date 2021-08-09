@@ -149,13 +149,11 @@ func NewSessionFromURLParams(q url.Values) (*session.Session, url.Values, error)
 // "awssdk=v1" will force V1.
 // "asssdk=v2" will force V2.
 // No "awssdk" parameter (or any other value) will return the default, currently V1.
+// Note that the default may change in the future.
 func UseV2(q url.Values) bool {
-	for param, values := range q {
-		if param == "awssdk" {
-			if values[0] == "v2" || values[0] == "V2" {
-				return true
-			}
-			return false
+	if values, ok := q["awssdk"]; ok {
+		if values[0] == "v2" || values[0] == "V2" {
+			return true
 		}
 	}
 	return false
