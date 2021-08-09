@@ -82,10 +82,12 @@ go-cdk-feedback@google.com.
 At this time we prefer to focus on maintaining the existing APIs and drivers,
 and are unlikely to accept new ones into the `go-cloud` repository. The modular
 nature of the Go CDK makes it simple to host new APIs and drivers for existing
-APIs externally, in separate repositories. If you have a new API or driver that
-you believe are important and mature enough to be included, feel free to open an
-issue to discuss this; our default will likely be to suggest starting in a
-separate repository.
+APIs externally, in separate repositories.
+
+If you have a new API or driver that you believe are important and mature enough
+to be included, feel free to open an issue to discuss this; our default will
+likely be to suggest starting in a separate repository. We'll also be happy
+to maintain a list of such external APIs and drivers in this README.
 
 ## Current features
 
