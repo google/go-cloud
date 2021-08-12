@@ -20,12 +20,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-
+	ssmv2 "github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/smithy-go"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
@@ -39,20 +40,36 @@ import (
 const region = "us-east-2"
 
 type harness struct {
-	session client.ConfigProvider
-	closer  func()
+	useV2    bool
+	session  client.ConfigProvider
+	clientV2 *ssmv2.Client
+	closer   func()
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	sess, _, done, _ := setup.NewAWSSession(context.Background(), t, region)
-	return &harness{session: sess, closer: done}, nil
+	return &harness{useV2: false, session: sess, closer: done}, nil
+}
+
+func newHarnessV2(t *testing.T) (drivertest.Harness, error) {
+	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region)
+	return &harness{useV2: true, clientV2: ssmv2.NewFromConfig(cfg), closer: done}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(h.session, name, decoder, nil), nil
+	return newWatcher(h.useV2, h.session, h.clientV2, name, decoder, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
+	if h.useV2 {
+		_, err := h.clientV2.PutParameter(ctx, &ssmv2.PutParameterInput{
+			Name:      aws.String(name),
+			Type:      "String",
+			Value:     aws.String(string(val)),
+			Overwrite: true,
+		})
+		return err
+	}
 	svc := ssm.New(h.session)
 	_, err := svc.PutParameter(&ssm.PutParameterInput{
 		Name:      aws.String(name),
@@ -68,6 +85,10 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
+	if h.useV2 {
+		_, err := h.clientV2.DeleteParameter(ctx, &ssmv2.DeleteParameterInput{Name: aws.String(name)})
+		return err
+	}
 	svc := ssm.New(h.session)
 	_, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)})
 	return err
@@ -80,16 +101,33 @@ func (h *harness) Close() {
 func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{useV2: false}})
 }
 
-type verifyAs struct{}
+func TestConformanceV2(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarnessV2, []drivertest.AsTest{verifyAs{useV2: true}})
+}
+
+type verifyAs struct {
+	useV2 bool
+}
 
 func (verifyAs) Name() string {
 	return "verify As"
 }
 
-func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+func (v verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	if v.useV2 {
+		var getParam *ssmv2.GetParameterOutput
+		if !s.As(&getParam) {
+			return errors.New("Snapshot.As failed for GetParameterOutput")
+		}
+		var descParam *ssmv2.DescribeParametersOutput
+		if !s.As(&descParam) {
+			return errors.New("Snapshot.As failed for DescribeParametersOutput")
+		}
+		return nil
+	}
 	var getParam *ssm.GetParameterOutput
 	if !s.As(&getParam) {
 		return errors.New("Snapshot.As failed for GetParameterOutput")
@@ -101,7 +139,14 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
+func (va verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
+	if va.useV2 {
+		var e smithy.APIError
+		if !v.ErrorAs(err, &e) {
+			return errors.New("Keeper.ErrorAs failed")
+		}
+		return nil
+	}
 	var e awserr.Error
 	if !v.ErrorAs(err, &e) {
 		return errors.New("runtimevar.ErrorAs failed")

@@ -180,12 +180,19 @@ To open a variable stored in [AWS Parameter Store][] via a URL, you can use the
 [AWS Parameter Store]:
 https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
 
+If you set the "awssdk=v1" query parameter,
 `runtimevar.OpenVariable` will create a default AWS Session with the
 `SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See [AWS Session][] to learn about authentication
 alternatives, including using environment variables.
 
+If you set the "awssdk=v2" query parameter, it will instead create an AWS
+Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
+
+If no "awssdk" query parameter is set, Go CDK will use a default (currently V1).
+
 [AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
 
 {{< goexample
 "gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL" >}}
@@ -197,8 +204,14 @@ variable.
 
 {{< goexample "gocloud.dev/runtimevar/awsparamstore.ExampleOpenVariable" >}}
 
+[`awsparamstore.OpenVariableV2`][] is similar but uses the AWS SDK V2.
+
+{{< goexample "gocloud.dev/runtimevar/awsparamstore.ExampleOpenVariableV2" >}}
+
 [`awsparamstore.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariable
+[`awsparamstore.OpenVariableV2`]:
+https://godoc.org/gocloud.dev/runtimevar/awsparamstore#OpenVariableV2
 
 ### AWS Secrets Manager {#awssm}
 

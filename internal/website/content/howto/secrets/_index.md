@@ -195,7 +195,7 @@ application connects to the correct region.
 
 [AWS KMS]: https://aws.amazon.com/kms/
 
-If you set the "awssdk=v1" query parameter, 
+If you set the "awssdk=v1" query parameter,
 `secrets.OpenKeeper` will create a default AWS Session with the
 `SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See [AWS Session][] to learn about authentication
@@ -219,9 +219,9 @@ connect to KMS:
 
 {{< goexample "gocloud.dev/secrets/awskms.ExampleOpenKeeper" >}}
 
-The [`awskms.OpenKeeperV2`][] is similar but uses the AWS SDK V2.
+[`awskms.OpenKeeperV2`][] is similar but uses the AWS SDK V2.
 
- {{< goexample "gocloud.dev/secrets/awskmsv2.ExampleOpenKeeperV2" >}}
+{{< goexample "gocloud.dev/secrets/awskms.ExampleOpenKeeperV2" >}}
 
 [`awskms.OpenKeeper`]: https://godoc.org/gocloud.dev/secrets/awskms#OpenKeeper
 [`awskms.OpenKeeperV2`]: https://godoc.org/gocloud.dev/secrets/awskms#OpenKeeperV2
