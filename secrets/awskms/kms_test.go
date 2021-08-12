@@ -21,9 +21,11 @@ import (
 	"os"
 	"testing"
 
+	kmsv2 "github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/smithy-go"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
@@ -37,12 +39,14 @@ const (
 )
 
 type harness struct {
-	client *kms.KMS
-	close  func()
+	useV2    bool
+	client   *kms.KMS
+	clientV2 *kmsv2.Client
+	close    func()
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	return &keeper{keyID: keyID1, client: h.client}, &keeper{keyID: keyID2, client: h.client}, nil
+	return &keeper{useV2: h.useV2, keyID: keyID1, client: h.client, clientV2: h.clientV2}, &keeper{useV2: h.useV2, keyID: keyID2, client: h.client, clientV2: h.clientV2}, nil
 }
 
 func (h *harness) Close() {
@@ -52,28 +56,54 @@ func (h *harness) Close() {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	sess, _, done, _ := setup.NewAWSSession(ctx, t, region)
 	return &harness{
+		useV2:  false,
 		client: kms.New(sess),
 		close:  done,
 	}, nil
 }
 
-func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+func newHarnessV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	return &harness{
+		useV2:    true,
+		clientV2: kmsv2.NewFromConfig(cfg),
+		close:    done,
+	}, nil
 }
 
-type verifyAs struct{}
+func TestConformance(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{v2: false}})
+}
+
+func TestConformanceV2(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarnessV2, []drivertest.AsTest{verifyAs{v2: true}})
+}
+
+type verifyAs struct {
+	v2 bool
+}
 
 func (v verifyAs) Name() string {
 	return "verify As function"
 }
 
 func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
-	var e awserr.Error
-	if !k.ErrorAs(err, &e) {
-		return errors.New("Keeper.ErrorAs failed")
+	var code string
+	if v.v2 {
+		var e smithy.APIError
+		if !k.ErrorAs(err, &e) {
+			return errors.New("Keeper.ErrorAs failed")
+		}
+		code = e.ErrorCode()
+	} else {
+		var e awserr.Error
+		if !k.ErrorAs(err, &e) {
+			return errors.New("Keeper.ErrorAs failed")
+		}
+		code = e.Code()
 	}
-	if e.Code() != kms.ErrCodeInvalidCiphertextException {
-		return fmt.Errorf("got %q, want %q", e.Code(), kms.ErrCodeInvalidCiphertextException)
+	if code != kms.ErrCodeInvalidCiphertextException {
+		return fmt.Errorf("got %q, want %q", code, kms.ErrCodeInvalidCiphertextException)
 	}
 	return nil
 }
@@ -128,6 +158,10 @@ func TestOpenKeeper(t *testing.T) {
 		{"awskms:///arn:aws:kms:us-east-1:932528106278:key/8be0dcc5-da0a-4164-a99f-649015e344b5", false},
 		// OK, overriding region.
 		{"awskms://alias/my-key?region=us-west1", false},
+		// OK, using V1.
+		{"awskms://alias/my-key?awssdk=v1", false},
+		// OK, using V2.
+		{"awskms://alias/my-key?awssdk=v2", false},
 		// Unknown parameter.
 		{"awskms://alias/my-key?param=value", true},
 	}

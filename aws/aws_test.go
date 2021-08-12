@@ -15,6 +15,7 @@
 package aws_test
 
 import (
+	"context"
 	"net/url"
 	"testing"
 
@@ -23,7 +24,7 @@ import (
 	gcaws "gocloud.dev/aws"
 )
 
-func TestURLOpenerForParams(t *testing.T) {
+func TestConfigFromURLParams(t *testing.T) {
 	tests := []struct {
 		name    string
 		query   url.Values
@@ -93,6 +94,96 @@ func TestURLOpenerForParams(t *testing.T) {
 			}
 			if diff := cmp.Diff(got, test.wantCfg); diff != "" {
 				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestUseV2(t *testing.T) {
+	tests := []struct {
+		name  string
+		query url.Values
+		want  bool
+	}{
+		{
+			name:  "No overrides",
+			query: url.Values{},
+		},
+		{
+			name:  "unused param",
+			query: url.Values{"foo": {"bar"}},
+		},
+		{
+			name:  "force v1",
+			query: url.Values{"awssdk": {"v1"}},
+		},
+		{
+			name:  "force v1 cap",
+			query: url.Values{"awssdk": {"V1"}},
+		},
+		{
+			name:  "force v2",
+			query: url.Values{"awssdk": {"v2"}},
+			want:  true,
+		},
+		{
+			name:  "force v2 cap",
+			query: url.Values{"awssdk": {"V2"}},
+			want:  true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := gcaws.UseV2(test.query)
+			if test.want != got {
+				t.Errorf("got %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestV2ConfigFromURLParams(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name       string
+		query      url.Values
+		wantRegion string
+		wantErr    bool
+	}{
+		{
+			name:  "No overrides",
+			query: url.Values{},
+		},
+		{
+			name:    "Invalid query parameter",
+			query:   url.Values{"foo": {"bar"}},
+			wantErr: true,
+		},
+		{
+			name:       "Region",
+			query:      url.Values{"region": {"my_region"}},
+			wantRegion: "my_region",
+		},
+		{
+			name:  "Profile",
+			query: url.Values{"profile": {"my_profile"}},
+			// Hard to verify.
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := gcaws.V2ConfigFromURLParams(ctx, test.query)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if test.wantRegion != "" && got.Region != test.wantRegion {
+				t.Errorf("got region %q, want %q", got.Region, test.wantRegion)
 			}
 		})
 	}

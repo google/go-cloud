@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package awskms provides a secrets implementation backed by AWS KMS.
-// Use OpenKeeper to construct a *secrets.Keeper.
+// Use OpenKeeper to construct a *secrets.Keeper, or OpenKeeperV2 to
+// use AWS SDK V2.
 //
 // URLs
 //
@@ -21,6 +22,7 @@
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 // for more details.
+// Use "awssdk=v1" or "awssdk=v2" to force a specific AWS SDK version.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -28,7 +30,7 @@
 // As
 //
 // awskms exposes the following type for As:
-//  - Error: awserr.Error
+//  - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
 package awskms // import "gocloud.dev/secrets/awskms"
 
 import (
@@ -40,10 +42,13 @@ import (
 	"strings"
 	"sync"
 
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	kmsv2 "github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/smithy-go"
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
@@ -59,6 +64,7 @@ func init() {
 var Set = wire.NewSet(
 	wire.Struct(new(URLOpener), "ConfigProvider"),
 	Dial,
+	DialV2,
 )
 
 // Dial gets an AWS KMS service client.
@@ -67,6 +73,11 @@ func Dial(p client.ConfigProvider) (*kms.KMS, error) {
 		return nil, errors.New("getting KMS service: no AWS session provided")
 	}
 	return kms.New(p), nil
+}
+
+// DialV2 gets an AWS KMS service client using the AWS SDK V2.
+func DialV2(cfg awsv2.Config) (*kmsv2.Client, error) {
+	return kmsv2.NewFromConfig(cfg), nil
 }
 
 // lazySessionOpener obtains the AWS session from the environment on the first
@@ -78,6 +89,10 @@ type lazySessionOpener struct {
 }
 
 func (o *lazySessionOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	if gcaws.UseV2(u.Query()) {
+		opener := &URLOpener{UseV2: true}
+		return opener.OpenKeeperURL(ctx, u)
+	}
 	o.init.Do(func() {
 		sess, err := gcaws.NewDefaultSession()
 		if err != nil {
@@ -85,6 +100,7 @@ func (o *lazySessionOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*sec
 			return
 		}
 		o.opener = &URLOpener{
+			UseV2:          false,
 			ConfigProvider: sess,
 		}
 	})
@@ -105,10 +121,17 @@ const Scheme = "awskms"
 // for more details. Note that ARNs may contain ":" characters, which cannot be
 // escaped in the Host part of a URL, so the "awskms:///<ARN>" form should be used.
 //
-// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
+// or anything else to accept the default.
+//
+// For V1, see gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // for overriding the aws.Session from the URL.
+// For V2, see gocloud.dev/aws/V2ConfigFromURLParams.
 type URLOpener struct {
-	// ConfigProvider must be set to a non-nil value.
+	// UseV2 indicates whether the AWS SDK V2 should be used.
+	UseV2 bool
+
+	// ConfigProvider must be set to a non-nil value if UseV2 is false.
 	ConfigProvider client.ConfigProvider
 
 	// Options specifies the options to pass to OpenKeeper.
@@ -117,6 +140,22 @@ type URLOpener struct {
 
 // OpenKeeperURL opens an AWS KMS Keeper based on u.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	// A leading "/" means the Host was empty; trim the slash.
+	// This is so that awskms:///foo:bar results in "foo:bar" instead of
+	// "/foo:bar".
+	keyID := strings.TrimPrefix(path.Join(u.Host, u.Path), "/")
+
+	if o.UseV2 {
+		cfg, err := gcaws.V2ConfigFromURLParams(ctx, u.Query())
+		if err != nil {
+			return nil, fmt.Errorf("open keeper %v: %v", u, err)
+		}
+		clientV2, err := DialV2(cfg)
+		if err != nil {
+			return nil, err
+		}
+		return OpenKeeperV2(clientV2, keyID, &o.Options), nil
+	}
 	configProvider := &gcaws.ConfigOverrider{
 		Base: o.ConfigProvider,
 	}
@@ -129,10 +168,6 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if err != nil {
 		return nil, err
 	}
-	// A leading "/" means the Host was empty; trim the slash.
-	// This is so that awskms:///foo:bar results in "foo:bar" instead of
-	// "/foo:bar".
-	keyID := strings.TrimPrefix(path.Join(u.Host, u.Path), "/")
 	return OpenKeeper(client, keyID, &o.Options), nil
 }
 
@@ -144,18 +179,44 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 // See the package documentation for an example.
 func OpenKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
+		useV2:  false,
 		keyID:  keyID,
 		client: client,
 	})
 }
 
+// OpenKeeperV2 returns a *secrets.Keeper that uses AWS KMS, using SDK v2.
+// The key ID can be in the form of an Amazon Resource Name (ARN), alias
+// name, or alias ARN. See
+// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
+// for more details.
+// See the package documentation for an example.
+func OpenKeeperV2(client *kmsv2.Client, keyID string, opts *KeeperOptions) *secrets.Keeper {
+	return secrets.NewKeeper(&keeper{
+		useV2:    true,
+		keyID:    keyID,
+		clientV2: client,
+	})
+}
+
 type keeper struct {
-	keyID  string
-	client *kms.KMS
+	useV2    bool
+	keyID    string
+	client   *kms.KMS
+	clientV2 *kmsv2.Client
 }
 
 // Decrypt decrypts the ciphertext into a plaintext.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+	if k.useV2 {
+		result, err := k.clientV2.Decrypt(ctx, &kmsv2.DecryptInput{
+			CiphertextBlob: ciphertext,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return result.Plaintext, nil
+	}
 	result, err := k.client.Decrypt(&kms.DecryptInput{
 		CiphertextBlob: ciphertext,
 	})
@@ -167,6 +228,16 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+	if k.useV2 {
+		result, err := k.clientV2.Encrypt(ctx, &kmsv2.EncryptInput{
+			KeyId:     aws.String(k.keyID),
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return result.CiphertextBlob, nil
+	}
 	result, err := k.client.Encrypt(&kms.EncryptInput{
 		KeyId:     aws.String(k.keyID),
 		Plaintext: plaintext,
@@ -182,6 +253,9 @@ func (k *keeper) Close() error { return nil }
 
 // ErrorAs implements driver.Keeper.ErrorAs.
 func (k *keeper) ErrorAs(err error, i interface{}) bool {
+	if k.useV2 {
+		return errors.As(err, i)
+	}
 	e, ok := err.(awserr.Error)
 	if !ok {
 		return false
@@ -196,11 +270,21 @@ func (k *keeper) ErrorAs(err error, i interface{}) bool {
 
 // ErrorCode implements driver.ErrorCode.
 func (k *keeper) ErrorCode(err error) gcerrors.ErrorCode {
-	ae, ok := err.(awserr.Error)
-	if !ok {
-		return gcerr.Unknown
+	var code string
+	if k.useV2 {
+		var ae smithy.APIError
+		if !errors.As(err, &ae) {
+			return gcerr.Unknown
+		}
+		code = ae.ErrorCode()
+	} else {
+		ae, ok := err.(awserr.Error)
+		if !ok {
+			return gcerr.Unknown
+		}
+		code = ae.Code()
 	}
-	ec, ok := errorCodeMap[ae.Code()]
+	ec, ok := errorCodeMap[code]
 	if !ok {
 		return gcerr.Unknown
 	}

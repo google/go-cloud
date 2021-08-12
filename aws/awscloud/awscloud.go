@@ -34,6 +34,7 @@ import (
 var AWS = wire.NewSet(
 	Services,
 	aws.DefaultSession,
+	aws.NewDefaultV2Config,
 	wire.Value(http.DefaultClient),
 )
 
