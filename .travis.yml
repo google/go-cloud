@@ -57,6 +57,10 @@ jobs:
         fqdn: gocloud.dev
         skip-cleanup: true
         local-dir: internal/website/public
+        # This token is set in Travis environment settings,
+        # https://travis-ci.com/github/google/go-cloud/settings
+        # It's a never-expiring Github Personal Access Token
+        # with "repo" access.
         github-token: $DEPLOY_TOKEN
         keep-history: true
         verbose: true  # temporarily, while verifying
