@@ -355,7 +355,6 @@ func describeParameterV2(ctx context.Context, client *ssmv2.Client, name string)
 }
 
 // WatchVariable implements driver.WatchVariable.
-// WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	lastVersion := int64(-1)
 	if prev != nil {
