@@ -1,0 +1,97 @@
+{
+  "Initial": "AQAAAA7ZAAOJBz2cUP5c",
+  "Version": "0.2",
+  "Converter": {
+    "ScrubBody": null,
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Amz-Date$"
+    ],
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$",
+      "^X-Amz-Security-Token$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "ea88d947894f978d",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sqs.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "Content-Length": [
+            "198"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPVJlY2VpdmVNZXNzYWdlJkF0dHJpYnV0ZU5hbWUuMT1BbGwmTWF4TnVtYmVyT2ZNZXNzYWdlcz0xJk1lc3NhZ2VBdHRyaWJ1dGVOYW1lLjE9QWxsJlF1ZXVlVXJsPWh0dHBzJTNBJTJGJTJGdXMtZWFzdC0yLmFtYXpvbmF3cy5jb20lMkY0NjIzODAyMjU3MjIlMkZub25leGlzdGVudC1zdWJzY3JpcHRpb24mVmVyc2lvbj0yMDEyLTExLTA1"
+        ]
+      },
+      "Response": {
+        "StatusCode": 400,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "333"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Tue, 19 Oct 2021 00:08:41 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "2ae957f2-bb93-5b20-a470-0e1ab55a4eb6"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PEVycm9yUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9xdWV1ZS5hbWF6b25hd3MuY29tL2RvYy8yMDEyLTExLTA1LyI+PEVycm9yPjxUeXBlPlNlbmRlcjwvVHlwZT48Q29kZT5BV1MuU2ltcGxlUXVldWVTZXJ2aWNlLk5vbkV4aXN0ZW50UXVldWU8L0NvZGU+PE1lc3NhZ2U+VGhlIHNwZWNpZmllZCBxdWV1ZSBkb2VzIG5vdCBleGlzdCBmb3IgdGhpcyB3c2RsIHZlcnNpb24uPC9NZXNzYWdlPjxEZXRhaWwvPjwvRXJyb3I+PFJlcXVlc3RJZD4yYWU5NTdmMi1iYjkzLTViMjAtYTQ3MC0wZTFhYjU1YTRlYjY8L1JlcXVlc3RJZD48L0Vycm9yUmVzcG9uc2U+"
+      }
+    }
+  ]
+}
