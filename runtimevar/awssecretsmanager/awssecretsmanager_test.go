@@ -24,11 +24,14 @@ import (
 	"testing"
 	"time"
 
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	secretsmanagerv2 "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/smithy-go"
 	"github.com/googleapis/gax-go/v2"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -46,8 +49,10 @@ import (
 const region = "us-east-2"
 
 type harness struct {
-	session client.ConfigProvider
-	closer  func()
+	useV2    bool
+	session  client.ConfigProvider
+	clientV2 *secretsmanagerv2.Client
+	closer   func()
 }
 
 // waitForMutation uses check to wait until a mutation has taken effect.
@@ -100,22 +105,42 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	sess, _, done, _ := setup.NewAWSSession(context.Background(), t, region)
 
 	return &harness{
+		useV2:   false,
 		session: sess,
 		closer:  done,
 	}, nil
 }
 
+func newHarnessV2(t *testing.T) (drivertest.Harness, error) {
+	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region)
+	return &harness{
+		useV2:    true,
+		clientV2: secretsmanagerv2.NewFromConfig(cfg),
+		closer:   done,
+	}, nil
+}
+
 func (h *harness) MakeWatcher(_ context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(h.session, name, decoder, nil), nil
+	return newWatcher(h.useV2, h.session, h.clientV2, name, decoder, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	svc := secretsmanager.New(h.session)
-	_, err := svc.CreateSecretWithContext(ctx, &secretsmanager.CreateSecretInput{
-		Name:               aws.String(name),
-		ClientRequestToken: aws.String(generateClientRequestToken(name, val)),
-		SecretBinary:       val,
-	})
+	var err error
+	var svc *secretsmanager.SecretsManager
+	if h.useV2 {
+		_, err = h.clientV2.CreateSecret(ctx, &secretsmanagerv2.CreateSecretInput{
+			Name:               awsv2.String(name),
+			ClientRequestToken: awsv2.String(generateClientRequestToken(name, val)),
+			SecretBinary:       val,
+		})
+	} else {
+		svc = secretsmanager.New(h.session)
+		_, err = svc.CreateSecretWithContext(ctx, &secretsmanager.CreateSecretInput{
+			Name:               aws.String(name),
+			ClientRequestToken: aws.String(generateClientRequestToken(name, val)),
+			SecretBinary:       val,
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -123,9 +148,12 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 	// verified that the mutation was applied. This is still not a guarantee
 	// but in practice seems to work well enough to make tests repeatable.
 	return waitForMutation(ctx, func() error {
-		_, err := svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
-			SecretId: aws.String(name),
-		})
+		var err error
+		if h.useV2 {
+			_, err = h.clientV2.GetSecretValue(ctx, &secretsmanagerv2.GetSecretValueInput{SecretId: awsv2.String(name)})
+		} else {
+			_, err = svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{SecretId: aws.String(name)})
+		}
 		if err == nil {
 			// Create was seen.
 			return nil
@@ -137,12 +165,22 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
-	svc := secretsmanager.New(h.session)
-	_, err := svc.PutSecretValueWithContext(ctx, &secretsmanager.PutSecretValueInput{
-		ClientRequestToken: aws.String(generateClientRequestToken(name, val)),
-		SecretBinary:       val,
-		SecretId:           aws.String(name),
-	})
+	var svc *secretsmanager.SecretsManager
+	var err error
+	if h.useV2 {
+		_, err = h.clientV2.PutSecretValue(ctx, &secretsmanagerv2.PutSecretValueInput{
+			ClientRequestToken: awsv2.String(generateClientRequestToken(name, val)),
+			SecretBinary:       val,
+			SecretId:           awsv2.String(name),
+		})
+	} else {
+		svc = secretsmanager.New(h.session)
+		_, err = svc.PutSecretValueWithContext(ctx, &secretsmanager.PutSecretValueInput{
+			ClientRequestToken: aws.String(generateClientRequestToken(name, val)),
+			SecretBinary:       val,
+			SecretId:           aws.String(name),
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -150,16 +188,28 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 	// verified that the mutation was applied. This is still not a guarantee
 	// but in practice seems to work well enough to make tests repeatable.
 	return waitForMutation(ctx, func() error {
-		getResp, err := svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
-			SecretId: aws.String(name),
-		})
+		var err error
+		var bb []byte
+		if h.useV2 {
+			var getResp *secretsmanagerv2.GetSecretValueOutput
+			getResp, err = h.clientV2.GetSecretValue(ctx, &secretsmanagerv2.GetSecretValueInput{SecretId: awsv2.String(name)})
+			if err == nil {
+				bb = getResp.SecretBinary
+			}
+		} else {
+			var getResp *secretsmanager.GetSecretValueOutput
+			getResp, err = svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{SecretId: aws.String(name)})
+			if err == nil {
+				bb = getResp.SecretBinary
+			}
+		}
 		if err != nil {
 			// Failure; we'll retry if it's a NotFound, but that's not
 			// really expected for an Update.
 			w := &watcher{}
 			return gcerr.New(w.ErrorCode(err), err, 1, "runtimevar")
 		}
-		if !bytes.Equal(getResp.SecretBinary, val) {
+		if !bytes.Equal(bb, val) {
 			// Value hasn't been updated yet, return a NotFound to
 			// trigger retry.
 			return gcerr.Newf(gcerr.NotFound, nil, "updated value not seen yet")
@@ -170,11 +220,20 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
-	svc := secretsmanager.New(h.session)
-	_, err := svc.DeleteSecretWithContext(ctx, &secretsmanager.DeleteSecretInput{
-		ForceDeleteWithoutRecovery: aws.Bool(true),
-		SecretId:                   aws.String(name),
-	})
+	var svc *secretsmanager.SecretsManager
+	var err error
+	if h.useV2 {
+		_, err = h.clientV2.DeleteSecret(ctx, &secretsmanagerv2.DeleteSecretInput{
+			ForceDeleteWithoutRecovery: true,
+			SecretId:                   awsv2.String(name),
+		})
+	} else {
+		svc = secretsmanager.New(h.session)
+		_, err = svc.DeleteSecretWithContext(ctx, &secretsmanager.DeleteSecretInput{
+			ForceDeleteWithoutRecovery: aws.Bool(true),
+			SecretId:                   aws.String(name),
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -184,14 +243,17 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	// Note that "success" after a delete is a NotFound error, so we massage
 	// the err returned from DescribeSecret to reflect that.
 	return waitForMutation(ctx, func() error {
-		_, err := svc.DescribeSecretWithContext(ctx, &secretsmanager.DescribeSecretInput{
-			SecretId: aws.String(name),
-		})
+		var err error
+		if h.useV2 {
+			_, err = h.clientV2.DescribeSecret(ctx, &secretsmanagerv2.DescribeSecretInput{SecretId: awsv2.String(name)})
+		} else {
+			_, err = svc.DescribeSecretWithContext(ctx, &secretsmanager.DescribeSecretInput{SecretId: aws.String(name)})
+		}
 		if err == nil {
 			// Secret still exists, return a NotFound to trigger a retry.
 			return gcerr.Newf(gcerr.NotFound, nil, "delete not seen yet")
 		}
-		w := &watcher{}
+		w := &watcher{useV2: h.useV2}
 		if w.ErrorCode(err) == gcerrors.NotFound {
 			// Delete was seen.
 			return nil
@@ -208,16 +270,33 @@ func (h *harness) Close() {
 func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{useV2: false}})
 }
 
-type verifyAs struct{}
+func TestConformanceV2(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarnessV2, []drivertest.AsTest{verifyAs{useV2: true}})
+}
+
+type verifyAs struct {
+	useV2 bool
+}
 
 func (verifyAs) Name() string {
 	return "verify As"
 }
 
-func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+func (v verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	if v.useV2 {
+		var getParam *secretsmanagerv2.GetSecretValueOutput
+		if !s.As(&getParam) {
+			return errors.New("Snapshot.As failed for GetSecretValueOutput")
+		}
+		var descParam *secretsmanagerv2.DescribeSecretOutput
+		if !s.As(&descParam) {
+			return errors.New("Snapshot.As failed for DescribeSecretOutput")
+		}
+		return nil
+	}
 	var getParam *secretsmanager.GetSecretValueOutput
 	if !s.As(&getParam) {
 		return errors.New("Snapshot.As failed for GetSecretValueOutput")
@@ -229,7 +308,14 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
+func (va verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
+	if va.useV2 {
+		var e smithy.APIError
+		if !v.ErrorAs(err, &e) {
+			return errors.New("Keeper.ErrorAs failed")
+		}
+		return nil
+	}
 	var e awserr.Error
 	if !v.ErrorAs(err, &e) {
 		return errors.New("runtimevar.ErrorAs failed")
@@ -302,6 +388,8 @@ func TestOpenVariable(t *testing.T) {
 		{"awssecretsmanager://myvar?decoder=notadecoder", true},
 		// Invalid parameter.
 		{"awssecretsmanager://myvar?param=value", true},
+		// OK, using SDK V2.
+		{"awssecretsmanager://myvar?decoder=string&awssdk=v2", false},
 	}
 
 	ctx := context.Background()

@@ -219,6 +219,8 @@ func TestOpenVariable(t *testing.T) {
 		{"awsparamstore://myvar?decoder=notadecoder", true},
 		// Invalid parameter.
 		{"awsparamstore://myvar?param=value", true},
+		// OK, using SDK V2.
+		{"awsparamstore://myvar?decoder=string&awssdk=v2", false},
 	}
 
 	ctx := context.Background()

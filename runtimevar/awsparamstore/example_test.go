@@ -70,7 +70,6 @@ func Example_openVariableFromURL() {
 	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-
 	v, err := runtimevar.OpenVariable(ctx, "awsparamstore://myvar?region=us-west-1&decoder=string")
 	if err != nil {
 		log.Fatal(err)

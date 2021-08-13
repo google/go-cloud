@@ -39,6 +39,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.6.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.3.2
 	github.com/aws/aws-sdk-go-v2/service/kms v1.4.2
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.5.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.9.0
 	github.com/aws/smithy-go v1.7.0
 	github.com/fsnotify/fsnotify v1.4.9

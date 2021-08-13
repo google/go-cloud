@@ -221,12 +221,19 @@ To open a variable stored in [AWS Secrets Manager][] via a URL, you can use the
 [AWS Secrets Manager]:
 https://aws.amazon.com/secrets-manager
 
+If you set the "awssdk=v1" query parameter,
 `runtimevar.OpenVariable` will create a default AWS Session with the
 `SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See [AWS Session][] to learn about authentication
 alternatives, including using environment variables.
 
+If you set the "awssdk=v2" query parameter, it will instead create an AWS
+Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
+
+If no "awssdk" query parameter is set, Go CDK will use a default (currently V1).
+
 [AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
 
 {{< goexample
 "gocloud.dev/runtimevar/awssecretsmanager.Example_openVariableFromURL" >}}
@@ -238,11 +245,17 @@ variable.
 
 {{< goexample "gocloud.dev/runtimevar/awssecretsmanager.ExampleOpenVariable" >}}
 
+[`awssecretsmanager.OpenVariableV2`][] is similar but uses the AWS SDK V2.
+
+{{< goexample "gocloud.dev/runtimevar/awssecretsmanager.ExampleOpenVariableV2" >}}
+
 [`awssecretsmanager.OpenVariable`]:
 https://godoc.org/gocloud.dev/runtimevar/awssecretsmanager#OpenVariable
+[`awssecretsmanager.OpenVariableV2`]:
+https://godoc.org/gocloud.dev/runtimevar/awssecretsmanager#OpenVariableV2
 
-Note that both `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret` actions must be allowed in 
-caller's IAM policy.
+Note that both `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret` actions must be allowed in
+the caller's IAM policy.
 
 ### etcd {#etcd}
 
