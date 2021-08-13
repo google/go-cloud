@@ -286,7 +286,7 @@ start reading from an arbitrary offset in the blob, use <code>NewRangeReader</co
 you would see in the <a href="https://cloud.google.com/storage/docs/gsutil"><code>gsutil</code></a> CLI.</p>
 
 <p><code>blob.OpenBucket</code> will use Application Default Credentials; if you have
-authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/login"><code>gcloud auth login</code></a>, it will use those credentials. See
+authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login"><code>gcloud auth application-default login</code></a>, it will use those credentials. See
 <a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
 alternatives, including using environment variables.</p>
 
