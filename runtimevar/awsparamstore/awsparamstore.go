@@ -140,7 +140,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	}
 
 	if o.UseV2 {
-		cfg, err := gcaws.V2ConfigFromURLParams(ctx, u.Query())
+		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 		if err != nil {
 			return nil, fmt.Errorf("open variable %v: %v", u, err)
 		}
@@ -239,7 +239,7 @@ func (s *state) As(i interface{}) bool {
 // the same error, in which case it returns nil.
 func errorState(err error, prevS driver.State) driver.State {
 	// Map aws.RequestCanceled to the more standard context package errors.
-	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == request.CanceledErrorCode {
+	if getErrorCode(err) == request.CanceledErrorCode {
 		msg := err.Error()
 		if strings.Contains(msg, "context deadline exceeded") {
 			err = context.DeadlineExceeded
@@ -269,13 +269,8 @@ func equivalentError(err1, err2 error) bool {
 	if err1 == err2 || err1.Error() == err2.Error() {
 		return true
 	}
-	var code1, code2 string
-	if awsErr, ok := err1.(awserr.Error); ok {
-		code1 = awsErr.Code()
-	}
-	if awsErr, ok := err2.(awserr.Error); ok {
-		code2 = awsErr.Code()
-	}
+	code1 := getErrorCode(err1)
+	code2 := getErrorCode(err2)
 	return code1 != "" && code1 == code2
 }
 
@@ -336,7 +331,7 @@ func describeParameter(svc *ssm.SSM, name string) (time.Time, *ssm.DescribeParam
 	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != name {
 		return time.Time{}, nil, fmt.Errorf("unable to get single %q parameter", name)
 	}
-	return awsv2.ToTime(descResp.Parameters[0].LastModifiedDate), descResp, nil
+	return aws.TimeValue(descResp.Parameters[0].LastModifiedDate), descResp, nil
 }
 
 func describeParameterV2(ctx context.Context, client *ssmv2.Client, name string) (time.Time, *ssmv2.DescribeParametersOutput, error) {
@@ -351,7 +346,7 @@ func describeParameterV2(ctx context.Context, client *ssmv2.Client, name string)
 	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != name {
 		return time.Time{}, descResp, fmt.Errorf("unable to get single %q parameter", name)
 	}
-	return aws.TimeValue(descResp.Parameters[0].LastModifiedDate), descResp, nil
+	return awsv2.ToTime(descResp.Parameters[0].LastModifiedDate), descResp, nil
 }
 
 // WatchVariable implements driver.WatchVariable.
@@ -433,22 +428,20 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
+func getErrorCode(err error) string {
+	if awsErr, ok := err.(awserr.Error); ok {
+		return awsErr.Code()
+	}
+	var ae smithy.APIError
+	if errors.As(err, &ae) {
+		return ae.ErrorCode()
+	}
+	return ""
+}
+
 // ErrorCode implements driver.ErrorCode.
 func (w *watcher) ErrorCode(err error) gcerrors.ErrorCode {
-	var code string
-	if w.useV2 {
-		var ae smithy.APIError
-		if !errors.As(err, &ae) {
-			return gcerrors.Unknown
-		}
-		code = ae.ErrorCode()
-	} else {
-		awsErr, ok := err.(awserr.Error)
-		if !ok {
-			return gcerrors.Unknown
-		}
-		code = awsErr.Code()
-	}
+	code := getErrorCode(err)
 	if code == "ParameterNotFound" {
 		return gcerrors.NotFound
 	}
