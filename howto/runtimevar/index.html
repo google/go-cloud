@@ -362,8 +362,7 @@ Config based on the AWS SDK V2; see <a href="https://aws.github.io/aws-sdk-go-v2
 <span class="p">)</span>
 
 <span class="c1">// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-</span><span class="c1"></span>
-<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awsparamstore://myvar?region=us-west-1&amp;decoder=string&#34;</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awsparamstore://myvar?region=us-west-1&amp;decoder=string&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -436,10 +435,16 @@ variable.</p>
 <p>To open a variable stored in <a href="https://aws.amazon.com/secrets-manager">AWS Secrets Manager</a> via a URL, you can use the
 <code>runtimevar.OpenVariable</code> function as shown in the example below.</p>
 
-<p><code>runtimevar.OpenVariable</code> will create a default AWS Session with the
+<p>If you set the &ldquo;awssdk=v1&rdquo; query parameter,
+<code>runtimevar.OpenVariable</code> will create a default AWS Session with the
 <code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
 alternatives, including using environment variables.</p>
+
+<p>If you set the &ldquo;awssdk=v2&rdquo; query parameter, it will instead create an AWS
+Config based on the AWS SDK V2; see <a href="https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/">AWS V2 Config</a> to learn more.</p>
+
+<p>If no &ldquo;awssdk&rdquo; query parameter is set, Go CDK will use a default (currently V1).</p>
 
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
@@ -455,6 +460,13 @@ alternatives, including using environment variables.</p>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Use &#34;awssdk=v1&#34; or &#34;v2&#34; to force a specific AWS SDK version.
+</span><span class="c1"></span><span class="nx">vUsingV2</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nf">OpenVariable</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;awssecretsmanager://secret-variable-name?region=us-east-2&amp;decoder=string&amp;awssdk=v2&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">vUsingV2</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
 <h4 id="awssm-ctor"> AWS Constructor<a class="anchor" href="#awssm-ctor" aria-label="Link to Section">🔗</a></h4>
@@ -484,8 +496,37 @@ variable.</p>
 <span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 
+<p><a href="https://godoc.org/gocloud.dev/runtimevar/awssecretsmanager#OpenVariableV2"><code>awssecretsmanager.OpenVariableV2</code></a> is similar but uses the AWS SDK V2.</p>
+
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="nx">awsv2cfg</span> <span class="s">&#34;github.com/aws/aws-sdk-go-v2/config&#34;</span>
+	<span class="nx">secretsmanagerv2</span> <span class="s">&#34;github.com/aws/aws-sdk-go-v2/service/secretsmanager&#34;</span>
+	<span class="s">&#34;gocloud.dev/runtimevar&#34;</span>
+	<span class="s">&#34;gocloud.dev/runtimevar/awssecretsmanager&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Establish a AWS V2 Config.
+</span><span class="c1">// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+</span><span class="c1"></span><span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+<span class="nx">cfg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awsv2cfg</span><span class="p">.</span><span class="nf">LoadDefaultConfig</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Construct a *runtimevar.Variable that watches the variable.
+</span><span class="c1">// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).
+</span><span class="c1"></span><span class="nx">clientV2</span> <span class="o">:=</span> <span class="nx">secretsmanagerv2</span><span class="p">.</span><span class="nf">NewFromConfig</span><span class="p">(</span><span class="nx">cfg</span><span class="p">)</span>
+<span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awssecretsmanager</span><span class="p">.</span><span class="nf">OpenVariableV2</span><span class="p">(</span><span class="nx">clientV2</span><span class="p">,</span> <span class="s">&#34;secret-variable-name&#34;</span><span class="p">,</span> <span class="nx">runtimevar</span><span class="p">.</span><span class="nx">StringDecoder</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">v</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
 <p>Note that both <code>secretsmanager:GetSecretValue</code> and <code>secretsmanager:DescribeSecret</code> actions must be allowed in
-caller&rsquo;s IAM policy.</p>
+the caller&rsquo;s IAM policy.</p>
 
 <h3 id="etcd"> etcd<a class="anchor" href="#etcd" aria-label="Link to Section">🔗</a></h3>
 
