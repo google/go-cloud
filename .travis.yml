@@ -35,17 +35,14 @@ env:
 
 jobs:
   include:
-    - go: "1.15.x"
-      os: linux
     - go: "1.16.x"
       os: linux
-    - go: "1.16.x"
+    - go: "1.17.x"
+      os: linux
+    - go: "1.17.x"
       os: osx
-    - go: "1.16.x"
+    - go: "1.17.x"
       os: windows
-      # TODO(rvangent): Remove filter_secrets: false once the Travis issue is fixed:
-      # https://travis-ci.community/t/current-known-issues-please-read-this-before-posting-a-new-topic/264/10
-      filter_secrets: false
     # Deploy to GitHub Pages.
     - stage: website
       os: linux
