@@ -17,10 +17,14 @@ module gocloud.dev
 go 1.12
 
 require (
-	cloud.google.com/go v0.90.0
+	cloud.google.com/go v0.93.3
 	cloud.google.com/go/firestore v1.5.0
+	cloud.google.com/go/kms v0.1.0
+	cloud.google.com/go/monitoring v0.1.0 // indirect
 	cloud.google.com/go/pubsub v1.13.0
+	cloud.google.com/go/secretmanager v0.1.0
 	cloud.google.com/go/storage v1.16.0
+	cloud.google.com/go/trace v0.1.0 // indirect
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20200617204711-c478e41e60e9
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.8
 	contrib.go.opencensus.io/integrations/ocsql v0.1.7
@@ -60,11 +64,11 @@ require (
 	go.opencensus.io v0.23.0
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
-	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
+	golang.org/x/oauth2 v0.0.0-20210805134026-6f1e6394065a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	google.golang.org/api v0.52.0
-	google.golang.org/genproto v0.0.0-20210728212813-7823e685a01f
+	google.golang.org/api v0.54.0
+	google.golang.org/genproto v0.0.0-20210813162853-db860fec028c
 	google.golang.org/grpc v1.39.1
 	nhooyr.io/websocket v1.8.7 // indirect
 )
