@@ -152,7 +152,7 @@ func (ch *fakeChannel) QueueDeclareAndBind(queueName, exchangeName string) error
 	return nil
 }
 
-func (ch *fakeChannel) Publish(exchangeName string, pub amqp.Publishing) error {
+func (ch *fakeChannel) Publish(exchangeName, routingKey string, pub amqp.Publishing) error {
 	if ch.isClosed() {
 		return amqp.ErrClosed
 	}

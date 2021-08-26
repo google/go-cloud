@@ -96,7 +96,11 @@ const Scheme = "rabbit"
 //
 // For subscriptions, the URL's host+path is used as the queue name.
 //
-// No query parameters are supported.
+// The following query parameters are supported:
+//
+//   - routing_key: sets TopicOptions.RoutingKey
+//
+// Currently their use is limited to publishers.
 type URLOpener struct {
 	// Connection to use for communication with the server.
 	Connection *amqp.Connection
@@ -109,11 +113,20 @@ type URLOpener struct {
 
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+	opts := o.TopicOptions
+
+	for param, value := range u.Query() {
+		switch param {
+		case "routing_key":
+			if n := len(value); n > 0 {
+				opts.RoutingKey = value[n-1]
+			}
+		default:
+			return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+		}
 	}
 	exchangeName := path.Join(u.Host, u.Path)
-	return OpenTopic(o.Connection, exchangeName, &o.TopicOptions), nil
+	return OpenTopic(o.Connection, exchangeName, &opts), nil
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
@@ -126,8 +139,10 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 }
 
 type topic struct {
-	exchange string // the AMQP exchange
-	conn     amqpConnection
+	exchange   string // the AMQP exchange
+	routingKey string
+
+	conn amqpConnection
 
 	mu     sync.Mutex
 	ch     amqpChannel              // AMQP channel used for all communication.
@@ -138,7 +153,11 @@ type topic struct {
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by
 // RabbitMQ.
-type TopicOptions struct{}
+type TopicOptions struct {
+	// RoutingKey specifies the routing key for published messages. RabbitMQ uses
+	// routing keys for routing messages depending on the exchange configuration.
+	RoutingKey string
+}
 
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by RabbitMQ.
@@ -158,14 +177,19 @@ type SubscriptionOptions struct{}
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
-func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(newTopic(&connection{conn}, name), nil)
+func OpenTopic(conn *amqp.Connection, exchangeName string, opts *TopicOptions) *pubsub.Topic {
+	var routingKey string
+	if opts != nil {
+		routingKey = opts.RoutingKey
+	}
+	return pubsub.NewTopic(newTopic(&connection{conn}, exchangeName, routingKey), nil)
 }
 
-func newTopic(conn amqpConnection, name string) *topic {
+func newTopic(conn amqpConnection, exchange, routingKey string) *topic {
 	return &topic{
-		conn:     conn,
-		exchange: name,
+		conn:       conn,
+		exchange:   exchange,
+		routingKey: routingKey,
 	}
 }
 
@@ -262,7 +286,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 				return err
 			}
 		}
-		if perr = ch.Publish(t.exchange, pub); perr != nil {
+		if perr = ch.Publish(t.exchange, t.routingKey, pub); perr != nil {
 			cancel()
 			break
 		}
@@ -544,7 +568,6 @@ func newSubscription(conn amqpConnection, name string) *subscription {
 
 // Must be called with s.mu held.
 func (s *subscription) establishChannel(ctx context.Context) error {
-
 	if s.ch != nil { // We already have a channel.
 		select {
 		// If it was closed, open a new one.

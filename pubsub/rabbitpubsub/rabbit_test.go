@@ -119,11 +119,11 @@ func (h *harness) CreateTopic(_ context.Context, testName string) (dt driver.Top
 		}
 		ch.ExchangeDelete(exchange)
 	}
-	return newTopic(h.conn, exchange), cleanup, nil
+	return newTopic(h.conn, exchange, ""), cleanup, nil
 }
 
 func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
-	return newTopic(h.conn, "nonexistent-topic"), nil
+	return newTopic(h.conn, "nonexistent-topic", ""), nil
 }
 
 func (h *harness) CreateSubscription(_ context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
@@ -164,7 +164,7 @@ func TestUnroutable(t *testing.T) {
 	if err := declareExchange(conn, "u"); err != nil {
 		t.Fatal(err)
 	}
-	topic := newTopic(conn, "u")
+	topic := newTopic(conn, "u", "")
 	msgs := []*driver.Message{
 		{Body: []byte("")},
 		{Body: []byte("")},
