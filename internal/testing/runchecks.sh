@@ -25,46 +25,11 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
-# The following logic lets us skip the (lengthy) installation process and tests
-# in some cases where the PR carries trivial changes that don't affect the code
-# (such as documentation-only).
-if [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]]; then
-  tmpfile=$(mktemp)
-  function cleanup() {
-    rm -rf "$tmpfile"
-  }
-  trap cleanup EXIT
-
-  mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
-  if [[ -z $mergebase ]]; then
-    echo "merge-base empty. Please ensure that the PR is mergeable."
-    exit 1
-  fi
-  git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > "$tmpfile"
-
-  # Find out if the diff has any files that are neither:
-  #
-  # * in internal/website, nor
-  # * end with .md
-  #
-  # If there are no such files, grep returns 1 and we don't have to run the
-  # tests.
-  echo "The following files changed:"
-  cat "$tmpfile"
-  if grep -v "^internal/website" "$tmpfile" | grep -v ".md$"; then
-    echo "--> Found some non-trivial changes, running tests"
-  else
-    echo "--> Diff doesn't affect tests; not running them"
-    exit 0
-  fi
-fi
-
-
 # start_local_deps.sh requires that Docker is installed, via Travis services,
 # which are only supported on Linux.
 # Tests that depend on them should check the Travis environment before running.
 # Don't do this when running locally, as it's slow; user should do it.
-if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
+if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
   echo
   echo "Starting local dependencies..."
   ./internal/testing/start_local_deps.sh
@@ -94,7 +59,7 @@ while read -r path || [[ -n "$path" ]]; do
   # TODO(rvangent): Special case modules to skip for Windows. Perhaps
   # this should be data-driven by allmodules?
   # (https://github.com/google/go-cloud/issues/2111).
-  if [[ "${TRAVIS_OS_NAME:-}" == "windows" ]] && [[ "$path" == "internal/website" ]]; then
+  if [[ "${RUNNER_OS:-}" == "Windows" ]] && [[ "$path" == "internal/website" ]]; then
     echo "  Skipping on Windows"
     continue
   fi
@@ -104,7 +69,7 @@ while read -r path || [[ -n "$path" ]]; do
 
   # Only do coverage for the Linux build on Travis because it is slow, and
   # codecov will only save the last one anyway.
-  if [[ "${TRAVIS_OS_NAME:-}" == "linux" ]]; then
+  if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
     gotestflags+=("-coverpkg=./..." "-coverprofile=$rootdir/modcoverage.out")
   fi
 
@@ -136,7 +101,7 @@ fi
 
 # The rest of these checks are not OS-specific, so we only run them for the
 # Linux build on Travis, or when running locally.
-if [[ "${TRAVIS_OS_NAME:-linux}" != "linux" ]]; then
+if [[ "${RUNNER_OS:-linux}" != "Linux" ]]; then
   exit $result
 fi
 
@@ -223,7 +188,7 @@ fi;
 
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.
-if [[ ${latest_go_version} -eq 1 ]] && [[ ${result} -eq 0 ]] && [[ ! -z "${TRAVIS_BRANCH:-}" ]] && [[ ! -z "${TRAVIS_PULL_REQUEST_SHA:-}" ]]; then
+if [[ ${latest_go_version} -eq 1 ]] && [[ ${result} -eq 0 ]] && [[ ! -z "${GITHUB_HEAD_REF:-}" ]]; then
   echo
   ./internal/testing/check_api_change.sh || result=1;
 fi
