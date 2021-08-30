@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Go CDK Tests
+name: tests
 on: [push, pull_request]
 jobs:
   build:
@@ -22,7 +22,7 @@ jobs:
         go-version: [1.17.x]
         include:
           - go-version: 1.16.x
-            os: unbuntu-latest
+            os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
     steps:

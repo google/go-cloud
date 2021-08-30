@@ -367,9 +367,9 @@ func newGCPReplayer(t *testing.T, filename string) (*grpcreplay.Replayer, func()
 }
 
 // HasDockerTestEnvironment returns true when either:
-// 1) Not on Travis.
-// 2) On Travis Linux environment, where Docker is available.
+// 1) Not on Github Actions.
+// 2) On Github's Linux environment, where Docker is available.
 func HasDockerTestEnvironment() bool {
-	s := os.Getenv("TRAVIS_OS_NAME")
-	return s == "" || s == "linux"
+	s := os.Getenv("RUNNER_OS")
+	return s == "" || s == "Linux"
 }
