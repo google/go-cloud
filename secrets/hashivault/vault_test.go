@@ -48,7 +48,7 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	return &keeper{keyID: keyID1, client: h.client}, &keeper{keyID: keyID2, client: h.client}, nil
+	return newKeeper(h.client, keyID1, nil), newKeeper(h.client, keyID2, nil), nil
 }
 
 func (h *harness) Close() {}
@@ -182,6 +182,8 @@ func TestOpenKeeper(t *testing.T) {
 	}{
 		// OK.
 		{"hashivault://mykey", false},
+		// OK, setting engine.
+		{"hashivault://mykey?engine=foo", false},
 		// Invalid parameter.
 		{"hashivault://mykey?param=value", true},
 	}

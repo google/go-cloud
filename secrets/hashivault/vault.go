@@ -144,7 +144,8 @@ const Scheme = "hashivault"
 //
 // The URL Host + Path are used as the keyID.
 //
-// No query parameters are supported.
+// The following query parameters are supported:
+// - engine: The secrets engine to use; defaults to "transit".
 type URLOpener struct {
 	// Client must be non-nil.
 	Client *api.Client
@@ -155,32 +156,49 @@ type URLOpener struct {
 
 // OpenKeeperURL opens the Keeper URL.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
+	for param, vals := range u.Query() {
+		switch param {
+		case "engine":
+			o.Options.Engine = vals[0]
+		default:
+			return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
+		}
 	}
 	return OpenKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
+}
+
+func newKeeper(client *api.Client, keyID string, opts *KeeperOptions) *keeper {
+	if opts == nil {
+		opts = &KeeperOptions{}
+	}
+	if opts.Engine == "" {
+		opts.Engine = "transit"
+	}
+	return &keeper{
+		keyID:  keyID,
+		client: client,
+		opts:   *opts,
+	}
 }
 
 // OpenKeeper returns a *secrets.Keeper that uses the Transit Secrets Engine of
 // Vault by Hashicorp.
 // See the package documentation for an example.
 func OpenKeeper(client *api.Client, keyID string, opts *KeeperOptions) *secrets.Keeper {
-	return secrets.NewKeeper(&keeper{
-		keyID:  keyID,
-		client: client,
-	})
+	return secrets.NewKeeper(newKeeper(client, keyID, opts))
 }
 
 type keeper struct {
 	// keyID is an encryption key ring name used by the Vault's transit API.
 	keyID  string
 	client *api.Client
+	opts   KeeperOptions
 }
 
 // Decrypt decrypts the ciphertext into a plaintext.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	out, err := k.client.Logical().Write(
-		path.Join("transit/decrypt", k.keyID),
+		path.Join(k.opts.Engine+"/decrypt", k.keyID),
 		map[string]interface{}{
 			"ciphertext": string(ciphertext),
 		},
@@ -194,7 +212,7 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 // Encrypt encrypts a plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	secret, err := k.client.Logical().Write(
-		path.Join("transit/encrypt", k.keyID),
+		path.Join(k.opts.Engine+"/encrypt", k.keyID),
 		map[string]interface{}{
 			"plaintext": plaintext,
 		},
@@ -221,4 +239,8 @@ func (k *keeper) ErrorCode(error) gcerrors.ErrorCode {
 
 // KeeperOptions controls Keeper behaviors.
 // It is provided for future extensibility.
-type KeeperOptions struct{}
+type KeeperOptions struct {
+	// Engine is the name of the secrets engine to use.
+	// It defaults to "transit".
+	Engine string
+}
