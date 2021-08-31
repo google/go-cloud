@@ -2,7 +2,7 @@
 
 _Write once, run on any cloud ☁️_
 
-![Build Status](https://github.com/google/go-cloud/actions/workflows/tests.yml/badge.svg?branch=master)
+[![Go CDK Tests](https://github.com/google/go-cloud/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/google/go-cloud/actions/workflows/tests.yml)
 [![PkgGoDev](https://pkg.go.dev/badge/mod/gocloud.dev)][PkgGoDev]
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
 
