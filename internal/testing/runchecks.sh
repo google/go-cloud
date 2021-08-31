@@ -33,6 +33,8 @@ if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
   echo
   echo "Starting local dependencies..."
   ./internal/testing/start_local_deps.sh
+else
+  echo "Not starting local dependencies for ${RUNNER_OS:-}."
 fi
 
 result=0
@@ -188,10 +190,11 @@ fi;
 
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.
-if [[ ${latest_go_version} -eq 1 ]] && [[ ${result} -eq 0 ]] && [[ ! -z "${GITHUB_HEAD_REF:-}" ]]; then
-  echo
-  ./internal/testing/check_api_change.sh || result=1;
-fi
+# CURRENTLY BROKEN
+# if [[ ${latest_go_version} -eq 1 ]] && [[ ${result} -eq 0 ]] && [[ ! -z "${GITHUB_HEAD_REF:-}" ]]; then
+  # echo
+  # ./internal/testing/check_api_change.sh || result=1;
+# fi
 
 
 echo
