@@ -228,14 +228,11 @@ func (s *state) As(i interface{}) bool {
 // errorState returns a new State with err, unless prevS also represents
 // the same error, in which case it returns nil.
 func errorState(err error, prevS driver.State) driver.State {
-	// Map aws.RequestCanceled to the more standard context package errors.
-	if getErrorCode(err) == request.CanceledErrorCode {
-		msg := err.Error()
-		if strings.Contains(msg, "context deadline exceeded") {
-			err = context.DeadlineExceeded
-		} else {
-			err = context.Canceled
-		}
+	// Map to the more standard context package error.
+	if strings.Contains(err.Error(), "context deadline exceeded") {
+		err = context.DeadlineExceeded
+	} else if getErrorCode(err) == request.CanceledErrorCode {
+		err = context.Canceled
 	}
 	s := &state{err: err}
 	if prevS == nil {

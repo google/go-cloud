@@ -20,7 +20,7 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.8
 	github.com/Azure/azure-pipeline-go v0.2.3
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/aws/aws-sdk-go v1.40.16
+	github.com/aws/aws-sdk-go v1.40.34
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/go-cmdtest v0.3.0
 	github.com/google/go-cmp v0.5.6
@@ -36,7 +36,7 @@ require (
 	gocloud.dev/pubsub/natspubsub v0.23.0
 	gocloud.dev/pubsub/rabbitpubsub v0.23.0
 	gocloud.dev/secrets/hashivault v0.23.0
-	google.golang.org/genproto v0.0.0-20210728212813-7823e685a01f
+	google.golang.org/genproto v0.0.0-20210831024726-fe130286e0e2
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
 
