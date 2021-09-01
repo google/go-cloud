@@ -34,7 +34,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.24.0
-	github.com/aws/aws-sdk-go v1.40.16
+	github.com/aws/aws-sdk-go v1.40.34
 	github.com/aws/aws-sdk-go-v2 v1.8.0
 	github.com/aws/aws-sdk-go-v2/config v1.6.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.3.2
