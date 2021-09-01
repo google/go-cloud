@@ -25,8 +25,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	gocloud.dev v0.23.0
+	gocloud.dev v0.24.0
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
-
-replace gocloud.dev => ../../

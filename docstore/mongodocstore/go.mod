@@ -23,7 +23,5 @@ require (
 	github.com/google/wire v0.5.0
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.7.1
-	gocloud.dev v0.23.0
+	gocloud.dev v0.24.0
 )
-
-replace gocloud.dev => ../../

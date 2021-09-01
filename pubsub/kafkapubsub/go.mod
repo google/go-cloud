@@ -21,7 +21,5 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	gocloud.dev v0.23.0
+	gocloud.dev v0.24.0
 )
-
-replace gocloud.dev => ../../
