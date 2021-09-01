@@ -38,7 +38,6 @@ resource "github_branch_protection" "default_branch" {
     strict = false
 
     contexts = [
-      "Travis CI - Pull Request",
       "cla/google",
     ]
   }

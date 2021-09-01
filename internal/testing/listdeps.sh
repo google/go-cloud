@@ -19,9 +19,8 @@ set -euo pipefail
 #
 # $ internal/testing/listdeps.sh > internal/testing/alldeps
 #
-# Important note: there are changes in module tooling behavior between go 1.11
-# and go 1.12; please make sure to use the same version of Go as used by Travis
-# (see .travis.yml) when updating the alldeps file.
+# Make sure to use the same version of Go as used by tests
+# (see .github/actions/tests.yml) when updating the alldeps file.
 tmpfile=$(mktemp)
 function cleanup() {
   rm -rf "$tmpfile"
