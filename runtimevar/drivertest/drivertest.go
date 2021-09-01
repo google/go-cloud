@@ -395,7 +395,7 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	} else {
 		got, err = unchangedState.Value()
 		if err != context.DeadlineExceeded {
-			t.Fatalf("got state %v/%v, wanted nil or nil/DeadlineExceeded after no change", got, err)
+			t.Fatalf("got state %v/%v/%v, wanted nil or nil/DeadlineExceeded after no change", got, err, gcerrors.Code(err))
 		}
 	}
 
