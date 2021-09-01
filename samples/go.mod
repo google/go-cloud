@@ -20,7 +20,7 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.8
 	github.com/Azure/azure-pipeline-go v0.2.3
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/aws/aws-sdk-go v1.40.16
+	github.com/aws/aws-sdk-go v1.40.34
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/go-cmdtest v0.3.0
 	github.com/google/go-cmp v0.5.6
