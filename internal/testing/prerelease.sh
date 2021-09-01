@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs expensive checks that we don't normally run on Travis, but
+# This script runs expensive checks that we don't normally run, but
 # that should run periodically, before each release.
 # For example, tests that can't use record/replay, so must be performed live
 # against the backing service.

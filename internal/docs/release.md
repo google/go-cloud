@@ -6,7 +6,8 @@ To do a release:
     during the release window (likely 1-2 hours). TODO(eliben): find a way to
     enforce this on GitHub.
 
--   Make sure all tests pass locally with `runchecks.sh` and Travis is green.
+-   Make sure all tests pass locally with `runchecks.sh` and the build is
+    green.
 
 -   Run the prerelease checks until everything is passing.
 
@@ -47,7 +48,7 @@ To do a release:
 
     Check that everything looks in order (with `git diff`) and commit.
 
--   Create a PR. Travis will fail for this PR because submodules depend on a
+-   Create a PR. Tests will fail for this PR because submodules depend on a
     version of the main module that wasn't tagged yet. Enable force merging in
     GitHub settings and force-merge the PR. Note that this does not affect
     users, since a new version hasn't been tagged yet.

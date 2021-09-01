@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script runs all checks for Go CDK on Travis, including go test suites,
+# This script runs all checks for Go CDK, including go test suites,
 # compatibility checks, consistency checks, Wire, etc.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
@@ -25,9 +25,9 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
-# start_local_deps.sh requires that Docker is installed, via Travis services,
-# which are only supported on Linux.
-# Tests that depend on them should check the Travis environment before running.
+# start_local_deps.sh requires that Docker is installed,
+# which is only supported on Linux.
+# Tests that depend on them should check the RUNNER_OS environment before running.
 # Don't do this when running locally, as it's slow; user should do it.
 if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
   echo
@@ -69,7 +69,7 @@ while read -r path || [[ -n "$path" ]]; do
   gotestflags=("-json" "-race")
   testsummaryflags=("-progress")
 
-  # Only do coverage for the Linux build on Travis because it is slow, and
+  # Only do coverage for the Linux build because it is slow, and
   # codecov will only save the last one anyway.
   if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
     gotestflags+=("-coverpkg=./..." "-coverprofile=$rootdir/modcoverage.out")
@@ -102,7 +102,7 @@ if [ -f coverage.out ] && [ $result -eq 0 ]; then
 fi
 
 # The rest of these checks are not OS-specific, so we only run them for the
-# Linux build on Travis, or when running locally.
+# Linux build, or when running locally.
 if [[ "${RUNNER_OS:-linux}" != "Linux" ]]; then
   exit $result
 fi
