@@ -19,7 +19,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Note: we used to include windows-latest, but it's super
+        # flaky on Github runners, lots of OOMs.
+        os: [ubuntu-latest, macos-latest]
         go-version: [1.17.x]
         include:
           - go-version: 1.16.x
