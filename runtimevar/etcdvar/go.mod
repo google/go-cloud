@@ -39,7 +39,7 @@ require (
 	go.etcd.io/bbolt v1.3.2 // indirect
 	go.etcd.io/etcd v3.3.13+incompatible
 	gocloud.dev v0.23.0
-	google.golang.org/grpc v1.39.1
+	google.golang.org/grpc v1.40.0
 	google.golang.org/grpc/examples v0.0.0-20210805213004-fc30d5b571f5 // indirect
 )
 
