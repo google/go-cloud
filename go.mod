@@ -35,13 +35,13 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.24.0
 	github.com/aws/aws-sdk-go v1.40.16
-	github.com/aws/aws-sdk-go-v2 v1.8.0
+	github.com/aws/aws-sdk-go-v2 v1.9.0
 	github.com/aws/aws-sdk-go-v2/config v1.6.0
-	github.com/aws/aws-sdk-go-v2/credentials v1.3.2
+	github.com/aws/aws-sdk-go-v2/credentials v1.4.0
 	github.com/aws/aws-sdk-go-v2/service/kms v1.4.2
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.5.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.9.0
-	github.com/aws/smithy-go v1.7.0
+	github.com/aws/smithy-go v1.8.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
