@@ -76,8 +76,7 @@ You can also browse Go package reference on [pkg.go.dev][PkgGoDev].
 
 The APIs are still in alpha, but we think they are production-ready and are
 actively looking for feedback from early adopters. If you have comments or
-questions, you can post to the [go-cloud mailing list][] or email us at
-go-cdk-feedback@google.com.
+questions please open an issue.
 
 At this time we prefer to focus on maintaining the existing APIs and drivers,
 and are unlikely to accept new ones into the `go-cloud` repository. The modular
@@ -131,12 +130,9 @@ See [the contributing guide](./CONTRIBUTING.md) for more details.
 
 ## Community
 
-You can contact us on the [go-cloud mailing list][].
-
 This project is covered by the Go [Code of Conduct][].
 
 [Code of Conduct]: ./CODE_OF_CONDUCT.md
-[go-cloud mailing list]: https://groups.google.com/forum/#!forum/go-cloud
 
 ## Legal disclaimer
 
