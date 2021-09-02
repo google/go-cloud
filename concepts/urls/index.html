@@ -2,7 +2,7 @@
 <html lang="en-us">
 <head>
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="generator" content="Hugo 0.88.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>URLs &middot; Go CDK</title>
@@ -39,28 +39,22 @@ and each provider implementation has code to convert the URL into the data
 needed to call its constructor. For example, calling
 <code>blob.OpenBucket(&quot;s3blob://my-bucket&quot;)</code> will return a <code>*blob.Bucket</code> created
 using <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blob.OpenBucket</code></a>.</p>
-
 <p>Each portable API package will document the types that it supports opening
 by URL. For example, the <code>blob</code> package supports <code>Bucket</code>s, while the <code>pubsub</code>
 package supports <code>Topic</code>s and <code>Subscription</code>s. Each provider implementation will
 document what scheme(s) it registers for, and what format of URL it expects.</p>
-
 <p>Each portable type URL opener will accept URL schemes with an <code>&lt;api&gt;+</code> prefix
 (e.g. <code>blob+file:///dir</code> instead of <code>file:///dir</code>, as well as schemes with an
 <code>&lt;api&gt;+&lt;type&gt;+</code> prefix (e.g. <code>blob+bucket+file:///dir</code>).</p>
-
 <p>Each portable API package should include an example using a URL, and
 many providers will include provider-specific examples as well.</p>
-
 <h2 id="muxes"> Muxes<a class="anchor" href="#muxes" aria-label="Link to Section">🔗</a></h2>
-
 <p>Each portable type that is openable via URL will have a top-level function
 you can call, like <a href="https://godoc.org/gocloud.dev/blob#OpenBucket"><code>blob.OpenBucket</code></a>. This top-level function uses a default
 instance of a <code>URLMux</code> multiplexer to map schemes to a provider-specific
 opener for the type. For example, <code>blob</code> has a <a href="https://godoc.org/gocloud.dev/blob#BucketURLOpener"><code>BucketURLOpener</code></a> interface
 that providers implement and then register using <a href="https://godoc.org/gocloud.dev/blob#URLMux.RegisterBucket"><code>RegisterBucket</code></a> on the
 result of <a href="https://godoc.org/gocloud.dev/blob#DefaultURLMux"><code>DefaultURLMux</code></a>.</p>
-
 <p>Many applications will work just fine using the default mux through the
 top-level <code>Open</code> functions. However, if you want more control, you can create
 your own <code>URLMux</code> and register the provider <code>URLOpener</code>s you need. Most
@@ -70,7 +64,6 @@ via URL will often use default credentials from the environment. For example,
 the AWS URL openers use the credentials saved by &ldquo;aws login&rdquo; (we don&rsquo;t want
 to include credentials in the URL itself, since they are likely to be
 sensitive).</p>
-
 <ol>
 <li>Instantiate the provider&rsquo;s <code>URLOpener</code> with the specific fields you need.
 For example, <code>s3blob.URLOpener{ConfigProvider: myAWSProvider}</code> using a
@@ -104,6 +97,27 @@ For example, <code>s3blob.URLOpener{ConfigProvider: myAWSProvider}</code> using 
         <li class="Sidenav-section">
           <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
             <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/docstore/" class="Sidenav-pageLink">Docstore</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/sql/" class="Sidenav-pageLink">MySQL/PostgreSQL</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/runtimevar/" class="Sidenav-pageLink">Runtime Configuration</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/server/" class="Sidenav-pageLink">Server</a>
+              </li>
               
               <li class="Sidenav-page">
                 <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
@@ -149,8 +163,7 @@ For example, <code>s3blob.URLOpener{ConfigProvider: myAWSProvider}</code> using 
       <nav>
         <ul class="FooterLinks">
           <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
-          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
-          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/issues" class="FooterLinks-link">Contact Team</a></li>
         </ul>
       </nav>
 

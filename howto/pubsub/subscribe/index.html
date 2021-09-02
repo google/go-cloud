@@ -2,7 +2,7 @@
 <html lang="en-us">
 <head>
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="generator" content="Hugo 0.88.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Subscribe to Messages from a Topic &middot; Go CDK</title>
@@ -35,50 +35,26 @@ if (!doNotTrack) {
 <nav class="PageTOC">
   <div class="PageTOC-heading">In this article</div>
   <nav id="TableOfContents">
-<ul>
-<li>
-<ul>
-<li><a href="#opening">Opening a Subscription</a></li>
-<li><a href="#receiving">Receiving and Acknowledging Messages</a></li>
-<li><a href="#other-usage-samples">Other Usage Samples</a></li>
-<li><a href="#services">Supported Pub/Sub Services</a>
-<ul>
-<li><a href="#gcp">Google Cloud Pub/Sub</a>
-<ul>
-<li><a href="#gcp-ctor">Google Cloud Pub/Sub Constructor</a></li>
-</ul></li>
-<li><a href="#sqs">Amazon Simple Queueing Service</a>
-<ul>
-<li><a href="#sqs-ctor">Amazon SQS Constructor</a></li>
-</ul></li>
-<li><a href="#azure">Azure Service Bus</a>
-<ul>
-<li><a href="#azure-ctor">Azure Service Bus Constructor</a></li>
-</ul></li>
-<li><a href="#rabbitmq">RabbitMQ</a>
-<ul>
-<li><a href="#rabbitmq-ctor">RabbitMQ Constructor</a></li>
-</ul></li>
-<li><a href="#nats">NATS</a>
-<ul>
-<li><a href="#nats-ctor">NATS Constructor</a></li>
-</ul></li>
-<li><a href="#kafka">Kafka</a>
-<ul>
-<li><a href="#kafka-ctor">Kafka Constructor</a></li>
-</ul></li>
-<li><a href="#mem">In-Memory</a>
-<ul>
-<li><a href="#mem-ctor">In-Memory Constructor</a></li>
-</ul></li>
-</ul></li>
-</ul></li>
-</ul>
+  <ul>
+    <li><a href="#opening">Opening a Subscription</a></li>
+    <li><a href="#receiving">Receiving and Acknowledging Messages</a></li>
+    <li><a href="#other-usage-samples">Other Usage Samples</a></li>
+    <li><a href="#services">Supported Pub/Sub Services</a>
+      <ul>
+        <li><a href="#gcp">Google Cloud Pub/Sub</a></li>
+        <li><a href="#sqs">Amazon Simple Queueing Service</a></li>
+        <li><a href="#azure">Azure Service Bus</a></li>
+        <li><a href="#rabbitmq">RabbitMQ</a></li>
+        <li><a href="#nats">NATS</a></li>
+        <li><a href="#kafka">Kafka</a></li>
+        <li><a href="#mem">In-Memory</a></li>
+      </ul>
+    </li>
+  </ul>
 </nav>
 </nav>
 
 <p>Subscribing to receive message from a topic with the Go CDK takes three steps:</p>
-
 <ol>
 <li><a href="#opening">Open a subscription</a> to a topic with the Pub/Sub service of your choice (once per
 subscription).</li>
@@ -86,16 +62,13 @@ subscription).</li>
 work related to the message, use the Ack method to prevent it from being
 redelivered.</li>
 </ol>
-
 <h2 id="opening"> Opening a Subscription<a class="anchor" href="#opening" aria-label="Link to Section">🔗</a></h2>
-
 <p>The first step in subscribing to receive messages from a topic is
 to instantiate a portable <a href="https://godoc.org/gocloud.dev/pubsub#Subscription"><code>*pubsub.Subscription</code></a> for your service.</p>
-
 <p>The easiest way to do so is to use <a href="https://godoc.org/gocloud.dev/pubsub#OpenTopic"><code>pubsub.OpenSubscription</code></a>
 and a service-specific URL pointing to the topic, making sure you
 <a href="https://golang.org/doc/effective_go.html#blank_import">&ldquo;blank import&rdquo;</a> the driver package to link it in.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
     <span class="s">&#34;context&#34;</span>
 
     <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -109,29 +82,24 @@ and a service-specific URL pointing to the topic, making sure you
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subs</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <span class="c1">// subs is a *pubsub.Subscription; see usage below
-</span><span class="c1"></span><span class="o">...</span></code></pre></div>
-<p>See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for general background and the <a href="#services">guide below</a>
+</span><span class="c1"></span><span class="o">...</span>
+</code></pre></div><p>See <a href="https://gocloud.dev/concepts/urls/">Concepts: URLs</a> for general background and the <a href="#services">guide below</a>
 for URL usage for each supported service.</p>
-
 <p>Alternatively, if you need fine-grained
 control over the connection settings, you can call the constructor function in
 the driver package directly (like <code>gcppubsub.OpenSubscription</code>).</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/pubsub/&lt;driver&gt;&#34;</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/pubsub/&lt;driver&gt;&#34;</span>
 <span class="o">...</span>
 <span class="nx">subs</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="p">&lt;</span><span class="nx">driver</span><span class="p">&gt;.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-<span class="o">...</span></code></pre></div>
-<p>You may find the <a href="http://github.com/google/wire"><code>wire</code> package</a> useful for managing your initialization code
+<span class="o">...</span>
+</code></pre></div><p>You may find the <a href="http://github.com/google/wire"><code>wire</code> package</a> useful for managing your initialization code
 when switching between different backing services.</p>
-
 <p>See the <a href="#services">guide below</a> for constructor usage for each supported service.</p>
-
 <h2 id="receiving"> Receiving and Acknowledging Messages<a class="anchor" href="#receiving" aria-label="Link to Section">🔗</a></h2>
-
 <p>A simple subscriber that operates on
 <a href="https://godoc.org/gocloud.dev/pubsub#Message">messages</a> serially looks like
 this:</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Loop on received messages.
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Loop on received messages.
 </span><span class="c1"></span><span class="k">for</span> <span class="p">{</span>
 	<span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Receive</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
@@ -145,11 +113,9 @@ this:</p>
 </span><span class="c1"></span>	<span class="nx">msg</span><span class="p">.</span><span class="nf">Ack</span><span class="p">()</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <p>If you want your subscriber to operate on incoming messages concurrently,
 you can start multiple goroutines:</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Loop on received messages. We can use a channel as a semaphore to limit how
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Loop on received messages. We can use a channel as a semaphore to limit how
 </span><span class="c1">// many goroutines we have active at a time as well as wait on the goroutines
 </span><span class="c1">// to finish before exiting.
 </span><span class="c1"></span><span class="kd">const</span> <span class="nx">maxHandlers</span> <span class="p">=</span> <span class="mi">10</span>
@@ -188,30 +154,22 @@ you can start multiple goroutines:</p>
 	<span class="nx">sem</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <p>Note that the <a href="https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery">semantics of message delivery</a> can vary by backing service.</p>
-
 <h2 id="other-usage-samples"> Other Usage Samples<a class="anchor" href="#other-usage-samples" aria-label="Link to Section">🔗</a></h2>
-
 <ul>
 <li><a href="https://github.com/google/go-cloud/tree/master/samples/gocdk-pubsub">CLI Sample</a></li>
 <li><a href="https://gocloud.dev/tutorials/order/">Order Processor sample</a></li>
 <li><a href="https://godoc.org/gocloud.dev/pubsub#pkg-examples">pubsub package examples</a></li>
 </ul>
-
 <h2 id="services"> Supported Pub/Sub Services<a class="anchor" href="#services" aria-label="Link to Section">🔗</a></h2>
-
 <h3 id="gcp"> Google Cloud Pub/Sub<a class="anchor" href="#gcp" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK can receive messages from a Google <a href="https://cloud.google.com/pubsub/docs/">Cloud Pub/Sub</a> subscription.
 The URLs use the project ID and the subscription ID.</p>
-
 <p><code>pubsub.OpenSubscription</code> will use Application Default Credentials; if you have
 authenticated via <a href="https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login"><code>gcloud auth application-default login</code></a>, it will use those credentials. See
 <a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a> to learn about authentication
 alternatives, including using environment variables.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -225,15 +183,12 @@ alternatives, including using environment variables.</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h4 id="gcp-ctor"> Google Cloud Pub/Sub Constructor<a class="anchor" href="#gcp-ctor" aria-label="Link to Section">🔗</a></h4>
-
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenSubscription"><code>gcppubsub.OpenSubscription</code></a> constructor opens a Cloud Pub/Sub
 subscription. You must first obtain <a href="https://cloud.google.com/docs/authentication/production">GCP credentials</a> and then
 create a gRPC connection to Cloud Pub/Sub. (This gRPC connection can be
 reused among subscriptions.)</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/gcp&#34;</span>
@@ -270,20 +225,16 @@ reused among subscriptions.)</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h3 id="sqs"> Amazon Simple Queueing Service<a class="anchor" href="#sqs" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK can subscribe to an Amazon <a href="https://aws.amazon.com/sqs/">Simple Queueing Service</a> (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
 <code>https://</code> is replaced with <code>awssqs://</code>. You should specify the <code>region</code>
 query parameter to ensure your application connects to the correct region.</p>
-
 <p><code>pubsub.OpenSubscription</code> will create a default AWS Session with the
 <code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
 alternatives, including using environment variables.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -301,23 +252,18 @@ alternatives, including using environment variables.</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <p>If your messages are being sent to SQS directly, or if they are being delivered
 via an SNS topic with <code>RawMessageDelivery</code> enabled, set a <code>raw=true</code> query
 parameter in your URL, or set <code>SubscriberOptions.Raw</code> to <code>true</code> if you&rsquo;re using
 the constructors. By default, the subscription will use heuristics to identify
 whether the message bodies are raw or <a href="https://aws.amazon.com/sns/faqs/#Raw_message_delivery">SNS JSON</a>.</p>
-
 <p>Messages with a <code>base64encoded</code> message attribute will be automatically
 <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> decoded before being returned. See the <a href="https://gocloud.dev/howto/pubsub/publish/#sns">SNS publishing guide</a>
 or the [SQS publshing guide][] for more details.</p>
-
 <h4 id="sqs-ctor"> Amazon SQS Constructor<a class="anchor" href="#sqs-ctor" aria-label="Link to Section">🔗</a></h4>
-
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSubscription"><code>awssnssqs.OpenSubscription</code></a> constructor opens an SQS queue. You must
 first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
@@ -341,17 +287,14 @@ first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 <span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h3 id="azure"> Azure Service Bus<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK can recieve messages from an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> subscription
 over <a href="https://www.amqp.org/">AMQP 1.0</a>. The URL for subscribing is the topic name with the
 subscription name in the <code>subscription</code> query parameter.
 <code>pubsub.OpenSubscription</code> will use the environment variable
 <code>SERVICEBUS_CONNECTION_STRING</code> to obtain the Service Bus Connection String
 you need to copy <a href="https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-how-to-use-topics-subscriptions#get-the-connection-string">from the Azure portal</a>.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -369,16 +312,13 @@ you need to copy <a href="https://docs.microsoft.com/en-us/azure/service-bus-mes
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h4 id="azure-ctor"> Azure Service Bus Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
-
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/azuresb#OpenSubscription"><code>azuresb.OpenSubscription</code></a> constructor opens an Azure Service Bus
 subscription. You must first connect to the topic and subscription using the
 <a href="https://github.com/Azure/azure-service-bus-go">Azure Service Bus library</a> and then pass the subscription to
 <code>azuresb.OpenSubscription</code>. There are also helper functions in the <code>azuresb</code>
 package to make this easier.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 	<span class="s">&#34;os&#34;</span>
 
@@ -414,15 +354,12 @@ package to make this easier.</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h3 id="rabbitmq"> RabbitMQ<a class="anchor" href="#rabbitmq" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK can receive messages from an <a href="https://www.rabbitmq.com/protocol.html">AMQP 0.9.1</a> queue, the dialect of
 AMQP spoken by <a href="https://www.rabbitmq.com">RabbitMQ</a>. A RabbitMQ URL only includes the queue name.
 The RabbitMQ&rsquo;s server is discovered from the <code>RABBIT_SERVER_URL</code> environment
 variable (which is something like <code>amqp://guest:guest@localhost:5672/</code>).</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -438,13 +375,10 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h4 id="rabbitmq-ctor"> RabbitMQ Constructor<a class="anchor" href="#rabbitmq-ctor" aria-label="Link to Section">🔗</a></h4>
-
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenSubscription"><code>rabbitpubsub.OpenSubscription</code></a> constructor opens a RabbitMQ queue.
 You must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;github.com/streadway/amqp&#34;</span>
@@ -459,14 +393,11 @@ You must first create an <a href="https://godoc.org/github.com/streadway/amqp#Co
 <span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">rabbitpubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">rabbitConn</span><span class="p">,</span> <span class="s">&#34;myqueue&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h3 id="nats"> NATS<a class="anchor" href="#nats" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK can publish to a <a href="https://nats.io/">NATS</a> subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the <code>NATS_SERVER_URL</code>
 environment variable (which is something like <code>nats://nats.example.com</code>).</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -482,21 +413,16 @@ environment variable (which is something like <code>nats://nats.example.com</cod
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <p>NATS guarantees at-most-once delivery; it will never redeliver a message.
 Therefore, <code>Message.Ack</code> is a no-op.</p>
-
 <p>To parse messages <a href="https://gocloud.dev/howto/pubsub/publish/#nats">published via the Go CDK</a>, the NATS driver
 will first attempt to decode the payload using <a href="https://golang.org/pkg/encoding/gob/">gob</a>. Failing that, it will
 return the message payload as the <code>Data</code> with no metadata to accomodate
 subscribing to messages coming from a source not using the Go CDK.</p>
-
 <h4 id="nats-ctor"> NATS Constructor<a class="anchor" href="#nats-ctor" aria-label="Link to Section">🔗</a></h4>
-
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription"><code>natspubsub.OpenSubscription</code></a> constructor opens a NATS subject as a
 topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"><code>*nats.Conn</code></a> to your NATS instance.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;github.com/nats-io/nats.go&#34;</span>
@@ -518,17 +444,14 @@ topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h3 id="kafka"> Kafka<a class="anchor" href="#kafka" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK can receive messages from a <a href="https://kafka.apache.org/">Kafka</a> cluster.
 A Kafka URL includes the consumer group name, plus at least one instance
 of a query parameter specifying the topic to subscribe to.
 The brokers in the Kafka cluster are discovered from the
 <code>KAFKA_BROKERS</code> environment variable (which is a comma-delimited list of
 hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -546,18 +469,14 @@ hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h4 id="kafka-ctor"> Kafka Constructor<a class="anchor" href="#kafka-ctor" aria-label="Link to Section">🔗</a></h4>
-
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenSubscription"><code>kafkapubsub.OpenSubscription</code></a> constructor creates a consumer in a
 consumer group, subscribed to one or more topics.</p>
-
 <p>In addition to the list of brokers, you&rsquo;ll need a <a href="https://godoc.org/github.com/Shopify/sarama#Config"><code>*sarama.Config</code></a>, which
 exposes many knobs that can affect performance and semantics; review and set
 them carefully. <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig"><code>kafkapubsub.MinimalConfig</code></a> provides a minimal config to
 get you started.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
@@ -577,16 +496,13 @@ get you started.</p>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h3 id="mem"> In-Memory<a class="anchor" href="#mem" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
 The names in <code>mem://</code> URLs are a process-wide namespace, so subscriptions to
 the same name will receive messages posted to that topic. For instance, if
 you open a topic <code>mem://topicA</code> and open two subscriptions with
 <code>mem://topicA</code>, you will have two subscriptions to the same topic.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
 	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
@@ -607,16 +523,13 @@ you open a topic <code>mem://topicA</code> and open two subscriptions with
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
-
 <h4 id="mem-ctor"> In-Memory Constructor<a class="anchor" href="#mem-ctor" aria-label="Link to Section">🔗</a></h4>
-
 <p>To create a subscription to an in-memory Pub/Sub topic, pass the <a href="https://gocloud.dev/howto/pubsub/publish/#mem-ctor">topic you
 created</a> into the <a href="https://godoc.org/gocloud.dev/pubsub/mempubsub#NewSubscription"><code>mempubsub.NewSubscription</code> function</a>.
 You will also need to pass an acknowledgement deadline: once a message is
 received, if it is not acknowledged after the deadline elapses, then it will be
 redelivered.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 	<span class="s">&#34;time&#34;</span>
 
@@ -655,6 +568,27 @@ redelivered.</p>
         <li class="Sidenav-section">
           <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
             <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/docstore/" class="Sidenav-pageLink">Docstore</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/sql/" class="Sidenav-pageLink">MySQL/PostgreSQL</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/runtimevar/" class="Sidenav-pageLink">Runtime Configuration</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/server/" class="Sidenav-pageLink">Server</a>
+              </li>
               
               <li class="Sidenav-page">
                 <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
@@ -700,8 +634,7 @@ redelivered.</p>
       <nav>
         <ul class="FooterLinks">
           <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
-          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
-          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/issues" class="FooterLinks-link">Contact Team</a></li>
         </ul>
       </nav>
 

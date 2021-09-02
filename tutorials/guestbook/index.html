@@ -2,7 +2,7 @@
 <html lang="en-us">
 <head>
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="generator" content="Hugo 0.88.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Tutorial: Guestbook Application &middot; Go CDK</title>
@@ -35,55 +35,52 @@ if (!doNotTrack) {
 <nav class="PageTOC">
   <div class="PageTOC-heading">In this article</div>
   <nav id="TableOfContents">
-<ul>
-<li>
-<ul>
-<li><a href="#prerequisites">Prerequisites</a>
-<ul>
-<li><a href="#cloning-the-sample">Cloning the Sample</a></li>
-</ul></li>
-<li><a href="#building">Building</a></li>
-<li><a href="#running-locally">Running Locally</a></li>
-<li><a href="#running-on-google-cloud-platform-gcp">Running on Google Cloud Platform (GCP)</a>
-<ul>
-<li><a href="#provision-resources">Provision resources</a></li>
-<li><a href="#deploy-the-application">Deploy the application</a></li>
-<li><a href="#cleanup">Cleanup</a></li>
-</ul></li>
-<li><a href="#running-on-amazon-web-services-aws">Running on Amazon Web Services (AWS)</a>
-<ul>
-<li><a href="#agree-to-the-debian-terms-and-conditions">Agree to the Debian Terms and Conditions</a></li>
-<li><a href="#ssh-key">SSH Key</a></li>
-<li><a href="#provision-resources-1">Provision resources</a></li>
-<li><a href="#deploy-the-application-1">Deploy the application</a></li>
-<li><a href="#cleanup-1">Cleanup</a></li>
-</ul></li>
-<li><a href="#running-on-azure">Running on Azure</a>
-<ul>
-<li><a href="#provision-resources-2">Provision resources</a></li>
-<li><a href="#deploy-the-application-2">Deploy the application</a></li>
-<li><a href="#cleanup-2">Cleanup</a></li>
-</ul></li>
-<li><a href="#gophers">Gophers</a></li>
-</ul></li>
-</ul>
+  <ul>
+    <li><a href="#prerequisites">Prerequisites</a>
+      <ul>
+        <li><a href="#cloning-the-sample">Cloning the Sample</a></li>
+      </ul>
+    </li>
+    <li><a href="#building">Building</a></li>
+    <li><a href="#running-locally">Running Locally</a></li>
+    <li><a href="#running-on-google-cloud-platform-gcp">Running on Google Cloud Platform (GCP)</a>
+      <ul>
+        <li><a href="#provision-resources">Provision resources</a></li>
+        <li><a href="#deploy-the-application">Deploy the application</a></li>
+        <li><a href="#cleanup">Cleanup</a></li>
+      </ul>
+    </li>
+    <li><a href="#running-on-amazon-web-services-aws">Running on Amazon Web Services (AWS)</a>
+      <ul>
+        <li><a href="#agree-to-the-debian-terms-and-conditions">Agree to the Debian Terms and Conditions</a></li>
+        <li><a href="#ssh-key">SSH Key</a></li>
+        <li><a href="#provision-resources-1">Provision resources</a></li>
+        <li><a href="#deploy-the-application-1">Deploy the application</a></li>
+        <li><a href="#cleanup-1">Cleanup</a></li>
+      </ul>
+    </li>
+    <li><a href="#running-on-azure">Running on Azure</a>
+      <ul>
+        <li><a href="#provision-resources-2">Provision resources</a></li>
+        <li><a href="#deploy-the-application-2">Deploy the application</a></li>
+        <li><a href="#cleanup-2">Cleanup</a></li>
+      </ul>
+    </li>
+    <li><a href="#gophers">Gophers</a></li>
+  </ul>
 </nav>
 </nav>
 
 <p>In this tutorial, we will deploy an existing Go CDK application called Guestbook
 locally, then on Google Cloud Platform (GCP), Amazon Web Services (AWS), and
 Azure.</p>
-
-<p>Guestbook is a sample application that records visitors&rsquo; messages and displays a
+<p>Guestbook is a sample application that records visitors' messages and displays a
 cloud banner with an administrative message. The main business logic is written
 in a cloud-agnostic manner using MySQL, the generic blob API, and the generic
 runtimevar API. All platform-specific code is set up by
 <a href="https://github.com/google/wire">Wire</a>.</p>
-
 <h2 id="prerequisites"> Prerequisites<a class="anchor" href="#prerequisites" aria-label="Link to Section">🔗</a></h2>
-
 <p>You will need to install the following software for this tutorial:</p>
-
 <ul>
 <li><a href="https://git-scm.com/">Git</a></li>
 <li><a href="https://golang.org/doc/install">Go</a></li>
@@ -91,25 +88,21 @@ runtimevar API. All platform-specific code is set up by
 <li><a href="https://docs.docker.com/install/">Docker Desktop</a></li>
 <li><a href="https://www.terraform.io/intro/getting-started/install.html">Terraform</a></li>
 </ul>
-
 <h3 id="cloning-the-sample"> Cloning the Sample<a class="anchor" href="#cloning-the-sample" aria-label="Link to Section">🔗</a></h3>
-
 <p>Before you can do anything else, you need to clone the Go CDK repository. The
 repository contains the Guestbook sample.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">git clone https://github.com/google/go-cloud.git
-<span class="nb">cd</span> go-cloud/samples/guestbook</code></pre></div>
-<h2 id="building"> Building<a class="anchor" href="#building" aria-label="Link to Section">🔗</a></h2>
-
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">git clone https://github.com/google/go-cloud.git
+<span class="nb">cd</span> go-cloud/samples/guestbook
+</code></pre></div><h2 id="building"> Building<a class="anchor" href="#building" aria-label="Link to Section">🔗</a></h2>
 <p>Run the following in the <code>samples/guestbook</code> directory:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go generate <span class="o">&amp;&amp;</span> go build</code></pre></div>
-<h2 id="running-locally"> Running Locally<a class="anchor" href="#running-locally" aria-label="Link to Section">🔗</a></h2>
-
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">go generate <span class="o">&amp;&amp;</span> go build
+</code></pre></div><h2 id="running-locally"> Running Locally<a class="anchor" href="#running-locally" aria-label="Link to Section">🔗</a></h2>
 <p>You will need to run a local MySQL database server and create a local message of
 the day. <code>localdb/main.go</code> runs the local MySQL database server using Docker:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go get ./localdb/... <span class="c1"># Get package dependencies.</span>
-go run localdb/main.go</code></pre></div>
-<p>In another terminal, run the <code>guestbook</code> application:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Set a local Message of the Day.</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">go get ./localdb/... <span class="c1"># Get package dependencies.</span>
+go run localdb/main.go
+</code></pre></div><p>In another terminal, run the <code>guestbook</code> application:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Set a local Message of the Day.</span>
 <span class="nb">echo</span> <span class="s1">&#39;Hello, World!&#39;</span> &gt; motd.txt
 
 <span class="c1"># Run the server.</span>
@@ -117,67 +110,54 @@ go run localdb/main.go</code></pre></div>
 <span class="c1"># For runtimevar, it uses filevar, pointing at the local file ./motd.txt.</span>
 <span class="c1">#   You can update the ./motd.txt while the server is running, refresh</span>
 <span class="c1">#   the page, and see it change.</span>
-./guestbook -env<span class="o">=</span><span class="nb">local</span> -bucket<span class="o">=</span>blobs -motd_var<span class="o">=</span>motd.txt</code></pre></div>
-<p>Your server is now running on <a href="http://localhost:8080/">http://localhost:8080/</a>.</p>
-
+./guestbook -env<span class="o">=</span><span class="nb">local</span> -bucket<span class="o">=</span>blobs -motd_var<span class="o">=</span>motd.txt
+</code></pre></div><p>Your server is now running on http://localhost:8080/.</p>
 <p>You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
 (SIGINT).</p>
-
 <h2 id="running-on-google-cloud-platform-gcp"> Running on Google Cloud Platform (GCP)<a class="anchor" href="#running-on-google-cloud-platform-gcp" aria-label="Link to Section">🔗</a></h2>
-
 <p>If you want to run this sample on GCP, you need to create a project, download
 the <a href="https://cloud.google.com/sdk/downloads">gcloud CLI</a>, install <code>kubectl</code> and log in.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Install kubectl.</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Install kubectl.</span>
 gcloud components install kubectl
 
 <span class="c1"># Opens a browser to log you into GCP.</span>
-gcloud auth login</code></pre></div>
-<h3 id="provision-resources"> Provision resources<a class="anchor" href="#provision-resources" aria-label="Link to Section">🔗</a></h3>
-
+gcloud auth login
+</code></pre></div><h3 id="provision-resources"> Provision resources<a class="anchor" href="#provision-resources" aria-label="Link to Section">🔗</a></h3>
 <p>You can now use Terraform to set up your project.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">gcloud auth application-default login
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">gcloud auth application-default login
 <span class="nb">cd</span> gcp
 terraform init
 
 <span class="c1"># Terraform will prompt you for your GCP project ID, desired region,</span>
 <span class="c1"># and desired zone.</span>
-terraform apply</code></pre></div>
-<h3 id="deploy-the-application"> Deploy the application<a class="anchor" href="#deploy-the-application" aria-label="Link to Section">🔗</a></h3>
-
+terraform apply
+</code></pre></div><h3 id="deploy-the-application"> Deploy the application<a class="anchor" href="#deploy-the-application" aria-label="Link to Section">🔗</a></h3>
 <p>This sample provides a script for building the Guestbook binary and deploying it
 to the Kubernetes cluster created by Terraform.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go run deploy/main.go</code></pre></div>
-<p>The deploy script will display the URL of your running service.</p>
-
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">go run deploy/main.go
+</code></pre></div><p>The deploy script will display the URL of your running service.</p>
 <h3 id="cleanup"> Cleanup<a class="anchor" href="#cleanup" aria-label="Link to Section">🔗</a></h3>
-
 <p>To clean up the created resources, run <code>terraform destroy</code> inside the <code>gcp</code>
 directory using the same variables you entered during <code>terraform apply</code>.</p>
-
 <h2 id="running-on-amazon-web-services-aws"> Running on Amazon Web Services (AWS)<a class="anchor" href="#running-on-amazon-web-services-aws" aria-label="Link to Section">🔗</a></h2>
-
 <p>If you want to run this sample on AWS, you need to set up an account, download
 the <a href="https://docs.aws.amazon.com/cli/latest/userguide/installing.html">AWS command line interface</a>, and log in. There&rsquo;s
 <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html">help here</a> if you need it.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">aws configure</code></pre></div>
-<h3 id="agree-to-the-debian-terms-and-conditions"> Agree to the Debian Terms and Conditions<a class="anchor" href="#agree-to-the-debian-terms-and-conditions" aria-label="Link to Section">🔗</a></h3>
-
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">aws configure
+</code></pre></div><h3 id="agree-to-the-debian-terms-and-conditions"> Agree to the Debian Terms and Conditions<a class="anchor" href="#agree-to-the-debian-terms-and-conditions" aria-label="Link to Section">🔗</a></h3>
 <p>You have to agree to the <a href="https://aws.amazon.com/marketplace/pp?sku=55q52qvgjfpdj2fpfy9mb1lo4">Debian Terms and Conditions</a> in order to provision
 the resources. Click through the &ldquo;Continue to Subscribe&rdquo; button at the top, then
 log in to your AWS account and subscribe to Debian.</p>
-
 <h3 id="ssh-key"> SSH Key<a class="anchor" href="#ssh-key" aria-label="Link to Section">🔗</a></h3>
-
 <p>You will also need an SSH key to SSH into the EC2 instance. If you don&rsquo;t already
 have one, you can follow <a href="https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/">this guide from GitHub</a>. Follow the
 instructions for &ldquo;Adding your key to the ssh-agent&rdquo; if you want the key to
 persist across terminal sessions.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">ssh-add</code></pre></div>
-<h3 id="provision-resources-1"> Provision resources<a class="anchor" href="#provision-resources-1" aria-label="Link to Section">🔗</a></h3>
-
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">ssh-add
+</code></pre></div><h3 id="provision-resources-1"> Provision resources<a class="anchor" href="#provision-resources-1" aria-label="Link to Section">🔗</a></h3>
 <p>You can now use Terraform to set up your project. This will create an EC2
 instance you can SSH to and run your binary.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Build for deploying on the AWS Linux VM.</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Build for deploying on the AWS Linux VM.</span>
 <span class="nv">GOOS</span><span class="o">=</span>linux <span class="nv">GOARCH</span><span class="o">=</span>amd64 go build
 
 <span class="c1"># Enter AWS directory from samples/guestbook.</span>
@@ -187,14 +167,13 @@ terraform init
 <span class="c1"># Provisioning can take up to 10 minutes.</span>
 <span class="c1"># Keep track of the output of this command as it is needed later.</span>
 <span class="c1"># You can replace us-west-1 with whatever region you want.</span>
-terraform apply -var <span class="nv">region</span><span class="o">=</span>us-west-1 -var <span class="nv">ssh_public_key</span><span class="o">=</span><span class="s2">&#34;</span><span class="k">$(</span>cat ~/.ssh/id_rsa.pub<span class="k">)</span><span class="s2">&#34;</span></code></pre></div>
-<h3 id="deploy-the-application-1"> Deploy the application<a class="anchor" href="#deploy-the-application-1" aria-label="Link to Section">🔗</a></h3>
-
+terraform apply -var <span class="nv">region</span><span class="o">=</span>us-west-1 -var <span class="nv">ssh_public_key</span><span class="o">=</span><span class="s2">&#34;</span><span class="k">$(</span>cat ~/.ssh/id_rsa.pub<span class="k">)</span><span class="s2">&#34;</span>
+</code></pre></div><h3 id="deploy-the-application-1"> Deploy the application<a class="anchor" href="#deploy-the-application-1" aria-label="Link to Section">🔗</a></h3>
 <p>You now need to connect to the new remote server to execute the <code>guestbook</code>
 binary. The final output of <code>terraform apply</code> lists the variables <code>guestbook</code>
 requires as arguments. Here&rsquo;s an example, with actual strings replaced with
 <code>[redacted]</code>:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Output from &#34;terraform apply&#34; command....</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Output from &#34;terraform apply&#34; command....</span>
 &lt;snip&gt;
 
 Outputs:
@@ -222,27 +201,21 @@ server$ <span class="nv">AWS_REGION</span><span class="o">=</span>&lt;your regio
 </span><span class="se"></span>  -db_host<span class="o">=</span>&lt;your database_host&gt; <span class="se">\
 </span><span class="se"></span>  -db_user<span class="o">=</span>root <span class="se">\
 </span><span class="se"></span>  -db_password<span class="o">=</span>&lt;your database_root_password&gt; <span class="se">\
-</span><span class="se"></span>  -motd_var<span class="o">=</span>/guestbook/motd</code></pre></div>
-<p>You can now visit the server at <code>http://&lt;your instance_host&gt;:8080/</code>.</p>
-
+</span><span class="se"></span>  -motd_var<span class="o">=</span>/guestbook/motd
+</code></pre></div><p>You can now visit the server at <code>http://&lt;your instance_host&gt;:8080/</code>.</p>
 <h3 id="cleanup-1"> Cleanup<a class="anchor" href="#cleanup-1" aria-label="Link to Section">🔗</a></h3>
-
 <p>To clean up the created resources, run <code>terraform destroy</code> inside the <code>aws</code>
 directory using the same variables you entered during <code>terraform apply</code>.</p>
-
 <h2 id="running-on-azure"> Running on Azure<a class="anchor" href="#running-on-azure" aria-label="Link to Section">🔗</a></h2>
-
 <p>The Go CDK doesn&rsquo;t have support for SQL on Azure yet (<a href="https://github.com/google/go-cloud/issues/1305">#1305</a>), so we&rsquo;ll run
 MySQL and the binary locally. This tutorial will show how to use Azure storage
 for the MOTD and Gopher logo.</p>
-
 <p>You first need to set up an Azure account and install the <a href="https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest">Azure CLI</a>. Then,
 use the <code>az</code> CLI to log in.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">az login</code></pre></div>
-<h3 id="provision-resources-2"> Provision resources<a class="anchor" href="#provision-resources-2" aria-label="Link to Section">🔗</a></h3>
-
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell">az login
+</code></pre></div><h3 id="provision-resources-2"> Provision resources<a class="anchor" href="#provision-resources-2" aria-label="Link to Section">🔗</a></h3>
 <p>We&rsquo;ll use Terraform to set up your project.</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Enter the Azure directory from samples/guestbook.</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Enter the Azure directory from samples/guestbook.</span>
 <span class="nb">cd</span> azure
 terraform init
 
@@ -255,17 +228,16 @@ Outputs:
 
 <span class="nv">access_key</span> <span class="o">=</span> <span class="o">[</span>redacted<span class="o">]</span>
 <span class="nv">storage_account</span> <span class="o">=</span> <span class="o">[</span>redacated<span class="o">]</span>
-<span class="nv">storage_container</span> <span class="o">=</span> <span class="o">[</span>redacted<span class="o">]</span></code></pre></div>
-<h3 id="deploy-the-application-2"> Deploy the application<a class="anchor" href="#deploy-the-application-2" aria-label="Link to Section">🔗</a></h3>
-
+<span class="nv">storage_container</span> <span class="o">=</span> <span class="o">[</span>redacted<span class="o">]</span>
+</code></pre></div><h3 id="deploy-the-application-2"> Deploy the application<a class="anchor" href="#deploy-the-application-2" aria-label="Link to Section">🔗</a></h3>
 <p>You will need to run a local MySQL database server, similar to what we did for
 running locally earlier. Open a new terminal window, and run:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="nb">cd</span> .. <span class="c1"># back up to samples/guestbook</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="nb">cd</span> .. <span class="c1"># back up to samples/guestbook</span>
 go get ./localdb/... <span class="c1"># Get package dependencies.</span>
-go run localdb/main.go</code></pre></div>
-<p>In the original terminal, add your Azure credentials to the environment and run
+go run localdb/main.go
+</code></pre></div><p>In the original terminal, add your Azure credentials to the environment and run
 the <code>guestbook</code> application:</p>
-<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># You should be in the &#34;samples/guestbook/azure&#34; directory.</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># You should be in the &#34;samples/guestbook/azure&#34; directory.</span>
 
 <span class="c1"># Enter the storage_account from the Terraform output earlier.</span>
 <span class="nb">export</span> <span class="nv">AZURE_STORAGE_ACCOUNT</span><span class="o">=</span>&lt;your storage_account&gt;
@@ -275,20 +247,15 @@ the <code>guestbook</code> application:</p>
 <span class="c1"># Run the binary.</span>
 <span class="c1"># Fill in the -bucket command-line argument with the value from the Terraform</span>
 <span class="c1"># output.</span>
-#
-./guestbook -env<span class="o">=</span>azure -bucket<span class="o">=</span>&lt;your storage_container&gt; -motd_var<span class="o">=</span>motd</code></pre></div>
-<p>Your server is now running on <a href="http://localhost:8080/">http://localhost:8080/</a>.</p>
-
+<span class="c1">#</span>
+./guestbook -env<span class="o">=</span>azure -bucket<span class="o">=</span>&lt;your storage_container&gt; -motd_var<span class="o">=</span>motd
+</code></pre></div><p>Your server is now running on http://localhost:8080/.</p>
 <p>You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
 (SIGINT).</p>
-
 <h3 id="cleanup-2"> Cleanup<a class="anchor" href="#cleanup-2" aria-label="Link to Section">🔗</a></h3>
-
 <p>To clean up the created resources, run <code>terraform destroy</code> inside the <code>azure</code>
 directory using the same variables you entered during <code>terraform apply</code>.</p>
-
 <h2 id="gophers"> Gophers<a class="anchor" href="#gophers" aria-label="Link to Section">🔗</a></h2>
-
 <p>The Go gopher was designed by Renee French and used under the
 <a href="https://creativecommons.org/licenses/by/3.0/">Creative Commons 3.0 Attributions</a>
 license.</p></div>
@@ -316,6 +283,27 @@ license.</p></div>
         <li class="Sidenav-section">
           <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
             <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/docstore/" class="Sidenav-pageLink">Docstore</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/sql/" class="Sidenav-pageLink">MySQL/PostgreSQL</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/runtimevar/" class="Sidenav-pageLink">Runtime Configuration</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/server/" class="Sidenav-pageLink">Server</a>
+              </li>
               
               <li class="Sidenav-page">
                 <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
@@ -361,8 +349,7 @@ license.</p></div>
       <nav>
         <ul class="FooterLinks">
           <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
-          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
-          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/issues" class="FooterLinks-link">Contact Team</a></li>
         </ul>
       </nav>
 

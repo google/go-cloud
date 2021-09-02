@@ -2,7 +2,7 @@
 <html lang="en-us">
 <head>
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="generator" content="Hugo 0.88.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Server &middot; Go CDK</title>
@@ -35,34 +35,27 @@ if (!doNotTrack) {
 <nav class="PageTOC">
   <div class="PageTOC-heading">In this article</div>
   <nav id="TableOfContents">
-<ul>
-<li>
-<ul>
-<li><a href="#starting-up-the-server">Starting up the server</a>
-<ul>
-<li><a href="#adding-a-request-logger">Adding a request logger</a></li>
-<li><a href="#adding-health-checks">Adding health checks</a></li>
-</ul></li>
-<li><a href="#other-usage-samples">Other Usage Samples</a></li>
-</ul></li>
-</ul>
+  <ul>
+    <li><a href="#starting-up-the-server">Starting up the server</a>
+      <ul>
+        <li><a href="#adding-a-request-logger">Adding a request logger</a></li>
+        <li><a href="#adding-health-checks">Adding health checks</a></li>
+      </ul>
+    </li>
+    <li><a href="#other-usage-samples">Other Usage Samples</a></li>
+  </ul>
 </nav>
 </nav>
-
-
 
 <p>The Go CDK&rsquo;s <code>server</code> package provides a pre-configured HTTP server with
 diagnostic hooks for request logging, health checks, and trace exporting via
 OpenCensus. This guide will show you how to start up and shut down the server,
 as well as how to work with the request logging and health checks.</p>
-
 <h2 id="starting-up-the-server"> Starting up the server<a class="anchor" href="#starting-up-the-server" aria-label="Link to Section">🔗</a></h2>
-
 <p>The Go CDK Server constructor takes an <code>http.Handler</code> and an <code>Options</code> struct.
 The simplest way to start the server is to use <code>http.DefaultServeMux</code> and
 pass <code>nil</code> for the options.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;fmt&#34;</span>
 	<span class="s">&#34;net/http&#34;</span>
 
@@ -82,16 +75,12 @@ pass <code>nil</code> for the options.</p>
 	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <h3 id="adding-a-request-logger"> Adding a request logger<a class="anchor" href="#adding-a-request-logger" aria-label="Link to Section">🔗</a></h3>
-
 <p>You can use the <code>server.Options</code> struct to specify a request logger.</p>
-
 <p>The example is shown with the Go CDK <a href="https://godoc.org/gocloud.dev/server/requestlog"><code>requestlog</code></a> package&rsquo;s <code>NCSALogger</code>.
 To get logs in the Stackdriver JSON format, use <code>NewStackdriverLogger</code> in place
 of <code>NewNCSALogger</code>.</p>
-
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;fmt&#34;</span>
 	<span class="s">&#34;net/http&#34;</span>
 	<span class="s">&#34;os&#34;</span>
@@ -119,14 +108,11 @@ of <code>NewNCSALogger</code>.</p>
 	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <h3 id="adding-health-checks"> Adding health checks<a class="anchor" href="#adding-health-checks" aria-label="Link to Section">🔗</a></h3>
-
 <p>The Go CDK <code>server</code> package affords a hook for you to define health checks for
 your application and see the results at <code>/healthz/readiness</code>. The server also
 runs an endpoint at <code>/healthz/liveness</code>, which is a conventional name for a
 liveness check and is where Kubernetes, if you are using it, will look.</p>
-
 <p>Health checks are an important part of application monitoring, and readiness
 checks are subtly different than liveness checks. The liveness check will return
 <code>200 OK</code> if the server can serve requests. But because each application may have
@@ -134,7 +120,7 @@ a different definition of what it means to be &ldquo;healthy&rdquo; (perhaps you
 application has a dependency on a back end service), you will need to define a
 concrete type to implement the <code>health.Checker</code> interface and define a
 <code>CheckHealth</code> method specific to your application for readiness checks.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// customHealthCheck is an example health check. It implements the
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="c1">// customHealthCheck is an example health check. It implements the
 </span><span class="c1">// health.Checker interface and reports the server is healthy when the healthy
 </span><span class="c1">// field is set to true.
 </span><span class="c1"></span><span class="kd">type</span> <span class="nx">customHealthCheck</span> <span class="kd">struct</span> <span class="p">{</span>
@@ -151,8 +137,8 @@ concrete type to implement the <code>health.Checker</code> interface and define 
 		<span class="k">return</span> <span class="nx">errors</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="s">&#34;not ready yet!&#34;</span><span class="p">)</span>
 	<span class="p">}</span>
 	<span class="k">return</span> <span class="kc">nil</span>
-<span class="p">}</span></code></pre></div>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+<span class="p">}</span>
+</code></pre></div><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;fmt&#34;</span>
 	<span class="s">&#34;net/http&#34;</span>
 	<span class="s">&#34;time&#34;</span>
@@ -191,9 +177,7 @@ concrete type to implement the <code>health.Checker</code> interface and define 
 	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatalf</span><span class="p">(</span><span class="s">&#34;%v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
 <span class="p">}</span>
 </code></pre></div>
-
 <h2 id="other-usage-samples"> Other Usage Samples<a class="anchor" href="#other-usage-samples" aria-label="Link to Section">🔗</a></h2>
-
 <ul>
 <li><a href="https://github.com/google/go-cloud/tree/master/samples/server">Minimal server sample</a></li>
 <li><a href="https://gocloud.dev/tutorials/guestbook/">Guestbook sample</a></li>
@@ -224,6 +208,27 @@ concrete type to implement the <code>health.Checker</code> interface and define 
         <li class="Sidenav-section">
           <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
             <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/docstore/" class="Sidenav-pageLink">Docstore</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/sql/" class="Sidenav-pageLink">MySQL/PostgreSQL</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/runtimevar/" class="Sidenav-pageLink">Runtime Configuration</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/server/" class="Sidenav-pageLink">Server</a>
+              </li>
               
               <li class="Sidenav-page">
                 <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
@@ -269,8 +274,7 @@ concrete type to implement the <code>health.Checker</code> interface and define 
       <nav>
         <ul class="FooterLinks">
           <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
-          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
-          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/issues" class="FooterLinks-link">Contact Team</a></li>
         </ul>
       </nav>
 
