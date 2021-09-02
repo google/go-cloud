@@ -51,12 +51,8 @@ with only minimal setup-time changes.
 ## Project status
 
 We're looking for early adopters to help us validate the APIs before releasing
-a beta version. Please try it and provide feedback!
-
-* File a [GitHub issue](https://github.com/google/go-cloud/issues)
-* Post questions to the
-[project's mailing list](https://groups.google.com/forum/#!forum/go-cloud)
-* Send us private feedback at <go-cdk-feedback@google.com>
+a beta version. Please try it and provide feedback by filing a
+[GitHub issue](https://github.com/google/go-cloud/issues).
 
 ## Legal disclaimer
 
