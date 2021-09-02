@@ -10,3 +10,10 @@
 #   fqdn: gocloud.dev
 #   skip-cleanup: true
 #   local-dir: internal/website/public
+
+# To do this manually:
+#
+# Invoke the `hugo` command manually (after installing `hugo`).
+# Separately check out the gh-pages branch of this repository.
+# Overwrite the contents of the branch with the public/ directory, and push
+# to the branch.
