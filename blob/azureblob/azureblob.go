@@ -30,8 +30,9 @@
 // blob storage domain to use. If no AZURE_STORAGE_DOMAIN is provided, the
 // default Azure public domain "blob.core.windows.net" will be used. Check
 // the Azure Developer Guide for your particular cloud environment to see
-// the proper blob storage domain name to provide. We ignore errors on blob.OpenBucket
-// because we'll get them from OpenBucket later
+// the proper blob storage domain name to provide.
+// If there are multiple identities assigned to your account, you can also provide
+// AZURE_CLIENT_ID to designate which identity should be used for authentication.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
