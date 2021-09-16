@@ -31,6 +31,8 @@
 // default Azure public domain "blob.core.windows.net" will be used. Check
 // the Azure Developer Guide for your particular cloud environment to see
 // the proper blob storage domain name to provide.
+// If there are multiple identities assigned to your account, you can also provide
+// AZURE_CLIENT_ID to designate which identity should be used for authentication.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -165,6 +167,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		// Ignore errors, as we'll get errors from OpenBucket later.
 		accountName, _ := DefaultAccountName()
 		accountKey, _ := DefaultAccountKey()
+		clientId, _ := DefaultClientId()
 		sasToken, _ := DefaultSASToken()
 		storageDomain, _ := DefaultStorageDomain()
 		isCDN, _ := DefaultIsCDN()
@@ -180,7 +183,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		if accountKey != "" || sasToken != "" {
 			o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken, opts)
 		} else if isMSIEnvironment {
-			o.opener, o.err = openerFromMSI(accountName, opts)
+			o.opener, o.err = openerFromMSI(accountName, clientId, opts)
 		} else {
 			o.opener, o.err = openerFromAnon(accountName, opts)
 		}
@@ -266,9 +269,9 @@ var defaultTokenRefreshFunction = func(spToken *adal.ServicePrincipalToken) func
 }
 
 // openerFromMSI acquires an MSI token and returns TokenCredential backed URLOpener
-func openerFromMSI(accountName AccountName, opts Options) (*URLOpener, error) {
+func openerFromMSI(accountName AccountName, clientId ClientId, opts Options) (*URLOpener, error) {
 
-	spToken, err := getMSIServicePrincipalToken(azure.PublicCloud.ResourceIdentifiers.Storage)
+	spToken, err := getMSIServicePrincipalToken(azure.PublicCloud.ResourceIdentifiers.Storage, clientId)
 	if err != nil {
 		return nil, fmt.Errorf("failure acquiring token from MSI endpoint %w", err)
 	}
@@ -287,14 +290,23 @@ func openerFromMSI(accountName AccountName, opts Options) (*URLOpener, error) {
 }
 
 // getMSIServicePrincipalToken retrieves Azure API Service Principal token.
-func getMSIServicePrincipalToken(resource string) (*adal.ServicePrincipalToken, error) {
+func getMSIServicePrincipalToken(resource string, clientId ClientId) (*adal.ServicePrincipalToken, error) {
 
 	msiEndpoint, err := adal.GetMSIEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the managed service identity endpoint: %v", err)
 	}
 
-	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	var token *adal.ServicePrincipalToken
+	if clientId == "" {
+		token, err = adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	} else {
+		opts := &adal.ManagedIdentityOptions{
+			ClientID: string(clientId),
+		}
+		token, err = adal.NewServicePrincipalTokenFromManagedIdentity(resource, opts)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the managed service identity token: %v", err)
 	}
@@ -366,6 +378,9 @@ type AccountName string
 // AccountKey is an Azure storage account key (primary or secondary).
 type AccountKey string
 
+// ClientID is an Azure client id
+type ClientId string
+
 // SASToken is an Azure shared access signature.
 // https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1
 type SASToken string
@@ -398,6 +413,13 @@ func DefaultAccountKey() (AccountKey, error) {
 		return "", errors.New("azureblob: environment variable AZURE_STORAGE_KEY not set")
 	}
 	return AccountKey(s), nil
+}
+
+// DefaultClientId loads the Azure client Id from the
+// AZURE_CLIENT_ID environment variable. Use of the client Id is optional
+func DefaultClientId() (ClientId, error) {
+	s := os.Getenv("AZURE_CLIENT_ID")
+	return ClientId(s), nil
 }
 
 // DefaultSASToken loads a Azure SAS token from the AZURE_STORAGE_SAS_TOKEN
