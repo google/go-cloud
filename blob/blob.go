@@ -1020,8 +1020,8 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	return wrapError(b.b, b.b.Delete(ctx, key), key)
 }
 
-// SignedURL returns a URL that can be used to GET the blob for the duration
-// specified in opts.Expiry.
+// SignedURL returns a URL that can be used to GET (default), PUT or DELETE
+// the blob for the duration specified in opts.Expiry.
 //
 // A nil SignedURLOptions is treated the same as the zero value.
 //
