@@ -170,13 +170,19 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 	opts := new(Options)
 	*opts = o.Options
 
-	switch metadataOption(q.Get("metadata")) {
-	case MetadataDontWrite:
-		opts.Metadata = MetadataDontWrite
-	case MetadataInSidecar:
-		opts.Metadata = MetadataInSidecar
-	default:
-		return nil, errors.New("fileblob.OpenBucket: unsupported value for query parameter 'metadata'")
+	// Note: can't just use q.Get, because then we can't distinguish between
+	// "not set" (we should leave opts alone) vs "set to empty string" (which is
+	// one of the legal values, we should override opts).
+	metadataVal := q["metadata"]
+	if len(metadataVal) > 0 {
+		switch metadataOption(metadataVal[0]) {
+		case MetadataDontWrite:
+			opts.Metadata = MetadataDontWrite
+		case MetadataInSidecar:
+			opts.Metadata = MetadataInSidecar
+		default:
+			return nil, errors.New("fileblob.OpenBucket: unsupported value for query parameter 'metadata'")
+		}
 	}
 	if q.Get("create_dir") != "" {
 		opts.CreateDir = true
