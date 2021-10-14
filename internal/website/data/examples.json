@@ -35,6 +35,10 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/azureblob\"\n)",
 		"code": "// blob.OpenBucket creates a *blob.Bucket from a URL.\n// This URL will open the container \"my-container\" using default\n// credentials found in the environment variables\n// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY\n// and AZURE_STORAGE_SAS_TOKEN.\nbucket, err := blob.OpenBucket(ctx, \"azblob://my-container\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
 	},
+	"gocloud.dev/blob/azureblob.Example_openBucketFromURLWithCLI": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/azureblob\"\n)",
+		"code": "// blob.OpenBucket creates a *blob.Bucket from a URL.\n// This URL will open the container \"my-container\" using\n// credentials created by az cli, and storage account \"xxx\" and\n// subscription \"xxx-yyy\"\n// and AZURE_STORAGE_SAS_TOKEN.\nbucket, err := blob.OpenBucket(ctx, \"azblob://my-container?subscription_id=xxx-yyy\u0026account_name=xxx\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	},
 	"gocloud.dev/blob/fileblob.ExampleOpenBucket": {
 		"imports": "import (\n\t\"os\"\n\n\t\"gocloud.dev/blob/fileblob\"\n)",
 		"code": "// The directory you pass to fileblob.OpenBucket must exist first.\nconst myDir = \"path/to/local/directory\"\nif err := os.MkdirAll(myDir, 0777); err != nil {\n\treturn err\n}\n\n// Create a file-based bucket.\nbucket, err := fileblob.OpenBucket(myDir, nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"

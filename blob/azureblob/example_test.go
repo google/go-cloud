@@ -115,11 +115,11 @@ func Example_openBucketFromURLWithCLI() {
 	ctx := context.Background()
 
 	// blob.OpenBucket creates a *blob.Bucket from a URL.
-	// This URL will open the container "my-container" using default
-	// credentials found in the environment variables
-	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
+	// This URL will open the container "my-container" using
+	// credentials created by az cli, and storage account "xxx" and
+	// subscription "xxx-yyy"
 	// and AZURE_STORAGE_SAS_TOKEN.
-	bucket, err := blob.OpenBucket(ctx, "azblob://my-container?subscription_id=xxx&account_name=xxx")
+	bucket, err := blob.OpenBucket(ctx, "azblob://my-container?subscription_id=xxx-yyy&account_name=xxx")
 	if err != nil {
 		log.Fatal(err)
 	}
