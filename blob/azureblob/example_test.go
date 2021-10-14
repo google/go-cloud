@@ -108,6 +108,24 @@ func Example_openBucketFromURL() {
 	defer bucket.Close()
 }
 
+func Example_openBucketFromURLWithCLI() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/blob/azureblob"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	// blob.OpenBucket creates a *blob.Bucket from a URL.
+	// This URL will open the container "my-container" using default
+	// credentials found in the environment variables
+	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
+	// and AZURE_STORAGE_SAS_TOKEN.
+	bucket, err := blob.OpenBucket(ctx, "azblob://my-container?subscription_id=xxx&account_name=xxx")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bucket.Close()
+}
+
 func ExampleOpenBucket_usingAADCredentials() {
 	const (
 		// Your Azure Storage Account.
