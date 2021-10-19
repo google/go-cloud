@@ -133,6 +133,11 @@ type Options struct {
 	// The full URL used is "<Protocol>://<account name>.<StorageDomain>", where the
 	// "<account name>." part is dropped if IsCDN is set to true.
 	IsCDN bool
+
+	// IsLocalEmulator should be set to true when targetting Local Storage Emulator (Azurite)
+	// https://docs.microsoft.com/en-us/azure/storage/common/storage-use-azurite
+	// This allows to build an URL structure that works with it (which is a bit different from the real one.)
+	IsLocalEmulator bool
 }
 
 const (
@@ -522,7 +527,7 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	d := string(opts.StorageDomain)
 	var u string
 	// The URL structure of the local emulator is a bit different from the real one.
-	if strings.HasPrefix(d, "127.0.0.1") || strings.HasPrefix(d, "localhost") {
+	if strings.HasPrefix(d, "127.0.0.1") || strings.HasPrefix(d, "localhost") || opts.IsLocalEmulator {
 		u = fmt.Sprintf("%s://%s/%s", opts.Protocol, opts.StorageDomain, accountName) // http://127.0.0.1:10000/devstoreaccount1
 	} else if opts.IsCDN {
 		u = fmt.Sprintf("%s://%s", opts.Protocol, opts.StorageDomain) // https://mycdnname.azureedge.net
