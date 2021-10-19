@@ -26,3 +26,5 @@ set -euo pipefail
 ./runtimevar/etcdvar/localetcd.sh
 ./docstore/mongodocstore/localmongo.sh
 ./secrets/hashivault/localvault.sh
+
+sleep 10
