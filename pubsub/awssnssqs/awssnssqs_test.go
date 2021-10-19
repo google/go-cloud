@@ -16,17 +16,22 @@ package awssnssqs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
 
+	snsv2 "github.com/aws/aws-sdk-go-v2/service/sns"
+	sqsv2 "github.com/aws/aws-sdk-go-v2/service/sqs"
+	sqstypesv2 "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/smithy-go"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -57,48 +62,78 @@ func newSession() (*session.Session, error) {
 }
 
 type harness struct {
-	sess      *session.Session
-	topicKind topicKind
-	rt        http.RoundTripper
-	closer    func()
-	numTopics uint32
-	numSubs   uint32
+	useV2       bool
+	sess        *session.Session
+	snsClientV2 *snsv2.Client
+	sqsClientV2 *sqsv2.Client
+	topicKind   topicKind
+	rt          http.RoundTripper
+	closer      func()
+	numTopics   uint32
+	numSubs     uint32
 }
 
 func newHarness(ctx context.Context, t *testing.T, topicKind topicKind) (drivertest.Harness, error) {
 	sess, rt, closer, _ := setup.NewAWSSession(ctx, t, region)
-	return &harness{sess: sess, rt: rt, topicKind: topicKind, closer: closer}, nil
+	return &harness{useV2: false, sess: sess, rt: rt, topicKind: topicKind, closer: closer}, nil
+}
+
+func newHarnessV2(ctx context.Context, t *testing.T, topicKind topicKind) (drivertest.Harness, error) {
+	cfg, rt, closer, _ := setup.NewAWSv2Config(context.Background(), t, region)
+	return &harness{useV2: true, snsClientV2: snsv2.NewFromConfig(cfg), sqsClientV2: sqsv2.NewFromConfig(cfg), rt: rt, topicKind: topicKind, closer: closer}, nil
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	topicName := sanitize(fmt.Sprintf("%s-top-%d", testName, atomic.AddUint32(&h.numTopics, 1)))
-	return createTopic(ctx, topicName, h.sess, h.topicKind)
+	return createTopic(ctx, topicName, h.useV2, h.sess, h.snsClientV2, h.sqsClientV2, h.topicKind)
 }
 
-func createTopic(ctx context.Context, topicName string, sess *session.Session, topicKind topicKind) (dt driver.Topic, cleanup func(), err error) {
+func createTopic(ctx context.Context, topicName string, useV2 bool, sess *session.Session, snsClientV2 *snsv2.Client, sqsClientV2 *sqsv2.Client, topicKind topicKind) (dt driver.Topic, cleanup func(), err error) {
 	switch topicKind {
 	case topicKindSNS, topicKindSNSRaw:
 		// Create an SNS topic.
-		client := sns.New(sess)
-		out, err := client.CreateTopicWithContext(ctx, &sns.CreateTopicInput{Name: aws.String(topicName)})
-		if err != nil {
-			return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
-		}
-		dt = openSNSTopic(ctx, sess, *out.TopicArn, nil)
-		cleanup = func() {
-			client.DeleteTopicWithContext(ctx, &sns.DeleteTopicInput{TopicArn: out.TopicArn})
+		if useV2 {
+			out, err := snsClientV2.CreateTopic(ctx, &snsv2.CreateTopicInput{Name: aws.String(topicName)})
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
+			}
+			dt = openSNSTopicV2(ctx, snsClientV2, *out.TopicArn, nil)
+			cleanup = func() {
+				snsClientV2.DeleteTopic(ctx, &snsv2.DeleteTopicInput{TopicArn: out.TopicArn})
+			}
+		} else {
+			client := sns.New(sess)
+			out, err := client.CreateTopicWithContext(ctx, &sns.CreateTopicInput{Name: aws.String(topicName)})
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
+			}
+			dt = openSNSTopic(ctx, client, *out.TopicArn, nil)
+			cleanup = func() {
+				client.DeleteTopicWithContext(ctx, &sns.DeleteTopicInput{TopicArn: out.TopicArn})
+			}
 		}
 		return dt, cleanup, nil
 	case topicKindSQS:
 		// Create an SQS queue.
-		sqsClient := sqs.New(sess)
-		qURL, _, err := createSQSQueue(ctx, sqsClient, topicName)
-		if err != nil {
-			return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
-		}
-		dt = openSQSTopic(ctx, sess, qURL, nil)
-		cleanup = func() {
-			sqsClient.DeleteQueueWithContext(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+		if useV2 {
+			qURL, _, err := createSQSQueue(ctx, true, nil, sqsClientV2, topicName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
+			}
+			dt = openSQSTopicV2(ctx, sqsClientV2, qURL, nil)
+			cleanup = func() {
+				sqsClientV2.DeleteQueue(ctx, &sqsv2.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+			}
+		} else {
+			sqsClient := sqs.New(sess)
+			qURL, _, err := createSQSQueue(ctx, false, sqsClient, nil, topicName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
+			}
+			dt = openSQSTopic(ctx, sqsClient, qURL, nil)
+			cleanup = func() {
+				sqsClient.DeleteQueueWithContext(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+			}
 		}
 		return dt, cleanup, nil
 	default:
@@ -110,10 +145,18 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	switch h.topicKind {
 	case topicKindSNS, topicKindSNSRaw:
 		const fakeTopicARN = "arn:aws:sns:" + region + ":" + accountNumber + ":nonexistenttopic"
-		return openSNSTopic(ctx, h.sess, fakeTopicARN, nil), nil
+		if h.useV2 {
+			return openSNSTopicV2(ctx, h.snsClientV2, fakeTopicARN, nil), nil
+		} else {
+		}
+		return openSNSTopic(ctx, sns.New(h.sess), fakeTopicARN, nil), nil
 	case topicKindSQS:
 		const fakeQueueURL = "https://" + region + ".amazonaws.com/" + accountNumber + "/nonexistent-queue"
-		return openSQSTopic(ctx, h.sess, fakeQueueURL, nil), nil
+		if h.useV2 {
+			return openSQSTopicV2(ctx, h.sqsClientV2, fakeQueueURL, nil), nil
+		} else {
+		}
+		return openSQSTopic(ctx, sqs.New(h.sess), fakeQueueURL, nil), nil
 	default:
 		panic("unreachable")
 	}
@@ -121,66 +164,123 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	subName := sanitize(fmt.Sprintf("%s-sub-%d", testName, atomic.AddUint32(&h.numSubs, 1)))
-	return createSubscription(ctx, dt, subName, h.sess, h.topicKind)
+	return createSubscription(ctx, dt, subName, h.useV2, h.sess, h.snsClientV2, h.sqsClientV2, h.topicKind)
 }
 
-func createSubscription(ctx context.Context, dt driver.Topic, subName string, sess *session.Session, topicKind topicKind) (ds driver.Subscription, cleanup func(), err error) {
+func createSubscription(ctx context.Context, dt driver.Topic, subName string, useV2 bool, sess *session.Session, snsClientV2 *snsv2.Client, sqsClientV2 *sqsv2.Client, topicKind topicKind) (ds driver.Subscription, cleanup func(), err error) {
 	switch topicKind {
 	case topicKindSNS, topicKindSNSRaw:
 		// Create an SQS queue, and subscribe it to the SNS topic.
-		sqsClient := sqs.New(sess)
-		qURL, qARN, err := createSQSQueue(ctx, sqsClient, subName)
-		if err != nil {
-			return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
+		var qURL, qARN string
+		var err error
+		if useV2 {
+			qURL, qARN, err = createSQSQueue(ctx, true, nil, sqsClientV2, subName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
+			}
+			ds = openSubscriptionV2(ctx, sqsClientV2, qURL, nil)
+		} else {
+			sqsClient := sqs.New(sess)
+			qURL, qARN, err = createSQSQueue(ctx, false, sqsClient, nil, subName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
+			}
+			ds = openSubscription(ctx, sqsClient, qURL, nil)
 		}
-		ds = openSubscription(ctx, sess, qURL, nil)
 
 		snsTopicARN := dt.(*snsTopic).arn
-		snsClient := sns.New(sess)
-		req := &sns.SubscribeInput{
-			TopicArn: aws.String(snsTopicARN),
-			Endpoint: aws.String(qARN),
-			Protocol: aws.String("sqs"),
-		}
-		// Enable RawMessageDelivery on the subscription if needed.
-		if topicKind == topicKindSNSRaw {
-			req.Attributes = map[string]*string{"RawMessageDelivery": aws.String("true")}
-		}
-		out, err := snsClient.SubscribeWithContext(ctx, req)
-		if err != nil {
-			return nil, nil, fmt.Errorf("subscribing: %v", err)
-		}
-		cleanup := func() {
-			snsClient.UnsubscribeWithContext(ctx, &sns.UnsubscribeInput{SubscriptionArn: out.SubscriptionArn})
-			sqsClient.DeleteQueueWithContext(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+		var cleanup func()
+		if useV2 {
+			req := &snsv2.SubscribeInput{
+				TopicArn: aws.String(snsTopicARN),
+				Endpoint: aws.String(qARN),
+				Protocol: aws.String("sqs"),
+			}
+			// Enable RawMessageDelivery on the subscription if needed.
+			if topicKind == topicKindSNSRaw {
+				req.Attributes = map[string]string{"RawMessageDelivery": "true"}
+			}
+			out, err := snsClientV2.Subscribe(ctx, req)
+			if err != nil {
+				return nil, nil, fmt.Errorf("subscribing: %v", err)
+			}
+			cleanup = func() {
+				snsClientV2.Unsubscribe(ctx, &snsv2.UnsubscribeInput{SubscriptionArn: out.SubscriptionArn})
+				sqsClientV2.DeleteQueue(ctx, &sqsv2.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+			}
+		} else {
+			snsClient := sns.New(sess)
+			req := &sns.SubscribeInput{
+				TopicArn: aws.String(snsTopicARN),
+				Endpoint: aws.String(qARN),
+				Protocol: aws.String("sqs"),
+			}
+			// Enable RawMessageDelivery on the subscription if needed.
+			if topicKind == topicKindSNSRaw {
+				req.Attributes = map[string]*string{"RawMessageDelivery": aws.String("true")}
+			}
+			out, err := snsClient.SubscribeWithContext(ctx, req)
+			if err != nil {
+				return nil, nil, fmt.Errorf("subscribing: %v", err)
+			}
+			cleanup = func() {
+				sqsClient := sqs.New(sess)
+				snsClient.UnsubscribeWithContext(ctx, &sns.UnsubscribeInput{SubscriptionArn: out.SubscriptionArn})
+				sqsClient.DeleteQueueWithContext(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+			}
 		}
 		return ds, cleanup, nil
 	case topicKindSQS:
 		// The SQS queue already exists; we created it for the topic. Re-use it
 		// for the subscription.
 		qURL := dt.(*sqsTopic).qURL
-		return openSubscription(ctx, sess, qURL, nil), func() {}, nil
+		if useV2 {
+			return openSubscriptionV2(ctx, sqsClientV2, qURL, nil), func() {}, nil
+		} else {
+			return openSubscription(ctx, sqs.New(sess), qURL, nil), func() {}, nil
+		}
 	default:
 		panic("unreachable")
 	}
 }
 
-func createSQSQueue(ctx context.Context, sqsClient *sqs.SQS, topicName string) (string, string, error) {
-	out, err := sqsClient.CreateQueueWithContext(ctx, &sqs.CreateQueueInput{QueueName: aws.String(topicName)})
-	if err != nil {
-		return "", "", fmt.Errorf("creating SQS queue %q: %v", topicName, err)
+func createSQSQueue(ctx context.Context, useV2 bool, sqsClient *sqs.SQS, sqsClientV2 *sqsv2.Client, topicName string) (string, string, error) {
+	var qURL string
+	if useV2 {
+		out, err := sqsClientV2.CreateQueue(ctx, &sqsv2.CreateQueueInput{QueueName: aws.String(topicName)})
+		if err != nil {
+			return "", "", fmt.Errorf("creating SQS queue %q: %v", topicName, err)
+		}
+		qURL = aws.StringValue(out.QueueUrl)
+	} else {
+		out, err := sqsClient.CreateQueueWithContext(ctx, &sqs.CreateQueueInput{QueueName: aws.String(topicName)})
+		if err != nil {
+			return "", "", fmt.Errorf("creating SQS queue %q: %v", topicName, err)
+		}
+		qURL = aws.StringValue(out.QueueUrl)
 	}
-	qURL := aws.StringValue(out.QueueUrl)
 
 	// Get the ARN.
-	out2, err := sqsClient.GetQueueAttributesWithContext(ctx, &sqs.GetQueueAttributesInput{
-		QueueUrl:       aws.String(qURL),
-		AttributeNames: []*string{aws.String("QueueArn")},
-	})
-	if err != nil {
-		return "", "", fmt.Errorf("getting queue ARN for %s: %v", qURL, err)
+	var qARN string
+	if useV2 {
+		out2, err := sqsClientV2.GetQueueAttributes(ctx, &sqsv2.GetQueueAttributesInput{
+			QueueUrl:       aws.String(qURL),
+			AttributeNames: []sqstypesv2.QueueAttributeName{"QueueArn"},
+		})
+		if err != nil {
+			return "", "", fmt.Errorf("getting queue ARN for %s: %v", qURL, err)
+		}
+		qARN = out2.Attributes["QueueArn"]
+	} else {
+		out2, err := sqsClient.GetQueueAttributesWithContext(ctx, &sqs.GetQueueAttributesInput{
+			QueueUrl:       aws.String(qURL),
+			AttributeNames: []*string{aws.String("QueueArn")},
+		})
+		if err != nil {
+			return "", "", fmt.Errorf("getting queue ARN for %s: %v", qURL, err)
+		}
+		qARN = aws.StringValue(out2.Attributes["QueueArn"])
 	}
-	qARN := aws.StringValue(out2.Attributes["QueueArn"])
 
 	queuePolicy := `{
 		"Version": "2012-10-17",
@@ -197,10 +297,18 @@ func createSQSQueue(ctx context.Context, sqsClient *sqs.SQS, topicName string) (
 		}
 		]
 		}`
-	_, err = sqsClient.SetQueueAttributesWithContext(ctx, &sqs.SetQueueAttributesInput{
-		Attributes: map[string]*string{"Policy": &queuePolicy},
-		QueueUrl:   aws.String(qURL),
-	})
+	var err error
+	if useV2 {
+		_, err = sqsClientV2.SetQueueAttributes(ctx, &sqsv2.SetQueueAttributesInput{
+			Attributes: map[string]string{"Policy": queuePolicy},
+			QueueUrl:   aws.String(qURL),
+		})
+	} else {
+		_, err = sqsClient.SetQueueAttributesWithContext(ctx, &sqs.SetQueueAttributesInput{
+			Attributes: map[string]*string{"Policy": &queuePolicy},
+			QueueUrl:   aws.String(qURL),
+		})
+	}
 	if err != nil {
 		return "", "", fmt.Errorf("setting policy: %v", err)
 	}
@@ -209,7 +317,11 @@ func createSQSQueue(ctx context.Context, sqsClient *sqs.SQS, topicName string) (
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, func(), error) {
 	const fakeSubscriptionQueueURL = "https://" + region + ".amazonaws.com/" + accountNumber + "/nonexistent-subscription"
-	return openSubscription(ctx, h.sess, fakeSubscriptionQueueURL, nil), func() {}, nil
+	if h.useV2 {
+		return openSubscriptionV2(ctx, h.sqsClientV2, fakeSubscriptionQueueURL, nil), func() {}, nil
+	} else {
+		return openSubscription(ctx, sqs.New(h.sess), fakeSubscriptionQueueURL, nil), func() {}, nil
+	}
 }
 
 func (h *harness) Close() {
@@ -230,30 +342,55 @@ func (h *harness) SupportsMultipleSubscriptions() bool {
 }
 
 func TestConformanceSNSTopic(t *testing.T) {
-	asTests := []drivertest.AsTest{awsAsTest{topicKind: topicKindSNS}}
+	asTests := []drivertest.AsTest{awsAsTest{useV2: false, topicKind: topicKindSNS}}
 	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return newHarness(ctx, t, topicKindSNS)
 	}
 	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
 }
 
+func TestConformanceSNSTopicV2(t *testing.T) {
+	asTests := []drivertest.AsTest{awsAsTest{useV2: true, topicKind: topicKindSNS}}
+	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarnessV2(ctx, t, topicKindSNS)
+	}
+	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
+}
+
 func TestConformanceSNSTopicRaw(t *testing.T) {
-	asTests := []drivertest.AsTest{awsAsTest{topicKind: topicKindSNSRaw}}
+	asTests := []drivertest.AsTest{awsAsTest{useV2: false, topicKind: topicKindSNSRaw}}
 	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return newHarness(ctx, t, topicKindSNSRaw)
 	}
 	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
 }
 
+func TestConformanceSNSTopicRawV2(t *testing.T) {
+	asTests := []drivertest.AsTest{awsAsTest{useV2: true, topicKind: topicKindSNSRaw}}
+	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarnessV2(ctx, t, topicKindSNSRaw)
+	}
+	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
+}
+
 func TestConformanceSQSTopic(t *testing.T) {
-	asTests := []drivertest.AsTest{awsAsTest{topicKind: topicKindSQS}}
+	asTests := []drivertest.AsTest{awsAsTest{useV2: false, topicKind: topicKindSQS}}
 	newSQSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return newHarness(ctx, t, topicKindSQS)
 	}
 	drivertest.RunConformanceTests(t, newSQSHarness, asTests)
 }
 
+func TestConformanceSQSTopicV2(t *testing.T) {
+	asTests := []drivertest.AsTest{awsAsTest{useV2: true, topicKind: topicKindSQS}}
+	newSQSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarnessV2(ctx, t, topicKindSQS)
+	}
+	drivertest.RunConformanceTests(t, newSQSHarness, asTests)
+}
+
 type awsAsTest struct {
+	useV2     bool
 	topicKind topicKind
 }
 
@@ -264,14 +401,28 @@ func (awsAsTest) Name() string {
 func (t awsAsTest) TopicCheck(topic *pubsub.Topic) error {
 	switch t.topicKind {
 	case topicKindSNS, topicKindSNSRaw:
-		var s *sns.SNS
-		if !topic.As(&s) {
-			return fmt.Errorf("cast failed for %T", s)
+		if t.useV2 {
+			var s *snsv2.Client
+			if !topic.As(&s) {
+				return fmt.Errorf("cast failed for %T", s)
+			}
+		} else {
+			var s *sns.SNS
+			if !topic.As(&s) {
+				return fmt.Errorf("cast failed for %T", s)
+			}
 		}
 	case topicKindSQS:
-		var s *sqs.SQS
-		if !topic.As(&s) {
-			return fmt.Errorf("cast failed for %T", s)
+		if t.useV2 {
+			var s *sqsv2.Client
+			if !topic.As(&s) {
+				return fmt.Errorf("cast failed for %T", s)
+			}
+		} else {
+			var s *sqs.SQS
+			if !topic.As(&s) {
+				return fmt.Errorf("cast failed for %T", s)
+			}
 		}
 	default:
 		panic("unreachable")
@@ -279,15 +430,41 @@ func (t awsAsTest) TopicCheck(topic *pubsub.Topic) error {
 	return nil
 }
 
-func (awsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
-	var s *sqs.SQS
-	if !sub.As(&s) {
-		return fmt.Errorf("cast failed for %T", s)
+func (t awsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+	if t.useV2 {
+		var s *sqsv2.Client
+		if !sub.As(&s) {
+			return fmt.Errorf("cast failed for %T", s)
+		}
+	} else {
+		var s *sqs.SQS
+		if !sub.As(&s) {
+			return fmt.Errorf("cast failed for %T", s)
+		}
 	}
 	return nil
 }
 
 func (t awsAsTest) TopicErrorCheck(topic *pubsub.Topic, err error) error {
+	if t.useV2 {
+		var e smithy.APIError
+		if !topic.ErrorAs(err, &e) {
+			return errors.New("Topic.ErrorAs failed")
+		}
+		switch t.topicKind {
+		case topicKindSNS, topicKindSNSRaw:
+			if got, want := e.ErrorCode(), sns.ErrCodeNotFoundException; got != want {
+				return fmt.Errorf("got %q, want %q", got, want)
+			}
+		case topicKindSQS:
+			if got, want := e.ErrorCode(), sqs.ErrCodeQueueDoesNotExist; got != want {
+				return fmt.Errorf("got %q, want %q", got, want)
+			}
+		default:
+			panic("unreachable")
+		}
+		return nil
+	}
 	var ae awserr.Error
 	if !topic.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
@@ -307,7 +484,17 @@ func (t awsAsTest) TopicErrorCheck(topic *pubsub.Topic, err error) error {
 	return nil
 }
 
-func (awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+func (t awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	if t.useV2 {
+		var e smithy.APIError
+		if !s.ErrorAs(err, &e) {
+			return errors.New("Subscription.ErrorAs failed")
+		}
+		if got, want := e.ErrorCode(), sqs.ErrCodeQueueDoesNotExist; got != want {
+			return fmt.Errorf("got %q, want %q", got, want)
+		}
+		return nil
+	}
 	var ae awserr.Error
 	if !s.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
@@ -318,14 +505,21 @@ func (awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error
 	return nil
 }
 
-func (awsAsTest) MessageCheck(m *pubsub.Message) error {
-	var sm sqs.Message
-	if m.As(&sm) {
-		return fmt.Errorf("cast succeeded for %T, want failure", &sm)
-	}
-	var psm *sqs.Message
-	if !m.As(&psm) {
-		return fmt.Errorf("cast failed for %T", &psm)
+func (t awsAsTest) MessageCheck(m *pubsub.Message) error {
+	if t.useV2 {
+		var sm sqstypesv2.Message
+		if !m.As(&sm) {
+			return fmt.Errorf("cast failed for %T", &sm)
+		}
+	} else {
+		var sm sqs.Message
+		if m.As(&sm) {
+			return fmt.Errorf("cast succeeded for %T, want failure", &sm)
+		}
+		var psm *sqs.Message
+		if !m.As(&psm) {
+			return fmt.Errorf("cast failed for %T", &psm)
+		}
 	}
 	return nil
 }
@@ -333,18 +527,32 @@ func (awsAsTest) MessageCheck(m *pubsub.Message) error {
 func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
 	switch t.topicKind {
 	case topicKindSNS, topicKindSNSRaw:
-		var pub *sns.PublishInput
-		if !as(&pub) {
-			return fmt.Errorf("cast failed for %T", &pub)
+		if t.useV2 {
+			var pub *snsv2.PublishInput
+			if !as(&pub) {
+				return fmt.Errorf("cast failed for %T", &pub)
+			}
+		} else {
+			var pub *sns.PublishInput
+			if !as(&pub) {
+				return fmt.Errorf("cast failed for %T", &pub)
+			}
 		}
 	case topicKindSQS:
-		var smi *sqs.SendMessageInput
-		if !as(&smi) {
-			return fmt.Errorf("cast failed for %T", &smi)
-		}
-		var entry *sqs.SendMessageBatchRequestEntry
-		if !as(&entry) {
-			return fmt.Errorf("cast failed for %T", &entry)
+		if t.useV2 {
+			var entry sqstypesv2.SendMessageBatchRequestEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
+			}
+		} else {
+			var smi *sqs.SendMessageInput
+			if !as(&smi) {
+				return fmt.Errorf("cast failed for %T", &smi)
+			}
+			var entry *sqs.SendMessageBatchRequestEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
+			}
 		}
 	default:
 		panic("unreachable")
@@ -355,14 +563,28 @@ func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
 func (t awsAsTest) AfterSend(as func(interface{}) bool) error {
 	switch t.topicKind {
 	case topicKindSNS, topicKindSNSRaw:
-		var pub *sns.PublishOutput
-		if !as(&pub) {
-			return fmt.Errorf("cast failed for %T", &pub)
+		if t.useV2 {
+			var pub *snsv2.PublishOutput
+			if !as(&pub) {
+				return fmt.Errorf("cast failed for %T", &pub)
+			}
+		} else {
+			var pub *sns.PublishOutput
+			if !as(&pub) {
+				return fmt.Errorf("cast failed for %T", &pub)
+			}
 		}
 	case topicKindSQS:
-		var entry *sqs.SendMessageBatchResultEntry
-		if !as(&entry) {
-			return fmt.Errorf("cast failed for %T", &entry)
+		if t.useV2 {
+			var entry sqstypesv2.SendMessageBatchResultEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
+			}
+		} else {
+			var entry *sqs.SendMessageBatchResultEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
+			}
 		}
 	default:
 		panic("unreachable")
@@ -402,7 +624,7 @@ func benchmark(b *testing.B, topicKind topicKind) {
 		b.Fatal(err)
 	}
 	topicName := fmt.Sprintf("%s-topic", b.Name())
-	dt, cleanup1, err := createTopic(ctx, topicName, sess, topicKind)
+	dt, cleanup1, err := createTopic(ctx, topicName, false, sess, nil, nil, topicKind)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -414,7 +636,7 @@ func benchmark(b *testing.B, topicKind topicKind) {
 	topic := pubsub.NewTopic(dt, sendBatcherOpts)
 	defer topic.Shutdown(ctx)
 	subName := fmt.Sprintf("%s-subscription", b.Name())
-	ds, cleanup2, err := createSubscription(ctx, dt, subName, sess, topicKind)
+	ds, cleanup2, err := createSubscription(ctx, dt, subName, false, sess, nil, nil, topicKind)
 	if err != nil {
 		b.Fatal(err)
 	}
