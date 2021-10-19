@@ -657,6 +657,8 @@ func TestOpenTopicFromURL(t *testing.T) {
 		{"awssns:///arn:aws:service:region:accountid:resourceType/resourcePath", false},
 		// OK, setting region.
 		{"awssns:///arn:aws:service:region:accountid:resourceType/resourcePath?region=us-east-2", false},
+		// OK, setting usev2.
+		{"awssns:///arn:aws:service:region:accountid:resourceType/resourcePath?awssdk=v2", false},
 		// Invalid parameter.
 		{"awssns:///arn:aws:service:region:accountid:resourceType/resourcePath?param=value", true},
 
@@ -665,6 +667,8 @@ func TestOpenTopicFromURL(t *testing.T) {
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue", false},
 		// OK, setting region.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?region=us-east-2", false},
+		// OK, setting usev2.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?awssdk=v2", false},
 		// Invalid parameter.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?param=value", true},
 	}
@@ -698,6 +702,8 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=foo", true},
 		// OK, setting waittime.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?waittime=5s", false},
+		// OK, setting usev2.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?awssdk=v2", false},
 		// Invalid waittime.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?waittime=foo", true},
 		// Invalid parameter.
