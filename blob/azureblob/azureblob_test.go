@@ -591,7 +591,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 		// With account_name.
-		{"azblob://mybucket?account_name=value", false},
+		{"azblob://mybucket?storage_account=value", false},
 		// With subscription_id (but expect error as it requires a valid subscription id).
 		{"azblob://mybucket?subscription_id=value", true},
 	}

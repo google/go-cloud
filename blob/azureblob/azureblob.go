@@ -234,7 +234,7 @@ func setGlobalOptionsFromURLParams(q url.Values, o *GlobalOptions) (url.Values, 
 
 		value := values[0]
 		switch param {
-		case "account_name":
+		case "storage_account":
 			o.AccountName = AccountName(value)
 		case "subscription_id":
 			o.SubscriptionId = SubscriptionId(value)
