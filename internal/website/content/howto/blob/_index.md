@@ -191,19 +191,25 @@ S3 URLs in the Go CDK closely resemble the URLs you would see in the [AWS CLI][]
 You should specify the `region` query parameter to ensure your application
 connects to the correct region.
 
+If you set the "awssdk=v1" query parameter,
 `blob.OpenBucket` will create a default AWS Session with the
 `SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See [AWS Session][] to learn about authentication
 alternatives, including using environment variables.
 
-[AWS CLI]: https://aws.amazon.com/cli/
-[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+If you set the "awssdk=v2" query parameter, it will instead create an AWS
+Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
 
-{{< goexample "gocloud.dev/blob/s3blob.Example_openBucketFromURL" >}}
+If no "awssdk" query parameter is set, Go CDK will use a default (currently V1).
 
 Full details about acceptable URLs can be found under the API reference for
 [`s3blob.URLOpener`][].
 
+{{< goexample "gocloud.dev/blob/s3blob.Example_openBucketFromURL" >}}
+
+[AWS CLI]: https://aws.amazon.com/cli/
+[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
 [`s3blob.URLOpener`]: https://godoc.org/gocloud.dev/blob/s3blob#URLOpener
 
 #### S3 Constructor {#s3-ctor}
@@ -212,6 +218,10 @@ The [`s3blob.OpenBucket`][] constructor opens an [S3][] bucket. You must first
 create an [AWS session][] with the same region as your bucket:
 
 {{< goexample "gocloud.dev/blob/s3blob.ExampleOpenBucket" >}}
+
+[`s3blob.OpenBucketV2`][] is similar but uses the AWS SDK V2.
+
+{{< goexample "gocloud.dev/blob/s3blob.ExampleOpenBucketV2" >}}
 
 [`s3blob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/

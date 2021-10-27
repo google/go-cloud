@@ -1,0 +1,457 @@
+{
+  "Initial": "AQAAAA7ZDOP3OuVqcP5c",
+  "Version": "0.2",
+  "Converter": {
+    "ScrubBody": null,
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Amz-Date$"
+    ],
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$",
+      "^X-Amz-Security-Token$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "2c6d0ad572c9f319",
+      "Request": {
+        "Method": "PUT",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata?x-id=PutObject",
+        "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Md5": [
+            "XUFAKrxLKna5cZ2REBfFkg=="
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "UNSIGNED-PAYLOAD"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ],
+          "X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Amz-Meta-%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Amz-Meta-%20%21%22%23$%25\u0026%27%28%29%2a+%2c-.%2f": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Amz-Meta-%5b%5c%5d%5e_": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Amz-Meta-%60": [
+            "%60"
+          ],
+          "X-Amz-Meta-%7b%7c%7d~%7f": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Amz-Meta-%e2%98%ba%e2%98%ba%e2%98%ba": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Amz-Meta-..%2ffoo%2f..%2fbar%2f..%2f..%2fbaz..%2f": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c%5cbar%5c%5c%5cbaz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c..%5cbar%5c..%5c..%5cbaz..%5c": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Amz-Meta-12345": [
+            "12345"
+          ],
+          "X-Amz-Meta-Foo%20bar%20baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Amz-Meta-Foo%22bar%22baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%2fbar%2fbaz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%5cbar%5cbaz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Amz-Meta-__0x3a__%3b%3c__0x3d__%3e%3f": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Amz-Meta-__0x40__": [
+            "@"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Thu, 28 Oct 2021 18:33:29 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "KNjzBn2sfbKnjeLjQEg0howdwdjlnsyZ8N0GKsmlTnVJzQZoesXGP/og64bqjtZ7oCtUuo/BEdg="
+          ],
+          "X-Amz-Request-Id": [
+            "V338K5B83J4KVX4Z"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "55c83d73b800a93b",
+      "Request": {
+        "Method": "HEAD",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Thu, 28 Oct 2021 18:33:29 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Last-Modified": [
+            "Thu, 28 Oct 2021 18:33:29 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "Bv65c1rcWV+t7A6AQUxSoH3UmqKl1QFi04wuhfR8ZHM4uWZ6Lmxw0B4atxCDuG83pdjPPbMvqJE="
+          ],
+          "X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Amz-Meta-%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Amz-Meta-%20%21%22%23$%25\u0026%27%28%29%2a+%2c-.%2f": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Amz-Meta-%5b%5c%5d%5e_": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Amz-Meta-%60": [
+            "%60"
+          ],
+          "X-Amz-Meta-%7b%7c%7d~%7f": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Amz-Meta-%e2%98%ba%e2%98%ba%e2%98%ba": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Amz-Meta-..%2ffoo%2f..%2fbar%2f..%2f..%2fbaz..%2f": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c%5cbar%5c%5c%5cbaz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c..%5cbar%5c..%5c..%5cbaz..%5c": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Amz-Meta-12345": [
+            "12345"
+          ],
+          "X-Amz-Meta-Foo%20bar%20baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Amz-Meta-Foo%22bar%22baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%2fbar%2fbaz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%5cbar%5cbaz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Amz-Meta-__0x3a__%3b%3c__0x3d__%3e%3f": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Amz-Meta-__0x40__": [
+            "@"
+          ],
+          "X-Amz-Request-Id": [
+            "V330NRGA7VZH0NRE"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "7543b2f80e541cd7",
+      "Request": {
+        "Method": "HEAD",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Thu, 28 Oct 2021 18:33:29 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Last-Modified": [
+            "Thu, 28 Oct 2021 18:33:29 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "WICdsyVPfP+bicc5GKVak1AeDUhBpyCe3waJS6as3FefsZlPm/3tgjyl6wBWONB5Hs9FHPA5C94="
+          ],
+          "X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Amz-Meta-%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Amz-Meta-%20%21%22%23$%25\u0026%27%28%29%2a+%2c-.%2f": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Amz-Meta-%5b%5c%5d%5e_": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Amz-Meta-%60": [
+            "%60"
+          ],
+          "X-Amz-Meta-%7b%7c%7d~%7f": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Amz-Meta-%e2%98%ba%e2%98%ba%e2%98%ba": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Amz-Meta-..%2ffoo%2f..%2fbar%2f..%2f..%2fbaz..%2f": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c%5cbar%5c%5c%5cbaz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c..%5cbar%5c..%5c..%5cbaz..%5c": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Amz-Meta-12345": [
+            "12345"
+          ],
+          "X-Amz-Meta-Foo%20bar%20baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Amz-Meta-Foo%22bar%22baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%2fbar%2fbaz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%5cbar%5cbaz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Amz-Meta-__0x3a__%3b%3c__0x3d__%3e%3f": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Amz-Meta-__0x40__": [
+            "@"
+          ],
+          "X-Amz-Request-Id": [
+            "V3326WQBPCNTEN9Y"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "99db4efc037b53ab",
+      "Request": {
+        "Method": "DELETE",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata?x-id=DeleteObject",
+        "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 204,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Date": [
+            "Thu, 28 Oct 2021 18:33:29 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "AXMSv1s1hnzwIyKEesDi0Xb8z52iu+dIzLx+3E86U1Lp01hPPxJHhtR2vRaj8AEwZ2H3y6qCbQ0="
+          ],
+          "X-Amz-Request-Id": [
+            "V334E0QSWVP6DTTX"
+          ]
+        },
+        "Body": ""
+      }
+    }
+  ]
+}
