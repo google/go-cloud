@@ -2210,7 +2210,9 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 	// Generate a signed URL for DELETE.
 	deleteURL, err := b.SignedURL(ctx, key, &blob.SignedURLOptions{Method: http.MethodDelete})
-	if err != nil {
+	if gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Log("DELETE URLs not supported, skipping")
+	} else if err != nil {
 		t.Fatal(err)
 	} else if deleteURL == "" {
 		t.Fatal("got empty DELETE url")
@@ -2231,20 +2233,24 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}
 	tests := []signedURLTest{
 		{"getURL", getURL, "", false},
-		{"deleteURL", deleteURL, "", false},
+	}
+	if deleteURL != "" {
+		tests = append(tests, signedURLTest{"deleteURL", deleteURL, "", false})
 	}
 	if putURLWithContentType != "" {
+		// Allowed content type should work.
+		// Different or empty content type should fail.
 		tests = append(tests, signedURLTest{"putURLWithContentType", putURLWithContentType, allowedContentType, true})
 		tests = append(tests, signedURLTest{"putURLWithContentType", putURLWithContentType, differentContentType, false})
 		tests = append(tests, signedURLTest{"putURLWithContentType", putURLWithContentType, "", false})
 	}
-	/*
-	 */
 	if putURLEnforcedAbsentContentType != "" {
+		// Empty content type should work, non-empty should fail.
 		tests = append(tests, signedURLTest{"putURLEnforcedAbsentContentType", putURLEnforcedAbsentContentType, "", true})
 		tests = append(tests, signedURLTest{"putURLEnforcedAbsentContentType", putURLEnforcedAbsentContentType, differentContentType, false})
 	}
 	if putURLWithoutContentType != "" {
+		// Empty content type should work.
 		tests = append(tests, signedURLTest{"putURLWithoutContentType", putURLWithoutContentType, "", true})
 		// From the SignedURLOptions docstring:
 		// If EnforceAbsentContentType is false and ContentType is the empty string,
@@ -2274,16 +2280,16 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// GET it. Try with all URLs, only getURL should work.
-	for _, test := range []struct {
-		urlDescription string
-		url            string
-		wantSuccess    bool
-	}{
-		{"deleteURL", deleteURL, false},
-		{"putURLWithoutContentType", putURLWithoutContentType, false},
-		{"getURLNoParams", getURLNoParams, false},
-		{"getURL", getURL, true},
-	} {
+	tests = nil
+	if deleteURL != "" {
+		tests = append(tests, signedURLTest{"deleteURL", deleteURL, "", false})
+	}
+	tests = append(tests, []signedURLTest{
+		{"putURLWithoutContentType", putURLWithoutContentType, "", false},
+		{"getURLNoParams", getURLNoParams, "", false},
+		{"getURL", getURL, "", true},
+	}...)
+	for _, test := range tests {
 		if resp, err := client.Get(test.url); err != nil {
 			t.Fatalf("GET with %s URL failed: %v", test.urlDescription, err)
 		} else {
@@ -2305,15 +2311,14 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// DELETE it. Try with all URLs, only deleteURL should work.
-	for _, test := range []struct {
-		urlDescription string
-		url            string
-		wantSuccess    bool
-	}{
-		{"getURL", getURL, false},
-		{"putURLWithoutContentType", putURLWithoutContentType, false},
-		{"deleteURL", deleteURL, true},
-	} {
+	tests = []signedURLTest{
+		{"getURL", getURL, "", false},
+		{"putURLWithoutContentType", putURLWithoutContentType, "", false},
+	}
+	if deleteURL != "" {
+		tests = append(tests, signedURLTest{"deleteURL", deleteURL, "", true})
+	}
+	for _, test := range tests {
 		req, err := http.NewRequest(http.MethodDelete, test.url, nil)
 		if err != nil {
 			t.Fatalf("failed to create DELETE HTTP request using %q: %v", test.urlDescription, err)
@@ -2332,14 +2337,16 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// GET should fail now that the blob has been deleted.
-	if resp, err := client.Get(getURL); err != nil {
-		t.Errorf("GET after DELETE failed: %v", err)
-	} else {
-		defer resp.Body.Close()
-		if resp.StatusCode != 404 {
-			t.Errorf("GET after DELETE got status code %d, want 404", resp.StatusCode)
-			gotBody, _ := ioutil.ReadAll(resp.Body)
-			t.Errorf(string(gotBody))
+	if deleteURL != "" {
+		if resp, err := client.Get(getURL); err != nil {
+			t.Errorf("GET after DELETE failed: %v", err)
+		} else {
+			defer resp.Body.Close()
+			if resp.StatusCode != 404 {
+				t.Errorf("GET after DELETE got status code %d, want 404", resp.StatusCode)
+				gotBody, _ := ioutil.ReadAll(resp.Body)
+				t.Errorf(string(gotBody))
+			}
 		}
 	}
 }

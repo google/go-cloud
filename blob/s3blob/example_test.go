@@ -18,6 +18,8 @@ import (
 	"context"
 	"log"
 
+	awsv2cfg "github.com/aws/aws-sdk-go-v2/config"
+	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/blob"
@@ -47,6 +49,30 @@ func ExampleOpenBucket() {
 	defer bucket.Close()
 }
 
+func ExampleOpenBucketV2() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+
+	// Establish a AWS V2 Config.
+	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+	ctx := context.Background()
+	cfg, err := awsv2cfg.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a *blob.Bucket.
+	clientV2 := s3v2.NewFromConfig(cfg)
+	bucket, err := s3blob.OpenBucketV2(ctx, clientV2, "my-bucket", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bucket.Close()
+}
+
 func Example_openBucketFromURL() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/blob/s3blob"
@@ -55,6 +81,13 @@ func Example_openBucketFromURL() {
 
 	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	bucket, err := blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bucket.Close()
+
+	// Forcing AWS SDK V2.
+	bucket, err = blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1&awssdk=2")
 	if err != nil {
 		log.Fatal(err)
 	}
