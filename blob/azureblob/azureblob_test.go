@@ -442,7 +442,6 @@ func Test_openBucket(t *testing.T) {
 			name:             "local emulator 127.0.0.1:10000",
 			protocol:         "http",
 			storageDomain:    "127.0.0.1:10000",
-			isLocalEmulator:  false, // to test backward compatibility before introduction of Options.IsLocalEmulator
 			wantContainerURL: "http://127.0.0.1:10000/gocloudblobtests/mycontainer",
 			wantErr:          false,
 		},
@@ -450,7 +449,6 @@ func Test_openBucket(t *testing.T) {
 			name:             "local emulator localhost:10000",
 			protocol:         "http",
 			storageDomain:    "localhost:10000",
-			isLocalEmulator:  false, // to test backward compatibility before introduction of Options.IsLocalEmulator
 			wantContainerURL: "http://localhost:10000/gocloudblobtests/mycontainer",
 			wantErr:          false,
 		},
@@ -599,6 +597,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?cdn=true", false},
 		// With invalid CDN.
 		{"azblob://mybucket?cdn=42", true},
+		// With local emulator.
+		{"azblob://mybucket?localemu=true", false},
+		// With invalid local emulator.
+		{"azblob://mybucket?localemu=42", true},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}

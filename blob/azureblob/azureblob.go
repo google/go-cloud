@@ -134,9 +134,8 @@ type Options struct {
 	// "<account name>." part is dropped if IsCDN is set to true.
 	IsCDN bool
 
-	// IsLocalEmulator should be set to true when targetting Local Storage Emulator (Azurite)
-	// https://docs.microsoft.com/en-us/azure/storage/common/storage-use-azurite
-	// This allows to build an URL structure that works with it (which is a bit different from the real one.)
+	// IsLocalEmulator should be set to true when targetting Local Storage Emulator (Azurite).
+	// The URL format is "<Protocol>://<StorageDomain>/<account name>" (ex: http://127.0.0.1:10000/devstoreaccount1).
 	IsLocalEmulator bool
 }
 
@@ -211,6 +210,7 @@ const Scheme = "azblob"
 //  - domain: The domain name used to access the Azure Blob storage (e.g. blob.core.windows.net)
 //  - protocol: The protocol to use (e.g., http or https; default to https)
 //  - cdn: Set to true when domain represents a CDN
+//  - local: Set to true when domain points to the Local Storage Emulator (Azurite)
 //
 // See Options for more details.
 type URLOpener struct {
@@ -350,6 +350,12 @@ func setOptionsFromURLParams(q url.Values, o *Options) error {
 				return err
 			}
 			o.IsCDN = isCDN
+		case "localemu":
+			isLocalEmulator, err := strconv.ParseBool(value)
+			if err != nil {
+				return err
+			}
+			o.IsLocalEmulator = isLocalEmulator
 		default:
 			return fmt.Errorf("unknown query parameter %q", param)
 		}
