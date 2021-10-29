@@ -422,6 +422,7 @@ func Test_openBucket(t *testing.T) {
 		protocol         Protocol
 		storageDomain    StorageDomain
 		isCDN            bool
+		isLocalEmulator  bool
 		wantContainerURL string
 		wantErr          bool
 	}{
@@ -449,6 +450,14 @@ func Test_openBucket(t *testing.T) {
 			protocol:         "http",
 			storageDomain:    "localhost:10000",
 			wantContainerURL: "http://localhost:10000/gocloudblobtests/mycontainer",
+			wantErr:          false,
+		},
+		{
+			name:             "local emulator azurite-http.svc.local:10000",
+			protocol:         "http",
+			storageDomain:    "azurite-http.svc.local:10000",
+			isLocalEmulator:  true,
+			wantContainerURL: "http://azurite-http.svc.local:10000/gocloudblobtests/mycontainer",
 			wantErr:          false,
 		},
 		{
@@ -488,7 +497,7 @@ func Test_openBucket(t *testing.T) {
 			}
 			pipeline := azblob.NewPipeline(cred, azblob.PipelineOptions{})
 			containerName := "mycontainer"
-			o := &Options{Protocol: test.protocol, StorageDomain: test.storageDomain, IsCDN: test.isCDN}
+			o := &Options{Protocol: test.protocol, StorageDomain: test.storageDomain, IsCDN: test.isCDN, IsLocalEmulator: test.isLocalEmulator}
 			b, err := openBucket(ctx, pipeline, accountName, containerName, o)
 			if (err != nil) != test.wantErr {
 				t.Fatalf("wantErr=%v but got=%v", test.wantErr, err)
@@ -588,6 +597,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?cdn=true", false},
 		// With invalid CDN.
 		{"azblob://mybucket?cdn=42", true},
+		// With local emulator.
+		{"azblob://mybucket?localemu=true", false},
+		// With invalid local emulator.
+		{"azblob://mybucket?localemu=42", true},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}
