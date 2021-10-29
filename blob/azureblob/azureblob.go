@@ -210,7 +210,7 @@ const Scheme = "azblob"
 //  - domain: The domain name used to access the Azure Blob storage (e.g. blob.core.windows.net)
 //  - protocol: The protocol to use (e.g., http or https; default to https)
 //  - cdn: Set to true when domain represents a CDN
-//  - local: Set to true when domain points to the Local Storage Emulator (Azurite)
+//  - localemu: Set to true when domain points to the Local Storage Emulator (Azurite)
 //
 // See Options for more details.
 type URLOpener struct {
