@@ -187,8 +187,15 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 	if err != nil {
 		return nil, fmt.Errorf("can't parse global options")
 	}
+
+	// copy the URL as we are not allowed to change the original one
+	// see https://github.com/golang/go/issues/38351#issuecomment-619567154
+	if u == nil {
+		return nil, fmt.Errorf("the URL is nil")
+	}
+	copiedURL := &*u
 	// pass the rest of the options
-	u.RawQuery = rest.Encode()
+	copiedURL.RawQuery = rest.Encode()
 
 	if globalOptions.AccountName != "" {
 		accountName = globalOptions.AccountName
@@ -216,7 +223,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 	if o.err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
 	}
-	return o.opener.OpenBucketURL(ctx, u)
+	return o.opener.OpenBucketURL(ctx, copiedURL)
 }
 
 type GlobalOptions struct {
