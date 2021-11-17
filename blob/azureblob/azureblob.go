@@ -146,7 +146,7 @@ const (
 )
 
 func init() {
-	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
+	blob.DefaultURLMux().RegisterBucket(Scheme, new(routerCredsOpener))
 }
 
 // Set holds Wire providers for this package.
@@ -156,15 +156,16 @@ var Set = wire.NewSet(
 	wire.Struct(new(URLOpener), "AccountName", "Pipeline", "Options"),
 )
 
-// lazyCredsOpener obtains credentials from the environment on the first call
-// to OpenBucketURL.
-type lazyCredsOpener struct {
-	init   sync.Once
+// routerCredsOpener returns appropriate opener based on URL and/or environment variables
+// because unfortunately authentication in Azure is quite complex, so it's hard to pack the logic into
+// one function.
+type routerCredsOpener struct {
 	opener *URLOpener
 	err    error
 }
 
-func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+// OpenBucketURL obtains credentials from the environment/URL parameters/cli and opens the URL
+func (o *routerCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	// Use default credential info from the environment.
 	// Ignore errors, as we'll get errors from OpenBucket later.
 	accountName, _ := DefaultAccountName()
