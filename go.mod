@@ -52,6 +52,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.12.0
 	github.com/aws/smithy-go v1.8.1
 	github.com/fsnotify/fsnotify v1.5.1
+	github.com/gin-gonic/gin v1.7.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang-jwt/jwt/v4 v4.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
