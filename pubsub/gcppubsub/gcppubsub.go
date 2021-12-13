@@ -547,8 +547,12 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(error) bool {
-	// The client handles retries.
+func (s *subscription) IsRetryable(err error) bool {
+	// The client mostly handles retries, but does not
+	// include DeadlineExceeded for some reason.
+	if s.ErrorCode(err) == gcerrors.DeadlineExceeded {
+		return true
+	}
 	return false
 }
 
