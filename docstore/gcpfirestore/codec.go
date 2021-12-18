@@ -23,10 +23,10 @@ import (
 	"reflect"
 	"time"
 
-	tspb "google.golang.org/protobuf/types/known/timestamppb"
 	"gocloud.dev/docstore/driver"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/genproto/googleapis/type/latlng"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // encodeDoc encodes a driver.Document into Firestore's representation.

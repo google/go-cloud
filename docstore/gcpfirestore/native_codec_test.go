@@ -21,12 +21,12 @@ import (
 	"testing"
 
 	"cloud.google.com/go/firestore"
-	tspb "google.golang.org/protobuf/types/known/timestamppb"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // A nativeCodec encodes and decodes structs using the cloud.google.com/go/firestore

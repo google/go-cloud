@@ -23,9 +23,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"google.golang.org/protobuf/proto"
 	"gocloud.dev/docstore/internal/fields"
 	"gocloud.dev/internal/gcerr"
+	"google.golang.org/protobuf/proto"
 )
 
 var (

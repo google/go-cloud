@@ -18,12 +18,12 @@ import (
 	"testing"
 	"time"
 
-	tspb "google.golang.org/protobuf/types/known/timestamppb"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/drivertest"
 	"google.golang.org/genproto/googleapis/type/latlng"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Test that special types round-trip.
