@@ -47,7 +47,6 @@ import (
 	"time"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
@@ -319,10 +318,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		return errorState(err, prev), w.wait
 	}
 
-	createTime, err := ptypes.Timestamp(meta.CreateTime)
-	if err != nil {
-		return errorState(fmt.Errorf("invalid timestamp: %v", err), prev), w.wait
-	}
+	createTime := meta.CreateTime.AsTime()
 
 	// See if it's the same raw bytes as before.
 	if prev != nil {

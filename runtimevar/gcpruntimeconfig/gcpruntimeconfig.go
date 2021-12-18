@@ -45,7 +45,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
@@ -347,10 +346,5 @@ func bytesFromProto(vpb *pb.Variable) []byte {
 }
 
 func parseUpdateTime(vpb *pb.Variable) (time.Time, error) {
-	updateTime, err := ptypes.Timestamp(vpb.GetUpdateTime())
-	if err != nil {
-		return time.Time{}, fmt.Errorf(
-			"variable message for name=%q contains invalid timestamp: %v", vpb.Name, err)
-	}
-	return updateTime, nil
+	return vpb.GetUpdateTime().AsTime(), nil
 }

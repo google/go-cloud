@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
-	"github.com/golang/protobuf/proto"
-	tspb "github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/protobuf/proto"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"

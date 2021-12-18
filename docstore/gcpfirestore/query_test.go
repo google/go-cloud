@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"

@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/protobuf/proto"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
@@ -804,7 +804,7 @@ func testUpdate(t *testing.T, coll *ds.Collection, revField string) {
 			}
 			checkHasRevisionField(t, tc.doc, revField)
 			setRevision(tc.want, revision(got, revField), revField)
-			if diff := cmp.Diff(got, tc.want, cmpopts.IgnoreUnexported(timestamp.Timestamp{})); diff != "" {
+			if diff := cmp.Diff(got, tc.want, cmpopts.IgnoreUnexported(tspb.Timestamp{})); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -1193,14 +1193,14 @@ func testProto(t *testing.T, _ Harness, coll *ds.Collection) {
 	ctx := context.Background()
 	type protoStruct struct {
 		Name             string `docstore:"name"`
-		Proto            timestamp.Timestamp
-		PtrToProto       *timestamp.Timestamp
+		Proto            tspb.Timestamp
+		PtrToProto       *tspb.Timestamp
 		DocstoreRevision interface{}
 	}
 	doc := &protoStruct{
 		Name:       "testing",
-		Proto:      timestamp.Timestamp{Seconds: 42},
-		PtrToProto: &timestamp.Timestamp{Seconds: 43},
+		Proto:      tspb.Timestamp{Seconds: 42},
+		PtrToProto: &tspb.Timestamp{Seconds: 43},
 	}
 
 	err := coll.Create(ctx, doc)
@@ -1212,7 +1212,7 @@ func testProto(t *testing.T, _ Harness, coll *ds.Collection) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(got, doc, cmpopts.IgnoreUnexported(timestamp.Timestamp{})); diff != "" {
+	if diff := cmp.Diff(got, doc, cmpopts.IgnoreUnexported(tspb.Timestamp{})); diff != "" {
 		t.Error(diff)
 	}
 }
@@ -1622,7 +1622,7 @@ func testMultipleActions(t *testing.T, coll *ds.Collection, revField string) {
 			got := gots[i]
 			want := clone(wants[i])
 			want[revField] = got[revField]
-			if !cmp.Equal(got, want, cmpopts.IgnoreUnexported(timestamp.Timestamp{})) {
+			if !cmp.Equal(got, want, cmpopts.IgnoreUnexported(tspb.Timestamp{})) {
 				t.Errorf("index #%d:\ngot  %v\nwant %v", i, got, want)
 			}
 		}
