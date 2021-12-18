@@ -979,7 +979,10 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 			t.Error(err)
 		}
 	}()
-	topicErr := nonexistentTopic.Send(ctx, &pubsub.Message{})
+	// The test will hang here if Send doesn't fail quickly, so set a shorter timeout.
+	ctx2, cancel = context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	topicErr := nonexistentTopic.Send(ctx2, &pubsub.Message{})
 	if topicErr == nil || gcerrors.Code(topicErr) != gcerrors.NotFound {
 		t.Errorf("got error %v sending to nonexistent topic, want Code=NotFound", topicErr)
 	} else if err := st.TopicErrorCheck(topic, topicErr); err != nil {
