@@ -23,11 +23,10 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-	ts "github.com/golang/protobuf/ptypes/timestamp"
 	"gocloud.dev/docstore/driver"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/genproto/googleapis/type/latlng"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // encodeDoc encodes a driver.Document into Firestore's representation.
@@ -88,7 +87,7 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 
 var (
 	typeOfGoTime         = reflect.TypeOf(time.Time{})
-	typeOfProtoTimestamp = reflect.TypeOf((*ts.Timestamp)(nil))
+	typeOfProtoTimestamp = reflect.TypeOf((*tspb.Timestamp)(nil))
 	typeOfLatLng         = reflect.TypeOf((*latlng.LatLng)(nil))
 )
 
@@ -97,17 +96,14 @@ var (
 func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
 	switch v.Type() {
 	case typeOfGoTime:
-		ts, err := ptypes.TimestampProto(v.Interface().(time.Time))
-		if err != nil {
-			return false, err
-		}
+		ts := tspb.New(v.Interface().(time.Time))
 		e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{ts}}
 		return true, nil
 	case typeOfProtoTimestamp:
 		if v.IsNil() {
 			e.pv = nullValue
 		} else {
-			e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{v.Interface().(*ts.Timestamp)}}
+			e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{v.Interface().(*tspb.Timestamp)}}
 		}
 		return true, nil
 	case typeOfLatLng:
@@ -235,11 +231,7 @@ func decodeValue(v *pb.Value) (interface{}, error) {
 		return v.BytesValue, nil
 	case *pb.Value_TimestampValue:
 		// Return TimestampValue as time.Time.
-		t, err := ptypes.Timestamp(v.TimestampValue)
-		if err != nil {
-			return nil, err
-		}
-		return t, nil
+		return v.TimestampValue.AsTime(), nil
 	case *pb.Value_ReferenceValue:
 		// TODO(jba): support references
 		return nil, errors.New("references are not currently supported")
@@ -307,8 +299,7 @@ func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 			if ts.TimestampValue == nil {
 				return true, time.Time{}, nil
 			}
-			t, err := ptypes.Timestamp(ts.TimestampValue)
-			return true, t, err
+			return true, ts.TimestampValue.AsTime(), nil
 		}
 		return true, nil, fmt.Errorf("expected TimestampValue for time.Time, got %+v", d.pv.ValueType)
 	case typeOfProtoTimestamp:

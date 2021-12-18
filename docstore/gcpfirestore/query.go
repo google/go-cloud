@@ -26,10 +26,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/internal/gcerr"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
@@ -203,7 +203,7 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []drive
 		}
 	}
 	if q.Limit > 0 {
-		p.Limit = &wrappers.Int32Value{Value: int32(q.Limit)}
+		p.Limit = &wrapperspb.Int32Value{Value: int32(q.Limit)}
 	}
 
 	// TODO(jba): make sure we retrieve the fields needed for local filters.

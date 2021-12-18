@@ -19,11 +19,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestFilterToProto(t *testing.T) {

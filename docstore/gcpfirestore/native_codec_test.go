@@ -21,12 +21,12 @@ import (
 	"testing"
 
 	"cloud.google.com/go/firestore"
-	ts "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // A nativeCodec encodes and decodes structs using the cloud.google.com/go/firestore
@@ -93,8 +93,8 @@ type clientStream struct {
 
 func (cs *clientStream) RecvMsg(m interface{}) error {
 	if cs.doc != nil {
-		cs.doc.CreateTime = &ts.Timestamp{}
-		cs.doc.UpdateTime = &ts.Timestamp{}
+		cs.doc.CreateTime = &tspb.Timestamp{}
+		cs.doc.UpdateTime = &tspb.Timestamp{}
 		m.(*pb.BatchGetDocumentsResponse).Result = &pb.BatchGetDocumentsResponse_Found{Found: cs.doc}
 		cs.doc = nil
 		return nil

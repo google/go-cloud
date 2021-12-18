@@ -18,13 +18,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/drivertest"
 	"google.golang.org/genproto/googleapis/type/latlng"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Test that special types round-trip.
@@ -35,14 +34,11 @@ func TestCodecSpecial(t *testing.T) {
 	type S struct {
 		Name    string
 		T       time.Time
-		TS, TSn *timestamp.Timestamp
+		TS, TSn *tspb.Timestamp
 		LL, LLn *latlng.LatLng
 	}
 	tm := time.Date(2019, 3, 14, 0, 0, 0, 0, time.UTC)
-	ts, err := ptypes.TimestampProto(tm)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ts := tspb.New(tm)
 	in := &S{
 		Name: "name",
 		T:    tm,
@@ -63,7 +59,7 @@ func TestCodecSpecial(t *testing.T) {
 	if err := decodeDoc(enc, gotdoc, nameField, docstore.DefaultRevisionField); err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(&got, in, cmpopts.IgnoreUnexported(timestamp.Timestamp{}, latlng.LatLng{})); diff != "" {
+	if diff := cmp.Diff(&got, in, cmpopts.IgnoreUnexported(tspb.Timestamp{}, latlng.LatLng{})); diff != "" {
 		t.Error(diff)
 	}
 

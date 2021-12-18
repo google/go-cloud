@@ -23,9 +23,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/golang/protobuf/proto"
 	"gocloud.dev/docstore/internal/fields"
 	"gocloud.dev/internal/gcerr"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -106,7 +106,7 @@ type Encoder interface {
 // and encodes the resulting string.
 //
 // If the value implements proto.Message, Encode invokes proto.Marshal on it and encodes
-// the resulting byte slice. Here proto is the package "github.com/golang/protobuf/proto".
+// the resulting byte slice. Here proto is the package "google.golang.org/protobuf/proto".
 //
 // Not every map key type can be encoded. Only strings, integers (signed or
 // unsigned), and types that implement encoding.TextMarshaler are permitted as map
