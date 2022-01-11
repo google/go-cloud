@@ -2,13 +2,8 @@
 <h1>{{ .Title }}</h1>
 {{ partial "page-toc.html" . }}
 {{ partial "header-link.html" .Content }}
-{{ if or .Data.Pages .Sections }}
+{{ if or .Data.Pages }}
 <ul class="HowtoList">
-{{- range .Sections.GroupBy "Weight" }}
-{{- range .ByTitle }}
-  {{.Render "li"}}
-{{- end }}
-{{- end }}
 {{- range .Data.Pages.GroupBy "Weight" }}
 {{- range .ByTitle }}
   {{.Render "li"}}
