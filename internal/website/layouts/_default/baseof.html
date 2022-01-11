@@ -52,17 +52,6 @@
               </li>
               {{- end }}
               {{- end }}
-              {{with .Sections}}
-              {{- range .GroupBy "Weight" }}
-              {{- range .ByTitle }}
-              {{- if .Params.showInSidenav }}
-              <li class="Sidenav-page">
-                <a href="{{.RelPermalink}}" class="Sidenav-pageLink">{{.LinkTitle}}</a>
-              </li>
-              {{- end }}
-              {{- end }}
-              {{- end }}
-              {{- end }}
             </ul>
           {{- end}}
         </li>
