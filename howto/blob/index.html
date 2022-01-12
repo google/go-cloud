@@ -2,7 +2,7 @@
 <html lang="en-us">
 <head>
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <meta name="generator" content="Hugo 0.88.0" />
+  <meta name="generator" content="Hugo 0.91.2" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Blob &middot; Go CDK</title>
@@ -12,17 +12,6 @@
   <link type="text/css" rel="stylesheet" href="/css/style.css">
   <link rel="shortcut icon" href="/favicon-32x32.png">
   
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-135118641-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
-
 </head>
 <body>
   <div class="PageLayout">
@@ -301,10 +290,16 @@ other API that takes in a <code>*gcp.HTTPClient</code>.) You can find functions 
 <p>S3 URLs in the Go CDK closely resemble the URLs you would see in the <a href="https://aws.amazon.com/cli/">AWS CLI</a>.
 You should specify the <code>region</code> query parameter to ensure your application
 connects to the correct region.</p>
-<p><code>blob.OpenBucket</code> will create a default AWS Session with the
+<p>If you set the &ldquo;awssdk=v1&rdquo; query parameter,
+<code>blob.OpenBucket</code> will create a default AWS Session with the
 <code>SharedConfigEnable</code> option enabled; if you have authenticated with the AWS CLI,
 it will use those credentials. See <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS Session</a> to learn about authentication
 alternatives, including using environment variables.</p>
+<p>If you set the &ldquo;awssdk=v2&rdquo; query parameter, it will instead create an AWS
+Config based on the AWS SDK V2; see <a href="https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/">AWS V2 Config</a> to learn more.</p>
+<p>If no &ldquo;awssdk&rdquo; query parameter is set, Go CDK will use a default (currently V1).</p>
+<p>Full details about acceptable URLs can be found under the API reference for
+<a href="https://godoc.org/gocloud.dev/blob/s3blob#URLOpener"><code>s3blob.URLOpener</code></a>.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
@@ -318,9 +313,14 @@ alternatives, including using environment variables.</p>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Forcing AWS SDK V2.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;s3://my-bucket?region=us-west-1&amp;awssdk=2&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
-<p>Full details about acceptable URLs can be found under the API reference for
-<a href="https://godoc.org/gocloud.dev/blob/s3blob#URLOpener"><code>s3blob.URLOpener</code></a>.</p>
 <h4 id="s3-ctor"> S3 Constructor<a class="anchor" href="#s3-ctor" aria-label="Link to Section">🔗</a></h4>
 <p>The <a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucket"><code>s3blob.OpenBucket</code></a> constructor opens an <a href="https://aws.amazon.com/s3/">S3</a> bucket. You must first
 create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your bucket:</p>
@@ -344,6 +344,34 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 
 <span class="c1">// Create a *blob.Bucket.
 </span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">s3blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="s">&#34;my-bucket&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+<p>[<code>s3blob.OpenBucketV2</code>][] is similar but uses the AWS SDK V2.</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="nx">awsv2cfg</span> <span class="s">&#34;github.com/aws/aws-sdk-go-v2/config&#34;</span>
+	<span class="nx">s3v2</span> <span class="s">&#34;github.com/aws/aws-sdk-go-v2/service/s3&#34;</span>
+	<span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Establish a AWS V2 Config.
+</span><span class="c1">// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+</span><span class="c1"></span><span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
+<span class="nx">cfg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awsv2cfg</span><span class="p">.</span><span class="nf">LoadDefaultConfig</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Create a *blob.Bucket.
+</span><span class="c1"></span><span class="nx">clientV2</span> <span class="o">:=</span> <span class="nx">s3v2</span><span class="p">.</span><span class="nf">NewFromConfig</span><span class="p">(</span><span class="nx">cfg</span><span class="p">)</span>
+<span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">s3blob</span><span class="p">.</span><span class="nf">OpenBucketV2</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">clientV2</span><span class="p">,</span> <span class="s">&#34;my-bucket&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -519,34 +547,11 @@ separator, so on Windows, <code>C:\foo\bar</code> would be written as
               <li class="Sidenav-page">
                 <a href="/tutorials/order/" class="Sidenav-pageLink">Order Processor</a>
               </li>
-              
             </ul>
         </li>
         <li class="Sidenav-section">
           <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
             <ul class="Sidenav-pageList">
-              <li class="Sidenav-page">
-                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/howto/docstore/" class="Sidenav-pageLink">Docstore</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/howto/sql/" class="Sidenav-pageLink">MySQL/PostgreSQL</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/howto/runtimevar/" class="Sidenav-pageLink">Runtime Configuration</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/howto/secrets/" class="Sidenav-pageLink">Secrets</a>
-              </li>
-              <li class="Sidenav-page">
-                <a href="/howto/server/" class="Sidenav-pageLink">Server</a>
-              </li>
-              
               <li class="Sidenav-page">
                 <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
               </li>
@@ -582,7 +587,6 @@ separator, so on Windows, <code>C:\foo\bar</code> would be written as
               <li class="Sidenav-page">
                 <a href="/concepts/as/" class="Sidenav-pageLink">Using provider-specific APIs</a>
               </li>
-              
             </ul>
         </li>
       </ul>
