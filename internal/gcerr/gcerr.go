@@ -31,43 +31,43 @@ import (
 type ErrorCode int
 
 const (
-	// Returned by the Code function on a nil error. It is not a valid
+	// OK is returned by the Code function on a nil error. It is not a valid
 	// code for an error.
 	OK ErrorCode = 0
 
-	// The error could not be categorized.
+	// Unknown means that the error could not be categorized.
 	Unknown ErrorCode = 1
 
-	// The resource was not found.
+	// NotFound means that the resource was not found.
 	NotFound ErrorCode = 2
 
-	// The resource exists, but it should not.
+	// AlreadyExists means that the resource exists, but it should not.
 	AlreadyExists ErrorCode = 3
 
-	// A value given to a Go CDK API is incorrect.
+	// InvalidArguments means that a value given to a Go CDK API is incorrect.
 	InvalidArgument ErrorCode = 4
 
-	// Something unexpected happened. Internal errors always indicate
+	// Internal means that something unexpected happened. Internal errors always indicate
 	// bugs in the Go CDK (or possibly the underlying service).
 	Internal ErrorCode = 5
 
-	// The feature is not implemented.
+	// Unimplemented means that the feature is not implemented.
 	Unimplemented ErrorCode = 6
 
-	// The system was in the wrong state.
+	// FailedPrecondition means that the system was in the wrong state.
 	FailedPrecondition ErrorCode = 7
 
-	// The caller does not have permission to execute the specified operation.
+	// PermissionDenied means that the caller does not have permission to execute the specified operation.
 	PermissionDenied ErrorCode = 8
 
-	// Some resource has been exhausted, typically because a service resource limit
+	// ResourceExhausted means that some resource has been exhausted, typically because a service resource limit
 	// has been reached.
 	ResourceExhausted ErrorCode = 9
 
-	// The operation was canceled.
+	// Canceled means that the operation was canceled.
 	Canceled ErrorCode = 10
 
-	// The operation timed out.
+	// DeadlineExceeded means that The operation timed out.
 	DeadlineExceeded ErrorCode = 11
 )
 
@@ -84,20 +84,24 @@ const (
 
 // An Error describes a Go CDK error.
 type Error struct {
+	// Code is the error code.
 	Code  ErrorCode
 	msg   string
 	frame xerrors.Frame
 	err   error
 }
 
+// Error returns the error as a string.
 func (e *Error) Error() string {
 	return fmt.Sprint(e)
 }
 
+// Format formats the error.
 func (e *Error) Format(s fmt.State, c rune) {
 	xerrors.FormatError(e, s, c)
 }
 
+// FormatError formats the errots.
 func (e *Error) FormatError(p xerrors.Printer) (next error) {
 	if e.msg == "" {
 		p.Printf("code=%v", e.Code)

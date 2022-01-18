@@ -59,12 +59,13 @@ func (c connector) Driver() driver.Driver {
 	return ocsql.Wrap(&pq.Driver{})
 }
 
-// A type that implements PostgresURLOpener can open connection based on a URL.
+// PostgresURLOpener can open Postgres connections based on a URL.
 // The opener must not modify the URL argument. OpenPostgresURL must be safe to
 // call from multiple goroutines.
 //
 // This interface is generally implemented by types in driver packages.
 type PostgresURLOpener interface {
+	// OpenPostgresURL opens a Postgres connection based on the URL.
 	OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error)
 }
 

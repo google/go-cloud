@@ -97,7 +97,7 @@ func (c connector) Driver() driver.Driver {
 	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
-// A type that implements MySQLURLOpener can open connection based on a URL.
+// MySQLURLOpener implements MySQLURLOpener and can open connections based on a URL.
 // The opener must not modify the URL argument. OpenMySQLURL must be safe to
 // call from multiple goroutines.
 //

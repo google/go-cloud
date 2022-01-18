@@ -574,9 +574,8 @@ func (d docsForSorting) Less(i, j int) bool {
 	c := compare(d.vals[i], d.vals[j])
 	if d.ascending {
 		return c < 0
-	} else {
-		return c > 0
 	}
+	return c > 0
 }
 
 // compare returns -1 if v1 < v2, 0 if v1 == v2 and 1 if v1 > v2.

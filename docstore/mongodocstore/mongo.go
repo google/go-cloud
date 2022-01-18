@@ -109,6 +109,7 @@ type collection struct {
 	opts          *Options
 }
 
+// Options holds various options.
 type Options struct {
 	// Lowercase all field names for document encoding, field selection, update
 	// modifications and queries.

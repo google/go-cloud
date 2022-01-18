@@ -77,6 +77,9 @@ func TestReadFrom(t *testing.T) {
 	// Get some random data, of a large enough size to require multiple
 	// reads/writes given our buffer size of 1024.
 	data, err := randomData(1024*10 + 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	bucket := memblob.OpenBucket(nil)
 	defer bucket.Close()
@@ -118,6 +121,9 @@ func TestWriteTo(t *testing.T) {
 	// Get some random data, of a large enough size to require multiple
 	// reads/writes given our buffer size of 1024.
 	data, err := randomData(1024*10 + 10)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	bucket := memblob.OpenBucket(nil)
 	defer bucket.Close()

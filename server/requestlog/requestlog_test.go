@@ -48,11 +48,11 @@ func TestHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not get entry:", err)
 	}
-	if want := "test-baggage"; ent.Request.Context().Value("baggage") != want {
-		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value("baggage"), want)
+	if want := "test-baggage"; ent.Request.Context().Value(testContextKey) != want {
+		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value(testContextKey), want)
 	}
 	if want := "/foo"; ent.Request.URL.Path != want {
-		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value("baggage"), want)
+		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value(testContextKey), want)
 	}
 	if want := "POST"; ent.RequestMethod != want {
 		t.Errorf("RequestMethod = %q; want %q", ent.RequestMethod, want)
@@ -106,13 +106,17 @@ func (sh *testSpanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sh.h.ServeHTTP(w, r)
 }
 
+type contextKey string
+
+const testContextKey = contextKey("baggage")
+
 func roundTrip(r *http.Request, h http.Handler) (*Entry, *trace.SpanContext, error) {
 	capture := new(captureLogger)
 	hh := NewHandler(capture, h)
 	handler := &testSpanHandler{h: hh}
 	s := httptest.NewUnstartedServer(handler)
 	s.Config.ConnContext = func(ctx context.Context, c net.Conn) context.Context {
-		ctx = context.WithValue(ctx, "baggage", "test-baggage")
+		ctx = context.WithValue(ctx, testContextKey, "test-baggage")
 		return ctx
 	}
 	s.Start()

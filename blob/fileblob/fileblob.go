@@ -52,7 +52,6 @@
 //  - Attributes: os.FileInfo
 //  - CopyOptions.BeforeCopy: *os.File
 //  - WriterOptions.BeforeWrite: *os.File
-
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
