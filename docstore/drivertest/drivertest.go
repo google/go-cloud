@@ -44,20 +44,20 @@ type ByteArray [2]byte
 type CollectionKind int
 
 const (
-	// A collection with a single primary key field of type string named
+	// SingleKey is collection with a single primary key field of type string named
 	// drivertest.KeyField.
 	SingleKey CollectionKind = iota
 
-	// A collection that will consist entirely of HighScore structs (see below),
+	// TwoKey is a  collection that will consist entirely of HighScore structs (see below),
 	// whose two primary key fields are "Game" and "Player", both strings. Use
 	// drivertest.HighScoreKey as the key function.
 	TwoKey
 
-	// The collection should behave like a SingleKey collection, except
+	// AltRev is a collection that behaves like a SingleKey collection, except
 	// that the revision field should be drivertest.AlternateRevisionField.
 	AltRev
 
-	// The collection's documents will not have a revision field.
+	// NoRev is a collection whose documents will not have a revision field.
 	NoRev
 )
 

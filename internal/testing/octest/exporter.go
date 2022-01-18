@@ -78,6 +78,7 @@ func (te *TestExporter) ExportView(vd *view.Data) {
 	}
 }
 
+// Spans returns the exporter's traces.
 func (te *TestExporter) Spans() []*trace.SpanData {
 	te.mu.Lock()
 	defer te.mu.Unlock()

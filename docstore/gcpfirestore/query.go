@@ -138,9 +138,8 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 	if t1, ok := val.(time.Time); ok {
 		if t2, ok := f.Value.(time.Time); ok {
 			return applyComparison(f.Op, driver.CompareTimes(t1, t2))
-		} else {
-			return false
 		}
+		return false
 	}
 	lhs := reflect.ValueOf(val)
 	rhs := reflect.ValueOf(f.Value)

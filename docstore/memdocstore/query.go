@@ -131,9 +131,8 @@ func sortDocs(docs []storedDoc, field string, asc bool) {
 		}
 		if asc {
 			return c < 0
-		} else {
-			return c > 0
 		}
+		return c > 0
 	})
 }
 

@@ -72,6 +72,7 @@ type collection struct {
 // awsdynamodb logic. See Options.RunQueryFunc for details.
 type FallbackFunc func(context.Context, *driver.Query, RunQueryFunc) (driver.DocumentIterator, error)
 
+// Options holds various options.
 type Options struct {
 	// If false, queries that can only be executed by scanning the entire table
 	// return an error instead (with the exception of a query with no filters).

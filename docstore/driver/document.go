@@ -67,13 +67,12 @@ func (d Document) GetField(field string) (interface{}, error) {
 			return nil, gcerr.Newf(gcerr.NotFound, nil, "field %q not found in map", field)
 		}
 		return x, nil
-	} else {
-		v, err := d.structField(field)
-		if err != nil {
-			return nil, err
-		}
-		return v.Interface(), nil
 	}
+	v, err := d.structField(field)
+	if err != nil {
+		return nil, err
+	}
+	return v.Interface(), nil
 }
 
 // getDocument gets the value of the given field path, which must be a document.

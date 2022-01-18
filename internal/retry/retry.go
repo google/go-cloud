@@ -73,6 +73,7 @@ func (e *ContextError) Error() string {
 	return fmt.Sprintf("%v; last error: %v", e.CtxErr, e.FuncErr)
 }
 
+// Is returns true iff one of the two errors held in e is equal to target.
 func (e *ContextError) Is(target error) bool {
 	return e.CtxErr == target || e.FuncErr == target
 }

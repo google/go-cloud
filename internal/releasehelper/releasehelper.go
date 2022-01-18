@@ -83,7 +83,7 @@ func cmdCheck(s string) []byte {
 	return b
 }
 
-// These types are taken from "go mod help edit", in order to parse the JSON
+// GoMod holds "go mod" parameters, taken from "go mod help edit", in order to parse the JSON
 // output of `go mod edit -json`.
 type GoMod struct {
 	Module  Module
@@ -93,17 +93,20 @@ type GoMod struct {
 	Replace []Replace
 }
 
+// Module represents a Go module.
 type Module struct {
 	Path    string
 	Version string
 }
 
+// Require represents a required module.
 type Require struct {
 	Path     string
 	Version  string
 	Indirect bool
 }
 
+// Replace represents a replace directive.
 type Replace struct {
 	Old Module
 	New Module
