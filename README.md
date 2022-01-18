@@ -5,6 +5,7 @@ _Write once, run on any cloud ☁️_
 [![Build Status](https://github.com/google/go-cloud/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/google/go-cloud/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/mod/gocloud.dev)][PkgGoDev]
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 <p align="center">
   <img width="509" height="276" src="internal/website/static/go-cdk-logo-gopherblue.png" alt="">
