@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -513,5 +514,77 @@ func TestSkipMetadata(t *testing.T) {
 				attrsExt, gotSidecar, test.wantSidecar)
 		}
 		b.Delete(ctx, "key")
+	}
+}
+
+// TestDirsWithCharactersBeforeDelimiter tests a case where there's
+// a directory on a pagination boundary that ends with a character that's
+// less than the delimiter.
+// See https://github.com/google/go-cloud/issues/3089.
+func TestDirsWithCharactersBeforeDelimiter(t *testing.T) {
+	dir, err := ioutil.TempDir("", "fileblob*")
+	if err != nil {
+		t.Fatalf("Got error creating temp dir: %#v", err)
+	}
+	defer os.RemoveAll(dir)
+	dirpath := filepath.ToSlash(dir)
+	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
+		dirpath = "/" + dirpath
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	b, err := OpenBucket(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+
+	// A previous implementation returned the exact key as the NextPageToken.
+	// This leads to problems when the last character in the directory name
+	// is lexicographically smaller than the delimiter character. I.e., in
+	// the example below, "t-" ends with "-" which is  less than the delimiter
+	// "/", so pagination would get messed up.
+	// The current implementation trims the delimiter from the pageToken
+	// and the key before comparing them.
+	for _, key := range []string{
+		"testFile1",
+		"t/t/t",
+		"t-/t.",
+		"dir1/testFile1dir1",
+		"dir2/testFile1dir2",
+		"d",
+	} {
+		if err := b.WriteAll(ctx, key, []byte("hello world"), nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := []string{"d", "dir1/", "dir2/", "t/", "t-/", "testFile1"}
+
+	opts := &blob.ListOptions{
+		Prefix:    "",
+		Delimiter: "/",
+	}
+	// All page sizes should return the same end result.
+	for pageSize := 10; pageSize != 0; pageSize-- {
+		var got []string
+		var gotPaged []string
+		obs, token, err := b.ListPage(ctx, blob.FirstPageToken, pageSize, opts)
+		for {
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, o := range obs {
+				got = append(got, o.Key)
+				gotPaged = append(gotPaged, o.Key)
+			}
+			if token == nil {
+				break
+			}
+			gotPaged = append(gotPaged, fmt.Sprintf("XXX %s XXX", token))
+			obs, token, err = b.ListPage(ctx, token, pageSize, opts)
+		}
+		if !reflect.DeepEqual(want, got) {
+			t.Fatalf("For page size %d, got \n%v\nwant\n%v\npaged\n%v", pageSize, got, want, gotPaged)
+		}
 	}
 }
