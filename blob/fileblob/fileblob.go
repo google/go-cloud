@@ -470,12 +470,12 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			}
 		}
 		// If there's a pageToken, skip anything before it.
-		if pageToken != "" && obj.Key <= pageToken {
+		if pageToken != "" && strings.TrimSuffix(obj.Key, opts.Delimiter) <= pageToken {
 			return nil
 		}
 		// If we've already got a full page of results, set NextPageToken and stop.
 		if len(result.Objects) == pageSize {
-			result.NextPageToken = []byte(result.Objects[pageSize-1].Key)
+			result.NextPageToken = []byte(strings.TrimSuffix(result.Objects[pageSize-1].Key, opts.Delimiter))
 			return io.EOF
 		}
 		result.Objects = append(result.Objects, obj)
