@@ -152,7 +152,7 @@ whether the message bodies are raw or [SNS JSON][].
 
 Messages with a `base64encoded` message attribute will be automatically
 [Base64][] decoded before being returned. See the [SNS publishing guide][]
-or the [SQS publshing guide][] for more details.
+or the [SQS publishing guide][] for more details.
 
 [Base64]: https://en.wikipedia.org/wiki/Base64
 [SNS publishing guide]: {{< ref "./publish.md#sns" >}}
