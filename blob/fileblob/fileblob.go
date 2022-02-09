@@ -69,7 +69,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -494,12 +493,11 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		// However, sometimes adding the file delimiter messes that up (e.g.,
 		// if the file delimiter is later in the alphabet than the last character
 		// of a key).
-		// Detect if this happens and sort if needed.
-		if lastKeyAdded != "" && obj.Key < lastKeyAdded {
-			sort.SliceStable(result.Objects, func(i, j int) bool {
-				return result.Objects[i].Key < result.Objects[j].Key
-			})
-			lastKeyAdded = result.Objects[len(result.Objects)-1].Key
+		// Detect if this happens and swap if needed.
+		if len(result.Objects) > 1 && obj.Key < lastKeyAdded {
+			i := len(result.Objects) - 1
+			result.Objects[i-1], result.Objects[i] = result.Objects[i], result.Objects[i-1]
+			lastKeyAdded = result.Objects[i].Key
 		} else {
 			lastKeyAdded = obj.Key
 		}
