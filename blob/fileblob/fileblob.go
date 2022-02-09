@@ -64,10 +64,12 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -367,6 +369,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	// added. It is used to avoid adding it again; all files in this "directory"
 	// are collapsed to the single directory entry.
 	var lastPrefix string
+	var lastKeyAdded string
 
 	// If the Prefix contains a "/", we can set the root of the Walk
 	// to the path specified by the Prefix as any files below the path will not
@@ -380,7 +383,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 
 	// Do a full recursive scan of the root directory.
 	var result driver.ListPage
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			// Couldn't read this file/directory for some reason; just skip it.
 			return nil
@@ -431,18 +434,22 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			// For other blobs, md5 will remain nil.
 			md5 = xa.MD5
 		}
+		fi, err := info.Info()
+		if err != nil {
+			return err
+		}
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(*os.FileInfo)
 			if !ok {
 				return false
 			}
-			*p = info
+			*p = fi
 			return true
 		}
 		obj := &driver.ListObject{
 			Key:     key,
-			ModTime: info.ModTime(),
-			Size:    info.Size(),
+			ModTime: fi.ModTime(),
+			Size:    fi.Size(),
 			MD5:     md5,
 			AsFunc:  asFunc,
 		}
@@ -470,19 +477,40 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			}
 		}
 		// If there's a pageToken, skip anything before it.
-		if pageToken != "" && strings.TrimSuffix(obj.Key, opts.Delimiter) <= pageToken {
+		if pageToken != "" && obj.Key <= pageToken {
 			return nil
 		}
 		// If we've already got a full page of results, set NextPageToken and stop.
-		if len(result.Objects) == pageSize {
-			result.NextPageToken = []byte(strings.TrimSuffix(result.Objects[pageSize-1].Key, opts.Delimiter))
+		// Unless the current object is a directory, in which case there may
+		// still be objects coming that are alphabetically before it (since
+		// we appended the delimiter). In that case, keep going; we'll trim the
+		// extra entries (if any) before returning.
+		if len(result.Objects) == pageSize && !obj.IsDir {
+			result.NextPageToken = []byte(result.Objects[pageSize-1].Key)
 			return io.EOF
 		}
 		result.Objects = append(result.Objects, obj)
+		// Normally, objects are added in the correct order (by Key).
+		// However, sometimes adding the file delimiter messes that up (e.g.,
+		// if the file delimiter is later in the alphabet than the last character
+		// of a key).
+		// Detect if this happens and sort if needed.
+		if lastKeyAdded != "" && obj.Key < lastKeyAdded {
+			sort.SliceStable(result.Objects, func(i, j int) bool {
+				return result.Objects[i].Key < result.Objects[j].Key
+			})
+			lastKeyAdded = result.Objects[len(result.Objects)-1].Key
+		} else {
+			lastKeyAdded = obj.Key
+		}
 		return nil
 	})
 	if err != nil && err != io.EOF {
 		return nil, err
+	}
+	if len(result.Objects) > pageSize {
+		result.Objects = result.Objects[0:pageSize]
+		result.NextPageToken = []byte(result.Objects[pageSize-1].Key)
 	}
 	return &result, nil
 }

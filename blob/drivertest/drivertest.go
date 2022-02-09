@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -209,6 +210,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 	t.Run("TestListDelimiters", func(t *testing.T) {
 		testListDelimiters(t, newHarness)
+	})
+	t.Run("TestDirsWithCharactersBeforeDelimiter", func(t *testing.T) {
+		testDirsWithCharactersBeforeDelimiter(t, newHarness)
 	})
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
@@ -959,6 +963,86 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				t.Errorf("after delete, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantAfterDel, diff)
 			}
 		})
+	}
+}
+
+// testDirsWithCharactersBeforeDelimiter tests a case where there's
+// a directory on a pagination boundary that ends with a character that's
+// less than the delimiter.
+// See https://github.com/google/go-cloud/issues/3089.
+func testDirsWithCharactersBeforeDelimiter(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "blob-for-dirs-with-chars-before-delimiter/"
+	content := []byte("hello")
+
+	// The set of files to use for these tests.
+	keys := []string{
+		"testFile1",
+		"t/t/t",
+		"t-/t.",
+		"dir1/testFile1dir1",
+		"dir2/testFile1dir2",
+		"d",
+	}
+
+	// Note that "t-/" is before "t/". The delimiter is included in the
+	// alphabetical ordering.
+	want := []string{"d", "dir1/", "dir2/", "t-/", "t/", "testFile1"}
+
+	// Create blobs.
+	// We only create the blobs once, for efficiency and because there's
+	// no guarantee that after we create them they will be immediately returned
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blob.NewBucket(drv)
+
+	// See if the blobs are already there.
+	iter := b.List(&blob.ListOptions{Prefix: keyPrefix})
+	found := iterToSetOfKeys(ctx, t, iter)
+	for _, key := range keys {
+		key = keyPrefix + key
+		if !found[key] {
+			if err := b.WriteAll(ctx, key, content, nil); err != nil {
+				b.Close()
+				t.Fatal(err)
+			}
+		}
+	}
+	defer b.Close()
+	defer h.Close()
+
+	opts := &blob.ListOptions{
+		Prefix:    keyPrefix,
+		Delimiter: "/",
+	}
+	// All page sizes should return the same end result.
+	for pageSize := 10; pageSize != 0; pageSize-- {
+		var got []string
+		objs, token, err := b.ListPage(ctx, blob.FirstPageToken, pageSize, opts)
+		for {
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, o := range objs {
+				key := strings.TrimPrefix(o.Key, keyPrefix)
+				got = append(got, key)
+			}
+			if token == nil {
+				break
+			}
+			objs, token, err = b.ListPage(ctx, token, pageSize, opts)
+		}
+		if !reflect.DeepEqual(want, got) {
+			t.Fatalf("For page size %d, got \n%v\nwant\n%v", pageSize, got, want)
+		}
 	}
 }
 
