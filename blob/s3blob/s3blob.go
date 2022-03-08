@@ -103,9 +103,7 @@ var Set = wire.NewSet(
 	wire.Struct(new(URLOpener), "ConfigProvider"),
 )
 
-type urlSessionOpener struct {
-	opener *URLOpener
-}
+type urlSessionOpener struct{}
 
 func (o *urlSessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	if gcaws.UseV2(u.Query()) {
@@ -116,13 +114,11 @@ func (o *urlSessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-
-	o.opener = &URLOpener{
+	opener := &URLOpener{
 		ConfigProvider: sess,
 	}
-
 	u.RawQuery = rest.Encode()
-	return o.opener.OpenBucketURL(ctx, u)
+	return opener.OpenBucketURL(ctx, u)
 }
 
 // Scheme is the URL scheme s3blob registers its URLOpener under on
