@@ -386,6 +386,10 @@ func TestOpenVariable(t *testing.T) {
 		{"awssecretsmanager://myvar?decoder=string", false},
 		// Invalid decoder.
 		{"awssecretsmanager://myvar?decoder=notadecoder", true},
+		// OK, setting wait.
+		{"awssecretsmanager://myvar?wait=5m", false},
+		// Invalid wait.
+		{"awssecretsmanager://myvar?wait=xx", true},
 		// Invalid parameter.
 		{"awssecretsmanager://myvar?param=value", true},
 		// OK, using SDK V2.

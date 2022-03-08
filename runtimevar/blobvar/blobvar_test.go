@@ -143,6 +143,10 @@ func TestOpenVariable(t *testing.T) {
 		{bucketURL, "blob://myvar.txt?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
 		{bucketURL, "blob://myvar.json?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Setting wait.
+		{bucketURL, "blob://myvar.txt?wait=2m", false, false, []byte("hello world!")},
+		// Invalid wait.
+		{bucketURL, "blob://myvar.txt?wait=x", true, false, nil},
 	}
 
 	ctx := context.Background()

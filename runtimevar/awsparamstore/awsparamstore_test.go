@@ -217,6 +217,10 @@ func TestOpenVariable(t *testing.T) {
 		{"awsparamstore://myvar?decoder=string", false},
 		// Invalid decoder.
 		{"awsparamstore://myvar?decoder=notadecoder", true},
+		// OK, setting wait.
+		{"awsparamstore://myvar?wait=2m", false},
+		// Invalid wait.
+		{"awsparamstore://myvar?wait=x", true},
 		// Invalid parameter.
 		{"awsparamstore://myvar?param=value", true},
 		// OK, using SDK V2.

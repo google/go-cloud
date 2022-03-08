@@ -135,6 +135,8 @@ const Scheme = "gcpruntimeconfig"
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
 //       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
 //       See runtimevar.DecoderByName for supported values.
+//   - wait: The poll interval, in time.ParseDuration formats.
+//       Defaults to 30s.
 type URLOpener struct {
 	// Client must be set to a non-nil client authenticated with
 	// Cloud RuntimeConfigurator scope or equivalent.
@@ -158,11 +160,20 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
+	opts := o.Options
+	if s := q.Get("wait"); s != "" {
+		q.Del("wait")
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %v: invalid wait %q: %v", u, s, err)
+		}
+		opts.WaitDuration = d
+	}
 
 	for param := range q {
 		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
-	return OpenVariable(o.Client, path.Join(u.Host, u.Path), decoder, &o.Options)
+	return OpenVariable(o.Client, path.Join(u.Host, u.Path), decoder, &opts)
 }
 
 // Options sets options.
