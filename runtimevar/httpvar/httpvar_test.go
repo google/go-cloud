@@ -251,6 +251,10 @@ func TestOpenVariableURL(t *testing.T) {
 		{baseURL + "/string-var", false, false, []byte("hello world")},
 		// Working example with JSON decoder.
 		{baseURL + "/json-var?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Setting wait.
+		{baseURL + "/string-var?decoder=string&wait=1m", false, false, "hello world"},
+		// Invalid wait.
+		{baseURL + "/string-var?decoder=string&wait=xx", true, false, nil},
 	}
 
 	for _, test := range tests {

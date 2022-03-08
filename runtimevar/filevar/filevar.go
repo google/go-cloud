@@ -73,6 +73,8 @@ const Scheme = "file"
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
 //       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
 //       See runtimevar.DecoderByName for supported values.
+//   - wait: The frequency for retries after an error, in time.ParseDuration formats.
+//       Defaults to 30s.
 type URLOpener struct {
 	// Decoder specifies the decoder to use if one is not specified in the URL.
 	// Defaults to runtimevar.BytesDecoder.
@@ -93,6 +95,15 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
+	opts := o.Options
+	if s := q.Get("wait"); s != "" {
+		q.Del("wait")
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %v: invalid wait %q: %v", u, s, err)
+		}
+		opts.WaitDuration = d
+	}
 
 	for param := range q {
 		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
@@ -101,7 +112,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	if os.PathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
 	}
-	return OpenVariable(filepath.FromSlash(path), decoder, &o.Options)
+	return OpenVariable(filepath.FromSlash(path), decoder, &opts)
 }
 
 // Options sets options.

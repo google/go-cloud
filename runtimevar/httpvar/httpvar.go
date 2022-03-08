@@ -61,6 +61,8 @@ var Schemes = []string{"http", "https"}
 // the following URL parameters are removed if present:
 //   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
 //       See runtimevar.DecoderByName for supported values.
+//   - wait: The poll interval, in time.ParseDuration formats.
+//       Defaults to 30s.
 type URLOpener struct {
 	// The Client to use; required.
 	Client *http.Client
@@ -85,11 +87,20 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
+	opts := o.Options
+	if s := q.Get("wait"); s != "" {
+		q.Del("wait")
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %v: invalid wait %q: %v", u, s, err)
+		}
+		opts.WaitDuration = d
+	}
 	// See if we changed the query parameters.
 	if rawq := q.Encode(); rawq != u.Query().Encode() {
 		u2.RawQuery = rawq
 	}
-	return OpenVariable(o.Client, u2.String(), decoder, &o.Options)
+	return OpenVariable(o.Client, u2.String(), decoder, &opts)
 }
 
 // Options sets options.

@@ -215,6 +215,10 @@ func TestOpenVariable(t *testing.T) {
 		{"gcpruntimeconfig://myproject/mycfg/myvar?decoder=notadecoder", true},
 		// Invalid param.
 		{"gcpruntimeconfig://myproject/mycfg/myvar?param=value", true},
+		// OK, setting wait.
+		{"gcpruntimeconfig://projects/myproject/configs/mycfg/variables/myvar?wait=1m", false},
+		// Invalid wait.
+		{"gcpruntimeconfig://projects/myproject/configs/mycfg/variables/myvar?wait=xx", true},
 	}
 
 	ctx := context.Background()

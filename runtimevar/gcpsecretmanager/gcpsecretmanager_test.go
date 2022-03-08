@@ -224,6 +224,10 @@ func TestOpenVariable(t *testing.T) {
 		{"gcpsecretmanager://projects/myproject/secrets/mysecret?decoder=notadecoder", true},
 		// Invalid param.
 		{"gcpsecretmanager://projects/myproject/secrets/mysecret?param=value", true},
+		// Setting wait.
+		{"gcpsecretmanager://projects/myproject/secrets/mysecret?wait=1m", false},
+		// Invalid wait.
+		{"gcpsecretmanager://projects/myproject/secrets/mysecret?wait=xx", true},
 	}
 
 	ctx := context.Background()

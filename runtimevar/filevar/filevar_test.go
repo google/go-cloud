@@ -247,6 +247,10 @@ func TestOpenVariableURL(t *testing.T) {
 		{"file://" + secretsPath + "?decoder=decrypt+jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 		// Working example with escaped decrypt+json decoder
 		{"file://" + secretsPath + "?decoder=" + url.QueryEscape("decrypt+jsonmap"), false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Setting wait.
+		{"file://" + txtPath + "?decoder=string&wait=1m", false, false, "hello world!"},
+		// Invalid wait.
+		{"file://" + txtPath + "?decoder=string&wait=xx", true, false, nil},
 	}
 
 	for _, test := range tests {
