@@ -23,9 +23,17 @@
 		"imports": "import \"gocloud.dev/blob\"",
 		"code": "// Wrap the bucket using blob.PrefixedBucket.\n// The prefix should end with \"/\", so that the resulting bucket operates\n// in a subfolder.\nbucket = blob.PrefixedBucket(bucket, \"a/subfolder/\")\n\n// The original bucket is no longer usable; it has been closed.\n// The wrapped bucket should be closed when done.\ndefer bucket.Close()\n\n// Bucket operations on \u003ckey\u003e will be translated to \"a/subfolder/\u003ckey\u003e\"."
 	},
+	"gocloud.dev/blob.ExampleSingleKeyBucket": {
+		"imports": "import \"gocloud.dev/blob\"",
+		"code": "// Wrap the bucket using blob.SingleKeyBucket.\n// The bucket always references the provided key.\nbucket = blob.SingleKeyBucket(bucket, \"foo.txt\")\n\n// The original bucket is no longer usable; it has been closed.\n// The wrapped bucket should be closed when done.\ndefer bucket.Close()\n\n// Bucket operations will ignore the passed-in key and always reference foo.txt."
+	},
 	"gocloud.dev/blob.Example_openFromURLWithPrefix": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n)",
 		"code": "// Connect to a bucket using a URL, using the \"prefix\" query parameter to\n// target a subfolder in the bucket.\n// The prefix should end with \"/\", so that the resulting bucket operates\n// in a subfolder.\nb, err := blob.OpenBucket(ctx, \"mem://?prefix=a/subfolder/\")\nif err != nil {\n\treturn err\n}\ndefer b.Close()\n\n// Bucket operations on \u003ckey\u003e will be translated to \"a/subfolder/\u003ckey\u003e\"."
+	},
+	"gocloud.dev/blob.Example_openFromURLWithSingleKey": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "// Connect to a bucket using a URL, using the \"key\" query parameter to\n// make the bucket always reference that key.\nb, err := blob.OpenBucket(ctx, \"mem://?key=foo.txt\")\nif err != nil {\n\treturn err\n}\ndefer b.Close()\n\n// Bucket operations will ignore the passed-in key and always reference foo.txt."
 	},
 	"gocloud.dev/blob/azureblob.ExampleOpenBucket": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/Azure/azure-storage-blob-go/azblob\"\n\t\"gocloud.dev/blob/azureblob\"\n)",

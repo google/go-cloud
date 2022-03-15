@@ -1259,11 +1259,13 @@ func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, erro
 
 func applyPrefixParam(ctx context.Context, opener BucketURLOpener, u *url.URL) (*Bucket, error) {
 	prefix := u.Query().Get("prefix")
-	if prefix != "" {
-		// Make a copy of u with the "prefix" parameter removed.
+	singleKey := u.Query().Get("key")
+	if prefix != "" || singleKey != "" {
+		// Make a copy of u with the "prefix" and "key" parameters removed.
 		urlCopy := *u
 		q := urlCopy.Query()
 		q.Del("prefix")
+		q.Del("key")
 		urlCopy.RawQuery = q.Encode()
 		u = &urlCopy
 	}
@@ -1273,6 +1275,9 @@ func applyPrefixParam(ctx context.Context, opener BucketURLOpener, u *url.URL) (
 	}
 	if prefix != "" {
 		bucket = PrefixedBucket(bucket, prefix)
+	}
+	if singleKey != "" {
+		bucket = SingleKeyBucket(bucket, singleKey)
 	}
 	return bucket, nil
 }
@@ -1297,6 +1302,8 @@ func DefaultURLMux() *URLMux {
 //
 //   - prefix: wraps the resulting Bucket using PrefixedBucket with the
 //             given prefix.
+//   - key: wraps the resulting Bucket using SingleKeyBucket with the
+//             given key.
 func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	return defaultURLMux.OpenBucket(ctx, urlstr)
 }
@@ -1331,4 +1338,16 @@ func PrefixedBucket(bucket *Bucket, prefix string) *Bucket {
 	defer bucket.mu.Unlock()
 	bucket.closed = true
 	return NewBucket(driver.NewPrefixedBucket(bucket.b, prefix))
+}
+
+// SingleKeyBucket returns a *Bucket based on b that always references singleKey.
+// List methods will not work.
+// singleKey acts as srcKey for Copy.
+//
+// bucket will be closed and no longer usable after this function returns.
+func SingleKeyBucket(bucket *Bucket, singleKey string) *Bucket {
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+	bucket.closed = true
+	return NewBucket(driver.NewSingleKeyBucket(bucket.b, singleKey))
 }

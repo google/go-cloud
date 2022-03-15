@@ -70,3 +70,19 @@ func Example_openFromURLWithPrefix() {
 
 	// Bucket operations on <key> will be translated to "a/subfolder/<key>".
 }
+
+func Example_openFromURLWithSingleKey() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	// Connect to a bucket using a URL, using the "key" query parameter to
+	// make the bucket always reference that key.
+	b, err := blob.OpenBucket(ctx, "mem://?key=foo.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer b.Close()
+
+	// Bucket operations will ignore the passed-in key and always reference foo.txt.
+}

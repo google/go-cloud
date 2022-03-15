@@ -502,6 +502,22 @@ func ExamplePrefixedBucket() {
 	// Bucket operations on <key> will be translated to "a/subfolder/<key>".
 }
 
+func ExampleSingleKeyBucket() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	var bucket *blob.Bucket
+
+	// Wrap the bucket using blob.SingleKeyBucket.
+	// The bucket always references the provided key.
+	bucket = blob.SingleKeyBucket(bucket, "foo.txt")
+
+	// The original bucket is no longer usable; it has been closed.
+	// The wrapped bucket should be closed when done.
+	defer bucket.Close()
+
+	// Bucket operations will ignore the passed-in key and always reference foo.txt.
+}
+
 func ExampleReader_As() {
 	// This example is specific to the gcsblob implementation; it demonstrates
 	// access to the underlying cloud.google.com/go/storage.Reader type.

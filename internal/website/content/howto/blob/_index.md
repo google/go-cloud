@@ -86,6 +86,24 @@ URL:
 
 {{< goexample "gocloud.dev/blob.Example_openFromURLWithPrefix" >}}
 
+### Single Key Buckets {#singlekey}
+
+You can wrap a `*blob.Bucket` to always operate on a single key
+using `blob.SingleKeyBucket`:
+
+{{< goexample "gocloud.dev/blob.ExampleSingleKeyBucket" >}}
+
+Alternatively, you can configure the single key directly in the `blob.OpenBucket`
+URL:
+
+{{< goexample "gocloud.dev/blob.Example_openFromURLWithSingleKey" >}}
+
+The resulting bucket will ignore the `key` parameter to its functions,
+and always refer to the single key. This can be useful to allow configuration
+of a specific "file" via a single URL.
+
+`List` functions will not work on single key buckets.
+
 ## Using a Bucket {#using}
 
 Once you have opened a bucket for the storage provider you want, you can
