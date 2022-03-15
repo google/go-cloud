@@ -22,9 +22,9 @@ jobs:
         # Note: we used to include windows-latest, but it's super
         # flaky on Github runners, lots of OOMs.
         os: [ubuntu-latest, macos-latest]
-        go-version: [1.17.x]
+        go-version: [1.18.x]
         include:
-          - go-version: 1.16.x
+          - go-version: 1.17.x
             os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
