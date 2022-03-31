@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -219,6 +220,67 @@ func TestWatcher_WatchVariable(t *testing.T) {
 	})
 }
 
+func TestWithAuth(t *testing.T) {
+	const (
+		authUser = "test_user"
+		authPwd  = "test_pwd"
+		value    = "hello world"
+	)
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	mockServer := h.(*harness).mockServer
+	testURL := mockServer.baseURL + "/string-var?decoder=string"
+	mockServer.authUser = authUser
+	mockServer.authPwd = authPwd
+
+	ctx := context.Background()
+	if err := h.CreateVariable(ctx, "string-var", []byte(value)); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		AuthUser string
+		AuthPwd  string
+		WantErr  bool
+	}{
+		// No auth provided, fails.
+		{"", "", true},
+		// Invalid user, fails.
+		{"wronguser", authPwd, true},
+		// Invalid password, fails.
+		{authUser, "wrongpassword", true},
+		// Auth good, works.
+		{authUser, authPwd, false},
+	}
+
+	for _, test := range tests {
+		name := fmt.Sprintf("user=%s,pwd=%s", test.AuthUser, test.AuthPwd)
+		t.Run(name, func(t *testing.T) {
+			os.Setenv("HTTPVAR_AUTH_USERNAME", test.AuthUser)
+			os.Setenv("HTTPVAR_AUTH_PASSWORD", test.AuthPwd)
+
+			v, err := runtimevar.OpenVariable(ctx, testURL)
+			if err != nil {
+				t.Fatalf("failed OpenVariable: %v", err)
+			}
+			defer v.Close()
+			snapshot, err := v.Watch(ctx)
+			if (err != nil) != test.WantErr {
+				t.Errorf("got Watch error %v, want error %v", err, test.WantErr)
+			}
+			if err != nil {
+				return
+			}
+			if !cmp.Equal(snapshot.Value, value) {
+				t.Errorf("got snapshot value\n%v\n  want\n%v", snapshot.Value, value)
+			}
+		})
+	}
+}
+
 func TestOpenVariableURL(t *testing.T) {
 	h, err := newHarness(t)
 	if err != nil {
@@ -285,6 +347,8 @@ type mockServer struct {
 	baseURL   string
 	close     func()
 	responses map[string]interface{}
+	authUser  string
+	authPwd   string
 }
 
 func (m *mockServer) SetResponse(name string, response interface{}) {
@@ -300,6 +364,13 @@ func newMockServer() *mockServer {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if mock.authUser != "" {
+			user, pwd, ok := r.BasicAuth()
+			if !ok || user != mock.authUser || pwd != mock.authPwd {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
 		resp := mock.responses[strings.TrimPrefix(r.URL.String(), "/")]
 		if resp == nil {
 			w.WriteHeader(http.StatusNotFound)
