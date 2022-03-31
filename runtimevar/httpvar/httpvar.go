@@ -19,6 +19,8 @@
 //
 // For runtimevar.OpenVariable, httpvar registers for the schemes "http" and
 // "https". The default URL opener will use http.DefaultClient.
+// To use HTTP Basic Auth for the requests, set the environment variables
+// "HTTPVAR_AUTH_USERNAME" and "HTTPVAR_AUTH_PASSWORD".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -37,6 +39,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"gocloud.dev/gcerrors"
@@ -214,6 +217,11 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, w.endpoint.String(), nil)
 	if err != nil {
 		return errorState(err, prev), w.wait
+	}
+	authUsername := os.Getenv("HTTPVAR_AUTH_USERNAME")
+	authPassword := os.Getenv("HTTPVAR_AUTH_PASSWORD")
+	if authUsername != "" && authPassword != "" {
+		req.SetBasicAuth(authUsername, authPassword)
 	}
 	resp, err := w.client.Do(req)
 	if err != nil {
