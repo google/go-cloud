@@ -69,16 +69,15 @@ while read -r path || [[ -n "$path" ]]; do
   gotestflags=("-json" "-race")
   testsummaryflags=("-progress")
 
-  # Only do coverage for the Linux build because it is slow, and
-  # codecov will only save the last one anyway.
-  if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
-    gotestflags+=("-coverpkg=./..." "-coverprofile=$rootdir/modcoverage.out")
-  fi
-
-  # Previous versions of the "go" command may have
-  # different opinions about what go.mod should look
-  # like.
   if [[ $latest_go_version -eq 1 ]]; then
+    # Only do coverage for the latest Linux build because it is slow, and
+    # codecov will only save the last one anyway.
+    if [[ "${RUNNER_OS:-}" == "Linux" ]]; then
+      gotestflags+=("-coverpkg=./..." "-coverprofile=$rootdir/modcoverage.out")
+    fi
+    # Previous versions of the "go" command may have
+    # different opinions about what go.mod should look
+    # like.
     gotestflags+=("-mod=readonly")
   fi
 
