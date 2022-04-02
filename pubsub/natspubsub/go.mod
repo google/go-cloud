@@ -21,7 +21,5 @@ require (
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/nats-io/nats-server/v2 v2.7.2
 	github.com/nats-io/nats.go v1.13.1-0.20220121202836-972a071d373d
-	gocloud.dev v0.24.0
+	gocloud.dev v0.25.0
 )
-
-replace gocloud.dev => ../../
