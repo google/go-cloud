@@ -64,7 +64,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.2.0
 	github.com/klauspost/compress v1.15.1 // indirect
 	github.com/lib/pq v1.10.4
-	github.com/mattn/go-ieproxy v0.0.3 // indirect
+	github.com/mattn/go-ieproxy v0.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	go.opencensus.io v0.23.0
 	go.uber.org/atomic v1.9.0 // indirect
