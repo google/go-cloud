@@ -26,7 +26,7 @@ You will need to install the following software for this tutorial:
 -   [Go](https://golang.org/doc/install)
 -   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
 -   [Docker Desktop](https://docs.docker.com/install/)
--   [Terraform](https://www.terraform.io/intro/getting-started/install.html)
+-   [Terraform](https://spacelift.io/blog/how-to-install-terraform)
 
 ### Cloning the Sample
 
