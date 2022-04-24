@@ -56,6 +56,7 @@ const (
 // URLOpener opens localsecrets URLs like "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=".
 //
 // The URL host must be base64 encoded, and must decode to exactly 32 bytes.
+// Note that base64.URLEncoding should be used to avoid URL-unsafe character in the hostname.
 // If the URL host is empty (e.g., "base64key://"), a new random key is generated.
 //
 // No query parameters are supported.
