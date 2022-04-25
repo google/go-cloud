@@ -839,6 +839,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	page := &driver.ListPage{}
 	page.Objects = []*driver.ListObject{}
 	for _, blobPrefix := range listBlob.Segment.BlobPrefixes {
+		blobPrefix := blobPrefix // capture loop variable for use in AsFunc
 		page.Objects = append(page.Objects, &driver.ListObject{
 			Key:   unescapeKey(blobPrefix.Name),
 			Size:  0,
@@ -854,6 +855,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	}
 
 	for _, blobInfo := range listBlob.Segment.BlobItems {
+		blobInfo := blobInfo // capture loop variable for use in AsFunc
 		page.Objects = append(page.Objects, &driver.ListObject{
 			Key:     unescapeKey(blobInfo.Name),
 			ModTime: blobInfo.Properties.LastModified,
