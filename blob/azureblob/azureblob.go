@@ -1016,6 +1016,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if opts.BufferSize == 0 {
 		opts.BufferSize = defaultUploadBlockSize
 	}
+	if opts.MaxConcurrency == 0 {
+		opts.MaxConcurrency = defaultUploadBuffers
+	}
 
 	md := make(map[string]string, len(opts.Metadata))
 	for k, v := range opts.Metadata {
@@ -1040,7 +1043,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}
 	uploadOpts := &azblob.UploadStreamToBlockBlobOptions{
 		BufferSize: opts.BufferSize,
-		MaxBuffers: defaultUploadBuffers,
+		MaxBuffers: opts.MaxConcurrency,
 		Metadata:   md,
 		BlobHTTPHeaders: azblob.BlobHTTPHeaders{
 			CacheControl:       opts.CacheControl,

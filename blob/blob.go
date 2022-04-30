@@ -891,6 +891,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		ContentLanguage:    opts.ContentLanguage,
 		ContentMD5:         opts.ContentMD5,
 		BufferSize:         opts.BufferSize,
+		MaxConcurrency:     opts.MaxConcurrency,
 		BeforeWrite:        opts.BeforeWrite,
 	}
 	if len(opts.Metadata) > 0 {
@@ -1148,6 +1149,13 @@ type WriterOptions struct {
 	// If the Writer is used to do many small writes concurrently, using a
 	// smaller BufferSize may reduce memory usage.
 	BufferSize int
+
+	// MaxConcurrency changes the default concurrency for parts of an upload.
+	//
+	// This option may be ignored by some drivers.
+	//
+	// If 0, the driver will choose a reasonable default.
+	MaxConcurrency int
 
 	// CacheControl specifies caching attributes that services may use
 	// when serving the blob.
