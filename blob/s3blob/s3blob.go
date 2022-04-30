@@ -924,6 +924,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			if opts.BufferSize != 0 {
 				u.PartSize = int64(opts.BufferSize)
 			}
+			if opts.MaxConcurrency != 0 {
+				u.Concurrency = opts.MaxConcurrency
+			}
 		})
 		md := make(map[string]string, len(opts.Metadata))
 		for k, v := range opts.Metadata {
@@ -985,6 +988,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		uploader := s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
 			if opts.BufferSize != 0 {
 				u.PartSize = int64(opts.BufferSize)
+			}
+			if opts.MaxConcurrency != 0 {
+				u.Concurrency = opts.MaxConcurrency
 			}
 		})
 		md := make(map[string]*string, len(opts.Metadata))
