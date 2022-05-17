@@ -45,7 +45,7 @@
 //  - Subscription: *raw.SubscriberClient
 //  - Message.BeforeSend: *pb.PubsubMessage
 //  - Message.AfterSend: *string for the pb.PublishResponse.MessageIds entry corresponding to the message.
-//  - Message: *pb.PubsubMessage
+//  - Message: *pb.PubsubMessage, *pb.ReceivedMessage
 //  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
@@ -497,27 +497,33 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 	ms := make([]*driver.Message, 0, len(resp.ReceivedMessages))
 	for _, rm := range resp.ReceivedMessages {
+		rm := rm
 		rmm := rm.Message
 		m := &driver.Message{
 			LoggableID: rmm.MessageId,
 			Body:       rmm.Data,
 			Metadata:   rmm.Attributes,
 			AckID:      rm.AckId,
-			AsFunc:     messageAsFunc(rmm),
+			AsFunc:     messageAsFunc(rmm, rm),
 		}
 		ms = append(ms, m)
 	}
 	return ms, nil
 }
 
-func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
+func messageAsFunc(pm *pb.PubsubMessage, rm *pb.ReceivedMessage) func(interface{}) bool {
 	return func(i interface{}) bool {
-		p, ok := i.(**pb.PubsubMessage)
-		if !ok {
-			return false
+		ip, ok := i.(**pb.PubsubMessage)
+		if ok {
+			*ip = pm
+			return true
 		}
-		*p = pm
-		return true
+		rp, ok := i.(**pb.ReceivedMessage)
+		if ok {
+			*rp = rm
+			return true
+		}
+		return false
 	}
 }
 
