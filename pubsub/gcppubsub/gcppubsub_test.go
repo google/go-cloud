@@ -255,6 +255,10 @@ func (gcpAsTest) MessageCheck(m *pubsub.Message) error {
 	if !m.As(&ppm) {
 		return fmt.Errorf("cast failed for %T", &ppm)
 	}
+	var prm *pubsubpb.ReceivedMessage
+	if !m.As(&prm) {
+		return fmt.Errorf("cast failed for %T", &prm)
+	}
 	return nil
 }
 
