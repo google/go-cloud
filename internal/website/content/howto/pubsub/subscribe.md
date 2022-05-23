@@ -216,7 +216,7 @@ You must first create an [`*amqp.Connection`][] to your RabbitMQ instance.
 
 {{< goexample "gocloud.dev/pubsub/rabbitpubsub.ExampleOpenSubscription" >}}
 
-[`*amqp.Connection`]: https://godoc.org/github.com/streadway/amqp#Connection
+[`*amqp.Connection`]: https://pkg.go.dev/github.com/rabbitmq/amqp091-go#Connection
 [`rabbitpubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenSubscription
 
 ### NATS {#nats}

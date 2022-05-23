@@ -17,7 +17,9 @@ package rabbitpubsub
 // Interfaces for the AMQP protocol, and adapters for the real amqp client.
 // Fake implementations of the interfaces are in fake_test.go
 
-import "github.com/streadway/amqp"
+import (
+	amqp "github.com/rabbitmq/amqp091-go"
+)
 
 // Values we use for the amqp client.
 // See https://www.rabbitmq.com/amqp-0-9-1-reference.html.
@@ -39,13 +41,13 @@ const (
 	immediate = false
 )
 
-// See https://godoc.org/github.com/streadway/amqp#Connection for the documentation of these methods.
+// See https://pkg.go.dev/github.com/rabbitmq/amqp091-go#Connection for the documentation of these methods.
 type amqpConnection interface {
 	Channel() (amqpChannel, error)
 	Close() error
 }
 
-// See https://godoc.org/github.com/streadway/amqp#Channel for the documentation of these methods.
+// See https://pkg.go.dev/github.com/rabbitmq/amqp091-go#Channel for the documentation of these methods.
 type amqpChannel interface {
 	Publish(exchange string, msg amqp.Publishing) error
 	Consume(queue, consumer string) (<-chan amqp.Delivery, error)

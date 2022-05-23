@@ -30,7 +30,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
