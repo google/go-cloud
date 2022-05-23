@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -440,8 +440,8 @@ func isRetryable(err error) bool {
 	// But it actually means "can be recovered by retrying later or with different
 	// parameters," which is not what we want. The error codes for which Recover is
 	// true, defined in the isSoftExceptionCode function of
-	// github.com/streadway/amqp/spec091.go, include things like NotFound and
-	// AccessRefused, which require outside action.
+	// https://github.com/rabbitmq/amqp091-go/blob/main/spec091.go, includng things
+	// like NotFound and AccessRefused, which require outside action.
 	//
 	// The following are the codes which might be resolved by retry without external
 	// action, according to the AMQP 0.91 spec

@@ -288,11 +288,11 @@
 		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// This URL will Dial the NATS server at the URL in the environment variable\n// NATS_SERVER_URL and send messages with subject \"example.mysubject\".\ntopic, err := pubsub.OpenTopic(ctx, \"nats://example.mysubject\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/rabbitpubsub.ExampleOpenSubscription": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/streadway/amqp\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
+		"imports": "import (\n\t\"context\"\n\n\tamqp \"github.com/rabbitmq/amqp091-go\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "rabbitConn, err := amqp.Dial(\"amqp://guest:guest@localhost:5672/\")\nif err != nil {\n\treturn err\n}\ndefer rabbitConn.Close()\nsubscription := rabbitpubsub.OpenSubscription(rabbitConn, \"myqueue\", nil)\ndefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/rabbitpubsub.ExampleOpenTopic": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/streadway/amqp\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
+		"imports": "import (\n\t\"context\"\n\n\tamqp \"github.com/rabbitmq/amqp091-go\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
 		"code": "rabbitConn, err := amqp.Dial(\"amqp://guest:guest@localhost:5672/\")\nif err != nil {\n\treturn err\n}\ndefer rabbitConn.Close()\ntopic := rabbitpubsub.OpenTopic(rabbitConn, \"myexchange\", nil)\ndefer topic.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/rabbitpubsub.Example_openSubscriptionFromURL": {

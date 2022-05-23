@@ -17,7 +17,7 @@ module gocloud.dev/pubsub/rabbitpubsub
 go 1.12
 
 require (
-	github.com/streadway/amqp v1.0.0
+	github.com/rabbitmq/amqp091-go v1.3.4
 	gocloud.dev v0.25.0
 )
 
