@@ -331,30 +331,54 @@ func getParameterV2(ctx context.Context, client *ssmv2.Client, name string) (int
 }
 
 func describeParameter(svc *ssm.SSM, name string) (time.Time, *ssm.DescribeParametersOutput, error) {
-	descResp, err := svc.DescribeParameters(&ssm.DescribeParametersInput{
-		Filters: []*ssm.ParametersFilter{
-			{Key: aws.String("Name"), Values: []*string{&name}},
-		},
-	})
-	if err != nil {
-		return time.Time{}, nil, err
+	query := func(nextToken *string) (*ssm.DescribeParametersOutput, error) {
+		return svc.DescribeParameters(&ssm.DescribeParametersInput{
+			NextToken: nextToken,
+			Filters: []*ssm.ParametersFilter{
+				{Key: aws.String("Name"), Values: []*string{&name}},
+			},
+		})
 	}
-	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != name {
+	var result []*ssm.ParameterMetadata
+	var descResp *ssm.DescribeParametersOutput
+	var err error
+	var token *string
+	for ok := true; ok; ok = (token != nil) {
+		if descResp, err = query(token); err != nil {
+			return time.Time{}, nil, err
+		} else {
+			result = append(result, descResp.Parameters...)
+			token = descResp.NextToken
+		}
+	}
+	if len(result) != 1 || *result[0].Name != name {
 		return time.Time{}, nil, fmt.Errorf("unable to get single %q parameter", name)
 	}
-	return aws.TimeValue(descResp.Parameters[0].LastModifiedDate), descResp, nil
+	return aws.TimeValue(result[0].LastModifiedDate), descResp, nil
 }
 
 func describeParameterV2(ctx context.Context, client *ssmv2.Client, name string) (time.Time, *ssmv2.DescribeParametersOutput, error) {
-	descResp, err := client.DescribeParameters(ctx, &ssmv2.DescribeParametersInput{
-		Filters: []ssmv2types.ParametersFilter{
-			{Key: "Name", Values: []string{name}},
-		},
-	})
-	if err != nil {
-		return time.Time{}, nil, err
+	query := func(nextToken *string) (*ssmv2.DescribeParametersOutput, error) {
+		return client.DescribeParameters(ctx, &ssmv2.DescribeParametersInput{
+			NextToken: nextToken,
+			Filters: []ssmv2types.ParametersFilter{
+				{Key: "Name", Values: []string{name}},
+			},
+		})
 	}
-	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != name {
+	result := []ssmv2types.ParameterMetadata{}
+	var descResp *ssmv2.DescribeParametersOutput
+	var err error
+	var token *string
+	for ok := true; ok; ok = (token != nil) {
+		if descResp, err = query(token); err != nil {
+			return time.Time{}, nil, err
+		} else {
+			result = append(result, descResp.Parameters...)
+			token = descResp.NextToken
+		}
+	}
+	if len(result) != 1 || *result[0].Name != name {
 		return time.Time{}, descResp, fmt.Errorf("unable to get single %q parameter", name)
 	}
 	return awsv2.ToTime(descResp.Parameters[0].LastModifiedDate), descResp, nil
