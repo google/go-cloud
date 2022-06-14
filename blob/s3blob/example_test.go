@@ -60,9 +60,6 @@ func ExampleOpenBucketV2() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Create a *blob.Bucket.
 	clientV2 := s3v2.NewFromConfig(cfg)

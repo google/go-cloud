@@ -65,7 +65,7 @@
 	},
 	"gocloud.dev/blob/s3blob.ExampleOpenBucketV2": {
 		"imports": "import (\n\t\"context\"\n\n\tawsv2cfg \"github.com/aws/aws-sdk-go-v2/config\"\n\ts3v2 \"github.com/aws/aws-sdk-go-v2/service/s3\"\n\t\"gocloud.dev/blob/s3blob\"\n)",
-		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\nctx := context.Background()\ncfg, err := awsv2cfg.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\nif err != nil {\n\treturn err\n}\n\n// Create a *blob.Bucket.\nclientV2 := s3v2.NewFromConfig(cfg)\nbucket, err := s3blob.OpenBucketV2(ctx, clientV2, \"my-bucket\", nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\nctx := context.Background()\ncfg, err := awsv2cfg.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create a *blob.Bucket.\nclientV2 := s3v2.NewFromConfig(cfg)\nbucket, err := s3blob.OpenBucketV2(ctx, clientV2, \"my-bucket\", nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
 	},
 	"gocloud.dev/blob/s3blob.Example_openBucketFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/s3blob\"\n)",
