@@ -33,6 +33,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -1195,6 +1196,18 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			}
 			if r.ModTime().IsZero() {
 				t.Errorf("got zero mod time, want non-zero")
+			}
+			// For tests that successfully read, recreate the io.Reader and
+			// test it with iotest.TestReader.
+			r, err = b.NewRangeReader(ctx, tc.key, tc.offset, tc.length, nil)
+			if err != nil {
+				t.Errorf("failed to recreate Reader: %v", err)
+				return
+			}
+			defer r.Close()
+			if err = iotest.TestReader(r, tc.want); err != nil {
+				t.Errorf("iotest.TestReader failed: %v", err)
+				return
 			}
 		})
 	}

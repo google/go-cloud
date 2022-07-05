@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7Yn1vdD5Ldcv5c",
+  "Initial": "AQAAAA7aVbeWHcMGGP5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -41,7 +41,7 @@
   },
   "Entries": [
     {
-      "ID": "1c97a9fbb1a82baa",
+      "ID": "f6cb85f43ad1928d",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading?blockid=CLEARED\u0026comp=block",
@@ -77,7 +77,7 @@
             "0"
           ],
           "Date": [
-            "Fri, 06 Aug 2021 16:35:40 GMT"
+            "Tue, 05 Jul 2022 04:39:49 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -86,7 +86,7 @@
             "CQSsryslIqA="
           ],
           "X-Ms-Request-Id": [
-            "8715d278-101e-000a-61e1-8a4d5d000000"
+            "4d42a725-901e-003d-3029-906e39000000"
           ],
           "X-Ms-Request-Server-Encrypted": [
             "true"
@@ -99,7 +99,7 @@
       }
     },
     {
-      "ID": "331f50a48b72efd1",
+      "ID": "96a8658ac4abda62",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading?comp=blocklist",
@@ -153,22 +153,22 @@
             "0"
           ],
           "Date": [
-            "Fri, 06 Aug 2021 16:35:40 GMT"
+            "Tue, 05 Jul 2022 04:39:49 GMT"
           ],
           "Etag": [
-            "\"0x8D958F83AE887B7\""
+            "\"0x8DA5E4065D1A885\""
           ],
           "Last-Modified": [
-            "Fri, 06 Aug 2021 16:35:41 GMT"
+            "Tue, 05 Jul 2022 04:39:50 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Content-Crc64": [
-            "i8JOVhOyozM="
+            "3o/thcvdOuk="
           ],
           "X-Ms-Request-Id": [
-            "8715d284-101e-000a-6be1-8a4d5d000000"
+            "4d42a72d-901e-003d-3529-906e39000000"
           ],
           "X-Ms-Request-Server-Encrypted": [
             "true"
@@ -181,7 +181,7 @@
       }
     },
     {
-      "ID": "698fd091a0e6d6c0",
+      "ID": "169c5399b6a2c65d",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
@@ -226,13 +226,13 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 06 Aug 2021 16:35:40 GMT"
+            "Tue, 05 Jul 2022 04:39:49 GMT"
           ],
           "Etag": [
-            "\"0x8D958F83AE887B7\""
+            "\"0x8DA5E4065D1A885\""
           ],
           "Last-Modified": [
-            "Fri, 06 Aug 2021 16:35:41 GMT"
+            "Tue, 05 Jul 2022 04:39:50 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -241,7 +241,7 @@
             "BlockBlob"
           ],
           "X-Ms-Creation-Time": [
-            "Fri, 06 Aug 2021 16:35:41 GMT"
+            "Tue, 05 Jul 2022 04:39:50 GMT"
           ],
           "X-Ms-Lease-State": [
             "available"
@@ -250,7 +250,7 @@
             "unlocked"
           ],
           "X-Ms-Request-Id": [
-            "8715d289-101e-000a-70e1-8a4d5d000000"
+            "4d42a733-901e-003d-3b29-906e39000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -263,7 +263,89 @@
       }
     },
     {
-      "ID": "bc673cedb0a6abea",
+      "ID": "a9288f2af49d7980",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Ms-Date": [
+            "CLEARED"
+          ],
+          "X-Ms-Version": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          null
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Disposition": [
+            ""
+          ],
+          "Content-Length": [
+            "27"
+          ],
+          "Content-Md5": [
+            "PflsWr6X8pZ9OAEIcAMKXw=="
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Tue, 05 Jul 2022 04:39:49 GMT"
+          ],
+          "Etag": [
+            "\"0x8DA5E4065D1A885\""
+          ],
+          "Last-Modified": [
+            "Tue, 05 Jul 2022 04:39:50 GMT"
+          ],
+          "Server": [
+            "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
+          ],
+          "X-Ms-Blob-Type": [
+            "BlockBlob"
+          ],
+          "X-Ms-Creation-Time": [
+            "Tue, 05 Jul 2022 04:39:50 GMT"
+          ],
+          "X-Ms-Lease-State": [
+            "available"
+          ],
+          "X-Ms-Lease-Status": [
+            "unlocked"
+          ],
+          "X-Ms-Request-Id": [
+            "4d42a73b-901e-003d-4229-906e39000000"
+          ],
+          "X-Ms-Server-Encrypted": [
+            "true"
+          ],
+          "X-Ms-Version": [
+            "CLEARED"
+          ]
+        },
+        "Body": "YWJjZGVmZ2hpamtsbW5vcHF1cnN0dXZ3eHl6"
+      }
+    },
+    {
+      "ID": "165444a710132f99",
       "Request": {
         "Method": "DELETE",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
@@ -299,7 +381,7 @@
             "0"
           ],
           "Date": [
-            "Fri, 06 Aug 2021 16:35:40 GMT"
+            "Tue, 05 Jul 2022 04:39:49 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -308,7 +390,7 @@
             "true"
           ],
           "X-Ms-Request-Id": [
-            "8715d28f-101e-000a-76e1-8a4d5d000000"
+            "4d42a73f-901e-003d-4629-906e39000000"
           ],
           "X-Ms-Version": [
             "CLEARED"
