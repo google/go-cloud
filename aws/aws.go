@@ -77,10 +77,10 @@ func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) 
 // ConfigFromURLParams.
 //
 // The following query options are supported:
-//  - region: The AWS region for requests; sets aws.Config.Region.
-//  - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
-//  - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
-//  - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
+//   - region: The AWS region for requests; sets aws.Config.Region.
+//   - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
+//   - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
+//   - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
 func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 	var cfg aws.Config
 	for param, values := range q {
@@ -119,8 +119,8 @@ func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 // parameters it knows about
 //
 // The following query options are supported:
-//  - profile: The AWS profile to use from the AWS configs (shared config file and
-//             shared credentials file)
+//   - profile: The AWS profile to use from the AWS configs (shared config file and
+//     shared credentials file)
 func NewSessionFromURLParams(q url.Values) (*session.Session, url.Values, error) {
 	// always enable shared config (~/.aws/config by default)
 	opts := session.Options{SharedConfigState: session.SharedConfigEnable}
@@ -175,8 +175,8 @@ func NewDefaultV2Config(ctx context.Context) (awsv2.Config, error) {
 // V2ConfigFromURLParams.
 //
 // The following query options are supported:
-//  - region: The AWS region for requests; sets WithRegion.
-//  - profile: The shared config profile to use; sets SharedConfigProfile.
+//   - region: The AWS region for requests; sets WithRegion.
+//   - profile: The shared config profile to use; sets SharedConfigProfile.
 func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, error) {
 	var opts []func(*awsv2cfg.LoadOptions) error
 	for param, values := range q {

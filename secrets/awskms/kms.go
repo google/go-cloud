@@ -16,7 +16,7 @@
 // Use OpenKeeper to construct a *secrets.Keeper, or OpenKeeperV2 to
 // use AWS SDK V2.
 //
-// URLs
+// # URLs
 //
 // For secrets.OpenKeeper, awskms registers for the scheme "awskms".
 // The default URL opener will use an AWS session with the default credentials
@@ -27,10 +27,10 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // awskms exposes the following type for As:
-//  - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
+//   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
 package awskms // import "gocloud.dev/secrets/awskms"
 
 import (

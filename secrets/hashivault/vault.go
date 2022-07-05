@@ -16,7 +16,7 @@
 // Secrets Engine of Vault by Hashicorp.
 // Use OpenKeeper to construct a *secrets.Keeper.
 //
-// URLs
+// # URLs
 //
 // For secrets.OpenKeeper, hashivault registers for the scheme "hashivault".
 // The default URL opener will dial a Vault server using the environment variables
@@ -25,7 +25,7 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // hashivault does not support any types for As.
 package hashivault

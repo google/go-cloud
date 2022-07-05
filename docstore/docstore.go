@@ -104,9 +104,10 @@ func (c *Collection) revisionField() string {
 }
 
 // A FieldPath is a dot-separated sequence of UTF-8 field names. Examples:
-//   room
-//   room.size
-//   room.size.width
+//
+//	room
+//	room.size
+//	room.size.width
 //
 // A FieldPath can be used select top-level fields or elements of sub-documents.
 // There is no way to select a single list element.
@@ -259,16 +260,17 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 
 // Mods is a map from field paths to modifications.
 // At present, a modification is one of:
-//  - nil, to delete the field
-//  - an Increment value, to add a number to the field
-//  - any other value, to set the field to that value
+//   - nil, to delete the field
+//   - an Increment value, to add a number to the field
+//   - any other value, to set the field to that value
+//
 // See ActionList.Update.
 type Mods map[FieldPath]interface{}
 
 // Increment returns a modification that results in a field being incremented. It
 // should only be used as a value in a Mods map, like so:
 //
-//    docstore.Mods{"count": docstore.Increment(1)}
+//	docstore.Mods{"count": docstore.Increment(1)}
 //
 // The amount must be an integer or floating-point value.
 func Increment(amount interface{}) interface{} {

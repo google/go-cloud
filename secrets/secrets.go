@@ -18,15 +18,15 @@
 //
 // See https://gocloud.dev/howto/secrets/ for a detailed how-to guide.
 //
-//
-// OpenCensus Integration
+// # OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-//  - Encrypt
-//  - Decrypt
+//   - Encrypt
+//   - Decrypt
+//
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/secrets/Encrypt".

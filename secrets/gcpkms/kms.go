@@ -15,7 +15,7 @@
 // Package gcpkms provides a secrets implementation backed by Google Cloud KMS.
 // Use OpenKeeper to construct a *secrets.Keeper.
 //
-// URLs
+// # URLs
 //
 // For secrets.OpenKeeper, gcpkms registers for the scheme "gcpkms".
 // The default URL opener will create a connection using use default
@@ -25,10 +25,10 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // gcpkms exposes the following type for As:
-//  - Error: *google.golang.org/grpc/status.Status
+//   - Error: *google.golang.org/grpc/status.Status
 package gcpkms // import "gocloud.dev/secrets/gcpkms"
 
 import (

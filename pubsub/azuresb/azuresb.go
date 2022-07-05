@@ -16,7 +16,7 @@
 // Bus Topic and Subscription.
 // See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview for an overview.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, azuresb registers
 // for the scheme "azuresb".
@@ -26,7 +26,7 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Message Delivery Semantics
+// # Message Delivery Semantics
 //
 // Azure ServiceBus supports at-least-once semantics in the default Peek-Lock
 // mode; messages will be redelivered if they are not Acked, or if they are
@@ -42,15 +42,15 @@
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
-// As
+// # As
 //
 // azuresb exposes the following types for As:
-//  - Topic: *servicebus.Topic
-//  - Subscription: *servicebus.Subscription
-//  - Message.BeforeSend: *servicebus.Message
-//  - Message.AfterSend: None
-//  - Message: *servicebus.Message
-//  - Error: common.Retryable, *amqp.Error, *amqp.DetachError
+//   - Topic: *servicebus.Topic
+//   - Subscription: *servicebus.Subscription
+//   - Message.BeforeSend: *servicebus.Message
+//   - Message.AfterSend: None
+//   - Message: *servicebus.Message
+//   - Error: common.Retryable, *amqp.Error, *amqp.DetachError
 package azuresb // import "gocloud.dev/pubsub/azuresb"
 
 import (

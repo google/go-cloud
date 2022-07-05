@@ -18,8 +18,7 @@
 //
 // See https://gocloud.dev/howto/runtimevar/ for a detailed how-to guide.
 //
-//
-// OpenCensus Integration
+// # OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
 // backend providers. See https://opencensus.io.
@@ -497,12 +496,13 @@ func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
 //
 // Supported values include:
 //   - empty string: Returns the default from the URLOpener.Decoder, or
-//       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
-//       using the default URLOpener).
+//     BytesDecoder if URLOpener.Decoder is nil (which is true if you're
+//     using the default URLOpener).
 //   - "bytes": Returns a BytesDecoder; Snapshot.Value will be of type []byte.
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
-//       Snapshot.Value will be of type *map[string]interface{}.
+//     Snapshot.Value will be of type *map[string]interface{}.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
+//
 // It also supports using "decrypt+<decoderName>" (or "decrypt" for default
 // decoder) to decrypt the data before decoding. It uses the secrets package to
 // open a keeper by the URL string stored in a environment variable

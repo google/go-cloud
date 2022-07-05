@@ -16,13 +16,13 @@
 // that never change. Use New, NewBytes, or NewError to construct a
 // *runtimevar.Variable.
 //
-// URLs
+// # URLs
 //
 // For runtimevar.OpenVariable, constantvar registers for the scheme "constant".
 // For more details on the URL format, see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // constantvar does not support any types for As.
 package constantvar // import "gocloud.dev/runtimevar/constantvar"
@@ -52,11 +52,11 @@ const Scheme = "constant"
 //
 // The following URL parameters are supported:
 //   - val: The value to use for the constant Variable. The bytes from val
-//       are passed to NewBytes.
+//     are passed to NewBytes.
 //   - err: The error to use for the constant Variable. A new error is created
-//       using errors.New and passed to NewError.
+//     using errors.New and passed to NewError.
 //   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
-//       See runtimevar.DecoderByName for supported values.
+//     See runtimevar.DecoderByName for supported values.
 //
 // If both "err" and "val" are provided, "val" is ignored.
 type URLOpener struct {

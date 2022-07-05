@@ -17,7 +17,7 @@
 // messages to SQS (Simple Queuing Service). It also provides an implementation
 // of pubsub.Subscription that receives messages from SQS.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic, awssnssqs registers for the scheme "awssns" for
 // an SNS topic, and "awssqs" for an SQS topic. For pubsub.OpenSubscription,
@@ -30,37 +30,37 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Message Delivery Semantics
+// # Message Delivery Semantics
 //
 // AWS SQS supports at-least-once semantics; applications must call Message.Ack
 // after processing a message, or it will be redelivered.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
-// Escaping
+// # Escaping
 //
 // Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are required for awssnssqs:
-//  - Metadata keys: Characters other than "a-zA-z0-9_-.", and additionally "."
-//    when it's at the start of the key or the previous character was ".",
-//    are escaped using "__0x<hex>__". These characters were determined by
-//    experimentation.
-//  - Metadata values: Escaped using URL encoding.
-//  - Message body: AWS SNS/SQS only supports UTF-8 strings. See the
-//    BodyBase64Encoding enum in TopicOptions for strategies on how to send
-//    non-UTF-8 message bodies. By default, non-UTF-8 message bodies are base64
-//    encoded.
+//   - Metadata keys: Characters other than "a-zA-z0-9_-.", and additionally "."
+//     when it's at the start of the key or the previous character was ".",
+//     are escaped using "__0x<hex>__". These characters were determined by
+//     experimentation.
+//   - Metadata values: Escaped using URL encoding.
+//   - Message body: AWS SNS/SQS only supports UTF-8 strings. See the
+//     BodyBase64Encoding enum in TopicOptions for strategies on how to send
+//     non-UTF-8 message bodies. By default, non-UTF-8 message bodies are base64
+//     encoded.
 //
-// As
+// # As
 //
 // awssnssqs exposes the following types for As:
-//  - Topic: (V1) *sns.SNS for OpenSNSTopic, *sqs.SQS for OpenSQSTopic; (V2) *snsv2.Client for OpenSNSTopicV2, *sqsv2.Client for OpenSQSTopicV2
-//  - Subscription: (V1) *sqs.SQS; (V2) *sqsv2.Client
-//  - Message: (V1) *sqs.Message; (V2) sqstypesv2.Message
-//  - Message.BeforeSend: (V1) *sns.PublishInput for OpenSNSTopic, *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic; (V2) *snsv2.PublishInput for OpenSNSTopicV2, sqstypesv2.SendMessageBatchRequestEntry for OpenSQSTopicV2
-//  - Message.AfterSend: (V1) *sns.PublishOutput for OpenSNSTopic, *sqs.SendMessageBatchResultEntry for OpenSQSTopic; (V2) *snsv2.PublishOutput for OpenSNSTopicV2, sqstypesv2.SendMessageBatchResultEntry for OpenSQSTopicV2
-//  - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
+//   - Topic: (V1) *sns.SNS for OpenSNSTopic, *sqs.SQS for OpenSQSTopic; (V2) *snsv2.Client for OpenSNSTopicV2, *sqsv2.Client for OpenSQSTopicV2
+//   - Subscription: (V1) *sqs.SQS; (V2) *sqsv2.Client
+//   - Message: (V1) *sqs.Message; (V2) sqstypesv2.Message
+//   - Message.BeforeSend: (V1) *sns.PublishInput for OpenSNSTopic, *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic; (V2) *snsv2.PublishInput for OpenSNSTopicV2, sqstypesv2.SendMessageBatchRequestEntry for OpenSQSTopicV2
+//   - Message.AfterSend: (V1) *sns.PublishOutput for OpenSNSTopic, *sqs.SendMessageBatchResultEntry for OpenSQSTopic; (V2) *snsv2.PublishOutput for OpenSNSTopicV2, sqstypesv2.SendMessageBatchResultEntry for OpenSQSTopicV2
+//   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
 import (

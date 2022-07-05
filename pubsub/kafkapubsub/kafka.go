@@ -23,7 +23,7 @@
 // kafkapubsub does not support Message.Nack; Message.Nackable will return
 // false, and Message.Nack will panic if called.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, kafkapubsub registers
 // for the scheme "kafka".
@@ -34,22 +34,22 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Escaping
+// # Escaping
 //
 // Go CDK supports all UTF-8 strings. No escaping is required for Kafka.
 // Message metadata is supported through Kafka Headers, which allow arbitrary
 // []byte for both key and value. These are converted to string for use in
 // Message.Metadata.
 //
-// As
+// # As
 //
 // kafkapubsub exposes the following types for As:
-//  - Topic: sarama.SyncProducer
-//  - Subscription: sarama.ConsumerGroup, sarama.ConsumerGroupSession (may be nil during session renegotiation, and session may go stale at any time)
-//  - Message: *sarama.ConsumerMessage
-//  - Message.BeforeSend: *sarama.ProducerMessage
-//  - Message.AfterSend: None
-//  - Error: sarama.ConsumerError, sarama.ConsumerErrors, sarama.ProducerError, sarama.ProducerErrors, sarama.ConfigurationError, sarama.PacketDecodingError, sarama.PacketEncodingError, sarama.KError
+//   - Topic: sarama.SyncProducer
+//   - Subscription: sarama.ConsumerGroup, sarama.ConsumerGroupSession (may be nil during session renegotiation, and session may go stale at any time)
+//   - Message: *sarama.ConsumerMessage
+//   - Message.BeforeSend: *sarama.ProducerMessage
+//   - Message.AfterSend: None
+//   - Error: sarama.ConsumerError, sarama.ConsumerErrors, sarama.ProducerError, sarama.ProducerErrors, sarama.ConfigurationError, sarama.PacketDecodingError, sarama.PacketEncodingError, sarama.KError
 package kafkapubsub // import "gocloud.dev/pubsub/kafkapubsub"
 
 import (

@@ -14,7 +14,7 @@
 
 // Package awspostgres provides connections to AWS RDS PostgreSQL instances.
 //
-// URLs
+// # URLs
 //
 // For postgres.Open, awspostgres registers for the scheme "awspostgres".
 // The default URL opener will create a connection using the default

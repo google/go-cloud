@@ -16,7 +16,7 @@
 // PubSub. Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
 // to construct a *pubsub.Subscription.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, gcppubsub registers
 // for the scheme "gcppubsub".
@@ -31,22 +31,22 @@
 // So, when environment variable 'PUBSUB_EMULATOR_HOST' is set
 // driver connects to the specified emulator host by default.
 //
-// Message Delivery Semantics
+// # Message Delivery Semantics
 //
 // GCP Pub/Sub supports at-least-once semantics; applications must
 // call Message.Ack after processing a message, or it will be redelivered.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
-// As
+// # As
 //
 // gcppubsub exposes the following types for As:
-//  - Topic: *raw.PublisherClient
-//  - Subscription: *raw.SubscriberClient
-//  - Message.BeforeSend: *pb.PubsubMessage
-//  - Message.AfterSend: *string for the pb.PublishResponse.MessageIds entry corresponding to the message.
-//  - Message: *pb.PubsubMessage, *pb.ReceivedMessage
-//  - Error: *google.golang.org/grpc/status.Status
+//   - Topic: *raw.PublisherClient
+//   - Subscription: *raw.SubscriberClient
+//   - Message.BeforeSend: *pb.PubsubMessage
+//   - Message.AfterSend: *string for the pb.PublishResponse.MessageIds entry corresponding to the message.
+//   - Message: *pb.PubsubMessage, *pb.ReceivedMessage
+//   - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
 import (

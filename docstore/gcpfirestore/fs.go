@@ -17,14 +17,13 @@
 // Use OpenCollection to construct a *docstore.Collection.
 //
 // Docstore types not supported by the Go firestore client, cloud.google.com/go/firestore:
-//  - unsigned integers: encoded is int64s
-//  - arrays: encoded as Firestore array values
+//   - unsigned integers: encoded is int64s
+//   - arrays: encoded as Firestore array values
 //
 // Firestore types not supported by Docstore:
-//  - Document reference (a pointer to another Firestore document)
+//   - Document reference (a pointer to another Firestore document)
 //
-//
-// URLs
+// # URLs
 //
 // For docstore.OpenCollection, gcpfirestore registers for the scheme
 // "firestore".
@@ -35,20 +34,18 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-//
-// As
+// # As
 //
 // gcpfirestore exposes the following types for as functions.
 // The pb package is google.golang.org/genproto/googleapis/firestore/v1.
 // The firestore  package is cloud.google.com/go/firestore/apiv1.
-//  - Collection.As: *firestore.Client
-//  - ActionList.BeforeDo: *pb.BatchGetDocumentsRequest or *pb.CommitRequest.
-//  - Query.BeforeQuery: *pb.RunQueryRequest
-//  - DocumentIterator: firestore.Firestore_RunQueryClient
-//  - Error: *google.golang.org/grpc/status.Status
+//   - Collection.As: *firestore.Client
+//   - ActionList.BeforeDo: *pb.BatchGetDocumentsRequest or *pb.CommitRequest.
+//   - Query.BeforeQuery: *pb.RunQueryRequest
+//   - DocumentIterator: firestore.Firestore_RunQueryClient
+//   - Error: *google.golang.org/grpc/status.Status
 //
-//
-// Queries
+// # Queries
 //
 // Firestore allows only one field in a query to be compared with an inequality
 // operator (one other than "="). This driver selects the first field in a Where

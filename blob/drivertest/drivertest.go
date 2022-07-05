@@ -71,16 +71,23 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 2. Creates a blob in a directory, using BeforeWrite as a WriterOption.
 // 3. Fetches the blob's attributes and calls AttributeCheck.
 // 4. Creates a Reader for the blob using BeforeReader as a ReaderOption,
-//    and calls ReaderCheck with the resulting Reader.
+//
+//	and calls ReaderCheck with the resulting Reader.
+//
 // 5. Calls List using BeforeList as a ListOption, with Delimiter set so
-//    that only the directory is returned, and calls ListObjectCheck
-//    on the single directory list entry returned.
+//
+//	that only the directory is returned, and calls ListObjectCheck
+//	on the single directory list entry returned.
+//
 // 6. Calls List using BeforeList as a ListOption, and calls ListObjectCheck
-//    on the single blob entry returned.
+//
+//	on the single blob entry returned.
+//
 // 7. Tries to read a non-existent blob, and calls ErrorCheck with the error.
 // 8. Makes a copy of the blob, using BeforeCopy as a CopyOption.
 // 9. Calls SignedURL using BeforeSign as a SignedURLOption for each supported
-//    signing method (i.e. GET, PUT and DELETE).
+//
+//	signing method (i.e. GET, PUT and DELETE).
 //
 // For example, an AsTest might set a driver-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in

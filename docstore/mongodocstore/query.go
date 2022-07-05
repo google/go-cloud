@@ -94,7 +94,9 @@ func (c *collection) filtersToBSON(fs []driver.Filter) (bson.D, error) {
 // filterToBSON converts a driver.Filter to the MongoDB equivalent, expressed
 // as a bson.E (key-value pair).
 // The MongoDB document corresponding to "field op value" is
-//   {field: {mop: value}}
+//
+//	{field: {mop: value}}
+//
 // where mop is the mongo version of op (see the mongoQueryOps map above).
 func (c *collection) filterToBSON(f driver.Filter) (bson.E, error) {
 	key := c.toMongoFieldPath(f.FieldPath)

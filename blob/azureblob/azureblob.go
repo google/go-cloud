@@ -20,7 +20,7 @@
 // set to "BlockBlob".
 // See https://stackoverflow.com/questions/37824136/put-on-sas-blob-url-without-specifying-x-ms-blob-type-header.
 //
-// URLs
+// # URLs
 //
 // For blob.OpenBucket, azureblob registers for the scheme "azblob".
 // The default URL opener will use credentials from the environment variables
@@ -37,34 +37,34 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Escaping
+// # Escaping
 //
 // Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are performed for azureblob:
-//  - Blob keys: ASCII characters 0-31, 92 ("\"), and 127 are escaped to
-//    "__0x<hex>__". Additionally, the "/" in "../" and a trailing "/" in a
-//    key (e.g., "foo/") are escaped in the same way.
-//  - Metadata keys: Per https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata,
-//    Azure only allows C# identifiers as metadata keys. Therefore, characters
-//    other than "[a-z][A-z][0-9]_" are escaped using "__0x<hex>__". In addition,
-//    characters "[0-9]" are escaped when they start the string.
-//    URL encoding would not work since "%" is not valid.
-//  - Metadata values: Escaped using URL encoding.
+//   - Blob keys: ASCII characters 0-31, 92 ("\"), and 127 are escaped to
+//     "__0x<hex>__". Additionally, the "/" in "../" and a trailing "/" in a
+//     key (e.g., "foo/") are escaped in the same way.
+//   - Metadata keys: Per https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata,
+//     Azure only allows C# identifiers as metadata keys. Therefore, characters
+//     other than "[a-z][A-z][0-9]_" are escaped using "__0x<hex>__". In addition,
+//     characters "[0-9]" are escaped when they start the string.
+//     URL encoding would not work since "%" is not valid.
+//   - Metadata values: Escaped using URL encoding.
 //
-// As
+// # As
 //
 // azureblob exposes the following types for As:
-//  - Bucket: *azblob.ContainerURL
-//  - Error: azblob.StorageError
-//  - ListObject: azblob.BlobItemInternal for objects, azblob.BlobPrefix for "directories"
-//  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
-//  - Reader: azblob.DownloadResponse
-//  - Reader.BeforeRead: *azblob.BlockBlobURL, *azblob.BlobAccessConditions
-//  - Attributes: azblob.BlobGetPropertiesResponse
-//  - CopyOptions.BeforeCopy: azblob.Metadata, *azblob.ModifiedAccessConditions, *azblob.BlobAccessConditions
-//  - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
-//  - SignedURLOptions.BeforeSign: *azblob.BlobSASSignatureValues
+//   - Bucket: *azblob.ContainerURL
+//   - Error: azblob.StorageError
+//   - ListObject: azblob.BlobItemInternal for objects, azblob.BlobPrefix for "directories"
+//   - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
+//   - Reader: azblob.DownloadResponse
+//   - Reader.BeforeRead: *azblob.BlockBlobURL, *azblob.BlobAccessConditions
+//   - Attributes: azblob.BlobGetPropertiesResponse
+//   - CopyOptions.BeforeCopy: azblob.Metadata, *azblob.ModifiedAccessConditions, *azblob.BlobAccessConditions
+//   - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
+//   - SignedURLOptions.BeforeSign: *azblob.BlobSASSignatureValues
 package azureblob
 
 import (
@@ -207,10 +207,10 @@ const Scheme = "azblob"
 // The URL host is used as the bucket name.
 //
 // The following query options are supported:
-//  - domain: The domain name used to access the Azure Blob storage (e.g. blob.core.windows.net)
-//  - protocol: The protocol to use (e.g., http or https; default to https)
-//  - cdn: Set to true when domain represents a CDN
-//  - localemu: Set to true when domain points to the Local Storage Emulator (Azurite)
+//   - domain: The domain name used to access the Azure Blob storage (e.g. blob.core.windows.net)
+//   - protocol: The protocol to use (e.g., http or https; default to https)
+//   - cdn: Set to true when domain represents a CDN
+//   - localemu: Set to true when domain points to the Local Storage Emulator (Azurite)
 //
 // See Options for more details.
 type URLOpener struct {

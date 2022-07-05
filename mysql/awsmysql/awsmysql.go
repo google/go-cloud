@@ -14,7 +14,7 @@
 
 // Package awsmysql provides connections to AWS RDS MySQL instances.
 //
-// URLs
+// # URLs
 //
 // For mysql.Open, awsmysql registers for the scheme "awsmysql".
 // The default URL opener will create a connection using the default

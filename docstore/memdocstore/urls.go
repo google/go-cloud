@@ -39,8 +39,8 @@ const Scheme = "mem"
 //
 // The following query parameters are supported:
 //
-//  - revision_field (optional): the name of the revision field.
-//  - filename (optional): the filename to store the collection in.
+//   - revision_field (optional): the name of the revision field.
+//   - filename (optional): the filename to store the collection in.
 type URLOpener struct {
 	mu          sync.Mutex
 	collections map[string]urlColl

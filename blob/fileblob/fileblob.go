@@ -23,35 +23,35 @@
 // In any case, absent any stored metadata many blob.Attributes fields
 // will be set to default values.
 //
-// URLs
+// # URLs
 //
 // For blob.OpenBucket, fileblob registers for the scheme "file".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Escaping
+// # Escaping
 //
 // Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are performed for fileblob:
-//  - Blob keys: ASCII characters 0-31 are escaped to "__0x<hex>__".
-//    If os.PathSeparator != "/", it is also escaped.
-//    Additionally, the "/" in "../", the trailing "/" in "//", and a trailing
-//    "/" is key names are escaped in the same way.
-//    On Windows, the characters "<>:"|?*" are also escaped.
+//   - Blob keys: ASCII characters 0-31 are escaped to "__0x<hex>__".
+//     If os.PathSeparator != "/", it is also escaped.
+//     Additionally, the "/" in "../", the trailing "/" in "//", and a trailing
+//     "/" is key names are escaped in the same way.
+//     On Windows, the characters "<>:"|?*" are also escaped.
 //
-// As
+// # As
 //
 // fileblob exposes the following types for As:
-//  - Bucket: os.FileInfo
-//  - Error: *os.PathError
-//  - ListObject: os.FileInfo
-//  - Reader: io.Reader
-//  - ReaderOptions.BeforeRead: *os.File
-//  - Attributes: os.FileInfo
-//  - CopyOptions.BeforeCopy: *os.File
-//  - WriterOptions.BeforeWrite: *os.File
+//   - Bucket: os.FileInfo
+//   - Error: *os.PathError
+//   - ListObject: os.FileInfo
+//   - Reader: io.Reader
+//   - ReaderOptions.BeforeRead: *os.File
+//   - Attributes: os.FileInfo
+//   - CopyOptions.BeforeCopy: *os.File
+//   - WriterOptions.BeforeWrite: *os.File
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
@@ -110,20 +110,20 @@ const Scheme = "file"
 //
 // If either of base_url / secret_key_path are provided, both must be.
 //
-//  - file:///a/directory
-//    -> Passes "/a/directory" to OpenBucket.
-//  - file://localhost/a/directory
-//    -> Also passes "/a/directory".
-//  - file://./../..
-//    -> The hostname is ".", signaling a relative path; passes "../..".
-//  - file:///c:/foo/bar on Windows.
-//    -> Passes "c:\foo\bar".
-//  - file://localhost/c:/foo/bar on Windows.
-//    -> Also passes "c:\foo\bar".
-//  - file:///a/directory?base_url=/show&secret_key_path=secret.key
-//    -> Passes "/a/directory" to OpenBucket, and sets Options.URLSigner
-//       to a URLSignerHMAC initialized with base URL "/show" and secret key
-//       bytes read from the file "secret.key".
+//   - file:///a/directory
+//     -> Passes "/a/directory" to OpenBucket.
+//   - file://localhost/a/directory
+//     -> Also passes "/a/directory".
+//   - file://./../..
+//     -> The hostname is ".", signaling a relative path; passes "../..".
+//   - file:///c:/foo/bar on Windows.
+//     -> Passes "c:\foo\bar".
+//   - file://localhost/c:/foo/bar on Windows.
+//     -> Also passes "c:\foo\bar".
+//   - file:///a/directory?base_url=/show&secret_key_path=secret.key
+//     -> Passes "/a/directory" to OpenBucket, and sets Options.URLSigner
+//     to a URLSignerHMAC initialized with base URL "/show" and secret key
+//     bytes read from the file "secret.key".
 type URLOpener struct {
 	// Options specifies the default options to pass to OpenBucket.
 	Options Options

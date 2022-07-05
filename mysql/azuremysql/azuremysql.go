@@ -15,7 +15,7 @@
 // Package azuremysql provides connections to Azure Database for MySQL.
 // See https://docs.microsoft.com/en-us/azure/mysql.
 //
-// URLs
+// # URLs
 //
 // For mysql.Open, azuremysql registers for the scheme "azuremysql".
 // To customize the URL opener, or for more details on the URL format,

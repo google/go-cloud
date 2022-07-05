@@ -15,7 +15,7 @@
 // Package gcsblob provides a blob implementation that uses GCS. Use OpenBucket
 // to construct a *blob.Bucket.
 //
-// URLs
+// # URLs
 //
 // For blob.OpenBucket, gcsblob registers for the scheme "gs".
 // The default URL opener will set up a connection using default credentials
@@ -32,27 +32,27 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Escaping
+// # Escaping
 //
 // Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are performed for gcsblob:
-//  - Blob keys: ASCII characters 10 and 13 are escaped to "__0x<hex>__".
-//    Additionally, the "/" in "../" is escaped in the same way.
+//   - Blob keys: ASCII characters 10 and 13 are escaped to "__0x<hex>__".
+//     Additionally, the "/" in "../" is escaped in the same way.
 //
-// As
+// # As
 //
 // gcsblob exposes the following types for As:
-//  - Bucket: *storage.Client
-//  - Error: *googleapi.Error
-//  - ListObject: storage.ObjectAttrs
-//  - ListOptions.BeforeList: *storage.Query
-//  - Reader: *storage.Reader
-//  - ReaderOptions.BeforeRead: **storage.ObjectHandle, *storage.Reader (if accessing both, must be in that order)
-//  - Attributes: storage.ObjectAttrs
-//  - CopyOptions.BeforeCopy: *CopyObjectHandles, *storage.Copier (if accessing both, must be in that order)
-//  - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer (if accessing both, must be in that order)
-//  - SignedURLOptions.BeforeSign: *storage.SignedURLOptions
+//   - Bucket: *storage.Client
+//   - Error: *googleapi.Error
+//   - ListObject: storage.ObjectAttrs
+//   - ListOptions.BeforeList: *storage.Query
+//   - Reader: *storage.Reader
+//   - ReaderOptions.BeforeRead: **storage.ObjectHandle, *storage.Reader (if accessing both, must be in that order)
+//   - Attributes: storage.ObjectAttrs
+//   - CopyOptions.BeforeCopy: *CopyObjectHandles, *storage.Copier (if accessing both, must be in that order)
+//   - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer (if accessing both, must be in that order)
+//   - SignedURLOptions.BeforeSign: *storage.SignedURLOptions
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (

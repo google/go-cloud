@@ -17,7 +17,7 @@
 // *pubsub.Subscription. This package uses gob to encode and decode driver.Message to
 // []byte.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, natspubsub registers
 // for the scheme "nats".
@@ -27,21 +27,21 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Message Delivery Semantics
+// # Message Delivery Semantics
 //
 // NATS supports at-most-semantics; applications need not call Message.Ack,
 // and must not call Message.Nack.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
-// As
+// # As
 //
 // natspubsub exposes the following types for As:
-//  - Topic: *nats.Conn
-//  - Subscription: *nats.Subscription
-//  - Message.BeforeSend: None.
-//  - Message.AfterSend: None.
-//  - Message: *nats.Msg
+//   - Topic: *nats.Conn
+//   - Subscription: *nats.Subscription
+//   - Message.BeforeSend: None.
+//   - Message.AfterSend: None.
+//   - Message: *nats.Msg
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
 import (

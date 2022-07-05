@@ -18,8 +18,7 @@
 // Every document in a memdocstore collection has a unique primary key. The primary
 // key values need not be strings; they may be any comparable Go value.
 //
-//
-// Action Lists
+// # Action Lists
 //
 // Action lists are executed concurrently. Each action in an action list is executed
 // in a separate goroutine.
@@ -27,8 +26,7 @@
 // memdocstore calls the BeforeDo function of an ActionList once before executing the
 // actions. Its As function never returns true.
 //
-//
-// URLs
+// # URLs
 //
 // For docstore.OpenCollection, memdocstore registers for the scheme
 // "mem".
