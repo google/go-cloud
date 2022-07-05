@@ -36,11 +36,11 @@ increasing compile times or binary sizes, and avoiding any side effects from
 
 For non-reference documentation, see https://gocloud.dev/
 
-URLs
+# URLs
 
 See https://gocloud.dev/concepts/urls/ for a discussion of URLs in the Go CDK.
 
-As
+# As
 
 See https://gocloud.dev/concepts/as/ for a discussion of how to write
 service-specific code with the Go CDK.

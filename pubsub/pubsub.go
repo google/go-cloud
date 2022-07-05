@@ -18,8 +18,7 @@
 //
 // See https://gocloud.dev/howto/pubsub/ for a detailed how-to guide.
 //
-//
-// At-most-once and At-least-once Delivery
+// # At-most-once and At-least-once Delivery
 //
 // The semantics of message delivery vary across PubSub services.
 // Some services guarantee that messages received by subscribers but not
@@ -34,22 +33,23 @@
 // documentation for more information about message delivery semantics.
 //
 // After receiving a Message via Subscription.Receive:
-//  - Always call Message.Ack or Message.Nack after processing the message.
-//  - For some drivers, Ack will be a no-op.
-//  - For some drivers, Nack is not supported and will panic; you can call
-//    Message.Nackable to see.
+//   - Always call Message.Ack or Message.Nack after processing the message.
+//   - For some drivers, Ack will be a no-op.
+//   - For some drivers, Nack is not supported and will panic; you can call
+//     Message.Nackable to see.
 //
-// OpenCensus Integration
+// # OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-//  - Topic.Send
-//  - Topic.Shutdown
-//  - Subscription.Receive
-//  - Subscription.Shutdown
-//  - The internal driver methods SendBatch, SendAcks and ReceiveBatch.
+//   - Topic.Send
+//   - Topic.Shutdown
+//   - Subscription.Receive
+//   - Subscription.Shutdown
+//   - The internal driver methods SendBatch, SendAcks and ReceiveBatch.
+//
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/pubsub/Topic.Send".
@@ -520,15 +520,18 @@ func (s *Subscription) updateBatchSize() int {
 // Receive retries retryable errors from the underlying driver forever.
 // Therefore, if Receive returns an error, either:
 // 1. It is a non-retryable error from the underlying driver, either from
-//    an attempt to fetch more messages or from an attempt to ack messages.
-//    Operator intervention may be required (e.g., invalid resource, quota
-//    error, etc.). Receive will return the same error from then on, so the
-//    application should log the error and either recreate the Subscription,
-//    or exit.
+//
+//	an attempt to fetch more messages or from an attempt to ack messages.
+//	Operator intervention may be required (e.g., invalid resource, quota
+//	error, etc.). Receive will return the same error from then on, so the
+//	application should log the error and either recreate the Subscription,
+//	or exit.
+//
 // 2. The provided ctx is Done. Error() on the returned error will include both
-//    the ctx error and the underlying driver error, and ErrorAs on it
-//    can access the underlying driver error type if needed. Receive may
-//    be called again with a fresh ctx.
+//
+//	the ctx error and the underlying driver error, and ErrorAs on it
+//	can access the underlying driver error type if needed. Receive may
+//	be called again with a fresh ctx.
 //
 // Callers can distinguish between the two by checking if the ctx they passed
 // is Done, or via xerrors.Is(err, context.DeadlineExceeded or context.Canceled)

@@ -14,7 +14,8 @@
 
 // Summarizes the output of go test.
 // Run like so:
-//    go test  -json ./... | test-summary
+//
+//	go test  -json ./... | test-summary
 package main
 
 import (

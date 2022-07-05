@@ -80,7 +80,9 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 1. Calls TopicCheck.
 // 2. Calls SubscriptionCheck.
 // 3. Sends a message, setting Message.BeforeSend to BeforeSend
-//    and Message.AfterSend to AfterSend.
+//
+//	and Message.AfterSend to AfterSend.
+//
 // 4. Receives the message and calls MessageCheck.
 // 5. Calls TopicErrorCheck.
 // 6. Calls SubscriptionErrorCheck.

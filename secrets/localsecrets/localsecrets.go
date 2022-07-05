@@ -16,14 +16,14 @@
 // provided symmetric key.
 // Use NewKeeper to construct a *secrets.Keeper.
 //
-// URLs
+// # URLs
 //
 // For secrets.OpenKeeper, localsecrets registers for the scheme "base64key".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // localsecrets does not support any types for As.
 package localsecrets // import "gocloud.dev/secrets/localsecrets"

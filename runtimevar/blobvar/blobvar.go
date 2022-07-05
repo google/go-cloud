@@ -16,7 +16,7 @@
 // variables read from a blob.Bucket.
 // Use OpenVariable to construct a *runtimevar.Variable.
 //
-// URLs
+// # URLs
 //
 // For runtimevar.OpenVariable, blobvar registers for the scheme "blob".
 // The default URL opener will open a blob.Bucket based on the environment
@@ -25,11 +25,11 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // blobvar exposes the following types for As:
-//  - Snapshot: Not supported.
-//  - Error: error, which can be passed to blob.ErrorAs.
+//   - Snapshot: Not supported.
+//   - Error: error, which can be passed to blob.ErrorAs.
 package blobvar // import "gocloud.dev/runtimevar/blobvar"
 
 import (
@@ -85,10 +85,10 @@ const Scheme = "blob"
 // URLOpener opens blob-backed URLs like "blob://myblobkey?decoder=string".
 // It supports the following URL parameters:
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
-//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
-//       See runtimevar.DecoderByName for supported values.
+//     runtimevar.BytesDecoder if URLOpener.Decoder is nil.
+//     See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval, in time.ParseDuration formats.
-//       Defaults to 30s.
+//     Defaults to 30s.
 type URLOpener struct {
 	// Bucket is required.
 	Bucket *blob.Bucket

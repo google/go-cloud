@@ -19,7 +19,7 @@
 // mempubsub should not be used for production: it is intended for local
 // development and testing.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, mempubsub registers
 // for the scheme "mem".
@@ -27,14 +27,14 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Message Delivery Semantics
+// # Message Delivery Semantics
 //
 // mempubsub supports at-least-once semantics; applications must
 // call Message.Ack after processing a message, or it will be redelivered.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
-// As
+// # As
 //
 // mempubsub does not support any types for As.
 package mempubsub // import "gocloud.dev/pubsub/mempubsub"
@@ -69,7 +69,7 @@ const Scheme = "mem"
 //
 // Query parameters:
 //   - ackdeadline: The ack deadline for OpenSubscription, in time.ParseDuration formats.
-//       Defaults to 1m.
+//     Defaults to 1m.
 type URLOpener struct {
 	mu     sync.Mutex
 	topics map[string]*pubsub.Topic

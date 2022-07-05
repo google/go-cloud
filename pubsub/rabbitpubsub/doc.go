@@ -25,7 +25,7 @@
 // A Pub/Sub subscription is an AMQP queue. The queue should be bound to the exchange
 // that is the topic of the subscription. See the package example for details.
 //
-// URLs
+// # URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, rabbitpubsub registers
 // for the scheme "rabbit".
@@ -35,20 +35,20 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// Message Delivery Semantics
+// # Message Delivery Semantics
 //
 // RabbitMQ supports at-least-once semantics; applications must
 // call Message.Ack after processing a message, or it will be redelivered.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
-// As
+// # As
 //
 // rabbitpubsub exposes the following types for As:
-//  - Topic: *amqp.Connection
-//  - Subscription: *amqp.Connection
-//  - Message.BeforeSend: *amqp.Publishing
-//  - Message.AfterSend: None
-//  - Message: amqp.Delivery
-//  - Error: *amqp.Error and MultiError
+//   - Topic: *amqp.Connection
+//   - Subscription: *amqp.Connection
+//   - Message.BeforeSend: *amqp.Publishing
+//   - Message.AfterSend: None
+//   - Message: amqp.Delivery
+//   - Error: *amqp.Error and MultiError
 package rabbitpubsub // import "gocloud.dev/pubsub/rabbitpubsub"

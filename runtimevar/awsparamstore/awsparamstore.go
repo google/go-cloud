@@ -17,7 +17,7 @@
 // (https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html)
 // Use OpenVariable to construct a *runtimevar.Variable.
 //
-// URLs
+// # URLs
 //
 // For runtimevar.OpenVariable, awsparamstore registers for the scheme "awsparamstore".
 // The default URL opener will use an AWS session with the default credentials
@@ -27,11 +27,11 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // awsparamstore exposes the following types for As:
-//  - Snapshot: (V1) *ssm.GetParameterOutput, *ssm.DescribeParametersOutput, (V2) *ssmv2.GetParameterOutput, *ssmv2.DescribeParametersOutput
-//  - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
+//   - Snapshot: (V1) *ssm.GetParameterOutput, *ssm.DescribeParametersOutput, (V2) *ssmv2.GetParameterOutput, *ssmv2.DescribeParametersOutput
+//   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
 package awsparamstore // import "gocloud.dev/runtimevar/awsparamstore"
 
 import (
@@ -80,10 +80,10 @@ var Set = wire.NewSet(
 //
 // In addition, the following URL parameters are supported:
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
-//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
-//       See runtimevar.DecoderByName for supported values.
+//     runtimevar.BytesDecoder if URLOpener.Decoder is nil.
+//     See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval, in time.ParseDuration formats.
-//       Defaults to 30s.
+//     Defaults to 30s.
 type URLOpener struct {
 	// UseV2 indicates whether the AWS SDK V2 should be used.
 	UseV2 bool

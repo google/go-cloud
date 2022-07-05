@@ -15,11 +15,11 @@
 // Package fields provides a view of the fields of a struct that follows the Go
 // rules, amended to consider tags and case insensitivity.
 //
-// Usage
+// # Usage
 //
 // First define a function that interprets tags:
 //
-//   func parseTag(st reflect.StructTag) (name string, keep bool, other interface{}, err error) { ... }
+//	func parseTag(st reflect.StructTag) (name string, keep bool, other interface{}, err error) { ... }
 //
 // The function's return values describe whether to ignore the field
 // completely or provide an alternate name, as well as other data from the
@@ -27,29 +27,29 @@
 //
 // Then define a function to validate the type:
 //
-//   func validate(t reflect.Type) error { ... }
+//	func validate(t reflect.Type) error { ... }
 //
 // Then, if necessary, define a function to specify leaf types - types
 // which should be considered one field and not be recursed into:
 //
-//   func isLeafType(t reflect.Type) bool { ... }
+//	func isLeafType(t reflect.Type) bool { ... }
 //
 // eg:
 //
-//   func isLeafType(t reflect.Type) bool {
-//      return t == reflect.TypeOf(time.Time{})
-//   }
+//	func isLeafType(t reflect.Type) bool {
+//	   return t == reflect.TypeOf(time.Time{})
+//	}
 //
 // Next, construct a Cache, passing your functions. As its name suggests, a
 // Cache remembers validation and field information for a type, so subsequent
 // calls with the same type are very fast.
 //
-//    cache := fields.NewCache(parseTag, validate, isLeafType)
+//	cache := fields.NewCache(parseTag, validate, isLeafType)
 //
 // To get the fields of a struct type as determined by the above rules, call
 // the Fields method:
 //
-//    fields, err := cache.Fields(reflect.TypeOf(MyStruct{}))
+//	fields, err := cache.Fields(reflect.TypeOf(MyStruct{}))
 //
 // The return value can be treated as a slice of Fields.
 //
@@ -57,7 +57,7 @@
 // call Match on the list of fields to find a field whose name is the best
 // match:
 //
-//   field := fields.Match(name)
+//	field := fields.Match(name)
 //
 // Match looks for an exact match first, then falls back to a case-insensitive
 // comparison.
@@ -474,10 +474,12 @@ func dominantField(fs []Field) (Field, bool) {
 
 // ParseStandardTag extracts the sub-tag named by key, then parses it using the
 // de facto standard format introduced in encoding/json:
-//   "-" means "ignore this tag", unless it has options (that is, is followed by a comma),
-//       in which case it is treated a name.
-//   "<name>" provides an alternative name for the field
-//   "<name>,opt1,opt2,..." specifies options after the name.
+//
+//	"-" means "ignore this tag", unless it has options (that is, is followed by a comma),
+//	    in which case it is treated a name.
+//	"<name>" provides an alternative name for the field
+//	"<name>,opt1,opt2,..." specifies options after the name.
+//
 // The options are returned as a []string.
 func ParseStandardTag(key string, t reflect.StructTag) (name string, keep bool, options []string) {
 	s := t.Get(key)

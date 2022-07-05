@@ -15,7 +15,7 @@
 // Package gcpmysql provides connections to managed MySQL Cloud SQL instances.
 // See https://cloud.google.com/sql/docs/mysql/ for more information.
 //
-// URLs
+// # URLs
 //
 // For mysql.Open, gcpmysql registers for the scheme "gcpmysql".
 // The default URL opener will create a connection using the default

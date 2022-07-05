@@ -17,7 +17,7 @@
 // (https://cloud.google.com/deployment-manager/runtime-configurator).
 // Use OpenVariable to construct a *runtimevar.Variable.
 //
-// URLs
+// # URLs
 //
 // For runtimevar.OpenVariable, gcpruntimeconfig registers for the scheme
 // "gcpruntimeconfig".
@@ -28,11 +28,11 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // gcpruntimeconfig exposes the following types for As:
-//  - Snapshot: *pb.Variable
-//  - Error: *status.Status
+//   - Snapshot: *pb.Variable
+//   - Error: *status.Status
 package gcpruntimeconfig // import "gocloud.dev/runtimevar/gcpruntimeconfig"
 
 import (
@@ -133,10 +133,10 @@ const Scheme = "gcpruntimeconfig"
 // The following query parameters are supported:
 //
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
-//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
-//       See runtimevar.DecoderByName for supported values.
+//     runtimevar.BytesDecoder if URLOpener.Decoder is nil.
+//     See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval, in time.ParseDuration formats.
-//       Defaults to 30s.
+//     Defaults to 30s.
 type URLOpener struct {
 	// Client must be set to a non-nil client authenticated with
 	// Cloud RuntimeConfigurator scope or equivalent.
@@ -187,7 +187,8 @@ type Options struct {
 // GCP Cloud Runtime Configurator.
 //
 // A variableKey will look like:
-//   projects/[project_id]/configs/[CONFIG_ID]/variables/[VARIABLE_NAME]
+//
+//	projects/[project_id]/configs/[CONFIG_ID]/variables/[VARIABLE_NAME]
 //
 // You can use the full string (e.g., copied from the GCP Console), or
 // construct one from its parts using VariableKey.

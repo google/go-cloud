@@ -16,7 +16,7 @@
 // See https://docs.microsoft.com/en-us/azure/key-vault/key-vault-whatis for more information.
 // Use OpenKeeper to construct a *secrets.Keeper.
 //
-// URLs
+// # URLs
 //
 // For secrets.OpenKeeper, azurekeyvault registers for the scheme "azurekeyvault".
 // The default URL opener will use Dial, which gets default credentials from the
@@ -28,7 +28,7 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // azurekeyvault exposes the following type for As:
 // - Error: autorest.DetailedError, see https://godoc.org/github.com/Azure/go-autorest/autorest#DetailedError

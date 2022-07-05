@@ -16,7 +16,7 @@
 // DynamoDB.
 // Use OpenCollection to construct a *docstore.Collection.
 //
-// URLs
+// # URLs
 //
 // For docstore.OpenCollection, awsdynamodb registers for the scheme
 // "dynamodb". The default URL opener will use an AWS session with the default
@@ -26,15 +26,15 @@
 // URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // awsdynamodb exposes the following types for As:
-//  - Collection.As: *dynamodb.DynamoDB
-//  - ActionList.BeforeDo: *dynamodb.BatchGetItemInput or *dynamodb.PutItemInput or *dynamodb.DeleteItemInput
-//                         or *dynamodb.UpdateItemInput
-//  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
-//  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
-//  - ErrorAs: awserr.Error
+//   - Collection.As: *dynamodb.DynamoDB
+//   - ActionList.BeforeDo: *dynamodb.BatchGetItemInput or *dynamodb.PutItemInput or *dynamodb.DeleteItemInput
+//     or *dynamodb.UpdateItemInput
+//   - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
+//   - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
+//   - ErrorAs: awserr.Error
 package awsdynamodb
 
 import (

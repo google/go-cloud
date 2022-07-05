@@ -17,7 +17,7 @@
 // (https://cloud.google.com/secret-manager).
 // Use OpenVariable to construct a *runtimevar.Variable.
 //
-// URLs
+// # URLs
 //
 // For runtimevar.OpenVariable, gcpsecretmanager registers for the scheme
 // "gcpsecretmanager".
@@ -28,11 +28,11 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // gcpsecretmanager exposes the following types for As:
-//  - Snapshot: *secretmanagerpb.AccessSecretVersionResponse
-//  - Error: *status.Status
+//   - Snapshot: *secretmanagerpb.AccessSecretVersionResponse
+//   - Error: *status.Status
 package gcpsecretmanager // import "gocloud.dev/runtimevar/gcpsecretmanager"
 
 import (
@@ -133,10 +133,10 @@ const Scheme = "gcpsecretmanager"
 // The following query parameters are supported:
 //
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
-//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
-//       See runtimevar.DecoderByName for supported values.
+//     runtimevar.BytesDecoder if URLOpener.Decoder is nil.
+//     See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval, in time.ParseDuration formats.
-//       Defaults to 30s.
+//     Defaults to 30s.
 type URLOpener struct {
 	// Client must be set to a non-nil client authenticated with
 	// Secret Manager scope or equivalent.
@@ -186,7 +186,8 @@ type Options struct {
 // OpenVariable constructs a *runtimevar.Variable backed by secretKey in GCP Secret Manager.
 //
 // A secretKey will look like:
-//   projects/[project_id]/secrets/[secret_id]
+//
+//	projects/[project_id]/secrets/[secret_id]
 //
 // A project ID is a unique, user-assigned ID of the Project.
 // It must be 6 to 30 lowercase letters, digits, or hyphens.

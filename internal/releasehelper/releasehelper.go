@@ -127,10 +127,10 @@ func parseModuleInfo(path string) GoMod {
 // Each require in the go.mod file is processed with reqHandler, a callback
 // function. It's called with these arguments:
 //
-//   gomodPath - path to the go.mod file where this 'require' was found
-//   mod - name of the module being 'require'd
-//   modPath - mod's location in the filesystem relative to
-//             the go.mod 'require'ing it
+//	gomodPath - path to the go.mod file where this 'require' was found
+//	mod - name of the module being 'require'd
+//	modPath - mod's location in the filesystem relative to
+//	          the go.mod 'require'ing it
 func runOnGomod(path string, reqHandler func(gomodPath, mod, modPath string)) {
 	gomodPath := filepath.Join(path, "go.mod")
 	fmt.Println("Processing", gomodPath)

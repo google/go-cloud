@@ -18,16 +18,14 @@
 //
 // See https://gocloud.dev/howto/docstore/ for a detailed how-to guide.
 //
-//
-// Collections
+// # Collections
 //
 // In docstore, documents are grouped into collections, and each document has a key
 // that is unique in its collection. You can add, retrieve, modify and delete
 // documents by key, and you can query a collection to retrieve documents that match
 // certain criteria.
 //
-//
-// Representing Documents
+// # Representing Documents
 //
 // A document is a set of named fields, each with a value. A field's value can be a scalar,
 // a list, or a nested document.
@@ -37,38 +35,38 @@
 // and the values are map values. Lists are represented with slices. For example,
 // here is a document about a book described as a map:
 //
-//   doc := map[string]interface{}{
-//       "Title": "The Master and Margarita",
-//       "Author": map[string]interface{}{
-//           "First": "Mikhail",
-//           "Last": "Bulgakov",
-//       },
-//       "PublicationYears": []int{1967, 1973},
-//   }
+//	doc := map[string]interface{}{
+//	    "Title": "The Master and Margarita",
+//	    "Author": map[string]interface{}{
+//	        "First": "Mikhail",
+//	        "Last": "Bulgakov",
+//	    },
+//	    "PublicationYears": []int{1967, 1973},
+//	}
 //
 // Note that the value of "PublicationYears" is a list, and the value of "Author" is
 // itself a document.
 //
 // Here is the same document represented with structs:
 //
-//   type Book struct {
-//       Title            string
-//       Author           Name
-//       PublicationYears []int
-//   }
+//	type Book struct {
+//	    Title            string
+//	    Author           Name
+//	    PublicationYears []int
+//	}
 //
-//   type Name struct {
-//       First, Last string
-//   }
+//	type Name struct {
+//	    First, Last string
+//	}
 //
-//   doc := &Book{
-//       Title: "The Master and Margarita",
-//       Author: Name{
-//           First: "Mikhail",
-//           Last:  "Bulgakov",
-//       },
-//       PublicationYears: []int{1967, 1973},
-//   }
+//	doc := &Book{
+//	    Title: "The Master and Margarita",
+//	    Author: Name{
+//	        First: "Mikhail",
+//	        Last:  "Bulgakov",
+//	    },
+//	    PublicationYears: []int{1967, 1973},
+//	}
 //
 // You must use a pointer to a struct to represent a document, although structs
 // nested inside a document, like the Name struct above, need not be pointers.
@@ -84,12 +82,12 @@
 // encoding/json. For example, this is the Book struct with different field
 // names:
 //
-//   type Book struct {
-//       Title            string `docstore:"title"`
-//       Author           Name   `docstore:"author"`
-//       PublicationYears []int  `docstore:"pub_years,omitempty"`
-//       NumPublications  int    `docstore:"-"`
-//   }
+//	type Book struct {
+//	    Title            string `docstore:"title"`
+//	    Author           Name   `docstore:"author"`
+//	    PublicationYears []int  `docstore:"pub_years,omitempty"`
+//	    NumPublications  int    `docstore:"-"`
+//	}
 //
 // This struct describes a document with field names "title", "author" and
 // "pub_years". The pub_years field is omitted from the stored document if it has
@@ -105,8 +103,7 @@
 // Note that unlike encoding/json, Docstore does case-sensitive matching during
 // decoding to match the behavior of decoders in most docstore services.
 //
-//
-// Representing Data
+// # Representing Data
 //
 // Values stored in document fields can be any of a wide range of types. All
 // primitive types except for complex numbers are supported, as well as slices and
@@ -124,8 +121,7 @@
 // time in nanoseconds using time's UnixNano method, you can get the original
 // time back (in the local timezone) with the time.Unix function.
 //
-//
-// Representing Keys
+// # Representing Keys
 //
 // The key of a docstore document is its unique identifier, usually a field.
 // Keys never appear alone in the docstore API, only as part of a document. For
@@ -139,14 +135,13 @@
 // document.
 // Usually, you provide the name of the key field, as in the example below:
 //
-//   coll, err := memdocstore.OpenCollection("SSN", nil)
+//	coll, err := memdocstore.OpenCollection("SSN", nil)
 //
 // Here, the "SSN" field of the document is used as the key. Some drivers let you
 // supply a function to extract the key from the document, which can be useful if the
 // key is composed of more than one field.
 //
-//
-// Actions
+// # Actions
 //
 // Docstore supports six actions on documents as methods on the Collection type:
 //   - Get retrieves a document.
@@ -159,7 +154,7 @@
 // Each action acts atomically on a single document. You can execute actions
 // individually or you can group them into an action list, like so:
 //
-//   err := coll.Actions().Put(doc1).Replace(doc2).Get(doc3).Do(ctx)
+//	err := coll.Actions().Put(doc1).Replace(doc2).Get(doc3).Do(ctx)
 //
 // When you use an action list, docstore will try to optimize the execution of the
 // actions. For example, multiple Get actions may be combined into a single "batch
@@ -168,8 +163,7 @@
 // document are executed in the user-specified order. See the documentation of
 // ActionList for details.
 //
-//
-// Revisions
+// # Revisions
 //
 // Docstore supports document revisions to distinguish different versions of a
 // document and enable optimistic locking. By default, Docstore stores the
@@ -197,27 +191,26 @@
 // of unspecified type must be handled. When defining a document struct,
 // define the field to be of type interface{}. For example,
 //
-//   type User {
-//       Name             string
-//       DocstoreRevision interface{}
-//   }
+//	type User {
+//	    Name             string
+//	    DocstoreRevision interface{}
+//	}
 //
-//
-// Queries
+// # Queries
 //
 // Docstore supports querying within a collection. Call the Query method on
 // Collection to obtain a Query value, then build your query by calling Query methods
 // like Where, Limit and so on. Finally, call the Get method on the query to execute it.
 // The result is an iterator, whose use is described below.
 //
-//   iter := coll.Query().Where("size", ">", 10).Limit(5).Get(ctx)
+//	iter := coll.Query().Where("size", ">", 10).Limit(5).Get(ctx)
 //
 // The Where method defines a filter condition, much like a WHERE clause in SQL.
 // Conditions are of the form "field op value", where field is any document field
 // path (including dot-separated paths), op is one of "=", ">", "<", ">=" or "<=",
 // and value can be any value.
 //
-//   iter := coll.Query().Where("Author.Last", "=", "Bulgakov").Limit(3).Get(ctx)
+//	iter := coll.Query().Where("Author.Last", "=", "Bulgakov").Limit(3).Get(ctx)
 //
 // You can make multiple Where calls. In some cases, parts of a Where clause may be
 // processed in the driver rather than natively by the backing service, which may have
@@ -228,22 +221,21 @@
 // method until it returns io.EOF. Always call Stop when you are finished with an
 // iterator. It is wise to use a defer statement for this.
 //
-//   iter := coll.Query().Where("size", ">", 10).Limit(5).Get(ctx)
-//   defer iter.Stop()
-//   for {
-//       m := map[string]interface{}{}
-//       err := iter.Next(ctx, m)
-//       if err == io.EOF {
-//           break
-//       }
-//       if err != nil {
-//           return err
-//       }
-//       fmt.Println(m)
-//   }
+//	iter := coll.Query().Where("size", ">", 10).Limit(5).Get(ctx)
+//	defer iter.Stop()
+//	for {
+//	    m := map[string]interface{}{}
+//	    err := iter.Next(ctx, m)
+//	    if err == io.EOF {
+//	        break
+//	    }
+//	    if err != nil {
+//	        return err
+//	    }
+//	    fmt.Println(m)
+//	}
 //
-//
-// Errors
+// # Errors
 //
 // The errors returned from this package can be inspected in several ways:
 //
@@ -254,15 +246,15 @@
 // the returned error. See the specific driver's package doc for the supported
 // types.
 //
-//
-// OpenCensus Integration
+// # OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-//  - ActionList.Do
-//  - Query.Get (for the first query only; drivers may make additional calls while iterating over results)
+//   - ActionList.Do
+//   - Query.Get (for the first query only; drivers may make additional calls while iterating over results)
+//
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/docstore/ActionList.Do".

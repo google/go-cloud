@@ -18,8 +18,7 @@
 //
 // See https://gocloud.dev/howto/blob/ for a detailed how-to guide.
 //
-//
-// Errors
+// # Errors
 //
 // The errors returned from this package can be inspected in several ways:
 //
@@ -29,20 +28,20 @@
 // The Bucket.ErrorAs method can retrieve the driver error underlying the returned
 // error.
 //
-//
-// OpenCensus Integration
+// # OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-//  - Attributes
-//  - Copy
-//  - Delete
-//  - ListPage
-//  - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
-//    are included because they call NewRangeReader.)
-//  - NewWriter, from creation until the call to Close.
+//   - Attributes
+//   - Copy
+//   - Delete
+//   - ListPage
+//   - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
+//     are included because they call NewRangeReader.)
+//   - NewWriter, from creation until the call to Close.
+//
 // All trace and metric names begin with the package import path.
 // The traces add the method name.
 // For example, "gocloud.dev/blob/Attributes".
@@ -52,8 +51,8 @@
 // For example, "gocloud.dev/blob/latency".
 //
 // It also collects the following metrics:
-//  - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
-//  - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
+//   - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
+//   - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
@@ -1309,9 +1308,9 @@ func DefaultURLMux() *URLMux {
 // the following query parameters:
 //
 //   - prefix: wraps the resulting Bucket using PrefixedBucket with the
-//             given prefix.
+//     given prefix.
 //   - key: wraps the resulting Bucket using SingleKeyBucket with the
-//             given key.
+//     given key.
 func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	return defaultURLMux.OpenBucket(ctx, urlstr)
 }

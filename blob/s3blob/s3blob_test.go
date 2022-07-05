@@ -40,10 +40,13 @@ import (
 // These constants record the region & bucket used for the last --record.
 // If you want to use --record mode,
 // 1. Create a bucket in your AWS project from the S3 management console.
-//    https://s3.console.aws.amazon.com/s3/home.
+//
+//	https://s3.console.aws.amazon.com/s3/home.
+//
 // 2. Update this constant to your bucket name.
 // TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
-//    name from the Terraform output instead (saving a copy of it for replay).
+//
+//	name from the Terraform output instead (saving a copy of it for replay).
 const (
 	bucketName = "go-cloud-testing"
 	region     = "us-west-1"

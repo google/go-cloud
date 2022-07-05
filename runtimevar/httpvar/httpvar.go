@@ -15,7 +15,7 @@
 // Package httpvar provides a runtimevar implementation with variables
 // backed by http endpoint. Use OpenVariable to construct a *runtimevar.Variable.
 //
-// URLs
+// # URLs
 //
 // For runtimevar.OpenVariable, httpvar registers for the schemes "http" and
 // "https". The default URL opener will use http.DefaultClient.
@@ -25,11 +25,11 @@
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // httpvar exposes the following types for As:
-//  - Snapshot: *http.Response
-//  - Error: httpvar.RequestError, url.Error
+//   - Snapshot: *http.Response
+//   - Error: httpvar.RequestError, url.Error
 package httpvar // import "gocloud.dev/runtimevar/httpvar"
 
 import (
@@ -63,9 +63,9 @@ var Schemes = []string{"http", "https"}
 // The full URL, including scheme, is used as the endpoint, except that the
 // the following URL parameters are removed if present:
 //   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
-//       See runtimevar.DecoderByName for supported values.
+//     See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval, in time.ParseDuration formats.
-//       Defaults to 30s.
+//     Defaults to 30s.
 type URLOpener struct {
 	// The Client to use; required.
 	Client *http.Client

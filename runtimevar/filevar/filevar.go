@@ -24,16 +24,17 @@
 // Known Issues:
 //
 // * On macOS, if an empty file is copied into a configuration file,
-//   filevar will not detect the change.
 //
-// URLs
+//	filevar will not detect the change.
+//
+// # URLs
 //
 // For runtimevar.OpenVariable, filevar registers for the scheme "file".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
-// As
+// # As
 //
 // filevar does not support any types for As.
 package filevar // import "gocloud.dev/runtimevar/filevar"
@@ -71,10 +72,10 @@ const Scheme = "file"
 //
 // The following URL parameters are supported:
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
-//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
-//       See runtimevar.DecoderByName for supported values.
+//     runtimevar.BytesDecoder if URLOpener.Decoder is nil.
+//     See runtimevar.DecoderByName for supported values.
 //   - wait: The frequency for retries after an error, in time.ParseDuration formats.
-//       Defaults to 30s.
+//     Defaults to 30s.
 type URLOpener struct {
 	// Decoder specifies the decoder to use if one is not specified in the URL.
 	// Defaults to runtimevar.BytesDecoder.

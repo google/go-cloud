@@ -17,9 +17,9 @@
 // can use to place and view orders; and a processor, which performs the
 // conversions. This binary can run both together in one process (the default),
 // or it can run either on its own. Either way, the two components:
-//  - communicate over a topic using the gocloud.dev/pubsub API;
-//  - write orders to a database using the gocloud.dev/docstore API;
-//  - and save image files to cloud storage using the gocloud.dev/blob API.
+//   - communicate over a topic using the gocloud.dev/pubsub API;
+//   - write orders to a database using the gocloud.dev/docstore API;
+//   - and save image files to cloud storage using the gocloud.dev/blob API.
 //
 // This application assumes at-least-once processing. Make sure the pubsub
 // implementation you provide to it has that behavior.

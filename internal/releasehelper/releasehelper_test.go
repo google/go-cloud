@@ -29,7 +29,8 @@ import (
 // ROOT/go.mod          <-- main go.mod for gocloud.dev
 // ROOT/submod/go.mod   <-- go.mod for a submodule of gocloud.dev
 // ROOT/samples/go.mod  <-- go.mod for "samples" that include both of the
-//                          other modules
+//
+//	other modules
 var mainGomod = []byte("module gocloud.dev\n")
 
 var submodGomod = []byte(`module gocloud.dev/submod
