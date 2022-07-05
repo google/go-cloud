@@ -367,11 +367,11 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	if b.useV2 {
 		var ae smithy.APIError
 		var oe *smithy.OperationError
-		if errors.As(err, &ae) {
-			code = ae.ErrorCode()
-		} else if errors.As(err, &oe) && strings.Contains(oe.Error(), "301 response missing Location header") {
+		if errors.As(err, &oe) && strings.Contains(oe.Error(), "301") {
 			// V2 returns an OperationError with a missing redirect for invalid buckets.
 			code = "NoSuchBucket"
+		} else if errors.As(err, &ae) {
+			code = ae.ErrorCode()
 		} else {
 			return gcerrors.Unknown
 		}
