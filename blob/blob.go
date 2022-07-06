@@ -88,14 +88,23 @@ import (
 	"gocloud.dev/internal/openurl"
 )
 
+// Ensure that Reader implements io.ReadSeekCloser.
+var _ = io.ReadSeekCloser(&Reader{})
+
 // Reader reads bytes from a blob.
-// It implements io.ReadCloser, and must be closed after
+// It implements io.ReadSeekCloser, and must be closed after
 // reads are finished.
 type Reader struct {
-	b   driver.Bucket
-	r   driver.Reader
-	key string
-	end func(error) // called at Close to finish trace and metric collection
+	b              driver.Bucket
+	r              driver.Reader
+	key            string
+	ctx            context.Context       // Used to recreate r after Seeks
+	dopts          *driver.ReaderOptions // "
+	baseOffset     int64                 // The base offset provided to NewRangeReader.
+	baseLength     int64                 // The length provided to NewRangeReader (may be negative).
+	relativeOffset int64                 // Current offset (relative to baseOffset).
+	savedOffset    int64                 // Last relativeOffset for r, saved after relativeOffset is changed in Seek, or -1 if no Seek.
+	end            func(error)           // Called at Close to finish trace and metric collection.
 	// for metric collection;
 	statsTagMutators []tag.Mutator
 	bytesRead        int
@@ -104,9 +113,82 @@ type Reader struct {
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
 func (r *Reader) Read(p []byte) (int, error) {
+	if r.savedOffset != -1 {
+		// We've done one or more Seeks since the last read. We may have
+		// to recreate the Reader.
+		//
+		// Note that remembering the savedOffset and lazily resetting the
+		// reader like this allows the caller to Seek, then Seek again back,
+		// to the original offset, without having to recreate the reader.
+		// We only have to recreate the reader if we actually read after a Seek.
+		// This is an important optimization because it's common to Seek
+		// to (SeekEnd, 0) and use the return value to determine the size
+		// of the data, then Seek back to (SeekStart, 0).
+		saved := r.savedOffset
+		r.savedOffset = -1
+		if r.relativeOffset == saved {
+			// Nope! We're at the same place we left off.
+		} else {
+			// Yep! We've changed the offset. Recreate the reader.
+			_ = r.r.Close()
+			length := r.baseLength
+			if length >= 0 {
+				length -= r.relativeOffset
+				if length < 0 {
+					// Shouldn't happen based on checks in Seek.
+					return 0, gcerr.Newf(gcerr.Internal, nil, "blob: invalid Seek (base length %d, relative offset %d)", r.baseLength, r.relativeOffset)
+				}
+			}
+			var err error
+			r.r, err = r.b.NewRangeReader(r.ctx, r.key, r.baseOffset+r.relativeOffset, length, r.dopts)
+			if err != nil {
+				return 0, wrapError(r.b, err, r.key)
+			}
+		}
+	}
 	n, err := r.r.Read(p)
 	r.bytesRead += n
+	r.relativeOffset += int64(n)
 	return n, wrapError(r.b, err, r.key)
+}
+
+// Seek implements io.Seeker (https://golang.org/pkg/io/#Seeker).
+func (r *Reader) Seek(offset int64, whence int) (int64, error) {
+	if r.savedOffset == -1 {
+		// Save the current offset for our reader. If the Seek changes the
+		// offset, and then we try to read, we'll need to recreate the reader.
+		// See comment above in Read for why we do it lazily.
+		r.savedOffset = r.relativeOffset
+	}
+	// The maximum relative offset is the minimum of:
+	// 1. The actual size of the blob, minus our initial baseOffset.
+	// 2. The length provided to NewRangeReader (if it was non-negative).
+	maxRelativeOffset := r.Size() - r.baseOffset
+	if r.baseLength >= 0 && r.baseLength < maxRelativeOffset {
+		maxRelativeOffset = r.baseLength
+	}
+	switch whence {
+	case io.SeekStart:
+		r.relativeOffset = offset
+	case io.SeekCurrent:
+		r.relativeOffset += offset
+	case io.SeekEnd:
+		r.relativeOffset = maxRelativeOffset + offset
+	}
+	if r.relativeOffset < 0 {
+		// "Seeking to an offset before the start of the file is an error."
+		invalidOffset := r.relativeOffset
+		r.relativeOffset = 0
+		return 0, fmt.Errorf("Seek resulted in invalid offset %d, using 0", invalidOffset)
+	}
+	if r.relativeOffset > maxRelativeOffset {
+		// "Seeking to any positive offset is legal, but the behavior of subsequent
+		// I/O operations on the underlying object is implementation-dependent."
+		// We'll choose to set the offset to the EOF.
+		log.Printf("blob.Reader.Seek set an offset after EOF (base offset/length from NewRangeReader %d, %d; actual blob size %d; relative offset %d -> absolute offset %d).", r.baseOffset, r.baseLength, r.Size(), r.relativeOffset, r.baseOffset+r.relativeOffset)
+		r.relativeOffset = maxRelativeOffset
+	}
+	return r.relativeOffset, nil
 }
 
 // Close implements io.Closer (https://golang.org/pkg/io/#Closer).
@@ -775,6 +857,11 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 // It reads at most length bytes starting at offset (>= 0).
 // If length is negative, it will read till the end of the blob.
 //
+// For the purposes of Seek, the returned Reader will start at offset and
+// end at the minimum of the actual end of the blob or (if length > 0) offset + length.
+//
+// Note that ctx is used for all reads performed during the lifetime of the reader.
+//
 // If the blob does not exist, NewRangeReader returns an error for which
 // gcerrors.Code will return gcerrors.NotFound. Exists is a lighter-weight way
 // to check for existence.
@@ -806,13 +893,14 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	}
 	tctx := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
-		// If err == nil, we handed the end closure off to the returned *Writer; it
-		// will be called when the Writer is Closed.
+		// If err == nil, we handed the end closure off to the returned *Reader; it
+		// will be called when the Reader is Closed.
 		if err != nil {
 			b.tracer.End(tctx, err)
 		}
 	}()
-	dr, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
+	var dr driver.Reader
+	dr, err = b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
 		return nil, wrapError(b.b, err, key)
 	}
@@ -821,6 +909,11 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 		b:                b.b,
 		r:                dr,
 		key:              key,
+		ctx:              ctx,
+		dopts:            dopts,
+		baseOffset:       offset,
+		baseLength:       length,
+		savedOffset:      -1,
 		end:              end,
 		statsTagMutators: []tag.Mutator{tag.Upsert(oc.ProviderKey, b.tracer.Provider)},
 	}
@@ -1126,9 +1219,12 @@ type SignedURLOptions struct {
 
 // ReaderOptions sets options for NewReader and NewRangeReader.
 type ReaderOptions struct {
-	// BeforeRead is a callback that will be called exactly once, before
+	// BeforeRead is a callback that will be called before
 	// any data is read (unless NewReader returns an error before then, in which
 	// case it may not be called at all).
+	//
+	// Calling Seek may reset the underlying reader, and result in BeforeRead
+	// getting called again with a different underlying provider-specific reader..
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
