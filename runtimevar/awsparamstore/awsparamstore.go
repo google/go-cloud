@@ -30,7 +30,7 @@
 // # As
 //
 // awsparamstore exposes the following types for As:
-//   - Snapshot: (V1) *ssm.GetParameterOutput, *ssm.DescribeParametersOutput, (V2) *ssmv2.GetParameterOutput, *ssmv2.DescribeParametersOutput
+//   - Snapshot: (V1) *ssm.GetParameterOutput, (V2) *ssmv2.GetParameterOutput
 //   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
 package awsparamstore // import "gocloud.dev/runtimevar/awsparamstore"
 
@@ -46,7 +46,6 @@ import (
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	ssmv2 "github.com/aws/aws-sdk-go-v2/service/ssm"
-	ssmv2types "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -212,8 +211,6 @@ type state struct {
 	val        interface{}
 	rawGetV1   *ssm.GetParameterOutput
 	rawGetV2   *ssmv2.GetParameterOutput
-	rawDescV1  *ssm.DescribeParametersOutput
-	rawDescV2  *ssmv2.DescribeParametersOutput
 	updateTime time.Time
 	version    int64
 	err        error
@@ -236,10 +233,6 @@ func (s *state) As(i interface{}) bool {
 		*p = s.rawGetV1
 	case **ssmv2.GetParameterOutput:
 		*p = s.rawGetV2
-	case **ssm.DescribeParametersOutput:
-		*p = s.rawDescV1
-	case **ssmv2.DescribeParametersOutput:
-		*p = s.rawDescV2
 	default:
 		return false
 	}
@@ -300,91 +293,36 @@ type watcher struct {
 	decoder *runtimevar.Decoder
 }
 
-func getParameter(svc *ssm.SSM, name string) (int64, []byte, *ssm.GetParameterOutput, error) {
+func getParameter(svc *ssm.SSM, name string) (int64, []byte, time.Time, *ssm.GetParameterOutput, error) {
 	getResp, err := svc.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(name),
 		// Ignored if the parameter is not encrypted.
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, nil, time.Time{}, nil, err
 	}
 	if getResp.Parameter == nil {
-		return 0, nil, getResp, fmt.Errorf("unable to get %q parameter", name)
+		return 0, nil, time.Time{}, getResp, fmt.Errorf("unable to get %q parameter", name)
 	}
-	return aws.Int64Value(getResp.Parameter.Version), []byte(aws.StringValue(getResp.Parameter.Value)), getResp, nil
+	return aws.Int64Value(getResp.Parameter.Version), []byte(aws.StringValue(getResp.Parameter.Value)), aws.TimeValue(getResp.Parameter.LastModifiedDate), getResp, nil
 }
 
-func getParameterV2(ctx context.Context, client *ssmv2.Client, name string) (int64, []byte, *ssmv2.GetParameterOutput, error) {
+func getParameterV2(ctx context.Context, client *ssmv2.Client, name string) (int64, []byte, time.Time, *ssmv2.GetParameterOutput, error) {
 	getResp, err := client.GetParameter(ctx, &ssmv2.GetParameterInput{
 		Name: aws.String(name),
 		// Ignored if the parameter is not encrypted.
 		WithDecryption: true,
 	})
 	if err != nil {
-		return 0, nil, nil, err
+		return 0, nil, time.Time{}, nil, err
 	}
 	if getResp.Parameter == nil {
-		return 0, nil, getResp, fmt.Errorf("unable to get %q parameter", name)
+		return 0, nil, time.Time{}, getResp, fmt.Errorf("unable to get %q parameter", name)
 	}
-	return getResp.Parameter.Version, []byte(awsv2.ToString(getResp.Parameter.Value)), getResp, nil
+	return getResp.Parameter.Version, []byte(awsv2.ToString(getResp.Parameter.Value)), awsv2.ToTime(getResp.Parameter.LastModifiedDate), getResp, nil
 }
 
-func describeParameter(svc *ssm.SSM, name string) (time.Time, *ssm.DescribeParametersOutput, error) {
-	query := func(nextToken *string) (*ssm.DescribeParametersOutput, error) {
-		return svc.DescribeParameters(&ssm.DescribeParametersInput{
-			NextToken: nextToken,
-			Filters: []*ssm.ParametersFilter{
-				{Key: aws.String("Name"), Values: []*string{&name}},
-			},
-		})
-	}
-	var result []*ssm.ParameterMetadata
-	var descResp *ssm.DescribeParametersOutput
-	var err error
-	var token *string
-	for ok := true; ok; ok = (token != nil) {
-		if descResp, err = query(token); err != nil {
-			return time.Time{}, nil, err
-		} else {
-			result = append(result, descResp.Parameters...)
-			token = descResp.NextToken
-		}
-	}
-	if len(result) != 1 || *result[0].Name != name {
-		return time.Time{}, nil, fmt.Errorf("unable to get single %q parameter", name)
-	}
-	return aws.TimeValue(result[0].LastModifiedDate), descResp, nil
-}
-
-func describeParameterV2(ctx context.Context, client *ssmv2.Client, name string) (time.Time, *ssmv2.DescribeParametersOutput, error) {
-	query := func(nextToken *string) (*ssmv2.DescribeParametersOutput, error) {
-		return client.DescribeParameters(ctx, &ssmv2.DescribeParametersInput{
-			NextToken: nextToken,
-			Filters: []ssmv2types.ParametersFilter{
-				{Key: "Name", Values: []string{name}},
-			},
-		})
-	}
-	result := []ssmv2types.ParameterMetadata{}
-	var descResp *ssmv2.DescribeParametersOutput
-	var err error
-	var token *string
-	for ok := true; ok; ok = (token != nil) {
-		if descResp, err = query(token); err != nil {
-			return time.Time{}, nil, err
-		} else {
-			result = append(result, descResp.Parameters...)
-			token = descResp.NextToken
-		}
-	}
-	if len(result) != 1 || *result[0].Name != name {
-		return time.Time{}, descResp, fmt.Errorf("unable to get single %q parameter", name)
-	}
-	return awsv2.ToTime(descResp.Parameters[0].LastModifiedDate), descResp, nil
-}
-
-// WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	lastVersion := int64(-1)
 	if prev != nil {
@@ -398,13 +336,14 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	// GetParameter from S3 to get the current value and version.
 	var newVersion int64
 	var newVal []byte
+	var newLastModified time.Time
 	var rawGetV1 *ssm.GetParameterOutput
 	var rawGetV2 *ssmv2.GetParameterOutput
 	var err error
 	if w.useV2 {
-		newVersion, newVal, rawGetV2, err = getParameterV2(ctx, w.clientV2, w.name)
+		newVersion, newVal, newLastModified, rawGetV2, err = getParameterV2(ctx, w.clientV2, w.name)
 	} else {
-		newVersion, newVal, rawGetV1, err = getParameter(svc, w.name)
+		newVersion, newVal, newLastModified, rawGetV1, err = getParameter(svc, w.name)
 	}
 	if err != nil {
 		return errorState(err, prev), w.wait
@@ -412,19 +351,6 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if newVersion == lastVersion {
 		// Version hasn't changed, so no change; return nil.
 		return nil, w.wait
-	}
-
-	// DescribeParameters from S3 to get the LastModified date.
-	var newLastModified time.Time
-	var rawDescV1 *ssm.DescribeParametersOutput
-	var rawDescV2 *ssmv2.DescribeParametersOutput
-	if w.useV2 {
-		newLastModified, rawDescV2, err = describeParameterV2(ctx, w.clientV2, w.name)
-	} else {
-		newLastModified, rawDescV1, err = describeParameter(svc, w.name)
-	}
-	if err != nil {
-		return errorState(err, prev), w.wait
 	}
 
 	// New value (or at least, new version). Decode it.
@@ -436,8 +362,6 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		val:        val,
 		rawGetV1:   rawGetV1,
 		rawGetV2:   rawGetV2,
-		rawDescV1:  rawDescV1,
-		rawDescV2:  rawDescV2,
 		updateTime: newLastModified,
 		version:    newVersion,
 	}, w.wait
