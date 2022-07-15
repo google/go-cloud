@@ -122,19 +122,11 @@ func (v verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 		if !s.As(&getParam) {
 			return errors.New("Snapshot.As failed for GetParameterOutput")
 		}
-		var descParam *ssmv2.DescribeParametersOutput
-		if !s.As(&descParam) {
-			return errors.New("Snapshot.As failed for DescribeParametersOutput")
-		}
 		return nil
 	}
 	var getParam *ssm.GetParameterOutput
 	if !s.As(&getParam) {
 		return errors.New("Snapshot.As failed for GetParameterOutput")
-	}
-	var descParam *ssm.DescribeParametersOutput
-	if !s.As(&descParam) {
-		return errors.New("Snapshot.As failed for DescribeParametersOutput")
 	}
 	return nil
 }
