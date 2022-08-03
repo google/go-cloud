@@ -32,12 +32,14 @@ require (
 	github.com/Azure/azure-amqp-common-go/v3 v3.2.2
 	github.com/Azure/azure-pipeline-go v0.2.3
 	github.com/Azure/azure-sdk-for-go v59.3.0+incompatible
-	github.com/Azure/azure-service-bus-go v0.11.5
+	github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus v0.4.0
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/Azure/go-amqp v0.16.4
+	github.com/Azure/go-amqp v0.17.4
 	github.com/Azure/go-autorest/autorest v0.11.22
 	github.com/Azure/go-autorest/autorest/adal v0.9.17
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.9
+	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
+	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.29.0
 	github.com/aws/aws-sdk-go v1.43.31
 	github.com/aws/aws-sdk-go-v2 v1.16.2
@@ -64,7 +66,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.2.0
 	github.com/klauspost/compress v1.15.1 // indirect
 	github.com/lib/pq v1.10.4
-	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	go.opencensus.io v0.23.0
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect

@@ -14,7 +14,10 @@ contrib.go.opencensus.io/integrations/ocsql
 github.com/Azure/azure-amqp-common-go/v3
 github.com/Azure/azure-pipeline-go
 github.com/Azure/azure-sdk-for-go
-github.com/Azure/azure-service-bus-go
+github.com/Azure/azure-sdk-for-go/sdk/azcore
+github.com/Azure/azure-sdk-for-go/sdk/internal
+github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus
+github.com/Azure/azure-sdk-for-go/sdk/messaging/internal
 github.com/Azure/azure-storage-blob-go
 github.com/Azure/go-amqp
 github.com/Azure/go-autorest/autorest
@@ -155,4 +158,3 @@ google.golang.org/grpc
 google.golang.org/protobuf
 gopkg.in/pipe.v2
 gopkg.in/square/go-jose.v2
-nhooyr.io/websocket
