@@ -416,13 +416,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				metadata[key] = strVal
 			}
 		}
-		body, err := sbmsg.Body()
-		if err != nil {
-			body = []byte(fmt.Sprintf("Invalid body: %v", err))
-		}
 		messages = append(messages, &driver.Message{
 			LoggableID: sbmsg.MessageID,
-			Body:       body,
+			Body:       sbmsg.Body,
 			Metadata:   metadata,
 			AckID:      sbmsg,
 			AsFunc:     messageAsFunc(sbmsg),

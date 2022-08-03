@@ -509,11 +509,11 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	const ignore = "kafka: client has run out of available brokers to talk to (Is your cluster reachable?)"
+	const ignore = "kafka: client has run out of available brokers to talk to"
 
 	for _, test := range tests {
 		sub, err := pubsub.OpenSubscription(ctx, test.URL)
-		if err != nil && err.Error() == ignore {
+		if err != nil && strings.Contains(err.Error(), ignore) {
 			// Since we don't have a real kafka broker to talk to, we will always get an error when
 			// opening a subscription. This test is checking specifically for query parameter usage, so
 			// we treat the "no brokers" error message as a nil error.

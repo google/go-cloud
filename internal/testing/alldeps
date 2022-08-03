@@ -17,7 +17,6 @@ github.com/Azure/azure-sdk-for-go
 github.com/Azure/azure-sdk-for-go/sdk/azcore
 github.com/Azure/azure-sdk-for-go/sdk/internal
 github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus
-github.com/Azure/azure-sdk-for-go/sdk/messaging/internal
 github.com/Azure/azure-storage-blob-go
 github.com/Azure/go-amqp
 github.com/Azure/go-autorest/autorest
@@ -43,6 +42,7 @@ github.com/aws/aws-sdk-go-v2/feature/s3/manager
 github.com/aws/aws-sdk-go-v2/internal/configsources
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2
 github.com/aws/aws-sdk-go-v2/internal/ini
+github.com/aws/aws-sdk-go-v2/internal/v4a
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding
 github.com/aws/aws-sdk-go-v2/service/internal/checksum
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url
@@ -59,7 +59,6 @@ github.com/aws/smithy-go
 github.com/cenkalti/backoff/v3
 github.com/census-instrumentation/opencensus-proto
 github.com/davecgh/go-spew
-github.com/devigned/tab
 github.com/dimchansky/utfbom
 github.com/eapache/go-resiliency
 github.com/eapache/go-xerial-snappy
@@ -67,7 +66,6 @@ github.com/eapache/queue
 github.com/fatih/color
 github.com/fsnotify/fsnotify
 github.com/go-sql-driver/mysql
-github.com/go-stack/stack
 github.com/golang-jwt/jwt/v4
 github.com/golang/groupcache
 github.com/golang/protobuf
@@ -79,6 +77,7 @@ github.com/google/martian/v3
 github.com/google/subcommands
 github.com/google/uuid
 github.com/google/wire
+github.com/googleapis/enterprise-certificate-proxy
 github.com/googleapis/gax-go/v2
 github.com/gorilla/mux
 github.com/hashicorp/errwrap
@@ -116,12 +115,15 @@ github.com/mitchellh/go-homedir
 github.com/mitchellh/go-testing-interface
 github.com/mitchellh/mapstructure
 github.com/mitchellh/reflectwalk
+github.com/montanaflynn/stats
 github.com/nats-io/nats.go
 github.com/nats-io/nkeys
 github.com/nats-io/nuid
 github.com/oklog/run
 github.com/pierrec/lz4
+github.com/pierrec/lz4/v4
 github.com/pkg/errors
+github.com/prometheus/prometheus
 github.com/rabbitmq/amqp091-go
 github.com/rcrowley/go-metrics
 github.com/ryanuber/go-glob

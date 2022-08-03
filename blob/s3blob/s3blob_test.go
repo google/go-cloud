@@ -90,7 +90,7 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 }
 
 func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, h.useV2, h.session, h.clientV2, "bucket-does-not-exist", h.opts)
+	return openBucket(ctx, h.useV2, h.session, h.clientV2, "go-cdk-bucket-does-not-exist", h.opts)
 }
 
 func (h *harness) Close() {

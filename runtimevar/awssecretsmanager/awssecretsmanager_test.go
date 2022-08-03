@@ -63,9 +63,9 @@ func waitForMutation(ctx context.Context, check func() error) error {
 	backoff := gax.Backoff{Multiplier: 1.0}
 	var initial time.Duration
 	if *setup.Record {
-		// When recording, wait 15 seconds and then poll every 5s.
-		initial = 15 * time.Second
-		backoff.Initial = 5 * time.Second
+		// When recording, wait 3 seconds and then poll every 2s.
+		initial = 3 * time.Second
+		backoff.Initial = 2 * time.Second
 	} else {
 		// During replay, we don't wait at all.
 		// The recorded file may have retries, but we don't need to actually wait between them.
