@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"testing"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/smithy-go"
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
@@ -145,6 +147,48 @@ func TestNoConnectionError(t *testing.T) {
 	}
 }
 
+func TestEncryptionContext(t *testing.T) {
+	tests := []struct {
+		Existing map[string]string
+		URL      string
+		WantErr  bool
+		Want     map[string]string
+	}{
+		// None before or after.
+		{nil, "http://foo", false, nil},
+		// New parameter.
+		{nil, "http://foo?context_foo=bar", false, map[string]string{"foo": "bar"}},
+		// 2 new parameters.
+		{nil, "http://foo?context_foo=bar&context_abc=baz", false, map[string]string{"foo": "bar", "abc": "baz"}},
+		// Multiple values.
+		{nil, "http://foo?context_foo=bar&context_foo=baz", true, nil},
+		// Existing, no new.
+		{map[string]string{"foo": "bar"}, "http://foo", false, map[string]string{"foo": "bar"}},
+		// No-conflict merge.
+		{map[string]string{"foo": "bar"}, "http://foo?context_abc=baz", false, map[string]string{"foo": "bar", "abc": "baz"}},
+		// Overwrite merge.
+		{map[string]string{"foo": "bar"}, "http://foo?context_foo=baz", false, map[string]string{"foo": "baz"}},
+	}
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("existing %v URL %v", test.Existing, test.URL), func(t *testing.T) {
+			opts := KeeperOptions{
+				EncryptionContext: test.Existing,
+			}
+			u, err := url.Parse(test.URL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = addEncryptionContextFromURLParams(&opts, u.Query())
+			if (err != nil) != test.WantErr {
+				t.Fatalf("got err %v, want error? %v", err, test.WantErr)
+			}
+			if diff := cmp.Diff(opts.EncryptionContext, test.Want); diff != "" {
+				t.Errorf("diff %v", diff)
+			}
+		})
+	}
+}
+
 func TestOpenKeeper(t *testing.T) {
 	tests := []struct {
 		URL     string
@@ -162,6 +206,10 @@ func TestOpenKeeper(t *testing.T) {
 		{"awskms://alias/my-key?awssdk=v1", false},
 		// OK, using V2.
 		{"awskms://alias/my-key?awssdk=v2", false},
+		// OK, adding EncryptionContext.
+		{"awskms://alias/my-key?context_abc=foo&context_def=bar", false},
+		// Multiple values for an EncryptionContext.
+		{"awskms://alias/my-key?context_abc=foo&context_abc=bar", true},
 		// Unknown parameter.
 		{"awskms://alias/my-key?param=value", true},
 	}
