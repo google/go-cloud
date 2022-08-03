@@ -33,8 +33,6 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	gocloud.dev v0.25.0
+	gocloud.dev v0.26.0
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
-
-replace gocloud.dev => ../../
