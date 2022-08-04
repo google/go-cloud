@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7XW2auDAyZAf4g",
+  "Initial": "AQAAAA7afM0aMKXl0v5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": null,
@@ -35,7 +35,7 @@
   },
   "Entries": [
     {
-      "ID": "0d3a68ea875a0501",
+      "ID": "9271f3f54223d4df",
       "Request": {
         "Method": "GET",
         "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-reading",
@@ -59,7 +59,7 @@
         "ProtoMinor": 1,
         "Header": {
           "Alt-Svc": [
-            "h3-29=\":443\"; ma=2592000,h3-T051=\":443\"; ma=2592000,h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\""
+            "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000,h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\""
           ],
           "Cache-Control": [
             "private, max-age=0"
@@ -71,7 +71,7 @@
             "application/xml; charset=UTF-8"
           ],
           "Date": [
-            "Thu, 03 Dec 2020 23:07:26 GMT"
+            "Wed, 03 Aug 2022 20:10:03 GMT"
           ],
           "Expires": [
             "CLEARED"
@@ -82,6 +82,9 @@
           "X-Guploader-Customer": [
             "cloud-storage"
           ],
+          "X-Guploader-Request-Class": [
+            "LATENCY_SENSITIVE"
+          ],
           "X-Guploader-Request-Result": [
             "agent_rejected"
           ],
@@ -89,7 +92,7 @@
             "agent_rejected"
           ],
           "X-Guploader-Uploadid": [
-            "ABg5-UwxKULqBdw4AzbitCZRr1PK3YQHzYcQXTWjF9vv0xxCOQCiyHKyml3qf1cXVa3biWdHi2x1pgALK94sZ6EgrOvH6-w7Jg"
+            "ADPycdvqYPZSEfEN2URfffpnGuq2Cdcxysb5l-wnBjihotLEvHzqqr1-LSSjkzsa1yaGOo7XJEc2-rJCAc3VWUGqBpI7Ig"
           ]
         },
         "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+Tm9TdWNoS2V5PC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQga2V5IGRvZXMgbm90IGV4aXN0LjwvTWVzc2FnZT48RGV0YWlscz5ObyBzdWNoIG9iamVjdDogZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9ibG9iLWZvci1yZWFkaW5nPC9EZXRhaWxzPjwvRXJyb3I+"
