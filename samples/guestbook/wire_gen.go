@@ -11,8 +11,7 @@ import (
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"database/sql"
 	"fmt"
-	"github.com/Azure/azure-pipeline-go/pipeline"
-	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/go-sql-driver/mysql"
 	"go.opencensus.io/trace"
@@ -116,21 +115,16 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	if err != nil {
 		return nil, nil, err
 	}
-	accountName, err := azureblob.DefaultAccountName()
+	serviceURLOptions := azureblob.NewDefaultServiceURLOptions()
+	serviceURL, err := azureblob.NewServiceURL(serviceURLOptions)
 	if err != nil {
 		return nil, nil, err
 	}
-	accountKey, err := azureblob.DefaultAccountKey()
+	serviceClient, err := azureblob.NewDefaultServiceClient(serviceURL)
 	if err != nil {
 		return nil, nil, err
 	}
-	sharedKeyCredential, err := azureblob.NewCredential(accountName, accountKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	pipelineOptions := _wirePipelineOptionsValue
-	pipeline := azureblob.NewPipeline(sharedKeyCredential, pipelineOptions)
-	bucket, cleanup, err := azureBucket(ctx, pipeline, accountName, flags)
+	bucket, cleanup, err := azureBucket(ctx, serviceClient, flags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -161,9 +155,8 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 }
 
 var (
-	_wirePipelineOptionsValue = azblob.PipelineOptions{}
-	_wireLoggerValue          = requestlog.Logger(nil)
-	_wireExporterValue        = trace.Exporter(nil)
+	_wireLoggerValue   = requestlog.Logger(nil)
+	_wireExporterValue = trace.Exporter(nil)
 )
 
 // Injectors from inject_gcp.go:
@@ -326,8 +319,8 @@ func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags
 
 // azureBucket is a Wire provider function that returns the Azure bucket based
 // on the command-line flags.
-func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob.AccountName, flags *cliFlags) (*blob.Bucket, func(), error) {
-	b, err := azureblob.OpenBucket(ctx, p, accountName, flags.bucket, nil)
+func azureBucket(ctx context.Context, client2 *azblob.ServiceClient, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := azureblob.OpenBucket(ctx, client2, flags.bucket, nil)
 	if err != nil {
 		return nil, nil, err
 	}

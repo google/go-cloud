@@ -12,12 +12,12 @@ contrib.go.opencensus.io/exporter/aws
 contrib.go.opencensus.io/exporter/stackdriver
 contrib.go.opencensus.io/integrations/ocsql
 github.com/Azure/azure-amqp-common-go/v3
-github.com/Azure/azure-pipeline-go
 github.com/Azure/azure-sdk-for-go
 github.com/Azure/azure-sdk-for-go/sdk/azcore
+github.com/Azure/azure-sdk-for-go/sdk/azidentity
 github.com/Azure/azure-sdk-for-go/sdk/internal
 github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus
-github.com/Azure/azure-storage-blob-go
+github.com/Azure/azure-sdk-for-go/sdk/storage/azblob
 github.com/Azure/go-amqp
 github.com/Azure/go-autorest/autorest
 github.com/Azure/go-autorest/autorest/adal
@@ -28,6 +28,7 @@ github.com/Azure/go-autorest/autorest/to
 github.com/Azure/go-autorest/autorest/validation
 github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/tracing
+github.com/AzureAD/microsoft-authentication-library-for-go
 github.com/GoogleCloudPlatform/cloudsql-proxy
 github.com/Shopify/sarama
 github.com/armon/go-metrics
@@ -69,6 +70,7 @@ github.com/fatih/color
 github.com/fsnotify/fsnotify
 github.com/go-sql-driver/mysql
 github.com/gogo/protobuf
+github.com/golang-jwt/jwt
 github.com/golang-jwt/jwt/v4
 github.com/golang/groupcache
 github.com/golang/protobuf
@@ -109,9 +111,9 @@ github.com/jcmturner/gokrb5/v8
 github.com/jcmturner/rpc/v2
 github.com/jmespath/go-jmespath
 github.com/klauspost/compress
+github.com/kylelemons/godebug
 github.com/lib/pq
 github.com/mattn/go-colorable
-github.com/mattn/go-ieproxy
 github.com/mattn/go-isatty
 github.com/mitchellh/copystructure
 github.com/mitchellh/go-homedir
@@ -125,6 +127,7 @@ github.com/nats-io/nuid
 github.com/oklog/run
 github.com/pierrec/lz4
 github.com/pierrec/lz4/v4
+github.com/pkg/browser
 github.com/pkg/errors
 github.com/prometheus/prometheus
 github.com/rabbitmq/amqp091-go
