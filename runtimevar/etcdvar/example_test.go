@@ -18,7 +18,7 @@ import (
 	"context"
 	"log"
 
-	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/client/v3"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/etcdvar"
 )
