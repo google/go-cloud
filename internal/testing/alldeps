@@ -58,6 +58,8 @@ github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/smithy-go
 github.com/cenkalti/backoff/v3
 github.com/census-instrumentation/opencensus-proto
+github.com/coreos/go-semver
+github.com/coreos/go-systemd/v22
 github.com/davecgh/go-spew
 github.com/dimchansky/utfbom
 github.com/eapache/go-resiliency
@@ -66,6 +68,7 @@ github.com/eapache/queue
 github.com/fatih/color
 github.com/fsnotify/fsnotify
 github.com/go-sql-driver/mysql
+github.com/gogo/protobuf
 github.com/golang-jwt/jwt/v4
 github.com/golang/groupcache
 github.com/golang/protobuf
@@ -131,6 +134,10 @@ github.com/xdg-go/pbkdf2
 github.com/xdg-go/scram
 github.com/xdg-go/stringprep
 github.com/youmark/pkcs8
+go.etcd.io/etcd
+go.etcd.io/etcd/api/v3
+go.etcd.io/etcd/client/pkg/v3
+go.etcd.io/etcd/client/v3
 go.mongodb.org/mongo-driver
 go.opencensus.io
 go.uber.org/atomic
@@ -142,6 +149,7 @@ gocloud.dev/internal/website
 gocloud.dev/pubsub/kafkapubsub
 gocloud.dev/pubsub/natspubsub
 gocloud.dev/pubsub/rabbitpubsub
+gocloud.dev/runtimevar/etcdvar
 gocloud.dev/samples
 gocloud.dev/secrets/hashivault
 golang.org/x/crypto
