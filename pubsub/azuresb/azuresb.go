@@ -87,6 +87,11 @@ var recvBatcherOpts = &batcher.Options{
 	MaxHandlers:  100, // max concurrency for reads
 }
 
+var ackBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1,
+	MaxHandlers:  100, // max concurrency for acks
+}
+
 func init() {
 	o := new(defaultOpener)
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
@@ -214,7 +219,10 @@ type topic struct {
 }
 
 // TopicOptions provides configuration options for an Azure SB Topic.
-type TopicOptions struct{}
+type TopicOptions struct {
+	// BatcherOptions adds constraints to the default batching done for sends.
+	BatcherOptions batcher.Options
+}
 
 // NewClientFromConnectionString returns a *servicebus.Client from a Service Bus connection string.
 // https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
@@ -238,7 +246,11 @@ func OpenTopic(ctx context.Context, sbSender *servicebus.Sender, opts *TopicOpti
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewTopic(t, sendBatcherOpts), nil
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	bo := sendBatcherOpts.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(t, bo), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -348,6 +360,13 @@ type SubscriptionOptions struct {
 	// When true: pubsub.Message.Ack will be a no-op, pubsub.Message.Nackable
 	// will return true, and pubsub.Message.Nack will panic.
 	ReceiveAndDelete bool
+
+	// ReceiveBatcherOptions adds constraints to the default batching done for receives.
+	ReceiveBatcherOptions batcher.Options
+
+	// AckBatcherOptions adds constraints to the default batching done for acks.
+	// Only used when ReceiveAndDelete is false.
+	AckBatcherOptions batcher.Options
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
@@ -356,7 +375,12 @@ func OpenSubscription(ctx context.Context, sbClient *servicebus.Client, sbReceiv
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, recvBatcherOpts, nil), nil
+	if opts == nil {
+		opts = &SubscriptionOptions{}
+	}
+	rbo := recvBatcherOpts.NewMergedOptions(&opts.ReceiveBatcherOptions)
+	abo := ackBatcherOpts.NewMergedOptions(&opts.AckBatcherOptions)
+	return pubsub.NewSubscription(ds, rbo, abo), nil
 }
 
 // openSubscription returns a driver.Subscription.
@@ -408,7 +432,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	defer cancel()
 
 	var messages []*driver.Message
-	sbmsgs, err := s.sbReceiver.ReceiveMessages(rctx, recvBatcherOpts.MaxBatchSize, nil)
+	sbmsgs, err := s.sbReceiver.ReceiveMessages(rctx, maxMessages, nil)
 	for _, sbmsg := range sbmsgs {
 		metadata := map[string]string{}
 		for key, value := range sbmsg.ApplicationProperties {

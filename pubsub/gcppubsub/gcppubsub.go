@@ -301,7 +301,10 @@ func SubscriberClient(ctx context.Context, conn *grpc.ClientConn) (*raw.Subscrib
 }
 
 // TopicOptions will contain configuration for topics.
-type TopicOptions struct{}
+type TopicOptions struct {
+	// BatcherOptions adds constraints to the default batching done for sends.
+	BatcherOptions batcher.Options
+}
 
 // OpenTopic returns a *pubsub.Topic backed by an existing GCP PubSub topic
 // in the given projectID. topicName is the last part of the full topic
@@ -309,7 +312,11 @@ type TopicOptions struct{}
 // See the package documentation for an example.
 func OpenTopic(client *raw.PublisherClient, projectID gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
 	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	return pubsub.NewTopic(openTopic(client, topicPath), sendBatcherOpts)
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	bo := sendBatcherOpts.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openTopic(client, topicPath), bo)
 }
 
 var topicPathRE = regexp.MustCompile("^projects/.+/topics/.+$")
@@ -321,7 +328,11 @@ func OpenTopicByPath(client *raw.PublisherClient, topicPath string, opts *TopicO
 	if !topicPathRE.MatchString(topicPath) {
 		return nil, fmt.Errorf("invalid topicPath %q; must match %v", topicPath, topicPathRE)
 	}
-	return pubsub.NewTopic(openTopic(client, topicPath), sendBatcherOpts), nil
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	bo := sendBatcherOpts.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openTopic(client, topicPath), bo), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -424,6 +435,12 @@ type subscription struct {
 type SubscriptionOptions struct {
 	// MaxBatchSize caps the maximum batch size used when retrieving messages. It defaults to 1000.
 	MaxBatchSize int
+
+	// ReceiveBatcherOptions adds constraints to the default batching done for receives.
+	ReceiveBatcherOptions batcher.Options
+
+	// AckBatcherOptions adds constraints to the default batching done for acks.
+	AckBatcherOptions batcher.Options
 }
 
 // OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
@@ -435,7 +452,9 @@ func OpenSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, sub
 	dsub := openSubscription(client, path, opts)
 	recvOpts := *defaultRecvBatcherOpts
 	recvOpts.MaxBatchSize = dsub.options.MaxBatchSize
-	return pubsub.NewSubscription(dsub, &recvOpts, ackBatcherOpts)
+	rbo := recvOpts.NewMergedOptions(&dsub.options.ReceiveBatcherOptions)
+	abo := ackBatcherOpts.NewMergedOptions(&dsub.options.AckBatcherOptions)
+	return pubsub.NewSubscription(dsub, rbo, abo)
 }
 
 var subscriptionPathRE = regexp.MustCompile("^projects/.+/subscriptions/.+$")
@@ -452,7 +471,9 @@ func OpenSubscriptionByPath(client *raw.SubscriberClient, subscriptionPath strin
 	dsub := openSubscription(client, subscriptionPath, opts)
 	recvOpts := *defaultRecvBatcherOpts
 	recvOpts.MaxBatchSize = dsub.options.MaxBatchSize
-	return pubsub.NewSubscription(dsub, &recvOpts, ackBatcherOpts), nil
+	rbo := recvOpts.NewMergedOptions(&dsub.options.ReceiveBatcherOptions)
+	abo := ackBatcherOpts.NewMergedOptions(&dsub.options.AckBatcherOptions)
+	return pubsub.NewSubscription(dsub, rbo, abo), nil
 }
 
 // openSubscription returns a driver.Subscription.
@@ -460,11 +481,9 @@ func openSubscription(client *raw.SubscriberClient, subscriptionPath string, opt
 	if opts == nil {
 		opts = &SubscriptionOptions{}
 	}
-
 	if opts.MaxBatchSize == 0 {
 		opts.MaxBatchSize = defaultRecvBatcherOpts.MaxBatchSize
 	}
-
 	return &subscription{client, subscriptionPath, opts}
 }
 
