@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7afMNLD+hGqv5c",
+  "Initial": "AQAAAA7agBQtJ3wYiP5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -36,21 +36,25 @@
     "RemoveParams": [
       "^se$",
       "^sig$",
+      "^st$",
       "^X-Ms-Date$"
     ]
   },
   "Entries": [
     {
-      "ID": "ba1bfa8d0f598020",
+      "ID": "09a58916be469567",
       "Request": {
         "Method": "PUT",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading?comp=blocklist",
         "Header": {
+          "Accept": [
+            "application/xml"
+          ],
           "Accept-Encoding": [
             "gzip"
           ],
           "Content-Length": [
-            "23"
+            "62"
           ],
           "User-Agent": [
             "CLEARED"
@@ -79,7 +83,7 @@
         },
         "MediaType": "application/xml",
         "BodyParts": [
-          "PEJsb2NrTGlzdD48L0Jsb2NrTGlzdD4="
+          "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEJsb2NrTGlzdD48L0Jsb2NrTGlzdD4="
         ]
       },
       "Response": {
@@ -92,22 +96,22 @@
             "0"
           ],
           "Date": [
-            "Wed, 03 Aug 2022 19:28:10 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "Etag": [
-            "\"0x8DA75864D87C970\""
+            "\"0x8DA778046FFFE1B\""
           ],
           "Last-Modified": [
-            "Wed, 03 Aug 2022 19:28:11 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Content-Crc64": [
-            "MdkAm9d35B8="
+            "HwJJD58gdF0="
           ],
           "X-Ms-Request-Id": [
-            "6ddffbf6-801e-0031-686f-a7f931000000"
+            "aec3adb1-d01e-005e-6869-a9f3c2000000"
           ],
           "X-Ms-Request-Server-Encrypted": [
             "true"
@@ -120,11 +124,14 @@
       }
     },
     {
-      "ID": "eceb123f4bcf7373",
+      "ID": "aeefa4d3b288c54c",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
         "Header": {
+          "Accept": [
+            "application/xml"
+          ],
           "Accept-Encoding": [
             "gzip"
           ],
@@ -162,13 +169,13 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Wed, 03 Aug 2022 19:28:10 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "Etag": [
-            "\"0x8DA75864D87C970\""
+            "\"0x8DA778046FFFE1B\""
           ],
           "Last-Modified": [
-            "Wed, 03 Aug 2022 19:28:11 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -177,7 +184,7 @@
             "BlockBlob"
           ],
           "X-Ms-Creation-Time": [
-            "Wed, 03 Aug 2022 19:28:11 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "X-Ms-Lease-State": [
             "available"
@@ -186,7 +193,7 @@
             "unlocked"
           ],
           "X-Ms-Request-Id": [
-            "6ddffbfc-801e-0031-6e6f-a7f931000000"
+            "aec3adb5-d01e-005e-6b69-a9f3c2000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -199,11 +206,14 @@
       }
     },
     {
-      "ID": "4e0ef3897c6d65c2",
+      "ID": "c78d212c3ce99cae",
       "Request": {
         "Method": "DELETE",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading",
         "Header": {
+          "Accept": [
+            "application/xml"
+          ],
           "Accept-Encoding": [
             "gzip"
           ],
@@ -212,9 +222,6 @@
           ],
           "X-Ms-Date": [
             "CLEARED"
-          ],
-          "X-Ms-Delete-Snapshots": [
-            "include"
           ],
           "X-Ms-Version": [
             "CLEARED"
@@ -235,7 +242,7 @@
             "0"
           ],
           "Date": [
-            "Wed, 03 Aug 2022 19:28:10 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -244,7 +251,7 @@
             "true"
           ],
           "X-Ms-Request-Id": [
-            "6ddffbff-801e-0031-706f-a7f931000000"
+            "aec3adbb-d01e-005e-6f69-a9f3c2000000"
           ],
           "X-Ms-Version": [
             "CLEARED"

@@ -20,7 +20,7 @@ package main
 import (
 	"context"
 
-	"github.com/Azure/azure-pipeline-go/pipeline"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/google/wire"
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
@@ -44,8 +44,9 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	wire.Build(
 		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
 		wire.InterfaceValue(new(trace.Exporter), trace.Exporter(nil)),
-		azureblob.NewPipeline,
-		azureblob.DefaultIdentity,
+		azureblob.NewDefaultServiceURLOptions,
+		azureblob.NewDefaultServiceClient,
+		azureblob.NewServiceURL,
 		applicationSet,
 		azureBucket,
 		azureMOTDVar,
@@ -57,8 +58,8 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 
 // azureBucket is a Wire provider function that returns the Azure bucket based
 // on the command-line flags.
-func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob.AccountName, flags *cliFlags) (*blob.Bucket, func(), error) {
-	b, err := azureblob.OpenBucket(ctx, p, accountName, flags.bucket, nil)
+func azureBucket(ctx context.Context, client *azblob.ServiceClient, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := azureblob.OpenBucket(ctx, client, flags.bucket, nil)
 	if err != nil {
 		return nil, nil, err
 	}

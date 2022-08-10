@@ -275,8 +275,7 @@ See [`aws.ConfigFromURLParams`][] for more details on supported URL options for 
 Azure Blob Storage URLs in the Go CDK allow you to identify [Azure Blob Storage][] containers
 when opening a bucket with `blob.OpenBucket`. Go CDK uses the environment
 variables `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, and
-`AZURE_STORAGE_SAS_TOKEN` to configure the credentials. `AZURE_STORAGE_ACCOUNT`
-is required, along with one of the other two.
+`AZURE_STORAGE_SAS_TOKEN`, among others, to configure the credentials.
 
 {{< goexample "gocloud.dev/blob/azureblob.Example_openBucketFromURL" >}}
 
@@ -290,8 +289,7 @@ Full details about acceptable URLs can be found under the API reference for
 
 The [`azureblob.OpenBucket`][] constructor opens an Azure Blob Storage container.
 `azureblob` operates on [Azure Storage Block Blobs][]. You must first create
-Azure Storage credentials and then create an Azure Storage pipeline before
-you can open a container.
+an Azure Service Client before you can open a container.
 
 {{< goexample "gocloud.dev/blob/azureblob.ExampleOpenBucket" >}}
 

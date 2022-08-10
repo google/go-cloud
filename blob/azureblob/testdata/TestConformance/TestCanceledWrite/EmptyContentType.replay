@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7afMNLNgRPaf5c",
+  "Initial": "AQAAAA7agBQuITocNf5c",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -36,16 +36,20 @@
     "RemoveParams": [
       "^se$",
       "^sig$",
+      "^st$",
       "^X-Ms-Date$"
     ]
   },
   "Entries": [
     {
-      "ID": "000cafc3bc9da3b6",
+      "ID": "a476205ae4bc9014",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-canceled-write",
         "Header": {
+          "Accept": [
+            "application/xml"
+          ],
           "Accept-Encoding": [
             "gzip"
           ],
@@ -77,7 +81,7 @@
             "application/xml"
           ],
           "Date": [
-            "Wed, 03 Aug 2022 19:28:11 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -86,21 +90,24 @@
             "BlobNotFound"
           ],
           "X-Ms-Request-Id": [
-            "52f5cf5d-901e-005f-156f-a7ac1e000000"
+            "91c08b51-b01e-0048-7b69-a90515000000"
           ],
           "X-Ms-Version": [
             "CLEARED"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjUyZjVjZjVkLTkwMWUtMDA1Zi0xNTZmLWE3YWMxZTAwMDAwMApUaW1lOjIwMjItMDgtMDNUMTk6Mjg6MTEuOTM4NDQ4NFo8L01lc3NhZ2U+PC9FcnJvcj4="
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjkxYzA4YjUxLWIwMWUtMDA0OC03YjY5LWE5MDUxNTAwMDAwMApUaW1lOjIwMjItMDgtMDZUMDc6NTA6MDYuNTkwNjgwMlo8L01lc3NhZ2U+PC9FcnJvcj4="
       }
     },
     {
-      "ID": "d52dbfa6affb9ec4",
+      "ID": "c41dc331e2cdd0d8",
       "Request": {
         "Method": "GET",
         "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-canceled-write",
         "Header": {
+          "Accept": [
+            "application/xml"
+          ],
           "Accept-Encoding": [
             "gzip"
           ],
@@ -132,7 +139,7 @@
             "application/xml"
           ],
           "Date": [
-            "Wed, 03 Aug 2022 19:28:11 GMT"
+            "Sat, 06 Aug 2022 07:50:05 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -141,13 +148,13 @@
             "BlobNotFound"
           ],
           "X-Ms-Request-Id": [
-            "52f5cf63-901e-005f-196f-a7ac1e000000"
+            "91c08b5d-b01e-0048-0169-a90515000000"
           ],
           "X-Ms-Version": [
             "CLEARED"
           ]
         },
-        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjUyZjVjZjYzLTkwMWUtMDA1Zi0xOTZmLWE3YWMxZTAwMDAwMApUaW1lOjIwMjItMDgtMDNUMTk6Mjg6MTEuOTUyNDQwOFo8L01lc3NhZ2U+PC9FcnJvcj4="
+        "Body": "77u/PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48RXJyb3I+PENvZGU+QmxvYk5vdEZvdW5kPC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQgYmxvYiBkb2VzIG5vdCBleGlzdC4KUmVxdWVzdElkOjkxYzA4YjVkLWIwMWUtMDA0OC0wMTY5LWE5MDUxNTAwMDAwMApUaW1lOjIwMjItMDgtMDZUMDc6NTA6MDYuNjA5NjY5NVo8L01lc3NhZ2U+PC9FcnJvcj4="
       }
     }
   ]
