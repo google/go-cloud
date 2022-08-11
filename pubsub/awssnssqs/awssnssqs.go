@@ -357,6 +357,9 @@ type TopicOptions struct {
 	// BodyBase64Encoding determines when message bodies are base64 encoded.
 	// The default is NonUTF8Only.
 	BodyBase64Encoding BodyBase64Encoding
+
+	// BatcherOptions adds constraints to the default batching done for sends.
+	BatcherOptions batcher.Options
 }
 
 // OpenTopic is a shortcut for OpenSNSTopic, provided for backwards compatibility.
@@ -367,13 +370,15 @@ func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string,
 // OpenSNSTopic opens a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
 func OpenSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSNSTopic(ctx, sns.New(sess), topicARN, opts), sendBatcherOptsSNS)
+	bo := sendBatcherOptsSNS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSNSTopic(ctx, sns.New(sess), topicARN, opts), bo)
 }
 
 // OpenSNSTopicV2 opens a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN), using AWS SDK V2.
 func OpenSNSTopicV2(ctx context.Context, client *snsv2.Client, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSNSTopicV2(ctx, client, topicARN, opts), sendBatcherOptsSNS)
+	bo := sendBatcherOptsSNS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSNSTopicV2(ctx, client, topicARN, opts), bo)
 }
 
 // openSNSTopic returns the driver for OpenSNSTopic. This function exists so the test
@@ -600,13 +605,15 @@ type sqsTopic struct {
 // OpenSQSTopic opens a topic that sends to the SQS topic with the given SQS
 // queue URL.
 func OpenSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSQSTopic(ctx, sqs.New(sess), qURL, opts), sendBatcherOptsSQS)
+	bo := sendBatcherOptsSQS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSQSTopic(ctx, sqs.New(sess), qURL, opts), bo)
 }
 
 // OpenSQSTopicV2 opens a topic that sends to the SQS topic with the given SQS
 // queue URL, using AWS SDK V2.
 func OpenSQSTopicV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openSQSTopicV2(ctx, client, qURL, opts), sendBatcherOptsSQS)
+	bo := sendBatcherOptsSQS.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(openSQSTopicV2(ctx, client, qURL, opts), bo)
 }
 
 // openSQSTopic returns the driver for OpenSQSTopic. This function exists so the test
@@ -916,20 +923,30 @@ type SubscriptionOptions struct {
 	// Note that a non-zero WaitTime can delay delivery of messages
 	// by up to that duration.
 	WaitTime time.Duration
+
+	// ReceiveBatcherOptions adds constraints to the default batching done for receives.
+	ReceiveBatcherOptions batcher.Options
+
+	// AckBatcherOptions adds constraints to the default batching done for acks.
+	AckBatcherOptions batcher.Options
 }
 
 // OpenSubscription opens a subscription based on AWS SQS for the given SQS
 // queue URL. The queue is assumed to be subscribed to some SNS topic, though
 // there is no check for this.
 func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, sqs.New(sess), qURL, opts), recvBatcherOpts, ackBatcherOpts)
+	rbo := recvBatcherOpts.NewMergedOptions(&opts.ReceiveBatcherOptions)
+	abo := ackBatcherOpts.NewMergedOptions(&opts.AckBatcherOptions)
+	return pubsub.NewSubscription(openSubscription(ctx, sqs.New(sess), qURL, opts), rbo, abo)
 }
 
 // OpenSubscriptionV2 opens a subscription based on AWS SQS for the given SQS
 // queue URL, using AWS SDK V2. The queue is assumed to be subscribed to some SNS topic, though
 // there is no check for this.
 func OpenSubscriptionV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscriptionV2(ctx, client, qURL, opts), recvBatcherOpts, ackBatcherOpts)
+	rbo := recvBatcherOpts.NewMergedOptions(&opts.ReceiveBatcherOptions)
+	abo := ackBatcherOpts.NewMergedOptions(&opts.AckBatcherOptions)
+	return pubsub.NewSubscription(openSubscriptionV2(ctx, client, qURL, opts), rbo, abo)
 }
 
 // openSubscription returns a driver.Subscription.

@@ -114,6 +114,33 @@ func newOptionsWithDefaults(opts *Options) Options {
 	return o
 }
 
+// newMergedOptions returns o merged with opts.
+func (o *Options) NewMergedOptions(opts *Options) *Options {
+	maxH := o.MaxHandlers
+	if opts.MaxHandlers != 0 && (maxH == 0 || opts.MaxHandlers < maxH) {
+		maxH = opts.MaxHandlers
+	}
+	minB := o.MinBatchSize
+	if opts.MinBatchSize != 0 && (minB == 0 || opts.MinBatchSize > minB) {
+		minB = opts.MinBatchSize
+	}
+	maxB := o.MaxBatchSize
+	if opts.MaxBatchSize != 0 && (maxB == 0 || opts.MaxBatchSize < maxB) {
+		maxB = opts.MaxBatchSize
+	}
+	maxBB := o.MaxBatchByteSize
+	if opts.MaxBatchByteSize != 0 && (maxBB == 0 || opts.MaxBatchByteSize < maxBB) {
+		maxBB = opts.MaxBatchByteSize
+	}
+	c := &Options{
+		MaxHandlers:      maxH,
+		MinBatchSize:     minB,
+		MaxBatchSize:     maxB,
+		MaxBatchByteSize: maxBB,
+	}
+	return c
+}
+
 // New creates a new Batcher.
 //
 // itemType is type that will be batched. For example, if you
