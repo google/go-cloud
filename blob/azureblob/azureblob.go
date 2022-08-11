@@ -40,10 +40,10 @@
 //   - If none of the above are provided, azureblob defaults to
 //     azidentity.NewDefaultAzureCredential:
 //     https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#NewDefaultAzureCredential.
-//     See the documentation there for the environment variables it supports,
-//     including AZURE_CLIENT_ID, AZURE_TENANT_ID, etc.
+//     See the documentation there for the credential types it supports, including
+//     CLI creds, environment variables like AZURE_CLIENT_ID, AZURE_TENANT_ID, etc.
 //
-// In addition, the environment variables AZURE_STORAGE_DOMAIN,
+// In addition, the environment variables AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_DOMAIN,
 // AZURE_STORAGE_PROTOCOL, AZURE_STORAGE_IS_CDN, and AZURE_STORAGE_IS_LOCAL_EMULATOR
 // can be used to configure how the default URLOpener generates the Azure
 // Service URL via ServiceURLOptions. These can all be configured via URL
@@ -289,10 +289,10 @@ func (o *lazyOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucke
 type credTypeEnumT int
 
 const (
-	credTypeSharedKey credTypeEnumT = iota
+	credTypeDefault credTypeEnumT = iota
+	credTypeSharedKey
 	credTypeSASViaNone
 	credTypeConnectionString
-	credTypeIdentityFromEnv
 )
 
 type credInfoT struct {
@@ -327,7 +327,7 @@ func newCredInfoFromEnv() *credInfoT {
 		credInfo.CredType = credTypeConnectionString
 		credInfo.ConnectionString = connectionString
 	} else {
-		credInfo.CredType = credTypeIdentityFromEnv
+		credInfo.CredType = credTypeDefault
 	}
 	return credInfo
 }
@@ -341,6 +341,13 @@ func (i *credInfoT) NewServiceClient(svcURL ServiceURL) (*azblob.ServiceClient, 
 	}
 
 	switch i.CredType {
+	case credTypeDefault:
+		log.Println("azureblob.URLOpener: using NewDefaultAzureCredential")
+		cred, err := azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed azidentity.NewDefaultAzureCredential: %v", err)
+		}
+		return azblob.NewServiceClient(string(svcURL), cred, azClientOpts)
 	case credTypeSharedKey:
 		log.Println("azureblob.URLOpener: using shared key credentials")
 		sharedKeyCred, err := azblob.NewSharedKeyCredential(i.AccountName, i.AccountKey)
@@ -354,13 +361,6 @@ func (i *credInfoT) NewServiceClient(svcURL ServiceURL) (*azblob.ServiceClient, 
 	case credTypeConnectionString:
 		log.Println("azureblob.URLOpener: using connection string")
 		return azblob.NewServiceClientFromConnectionString(i.ConnectionString, azClientOpts)
-	case credTypeIdentityFromEnv:
-		log.Println("azureblob.URLOpener: using NewEnvironmentCredentials")
-		cred, err := azidentity.NewEnvironmentCredential(nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed azidentity.NewEnvironmentCredential: %v", err)
-		}
-		return azblob.NewServiceClient(string(svcURL), cred, azClientOpts)
 	default:
 		return nil, errors.New("internal error, unknown cred type")
 	}
