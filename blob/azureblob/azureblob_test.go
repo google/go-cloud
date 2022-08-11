@@ -370,7 +370,7 @@ func TestOpenerFromEnv(t *testing.T) {
 			// Default.
 			accountName: "anotheraccount",
 			want: &credInfoT{
-				CredType:    credTypeIdentityFromEnv,
+				CredType:    credTypeDefault,
 				AccountName: "anotheraccount",
 			},
 			wantOpts: &ServiceURLOptions{
@@ -383,7 +383,7 @@ func TestOpenerFromEnv(t *testing.T) {
 			protocol:    "http",
 			domain:      "foo.bar.com",
 			want: &credInfoT{
-				CredType:    credTypeIdentityFromEnv,
+				CredType:    credTypeDefault,
 				AccountName: "myaccount",
 			},
 			wantOpts: &ServiceURLOptions{
@@ -397,7 +397,7 @@ func TestOpenerFromEnv(t *testing.T) {
 			accountName:     "myaccount",
 			isLocalEmulator: true,
 			want: &credInfoT{
-				CredType:    credTypeIdentityFromEnv,
+				CredType:    credTypeDefault,
 				AccountName: "myaccount",
 			},
 			wantOpts: &ServiceURLOptions{
