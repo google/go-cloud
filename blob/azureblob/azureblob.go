@@ -293,6 +293,7 @@ const (
 	credTypeSASViaNone
 	credTypeConnectionString
 	credTypeIdentityFromEnv
+	credTypeIdentityFromCli
 )
 
 type credInfoT struct {
@@ -317,6 +318,9 @@ func newCredInfoFromEnv() *credInfoT {
 	credInfo := &credInfoT{
 		AccountName: accountName,
 	}
+	// set the default first
+	credInfo.CredType = credTypeIdentityFromEnv
+
 	if accountName != "" && accountKey != "" {
 		credInfo.CredType = credTypeSharedKey
 		credInfo.AccountKey = accountKey
@@ -326,8 +330,10 @@ func newCredInfoFromEnv() *credInfoT {
 	} else if connectionString != "" {
 		credInfo.CredType = credTypeConnectionString
 		credInfo.ConnectionString = connectionString
-	} else {
-		credInfo.CredType = credTypeIdentityFromEnv
+	} else if cliAuthStr := os.Getenv("AZURE_BLOB_AUTH_VIA_CLI"); cliAuthStr != "" {
+		if b, err := strconv.ParseBool(cliAuthStr); err == nil && b {
+			credInfo.CredType = credTypeIdentityFromCli
+		}
 	}
 	return credInfo
 }
@@ -359,6 +365,13 @@ func (i *credInfoT) NewServiceClient(svcURL ServiceURL) (*azblob.ServiceClient, 
 		cred, err := azidentity.NewEnvironmentCredential(nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed azidentity.NewEnvironmentCredential: %v", err)
+		}
+		return azblob.NewServiceClient(string(svcURL), cred, azClientOpts)
+	case credTypeIdentityFromCli:
+		log.Println("azureblob.URLOpener: using NewCliCredentials")
+		cred, err := azidentity.NewAzureCLICredential(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed azidentity.NewCliCredential: %v", err)
 		}
 		return azblob.NewServiceClient(string(svcURL), cred, azClientOpts)
 	default:
