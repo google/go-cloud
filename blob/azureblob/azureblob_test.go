@@ -624,6 +624,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?protocol=http", false},
 		// With invalid protocol.
 		{"azblob://mybucket?protocol=ftp", true},
+		// With Account.
+		{"azblob://mybucket?storage_account=test", false},
 		// With CDN.
 		{"azblob://mybucket?cdn=true", false},
 		// With invalid CDN.
