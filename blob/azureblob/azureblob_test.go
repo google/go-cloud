@@ -470,6 +470,14 @@ func TestNewServiceURL(t *testing.T) {
 			wantErrURL: true,
 		},
 		{
+			// Account name set in the query
+			opts: ServiceURLOptions{},
+			query: url.Values{
+				"storage_account": {"testaccount"},
+			},
+			want: "https://testaccount.blob.core.windows.net",
+		},
+		{
 			// Basic working case.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
