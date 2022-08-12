@@ -470,6 +470,14 @@ func TestNewServiceURL(t *testing.T) {
 			wantErrURL: true,
 		},
 		{
+			// Account name set in the query
+			opts: ServiceURLOptions{},
+			query: url.Values{
+				"storage_account": {"testaccount"},
+			},
+			want: "https://testaccount.blob.core.windows.net",
+		},
+		{
 			// Basic working case.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
@@ -624,6 +632,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?protocol=http", false},
 		// With invalid protocol.
 		{"azblob://mybucket?protocol=ftp", true},
+		// With Account.
+		{"azblob://mybucket?storage_account=test", false},
 		// With CDN.
 		{"azblob://mybucket?cdn=true", false},
 		// With invalid CDN.
