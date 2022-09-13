@@ -73,10 +73,11 @@ import (
 
 var sendBatcherOpts = &batcher.Options{
 	MaxBatchSize: 100,
-	MaxHandlers:  2,
+	MaxHandlers:  100, // max concurrency for sends
 }
 
 var recvBatcherOpts = &batcher.Options{
+	// Concurrency doesn't make sense here.
 	MaxBatchSize: 1,
 	MaxHandlers:  1,
 }
@@ -216,6 +217,9 @@ type TopicOptions struct {
 	// the value for that key will be used as the message key when sending to
 	// Kafka, instead of being added to the message headers.
 	KeyName string
+
+	// BatcherOptions adds constraints to the default batching done for sends.
+	BatcherOptions batcher.Options
 }
 
 // OpenTopic creates a pubsub.Topic that sends to a Kafka topic.
@@ -230,7 +234,8 @@ func OpenTopic(brokers []string, config *sarama.Config, topicName string, opts *
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewTopic(dt, sendBatcherOpts), nil
+	bo := sendBatcherOpts.NewMergedOptions(&opts.BatcherOptions)
+	return pubsub.NewTopic(dt, bo), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
