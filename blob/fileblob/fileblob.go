@@ -642,6 +642,29 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
+func createTemp(path string) (*os.File, error) {
+	// Use a custom createTemp function rather than os.CreateTemp() as
+	// os.CreateTemp() sets the permissions of the tempfile to 0600, rather than
+	// 0666, making it inconsistent with the directories and attribute files.
+	try := 0
+	for {
+		// Append the current time with nanosecond precision and .tmp to the
+		// path. If the file already exists try again. Nanosecond changes enough
+		// between each iteration to make a conflict unlikely. Using the full
+		// time lowers the chance of a collision with a file using a similar
+		// pattern, but has undefined behavior after the year 2262.
+		name := path + "." + strconv.FormatInt(time.Now().UnixNano(), 16) + ".tmp"
+		f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+		if os.IsExist(err) {
+			if try++; try < 10000 {
+				continue
+			}
+			return nil, &os.PathError{Op: "createtemp", Path: path + ".*.tmp", Err: os.ErrExist}
+		}
+		return f, err
+	}
+}
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	path, err := b.path(key)
@@ -651,7 +674,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err := os.MkdirAll(filepath.Dir(path), os.FileMode(0777)); err != nil {
 		return nil, err
 	}
-	f, err := ioutil.TempFile(filepath.Dir(path), "fileblob")
+	f, err := createTemp(path)
 	if err != nil {
 		return nil, err
 	}
