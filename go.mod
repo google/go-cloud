@@ -69,6 +69,10 @@ require (
 	github.com/lib/pq v1.10.6
 	github.com/prometheus/prometheus v0.37.0 // indirect
 	go.opencensus.io v0.23.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.32.0
+	go.opentelemetry.io/otel v1.7.0
+	go.opentelemetry.io/otel/sdk v1.7.0
+	go.opentelemetry.io/otel/trace v1.7.0
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	golang.org/x/net v0.0.0-20220802222814-0bcc04d9c69b

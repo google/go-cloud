@@ -27,7 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestStackdriverLog(t *testing.T) {
@@ -41,9 +42,10 @@ func TestStackdriverLog(t *testing.T) {
 		endTime      = startTime + latencySec
 		endTimeNanos = startTimeNanos + latencyNanos
 	)
-	ctx, span := trace.StartSpan(context.Background(), "test")
+	tracer := otel.Tracer("test")
+	ctx, span := tracer.Start(context.Background(), "test")
 	defer span.End()
-	sc := trace.FromContext(ctx).SpanContext()
+	sc := trace.SpanContextFromContext(ctx)
 	buf := new(bytes.Buffer)
 	var logErr error
 	l := NewStackdriverLogger(buf, func(e error) { logErr = e })
@@ -62,8 +64,8 @@ func TestStackdriverLog(t *testing.T) {
 		ResponseHeaderSize: 555,
 		ResponseBodySize:   789000,
 		Latency:            latencySec*time.Second + latencyNanos*time.Nanosecond,
-		TraceID:            sc.TraceID,
-		SpanID:             sc.SpanID,
+		TraceID:            sc.TraceID(),
+		SpanID:             sc.SpanID(),
 	}
 	ent := *want // copy in case Log accidentally mutates
 	l.Log(&ent)

@@ -28,7 +28,7 @@ import (
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
-	"go.opencensus.io/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 )
@@ -39,7 +39,7 @@ var Set = wire.NewSet(
 	server.Set,
 	NewExporter,
 	monitoredresource.Autodetect,
-	wire.Bind(new(trace.Exporter), new(*stackdriver.Exporter)),
+	wire.Bind(new(sdktrace.SpanExporter), new(*stackdriver.Exporter)),
 	NewRequestLogger,
 	wire.Bind(new(requestlog.Logger), new(*requestlog.StackdriverLogger)),
 )

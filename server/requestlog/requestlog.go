@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"time"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Logger wraps the Log method.  Log must be safe to call from multiple
@@ -56,7 +56,7 @@ func NewHandler(log Logger, h http.Handler) *Handler {
 // even if the underlying handler does not.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	sc := trace.FromContext(r.Context()).SpanContext()
+	sc := trace.SpanContextFromContext(r.Context())
 	ent := &Entry{
 		Request:           cloneRequestWithoutBody(r),
 		ReceivedTime:      start,
@@ -67,8 +67,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Referer:           r.Referer(),
 		Proto:             r.Proto,
 		RemoteIP:          ipFromHostPort(r.RemoteAddr),
-		TraceID:           sc.TraceID,
-		SpanID:            sc.SpanID,
+		TraceID:           sc.TraceID(),
+		SpanID:            sc.SpanID(),
 	}
 	if addr, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
 		ent.ServerIP = ipFromHostPort(addr.String())
