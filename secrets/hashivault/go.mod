@@ -29,8 +29,6 @@ require (
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	gocloud.dev v0.26.0
+	gocloud.dev v0.27.0
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
-
-replace gocloud.dev => ../../

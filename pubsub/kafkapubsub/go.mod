@@ -22,7 +22,5 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	gocloud.dev v0.26.0
+	gocloud.dev v0.27.0
 )
-
-replace gocloud.dev => ../../
