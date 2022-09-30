@@ -29,3 +29,5 @@ require (
 	google.golang.org/genproto v0.0.0-20220808204814-fd01256a5276 // indirect
 	google.golang.org/grpc v1.48.0
 )
+
+replace gocloud.dev => ../../
