@@ -32,5 +32,5 @@ var CertSourceSet = wire.NewSet(
 // NewCertSource creates a local certificate source that uses the given
 // HTTP client. The client is assumed to make authenticated requests.
 func NewCertSource(c *gcp.HTTPClient) *certs.RemoteCertSource {
-	return certs.NewCertSourceOpts(&c.Client, certs.RemoteOpts{EnableIAMLogin: true})
+	return certs.NewCertSourceOpts(&c.Client, certs.RemoteOpts{})
 }
