@@ -21,6 +21,7 @@ import (
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/google/wire"
 	"gocloud.dev/gcp"
+	"golang.org/x/oauth2"
 )
 
 // CertSourceSet is a Wire provider set that binds a Cloud SQL proxy
@@ -31,6 +32,6 @@ var CertSourceSet = wire.NewSet(
 
 // NewCertSource creates a local certificate source that uses the given
 // HTTP client. The client is assumed to make authenticated requests.
-func NewCertSource(c *gcp.HTTPClient) *certs.RemoteCertSource {
-	return certs.NewCertSourceOpts(&c.Client, certs.RemoteOpts{})
+func NewCertSource(c *gcp.HTTPClient, t oauth2.TokenSource) *certs.RemoteCertSource {
+	return certs.NewCertSourceOpts(&c.Client, certs.RemoteOpts{EnableIAMLogin: true, TokenSource: t})
 }
