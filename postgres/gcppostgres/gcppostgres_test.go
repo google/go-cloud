@@ -41,8 +41,9 @@ func TestURLOpener(t *testing.T) {
 	username, _ := tfOut["username"].Value.(string)
 	password, _ := tfOut["password"].Value.(string)
 	databaseName, _ := tfOut["database"].Value.(string)
-	if project == "" || region == "" || instance == "" || username == "" || databaseName == "" {
-		t.Fatalf("Missing one or more required Terraform outputs; got project=%q region=%q instance=%q username=%q database=%q", project, region, instance, username, databaseName)
+	userEmail, _ := tfOut["user_email"].Value.(string)
+	if project == "" || region == "" || instance == "" || username == "" || databaseName == "" || userEmail == "" {
+		t.Fatalf("Missing one or more required Terraform outputs; got project=%q region=%q instance=%q username=%q database=%q userEmail=%q", project, region, instance, username, databaseName, userEmail)
 	}
 	tests := []struct {
 		name    string
@@ -50,7 +51,11 @@ func TestURLOpener(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:   "Success",
+			name:   "SuccessIam",
+			urlstr: fmt.Sprintf("gcppostgres://%s@%s/%s/%s/%s", userEmail, project, region, instance, databaseName),
+		},
+		{
+			name:   "SuccessBuiltin",
 			urlstr: fmt.Sprintf("gcppostgres://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, databaseName),
 		},
 		{
