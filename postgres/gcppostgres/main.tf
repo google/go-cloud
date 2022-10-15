@@ -42,8 +42,8 @@ variable "user_email" {
 }
 
 variable "region" {
-  default     = "europe-west1"
-  description = "GCP region to create database and storage in, for example 'europe-west1'. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+  default     = "us-central1"
+  description = "GCP region to create database and storage in, for example 'us-central1'. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
 }
 
 locals {
