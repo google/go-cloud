@@ -36,8 +36,8 @@ func NewCertSource(c *gcp.HTTPClient) *certs.RemoteCertSource {
 	return certs.NewCertSourceOpts(&c.Client, certs.RemoteOpts{})
 }
 
-// NewCertSourceIam creates a local certificate source, including Token source for token information used in
-//cert creation, that uses the given HTTP client. The client is assumed to make authenticated requests.
+// NewCertSourceWithIAM creates a local certificate source, including Token source for token information used in
+// cert creation, that uses the given HTTP client. The client is assumed to make authenticated requests.
 func NewCertSourceWithIAM(c *gcp.HTTPClient, t oauth2.TokenSource) *certs.RemoteCertSource {
 	return certs.NewCertSourceOpts(&c.Client, certs.RemoteOpts{EnableIAMLogin: true, TokenSource: t})
 }
