@@ -75,7 +75,7 @@ func (o *lazyCredsOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql
 			o.err = err
 			return
 		}
-		certSource := cloudsql.NewCertSource(client)
+		certSource := cloudsql.NewCertSourceWithIAM(client, creds.TokenSource)
 		o.opener = &URLOpener{CertSource: certSource}
 	})
 	if o.err != nil {
