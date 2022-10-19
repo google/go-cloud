@@ -36,7 +36,6 @@ package azurekeyvault
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"os"
@@ -46,9 +45,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -77,7 +78,7 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	Dial,
+	NewEnvironmentCredential,
 	wire.Struct(new(URLOpener), "Client"),
 )
 
@@ -93,22 +94,22 @@ func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets
 		// Determine the dialer to use. The default one gets
 		// credentials from the environment, but an alternative is
 		// to get credentials from the az CLI.
-		dialer := Dial
+		dialer := NewEnvironmentCredential
 		useCLIStr := os.Getenv("AZURE_KEYVAULT_AUTH_VIA_CLI")
 		if useCLIStr != "" {
 			if b, err := strconv.ParseBool(useCLIStr); err != nil {
 				o.err = fmt.Errorf("invalid value %q for environment variable AZURE_KEYVAULT_AUTH_VIA_CLI: %v", useCLIStr, err)
 				return
 			} else if b {
-				dialer = DialUsingCLIAuth
+				dialer = NewAzureCLICredential
 			}
 		}
-		client, err := dialer()
+		cred, err := dialer()
 		if err != nil {
 			o.err = err
 			return
 		}
-		o.opener = &URLOpener{Client: client}
+		o.opener = &URLOpener{Credential: cred}
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open keeper %v: failed to Dial default KeyVault: %v", u, o.err)
@@ -132,8 +133,8 @@ const Scheme = "azurekeyvault"
 //
 // No other query parameters are supported.
 type URLOpener struct {
-	// Client must be set to a non-nil value.
-	Client *keyvault.BaseClient
+	// Credential must be a valid Azure Identity credential.
+	Credential azcore.TokenCredential
 
 	// Options specifies the options to pass to OpenKeeper.
 	Options KeeperOptions
@@ -144,18 +145,18 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	q := u.Query()
 	algorithm := q.Get("algorithm")
 	if algorithm != "" {
-		o.Options.Algorithm = keyvault.JSONWebKeyEncryptionAlgorithm(algorithm)
+		o.Options.Algorithm = azkeys.JSONWebKeyEncryptionAlgorithm(algorithm)
 		q.Del("algorithm")
 	}
 	for param := range q {
 		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
 	keyID := "https://" + path.Join(u.Host, u.Path)
-	return OpenKeeper(o.Client, keyID, &o.Options)
+	return OpenKeeper(o.Credential, keyID, &o.Options)
 }
 
 type keeper struct {
-	client      *keyvault.BaseClient
+	client      *azkeys.Client
 	keyVaultURI string
 	keyName     string
 	keyVersion  string
@@ -168,42 +169,37 @@ type KeeperOptions struct {
 	// Defaults to "RSA-OAEP-256".
 	// See https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
 	// for more details.
-	Algorithm keyvault.JSONWebKeyEncryptionAlgorithm
+	Algorithm azkeys.JSONWebKeyEncryptionAlgorithm
 }
 
-// Dial gets a new *keyvault.BaseClient using authorization from the environment.
+// NewEnvironmentCredential gets a new *keyvault.BaseClient using authorization from the environment.
 // See https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization#use-environment-based-authentication.
-func Dial() (*keyvault.BaseClient, error) {
-	return dial(false)
-}
-
-// DialUsingCLIAuth gets a new *keyvault.BaseClient using authorization from the "az" CLI.
-func DialUsingCLIAuth() (*keyvault.BaseClient, error) {
-	return dial(true)
-}
-
-// dial is a helper for Dial and DialUsingCLIAuth.
-func dial(useCLI bool) (*keyvault.BaseClient, error) {
-	// Set the resource explicitly, because the default is the "resource manager endpoint"
-	// instead of the keyvault endpoint.
-	// https://azidentity.azurewebsites.net/post/2018/11/30/azure-key-vault-oauth-resource-value-https-vault-azure-net-no-slash
-	// has some discussion.
-	resource := os.Getenv("AZURE_AD_RESOURCE")
-	if resource == "" {
-		resource = "https://vault.azure.net"
-	}
-	authorizer := auth.NewAuthorizerFromEnvironmentWithResource
-	if useCLI {
-		authorizer = auth.NewAuthorizerFromCLIWithResource
-	}
-	auth, err := authorizer(resource)
+func NewEnvironmentCredential() (azcore.TokenCredential, error) {
+	credential, err := azidentity.NewEnvironmentCredential(nil)
 	if err != nil {
 		return nil, err
 	}
-	client := keyvault.NewWithoutDefaults()
-	client.Authorizer = auth
-	client.Sender = autorest.NewClientWithUserAgent(useragent.AzureUserAgentPrefix("secrets"))
-	return &client, nil
+	return credential, nil
+}
+
+// NewAzureCLICredential gets a new *keyvault.BaseClient using authorization from the "az" CLI.
+func NewAzureCLICredential() (azcore.TokenCredential, error) {
+	credential, err := azidentity.NewAzureCLICredential(nil)
+	if err != nil {
+		return nil, err
+	}
+	return credential, nil
+}
+
+// dial is a helper for Dial and DialUsingCLIAuth.
+func dial(vaultURL string, credential azcore.TokenCredential) (*azkeys.Client, error) {
+	return azkeys.NewClient(vaultURL, credential, &azkeys.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Telemetry: policy.TelemetryOptions{
+				ApplicationID: useragent.AzureUserAgentPrefix("secrets"),
+			},
+		},
+	}), nil
 }
 
 var (
@@ -219,7 +215,7 @@ var (
 // The "/{key-version}" suffix is optional; it defaults to the latest version.
 // See https://docs.microsoft.com/en-us/azure/key-vault/about-keys-secrets-and-certificates
 // for more details.
-func OpenKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) (*secrets.Keeper, error) {
+func OpenKeeper(client azcore.TokenCredential, keyID string, opts *KeeperOptions) (*secrets.Keeper, error) {
 	drv, err := openKeeper(client, keyID, opts)
 	if err != nil {
 		return nil, err
@@ -227,12 +223,12 @@ func OpenKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) 
 	return secrets.NewKeeper(drv), nil
 }
 
-func openKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) (*keeper, error) {
+func openKeeper(credential azcore.TokenCredential, keyID string, opts *KeeperOptions) (*keeper, error) {
 	if opts == nil {
 		opts = &KeeperOptions{}
 	}
 	if opts.Algorithm == "" {
-		opts.Algorithm = keyvault.RSAOAEP256
+		opts.Algorithm = azkeys.JSONWebKeyEncryptionAlgorithmRSAOAEP256
 	}
 	matches := keyIDRE.FindStringSubmatch(keyID)
 	if len(matches) != 3 {
@@ -246,6 +242,14 @@ func openKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) 
 	if len(parts) > 1 {
 		keyVersion = parts[1]
 	}
+	client := azkeys.NewClient(keyVaultURI, credential, &azkeys.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Telemetry: policy.TelemetryOptions{
+				ApplicationID: useragent.AzureUserAgentPrefix("secrets"),
+			},
+		},
+	})
+
 	return &keeper{
 		client:      client,
 		keyVaultURI: keyVaultURI,
@@ -257,28 +261,26 @@ func openKeeper(client *keyvault.BaseClient, keyID string, opts *KeeperOptions) 
 
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
-	b64Text := base64.StdEncoding.EncodeToString(plaintext)
-	keyOpsResult, err := k.client.Encrypt(ctx, k.keyVaultURI, k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
-		Algorithm: k.options.Algorithm,
-		Value:     &b64Text,
-	})
+	keyOpsResult, err := k.client.Encrypt(ctx, k.keyName, k.keyVersion, azkeys.KeyOperationsParameters{
+		Algorithm: &k.options.Algorithm,
+		Value:     plaintext,
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
-	return []byte(*keyOpsResult.Result), nil
+	return keyOpsResult.Result, nil
 }
 
 // Decrypt decrypts the ciphertext into a plaintext.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
-	cipherval := string(ciphertext)
-	keyOpsResult, err := k.client.Decrypt(ctx, k.keyVaultURI, k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
-		Algorithm: k.options.Algorithm,
-		Value:     &cipherval,
-	})
+	keyOpsResult, err := k.client.Decrypt(ctx, k.keyName, k.keyVersion, azkeys.KeyOperationsParameters{
+		Algorithm: &k.options.Algorithm,
+		Value:     ciphertext,
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
-	return base64.RawURLEncoding.DecodeString(*keyOpsResult.Result)
+	return keyOpsResult.Result, nil
 }
 
 // Close implements driver.Keeper.Close.

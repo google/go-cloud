@@ -17,12 +17,14 @@ package azurekeyvault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"gocloud.dev/internal/testing/setup"
@@ -69,48 +71,45 @@ const (
 	keyID2 = "https://go-cdk.vault.azure.net/keys/test2"
 )
 
+type NullToken struct{}
+
+func (*NullToken) GetToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	return azcore.AccessToken{}, fmt.Errorf("null token")
+}
+
 type harness struct {
-	client *keyvault.BaseClient
-	close  func()
+	credential azcore.TokenCredential
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	keeper1, err := openKeeper(h.client, keyID1, nil)
+	keeper1, err := openKeeper(h.credential, keyID1, nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	keeper2, err := openKeeper(h.client, keyID2, nil)
+	keeper2, err := openKeeper(h.credential, keyID2, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	return keeper1, keeper2, nil
 }
 
-func (h *harness) Close() {
-	h.close()
-}
+func (h *harness) Close() {}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	// Use initEnv to setup your environment variables.
-	var client *keyvault.BaseClient
+	var credential azcore.TokenCredential
 	if *setup.Record {
 		initEnv()
 		var err error
-		client, err = Dial()
+		credential, err = NewEnvironmentCredential()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		// Use a null authorizer for replay mode.
-		c := keyvault.NewWithoutDefaults()
-		client = &c
-		client.Authorizer = &autorest.NullAuthorizer{}
+		credential = &NullToken{}
 	}
-	sender, done := setup.NewAzureKeyVaultTestClient(ctx, t)
-	client.Sender = sender
 	return &harness{
-		client: client,
-		close:  done,
+		credential: credential,
 	}, nil
 }
 
@@ -157,8 +156,7 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 // Key Vault-specific tests.
 
 func TestNoConnectionError(t *testing.T) {
-	client := keyvault.NewWithoutDefaults()
-	k, err := OpenKeeper(&client, keyID1, nil)
+	k, err := OpenKeeper(&NullToken{}, keyID1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +203,7 @@ func TestOpenKeeper(t *testing.T) {
 */
 
 func TestKeyIDRE(t *testing.T) {
-	client := keyvault.NewWithoutDefaults()
+	credential := &NullToken{}
 
 	testCases := []struct {
 		// input
@@ -248,7 +246,7 @@ func TestKeyIDRE(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.keyID, func(t *testing.T) {
-			k, err := openKeeper(&client, testCase.keyID, nil)
+			k, err := openKeeper(credential, testCase.keyID, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

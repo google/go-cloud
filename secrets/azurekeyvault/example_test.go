@@ -30,7 +30,7 @@ func ExampleOpenKeeper() {
 	//
 	// You can alternatively use DialUsingCLIAuth to use auth from the
 	// "az" CLI.
-	client, err := azurekeyvault.Dial()
+	client, err := azurekeyvault.NewEnvironmentCredential()
 	if err != nil {
 		log.Fatal(err)
 	}
