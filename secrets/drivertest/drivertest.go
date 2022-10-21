@@ -269,10 +269,6 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 			name:      "wrong last byte",
 			malformed: append(copyEncryptedMsg()[:l-2], encryptedMsg[l-1]-1),
 		},
-		{
-			name:      "one more byte",
-			malformed: append(encryptedMsg, 4),
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := keeper.Decrypt(ctx, []byte(tc.malformed)); err == nil {
