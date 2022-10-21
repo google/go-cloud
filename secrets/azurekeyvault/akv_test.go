@@ -19,13 +19,14 @@ import (
 	"errors"
 	"log"
 	"os"
-	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys"
 	"gocloud.dev/internal/testing/setup"
+	"gocloud.dev/internal/useragent"
 	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
@@ -70,16 +71,16 @@ const (
 )
 
 type harness struct {
-	client *keyvault.BaseClient
-	close  func()
+	clientMaker ClientMakerT
+	close       func()
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	keeper1, err := openKeeper(h.client, keyID1, nil)
+	keeper1, err := openKeeper(h.clientMaker, keyID1, nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	keeper2, err := openKeeper(h.client, keyID2, nil)
+	keeper2, err := openKeeper(h.clientMaker, keyID2, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -90,50 +91,52 @@ func (h *harness) Close() {
 	h.close()
 }
 
+type dummyToken struct{}
+
+func (*dummyToken) GetToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	return azcore.AccessToken{}, nil
+}
+
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	// Use initEnv to setup your environment variables.
-	var client *keyvault.BaseClient
-	if *setup.Record {
-		initEnv()
+	httpClient, done := setup.NewAzureKeyVaultTestClient(ctx, t)
+	clientMaker := func(keyVaultURI string) (*azkeys.Client, error) {
+		var creds azcore.TokenCredential
 		var err error
-		client, err = Dial()
+		if *setup.Record {
+			initEnv()
+			creds, err = azidentity.NewEnvironmentCredential(nil)
+		} else {
+			creds = &dummyToken{}
+		}
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		// Use a null authorizer for replay mode.
-		c := keyvault.NewWithoutDefaults()
-		client = &c
-		client.Authorizer = &autorest.NullAuthorizer{}
+		return azkeys.NewClient(keyVaultURI, creds, &azkeys.ClientOptions{
+			ClientOptions: policy.ClientOptions{
+				Transport: httpClient,
+				Telemetry: policy.TelemetryOptions{
+					ApplicationID: useragent.AzureUserAgentPrefix("secrets"),
+				},
+			},
+		}), nil
 	}
-	sender, done := setup.NewAzureKeyVaultTestClient(ctx, t)
-	client.Sender = sender
 	return &harness{
-		client: client,
-		close:  done,
+		clientMaker: clientMaker,
+		close:       done,
 	}, nil
 }
 
 func initEnv() {
-	env, err := azure.EnvironmentFromName("AZUREPUBLICCLOUD")
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	// For Client Credentials authorization, set AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
 	// For Client Certificate and Azure Managed Service Identity, see doc below for help
 	// https://github.com/Azure/azure-sdk-for-go
-
 	if os.Getenv("AZURE_TENANT_ID") == "" ||
 		os.Getenv("AZURE_CLIENT_ID") == "" ||
 		os.Getenv("AZURE_CLIENT_SECRET") == "" {
 		log.Fatal("Missing environment for recording tests, set AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET")
 	}
-
-	os.Setenv("AZURE_ENVIRONMENT", env.Name)
-
-	vaultEndpoint := strings.TrimSuffix(env.KeyVaultEndpoint, "/")
-	os.Setenv("AZURE_AD_RESOURCE", vaultEndpoint)
+	os.Setenv("AZURE_ENVIRONMENT", "AzurePublicCloud")
+	os.Setenv("AZURE_AD_RESOURCE", "https://vault.azure.net")
 }
 
 func TestConformance(t *testing.T) {
@@ -147,7 +150,7 @@ func (v verifyAs) Name() string {
 }
 
 func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
-	var e autorest.DetailedError
+	var e *azcore.ResponseError
 	if !k.ErrorAs(err, &e) {
 		return errors.New("Keeper.ErrorAs failed")
 	}
@@ -156,39 +159,30 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 
 // Key Vault-specific tests.
 
-func TestNoConnectionError(t *testing.T) {
-	client := keyvault.NewWithoutDefaults()
-	k, err := OpenKeeper(&client, keyID1, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer k.Close()
-	if _, err := k.Encrypt(context.Background(), []byte("secrets")); err == nil {
-		t.Error("Encrypt: got nil, want no connection error")
-	}
+func dummyClientMaker(s string) (*azkeys.Client, error) {
+	return &azkeys.Client{}, nil
 }
 
-// This test no longer works on MacOS, as OpenKeeper always fails with "MSI not available".
-/*
 func TestOpenKeeper(t *testing.T) {
 	tests := []struct {
 		URL     string
 		WantErr bool
 	}{
 		// OK.
-		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey/myversion", false},
+		{"azurekeyvaultdummy://mykeyvault.vault.azure.net/keys/mykey/myversion", false},
 		// No version -> OK.
-		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey", false},
+		{"azurekeyvaultdummy://mykeyvault.vault.azure.net/keys/mykey", false},
 		// Setting algorithm query param -> OK.
-		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey/myversion?algorithm=RSA-OAEP", false},
+		{"azurekeyvaultdummy://mykeyvault.vault.azure.net/keys/mykey/myversion?algorithm=RSA-OAEP", false},
 		// Invalid query parameter.
-		{"azurekeyvault://mykeyvault.vault.azure.net/keys/mykey/myversion?param=value", true},
+		{"azurekeyvaultdummy://mykeyvault.vault.azure.net/keys/mykey/myversion?param=value", true},
 		// Missing key vault name.
-		{"azurekeyvault:///vault.azure.net/keys/mykey/myversion", true},
+		{"azurekeyvaultdummy:///vault.azure.net/keys/mykey/myversion", true},
 		// Missing "keys".
-		{"azurekeyvault://mykeyvault.vault.azure.net/mykey/myversion", true},
+		{"azurekeyvaultdummy://mykeyvault.vault.azure.net/mykey/myversion", true},
 	}
 
+	secrets.DefaultURLMux().RegisterKeeper(Scheme+"dummy", &URLOpener{ClientMaker: dummyClientMaker})
 	ctx := context.Background()
 	for _, test := range tests {
 		keeper, err := secrets.OpenKeeper(ctx, test.URL)
@@ -202,11 +196,8 @@ func TestOpenKeeper(t *testing.T) {
 		}
 	}
 }
-*/
 
 func TestKeyIDRE(t *testing.T) {
-	client := keyvault.NewWithoutDefaults()
-
 	testCases := []struct {
 		// input
 		keyID string
@@ -245,10 +236,9 @@ func TestKeyIDRE(t *testing.T) {
 			keyVersion:  "myversion",
 		},
 	}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.keyID, func(t *testing.T) {
-			k, err := openKeeper(&client, testCase.keyID, nil)
+			k, err := openKeeper(dummyClientMaker, testCase.keyID, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

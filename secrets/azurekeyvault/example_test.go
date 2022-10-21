@@ -25,18 +25,12 @@ import (
 func ExampleOpenKeeper() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// Get a client to use with the Azure KeyVault API, using default
+	// Makes a client to use with the Azure KeyVault API, using default
 	// authorization from the environment.
-	//
-	// You can alternatively use DialUsingCLIAuth to use auth from the
-	// "az" CLI.
-	client, err := azurekeyvault.Dial()
-	if err != nil {
-		log.Fatal(err)
-	}
+	clientMaker := azurekeyvault.DefaultClientMaker
 
 	// Construct a *secrets.Keeper.
-	keeper, err := azurekeyvault.OpenKeeper(client, "https://mykeyvaultname.vault.azure.net/keys/mykeyname", nil)
+	keeper, err := azurekeyvault.OpenKeeper(clientMaker, "https://mykeyvaultname.vault.azure.net/keys/mykeyname", nil)
 	if err != nil {
 		log.Fatal(err)
 	}

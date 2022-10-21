@@ -405,7 +405,7 @@
 	},
 	"gocloud.dev/secrets/azurekeyvault.ExampleOpenKeeper": {
 		"imports": "import \"gocloud.dev/secrets/azurekeyvault\"",
-		"code": "// Get a client to use with the Azure KeyVault API, using default\n// authorization from the environment.\n//\n// You can alternatively use DialUsingCLIAuth to use auth from the\n// \"az\" CLI.\nclient, err := azurekeyvault.Dial()\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper, err := azurekeyvault.OpenKeeper(client, \"https://mykeyvaultname.vault.azure.net/keys/mykeyname\", nil)\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
+		"code": "// Makes a client to use with the Azure KeyVault API, using default\n// authorization from the environment.\nclientMaker := azurekeyvault.DefaultClientMaker\n\n// Construct a *secrets.Keeper.\nkeeper, err := azurekeyvault.OpenKeeper(clientMaker, \"https://mykeyvaultname.vault.azure.net/keys/mykeyname\", nil)\nif err != nil {\n\treturn err\n}\ndefer keeper.Close()"
 	},
 	"gocloud.dev/secrets/azurekeyvault.Example_openFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/azurekeyvault\"\n)",
