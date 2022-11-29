@@ -97,7 +97,7 @@ func createTopic(ctx context.Context, topicName string, useV2 bool, sess *sessio
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
 			}
-			dt = openSNSTopicV2(ctx, snsClientV2, *out.TopicArn, nil)
+			dt = openSNSTopicV2(ctx, snsClientV2, *out.TopicArn, &TopicOptions{})
 			cleanup = func() {
 				snsClientV2.DeleteTopic(ctx, &snsv2.DeleteTopicInput{TopicArn: out.TopicArn})
 			}
@@ -107,7 +107,7 @@ func createTopic(ctx context.Context, topicName string, useV2 bool, sess *sessio
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
 			}
-			dt = openSNSTopic(ctx, client, *out.TopicArn, nil)
+			dt = openSNSTopic(ctx, client, *out.TopicArn, &TopicOptions{})
 			cleanup = func() {
 				client.DeleteTopicWithContext(ctx, &sns.DeleteTopicInput{TopicArn: out.TopicArn})
 			}
@@ -120,7 +120,7 @@ func createTopic(ctx context.Context, topicName string, useV2 bool, sess *sessio
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
 			}
-			dt = openSQSTopicV2(ctx, sqsClientV2, qURL, nil)
+			dt = openSQSTopicV2(ctx, sqsClientV2, qURL, &TopicOptions{})
 			cleanup = func() {
 				sqsClientV2.DeleteQueue(ctx, &sqsv2.DeleteQueueInput{QueueUrl: aws.String(qURL)})
 			}
@@ -130,7 +130,7 @@ func createTopic(ctx context.Context, topicName string, useV2 bool, sess *sessio
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
 			}
-			dt = openSQSTopic(ctx, sqsClient, qURL, nil)
+			dt = openSQSTopic(ctx, sqsClient, qURL, &TopicOptions{})
 			cleanup = func() {
 				sqsClient.DeleteQueueWithContext(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
 			}
@@ -146,17 +146,17 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	case topicKindSNS, topicKindSNSRaw:
 		const fakeTopicARN = "arn:aws:sns:" + region + ":" + accountNumber + ":nonexistenttopic"
 		if h.useV2 {
-			return openSNSTopicV2(ctx, h.snsClientV2, fakeTopicARN, nil), nil
+			return openSNSTopicV2(ctx, h.snsClientV2, fakeTopicARN, &TopicOptions{}), nil
 		} else {
 		}
-		return openSNSTopic(ctx, sns.New(h.sess), fakeTopicARN, nil), nil
+		return openSNSTopic(ctx, sns.New(h.sess), fakeTopicARN, &TopicOptions{}), nil
 	case topicKindSQS:
 		const fakeQueueURL = "https://" + region + ".amazonaws.com/" + accountNumber + "/nonexistent-queue"
 		if h.useV2 {
-			return openSQSTopicV2(ctx, h.sqsClientV2, fakeQueueURL, nil), nil
+			return openSQSTopicV2(ctx, h.sqsClientV2, fakeQueueURL, &TopicOptions{}), nil
 		} else {
 		}
-		return openSQSTopic(ctx, sqs.New(h.sess), fakeQueueURL, nil), nil
+		return openSQSTopic(ctx, sqs.New(h.sess), fakeQueueURL, &TopicOptions{}), nil
 	default:
 		panic("unreachable")
 	}
@@ -178,14 +178,14 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, us
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
 			}
-			ds = openSubscriptionV2(ctx, sqsClientV2, qURL, nil)
+			ds = openSubscriptionV2(ctx, sqsClientV2, qURL, &SubscriptionOptions{})
 		} else {
 			sqsClient := sqs.New(sess)
 			qURL, qARN, err = createSQSQueue(ctx, false, sqsClient, nil, subName)
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
 			}
-			ds = openSubscription(ctx, sqsClient, qURL, nil)
+			ds = openSubscription(ctx, sqsClient, qURL, &SubscriptionOptions{})
 		}
 
 		snsTopicARN := dt.(*snsTopic).arn
@@ -235,9 +235,9 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, us
 		// for the subscription.
 		qURL := dt.(*sqsTopic).qURL
 		if useV2 {
-			return openSubscriptionV2(ctx, sqsClientV2, qURL, nil), func() {}, nil
+			return openSubscriptionV2(ctx, sqsClientV2, qURL, &SubscriptionOptions{}), func() {}, nil
 		} else {
-			return openSubscription(ctx, sqs.New(sess), qURL, nil), func() {}, nil
+			return openSubscription(ctx, sqs.New(sess), qURL, &SubscriptionOptions{}), func() {}, nil
 		}
 	default:
 		panic("unreachable")
@@ -318,9 +318,9 @@ func createSQSQueue(ctx context.Context, useV2 bool, sqsClient *sqs.SQS, sqsClie
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, func(), error) {
 	const fakeSubscriptionQueueURL = "https://" + region + ".amazonaws.com/" + accountNumber + "/nonexistent-subscription"
 	if h.useV2 {
-		return openSubscriptionV2(ctx, h.sqsClientV2, fakeSubscriptionQueueURL, nil), func() {}, nil
+		return openSubscriptionV2(ctx, h.sqsClientV2, fakeSubscriptionQueueURL, &SubscriptionOptions{}), func() {}, nil
 	} else {
-		return openSubscription(ctx, sqs.New(h.sess), fakeSubscriptionQueueURL, nil), func() {}, nil
+		return openSubscription(ctx, sqs.New(h.sess), fakeSubscriptionQueueURL, &SubscriptionOptions{}), func() {}, nil
 	}
 }
 
