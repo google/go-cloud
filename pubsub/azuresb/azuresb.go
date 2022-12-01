@@ -74,7 +74,7 @@ import (
 )
 
 const (
-	listenerTimeout = 2 * time.Second
+	defaultListenerTimeout = 2 * time.Second
 )
 
 var sendBatcherOpts = &batcher.Options{
@@ -367,6 +367,12 @@ type SubscriptionOptions struct {
 	// AckBatcherOptions adds constraints to the default batching done for acks.
 	// Only used when ReceiveAndDelete is false.
 	AckBatcherOptions batcher.Options
+
+	// ListenerTimeout is the amount of time to wait before timing out the
+	// ReceiveMessages RPC call. This is used to ensure the receive operation is
+	// non-blocking as the RPC blocks if there are no messages.
+	// Defaults to 2 seconds.
+	ListenerTimeout time.Duration
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
@@ -393,6 +399,9 @@ func openSubscription(ctx context.Context, sbClient *servicebus.Client, sbReceiv
 	}
 	if opts == nil {
 		opts = &SubscriptionOptions{}
+	}
+	if opts.ListenerTimeout == 0 {
+		opts.ListenerTimeout = defaultListenerTimeout
 	}
 	return &subscription{sbReceiver: sbReceiver, opts: opts}, nil
 }
@@ -428,7 +437,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	// ReceiveMessages will block until rctx is Done; we want to return after
 	// a reasonably short delay even if there are no messages. So, create a
 	// sub context for the RPC.
-	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
+	rctx, cancel := context.WithTimeout(ctx, s.opts.ListenerTimeout)
 	defer cancel()
 
 	var messages []*driver.Message
