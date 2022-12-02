@@ -48,13 +48,13 @@ func ExampleOpenBucket() {
 	// To use a SAS token, you would set AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_SAS_TOKEN.
 	// You can also construct a client using the azblob constructors directly, like
 	// azblob.NewServiceClientWithSharedKey.
-	client, err := azureblob.NewDefaultServiceClient(serviceURL)
+	client, err := azureblob.NewDefaultClient(serviceURL, containerName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a *blob.Bucket.
-	b, err := azureblob.OpenBucket(ctx, client, containerName, nil)
+	b, err := azureblob.OpenBucket(ctx, client, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
