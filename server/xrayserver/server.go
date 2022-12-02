@@ -25,7 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/xray"
 	"github.com/aws/aws-sdk-go/service/xray/xrayiface"
 	"github.com/google/wire"
-	"go.opencensus.io/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/server"
 	"gocloud.dev/server/requestlog"
 )
@@ -36,7 +36,7 @@ var Set = wire.NewSet(
 	server.Set,
 	ServiceSet,
 	NewExporter,
-	wire.Bind(new(trace.Exporter), new(*exporter.Exporter)),
+	wire.Bind(new(sdktrace.SpanExporter), new(*exporter.Exporter)),
 	NewRequestLogger,
 	wire.Bind(new(requestlog.Logger), new(*requestlog.NCSALogger)),
 )

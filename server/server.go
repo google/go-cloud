@@ -27,8 +27,8 @@ import (
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/requestlog"
 
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Set is a Wire provider set that produces a *Server given the fields of
@@ -47,14 +47,19 @@ type Server struct {
 	handler        http.Handler
 	wrappedHandler http.Handler
 	healthHandler  health.Handler
-	te             trace.Exporter
-	sampler        trace.Sampler
+	te             sdktrace.SpanExporter
+	sampler        sdktrace.Sampler
+	tp             *sdktrace.TracerProvider
 	once           sync.Once
 	driver         driver.Server
+	handlerName    string
 }
 
 // Options is the set of optional parameters.
 type Options struct {
+	// HandlerName is the name of the server. Defaults to "server".
+	HandlerName string
+
 	// RequestLogger specifies the logger that will be used to log requests.
 	RequestLogger requestlog.Logger
 
@@ -63,12 +68,12 @@ type Options struct {
 	HealthChecks []health.Checker
 
 	// TraceExporter exports sampled trace spans.
-	TraceExporter trace.Exporter
+	TraceExporter sdktrace.SpanExporter
 
 	// DefaultSamplingPolicy is a function that takes a
-	// trace.SamplingParameters struct and returns a true or false decision about
+	// sdktrace.SamplingParameters struct and returns a true or false decision about
 	// whether it should be sampled and exported.
-	DefaultSamplingPolicy trace.Sampler
+	DefaultSamplingPolicy sdktrace.Sampler
 
 	// Driver serves HTTP requests.
 	Driver driver.Server
@@ -78,6 +83,7 @@ type Options struct {
 func New(h http.Handler, opts *Options) *Server {
 	srv := &Server{handler: h}
 	if opts != nil {
+		srv.handlerName = opts.HandlerName
 		srv.reqlog = opts.RequestLogger
 		srv.te = opts.TraceExporter
 		for _, c := range opts.HealthChecks {
@@ -86,16 +92,22 @@ func New(h http.Handler, opts *Options) *Server {
 		srv.sampler = opts.DefaultSamplingPolicy
 		srv.driver = opts.Driver
 	}
+	if srv.handlerName == "" {
+		srv.handlerName = "server"
+	}
 	return srv
 }
 
 func (srv *Server) init() {
 	srv.once.Do(func() {
 		if srv.te != nil {
-			trace.RegisterExporter(srv.te)
+			srv.tp = sdktrace.NewTracerProvider(
+				sdktrace.WithSampler(srv.sampler),
+				sdktrace.WithBatcher(srv.te),
+			)
 		}
 		if srv.sampler != nil {
-			trace.ApplyConfig(trace.Config{DefaultSampler: srv.sampler})
+			sdktrace.WithSampler(srv.sampler)
 		}
 		if srv.driver == nil {
 			srv.driver = NewDefaultDriver()
@@ -115,10 +127,7 @@ func (srv *Server) init() {
 		if srv.reqlog != nil {
 			h = requestlog.NewHandler(srv.reqlog, h)
 		}
-		h = &ochttp.Handler{
-			Handler:          h,
-			IsPublicEndpoint: true,
-		}
+		h = otelhttp.NewHandler(h, srv.handlerName)
 		mux.Handle("/", h)
 		srv.wrappedHandler = mux
 	})
@@ -149,6 +158,9 @@ func (srv *Server) ListenAndServeTLS(addr, certFile, keyFile string) error {
 
 // Shutdown gracefully shuts down the server without interrupting any active connections.
 func (srv *Server) Shutdown(ctx context.Context) error {
+	if srv.tp != nil {
+		srv.tp.Shutdown(ctx)
+	}
 	if srv.driver == nil {
 		return nil
 	}

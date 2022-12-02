@@ -61,7 +61,10 @@ github.com/eapache/go-resiliency
 github.com/eapache/go-xerial-snappy
 github.com/eapache/queue
 github.com/fatih/color
+github.com/felixge/httpsnoop
 github.com/fsnotify/fsnotify
+github.com/go-logr/logr
+github.com/go-logr/stdr
 github.com/go-sql-driver/mysql
 github.com/gogo/protobuf
 github.com/golang-jwt/jwt/v4
@@ -135,6 +138,11 @@ go.etcd.io/etcd/client/pkg/v3
 go.etcd.io/etcd/client/v3
 go.mongodb.org/mongo-driver
 go.opencensus.io
+go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
+go.opentelemetry.io/otel
+go.opentelemetry.io/otel/metric
+go.opentelemetry.io/otel/sdk
+go.opentelemetry.io/otel/trace
 go.uber.org/atomic
 go.uber.org/multierr
 go.uber.org/zap

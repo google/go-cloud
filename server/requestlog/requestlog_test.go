@@ -24,7 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestHandler(t *testing.T) {
@@ -84,11 +85,11 @@ func TestHandler(t *testing.T) {
 	if ent.ResponseBodySize != int64(len(responseMsg)) {
 		t.Errorf("ResponseBodySize = %d; want %d", ent.ResponseBodySize, len(responseMsg))
 	}
-	if ent.TraceID != spanCtx.TraceID {
-		t.Errorf("TraceID = %v; want %v", ent.TraceID, spanCtx.TraceID)
+	if ent.TraceID != spanCtx.TraceID() {
+		t.Errorf("TraceID = %v; want %v", ent.TraceID, spanCtx.TraceID())
 	}
-	if ent.SpanID != spanCtx.SpanID {
-		t.Errorf("SpanID = %v; want %v", ent.SpanID, spanCtx.SpanID)
+	if ent.SpanID != spanCtx.SpanID() {
+		t.Errorf("SpanID = %v; want %v", ent.SpanID, spanCtx.SpanID())
 	}
 }
 
@@ -98,10 +99,11 @@ type testSpanHandler struct {
 }
 
 func (sh *testSpanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "test")
+	tracer := otel.Tracer("test")
+	ctx, span := tracer.Start(r.Context(), "test")
 	defer span.End()
 	r = r.WithContext(ctx)
-	sc := trace.FromContext(ctx).SpanContext()
+	sc := trace.SpanContextFromContext(ctx)
 	sh.spanCtx = &sc
 	sh.h.ServeHTTP(w, r)
 }
