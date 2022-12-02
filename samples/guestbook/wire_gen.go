@@ -11,7 +11,7 @@ import (
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"database/sql"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/go-sql-driver/mysql"
 	"go.opencensus.io/trace"
@@ -120,11 +120,12 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	if err != nil {
 		return nil, nil, err
 	}
-	serviceClient, err := azureblob.NewDefaultServiceClient(serviceURL)
+	containerName := bucketName(flags)
+	client, err := azureblob.NewDefaultClient(serviceURL, containerName)
 	if err != nil {
 		return nil, nil, err
 	}
-	bucket, cleanup, err := azureBucket(ctx, serviceClient, flags)
+	bucket, cleanup, err := azureBucket(ctx, client, flags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -317,10 +318,14 @@ func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags
 
 // inject_azure.go:
 
+func bucketName(flags *cliFlags) azureblob.ContainerName {
+	return azureblob.ContainerName(flags.bucket)
+}
+
 // azureBucket is a Wire provider function that returns the Azure bucket based
 // on the command-line flags.
-func azureBucket(ctx context.Context, client2 *azblob.ServiceClient, flags *cliFlags) (*blob.Bucket, func(), error) {
-	b, err := azureblob.OpenBucket(ctx, client2, flags.bucket, nil)
+func azureBucket(ctx context.Context, client2 *container.Client, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := azureblob.OpenBucket(ctx, client2, nil)
 	if err != nil {
 		return nil, nil, err
 	}

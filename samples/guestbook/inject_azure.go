@@ -20,7 +20,7 @@ package main
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/google/wire"
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
@@ -45,9 +45,10 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
 		wire.InterfaceValue(new(trace.Exporter), trace.Exporter(nil)),
 		azureblob.NewDefaultServiceURLOptions,
-		azureblob.NewDefaultServiceClient,
+		azureblob.NewDefaultClient,
 		azureblob.NewServiceURL,
 		applicationSet,
+		bucketName,
 		azureBucket,
 		azureMOTDVar,
 		server.Set,
@@ -56,10 +57,14 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	return nil, nil, nil
 }
 
+func bucketName(flags *cliFlags) azureblob.ContainerName {
+	return azureblob.ContainerName(flags.bucket)
+}
+
 // azureBucket is a Wire provider function that returns the Azure bucket based
 // on the command-line flags.
-func azureBucket(ctx context.Context, client *azblob.ServiceClient, flags *cliFlags) (*blob.Bucket, func(), error) {
-	b, err := azureblob.OpenBucket(ctx, client, flags.bucket, nil)
+func azureBucket(ctx context.Context, client *azcontainer.Client, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := azureblob.OpenBucket(ctx, client, nil)
 	if err != nil {
 		return nil, nil, err
 	}

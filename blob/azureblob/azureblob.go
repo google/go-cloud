@@ -62,9 +62,9 @@
 // Go CDK supports all UTF-8 strings; to make this work with services lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are performed for azureblob:
-//   - Blob keys: ASCII characters 0-31, 92 ("\"), and 127 are escaped to
-//     "__0x<hex>__". Additionally, the "/" in "../" and a trailing "/" in a
-//     key (e.g., "foo/") are escaped in the same way.
+//   - Blob keys: ASCII characters 0-31, 34 ("\""), 35 ("#"), 37 ("%"), 63 ("?"),
+//     92 ("\"), and 127 are escaped to "__0x<hex>__".
+//     Additionally, the "/" in "../" and a trailing "/" in a key (e.g., "foo/") are escaped in the same way.
 //   - Metadata keys: Per https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata,
 //     Azure only allows C# identifiers as metadata keys. Therefore, characters
 //     other than "[a-z][A-z][0-9]_" are escaped using "__0x<hex>__". In addition,
@@ -75,16 +75,16 @@
 // # As
 //
 // azureblob exposes the following types for As:
-//   - Bucket: *azblob.ContainerClient
-//   - Error: *azcore.ReponseError, *azblob.InternalError, *azblob.StorageError
-//   - ListObject: azblob.BlobItemInternal for objects, azblob.BlobPrefix for "directories"
-//   - ListOptions.BeforeList: *azblob.ContainerListBlobsHierarchyOption
-//   - Reader: azblob.BlobDownloadResponse
-//   - Reader.BeforeRead: *azblob.BlockDownloadOptions
-//   - Attributes: azblob.BlobGetPropertiesResponse
-//   - CopyOptions.BeforeCopy: *azblob.BlobStartCopyOptions
+//   - Bucket: *container.Client
+//   - Error: *azcore.ReponseError. You can use bloberror.HasCode directly though.
+//   - ListObject: N/A.
+//   - ListOptions.BeforeList: *container.ListBlobsHierarchyOptions
+//   - Reader: azblobblob.DownloadStreamResponse
+//   - Reader.BeforeRead: *azblob.DownloadStreamOptions
+//   - Attributes: azblobblob.GetPropertiesResponse
+//   - CopyOptions.BeforeCopy: *azblobblob.StartCopyFromURLOptions
 //   - WriterOptions.BeforeWrite: *azblob.UploadStreamOptions
-//   - SignedURLOptions.BeforeSign: *azblob.BlobSASPermissions
+//   - SignedURLOptions.BeforeSign: *sas.BlobPermissions
 package azureblob
 
 import (
@@ -106,6 +106,11 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	azblobblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/google/wire"
 	"gocloud.dev/blob"
@@ -118,10 +123,9 @@ import (
 )
 
 const (
-	defaultMaxDownloadRetryRequests = 3               // download retry policy (Azure default is zero)
-	defaultPageSize                 = 1000            // default page size for ListPaged (Azure default is 5000)
-	defaultUploadBuffers            = 5               // configure the number of rotating buffers that are used when uploading (for degree of parallelism)
-	defaultUploadBlockSize          = 8 * 1024 * 1024 // configure the upload buffer size
+	defaultPageSize        = 1000            // default page size for ListPaged (Azure default is 5000)
+	defaultUploadBuffers   = 5               // configure the number of rotating buffers that are used when uploading (for degree of parallelism)
+	defaultUploadBlockSize = 8 * 1024 * 1024 // configure the upload buffer size
 )
 
 func init() {
@@ -132,7 +136,7 @@ func init() {
 var Set = wire.NewSet(
 	NewDefaultServiceURLOptions,
 	NewServiceURL,
-	NewDefaultServiceClient,
+	NewDefaultClient,
 )
 
 // Options sets options for constructing a *blob.Bucket backed by Azure Blob.
@@ -140,6 +144,9 @@ type Options struct{}
 
 // ServiceURL represents an Azure service URL.
 type ServiceURL string
+
+// ContainerName represents an Azure blob container name.
+type ContainerName string
 
 // ServiceURLOptions sets options for constructing a service URL for Azure Blob.
 type ServiceURLOptions struct {
@@ -283,7 +290,7 @@ func (o *lazyOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucke
 		credInfo := newCredInfoFromEnv()
 		opts := NewDefaultServiceURLOptions()
 		o.opener = &URLOpener{
-			MakeClient:        credInfo.NewServiceClient,
+			MakeClient:        credInfo.NewClient,
 			ServiceURLOptions: *opts,
 		}
 	})
@@ -336,14 +343,14 @@ func newCredInfoFromEnv() *credInfoT {
 	return credInfo
 }
 
-func (i *credInfoT) NewServiceClient(svcURL ServiceURL) (*azblob.ServiceClient, error) {
+func (i *credInfoT) NewClient(svcURL ServiceURL, containerName ContainerName) (*container.Client, error) {
 	// Set the ApplicationID.
-	azClientOpts := &azblob.ClientOptions{
-		Telemetry: policy.TelemetryOptions{
-			ApplicationID: useragent.AzureUserAgentPrefix("blob"),
-		},
+	azClientOpts := &container.ClientOptions{}
+	azClientOpts.Telemetry = policy.TelemetryOptions{
+		ApplicationID: useragent.AzureUserAgentPrefix("blob"),
 	}
 
+	containerURL := fmt.Sprintf("%s/%s", svcURL, containerName)
 	switch i.CredType {
 	case credTypeDefault:
 		log.Println("azureblob.URLOpener: using NewDefaultAzureCredential")
@@ -351,20 +358,20 @@ func (i *credInfoT) NewServiceClient(svcURL ServiceURL) (*azblob.ServiceClient, 
 		if err != nil {
 			return nil, fmt.Errorf("failed azidentity.NewDefaultAzureCredential: %v", err)
 		}
-		return azblob.NewServiceClient(string(svcURL), cred, azClientOpts)
+		return container.NewClient(containerURL, cred, azClientOpts)
 	case credTypeSharedKey:
 		log.Println("azureblob.URLOpener: using shared key credentials")
 		sharedKeyCred, err := azblob.NewSharedKeyCredential(i.AccountName, i.AccountKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed azblob.NewSharedKeyCredential: %v", err)
 		}
-		return azblob.NewServiceClientWithSharedKey(string(svcURL), sharedKeyCred, azClientOpts)
+		return container.NewClientWithSharedKeyCredential(containerURL, sharedKeyCred, azClientOpts)
 	case credTypeSASViaNone:
 		log.Println("azureblob.URLOpener: using SAS token and no other credentials")
-		return azblob.NewServiceClientWithNoCredential(string(svcURL), azClientOpts)
+		return container.NewClientWithNoCredential(containerURL, azClientOpts)
 	case credTypeConnectionString:
 		log.Println("azureblob.URLOpener: using connection string")
-		return azblob.NewServiceClientFromConnectionString(i.ConnectionString, azClientOpts)
+		return container.NewClientFromConnectionString(i.ConnectionString, string(containerName), azClientOpts)
 	default:
 		return nil, errors.New("internal error, unknown cred type")
 	}
@@ -385,7 +392,7 @@ const Scheme = "azblob"
 //   - localemu: Overrides Options.IsLocalEmulator.
 type URLOpener struct {
 	// MakeClient must be set to a non-nil value.
-	MakeClient func(svcURL ServiceURL) (*azblob.ServiceClient, error)
+	MakeClient func(svcURL ServiceURL, containerName ContainerName) (*container.Client, error)
 
 	// ServiceURLOptions specifies default options for generating the service URL.
 	// Some options can be overridden in the URL as described above.
@@ -405,56 +412,49 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	if err != nil {
 		return nil, err
 	}
-	svcClient, err := o.MakeClient(svcURL)
+	client, err := o.MakeClient(svcURL, ContainerName(u.Host))
 	if err != nil {
 		return nil, err
 	}
-	return OpenBucket(ctx, svcClient, u.Host, &o.Options)
+	return OpenBucket(ctx, client, &o.Options)
 }
 
 // bucket represents a Azure Storage Account Container, which handles read,
 // write and delete operations on objects within it.
 // See https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction.
 type bucket struct {
-	client *azblob.ContainerClient
+	client *container.Client
 	opts   *Options
 }
 
-// NewDefaultServiceClient returns an Azure Blob service client
+// NewDefaultClient returns an Azure Blob container client
 // with credentials from the environment as described in the package
 // docstring.
-func NewDefaultServiceClient(svcURL ServiceURL) (*azblob.ServiceClient, error) {
-	return newCredInfoFromEnv().NewServiceClient(svcURL)
+func NewDefaultClient(svcURL ServiceURL, containerName ContainerName) (*container.Client, error) {
+	return newCredInfoFromEnv().NewClient(svcURL, containerName)
 }
 
 // OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
 // documentation for an example and
 // https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob
 // for more details.
-func OpenBucket(ctx context.Context, svcClient *azblob.ServiceClient, containerName string, opts *Options) (*blob.Bucket, error) {
-	b, err := openBucket(ctx, svcClient, containerName, opts)
+func OpenBucket(ctx context.Context, client *container.Client, opts *Options) (*blob.Bucket, error) {
+	b, err := openBucket(ctx, client, opts)
 	if err != nil {
 		return nil, err
 	}
 	return blob.NewBucket(b), nil
 }
 
-func openBucket(ctx context.Context, svcClient *azblob.ServiceClient, containerName string, opts *Options) (*bucket, error) {
-	if svcClient == nil {
+func openBucket(ctx context.Context, client *container.Client, opts *Options) (*bucket, error) {
+	if client == nil {
 		return nil, errors.New("azureblob.OpenBucket: client is required")
-	}
-	if containerName == "" {
-		return nil, errors.New("azureblob.OpenBucket: containerName is required")
-	}
-	containerClient, err := svcClient.NewContainerClient(containerName)
-	if err != nil {
-		return nil, err
 	}
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &bucket{
-		client: containerClient,
+		client: client,
 		opts:   opts,
 	}, nil
 }
@@ -467,20 +467,14 @@ func (b *bucket) Close() error {
 // Copy implements driver.Copy.
 func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
 	dstKey = escapeKey(dstKey, false)
-	dstBlobClient, err := b.client.NewBlobClient(dstKey)
-	if err != nil {
-		return err
-	}
+	dstBlobClient := b.client.NewBlobClient(dstKey)
 	srcKey = escapeKey(srcKey, false)
-	srcBlobClient, err := b.client.NewBlobClient(srcKey)
-	if err != nil {
-		return err
-	}
-	copyOptions := &azblob.BlobStartCopyOptions{}
+	srcBlobClient := b.client.NewBlobClient(srcKey)
+	copyOptions := &azblobblob.StartCopyFromURLOptions{}
 	if opts.BeforeCopy != nil {
 		asFunc := func(i interface{}) bool {
 			switch v := i.(type) {
-			case **azblob.BlobStartCopyOptions:
+			case **azblobblob.StartCopyFromURLOptions:
 				*v = copyOptions
 				return true
 			}
@@ -496,7 +490,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	}
 	nErrors := 0
 	copyStatus := *resp.CopyStatus
-	for copyStatus == azblob.CopyStatusTypePending {
+	for copyStatus == azblobblob.CopyStatusTypePending {
 		// Poll until the copy is complete.
 		time.Sleep(500 * time.Millisecond)
 		propertiesResp, err := dstBlobClient.GetProperties(ctx, nil)
@@ -510,7 +504,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 		}
 		copyStatus = *propertiesResp.CopyStatus
 	}
-	if copyStatus != azblob.CopyStatusTypeSuccess {
+	if copyStatus != azblobblob.CopyStatusTypeSuccess {
 		return fmt.Errorf("Copy failed with status: %s", copyStatus)
 	}
 	return nil
@@ -519,11 +513,8 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	key = escapeKey(key, false)
-	blobClient, err := b.client.NewBlobClient(key)
-	if err != nil {
-		return err
-	}
-	_, err = blobClient.Delete(ctx, nil)
+	blobClient := b.client.NewBlobClient(key)
+	_, err := blobClient.Delete(ctx, nil)
 	return err
 }
 
@@ -531,7 +522,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 type reader struct {
 	body  io.ReadCloser
 	attrs driver.ReaderAttributes
-	raw   *azblob.BlobDownloadResponse
+	raw   *azblobblob.DownloadStreamResponse
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -544,7 +535,7 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 	return &r.attrs
 }
 func (r *reader) As(i interface{}) bool {
-	p, ok := i.(*azblob.BlobDownloadResponse)
+	p, ok := i.(*azblobblob.DownloadStreamResponse)
 	if !ok {
 		return false
 	}
@@ -555,15 +546,17 @@ func (r *reader) As(i interface{}) bool {
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	key = escapeKey(key, false)
-	blobClient, err := b.client.NewBlobClient(key)
-
-	downloadOpts := azblob.BlobDownloadOptions{Offset: &offset}
+	blobClient := b.client.NewBlobClient(key)
+	downloadOpts := azblob.DownloadStreamOptions{}
+	if offset != 0 {
+		downloadOpts.Range.Offset = offset
+	}
 	if length >= 0 {
-		downloadOpts.Count = &length
+		downloadOpts.Range.Count = length
 	}
 	if opts.BeforeRead != nil {
 		asFunc := func(i interface{}) bool {
-			if p, ok := i.(**azblob.BlobDownloadOptions); ok {
+			if p, ok := i.(**azblobblob.DownloadStreamOptions); ok {
 				*p = &downloadOpts
 				return true
 			}
@@ -573,7 +566,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			return nil, err
 		}
 	}
-	blobDownloadResponse, err := blobClient.Download(ctx, &downloadOpts)
+	blobDownloadResponse, err := blobClient.DownloadStream(ctx, &downloadOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +579,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if length == 0 {
 		body = http.NoBody
 	} else {
-		body = blobDownloadResponse.Body(&azblob.RetryReaderOptions{MaxRetryRequests: defaultMaxDownloadRetryRequests})
+		body = blobDownloadResponse.Body
 	}
 	return &reader{
 		body:  body,
@@ -614,7 +607,7 @@ func getSize(contentLength int64, contentRange string) int64 {
 
 // As implements driver.As.
 func (b *bucket) As(i interface{}) bool {
-	p, ok := i.(**azblob.ContainerClient)
+	p, ok := i.(**container.Client)
 	if !ok {
 		return false
 	}
@@ -630,43 +623,31 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 			*p = v
 			return true
 		}
-	case *azblob.StorageError:
-		if p, ok := i.(**azblob.StorageError); ok {
-			*p = v
-			return true
-		}
-	case *azblob.InternalError:
-		if p, ok := i.(**azblob.InternalError); ok {
-			*p = v
-			return true
-		}
 	}
 	return false
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
-	var errorCode azblob.StorageErrorCode
-	var statusCode int
-	var sErr *azblob.StorageError
+	if bloberror.HasCode(err, bloberror.BlobNotFound) {
+		return gcerrors.NotFound
+	}
+	if bloberror.HasCode(err, bloberror.AuthenticationFailed) {
+		return gcerrors.PermissionDenied
+	}
 	var rErr *azcore.ResponseError
-	if errors.As(err, &sErr) {
-		errorCode = sErr.ErrorCode
-		statusCode = sErr.StatusCode()
-	} else if errors.As(err, &rErr) {
-		errorCode = azblob.StorageErrorCode(rErr.ErrorCode)
-		statusCode = rErr.StatusCode
-	} else if strings.Contains(err.Error(), "no such host") {
+	if errors.As(err, &rErr) {
+		code := bloberror.Code(rErr.ErrorCode)
+		if code == bloberror.BlobNotFound || rErr.StatusCode == 404 {
+			return gcerrors.NotFound
+		}
+		if code == bloberror.AuthenticationFailed {
+			return gcerrors.PermissionDenied
+		}
+	}
+	if strings.Contains(err.Error(), "no such host") {
 		// This happens with an invalid storage account name; the host
 		// is something like invalidstorageaccount.blob.core.windows.net.
 		return gcerrors.NotFound
-	} else {
-		return gcerrors.Unknown
-	}
-	if errorCode == azblob.StorageErrorCodeBlobNotFound || statusCode == 404 {
-		return gcerrors.NotFound
-	}
-	if errorCode == azblob.StorageErrorCodeAuthenticationFailed {
-		return gcerrors.PermissionDenied
 	}
 	return gcerrors.Unknown
 }
@@ -674,10 +655,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key, false)
-	blobClient, err := b.client.NewBlobClient(key)
-	if err != nil {
-		return nil, err
-	}
+	blobClient := b.client.NewBlobClient(key)
 	blobPropertiesResponse, err := blobClient.GetProperties(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -689,6 +667,10 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		// keys & values.
 		md[escape.HexUnescape(k)] = escape.URLUnescape(v)
 	}
+	var eTag string
+	if blobPropertiesResponse.ETag != nil {
+		eTag = string(*blobPropertiesResponse.ETag)
+	}
 	return &driver.Attributes{
 		CacheControl:       to.String(blobPropertiesResponse.CacheControl),
 		ContentDisposition: to.String(blobPropertiesResponse.ContentDisposition),
@@ -699,10 +681,10 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		CreateTime:         *blobPropertiesResponse.CreationTime,
 		ModTime:            *blobPropertiesResponse.LastModified,
 		MD5:                blobPropertiesResponse.ContentMD5,
-		ETag:               to.String(blobPropertiesResponse.ETag),
+		ETag:               eTag,
 		Metadata:           md,
 		AsFunc: func(i interface{}) bool {
-			p, ok := i.(*azblob.BlobGetPropertiesResponse)
+			p, ok := i.(*azblobblob.GetPropertiesResponse)
 			if !ok {
 				return false
 			}
@@ -727,14 +709,14 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 
 	pageSize32 := int32(pageSize)
 	prefix := escapeKey(opts.Prefix, true)
-	azOpts := azblob.ContainerListBlobsHierarchyOptions{
+	azOpts := container.ListBlobsHierarchyOptions{
 		MaxResults: &pageSize32,
 		Prefix:     &prefix,
 		Marker:     marker,
 	}
 	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
-			p, ok := i.(**azblob.ContainerListBlobsHierarchyOptions)
+			p, ok := i.(**container.ListBlobsHierarchyOptions)
 			if !ok {
 				return false
 			}
@@ -745,12 +727,11 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil, err
 		}
 	}
-	azPager := b.client.ListBlobsHierarchy(escapeKey(opts.Delimiter, true), &azOpts)
-	azPager.NextPage(ctx)
-	if err := azPager.Err(); err != nil {
+	azPager := b.client.NewListBlobsHierarchyPager(escapeKey(opts.Delimiter, true), &azOpts)
+	resp, err := azPager.NextPage(ctx)
+	if err != nil {
 		return nil, err
 	}
-	resp := azPager.PageResponse()
 	page := &driver.ListPage{}
 	page.Objects = []*driver.ListObject{}
 	segment := resp.ListBlobsHierarchySegmentResponse.Segment
@@ -761,12 +742,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			Size:  0,
 			IsDir: true,
 			AsFunc: func(i interface{}) bool {
-				p, ok := i.(*azblob.BlobPrefix)
-				if !ok {
-					return false
-				}
-				*p = *blobPrefix
-				return true
+				return false
 			}})
 	}
 	for _, blobInfo := range segment.BlobItems {
@@ -778,12 +754,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			MD5:     blobInfo.Properties.ContentMD5,
 			IsDir:   false,
 			AsFunc: func(i interface{}) bool {
-				p, ok := i.(*azblob.BlobItemInternal)
-				if !ok {
-					return false
-				}
-				*p = *blobInfo
-				return true
+				return false
 			},
 		})
 	}
@@ -805,12 +776,8 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	}
 
 	key = escapeKey(key, false)
-	blobClient, err := b.client.NewBlobClient(key)
-	if err != nil {
-		return "", err
-	}
-
-	perms := azblob.BlobSASPermissions{}
+	blobClient := b.client.NewBlobClient(key)
+	perms := sas.BlobPermissions{}
 	switch opts.Method {
 	case http.MethodGet:
 		perms.Read = true
@@ -825,7 +792,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 
 	if opts.BeforeSign != nil {
 		asFunc := func(i interface{}) bool {
-			v, ok := i.(**azblob.BlobSASPermissions)
+			v, ok := i.(**sas.BlobPermissions)
 			if ok {
 				*v = &perms
 			}
@@ -837,14 +804,12 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	}
 	start := time.Now().UTC()
 	expiry := start.Add(opts.Expiry)
-	sasQueryParams, err := blobClient.GetSASToken(perms, start, expiry)
-	sasURL := fmt.Sprintf("%s?%s", blobClient.URL(), sasQueryParams.Encode())
-	return sasURL, nil
+	return blobClient.GetSASURL(perms, start, expiry)
 }
 
 type writer struct {
 	ctx        context.Context
-	client     *azblob.BlockBlobClient
+	client     *blockblob.Client
 	uploadOpts *azblob.UploadStreamOptions
 
 	w     *io.PipeWriter
@@ -862,10 +827,10 @@ func escapeKey(key string, isPrefix bool) string {
 		case c == '\\':
 			return true
 		// Azure doesn't handle these characters (determined via experimentation).
-		case c < 32 || c == 127:
+		case c < 32 || c == 34 || c == 35 || c == 37 || c == 63 || c == 127:
 			return true
-			// Escape trailing "/" for full keys, otherwise Azure can't address them
-			// consistently.
+		// Escape trailing "/" for full keys, otherwise Azure can't address them
+		// consistently.
 		case !isPrefix && i == len(key)-1 && c == '/':
 			return true
 		// For "../", escape the trailing slash.
@@ -884,10 +849,7 @@ func unescapeKey(key string) string {
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key, false)
-	blobClient, err := b.client.NewBlockBlobClient(key)
-	if err != nil {
-		return nil, err
-	}
+	blobClient := b.client.NewBlockBlobClient(key)
 	if opts.BufferSize == 0 {
 		opts.BufferSize = defaultUploadBlockSize
 	}
@@ -917,10 +879,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		md[e] = escape.URLEscape(v)
 	}
 	uploadOpts := &azblob.UploadStreamOptions{
-		BufferSize: opts.BufferSize,
-		MaxBuffers: opts.MaxConcurrency,
-		Metadata:   md,
-		HTTPHeaders: &azblob.BlobHTTPHeaders{
+		BlockSize:   opts.BufferSize,
+		Concurrency: opts.MaxConcurrency,
+		Metadata:    md,
+		HTTPHeaders: &azblobblob.HTTPHeaders{
 			BlobCacheControl:       &opts.CacheControl,
 			BlobContentDisposition: &opts.ContentDisposition,
 			BlobContentEncoding:    &opts.ContentEncoding,
@@ -975,7 +937,7 @@ func (w *writer) open(pr *io.PipeReader) error {
 		} else {
 			body = pr
 		}
-		_, w.err = w.client.UploadStream(w.ctx, body, *w.uploadOpts)
+		_, w.err = w.client.UploadStream(w.ctx, body, w.uploadOpts)
 		if w.err != nil {
 			if pr != nil {
 				pr.CloseWithError(w.err)
