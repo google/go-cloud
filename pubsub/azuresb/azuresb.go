@@ -143,6 +143,7 @@ const Scheme = "azuresb"
 //   - The URL's host+path is used as the topic name.
 //   - For subscriptions, the subscription name must be provided in the
 //     "subscription" query parameter.
+//   - For subscriptions, the ListenerTimeout can be overridden with time.Duration parseable values in "listener_timeout".
 //
 // No other query parameters are supported.
 type URLOpener struct {
@@ -204,6 +205,15 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	if subName == "" {
 		return nil, fmt.Errorf("open subscription %v: missing required query parameter subscription", u)
 	}
+	opts := o.SubscriptionOptions
+	if lts := q.Get("listener_timeout"); lts != "" {
+		q.Del("listener_timeout")
+		d, err := time.ParseDuration(lts)
+		if err != nil {
+			return nil, fmt.Errorf("open subscription %v: invalid listener_timeout %q: %v", u, lts, err)
+		}
+		opts.ListenerTimeout = d
+	}
 	for param := range q {
 		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
@@ -211,7 +221,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: couldn't open subscription %q: %v", u, subName, err)
 	}
-	return OpenSubscription(ctx, sbClient, sbReceiver, &o.SubscriptionOptions)
+	return OpenSubscription(ctx, sbClient, sbReceiver, &opts)
 }
 
 type topic struct {

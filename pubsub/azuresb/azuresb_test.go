@@ -409,6 +409,10 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"azuresb://mytopic?subscription=mysub", false},
 		// Missing subscription.
 		{"azuresb://mytopic", true},
+		// Setting listener_timeout.
+		{"azuresb://mytopic?subscription=mysub&listener_timeout=10s", false},
+		// Invalid listener_timeout.
+		{"azuresb://mytopic?subscription=mysub&listener_timeout=xxx", true},
 		// Invalid parameter.
 		{"azuresb://mytopic?subscription=mysub&param=value", true},
 	}
