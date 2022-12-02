@@ -77,7 +77,7 @@
 // azureblob exposes the following types for As:
 //   - Bucket: *container.Client
 //   - Error: *azcore.ReponseError. You can use bloberror.HasCode directly though.
-//   - ListObject: N/A.
+//   - ListObject: container.BlobItem for objects, none for "directories"
 //   - ListOptions.BeforeList: *container.ListBlobsHierarchyOptions
 //   - Reader: azblobblob.DownloadStreamResponse
 //   - Reader.BeforeRead: *azblob.DownloadStreamOptions
@@ -754,7 +754,11 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			MD5:     blobInfo.Properties.ContentMD5,
 			IsDir:   false,
 			AsFunc: func(i interface{}) bool {
-				return false
+				v, ok := i.(*container.BlobItem)
+				if ok {
+					*v = *blobInfo
+				}
+				return ok
 			},
 		})
 	}

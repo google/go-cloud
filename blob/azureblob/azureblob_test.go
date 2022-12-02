@@ -246,6 +246,16 @@ func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 }
 
 func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
+	if o.IsDir {
+		return nil
+	}
+	var item container.BlobItem
+	if !o.As(&item) {
+		return errors.New("ListObject.As for object returned false")
+	}
+	if got := *item.Properties.ContentLanguage; got != language {
+		return fmt.Errorf("got %q want %q", got, language)
+	}
 	return nil
 }
 
