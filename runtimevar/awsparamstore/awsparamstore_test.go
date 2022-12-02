@@ -66,7 +66,7 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 			Name:      aws.String(name),
 			Type:      "String",
 			Value:     aws.String(string(val)),
-			Overwrite: true,
+			Overwrite: aws.Bool(true),
 		})
 		return err
 	}

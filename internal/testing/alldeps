@@ -1,8 +1,9 @@
 cloud.google.com/go
-cloud.google.com/go/compute
+cloud.google.com/go/compute/metadata
 cloud.google.com/go/firestore
 cloud.google.com/go/iam
 cloud.google.com/go/kms
+cloud.google.com/go/longrunning
 cloud.google.com/go/monitoring
 cloud.google.com/go/pubsub
 cloud.google.com/go/secretmanager
@@ -48,6 +49,7 @@ github.com/aws/aws-sdk-go-v2/service/sns
 github.com/aws/aws-sdk-go-v2/service/sqs
 github.com/aws/aws-sdk-go-v2/service/ssm
 github.com/aws/aws-sdk-go-v2/service/sso
+github.com/aws/aws-sdk-go-v2/service/ssooidc
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/smithy-go
 github.com/cenkalti/backoff/v3
@@ -62,7 +64,7 @@ github.com/fatih/color
 github.com/fsnotify/fsnotify
 github.com/go-sql-driver/mysql
 github.com/gogo/protobuf
-github.com/golang-jwt/jwt
+github.com/golang-jwt/jwt/v4
 github.com/golang/groupcache
 github.com/golang/protobuf
 github.com/golang/snappy

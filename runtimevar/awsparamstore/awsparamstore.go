@@ -312,7 +312,7 @@ func getParameterV2(ctx context.Context, client *ssmv2.Client, name string) (int
 	getResp, err := client.GetParameter(ctx, &ssmv2.GetParameterInput{
 		Name: aws.String(name),
 		// Ignored if the parameter is not encrypted.
-		WithDecryption: true,
+		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {
 		return 0, nil, time.Time{}, nil, err

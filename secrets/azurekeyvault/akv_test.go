@@ -118,7 +118,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 					ApplicationID: useragent.AzureUserAgentPrefix("secrets"),
 				},
 			},
-		}), nil
+		})
 	}
 	return &harness{
 		clientMaker: clientMaker,
