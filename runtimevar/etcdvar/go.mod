@@ -18,16 +18,11 @@ go 1.12
 
 require (
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/google/go-cmp v0.5.8
-	github.com/googleapis/gax-go/v2 v2.5.1 // indirect
+	github.com/google/go-cmp v0.5.9
 	go.etcd.io/etcd v3.3.27+incompatible
-	go.etcd.io/etcd/client/v3 v3.5.4
-	go.uber.org/zap v1.22.0 // indirect
+	go.etcd.io/etcd/client/v3 v3.5.6
 	gocloud.dev v0.27.0
-	golang.org/x/net v0.0.0-20220809184613-07c6da5e1ced // indirect
-	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664 // indirect
-	google.golang.org/genproto v0.0.0-20220808204814-fd01256a5276 // indirect
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.51.0
 )
 
 replace gocloud.dev => ../../

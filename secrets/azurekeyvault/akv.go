@@ -183,7 +183,7 @@ func DefaultClientMaker(keyVaultURI string) (*azkeys.Client, error) {
 				ApplicationID: useragent.AzureUserAgentPrefix("secrets"),
 			},
 		},
-	}), nil
+	})
 }
 
 var (

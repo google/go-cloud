@@ -224,7 +224,7 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	var err error
 	if h.useV2 {
 		_, err = h.clientV2.DeleteSecret(ctx, &secretsmanagerv2.DeleteSecretInput{
-			ForceDeleteWithoutRecovery: true,
+			ForceDeleteWithoutRecovery: aws.Bool(true),
 			SecretId:                   awsv2.String(name),
 		})
 	} else {
