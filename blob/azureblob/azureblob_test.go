@@ -247,6 +247,10 @@ func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 
 func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 	if o.IsDir {
+		var prefix container.BlobPrefix
+		if !o.As(&prefix) {
+			return errors.New("ListObject.As for dir returned false")
+		}
 		return nil
 	}
 	var item container.BlobItem
