@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7bG3ayIwQ4Kv4g",
+  "Initial": "AQAAAA7bOTPpKOR/Bf4g",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -42,10 +42,10 @@
   },
   "Entries": [
     {
-      "ID": "5219fbf4f039e168",
+      "ID": "9f407f060c65fae6",
       "Request": {
         "Method": "PUT",
-        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo/..__0x2f__bar/..__0x2f__..__0x2f__baz..__0x2f__?blockid=CLEARED\u0026comp=block",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo%2F..__0x2f__bar%2F..__0x2f__..__0x2f__baz..__0x2f__",
         "Header": {
           "Accept": [
             "application/xml"
@@ -55,67 +55,6 @@
           ],
           "Content-Length": [
             "5"
-          ],
-          "User-Agent": [
-            "CLEARED"
-          ],
-          "X-Ms-Date": [
-            "CLEARED"
-          ],
-          "X-Ms-Version": [
-            "CLEARED"
-          ]
-        },
-        "MediaType": "application/octet-stream",
-        "BodyParts": [
-          "aGVsbG8="
-        ]
-      },
-      "Response": {
-        "StatusCode": 201,
-        "Proto": "HTTP/1.1",
-        "ProtoMajor": 1,
-        "ProtoMinor": 1,
-        "Header": {
-          "Content-Length": [
-            "0"
-          ],
-          "Date": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
-          ],
-          "Server": [
-            "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
-          ],
-          "X-Ms-Content-Crc64": [
-            "V0JSBnCFdzM="
-          ],
-          "X-Ms-Request-Id": [
-            "6408e34c-201e-0017-3406-06b129000000"
-          ],
-          "X-Ms-Request-Server-Encrypted": [
-            "true"
-          ],
-          "X-Ms-Version": [
-            "CLEARED"
-          ]
-        },
-        "Body": ""
-      }
-    },
-    {
-      "ID": "9eeac33cdd7934f4",
-      "Request": {
-        "Method": "PUT",
-        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo/..__0x2f__bar/..__0x2f__..__0x2f__baz..__0x2f__?comp=blocklist",
-        "Header": {
-          "Accept": [
-            "application/xml"
-          ],
-          "Accept-Encoding": [
-            "gzip"
-          ],
-          "Content-Length": [
-            "167"
           ],
           "User-Agent": [
             "CLEARED"
@@ -138,6 +77,9 @@
           "X-Ms-Blob-Content-Type": [
             "text/plain; charset=utf-8"
           ],
+          "X-Ms-Blob-Type": [
+            "BlockBlob"
+          ],
           "X-Ms-Date": [
             "CLEARED"
           ],
@@ -145,9 +87,9 @@
             "CLEARED"
           ]
         },
-        "MediaType": "application/xml",
+        "MediaType": "application/octet-stream",
         "BodyParts": [
-          "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KQ0xFQVJFRA=="
+          "aGVsbG8="
         ]
       },
       "Response": {
@@ -159,23 +101,26 @@
           "Content-Length": [
             "0"
           ],
+          "Content-Md5": [
+            "XUFAKrxLKna5cZ2REBfFkg=="
+          ],
           "Date": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Etag": [
-            "\"0x8DAD41E1F58B1E3\""
+            "\"0x8DAE5D7F3C94A83\""
           ],
           "Last-Modified": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
           ],
           "X-Ms-Content-Crc64": [
-            "z708fazKeCg="
+            "V0JSBnCFdzM="
           ],
           "X-Ms-Request-Id": [
-            "6408e351-201e-0017-3706-06b129000000"
+            "dc1e364e-801e-001e-77c0-17f4fa000000"
           ],
           "X-Ms-Request-Server-Encrypted": [
             "true"
@@ -188,10 +133,10 @@
       }
     },
     {
-      "ID": "a9e3ce50f26ce335",
+      "ID": "b893d6f0d745b6c4",
       "Request": {
         "Method": "GET",
-        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo/..__0x2f__bar/..__0x2f__..__0x2f__baz..__0x2f__",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo%2F..__0x2f__bar%2F..__0x2f__..__0x2f__baz..__0x2f__",
         "Header": {
           "Accept": [
             "application/xml"
@@ -236,13 +181,13 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Etag": [
-            "\"0x8DAD41E1F58B1E3\""
+            "\"0x8DAE5D7F3C94A83\""
           ],
           "Last-Modified": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -251,7 +196,7 @@
             "BlockBlob"
           ],
           "X-Ms-Creation-Time": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "X-Ms-Lease-State": [
             "available"
@@ -260,7 +205,7 @@
             "unlocked"
           ],
           "X-Ms-Request-Id": [
-            "6408e356-201e-0017-3c06-06b129000000"
+            "dc1e3655-801e-001e-7ec0-17f4fa000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -273,10 +218,10 @@
       }
     },
     {
-      "ID": "567b3bd1a647b834",
+      "ID": "de74d240a1cbc6e9",
       "Request": {
         "Method": "HEAD",
-        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo/..__0x2f__bar/..__0x2f__..__0x2f__baz..__0x2f__",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo%2F..__0x2f__bar%2F..__0x2f__..__0x2f__baz..__0x2f__",
         "Header": {
           "Accept": [
             "application/xml"
@@ -318,13 +263,13 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Etag": [
-            "\"0x8DAD41E1F58B1E3\""
+            "\"0x8DAE5D7F3C94A83\""
           ],
           "Last-Modified": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -339,7 +284,7 @@
             "BlockBlob"
           ],
           "X-Ms-Creation-Time": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "X-Ms-Lease-State": [
             "available"
@@ -348,7 +293,7 @@
             "unlocked"
           ],
           "X-Ms-Request-Id": [
-            "6408e358-201e-0017-3e06-06b129000000"
+            "dc1e365a-801e-001e-03c0-17f4fa000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -361,10 +306,10 @@
       }
     },
     {
-      "ID": "33f18ea4cb436d53",
+      "ID": "8ac663c02344de04",
       "Request": {
         "Method": "GET",
-        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo/..__0x2f__bar/..__0x2f__..__0x2f__baz..__0x2f__?sp=r\u0026sr=b\u0026sv=2020-02-10",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo%2F..__0x2f__bar%2F..__0x2f__..__0x2f__baz..__0x2f__?sp=r\u0026sr=b\u0026sv=2020-02-10",
         "Header": {
           "Accept-Encoding": [
             "gzip"
@@ -400,13 +345,13 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Etag": [
-            "\"0x8DAD41E1F58B1E3\""
+            "\"0x8DAE5D7F3C94A83\""
           ],
           "Last-Modified": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -415,7 +360,7 @@
             "BlockBlob"
           ],
           "X-Ms-Creation-Time": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "X-Ms-Lease-State": [
             "available"
@@ -424,7 +369,7 @@
             "unlocked"
           ],
           "X-Ms-Request-Id": [
-            "6408e35b-201e-0017-4106-06b129000000"
+            "dc1e365b-801e-001e-04c0-17f4fa000000"
           ],
           "X-Ms-Server-Encrypted": [
             "true"
@@ -437,10 +382,10 @@
       }
     },
     {
-      "ID": "ec5cf5aff78071cd",
+      "ID": "bf1b8a3e11355064",
       "Request": {
         "Method": "DELETE",
-        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo/..__0x2f__bar/..__0x2f__..__0x2f__baz..__0x2f__",
+        "URL": "https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys..__0x2f__foo%2F..__0x2f__bar%2F..__0x2f__..__0x2f__baz..__0x2f__",
         "Header": {
           "Accept": [
             "application/xml"
@@ -473,7 +418,7 @@
             "0"
           ],
           "Date": [
-            "Fri, 02 Dec 2022 04:31:46 GMT"
+            "Sat, 24 Dec 2022 17:54:49 GMT"
           ],
           "Server": [
             "Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0"
@@ -482,7 +427,7 @@
             "true"
           ],
           "X-Ms-Request-Id": [
-            "6408e360-201e-0017-4406-06b129000000"
+            "dc1e3661-801e-001e-0ac0-17f4fa000000"
           ],
           "X-Ms-Version": [
             "CLEARED"

@@ -77,7 +77,7 @@
 // azureblob exposes the following types for As:
 //   - Bucket: *container.Client
 //   - Error: *azcore.ReponseError. You can use bloberror.HasCode directly though.
-//   - ListObject: container.BlobItem for objects, none for "directories"
+//   - ListObject: container.BlobItem for objects, container.BlobPrefix for "directories"
 //   - ListOptions.BeforeList: *container.ListBlobsHierarchyOptions
 //   - Reader: azblobblob.DownloadStreamResponse
 //   - Reader.BeforeRead: *azblob.DownloadStreamOptions
@@ -742,7 +742,11 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			Size:  0,
 			IsDir: true,
 			AsFunc: func(i interface{}) bool {
-				return false
+				v, ok := i.(*container.BlobPrefix)
+				if ok {
+					*v = *blobPrefix
+				}
+				return ok
 			}})
 	}
 	for _, blobInfo := range segment.BlobItems {
@@ -759,8 +763,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 					*v = *blobInfo
 				}
 				return ok
-			},
-		})
+			}})
 	}
 	if resp.NextMarker != nil {
 		page.NextPageToken = []byte(*resp.NextMarker)
@@ -883,7 +886,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		md[e] = escape.URLEscape(v)
 	}
 	uploadOpts := &azblob.UploadStreamOptions{
-		BlockSize:   opts.BufferSize,
+		BlockSize:   int64(opts.BufferSize),
 		Concurrency: opts.MaxConcurrency,
 		Metadata:    md,
 		HTTPHeaders: &azblobblob.HTTPHeaders{
