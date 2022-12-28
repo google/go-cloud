@@ -700,6 +700,10 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=1", false},
 		// Invalid raw.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?raw=foo", true},
+		// OK, setting nacklazy.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?nacklazy=1", false},
+		// Invalid nacklazy.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?nacklazy=foo", true},
 		// OK, setting waittime.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?waittime=5s", false},
 		// OK, setting usev2.

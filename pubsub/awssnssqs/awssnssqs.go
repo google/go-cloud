@@ -214,6 +214,8 @@ const SQSScheme = "awssqs"
 //
 //   - raw (for "awssqs" Subscriptions only): sets SubscriberOptions.Raw. The
 //     value must be parseable by `strconv.ParseBool`.
+//   - nacklazy (for "awssqs" Subscriptions only): sets SubscriberOptions.NackLazy. The
+//     value must be parseable by `strconv.ParseBool`.
 //   - waittime: sets SubscriberOptions.WaitTime, in time.ParseDuration formats.
 //
 // See gocloud.dev/aws/ConfigFromURLParams for other query parameters
@@ -283,6 +285,14 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 			return nil, fmt.Errorf("invalid value %q for raw: %v", rawStr, err)
 		}
 		q.Del("raw")
+	}
+	if nackLazyStr := q.Get("nacklazy"); nackLazyStr != "" {
+		var err error
+		opts.NackLazy, err = strconv.ParseBool(nackLazyStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for nacklazy: %v", nackLazyStr, err)
+		}
+		q.Del("nacklazy")
 	}
 	if waitTimeStr := q.Get("waittime"); waitTimeStr != "" {
 		var err error
@@ -918,6 +928,17 @@ type SubscriptionOptions struct {
 	// See https://aws.amazon.com/sns/faqs/#Raw_message_delivery.
 	Raw bool
 
+	// NackLazy determines what Nack does.
+	//
+	// By default, Nack uses ChangeMessageVisibility to set the VisibilityTimeout
+	// for the nacked message to 0, so that it will be redelivered immediately.
+	// Set NackLazy to true to bypass this behavior; Nack will do nothing,
+	// and the message will be redelivered after the existing VisibilityTimeout
+	// expires (defaults to 30s, but can be configured per queue).
+	//
+	// See https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html.
+	NackLazy bool
+
 	// WaitTime passed to ReceiveMessage to enable long polling.
 	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html#sqs-long-polling.
 	// Note that a non-zero WaitTime can delay delivery of messages
@@ -1199,6 +1220,9 @@ func (s *subscription) CanNack() bool { return true }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	if s.opts.NackLazy {
+		return nil
+	}
 	if s.useV2 {
 		req := &sqsv2.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
 		for _, id := range ids {
