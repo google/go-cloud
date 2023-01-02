@@ -92,7 +92,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -275,7 +274,6 @@ func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	if opts.SASToken != "" {
 		svcURL += "?" + opts.SASToken
 	}
-	log.Printf("azureblob: constructed service URL: %s\n", svcURL)
 	return ServiceURL(svcURL), nil
 }
 
@@ -353,24 +351,20 @@ func (i *credInfoT) NewClient(svcURL ServiceURL, containerName ContainerName) (*
 	containerURL := fmt.Sprintf("%s/%s", svcURL, containerName)
 	switch i.CredType {
 	case credTypeDefault:
-		log.Println("azureblob.URLOpener: using NewDefaultAzureCredential")
 		cred, err := azidentity.NewDefaultAzureCredential(nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed azidentity.NewDefaultAzureCredential: %v", err)
 		}
 		return container.NewClient(containerURL, cred, azClientOpts)
 	case credTypeSharedKey:
-		log.Println("azureblob.URLOpener: using shared key credentials")
 		sharedKeyCred, err := azblob.NewSharedKeyCredential(i.AccountName, i.AccountKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed azblob.NewSharedKeyCredential: %v", err)
 		}
 		return container.NewClientWithSharedKeyCredential(containerURL, sharedKeyCred, azClientOpts)
 	case credTypeSASViaNone:
-		log.Println("azureblob.URLOpener: using SAS token and no other credentials")
 		return container.NewClientWithNoCredential(containerURL, azClientOpts)
 	case credTypeConnectionString:
-		log.Println("azureblob.URLOpener: using connection string")
 		return container.NewClientFromConnectionString(i.ConnectionString, string(containerName), azClientOpts)
 	default:
 		return nil, errors.New("internal error, unknown cred type")
