@@ -678,15 +678,14 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			if len(attrs) == 0 {
 				attrs = nil
 			}
-			entry := sqstypesv2.SendMessageBatchRequestEntry{
+			entry := &sqstypesv2.SendMessageBatchRequestEntry{
 				Id:                aws.String(strconv.Itoa(len(req.Entries))),
 				MessageAttributes: attrs,
 				MessageBody:       aws.String(body),
 			}
-			req.Entries = append(req.Entries, entry)
 			if dm.BeforeSend != nil {
 				asFunc := func(i interface{}) bool {
-					if p, ok := i.(*sqstypesv2.SendMessageBatchRequestEntry); ok {
+					if p, ok := i.(**sqstypesv2.SendMessageBatchRequestEntry); ok {
 						*p = entry
 						return true
 					}
@@ -696,6 +695,7 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 					return err
 				}
 			}
+			req.Entries = append(req.Entries, *entry)
 		}
 		resp, err := t.clientV2.SendMessageBatch(ctx, req)
 		if err != nil {
