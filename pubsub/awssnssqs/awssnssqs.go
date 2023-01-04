@@ -58,7 +58,7 @@
 //   - Topic: (V1) *sns.SNS for OpenSNSTopic, *sqs.SQS for OpenSQSTopic; (V2) *snsv2.Client for OpenSNSTopicV2, *sqsv2.Client for OpenSQSTopicV2
 //   - Subscription: (V1) *sqs.SQS; (V2) *sqsv2.Client
 //   - Message: (V1) *sqs.Message; (V2) sqstypesv2.Message
-//   - Message.BeforeSend: (V1) *sns.PublishInput for OpenSNSTopic, *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic; (V2) *snsv2.PublishInput for OpenSNSTopicV2, sqstypesv2.SendMessageBatchRequestEntry for OpenSQSTopicV2
+//   - Message.BeforeSend: (V1) *sns.PublishInput for OpenSNSTopic, *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput(deprecated) for OpenSQSTopic; (V2) *snsv2.PublishInput for OpenSNSTopicV2, *sqstypesv2.SendMessageBatchRequestEntry for OpenSQSTopicV2
 //   - Message.AfterSend: (V1) *sns.PublishOutput for OpenSNSTopic, *sqs.SendMessageBatchResultEntry for OpenSQSTopic; (V2) *snsv2.PublishOutput for OpenSNSTopicV2, sqstypesv2.SendMessageBatchResultEntry for OpenSQSTopicV2
 //   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
@@ -678,15 +678,14 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			if len(attrs) == 0 {
 				attrs = nil
 			}
-			entry := sqstypesv2.SendMessageBatchRequestEntry{
+			entry := &sqstypesv2.SendMessageBatchRequestEntry{
 				Id:                aws.String(strconv.Itoa(len(req.Entries))),
 				MessageAttributes: attrs,
 				MessageBody:       aws.String(body),
 			}
-			req.Entries = append(req.Entries, entry)
 			if dm.BeforeSend != nil {
 				asFunc := func(i interface{}) bool {
-					if p, ok := i.(*sqstypesv2.SendMessageBatchRequestEntry); ok {
+					if p, ok := i.(**sqstypesv2.SendMessageBatchRequestEntry); ok {
 						*p = entry
 						return true
 					}
@@ -696,6 +695,7 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 					return err
 				}
 			}
+			req.Entries = append(req.Entries, *entry)
 		}
 		resp, err := t.clientV2.SendMessageBatch(ctx, req)
 		if err != nil {
