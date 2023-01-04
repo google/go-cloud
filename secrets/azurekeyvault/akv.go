@@ -19,9 +19,7 @@
 // # URLs
 //
 // For secrets.OpenKeeper, azurekeyvault registers for the scheme "azurekeyvault".
-// The default URL opener will use DefaultClientMaker, which gets default credentials from the
-// environment, unless the AZURE_KEYVAULT_AUTH_VIA_CLI environment variable is
-// set to true, in which case it gets credentials from the "az" command line.
+// The default URL opener will use azidentity.DefaultAzureCredential to get credentials.
 //
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
@@ -38,10 +36,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"path"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -158,22 +154,7 @@ type KeeperOptions struct {
 // If the environment variable AZURE_KEYVAULT_AUTH_VIA_CLI is set to a truthy value, it
 // uses credentials from the Azure CLI instead.
 func DefaultClientMaker(keyVaultURI string) (*azkeys.Client, error) {
-	useCLI := false
-	useCLIStr := os.Getenv("AZURE_KEYVAULT_AUTH_VIA_CLI")
-	if useCLIStr != "" {
-		var err error
-		useCLI, err = strconv.ParseBool(useCLIStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for environment variable AZURE_KEYVAULT_AUTH_VIA_CLI: %v", useCLIStr, err)
-		}
-	}
-	var creds azcore.TokenCredential
-	var err error
-	if useCLI {
-		creds, err = azidentity.NewAzureCLICredential(nil)
-	} else {
-		creds, err = azidentity.NewEnvironmentCredential(nil)
-	}
+	creds, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return nil, err
 	}
