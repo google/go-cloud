@@ -540,7 +540,7 @@ func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
 		}
 	case topicKindSQS:
 		if t.useV2 {
-			var entry sqstypesv2.SendMessageBatchRequestEntry
+			var entry *sqstypesv2.SendMessageBatchRequestEntry
 			if !as(&entry) {
 				return fmt.Errorf("cast failed for %T", &entry)
 			}
