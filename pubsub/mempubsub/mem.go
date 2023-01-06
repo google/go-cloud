@@ -51,6 +51,7 @@ import (
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 )
 
@@ -131,9 +132,23 @@ type topic struct {
 	nextAckID int
 }
 
+// TopicOptions contains configuration options for topics.
+type TopicOptions struct {
+	// BatcherOptions adds constraints to the default batching done for sends.
+	BatcherOptions batcher.Options
+}
+
 // NewTopic creates a new in-memory topic.
 func NewTopic() *pubsub.Topic {
-	return pubsub.NewTopic(&topic{}, nil)
+	return NewTopicWithOptions(nil)
+}
+
+// NewTopicWithOptions is similar to NewTopic, but supports TopicOptions.
+func NewTopicWithOptions(opts *TopicOptions) *pubsub.Topic {
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	return pubsub.NewTopic(&topic{}, &opts.BatcherOptions)
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -211,6 +226,15 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 // Close implements driver.Topic.Close.
 func (*topic) Close() error { return nil }
 
+// SubscriptionOptions will contain configuration for subscriptions.
+type SubscriptionOptions struct {
+	// ReceiveBatcherOptions adds constraints to the default batching done for receives.
+	ReceiveBatcherOptions batcher.Options
+
+	// AckBatcherOptions adds constraints to the default batching done for acks.
+	AckBatcherOptions batcher.Options
+}
+
 type subscription struct {
 	mu          sync.Mutex
 	topic       *topic
@@ -223,11 +247,19 @@ type subscription struct {
 // If a message is not acked within in the given ack deadline from when
 // it is received, then it will be redelivered.
 func NewSubscription(pstopic *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
+	return NewSubscriptionWithOptions(pstopic, ackDeadline, nil)
+}
+
+// NewSubscriptionWithOptions is similar to NewSubscription, but supports SubscriptionOptions.
+func NewSubscriptionWithOptions(pstopic *pubsub.Topic, ackDeadline time.Duration, opts *SubscriptionOptions) *pubsub.Subscription {
+	if opts == nil {
+		opts = &SubscriptionOptions{}
+	}
 	var t *topic
 	if !pstopic.As(&t) {
 		panic("mempubsub: NewSubscription passed a Topic not from mempubsub")
 	}
-	return pubsub.NewSubscription(newSubscription(t, ackDeadline), nil, nil)
+	return pubsub.NewSubscription(newSubscription(t, ackDeadline), &opts.ReceiveBatcherOptions, &opts.AckBatcherOptions)
 }
 
 func newSubscription(topic *topic, ackDeadline time.Duration) *subscription {
