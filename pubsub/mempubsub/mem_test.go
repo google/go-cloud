@@ -139,3 +139,34 @@ func TestSendNoSubs(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+/*
+// This test runs forever, so it's commented out. It's useful for playing
+// around with batching. Add a Printf in ../pubsub.go that prints the batch size.
+func TestReceiveBatching(t *testing.T) {
+	ctx := context.Background()
+	topic := NewTopic()
+	defer topic.Shutdown(ctx)
+	sub := NewSubscriptionWithOptions(topic, 10*time.Second, &SubscriptionOptions{ReceiveBatcherOptions: batcher.Options{MaxBatchSize: 10, MaxHandlers: 100}})
+	defer sub.Shutdown(ctx)
+
+	// Receive messages as quickly as possible.
+	go func() {
+		for {
+			msg, _ := sub.Receive(ctx)
+			if msg != nil {
+				msg.Ack()
+			}
+		}
+	}()
+
+	// Send slightly slower than the 250ms Sleep.
+	for {
+		if err := topic.Send(ctx, &pubsub.Message{Body: []byte("a")}); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(333 * time.Millisecond)
+	}
+	// With the above parameters, ideally the batch size would settle down to around 2.
+}
+*/
