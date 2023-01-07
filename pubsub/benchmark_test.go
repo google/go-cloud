@@ -159,6 +159,13 @@ func TestReceivePerformance(t *testing.T) {
 				return d
 			},
 		},
+		{
+			description: "intermittent",
+			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) {
+				n := rand.Int() % 2
+				return n, 250 * time.Millisecond
+			},
+		},
 	}
 
 	for _, test := range tests {
