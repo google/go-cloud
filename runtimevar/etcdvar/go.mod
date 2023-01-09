@@ -21,8 +21,6 @@ require (
 	github.com/google/go-cmp v0.5.9
 	go.etcd.io/etcd v3.3.27+incompatible
 	go.etcd.io/etcd/client/v3 v3.5.6
-	gocloud.dev v0.27.0
+	gocloud.dev v0.28.0
 	google.golang.org/grpc v1.51.0
 )
-
-replace gocloud.dev => ../../
