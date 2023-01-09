@@ -532,37 +532,37 @@ func errorCode(err error) (gcerrors.ErrorCode, bool) {
 	if strings.Contains(err.Error(), "status code 404") {
 		return gcerrors.NotFound, false
 	}
-	var cond amqp.ErrorCondition
+	var cond amqp.ErrCond
 	var aderr *amqp.DetachError
 	var aerr *amqp.Error
 	if errors.As(err, &aderr) {
-		if aderr.RemoteError == nil {
+		if aderr.RemoteErr == nil {
 			return gcerrors.NotFound, false
 		}
-		cond = aderr.RemoteError.Condition
+		cond = aderr.RemoteErr.Condition
 	} else if errors.As(err, &aerr) {
 		cond = aerr.Condition
 	}
 	switch cond {
-	case amqp.ErrorNotFound:
+	case amqp.ErrCondNotFound:
 		return gcerrors.NotFound, false
 
-	case amqp.ErrorPreconditionFailed:
+	case amqp.ErrCondPreconditionFailed:
 		return gcerrors.FailedPrecondition, false
 
-	case amqp.ErrorInternalError:
+	case amqp.ErrCondInternalError:
 		return gcerrors.Internal, true
 
-	case amqp.ErrorNotImplemented:
+	case amqp.ErrCondNotImplemented:
 		return gcerrors.Unimplemented, false
 
-	case amqp.ErrorUnauthorizedAccess, amqp.ErrorNotAllowed:
+	case amqp.ErrCondUnauthorizedAccess, amqp.ErrCondNotAllowed:
 		return gcerrors.PermissionDenied, false
 
-	case amqp.ErrorResourceLimitExceeded:
+	case amqp.ErrCondResourceLimitExceeded:
 		return gcerrors.ResourceExhausted, true
 
-	case amqp.ErrorInvalidField:
+	case amqp.ErrCondInvalidField:
 		return gcerrors.InvalidArgument, false
 	}
 	return gcerrors.Unknown, true
