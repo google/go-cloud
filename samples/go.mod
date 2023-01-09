@@ -19,8 +19,8 @@ go 1.12
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.14
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.6.1
-	github.com/aws/aws-sdk-go v1.44.151
-	github.com/go-sql-driver/mysql v1.6.0
+	github.com/aws/aws-sdk-go v1.44.175
+	github.com/go-sql-driver/mysql v1.7.0
 	github.com/google/go-cmdtest v0.3.0
 	github.com/google/go-cmp v0.5.9
 	github.com/google/subcommands v1.2.0
@@ -35,7 +35,7 @@ require (
 	gocloud.dev/pubsub/natspubsub v0.28.0
 	gocloud.dev/pubsub/rabbitpubsub v0.28.0
 	gocloud.dev/secrets/hashivault v0.28.0
-	google.golang.org/genproto v0.0.0-20221201204527-e3fa12d562f3
+	google.golang.org/genproto v0.0.0-20230109162033-3c3c17ce83e6
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
 
