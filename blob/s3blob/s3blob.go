@@ -23,7 +23,6 @@
 // for more details.
 // Use "awssdk=v1" or "awssdk=v2" to force a specific AWS SDK version.
 // To customize the URL opener, or for more details on the URL format,
-// To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
