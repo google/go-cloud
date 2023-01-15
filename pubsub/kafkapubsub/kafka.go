@@ -234,17 +234,13 @@ func OpenTopic(brokers []string, config *sarama.Config, topicName string, opts *
 	if err != nil {
 		return nil, err
 	}
-	bo := &batcher.Options{}
-	if opts != nil {
-		bo = &opts.BatcherOptions
-	}
-	bo = sendBatcherOpts.NewMergedOptions(bo)
+	bo := sendBatcherOpts.NewMergedOptions(&dt.opts.BatcherOptions)
 	return pubsub.NewTopic(dt, bo), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(brokers []string, config *sarama.Config, topicName string, opts *TopicOptions) (driver.Topic, error) {
+func openTopic(brokers []string, config *sarama.Config, topicName string, opts *TopicOptions) (*topic, error) {
 	if opts == nil {
 		opts = &TopicOptions{}
 	}
