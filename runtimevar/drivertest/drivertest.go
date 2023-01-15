@@ -19,7 +19,6 @@ package drivertest // import "gocloud.dev/runtimevar/drivertest"
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -129,14 +128,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 }
 
-// deadlineExceeded returns true if err represents a context exceeded error.
-// It can either be a true context.DeadlineExceeded, or an RPC aborted due to
-// ctx cancellation; we don't have a good way of checking for the latter
-// explicitly so we check the Error() string.
-func deadlineExceeded(err error) bool {
-	return err == context.DeadlineExceeded || strings.Contains(err.Error(), "context deadline exceeded")
-}
-
 // waitTimeForBlockingCheck returns a duration to wait when verifying that a
 // call blocks. When in replay mode, it can be quite short to make tests run
 // quickly. When in record mode, it has to be long enough that RPCs can
@@ -233,8 +224,8 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	// RPC error during record. During replay, that error can be returned
 	// immediately (before tCtx is cancelled). So, we accept deadline exceeded
 	// errors as well.
-	if tCtx.Err() == nil && !deadlineExceeded(err) {
-		t.Errorf("got err %v; want Watch to have blocked until context was Done, or for the error to be deadline exceeded", err)
+	if tCtx.Err() == nil && gcerrors.Code(err) != gcerrors.DeadlineExceeded {
+		t.Errorf("got err %v/%v; want Watch to have blocked until context was Done, or for the error to be deadline exceeded", err, gcerrors.Code(err))
 	}
 }
 
@@ -394,7 +385,7 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 		// OK
 	} else {
 		got, err = unchangedState.Value()
-		if err != context.DeadlineExceeded {
+		if gcerrors.Code(err) != gcerrors.DeadlineExceeded {
 			t.Fatalf("got state %v/%v/%v, wanted nil or nil/DeadlineExceeded after no change", got, err, gcerrors.Code(err))
 		}
 	}
@@ -599,8 +590,8 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 		// RPC error during record. During replay, that error can be returned
 		// immediately (before tCtx is cancelled). So, we accept deadline exceeded
 		// errors as well.
-		if tCtx.Err() == nil && !deadlineExceeded(err) {
-			t.Errorf("got err %v; want Watch to have blocked until context was Done, or for the error to be deadline exceeded", err)
+		if tCtx.Err() == nil && gcerrors.Code(err) != gcerrors.DeadlineExceeded {
+			t.Errorf("got err %v/%v; want Watch to have blocked until context was Done, or for the error to be deadline exceeded", err, gcerrors.Code(err))
 		}
 	}
 }
