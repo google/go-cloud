@@ -234,7 +234,11 @@ func OpenTopic(brokers []string, config *sarama.Config, topicName string, opts *
 	if err != nil {
 		return nil, err
 	}
-	bo := sendBatcherOpts.NewMergedOptions(&opts.BatcherOptions)
+	bo := &batcher.Options{}
+	if opts != nil {
+		bo = &opts.BatcherOptions
+	}
+	bo = sendBatcherOpts.NewMergedOptions(bo)
 	return pubsub.NewTopic(dt, bo), nil
 }
 
