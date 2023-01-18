@@ -184,6 +184,15 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 		switch param {
 		case "region":
 			opts = append(opts, awsv2cfg.WithRegion(value))
+		case "endpoint":
+			customResolver := awsv2.EndpointResolverWithOptionsFunc(
+				func(service, region string, options ...interface{}) (awsv2.Endpoint, error) {
+					return awsv2.Endpoint{
+						PartitionID: "aws",
+						URL:         value,
+					}, nil
+				})
+			opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
 		case "profile":
 			opts = append(opts, awsv2cfg.WithSharedConfigProfile(value))
 		case "awssdk":
