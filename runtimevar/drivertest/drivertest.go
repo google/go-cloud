@@ -395,6 +395,15 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	state, _ = drv.WatchVariable(ctx, state)
+	// In rare race conditions during replay, if the earlier WatchVariable
+	// was cancelled/timed out before actually calling an RPC, this one
+	// might have returned the old/unchanged value. This only happens during
+	// replay mode. Just try again, the next RPC should get the updated value.
+	// BTW this is easy to reproduce by setting the timeout in
+	// waitForBlockingCheck to 1 nanosecond.
+	if state == nil && !*setup.Record {
+		state, _ = drv.WatchVariable(ctx, state)
+	}
 	if state == nil {
 		t.Fatalf("got nil state, want a non-nil state with a value")
 	}
