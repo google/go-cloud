@@ -19,11 +19,11 @@ go 1.12
 require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/wire v0.5.0
-	github.com/klauspost/compress v1.15.14 // indirect
+	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/montanaflynn/stats v0.7.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	go.mongodb.org/mongo-driver v1.11.1
+	go.mongodb.org/mongo-driver v1.11.2
 	gocloud.dev v0.28.0
 )
 
