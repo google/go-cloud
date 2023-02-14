@@ -659,7 +659,9 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 	for k, v := range blobPropertiesResponse.Metadata {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
-		md[escape.HexUnescape(k)] = escape.URLUnescape(v)
+		if v != nil {
+			md[escape.HexUnescape(k)] = escape.URLUnescape(*v)
+		}
 	}
 	var eTag string
 	if blobPropertiesResponse.ETag != nil {
@@ -805,7 +807,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	}
 	start := time.Now().UTC()
 	expiry := start.Add(opts.Expiry)
-	return blobClient.GetSASURL(perms, start, expiry)
+	return blobClient.GetSASURL(perms, expiry, &azblobblob.GetSASURLOptions{StartTime: &start})
 }
 
 type writer struct {
@@ -858,7 +860,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		opts.MaxConcurrency = defaultUploadBuffers
 	}
 
-	md := make(map[string]string, len(opts.Metadata))
+	md := make(map[string]*string, len(opts.Metadata))
 	for k, v := range opts.Metadata {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
@@ -877,7 +879,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		if _, ok := md[e]; ok {
 			return nil, fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
 		}
-		md[e] = escape.URLEscape(v)
+		escaped := escape.URLEscape(v)
+		md[e] = &escaped
 	}
 	uploadOpts := &azblob.UploadStreamOptions{
 		BlockSize:   int64(opts.BufferSize),
