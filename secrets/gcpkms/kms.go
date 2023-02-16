@@ -39,6 +39,7 @@ import (
 	"sync"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
@@ -46,7 +47,6 @@ import (
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/secrets"
 	"google.golang.org/api/option"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	"google.golang.org/grpc/status"
 )
 
