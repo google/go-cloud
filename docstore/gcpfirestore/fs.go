@@ -73,6 +73,7 @@ import (
 	"strings"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
+	pb "cloud.google.com/go/firestore/apiv1/firestorepb"
 	"github.com/google/wire"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
@@ -81,7 +82,6 @@ import (
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 	"google.golang.org/api/option"
-	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
