@@ -22,7 +22,7 @@ import (
 	"gocloud.dev/pubsub"
 
 	pbraw "cloud.google.com/go/pubsub/apiv1"
-	pbapi "google.golang.org/genproto/googleapis/pubsub/v1"
+	pbapi "cloud.google.com/go/pubsub/apiv1/pubsubpb"
 	"google.golang.org/grpc/status"
 )
 
