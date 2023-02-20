@@ -23,8 +23,8 @@ import (
 	"sync"
 
 	credentials "cloud.google.com/go/iam/credentials/apiv1"
+	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	gax "github.com/googleapis/gax-go/v2"
-	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 )
 
 // credentialsClient wraps the IAM Credentials API client for a lazy initialization
