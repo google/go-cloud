@@ -61,6 +61,9 @@ type WriterOptions struct {
 	// write in a single request, if supported. Larger objects will be split into
 	// multiple requests.
 	BufferSize int
+	// MaxUploadParts specifies the maximum number of uploaded parts.
+	// No all drivers set this value. Default S3 value is 10_000.
+	MaxUploadParts int
 	// MaxConcurrency changes the default concurrency for uploading parts.
 	MaxConcurrency int
 	// CacheControl specifies caching attributes that services may use

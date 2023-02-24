@@ -926,6 +926,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			if opts.MaxConcurrency != 0 {
 				u.Concurrency = opts.MaxConcurrency
 			}
+			if opts.MaxUploadParts != 0 {
+				u.MaxUploadParts = int32(opts.MaxUploadParts)
+			}
 		})
 		md := make(map[string]string, len(opts.Metadata))
 		for k, v := range opts.Metadata {
