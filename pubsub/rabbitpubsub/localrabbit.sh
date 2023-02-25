@@ -21,6 +21,7 @@ set -euo pipefail
 echo "Starting RabbitMQ..."
 docker rm -f rabbit &> /dev/null || :
 docker run -d --name rabbit -p 5672:5672 rabbitmq:3.10.17 &> /dev/null
-sleep 15
+echo Sleeping to give RabbitMQ some time to come up....
+sleep 60
 echo "...done. Run \"docker rm -f rabbit\" to clean up the container."
 echo
