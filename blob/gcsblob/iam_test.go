@@ -19,8 +19,8 @@ import (
 	"errors"
 	"testing"
 
+	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	gax "github.com/googleapis/gax-go/v2"
-	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 )
 
 const (
