@@ -19,10 +19,10 @@ import (
 	"testing"
 	"time"
 
+	pb "cloud.google.com/go/firestore/apiv1/firestorepb"
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"
-	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/protobuf/proto"
 )
 
