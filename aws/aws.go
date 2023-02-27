@@ -147,7 +147,7 @@ func NewSessionFromURLParams(q url.Values) (*session.Session, url.Values, error)
 // should use the AWS SDK v2.
 //
 // "awssdk=v1" will force V1.
-// "asssdk=v2" will force V2.
+// "awssdk=v2" will force V2.
 // No "awssdk" parameter (or any other value) will return the default, currently V1.
 // Note that the default may change in the future.
 func UseV2(q url.Values) bool {
