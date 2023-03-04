@@ -24,5 +24,5 @@ require (
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.11.2
-	gocloud.dev v0.28.0
+	gocloud.dev v0.29.0
 )
