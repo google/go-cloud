@@ -26,3 +26,5 @@ require (
 	gocloud.dev v0.29.0
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
+
+replace gocloud.dev => ../../

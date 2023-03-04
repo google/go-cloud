@@ -20,3 +20,5 @@ require (
 	github.com/rabbitmq/amqp091-go v1.7.0
 	gocloud.dev v0.29.0
 )
+
+replace gocloud.dev => ../../
