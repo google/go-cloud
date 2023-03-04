@@ -21,5 +21,5 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	gocloud.dev v0.28.0
+	gocloud.dev v0.29.0
 )

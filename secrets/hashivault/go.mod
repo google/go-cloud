@@ -23,6 +23,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7 // indirect
 	github.com/hashicorp/vault/api v1.9.0
-	gocloud.dev v0.28.0
+	gocloud.dev v0.29.0
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
