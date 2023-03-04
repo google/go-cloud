@@ -23,3 +23,5 @@ require (
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	gocloud.dev v0.29.0
 )
+
+replace gocloud.dev => ../../
