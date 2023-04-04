@@ -129,7 +129,7 @@ func BenchmarkS3blob(b *testing.B) {
 
 const language = "nl"
 
-// verifyContentLanguage uses As to access the underlying GCS types and
+// verifyContentLanguage uses As to access the underlying AWS types and
 // read/write the ContentLanguage field.
 type verifyContentLanguage struct {
 	useV2           bool
@@ -243,12 +243,10 @@ func (v verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 				list *s3v2.ListObjectsV2Input
 				opts *[]func(*s3v2.Options)
 			)
-			// make sure we can extract ALL the underlying GCS types
-			// for this call
-			if as(&list) && as(&opts) {
-				return nil
+			if !as(&list) || !as(&opts) {
+				return errors.New("List.As failed")
 			}
-			return errors.New("List.As failed")
+			return nil
 		}
 		return nil
 	}

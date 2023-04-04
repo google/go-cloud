@@ -968,13 +968,16 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		}
 		if opts.BeforeWrite != nil {
 			asFunc := func(i interface{}) bool {
-				// Note that since GCS does not expose AWS's
-				// Uploader abstraction, there does not appear
-				// to be any utility in exposing the options
-				// list to the v2 Uploader's Upload() method.
-				// Instead, applications can manipulate the
-				// exposed *Uploader directly, including by
-				// setting ClientOptions if needed.
+				// Note that since the Go CDK Blob
+				// abstraction does not expose AWS's
+				// Uploader concept, there does not
+				// appear to be any utility in
+				// exposing the options list to the v2
+				// Uploader's Upload() method.
+				// Instead, applications can
+				// manipulate the exposed *Uploader
+				// directly, including by setting
+				// ClientOptions if needed.
 				if p, ok := i.(**s3managerv2.Uploader); ok {
 					*p = uploaderV2
 					return true
