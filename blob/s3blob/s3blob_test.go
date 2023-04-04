@@ -129,7 +129,7 @@ func BenchmarkS3blob(b *testing.B) {
 
 const language = "nl"
 
-// verifyContentLanguage uses As to access the underlying GCS types and
+// verifyContentLanguage uses As to access the underlying AWS types and
 // read/write the ContentLanguage field.
 type verifyContentLanguage struct {
 	useV2           bool
@@ -172,8 +172,11 @@ func (v verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 
 func (v verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
 	if v.useV2 {
-		var req *s3v2.GetObjectInput
-		if !as(&req) {
+		var (
+			req  *s3v2.GetObjectInput
+			opts *[]func(*s3v2.Options)
+		)
+		if !as(&req) || !as(&opts) {
 			return errors.New("BeforeRead As failed")
 		}
 		return nil
@@ -187,8 +190,11 @@ func (v verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
 
 func (v verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	if v.useV2 {
-		var req *s3v2.PutObjectInput
-		if !as(&req) {
+		var (
+			req      *s3v2.PutObjectInput
+			uploader *s3managerv2.Uploader
+		)
+		if !as(&req) || !as(&uploader) {
 			return errors.New("Writer.As failed for PutObjectInput")
 		}
 		req.ContentLanguage = aws.String(language)
@@ -233,10 +239,14 @@ func (v verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 				return errors.New("List.As failed")
 			}
 		} else {
-			var req *s3v2.ListObjectsV2Input
-			if !as(&req) {
+			var (
+				list *s3v2.ListObjectsV2Input
+				opts *[]func(*s3v2.Options)
+			)
+			if !as(&list) || !as(&opts) {
 				return errors.New("List.As failed")
 			}
+			return nil
 		}
 		return nil
 	}
