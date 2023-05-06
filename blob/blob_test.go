@@ -235,11 +235,19 @@ func (b *erroringBucket) ListPaged(ctx context.Context, opts *driver.ListOptions
 	return nil, errFake
 }
 
+func (b *erroringBucket) DownloadRange(ctx context.Context, w io.Writer, key string, offset, length int64, opts *driver.ReaderOptions) error {
+	return errFake
+}
+
 func (b *erroringBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	if key == "work" {
 		return &erroringReader{}, nil
 	}
 	return nil, errFake
+}
+
+func (b *erroringBucket) Upload(ctx context.Context, key, contentType string, r io.Reader, opts *driver.ReaderOptions) error {
+	return errFake
 }
 
 func (b *erroringBucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
@@ -299,11 +307,15 @@ func TestErrorsAreWrapped(t *testing.T) {
 	_, err = iter.Next(ctx)
 	verifyWrap("ListIterator.Next", err)
 
+	err = b.DownloadRange(ctx, io.Discard, "", 0, 1, nil)
+	verifyWrap("DownloadRange", err)
 	_, err = b.NewRangeReader(ctx, "", 0, 1, nil)
 	verifyWrap("NewRangeReader", err)
 	_, err = b.ReadAll(ctx, "")
 	verifyWrap("ReadAll", err)
 
+	err = b.Upload(ctx, "", bytes.NewReader(buf), &WriterOptions{ContentType: "foo"})
+	verifyWrap("Upload", err)
 	// Providing ContentType means driver.NewTypedWriter is called right away.
 	_, err = b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"})
 	verifyWrap("NewWriter", err)
@@ -368,10 +380,16 @@ func TestBucketIsClosed(t *testing.T) {
 		t.Error(err)
 	}
 
+	if err := bucket.DownloadRange(ctx, io.Discard, "", 0, 1, nil); err != errClosed {
+		t.Error(err)
+	}
 	if _, err := bucket.NewRangeReader(ctx, "", 0, 1, nil); err != errClosed {
 		t.Error(err)
 	}
 	if _, err := bucket.ReadAll(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.Upload(ctx, "", bytes.NewReader(buf), &WriterOptions{ContentType: "application/octet-stream"}); err != errClosed {
 		t.Error(err)
 	}
 	if _, err := bucket.NewWriter(ctx, "", nil); err != errClosed {

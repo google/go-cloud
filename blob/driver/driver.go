@@ -226,6 +226,33 @@ type ListPage struct {
 	NextPageToken []byte
 }
 
+// Uploader is an optional interface that Bucket implementations may also implement.
+// If the underlying service can upload complete objects more efficiently than it can
+// implement TypedWriter, its Bucket implementation should implement Upload.
+type Uploader interface {
+	// Upload writes data from r to an object associated with key.
+	//
+	// A new object will be created unless an object with this key already exists.
+	// Otherwise any previous object with the same key will be replaced.
+	//
+	// contentType sets the MIME type of the object to be written. It must not be
+	// empty. opts is guaranteed to be non-nil.
+	Upload(ctx context.Context, key, contentType string, r io.Reader, opts *WriterOptions) error
+}
+
+// Downloader is an optional interface that Bucket implementations may also implement.
+// If the underlying service can upload complete objects more efficiently than it can
+// implement Downloader, its Bucket implementation should implement Download.
+type Downloader interface {
+	// DownloadRange copies part of an object to w, reading at most length bytes
+	// starting at the given offset. If length is negative, it will read until
+	// the end of the object. If the specified object does not exist,
+	// DownloadRange must return an error for which ErrorCode returns
+	// gcerrors.NotFound.
+	// opts is guaranteed to be non-nil.
+	DownloadRange(ctx context.Context, w io.Writer, key string, offset, length int64, opts *ReaderOptions) error
+}
+
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {

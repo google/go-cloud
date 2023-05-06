@@ -357,6 +357,8 @@ type bucket struct {
 	useLegacyList bool
 }
 
+var _ = driver.Uploader((*bucket)(nil))
+
 func (b *bucket) Close() error {
 	return nil
 }
@@ -923,74 +925,166 @@ func unescapeKey(key string) string {
 	return escape.HexUnescape(key)
 }
 
+func (b *bucket) newUploaderV2(key, contentType string, opts *driver.WriterOptions) (*s3managerv2.Uploader, *s3v2.PutObjectInput, error) {
+	uploaderV2 := s3managerv2.NewUploader(b.clientV2, func(u *s3managerv2.Uploader) {
+		if opts.BufferSize != 0 {
+			u.PartSize = int64(opts.BufferSize)
+		}
+		if opts.MaxConcurrency != 0 {
+			u.Concurrency = opts.MaxConcurrency
+		}
+	})
+	md := make(map[string]string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
+			c := runes[i]
+			return c == '@' || c == ':' || c == '='
+		})
+		md[k] = url.PathEscape(v)
+	}
+	reqV2 := &s3v2.PutObjectInput{
+		Bucket:      aws.String(b.name),
+		ContentType: aws.String(contentType),
+		Key:         aws.String(key),
+		Metadata:    md,
+	}
+	if opts.CacheControl != "" {
+		reqV2.CacheControl = aws.String(opts.CacheControl)
+	}
+	if opts.ContentDisposition != "" {
+		reqV2.ContentDisposition = aws.String(opts.ContentDisposition)
+	}
+	if opts.ContentEncoding != "" {
+		reqV2.ContentEncoding = aws.String(opts.ContentEncoding)
+	}
+	if opts.ContentLanguage != "" {
+		reqV2.ContentLanguage = aws.String(opts.ContentLanguage)
+	}
+	if len(opts.ContentMD5) > 0 {
+		reqV2.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
+	}
+	if opts.BeforeWrite != nil {
+		asFunc := func(i interface{}) bool {
+			// Note that since the Go CDK Blob
+			// abstraction does not expose AWS's
+			// Uploader concept, there does not
+			// appear to be any utility in
+			// exposing the options list to the v2
+			// Uploader's Upload() method.
+			// Instead, applications can
+			// manipulate the exposed *Uploader
+			// directly, including by setting
+			// ClientOptions if needed.
+			if p, ok := i.(**s3managerv2.Uploader); ok {
+				*p = uploaderV2
+				return true
+			}
+			if p, ok := i.(**s3v2.PutObjectInput); ok {
+				*p = reqV2
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeWrite(asFunc); err != nil {
+			return nil, nil, err
+		}
+	}
+	return uploaderV2, reqV2, nil
+}
+
+func (b *bucket) newUploader(key, contentType string, opts *driver.WriterOptions) (*s3manager.Uploader, *s3manager.UploadInput, error) {
+	uploader := s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
+		if opts.BufferSize != 0 {
+			u.PartSize = int64(opts.BufferSize)
+		}
+		if opts.MaxConcurrency != 0 {
+			u.Concurrency = opts.MaxConcurrency
+		}
+	})
+	md := make(map[string]*string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
+			c := runes[i]
+			return c == '@' || c == ':' || c == '='
+		})
+		md[k] = aws.String(url.PathEscape(v))
+	}
+	req := &s3manager.UploadInput{
+		Bucket:      aws.String(b.name),
+		ContentType: aws.String(contentType),
+		Key:         aws.String(key),
+		Metadata:    md,
+	}
+	if opts.CacheControl != "" {
+		req.CacheControl = aws.String(opts.CacheControl)
+	}
+	if opts.ContentDisposition != "" {
+		req.ContentDisposition = aws.String(opts.ContentDisposition)
+	}
+	if opts.ContentEncoding != "" {
+		req.ContentEncoding = aws.String(opts.ContentEncoding)
+	}
+	if opts.ContentLanguage != "" {
+		req.ContentLanguage = aws.String(opts.ContentLanguage)
+	}
+	if len(opts.ContentMD5) > 0 {
+		req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
+	}
+	if opts.BeforeWrite != nil {
+		asFunc := func(i interface{}) bool {
+			pu, ok := i.(**s3manager.Uploader)
+			if ok {
+				*pu = uploader
+				return true
+			}
+			pui, ok := i.(**s3manager.UploadInput)
+			if ok {
+				*pui = req
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeWrite(asFunc); err != nil {
+			return nil, nil, err
+		}
+	}
+	return uploader, req, nil
+}
+
+// Upload implements driver.Upload.
+func (b *bucket) Upload(ctx context.Context, key, contentType string, r io.Reader, opts *driver.WriterOptions) error {
+	if b.useV2 {
+		uploader, req, err := b.newUploaderV2(key, contentType, opts)
+		if err != nil {
+			return err
+		}
+		req.Body = r
+
+		_, err = uploader.Upload(ctx, req)
+		return err
+	} else {
+		uploader, req, err := b.newUploader(key, contentType, opts)
+		if err != nil {
+			return err
+		}
+		req.Body = r
+
+		_, err = uploader.UploadWithContext(ctx, req)
+		return err
+	}
+}
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key)
 	if b.useV2 {
-		uploaderV2 := s3managerv2.NewUploader(b.clientV2, func(u *s3managerv2.Uploader) {
-			if opts.BufferSize != 0 {
-				u.PartSize = int64(opts.BufferSize)
-			}
-			if opts.MaxConcurrency != 0 {
-				u.Concurrency = opts.MaxConcurrency
-			}
-		})
-		md := make(map[string]string, len(opts.Metadata))
-		for k, v := range opts.Metadata {
-			// See the package comments for more details on escaping of metadata
-			// keys & values.
-			k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
-				c := runes[i]
-				return c == '@' || c == ':' || c == '='
-			})
-			md[k] = url.PathEscape(v)
-		}
-		reqV2 := &s3v2.PutObjectInput{
-			Bucket:      aws.String(b.name),
-			ContentType: aws.String(contentType),
-			Key:         aws.String(key),
-			Metadata:    md,
-		}
-		if opts.CacheControl != "" {
-			reqV2.CacheControl = aws.String(opts.CacheControl)
-		}
-		if opts.ContentDisposition != "" {
-			reqV2.ContentDisposition = aws.String(opts.ContentDisposition)
-		}
-		if opts.ContentEncoding != "" {
-			reqV2.ContentEncoding = aws.String(opts.ContentEncoding)
-		}
-		if opts.ContentLanguage != "" {
-			reqV2.ContentLanguage = aws.String(opts.ContentLanguage)
-		}
-		if len(opts.ContentMD5) > 0 {
-			reqV2.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
-		}
-		if opts.BeforeWrite != nil {
-			asFunc := func(i interface{}) bool {
-				// Note that since the Go CDK Blob
-				// abstraction does not expose AWS's
-				// Uploader concept, there does not
-				// appear to be any utility in
-				// exposing the options list to the v2
-				// Uploader's Upload() method.
-				// Instead, applications can
-				// manipulate the exposed *Uploader
-				// directly, including by setting
-				// ClientOptions if needed.
-				if p, ok := i.(**s3managerv2.Uploader); ok {
-					*p = uploaderV2
-					return true
-				}
-				if p, ok := i.(**s3v2.PutObjectInput); ok {
-					*p = reqV2
-					return true
-				}
-				return false
-			}
-			if err := opts.BeforeWrite(asFunc); err != nil {
-				return nil, err
-			}
+		uploaderV2, reqV2, err := b.newUploaderV2(key, contentType, opts)
+		if err != nil {
+			return nil, err
 		}
 		return &writer{
 			ctx:        ctx,
@@ -1000,62 +1094,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			donec:      make(chan struct{}),
 		}, nil
 	} else {
-		uploader := s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
-			if opts.BufferSize != 0 {
-				u.PartSize = int64(opts.BufferSize)
-			}
-			if opts.MaxConcurrency != 0 {
-				u.Concurrency = opts.MaxConcurrency
-			}
-		})
-		md := make(map[string]*string, len(opts.Metadata))
-		for k, v := range opts.Metadata {
-			// See the package comments for more details on escaping of metadata
-			// keys & values.
-			k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
-				c := runes[i]
-				return c == '@' || c == ':' || c == '='
-			})
-			md[k] = aws.String(url.PathEscape(v))
-		}
-		req := &s3manager.UploadInput{
-			Bucket:      aws.String(b.name),
-			ContentType: aws.String(contentType),
-			Key:         aws.String(key),
-			Metadata:    md,
-		}
-		if opts.CacheControl != "" {
-			req.CacheControl = aws.String(opts.CacheControl)
-		}
-		if opts.ContentDisposition != "" {
-			req.ContentDisposition = aws.String(opts.ContentDisposition)
-		}
-		if opts.ContentEncoding != "" {
-			req.ContentEncoding = aws.String(opts.ContentEncoding)
-		}
-		if opts.ContentLanguage != "" {
-			req.ContentLanguage = aws.String(opts.ContentLanguage)
-		}
-		if len(opts.ContentMD5) > 0 {
-			req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
-		}
-		if opts.BeforeWrite != nil {
-			asFunc := func(i interface{}) bool {
-				pu, ok := i.(**s3manager.Uploader)
-				if ok {
-					*pu = uploader
-					return true
-				}
-				pui, ok := i.(**s3manager.UploadInput)
-				if ok {
-					*pui = req
-					return true
-				}
-				return false
-			}
-			if err := opts.BeforeWrite(asFunc); err != nil {
-				return nil, err
-			}
+		uploader, req, err := b.newUploader(key, contentType, opts)
+		if err != nil {
+			return nil, err
 		}
 		return &writer{
 			ctx:      ctx,

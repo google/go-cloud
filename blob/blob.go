@@ -623,6 +623,12 @@ func newBucket(b driver.Bucket) *Bucket {
 	}
 }
 
+func (b *Bucket) isClosed() bool {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.closed
+}
+
 // As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
@@ -848,6 +854,37 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 	}, nil
 }
 
+// Download is a shortcut for DownloadRange with offset=0 and length=-1.
+func (b *Bucket) Download(ctx context.Context, w io.Writer, key string, opts *ReaderOptions) error {
+	return b.DownloadRange(ctx, w, key, 0, -1, opts)
+}
+
+// DownloadRange is a shortcut for io.Copy(w, NewRangeReader(ctx, key, offset, length, opts)).
+func (b *Bucket) DownloadRange(ctx context.Context, w io.Writer, key string, offset, length int64, opts *ReaderOptions) error {
+	if downloader, ok := b.b.(driver.Downloader); ok {
+		if b.isClosed() {
+			return errClosed
+		}
+		if opts == nil {
+			opts = &ReaderOptions{}
+		}
+		dopts := &driver.ReaderOptions{
+			BeforeRead: opts.BeforeRead,
+		}
+		if err := downloader.DownloadRange(ctx, w, key, offset, length, dopts); err != nil {
+			return wrapError(b.b, err, key)
+		}
+		return nil
+	}
+
+	r, err := b.NewRangeReader(ctx, key, offset, length, opts)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, r)
+	return err
+}
+
 // NewReader is a shortcut for NewRangeReader with offset=0 and length=-1.
 func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions) (*Reader, error) {
 	return b.newRangeReader(ctx, key, 0, -1, opts)
@@ -930,6 +967,88 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	return r, nil
 }
 
+func (b *Bucket) writerOptions(opts *WriterOptions) (*driver.WriterOptions, string, error) {
+	if opts == nil {
+		opts = &WriterOptions{}
+	}
+	dopts := &driver.WriterOptions{
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		ContentMD5:         opts.ContentMD5,
+		BufferSize:         opts.BufferSize,
+		MaxConcurrency:     opts.MaxConcurrency,
+		BeforeWrite:        opts.BeforeWrite,
+	}
+	if len(opts.Metadata) > 0 {
+		// Services are inconsistent, but at least some treat keys
+		// as case-insensitive. To make the behavior consistent, we
+		// force-lowercase them when writing and reading.
+		md := make(map[string]string, len(opts.Metadata))
+		for k, v := range opts.Metadata {
+			if k == "" {
+				return nil, "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys may not be empty strings")
+			}
+			if !utf8.ValidString(k) {
+				return nil, "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
+			}
+			if !utf8.ValidString(v) {
+				return nil, "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
+			}
+			lowerK := strings.ToLower(k)
+			if _, found := md[lowerK]; found {
+				return nil, "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata has a duplicate case-insensitive metadata key: %q", lowerK)
+			}
+			md[lowerK] = v
+		}
+		dopts.Metadata = md
+	}
+	var contentType string
+	if opts.ContentType != "" {
+		t, p, err := mime.ParseMediaType(opts.ContentType)
+		if err != nil {
+			return nil, "", err
+		}
+		contentType = mime.FormatMediaType(t, p)
+	}
+	return dopts, contentType, nil
+}
+
+// Upload uploads r's data to the blob stored at key.
+//
+// Calling Upload is preferred to
+// Upload may be more efficient than ce characteristics than creating a writer and copying the data from r. If
+func (b *Bucket) Upload(ctx context.Context, key string, r io.Reader, opts *WriterOptions) error {
+	if opts == nil || opts.ContentType == "" {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.ContentType is required for Upload")
+	}
+
+	if uploader, ok := b.b.(driver.Uploader); ok {
+		dopts, contentType, err := b.writerOptions(opts)
+		if err != nil {
+			return err
+		}
+		if b.isClosed() {
+			return errClosed
+		}
+		if err = uploader.Upload(ctx, key, contentType, r, dopts); err != nil {
+			return wrapError(b.b, err, key)
+		}
+		return nil
+	}
+
+	w, err := b.NewWriter(ctx, key, opts)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(w, r); err != nil {
+		_ = w.Close()
+		return err
+	}
+	return w.Close()
+}
+
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
 //
 // If opts.ContentMD5 is not set, WriteAll will compute the MD5 of p and use it
@@ -943,15 +1062,10 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 		sum := md5.Sum(p)
 		realOpts.ContentMD5 = sum[:]
 	}
-	w, err := b.NewWriter(ctx, key, realOpts)
-	if err != nil {
-		return err
+	if realOpts.ContentType == "" {
+		realOpts.ContentType = http.DetectContentType(p)
 	}
-	if _, err := w.Write(p); err != nil {
-		_ = w.Close()
-		return err
-	}
-	return w.Close()
+	return b.Upload(ctx, key, bytes.NewReader(p), realOpts)
 }
 
 // NewWriter returns a Writer that writes to the blob stored at key.
@@ -973,41 +1087,9 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	if !utf8.ValidString(key) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewWriter key must be a valid UTF-8 string: %q", key)
 	}
-	if opts == nil {
-		opts = &WriterOptions{}
-	}
-	dopts := &driver.WriterOptions{
-		CacheControl:       opts.CacheControl,
-		ContentDisposition: opts.ContentDisposition,
-		ContentEncoding:    opts.ContentEncoding,
-		ContentLanguage:    opts.ContentLanguage,
-		ContentMD5:         opts.ContentMD5,
-		BufferSize:         opts.BufferSize,
-		MaxConcurrency:     opts.MaxConcurrency,
-		BeforeWrite:        opts.BeforeWrite,
-	}
-	if len(opts.Metadata) > 0 {
-		// Services are inconsistent, but at least some treat keys
-		// as case-insensitive. To make the behavior consistent, we
-		// force-lowercase them when writing and reading.
-		md := make(map[string]string, len(opts.Metadata))
-		for k, v := range opts.Metadata {
-			if k == "" {
-				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys may not be empty strings")
-			}
-			if !utf8.ValidString(k) {
-				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
-			}
-			if !utf8.ValidString(v) {
-				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
-			}
-			lowerK := strings.ToLower(k)
-			if _, found := md[lowerK]; found {
-				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata has a duplicate case-insensitive metadata key: %q", lowerK)
-			}
-			md[lowerK] = v
-		}
-		dopts.Metadata = md
+	dopts, contentType, err := b.writerOptions(opts)
+	if err != nil {
+		return nil, err
 	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -1028,18 +1110,12 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		end:              end,
 		cancel:           cancel,
 		key:              key,
-		contentMD5:       opts.ContentMD5,
+		contentMD5:       dopts.ContentMD5,
 		md5hash:          md5.New(),
 		statsTagMutators: []tag.Mutator{tag.Upsert(oc.ProviderKey, b.tracer.Provider)},
 	}
-	if opts.ContentType != "" {
-		t, p, err := mime.ParseMediaType(opts.ContentType)
-		if err != nil {
-			cancel()
-			return nil, err
-		}
-		ct := mime.FormatMediaType(t, p)
-		dw, err := b.b.NewTypedWriter(ctx, key, ct, dopts)
+	if contentType != "" {
+		dw, err := b.b.NewTypedWriter(ctx, key, contentType, dopts)
 		if err != nil {
 			cancel()
 			return nil, wrapError(b.b, err, key)
