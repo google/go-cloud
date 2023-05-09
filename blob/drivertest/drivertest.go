@@ -237,6 +237,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestConcurrentWriteAndRead", func(t *testing.T) {
 		testConcurrentWriteAndRead(t, newHarness)
 	})
+	t.Run("TestUploadDownload", func(t *testing.T) {
+		testUploadDownload(t, newHarness)
+	})
 	t.Run("TestMetadata", func(t *testing.T) {
 		testMetadata(t, newHarness)
 	})
@@ -2124,6 +2127,42 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 		}(k)
 	}
 	wg.Wait()
+}
+
+// testUploadDownload tests that Upload and Download work. For many drivers,
+// these are implemented in the concrete type, but drivers that implement Reader.Download
+// and/or Writer.Upload will have those called directly.
+func testUploadDownload(t *testing.T, newHarness HarnessMaker) {
+	const key = "blob-for-upload-download"
+	const contents = "up and down"
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blob.NewBucket(drv)
+	defer b.Close()
+
+	// Write a blob using Upload.
+	if err := b.Upload(ctx, key, strings.NewReader(contents), &blob.WriterOptions{ContentType: "text"}); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Delete(ctx, key)
+
+	// Read the blob using Download.
+	var bb bytes.Buffer
+	err = b.Download(ctx, key, &bb, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bb.String() != contents {
+		t.Errorf("read data mismatch for key %s", key)
+	}
 }
 
 // testKeys tests a variety of weird keys.

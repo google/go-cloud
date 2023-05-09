@@ -194,6 +194,77 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 func (*fakeLister) Close() error                           { return nil }
 func (*fakeLister) ErrorCode(err error) gcerrors.ErrorCode { return gcerrors.Unknown }
 
+type stubReader struct {
+	driver.Reader
+	downloaded bool
+}
+
+func (r *stubReader) Download(w io.Writer) error {
+	r.downloaded = true
+	return nil
+}
+
+func (*stubReader) Close() error { return nil }
+
+type stubWriter struct {
+	driver.Writer
+	uploaded bool
+}
+
+func (w *stubWriter) Upload(r io.Reader) error {
+	w.uploaded = true
+	return nil
+}
+
+func (*stubWriter) Close() error { return nil }
+
+// loaderBucket implements driver.Bucket's NewTypedWriter and NewRangedReader methods,
+// returning stubReader and stubWriter. It is used to verify that the special driver.Uploader
+// and driver.Downloader overrides work when called.
+type loaderBucket struct {
+	driver.Bucket
+	w stubWriter
+	r stubReader
+}
+
+func (b *loaderBucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	return &b.w, nil
+}
+
+func (b *loaderBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
+	return &b.r, nil
+}
+
+func (*loaderBucket) Close() error { return nil }
+
+func TestUploader(t *testing.T) {
+	ctx := context.Background()
+	lb := &loaderBucket{}
+	b := NewBucket(lb)
+	defer b.Close()
+	err := b.Upload(ctx, "key", nil, &WriterOptions{ContentType: "text/html"})
+	if err != nil {
+		t.Fatalf("Upload failed: %v", err)
+	}
+	if !lb.w.uploaded {
+		t.Error("Uploader wasn't called")
+	}
+}
+
+func TestDownloader(t *testing.T) {
+	ctx := context.Background()
+	lb := &loaderBucket{}
+	b := NewBucket(lb)
+	defer b.Close()
+	err := b.Download(ctx, "key", nil, nil)
+	if err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if !lb.r.downloaded {
+		t.Error("Downloader wasn't called")
+	}
+}
+
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
 // In addition, when passed the key "work", NewRangeReader and NewTypedWriter
