@@ -32,8 +32,7 @@
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
 // (during reads). The following escapes are performed for s3blob:
 //   - Blob keys: ASCII characters 0-31 are escaped to "__0x<hex>__".
-//     Additionally, the "/" in "../" and the trailing "/" in "//" are escaped in
-//     the same way.
+//     Additionally, the "/" in "../" is escaped in the same way.
 //   - Metadata keys: Escaped using URL encoding, then additionally "@:=" are
 //     escaped using "__0x<hex>__". These characters were determined by
 //     experimentation.
@@ -901,9 +900,6 @@ func escapeKey(key string) string {
 			return true
 		// For "../", escape the trailing slash.
 		case i > 1 && c == '/' && r[i-1] == '.' && r[i-2] == '.':
-			return true
-		// For "//", escape the trailing slash. Otherwise, S3 drops it.
-		case i > 0 && c == '/' && r[i-1] == '/':
 			return true
 		}
 		return false
