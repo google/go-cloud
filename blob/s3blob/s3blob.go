@@ -902,9 +902,6 @@ func escapeKey(key string) string {
 		// For "../", escape the trailing slash.
 		case i > 1 && c == '/' && r[i-1] == '.' && r[i-2] == '.':
 			return true
-		// For "//", escape the trailing slash. Otherwise, S3 drops it.
-		case i > 0 && c == '/' && r[i-1] == '/':
-			return true
 		}
 		return false
 	})
