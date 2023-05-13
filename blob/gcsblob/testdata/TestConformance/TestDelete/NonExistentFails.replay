@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7afM0lNA/oi/5c",
+  "Initial": "AQAAAA7b8cqcAmq7wQAA",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": null,
@@ -35,7 +35,7 @@
   },
   "Entries": [
     {
-      "ID": "cb66ca7fbc946c1f",
+      "ID": "dccd3a0f45780bea",
       "Request": {
         "Method": "DELETE",
         "URL": "https://storage.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/does-not-exist?alt=json\u0026prettyPrint=false",
@@ -58,9 +58,6 @@
         "ProtoMajor": 1,
         "ProtoMinor": 1,
         "Header": {
-          "Alt-Svc": [
-            "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000,h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\""
-          ],
           "Cache-Control": [
             "no-cache, no-store, max-age=0, must-revalidate"
           ],
@@ -71,7 +68,7 @@
             "application/json; charset=UTF-8"
           ],
           "Date": [
-            "Wed, 03 Aug 2022 20:10:14 GMT"
+            "Sat, 13 May 2023 18:14:52 GMT"
           ],
           "Expires": [
             "CLEARED"
@@ -86,20 +83,8 @@
             "Origin",
             "X-Origin"
           ],
-          "X-Guploader-Customer": [
-            "apiary_cloudstorage_metadata"
-          ],
-          "X-Guploader-Request-Class": [
-            "LATENCY_SENSITIVE"
-          ],
-          "X-Guploader-Request-Result": [
-            "agent_rejected"
-          ],
-          "X-Guploader-Upload-Result": [
-            "agent_rejected"
-          ],
           "X-Guploader-Uploadid": [
-            "ADPycdtP2IjE7qTo9X5vmw-CKwA0rqL-2rkHQkyUAiOsGTSPddS8oEmUCOGrgm41RoMCDqgv03pDWQ8f7KAcveF-Jap1"
+            "ADPycduRuauBoLj6-8iY4YrCpmcwrtRaPXCHpAdqqoU_UBwO-YRbchdsBDZdzRbVIEBxaeOe8qOHZT65tLixIeoyT51E"
           ]
         },
         "Body": "eyJlcnJvciI6eyJjb2RlIjo0MDQsIm1lc3NhZ2UiOiJObyBzdWNoIG9iamVjdDogZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9kb2VzLW5vdC1leGlzdCIsImVycm9ycyI6W3sibWVzc2FnZSI6Ik5vIHN1Y2ggb2JqZWN0OiBnby1jbG91ZC1ibG9iLXRlc3QtYnVja2V0L2RvZXMtbm90LWV4aXN0IiwiZG9tYWluIjoiZ2xvYmFsIiwicmVhc29uIjoibm90Rm91bmQifV19fQ=="
