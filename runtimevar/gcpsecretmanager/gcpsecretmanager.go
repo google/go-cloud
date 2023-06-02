@@ -216,7 +216,7 @@ func OpenVariable(client *secretmanager.Client, secretKey string, decoder *runti
 	return runtimevar.New(w), nil
 }
 
-var secretKeyRE = regexp.MustCompile("^projects/[a-z][a-z0-9_\\-]{4,28}[a-z0-9_]/secrets/[a-zA-Z0-9_\\-]{1,255}$")
+var secretKeyRE = regexp.MustCompile(`^projects/[a-z][a-z0-9_\-]{4,28}[a-z0-9_]/secrets/[a-zA-Z0-9_\-]{1,255}$`)
 
 const latestVersion = "/versions/latest"
 
