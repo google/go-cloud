@@ -150,10 +150,7 @@ func DoNotWrap(err error) bool {
 		return true
 	}
 	var r *retry.ContextError
-	if xerrors.As(err, &r) {
-		return true
-	}
-	return false
+	return xerrors.As(err, &r)
 }
 
 // GRPCCode extracts the gRPC status code and converts it into an ErrorCode.
