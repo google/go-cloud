@@ -24,7 +24,6 @@ import (
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 )
 
@@ -47,9 +46,9 @@ func BenchmarkPutVSTransact(b *testing.B) {
 			var items []map[string]*dynamodb.AttributeValue
 			for i := 0; i < nItems; i++ {
 				items = append(items, map[string]*dynamodb.AttributeValue{
-					"name": new(dyn.AttributeValue).SetS(fmt.Sprintf("pt-vs-transact-%d", i)),
-					"x":    new(dyn.AttributeValue).SetN(strconv.Itoa(i)),
-					"rev":  new(dyn.AttributeValue).SetN("1"),
+					"name": new(dynamodb.AttributeValue).SetS(fmt.Sprintf("pt-vs-transact-%d", i)),
+					"x":    new(dynamodb.AttributeValue).SetN(strconv.Itoa(i)),
+					"rev":  new(dynamodb.AttributeValue).SetN("1"),
 				})
 			}
 			for _, item := range items {
@@ -105,7 +104,7 @@ func putItems(b *testing.B, db *dynamodb.DynamoDB, items []map[string]*dynamodb.
 
 func batchGetTransactWrite(b *testing.B, db *dynamodb.DynamoDB, items []map[string]*dynamodb.AttributeValue) {
 	keys := make([]map[string]*dynamodb.AttributeValue, len(items))
-	tws := make([]*dyn.TransactWriteItem, len(items))
+	tws := make([]*dynamodb.TransactWriteItem, len(items))
 	for i, item := range items {
 		keys[i] = map[string]*dynamodb.AttributeValue{"name": items[i]["name"]}
 		item["x"].SetN(strconv.Itoa(i + 2))
