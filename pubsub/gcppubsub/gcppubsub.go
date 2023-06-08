@@ -207,7 +207,6 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	opts := o.TopicOptions
 
 	for param, value := range u.Query() {
-		fmt.Printf("bianpengyuan %v %v\n", param, value)
 		switch param {
 		case "max_send_batch_size":
 			maxBatchSize, err := queryParameterInt(value)
