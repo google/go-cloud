@@ -384,6 +384,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 		{"gcppubsub://projects/myproject/topic/mytopic", false},
 		// Invalid parameter.
 		{"gcppubsub://myproject/mytopic?param=value", true},
+		// Valid max_send_batch_size
+		{"gcppubsub://projects/mytopic?max_send_batch_size=1", false},
+		// Invalid max_send_batch_size
+		{"gcppubsub://projects/mytopic?max_send_batch_size=0", true},
+		// Invalid max_send_batch_size
+		{"gcppubsub://projects/mytopic?max_send_batch_size=1001", true},
 	}
 
 	ctx := context.Background()
