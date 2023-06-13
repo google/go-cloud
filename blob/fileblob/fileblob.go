@@ -789,6 +789,11 @@ type writer struct {
 	path string
 }
 
+func (w *writer) Upload(r io.Reader) error {
+	_, err := w.ReadFrom(r)
+	return err
+}
+
 func (w *writer) Close() error {
 	err := w.File.Close()
 	if err != nil {

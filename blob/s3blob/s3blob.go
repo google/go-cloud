@@ -263,7 +263,13 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 
 // writer writes an S3 object, it implements io.WriteCloser.
 type writer struct {
-	w *io.PipeWriter // created when the first byte is written
+	// Ends of an io.Pipe, created when the first byte is written.
+	pw *io.PipeWriter
+	pr *io.PipeReader
+
+	// Alternatively, upload is set to true when Upload was
+	// used to upload data.
+	upload bool
 
 	ctx   context.Context
 	useV2 bool
@@ -279,69 +285,74 @@ type writer struct {
 	err error
 }
 
-// Write appends p to w. User must call Close to close the w after done writing.
+// Write appends p to w.pw. User must call Close to close the w after done writing.
 func (w *writer) Write(p []byte) (int, error) {
 	// Avoid opening the pipe for a zero-length write;
 	// the concrete can do these for empty blobs.
 	if len(p) == 0 {
 		return 0, nil
 	}
-	if w.w == nil {
+	if w.pw == nil {
 		// We'll write into pw and use pr as an io.Reader for the
 		// Upload call to S3.
-		pr, pw := io.Pipe()
-		w.w = pw
-		if err := w.open(pr); err != nil {
-			return 0, err
-		}
+		w.pr, w.pw = io.Pipe()
+		w.open(w.pr, true)
 	}
-	select {
-	case <-w.donec:
-		return 0, w.err
-	default:
-	}
-	return w.w.Write(p)
+	return w.pw.Write(p)
 }
 
-// pr may be nil if we're Closing and no data was written.
-func (w *writer) open(pr *io.PipeReader) error {
+// Upload reads from r. Per the driver, it is guaranteed to be the only
+// write call for this writer.
+func (w *writer) Upload(r io.Reader) error {
+	w.upload = true
+	w.open(r, false)
+	return nil
+}
 
+// r may be nil if we're Closing and no data was written.
+// If closePipeOnError is true, w.pr will be closed if there's an
+// error uploading to S3.
+func (w *writer) open(r io.Reader, closePipeOnError bool) {
+	// This goroutine will keep running until Close, unless there's an error.
 	go func() {
 		defer close(w.donec)
 
-		body := io.Reader(pr)
-		if pr == nil {
+		if r == nil {
 			// AWS doesn't like a nil Body.
-			body = http.NoBody
+			r = http.NoBody
 		}
 		var err error
 		if w.useV2 {
-			w.reqV2.Body = body
+			w.reqV2.Body = r
 			_, err = w.uploaderV2.Upload(w.ctx, w.reqV2)
 		} else {
-			w.req.Body = body
+			w.req.Body = r
 			_, err = w.uploader.UploadWithContext(w.ctx, w.req)
 		}
 		if err != nil {
-			w.err = err
-			if pr != nil {
-				pr.CloseWithError(err)
+			if closePipeOnError {
+				w.pr.CloseWithError(err)
+				w.pr = nil
 			}
-			return
+			w.err = err
 		}
 	}()
-	return nil
 }
 
 // Close completes the writer and closes it. Any error occurring during write
 // will be returned. If a writer is closed before any Write is called, Close
 // will create an empty file at the given key.
 func (w *writer) Close() error {
-	if w.w == nil {
-		// We never got any bytes written. We'll write an http.NoBody.
-		w.open(nil)
-	} else if err := w.w.Close(); err != nil {
-		return err
+	if !w.upload {
+		if w.pr != nil {
+			defer w.pr.Close()
+		}
+		if w.pw == nil {
+			// We never got any bytes written. We'll write an http.NoBody.
+			w.open(nil, false)
+		} else if err := w.pw.Close(); err != nil {
+			return err
+		}
 	}
 	<-w.donec
 	return w.err
