@@ -187,6 +187,7 @@ const Scheme = "gcppubsub"
 // The following query parameters are supported:
 //
 //   - max_recv_batch_size: sets SubscriptionOptions.MaxBatchSize.
+//   - max_send_batch_size: sets TopicOptions.BatcherOptions.MaxBatchSize.
 //   - nacklazy: sets SubscriberOptions.NackLazy. The value must be parseable by `strconv.ParseBool`.
 //
 // Currently their use is limited to subscribers.
@@ -203,8 +204,24 @@ type URLOpener struct {
 
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+	opts := o.TopicOptions
+
+	for param, value := range u.Query() {
+		switch param {
+		case "max_send_batch_size":
+			maxBatchSize, err := queryParameterInt(value)
+			if err != nil {
+				return nil, fmt.Errorf("open topic %v: invalid query parameter %q: %v", u, param, err)
+			}
+
+			if maxBatchSize <= 0 || maxBatchSize > 1000 {
+				return nil, fmt.Errorf("open topic %v: invalid query parameter %q: must be between 1 and 1000", u, param)
+			}
+
+			opts.BatcherOptions.MaxBatchSize = maxBatchSize
+		default:
+			return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+		}
 	}
 	pc, err := PublisherClient(ctx, o.Conn)
 	if err != nil {
@@ -212,11 +229,11 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	}
 	topicPath := path.Join(u.Host, u.Path)
 	if topicPathRE.MatchString(topicPath) {
-		return OpenTopicByPath(pc, topicPath, &o.TopicOptions)
+		return OpenTopicByPath(pc, topicPath, &opts)
 	}
 	// Shortened form?
 	topicName := strings.TrimPrefix(u.Path, "/")
-	return OpenTopic(pc, gcp.ProjectID(u.Host), topicName, &o.TopicOptions), nil
+	return OpenTopic(pc, gcp.ProjectID(u.Host), topicName, &opts), nil
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
