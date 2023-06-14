@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/googleapis/gax-go/v2"
-	"golang.org/x/xerrors"
 )
 
 // Errors to distinguish retryable and non-retryable cases.
@@ -138,7 +137,7 @@ func TestErrorsIs(t *testing.T) {
 		FuncErr: os.ErrExist,
 	}
 	for _, target := range []error{err, context.Canceled, os.ErrExist} {
-		if !xerrors.Is(err, target) {
+		if !errors.Is(err, target) {
 			t.Errorf("xerrors.Is(%v) == false, want true", target)
 		}
 	}

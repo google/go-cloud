@@ -21,8 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/xerrors"
-
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
@@ -435,7 +433,7 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	if got := gcerrors.Code(err); got != gcerrors.Internal {
 		t.Fatalf("error code = %v; want %v", got, gcerrors.Internal)
 	}
-	if got := xerrors.Unwrap(err); got != serr {
+	if got := errors.Unwrap(err); got != serr {
 		t.Errorf("error = %v; want %v", got, serr)
 	}
 }
