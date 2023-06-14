@@ -465,7 +465,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 		// OK, setting both profile and region.
 		{"s3://mybucket?profile=main&region=us-west-1", false},
 		// OK, use V2.
-		{"s3://mybucket?awssdk=2", false},
+		{"s3://mybucket?awssdk=v2", false},
 		// Invalid parameter together with a valid one.
 		{"s3://mybucket?profile=main&param=value", true},
 		// Invalid parameter.

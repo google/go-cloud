@@ -84,7 +84,7 @@ func Example_openBucketFromURL() {
 	defer bucket.Close()
 
 	// Forcing AWS SDK V2.
-	bucket, err = blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1&awssdk=2")
+	bucket, err = blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1&awssdk=v2")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -69,7 +69,7 @@
 	},
 	"gocloud.dev/blob/s3blob.Example_openBucketFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/s3blob\"\n)",
-		"code": "// blob.OpenBucket creates a *blob.Bucket from a URL.\nbucket, err := blob.OpenBucket(ctx, \"s3://my-bucket?region=us-west-1\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()\n\n// Forcing AWS SDK V2.\nbucket, err = blob.OpenBucket(ctx, \"s3://my-bucket?region=us-west-1\u0026awssdk=2\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+		"code": "// blob.OpenBucket creates a *blob.Bucket from a URL.\nbucket, err := blob.OpenBucket(ctx, \"s3://my-bucket?region=us-west-1\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()\n\n// Forcing AWS SDK V2.\nbucket, err = blob.OpenBucket(ctx, \"s3://my-bucket?region=us-west-1\u0026awssdk=v2\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
 	},
 	"gocloud.dev/docstore.ExampleCollection_Actions_bulkWrite": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n)",
