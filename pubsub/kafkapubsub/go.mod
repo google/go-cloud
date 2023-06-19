@@ -23,7 +23,5 @@ require (
 	github.com/klauspost/compress v1.16.6 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
-	gocloud.dev v0.29.0
+	gocloud.dev v0.30.0
 )
-
-replace gocloud.dev => ../../
