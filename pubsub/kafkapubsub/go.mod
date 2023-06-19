@@ -25,5 +25,3 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	gocloud.dev v0.29.0
 )
-
-replace gocloud.dev => ../../

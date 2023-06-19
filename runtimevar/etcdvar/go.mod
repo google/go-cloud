@@ -25,5 +25,3 @@ require (
 	gocloud.dev v0.29.0
 	google.golang.org/grpc v1.56.0
 )
-
-replace gocloud.dev => ../../
