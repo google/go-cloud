@@ -21,9 +21,9 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/google/go-cmp v0.5.9
 	go.etcd.io/etcd v3.3.27+incompatible
-	go.etcd.io/etcd/client/v3 v3.5.7
+	go.etcd.io/etcd/client/v3 v3.5.9
 	gocloud.dev v0.29.0
-	google.golang.org/grpc v1.53.0
+	google.golang.org/grpc v1.56.0
 )
 
 replace gocloud.dev => ../../

@@ -182,6 +182,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 		r.ClearQueryParams("Signature")
 		r.ClearHeaders("Expires")
 		r.ClearHeaders("Signature")
+		r.ClearHeaders("X-Goog-Gcs-Idempotency-Token")
 	})
 	transport := c.Transport
 	if *Record {

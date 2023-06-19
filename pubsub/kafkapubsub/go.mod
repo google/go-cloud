@@ -19,8 +19,10 @@ go 1.12
 require (
 	github.com/Shopify/sarama v1.38.1
 	github.com/google/go-cmp v0.5.9
-	github.com/klauspost/compress v1.15.15 // indirect
+	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
+	github.com/klauspost/compress v1.16.6 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
+	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	gocloud.dev v0.29.0
 )
 

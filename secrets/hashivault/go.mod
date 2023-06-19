@@ -18,13 +18,10 @@ go 1.12
 
 require (
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
-	github.com/fatih/color v1.14.1 // indirect
-	github.com/hashicorp/go-hclog v1.4.0 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.4 // indirect
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7 // indirect
-	github.com/hashicorp/vault/api v1.9.0
+	github.com/hashicorp/vault/api v1.9.2
 	gocloud.dev v0.29.0
-	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
 
 replace gocloud.dev => ../../
