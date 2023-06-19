@@ -50,7 +50,7 @@
 //   - Message.BeforeSend: *servicebus.Message
 //   - Message.AfterSend: None
 //   - Message: *servicebus.Message
-//   - Error: common.Retryable, *amqp.Error, *amqp.DetachError
+//   - Error: common.Retryable, *amqp.Error, *amqp.LinkError
 package azuresb // import "gocloud.dev/pubsub/azuresb"
 
 import (
@@ -331,8 +331,8 @@ func (*topic) ErrorAs(err error, i interface{}) bool {
 
 func errorAs(err error, i interface{}) bool {
 	switch v := err.(type) {
-	case *amqp.DetachError:
-		if p, ok := i.(**amqp.DetachError); ok {
+	case *amqp.LinkError:
+		if p, ok := i.(**amqp.LinkError); ok {
 			*p = v
 			return true
 		}
@@ -533,7 +533,7 @@ func errorCode(err error) (gcerrors.ErrorCode, bool) {
 		return gcerrors.NotFound, false
 	}
 	var cond amqp.ErrCond
-	var aderr *amqp.DetachError
+	var aderr *amqp.LinkError
 	var aerr *amqp.Error
 	if errors.As(err, &aderr) {
 		if aderr.RemoteErr == nil {

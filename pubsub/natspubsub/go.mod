@@ -18,8 +18,9 @@ go 1.12
 
 require (
 	github.com/google/go-cmp v0.5.9
+	github.com/klauspost/compress v1.16.6 // indirect
 	github.com/nats-io/nats-server/v2 v2.7.2
-	github.com/nats-io/nats.go v1.23.0
+	github.com/nats-io/nats.go v1.27.0
 	gocloud.dev v0.29.0
 )
 
