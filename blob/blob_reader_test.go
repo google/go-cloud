@@ -15,7 +15,9 @@
 package blob_test
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"testing"
 	"testing/iotest"
 
@@ -41,12 +43,29 @@ func TestReader(t *testing.T) {
 	bucket.WriteAll(ctx, myKey, data, nil)
 
 	// Create a blob.Reader.
-	r, err := bucket.NewReader(ctx, myKey, nil)
+	r1, err := bucket.NewReader(ctx, myKey, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r.Close()
-	if err := iotest.TestReader(r, data); err != nil {
+	r1.Close()
+	if err := iotest.TestReader(r1, data); err != nil {
 		t.Error(err)
+	}
+
+	// Create another blob.Reader to exercise the ReadFrom code path
+	r2, err := bucket.NewReader(ctx, myKey, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r2.Close()
+
+	var buffer bytes.Buffer
+	n, err := io.Copy(&buffer, r2)
+	if err != nil {
+		t.Fatal(err)
+	} else if n != int64(len(data)) {
+		t.Fatal("wrote fewer bytes than expected")
+	} else if !bytes.Equal(buffer.Bytes(), data) {
+		t.Fatal("wrote invalid bytes")
 	}
 }
