@@ -2624,12 +2624,21 @@ func benchmarkRead(b *testing.B, bkt *blob.Bucket) {
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
+		var buffer bytes.Buffer
+		buffer.Grow(len(content))
+
 		for pb.Next() {
-			buf, err := bkt.ReadAll(ctx, key)
+			buffer.Reset()
+			r, err := bkt.NewReader(ctx, key, nil)
 			if err != nil {
 				b.Error(err)
 			}
-			if !bytes.Equal(buf, content) {
+
+			if _, err = io.Copy(&buffer, r); err != nil {
+				b.Error(err)
+			}
+			r.Close()
+			if !bytes.Equal(buffer.Bytes(), content) {
 				b.Error("read didn't match write")
 			}
 		}
