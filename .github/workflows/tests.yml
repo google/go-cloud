@@ -42,3 +42,10 @@ jobs:
       - name: Run Tests
         shell: bash
         run: 'internal/testing/runchecks.sh'
+      - if: matrix.os == 'ubuntu-latest'
+        name: Build for dragonfly
+        run: |
+          go install ./...
+        env:
+          GOARCH: amd64
+          GOOS: dragonfly
