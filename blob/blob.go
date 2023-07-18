@@ -18,6 +18,9 @@
 //
 // See https://gocloud.dev/howto/blob/ for a detailed how-to guide.
 //
+// *blob.Bucket implements io/fs.FS and io/fs.SubFS, so it can be used with
+// functions in that package.
+//
 // # Errors
 //
 // The errors returned from this package can be inspected in several ways:
@@ -623,6 +626,11 @@ func (o *ListObject) As(i interface{}) bool {
 type Bucket struct {
 	b      driver.Bucket
 	tracer *oc.Tracer
+
+	// ioFSCallback is set via SetIOFSCallback, which must be
+	// called before calling various functions implementing interfaces
+	// from the io/fs package.
+	ioFSCallback func() (context.Context, *ReaderOptions)
 
 	// mu protects the closed variable.
 	// Read locks are kept to allow holding a read lock for long-running calls,
