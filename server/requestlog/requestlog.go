@@ -20,9 +20,9 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"go.opencensus.io/trace"
@@ -51,9 +51,6 @@ func NewHandler(log Logger, h http.Handler) *Handler {
 
 // ServeHTTP calls its underlying handler's ServeHTTP method, then calls
 // Log after the handler returns.
-//
-// ServeHTTP will always consume the request body up to the first error,
-// even if the underlying handler does not.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	sc := trace.FromContext(r.Context()).SpanContext()
@@ -82,12 +79,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.h.ServeHTTP(w2, r2)
 
 	ent.Latency = time.Since(start)
-	if rcc.err == nil && rcc.r != nil && !w2.hijacked {
-		// If the handler hasn't encountered an error in the Body (like EOF),
-		// then consume the rest of the Body to provide an accurate rcc.n.
-		io.Copy(ioutil.Discard, rcc)
-	}
+	// The handler may or may not have read the entire body. If the request
+	// includes a Content-Length header, use that for a more accurate
+	// RequestBodySize.
 	ent.RequestBodySize = rcc.n
+	if contentLengthStr := r.Header.Get("Content-Length"); contentLengthStr != "" {
+		ent.RequestBodySize, _ = strconv.ParseInt(contentLengthStr, 10, 64)
+	}
 	ent.Status = w2.code
 	if ent.Status == 0 {
 		ent.Status = http.StatusOK
