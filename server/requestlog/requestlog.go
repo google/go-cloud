@@ -233,3 +233,9 @@ func (r *responseStats) Hijack() (_ net.Conn, _ *bufio.ReadWriter, err error) {
 	}
 	return nil, nil, errors.New("underlying ResponseWriter does not support hijacking")
 }
+
+func (r *responseStats) Flush() {
+	if fl, ok := r.w.(http.Flusher); ok {
+		fl.Flush()
+	}
+}
