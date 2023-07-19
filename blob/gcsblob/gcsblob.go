@@ -21,6 +21,8 @@
 // The default URL opener will set up a connection using default credentials
 // from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
+// You may force the use of an unauthenticated client by setting
+// GoogleAccessID to "-" (via Options or via the URL parameter "access_id").
 // Some environments, such as GCE, come without a private key. In such cases
 // the IAM Credentials API will be configured for use in Options.MakeSignBytes,
 // which will introduce latency to any and all calls to bucket.SignedURL
@@ -206,7 +208,8 @@ const Scheme = "gs"
 //   - access_id: sets Options.GoogleAccessID
 //   - private_key_path: path to read for Options.PrivateKey
 //
-// Currently their use is limited to SignedURL.
+// Currently their use is limited to SignedURL, except that setting access_id
+// to "-" forces the use of an unauthenticated client.
 type URLOpener struct {
 	// Client must be set to a non-nil HTTP client authenticated with
 	// Cloud Storage scope or equivalent.
@@ -218,32 +221,34 @@ type URLOpener struct {
 
 // OpenBucketURL opens the GCS bucket with the same name as the URL's host.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	opts, err := o.forParams(ctx, u.Query())
+	opts, client, err := o.forParams(ctx, u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-	return OpenBucket(ctx, o.Client, u.Host, opts)
+	return OpenBucket(ctx, client, u.Host, opts)
 }
 
-func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp.HTTPClient, error) {
 	for k := range q {
 		if k != "access_id" && k != "private_key_path" {
-			return nil, fmt.Errorf("invalid query parameter %q", k)
+			return nil, nil, fmt.Errorf("invalid query parameter %q", k)
 		}
 	}
 	opts := new(Options)
 	*opts = o.Options
+	client := o.Client
 	if accessID := q.Get("access_id"); accessID != "" && accessID != opts.GoogleAccessID {
-		opts.GoogleAccessID = accessID
-		opts.PrivateKey = nil // Clear any previous key unrelated to the new accessID.
-
-		// Clear this as well to prevent calls with the old and mismatched accessID.
-		opts.MakeSignBytes = nil
+		opts.clear()
+		if accessID == "-" {
+			client = gcp.NewAnonymousHTTPClient(gcp.DefaultTransport())
+		} else {
+			opts.GoogleAccessID = accessID
+		}
 	}
 	if keyPath := q.Get("private_key_path"); keyPath != "" {
 		pk, err := ioutil.ReadFile(keyPath)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		opts.PrivateKey = pk
 	} else if _, exists := q["private_key_path"]; exists {
@@ -252,12 +257,13 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 		// is intentional such as for tests or involving a key stored in a HSM/TPM.
 		opts.PrivateKey = nil
 	}
-	return opts, nil
+	return opts, client, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.
 type Options struct {
 	// GoogleAccessID represents the authorizer for SignedURL.
+	// If set to "-", an unauthenticated client will be used.
 	// Required to use SignedURL.
 	// See https://godoc.org/cloud.google.com/go/storage#SignedURLOptions.
 	GoogleAccessID string
@@ -277,6 +283,14 @@ type Options struct {
 	// MakeSignBytes is a factory for functions that are being used in place of an empty SignBytes.
 	// If your implementation of 'SignBytes' needs a request context, set this instead.
 	MakeSignBytes func(requestCtx context.Context) SignBytesFunc
+}
+
+// clear clears all the fields of o.
+func (o *Options) clear() {
+	o.GoogleAccessID = ""
+	o.PrivateKey = nil
+	o.SignBytes = nil
+	o.MakeSignBytes = nil
 }
 
 // SignBytesFunc is shorthand for the signature of Options.SignBytes.
