@@ -1,12 +1,13 @@
 {
-  "Initial": "AQAAAA7b8cqtEWtz4AAA",
+  "Initial": "AQAAAA7cSkbvHEiElwAA",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": null,
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Expires$",
-      "^Signature$"
+      "^Signature$",
+      "^X-Goog-Gcs-Idempotency-Token$"
     ],
     "RemoveRequestHeaders": [
       "^Authorization$",
@@ -35,7 +36,7 @@
   },
   "Entries": [
     {
-      "ID": "876ee9903641e394",
+      "ID": "c20422cf294313eb",
       "Request": {
         "Method": "GET",
         "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/nonexistent-key",
@@ -68,7 +69,7 @@
             "application/xml; charset=UTF-8"
           ],
           "Date": [
-            "Sat, 13 May 2023 18:15:09 GMT"
+            "Wed, 19 Jul 2023 21:04:47 GMT"
           ],
           "Expires": [
             "CLEARED"
@@ -77,7 +78,7 @@
             "UploadServer"
           ],
           "X-Guploader-Uploadid": [
-            "ADPycdtnsk8Hpiw-PqJtWstSSSoFIwwZV6sBjJHQeNZ4n-eiQc12AXqMja_OLMfviTYA8c1nkILVc4RWzpzM3-8OvwbJ5A"
+            "ADPycdvDWmp_hvVSOH6cvw3u9kKYQW3McyXNTSg7pwIyejsC6Ms5BXrV62ETVuAQNvovO24t7NKYuQaoyuEUx2-lMRLAndEqxkGV"
           ]
         },
         "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+Tm9TdWNoS2V5PC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQga2V5IGRvZXMgbm90IGV4aXN0LjwvTWVzc2FnZT48RGV0YWlscz5ObyBzdWNoIG9iamVjdDogZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9ub25leGlzdGVudC1rZXk8L0RldGFpbHM+PC9FcnJvcj4="
