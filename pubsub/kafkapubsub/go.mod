@@ -19,7 +19,7 @@ go 1.19
 require (
 	github.com/Shopify/sarama v1.38.1
 	github.com/google/go-cmp v0.5.9
-	gocloud.dev v0.30.0
+	gocloud.dev v0.31.0
 )
 
 require (
@@ -78,5 +78,3 @@ require (
 	google.golang.org/grpc v1.56.2 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
-
-replace gocloud.dev => ../../
