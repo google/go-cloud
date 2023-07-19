@@ -19,7 +19,7 @@ go 1.19
 require (
 	github.com/Shopify/sarama v1.38.1
 	github.com/google/go-cmp v0.5.9
-	gocloud.dev v0.31.0
+	gocloud.dev v0.32.0
 )
 
 require (

@@ -29,12 +29,12 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/streadway/amqp v1.0.0
 	go.opencensus.io v0.24.0
-	gocloud.dev v0.31.0
-	gocloud.dev/docstore/mongodocstore v0.31.0
-	gocloud.dev/pubsub/kafkapubsub v0.31.0
-	gocloud.dev/pubsub/natspubsub v0.31.0
-	gocloud.dev/pubsub/rabbitpubsub v0.31.0
-	gocloud.dev/secrets/hashivault v0.31.0
+	gocloud.dev v0.32.0
+	gocloud.dev/docstore/mongodocstore v0.32.0
+	gocloud.dev/pubsub/kafkapubsub v0.32.0
+	gocloud.dev/pubsub/natspubsub v0.32.0
+	gocloud.dev/pubsub/rabbitpubsub v0.32.0
+	gocloud.dev/secrets/hashivault v0.32.0
 	google.golang.org/genproto v0.0.0-20230717213848-3f92550aa753
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )

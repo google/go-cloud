@@ -18,7 +18,7 @@ go 1.19
 
 require (
 	github.com/hashicorp/vault/api v1.9.2
-	gocloud.dev v0.31.0
+	gocloud.dev v0.32.0
 )
 
 require (
