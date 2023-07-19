@@ -532,11 +532,12 @@ func TestURLOpenerForParams(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		currOpts Options
-		query    url.Values
-		wantOpts Options
-		wantErr  bool
+		name       string
+		currOpts   Options
+		query      url.Values
+		wantOpts   Options
+		wantClient bool
+		wantErr    bool
 	}{
 		{
 			name: "InvalidParam",
@@ -559,6 +560,15 @@ func TestURLOpenerForParams(t *testing.T) {
 				"access_id": {"bar"},
 			},
 			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name:     "AccessID override to - makes new client",
+			currOpts: Options{GoogleAccessID: "foo"},
+			query: url.Values{
+				"access_id": {"-"},
+			},
+			wantOpts:   Options{}, // cleared
+			wantClient: true,
 		},
 		{
 			name:     "AccessID not overridden",
@@ -608,7 +618,7 @@ func TestURLOpenerForParams(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			o := &URLOpener{Options: test.currOpts}
-			got, err := o.forParams(ctx, test.query)
+			got, gotClient, err := o.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -617,6 +627,9 @@ func TestURLOpenerForParams(t *testing.T) {
 			}
 			if diff := cmp.Diff(got, &test.wantOpts); diff != "" {
 				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
+			}
+			if test.wantClient != (gotClient != nil) {
+				t.Errorf("opener.forParams client return value was unexpected, got %v want %v", gotClient != nil, test.wantClient)
 			}
 		})
 	}
