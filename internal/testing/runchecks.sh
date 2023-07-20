@@ -187,15 +187,6 @@ if [[ ${latest_go_version} -eq 1 ]]; then
 fi;
 
 
-# For pull requests, check if there are undeclared incompatible API changes.
-# Skip this if we're already going to fail since it is expensive.
-# CURRENTLY BROKEN
-# if [[ ${latest_go_version} -eq 1 ]] && [[ ${result} -eq 0 ]] && [[ ! -z "${GITHUB_HEAD_REF:-}" ]]; then
-  # echo
-  # ./internal/testing/check_api_change.sh || result=1;
-# fi
-
-
 echo
 if [[ ${result} -eq 0 ]]; then
   echo "SUCCESS!"
