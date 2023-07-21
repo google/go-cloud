@@ -34,6 +34,7 @@
 // needs to be parsable as a boolean. For example:
 //   - nats://mysubject?natsv2
 //   - nats://mysubject?natsv2=true
+//
 // This feature could also be enabled by setting the UseV2 field in the
 // URLOpener.
 // If the server does not support this feature, any attempt to use it will
