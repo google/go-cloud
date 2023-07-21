@@ -33,12 +33,12 @@
 //     Otherwise, "storage_account" in the URL query string parameter can be used.
 //   - AZURE_STORAGE_KEY: To use a shared key credential. The service account
 //     name and key are passed to NewSharedKeyCredential and then the
-//     resulting credential is passed to NewServiceClientWithSharedKey.
+//     resulting credential is passed to NewClientWithSharedKeyCredential.
 //   - AZURE_STORAGE_CONNECTION_STRING: To use a connection string, passed to
-//     NewServiceClientFromConnectionString.
+//     NewClientFromConnectionString.
 //   - AZURE_STORAGE_SAS_TOKEN: To use a SAS token. The SAS token is added
 //     as a URL parameter to the service URL, and passed to
-//     NewServiceClientWithNoCredential.
+//     NewClientWithNoCredential.
 //   - If none of the above are provided, azureblob defaults to
 //     azidentity.NewDefaultAzureCredential:
 //     https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#NewDefaultAzureCredential.
@@ -311,9 +311,6 @@ type credInfoT struct {
 	AccountName string
 	AccountKey  string
 
-	// For credTypeSASViaNone.
-	//SASToken string
-
 	// For credTypeConnectionString
 	ConnectionString string
 }
@@ -331,7 +328,6 @@ func newCredInfoFromEnv() *credInfoT {
 		credInfo.AccountKey = accountKey
 	} else if sasToken != "" {
 		credInfo.CredType = credTypeSASViaNone
-		//credInfo.SASToken = sasToken
 	} else if connectionString != "" {
 		credInfo.CredType = credTypeConnectionString
 		credInfo.ConnectionString = connectionString
@@ -348,7 +344,10 @@ func (i *credInfoT) NewClient(svcURL ServiceURL, containerName ContainerName) (*
 		ApplicationID: useragent.AzureUserAgentPrefix("blob"),
 	}
 
-	containerURL := fmt.Sprintf("%s/%s", svcURL, containerName)
+	containerURL, err := url.JoinPath(string(svcURL), string(containerName))
+	if err != nil {
+		return nil, err
+	}
 	switch i.CredType {
 	case credTypeDefault:
 		cred, err := azidentity.NewDefaultAzureCredential(nil)
