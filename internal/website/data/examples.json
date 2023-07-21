@@ -273,7 +273,7 @@
 	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenSubscriptionV2": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscriptionV2(\n\tnatsConn,\n\t\"example.mysubject\",\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer natsConn.Close()\n\n\tsubscription, err := natspubsub.OpenSubscriptionV2(\n\t\tnatsConn,\n\t\t\"example.mysubject\",\n\t\tnil)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenTopic": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
@@ -281,7 +281,7 @@
 	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenTopicV2": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\ntopic, err := natspubsub.OpenTopicV2(natsConn, \"example.mysubject\", nil)\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer natsConn.Close()\n\n\ttopic, err := natspubsub.OpenTopicV2(natsConn, \"example.mysubject\", nil)\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer topic.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/natspubsub.Example_openQueueSubscriptionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
@@ -293,7 +293,7 @@
 	},
 	"gocloud.dev/pubsub/natspubsub.Example_openSubscriptionV2FromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n\t// This URL will Dial the NATS server at the URL in the environment variable\n\t// NATS_SERVER_URL and receive messages with subject \"example.mysubject\".\n\t// This URL will be parsed and the natsv2 attribute will be used to\n\t// use NATS v2.2.0+ native message headers as the message metadata.\n\tsubscription, err := pubsub.OpenSubscription(ctx, \"nats://example.mysubject?natsv2\")\n\tif err != nil {\n\t\treturn err\n\t}\n\tdefer subscription.Shutdown(ctx)"
+		"code": "// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.\n\t// This URL will Dial the NATS server at the URL in the environment variable\n\t// NATS_SERVER_URL and receive messages with subject \"example.mysubject\".\n\t// This URL will be parsed and the natsv2 attribute will be used to\n\t// use NATS v2.2.0+ native message headers as the message metadata.\n\tsubscription, err := pubsub.OpenSubscription(ctx, \"nats://example.mysubject?natsv2\")\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/natspubsub.Example_openTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
@@ -301,7 +301,7 @@
 	},
 	"gocloud.dev/pubsub/natspubsub.Example_openTopicV2FromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "\t// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n\t// This URL will Dial the NATS server at the URL in the environment variable\n\t// NATS_SERVER_URL and send messages with subject \"example.mysubject\".\n\t// This URL will be parsed and the natsv2 attribute will be used to\n\t// use NATS v2.2.0+ native message headers as the message metadata.\n\ttopic, err := pubsub.OpenTopic(ctx, \"nats://example.mysubject?natsv2\")\n\tif err != nil {\n\t\treturn err\n\t}\n\tdefer topic.Shutdown(ctx)"
+		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n\t// This URL will Dial the NATS server at the URL in the environment variable\n\t// NATS_SERVER_URL and send messages with subject \"example.mysubject\".\n\t// This URL will be parsed and the natsv2 attribute will be used to\n\t// use NATS v2.2.0+ native message headers as the message metadata.\n\ttopic, err := pubsub.OpenTopic(ctx, \"nats://example.mysubject?natsv2\")\n\tif err != nil {\n\t\tlog.Fatal(err)\n\t}\n\tdefer topic.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/rabbitpubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\tamqp \"github.com/rabbitmq/amqp091-go\"\n\t\"gocloud.dev/pubsub/rabbitpubsub\"\n)",
