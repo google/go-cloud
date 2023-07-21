@@ -24,7 +24,7 @@
 // The default URL opener will connect to a default server based on the
 // environment variable "NATS_SERVER_URL".
 //
-// For servers that support it (NATS Server 2.2.0 or later), messages could
+// For servers that support it (NATS Server 2.2.0 or later), messages can
 // be encoded using native NATS message headers, and native message content.
 // This provides full support for non-Go clients. Versions prior to 2.2.0
 // uses gob.Encoder to encode the message headers and content, which limits
@@ -35,7 +35,7 @@
 //   - nats://mysubject?natsv2
 //   - nats://mysubject?natsv2=true
 //
-// This feature could also be enabled by setting the UseV2 field in the
+// This feature can also be enabled by setting the UseV2 field in the
 // URLOpener.
 // If the server does not support this feature, any attempt to use it will
 // result in an error.
