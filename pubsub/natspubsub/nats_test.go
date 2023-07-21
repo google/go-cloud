@@ -38,8 +38,9 @@ const (
 )
 
 type harness struct {
-	s  *server.Server
-	nc *nats.Conn
+	s     *server.Server
+	nc    *nats.Conn
+	useV2 bool
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -50,12 +51,23 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &harness{s, nc}, nil
+	return &harness{s: s, nc: nc, useV2: false}, nil
+}
+
+func newHarnessV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	opts := gnatsd.DefaultTestOptions
+	opts.Port = testPort
+	s := gnatsd.RunServer(&opts)
+	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", testPort))
+	if err != nil {
+		return nil, err
+	}
+	return &harness{s: s, nc: nc, useV2: true}, nil
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (driver.Topic, func(), error) {
 	cleanup := func() {}
-	dt, err := openTopic(h.nc, testName)
+	dt, err := openTopic(h.nc, testName, h.useV2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -68,7 +80,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := openSubscription(h.nc, testName, nil)
+	ds, err := openSubscription(h.nc, testName, nil, h.useV2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,7 +94,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 }
 
 func (h *harness) CreateQueueSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := openSubscription(h.nc, testName, &SubscriptionOptions{Queue: testName})
+	ds, err := openSubscription(h.nc, testName, &SubscriptionOptions{Queue: testName}, h.useV2)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -108,7 +120,9 @@ func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
 
 func (*harness) SupportsMultipleSubscriptions() bool { return true }
 
-type natsAsTest struct{}
+type natsAsTest struct {
+	useV2 bool
+}
 
 func (natsAsTest) Name() string {
 	return "nats test"
@@ -166,7 +180,19 @@ func (natsAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (natsAsTest) BeforeSend(as func(interface{}) bool) error {
+func (n natsAsTest) BeforeSend(as func(interface{}) bool) error {
+	if !n.useV2 {
+		return nil
+	}
+	var pm nats.Msg
+	if as(&pm) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
+	}
+
+	var ppm *nats.Msg
+	if !as(&ppm) {
+		return fmt.Errorf("cast failed for %T", &ppm)
+	}
 	return nil
 }
 
@@ -177,6 +203,11 @@ func (natsAsTest) AfterSend(as func(interface{}) bool) error {
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{natsAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
+}
+
+func TestConformanceV2(t *testing.T) {
+	asTests := []drivertest.AsTest{natsAsTest{useV2: true}}
+	drivertest.RunConformanceTests(t, newHarnessV2, asTests)
 }
 
 // These are natspubsub specific to increase coverage.
@@ -231,6 +262,65 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	}
 }
 
+// These are natspubsub specific to increase coverage.
+
+// If we only send a body we should be able to get that from a direct NATS subscriber.
+func TestInteropWithDirectNATSV2(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newHarnessV2(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+	conn := dh.(*harness).nc
+
+	const topic = "foo"
+	// In version V2 we can use metadata which will be natively used in the nats message.
+	md := map[string]string{"a": "1", "b": "2", "c": "3"}
+	body := []byte("hello")
+
+	// Send a message using Go CDK and receive it using NATS directly.
+	pt, err := OpenTopicV2(conn, topic, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pt.Shutdown(ctx)
+	nsub, _ := conn.SubscribeSync(topic)
+	if err = pt.Send(ctx, &pubsub.Message{Body: body, Metadata: md}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := nsub.NextMsgWithContext(ctx)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if !bytes.Equal(m.Data, body) {
+		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
+	}
+	for k, v := range md {
+		if m.Header.Get(k) != v {
+			t.Fatalf("Metadata %q did not match. %q vs %q\n", k, m.Header.Get(k), v)
+		}
+	}
+
+	// Send a message using NATS directly and receive it using Go CDK.
+	ps, err := OpenSubscriptionV2(conn, topic, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ps.Shutdown(ctx)
+	if err := conn.Publish(topic, body); err != nil {
+		t.Fatal(err)
+	}
+	msg, err := ps.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer msg.Ack()
+	if !bytes.Equal(msg.Body, body) {
+		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
+	}
+}
+
 func TestErrorCode(t *testing.T) {
 	ctx := context.Background()
 	dh, err := newHarness(ctx, t)
@@ -241,7 +331,7 @@ func TestErrorCode(t *testing.T) {
 	h := dh.(*harness)
 
 	// Topics
-	dt, err := openTopic(h.nc, "bar")
+	dt, err := openTopic(h.nc, "bar", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +356,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds, err := openSubscription(h.nc, "bar", nil)
+	ds, err := openSubscription(h.nc, "bar", nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +389,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Queue Subscription
-	qs, err := openSubscription(h.nc, "bar", &SubscriptionOptions{Queue: t.Name()})
+	qs, err := openSubscription(h.nc, "bar", &SubscriptionOptions{Queue: t.Name()}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,25 +436,34 @@ func BenchmarkNatsQueuePubSub(b *testing.B) {
 	}
 	defer nc.Close()
 
-	h := &harness{s, nc}
-	dt, cleanup, err := h.CreateTopic(ctx, b.Name())
-	if err != nil {
-		b.Fatal(err)
+	for _, tc := range []struct {
+		name string
+		h    *harness
+	}{
+		{name: "V1", h: &harness{s: s, nc: nc, useV2: false}},
+		{name: "V2", h: &harness{s: s, nc: nc, useV2: true}},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			dt, cleanup, err := tc.h.CreateTopic(ctx, b.Name())
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer cleanup()
+
+			qs, cleanup, err := tc.h.CreateQueueSubscription(ctx, dt, b.Name())
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer cleanup()
+
+			topic := pubsub.NewTopic(dt, nil)
+			defer topic.Shutdown(ctx)
+			queueSub := pubsub.NewSubscription(qs, recvBatcherOpts, nil)
+			defer queueSub.Shutdown(ctx)
+
+			drivertest.RunBenchmarks(b, topic, queueSub)
+		})
 	}
-	defer cleanup()
-
-	qs, cleanup, err := h.CreateQueueSubscription(ctx, dt, b.Name())
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer cleanup()
-
-	topic := pubsub.NewTopic(dt, nil)
-	defer topic.Shutdown(ctx)
-	queueSub := pubsub.NewSubscription(qs, recvBatcherOpts, nil)
-	defer queueSub.Shutdown(ctx)
-
-	drivertest.RunBenchmarks(b, topic, queueSub)
 }
 
 func BenchmarkNatsPubSub(b *testing.B) {
@@ -381,24 +480,33 @@ func BenchmarkNatsPubSub(b *testing.B) {
 	}
 	defer nc.Close()
 
-	h := &harness{s, nc}
-	dt, cleanup, err := h.CreateTopic(ctx, b.Name())
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer cleanup()
-	ds, cleanup, err := h.CreateSubscription(ctx, dt, b.Name())
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer cleanup()
+	for _, tc := range []struct {
+		name string
+		h    *harness
+	}{
+		{name: "V1", h: &harness{s: s, nc: nc, useV2: false}},
+		{name: "V2", h: &harness{s: s, nc: nc, useV2: true}},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			dt, cleanup, err := tc.h.CreateTopic(ctx, b.Name())
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer cleanup()
+			ds, cleanup, err := tc.h.CreateSubscription(ctx, dt, b.Name())
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer cleanup()
 
-	topic := pubsub.NewTopic(dt, nil)
-	defer topic.Shutdown(ctx)
-	sub := pubsub.NewSubscription(ds, recvBatcherOpts, nil)
-	defer sub.Shutdown(ctx)
+			topic := pubsub.NewTopic(dt, nil)
+			defer topic.Shutdown(ctx)
+			sub := pubsub.NewSubscription(ds, recvBatcherOpts, nil)
+			defer sub.Shutdown(ctx)
 
-	drivertest.RunBenchmarks(b, topic, sub)
+			drivertest.RunBenchmarks(b, topic, sub)
+		})
+	}
 }
 
 func fakeConnectionStringInEnv() func() {
@@ -462,6 +570,15 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"nats://mytopic?param=value", true},
 		// Queue URL Parameter for QueueSubscription.
 		{"nats://mytopic?queue=queue1", false},
+		// Multiple values for Queue URL Parameter for QueueSubscription.
+		{"nats://mytopic?queue=queue1&queue=queue2", true},
+		// NATSV2 URL should be acceptable without values.
+		{"nats://mytopic?natsv2", false},
+		// NATSV2 URL should be acceptable with boolean parsable values.
+		{"nats://mytopic?natsv2=true", false},
+		{"nats://mytopic?natsv2=false", false},
+		// NATSV2 URL should throw error with non-boolean parsable values.
+		{"nats://mytopic?natsv2=foo", true},
 	}
 
 	for _, test := range tests {
@@ -476,6 +593,7 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 }
 
 func TestCodec(t *testing.T) {
+	const sub = "foo"
 	for _, dm := range []*driver.Message{
 		{Metadata: nil, Body: nil},
 		{Metadata: map[string]string{"a": "1"}, Body: nil},
@@ -484,19 +602,38 @@ func TestCodec(t *testing.T) {
 		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello"),
 			AckID: "foo", AsFunc: func(interface{}) bool { return true }},
 	} {
-		bytes, err := encodeMessage(dm)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var got driver.Message
-		if err := decodeMessage(bytes, &got); err != nil {
-			t.Fatal(err)
-		}
-		want := *dm
-		want.AckID = nil
-		want.AsFunc = nil
-		if diff := cmp.Diff(got, want); diff != "" {
-			t.Errorf("%+v:\n%s", want, diff)
-		}
+		t.Run("V1", func(t *testing.T) {
+			bytes, err := encodeMessage(dm)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got driver.Message
+			if err := decodeMessage(bytes, &got); err != nil {
+				t.Fatal(err)
+			}
+			want := *dm
+			want.AckID = nil
+			want.AsFunc = nil
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("%+v:\n%s", want, diff)
+			}
+		})
+		t.Run("V2", func(t *testing.T) {
+			nm := encodeMessageV2(dm, sub)
+			got, err := decodeMessageV2(nm)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			want := *dm
+			want.AckID = nil
+			want.AsFunc = nil
+			// AsFunc needs to be cleared as it cannot be comparable using Diff.
+			got.AsFunc = nil
+			if diff := cmp.Diff(*got, want); diff != "" {
+				t.Errorf("%+v:\n%s", want, diff)
+			}
+		})
+
 	}
 }
