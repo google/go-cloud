@@ -41,7 +41,7 @@
 // result in an error.
 // Using native NATS message headers and content is more efficient than using
 // gob.Encoder, and allows non-Go clients to subscribe to the topic and
-// receive messages. It is recommended to use this feature if only the server
+// receive messages. It is recommended to use this feature if the server
 // supports it.
 //
 // To customize the URL opener, or for more details on the URL format,
@@ -118,7 +118,6 @@ func init() {
 // variable "NATS_SERVER_URL".
 type defaultDialer struct {
 	init sync.Once
-	conn *nats.Conn
 	err  error
 
 	opener   URLOpener
@@ -137,7 +136,6 @@ func (o *defaultDialer) defaultConn(ctx context.Context) error {
 			o.err = fmt.Errorf("failed to dial NATS_SERVER_URL %q: %v", serverURL, err)
 			return
 		}
-		o.conn = conn
 		o.opener = URLOpener{Connection: conn}
 		o.openerV2 = URLOpener{Connection: conn, UseV2: true}
 	})
