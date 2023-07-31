@@ -649,11 +649,11 @@ func createTemp(path string) (*os.File, error) {
 	try := 0
 	for {
 		// Append the current time with nanosecond precision and .tmp to the
-		// path. If the file already exists try again. Nanosecond changes enough
+		// base path. If the file already exists try again. Nanosecond changes enough
 		// between each iteration to make a conflict unlikely. Using the full
 		// time lowers the chance of a collision with a file using a similar
 		// pattern, but has undefined behavior after the year 2262.
-		name := path + "." + strconv.FormatInt(time.Now().UnixNano(), 16) + ".tmp"
+		name := filepath.Join(os.TempDir(), filepath.Base(path)) + "." + strconv.FormatInt(time.Now().UnixNano(), 16) + ".tmp"
 		f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 		if os.IsExist(err) {
 			if try++; try < 10000 {
