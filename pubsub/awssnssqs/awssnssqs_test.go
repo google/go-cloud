@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	snsv2 "github.com/aws/aws-sdk-go-v2/service/sns"
+	snstypesv2 "github.com/aws/aws-sdk-go-v2/service/sns/types"
 	sqsv2 "github.com/aws/aws-sdk-go-v2/service/sqs"
 	sqstypesv2 "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -532,10 +533,18 @@ func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
 			if !as(&pub) {
 				return fmt.Errorf("cast failed for %T", &pub)
 			}
+			var entry *snstypesv2.PublishBatchRequestEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
+			}
 		} else {
 			var pub *sns.PublishInput
 			if !as(&pub) {
 				return fmt.Errorf("cast failed for %T", &pub)
+			}
+			var entry *sns.PublishBatchRequestEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
 			}
 		}
 	case topicKindSQS:
@@ -568,10 +577,18 @@ func (t awsAsTest) AfterSend(as func(interface{}) bool) error {
 			if !as(&pub) {
 				return fmt.Errorf("cast failed for %T", &pub)
 			}
+			var entry snstypesv2.PublishBatchResultEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
+			}
 		} else {
 			var pub *sns.PublishOutput
 			if !as(&pub) {
 				return fmt.Errorf("cast failed for %T", &pub)
+			}
+			var entry sns.PublishBatchResultEntry
+			if !as(&entry) {
+				return fmt.Errorf("cast failed for %T", &entry)
 			}
 		}
 	case topicKindSQS:
