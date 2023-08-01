@@ -18,7 +18,7 @@ go 1.19
 
 require (
 	github.com/rabbitmq/amqp091-go v1.8.1
-	gocloud.dev v0.32.0
+	gocloud.dev v0.33.0
 )
 
 require (
@@ -62,5 +62,3 @@ require (
 	google.golang.org/grpc v1.57.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
-
-replace gocloud.dev => ../../
