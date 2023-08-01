@@ -71,6 +71,12 @@ func randomData(nBytes int64) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Ensure that blob.Reader implements io.WriterTo.
+var _ io.WriterTo = &blob.Reader{}
+
+// Ensure that blob.Writer implements io.ReaderFrom.
+var _ io.ReaderFrom = &blob.Writer{}
+
 func TestReadFrom(t *testing.T) {
 	const dstKey = "dstkey"
 
@@ -109,12 +115,6 @@ func TestReadFrom(t *testing.T) {
 	}
 }
 
-// Ensure that blob.Reader implements io.WriterTo.
-var _ io.WriterTo = &blob.Reader{}
-
-// Ensure that blob.Writer implements io.ReaderFrom.
-var _ io.ReaderFrom = &blob.Writer{}
-
 func TestWriteTo(t *testing.T) {
 	const srcKey = "srckey"
 
@@ -150,6 +150,57 @@ func TestWriteTo(t *testing.T) {
 
 	// Verify the data was copied correctly.
 	got := buf.Bytes()
+	if !cmp.Equal(got, data) {
+		t.Errorf("got %v, want %v", got, data)
+	}
+}
+
+// TestCopyBytes uses io.Copy to copy bytes from one key to another.
+func TestCopyBytes(t *testing.T) {
+	const srcKey = "testkey-src"
+	const dstKey = "testkey-dst"
+
+	ctx := context.Background()
+
+	// Get some random data, of a large enough size to require multiple
+	// reads/writes given our buffer size of 1024.
+	data, err := randomData(1024*10 + 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bucket := memblob.OpenBucket(nil)
+	defer bucket.Close()
+
+	// Write the data to srcKey.
+	bucket.WriteAll(ctx, srcKey, data, nil)
+
+	// Create a reader for srcKey.
+	r, err := bucket.NewReader(ctx, srcKey, nil)
+	if err != nil {
+		t.Fatalf("failed to create reader: %v", err)
+	}
+
+	// Create a writer for dstKey.
+	w, err := bucket.NewWriter(ctx, dstKey, nil)
+	if err != nil {
+		t.Fatalf("failed to create writer: %v", err)
+	}
+
+	// Copy the data.
+	io.Copy(w, r)
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the data was copied correctly.
+	got, err := bucket.ReadAll(ctx, dstKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !cmp.Equal(got, data) {
 		t.Errorf("got %v, want %v", got, data)
 	}
