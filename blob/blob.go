@@ -237,9 +237,15 @@ func (r *Reader) As(i interface{}) bool {
 // It implements the io.WriterTo interface.
 func (r *Reader) WriteTo(w io.Writer) (int64, error) {
 	// If the writer has a ReaderFrom method, use it to do the copy.
+	// Don't do this for our own *Writer to avoid infinite recursion.
 	// Avoids an allocation and a copy.
-	if rt, ok := w.(io.ReaderFrom); ok {
-		return rt.ReadFrom(r)
+	switch w.(type) {
+	case *Writer:
+	default:
+		if rf, ok := w.(io.ReaderFrom); ok {
+			n, err := rf.ReadFrom(r)
+			return n, err
+		}
 	}
 
 	_, nw, err := readFromWriteTo(r, w)
@@ -486,9 +492,15 @@ func (w *Writer) write(p []byte) (int, error) {
 // It implements the io.ReaderFrom interface.
 func (w *Writer) ReadFrom(r io.Reader) (int64, error) {
 	// If the reader has a WriteTo method, use it to do the copy.
+	// Don't do this for our own *Reader to avoid infinite recursion.
 	// Avoids an allocation and a copy.
-	if wt, ok := r.(io.WriterTo); ok {
-		return wt.WriteTo(w)
+	switch r.(type) {
+	case *Reader:
+	default:
+		if wt, ok := r.(io.WriterTo); ok {
+			n, err := wt.WriteTo(w)
+			return n, err
+		}
 	}
 
 	nr, _, err := readFromWriteTo(r, w)
