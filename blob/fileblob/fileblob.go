@@ -218,6 +218,14 @@ type Options struct {
 	// (using os.MkdirAll).
 	CreateDir bool
 
+	// If true, don't use os.TempDir for temporary files, but instead place them
+	// next to the actual files. This may result in "stranded" temporary files
+	// (e.g., if the application is killed before the file cleanup runs).
+	//
+	// If your bucket directory is on a different mount than os.TempDir, you will
+	// need to set this to true, as os.Rename will fail across mount points.
+	NoTempDir bool
+
 	// Refers to the strategy for how to deal with metadata (such as blob.Attributes).
 	// For supported values please see the Metadata* constants.
 	// If left unchanged, 'MetadataInSidecar' will be used.
@@ -642,7 +650,7 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-func createTemp(path string) (*os.File, error) {
+func createTemp(path string, noTempDir bool) (*os.File, error) {
 	// Use a custom createTemp function rather than os.CreateTemp() as
 	// os.CreateTemp() sets the permissions of the tempfile to 0600, rather than
 	// 0666, making it inconsistent with the directories and attribute files.
@@ -653,7 +661,13 @@ func createTemp(path string) (*os.File, error) {
 		// between each iteration to make a conflict unlikely. Using the full
 		// time lowers the chance of a collision with a file using a similar
 		// pattern, but has undefined behavior after the year 2262.
-		name := filepath.Join(os.TempDir(), filepath.Base(path)) + "." + strconv.FormatInt(time.Now().UnixNano(), 16) + ".tmp"
+		var name string
+		if noTempDir {
+			name = path
+		} else {
+			name = filepath.Join(os.TempDir(), filepath.Base(path))
+		}
+		name += "." + strconv.FormatInt(time.Now().UnixNano(), 16) + ".tmp"
 		f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 		if os.IsExist(err) {
 			if try++; try < 10000 {
@@ -674,7 +688,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err := os.MkdirAll(filepath.Dir(path), os.FileMode(0777)); err != nil {
 		return nil, err
 	}
-	f, err := createTemp(path)
+	f, err := createTemp(path, b.opts.NoTempDir)
 	if err != nil {
 		return nil, err
 	}
