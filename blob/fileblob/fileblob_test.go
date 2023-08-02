@@ -39,12 +39,13 @@ type harness struct {
 	dir         string
 	prefix      string
 	metadataHow metadataOption
+	noTempDir   bool
 	server      *httptest.Server
 	urlSigner   URLSigner
 	closer      func()
 }
 
-func newHarness(ctx context.Context, t *testing.T, prefix string, metadataHow metadataOption) (drivertest.Harness, error) {
+func newHarness(ctx context.Context, t *testing.T, prefix string, metadataHow metadataOption, noTempDir bool) (drivertest.Harness, error) {
 	if metadataHow == MetadataDontWrite {
 		// Skip tests for if no metadata gets written.
 		// For these it is currently undefined whether any gets read (back).
@@ -64,7 +65,7 @@ func newHarness(ctx context.Context, t *testing.T, prefix string, metadataHow me
 			return nil, err
 		}
 	}
-	h := &harness{dir: dir, prefix: prefix, metadataHow: metadataHow}
+	h := &harness{dir: dir, prefix: prefix, metadataHow: metadataHow, noTempDir: noTempDir}
 
 	localServer := httptest.NewServer(http.HandlerFunc(h.serveSignedURL))
 	h.server = localServer
@@ -148,6 +149,7 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 	opts := &Options{
 		URLSigner: h.urlSigner,
 		Metadata:  h.metadataHow,
+		NoTempDir: h.noTempDir,
 	}
 	drv, err := openBucket(h.dir, opts)
 	if err != nil {
@@ -171,22 +173,29 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-		return newHarness(ctx, t, "", MetadataInSidecar)
+		return newHarness(ctx, t, "", MetadataInSidecar, false)
 	}
 	drivertest.RunConformanceTests(t, newHarnessNoPrefix, []drivertest.AsTest{verifyAs{}})
+}
+
+func TestConformanceNoTempDir(t *testing.T) {
+	newHarnessNoTmpDir := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		return newHarness(ctx, t, "", MetadataInSidecar, true)
+	}
+	drivertest.RunConformanceTests(t, newHarnessNoTmpDir, []drivertest.AsTest{verifyAs{}})
 }
 
 func TestConformanceWithPrefix(t *testing.T) {
 	const prefix = "some/prefix/dir/"
 	newHarnessWithPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-		return newHarness(ctx, t, prefix, MetadataInSidecar)
+		return newHarness(ctx, t, prefix, MetadataInSidecar, false)
 	}
 	drivertest.RunConformanceTests(t, newHarnessWithPrefix, []drivertest.AsTest{verifyAs{prefix: prefix}})
 }
 
 func TestConformanceSkipMetadata(t *testing.T) {
 	newHarnessSkipMetadata := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-		return newHarness(ctx, t, "", MetadataDontWrite)
+		return newHarness(ctx, t, "", MetadataDontWrite, false)
 	}
 	drivertest.RunConformanceTests(t, newHarnessSkipMetadata, []drivertest.AsTest{verifyAs{}})
 }
