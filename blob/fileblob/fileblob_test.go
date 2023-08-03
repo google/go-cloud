@@ -384,6 +384,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file://./../..", "filenotfound.txt", false, true, ""},
 		// OK.
 		{"file://" + dirpath, "myfile.txt", false, false, "hello world"},
+		// OK, with no_tmp_dir.
+		{"file://" + dirpath + "?no_tmp_dir", "myfile.txt", false, false, "hello world"},
 		// OK, host is ignored.
 		{"file://localhost" + dirpath, "myfile.txt", false, false, "hello world"},
 		// OK, with prefix.

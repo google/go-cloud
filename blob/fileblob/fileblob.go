@@ -15,12 +15,20 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// By default fileblob stores blob metadata in 'sidecar files' under the original
-// filename but an additional ".attrs" suffix.
-// That behaviour can be changed via Options.Metadata;
+// To avoid partial writes, fileblob writes to a temporary file and then renames
+// the temporary file to the final path on Close. By default, it creates these
+// temporary files in `os.TempDir`. If `os.TempDir` is on a different mount than
+// your base bucket path, the `os.Rename` will fail with `invalid cross-device link`.
+// To avoid this, either configure the temp dir to use by setting the environment
+// variable `TMPDIR`, or set `Options.NoTempDir` to `true` (fileblob will create
+// the temporary files next to the actual files instead of in a temporary directory).
+//
+// By default fileblob stores blob metadata in "sidecar" files under the original
+// filename with an additional ".attrs" suffix.
+// This behaviour can be changed via `Options.Metadata`;
 // writing of those metadata files can be suppressed by setting it to
-// 'MetadataDontWrite' or its equivalent "metadata=skip" in the URL for the opener.
-// In any case, absent any stored metadata many blob.Attributes fields
+// `MetadataDontWrite` or its equivalent "metadata=skip" in the URL for the opener.
+// In either case, absent any stored metadata many `blob.Attributes` fields
 // will be set to default values.
 //
 // # URLs
@@ -102,6 +110,8 @@ const Scheme = "file"
 //
 //   - create_dir: (any non-empty value) the directory is created (using os.MkDirAll)
 //     if it does not already exist.
+//   - no_tmp_dir: (any non-empty value) temporary files are created next to the final
+//     path instead of in os.TempDir.
 //   - base_url: the base URL to use to construct signed URLs; see URLSignerHMAC
 //   - secret_key_path: path to read for the secret key used to construct signed URLs;
 //     see URLSignerHMAC
@@ -149,6 +159,7 @@ var recognizedParams = map[string]bool{
 	"base_url":        true,
 	"secret_key_path": true,
 	"metadata":        true,
+	"no_tmp_dir":      true,
 }
 
 type metadataOption string // Not exported as subject to change.
@@ -186,6 +197,9 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 	}
 	if q.Get("create_dir") != "" {
 		opts.CreateDir = true
+	}
+	if q.Get("no_temp_dir") != "" {
+		opts.NoTempDir = true
 	}
 	baseURL := q.Get("base_url")
 	keyPath := q.Get("secret_key_path")
