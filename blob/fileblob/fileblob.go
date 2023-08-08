@@ -198,7 +198,7 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 	if q.Get("create_dir") != "" {
 		opts.CreateDir = true
 	}
-	if q.Get("no_temp_dir") != "" {
+	if q.Get("no_tmp_dir") != "" {
 		opts.NoTempDir = true
 	}
 	baseURL := q.Get("base_url")
