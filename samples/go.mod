@@ -14,7 +14,7 @@
 
 module gocloud.dev/samples
 
-go 1.19
+go 1.20
 
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.14
