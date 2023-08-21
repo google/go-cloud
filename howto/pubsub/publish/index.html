@@ -281,7 +281,7 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="azure"> Azure Service Bus<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h3>
-<p>The Go CDK can publish to an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> topic over <a href="https://www.amqp.org/">AMQP 1.0</a>.
+<p>The Go CDK can publish to an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> topic.
 The URL for publishing is the topic name. <code>pubsub.OpenTopic</code> will use the
 environment variable <code>SERVICEBUS_CONNECTION_STRING</code> to obtain the Service Bus
 connection string. The connection string can be obtained
@@ -304,7 +304,7 @@ connection string. The connection string can be obtained
 </code></pre></div>
 <h4 id="azure-ctor"> Azure Service Bus Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/azuresb#OpenTopic"><code>azuresb.OpenTopic</code></a> constructor opens an Azure Service Bus topic. You
-must first connect to the topic using the <a href="https://github.com/Azure/azure-service-bus-go">Azure Service Bus library</a> and
+must first connect to the topic using the <a href="https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus">Azure Service Bus library</a> and
 then pass it to <code>azuresb.OpenTopic</code>. There are also helper functions in the
 <code>azuresb</code> package to make this easier.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
@@ -323,18 +323,18 @@ then pass it to <code>azuresb.OpenTopic</code>. There are also helper functions 
 <span class="p">}</span>
 
 <span class="c1">// Connect to Azure Service Bus for the given topic.
-</span><span class="c1"></span><span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewNamespaceFromConnectionString</span><span class="p">(</span><span class="nx">connString</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">sbClient</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewClientFromConnectionString</span><span class="p">(</span><span class="nx">connString</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="nx">busTopic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewTopic</span><span class="p">(</span><span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">topicName</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="nx">sbSender</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewSender</span><span class="p">(</span><span class="nx">sbClient</span><span class="p">,</span> <span class="nx">topicName</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">busTopic</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">sbSender</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 
 <span class="c1">// Construct a *pubsub.Topic.
-</span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">busTopic</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sbSender</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -363,11 +363,11 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 </code></pre></div>
 <h4 id="rabbitmq-ctor"> RabbitMQ Constructor<a class="anchor" href="#rabbitmq-ctor" aria-label="Link to Section">🔗</a></h4>
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenTopic"><code>rabbitpubsub.OpenTopic</code></a> constructor opens a RabbitMQ exchange. You
-must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
+must first create an <a href="https://pkg.go.dev/github.com/rabbitmq/amqp091-go#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
-	<span class="s">&#34;github.com/streadway/amqp&#34;</span>
+	<span class="nx">amqp</span> <span class="s">&#34;github.com/rabbitmq/amqp091-go&#34;</span>
 	<span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
 <span class="p">)</span>
 

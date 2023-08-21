@@ -248,7 +248,7 @@ the constructors. By default, the subscription will use heuristics to identify
 whether the message bodies are raw or <a href="https://aws.amazon.com/sns/faqs/#Raw_message_delivery">SNS JSON</a>.</p>
 <p>Messages with a <code>base64encoded</code> message attribute will be automatically
 <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> decoded before being returned. See the <a href="https://gocloud.dev/howto/pubsub/publish/#sns">SNS publishing guide</a>
-or the [SQS publshing guide][] for more details.</p>
+or the <a href="https://gocloud.dev/howto/pubsub/publish/#sqs">SQS publishing guide</a> for more details.</p>
 <h4 id="sqs-ctor"> Amazon SQS Constructor<a class="anchor" href="#sqs-ctor" aria-label="Link to Section">🔗</a></h4>
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSubscription"><code>awssnssqs.OpenSubscription</code></a> constructor opens an SQS queue. You must
 first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
@@ -277,8 +277,8 @@ first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 <span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="azure"> Azure Service Bus<a class="anchor" href="#azure" aria-label="Link to Section">🔗</a></h3>
-<p>The Go CDK can recieve messages from an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> subscription
-over <a href="https://www.amqp.org/">AMQP 1.0</a>. The URL for subscribing is the topic name with the
+<p>The Go CDK can recieve messages from an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> subscription.
+The URL for subscribing is the topic name with the
 subscription name in the <code>subscription</code> query parameter.
 <code>pubsub.OpenSubscription</code> will use the environment variable
 <code>SERVICEBUS_CONNECTION_STRING</code> to obtain the Service Bus Connection String
@@ -304,7 +304,7 @@ you need to copy <a href="https://docs.microsoft.com/en-us/azure/service-bus-mes
 <h4 id="azure-ctor"> Azure Service Bus Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/azuresb#OpenSubscription"><code>azuresb.OpenSubscription</code></a> constructor opens an Azure Service Bus
 subscription. You must first connect to the topic and subscription using the
-<a href="https://github.com/Azure/azure-service-bus-go">Azure Service Bus library</a> and then pass the subscription to
+<a href="https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus">Azure Service Bus library</a> and then pass the subscription to
 <code>azuresb.OpenSubscription</code>. There are also helper functions in the <code>azuresb</code>
 package to make this easier.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
@@ -320,24 +320,18 @@ package to make this easier.</p>
 <span class="kd">const</span> <span class="nx">subscriptionName</span> <span class="p">=</span> <span class="s">&#34;test-subscription&#34;</span>
 
 <span class="c1">// Connect to Azure Service Bus for the given subscription.
-</span><span class="c1"></span><span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewNamespaceFromConnectionString</span><span class="p">(</span><span class="nx">serviceBusConnString</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">sbClient</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewClientFromConnectionString</span><span class="p">(</span><span class="nx">serviceBusConnString</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="nx">busTopic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewTopic</span><span class="p">(</span><span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">topicName</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="nx">sbReceiver</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewReceiver</span><span class="p">(</span><span class="nx">sbClient</span><span class="p">,</span> <span class="nx">topicName</span><span class="p">,</span> <span class="nx">subscriptionName</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">busTopic</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<span class="nx">busSub</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewSubscription</span><span class="p">(</span><span class="nx">busTopic</span><span class="p">,</span> <span class="nx">subscriptionName</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">busSub</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">sbReceiver</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 
 <span class="c1">// Construct a *pubsub.Subscription.
-</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-	<span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">busTopic</span><span class="p">,</span> <span class="nx">busSub</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sbClient</span><span class="p">,</span> <span class="nx">sbReceiver</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -366,11 +360,11 @@ variable (which is something like <code>amqp://guest:guest@localhost:5672/</code
 </code></pre></div>
 <h4 id="rabbitmq-ctor"> RabbitMQ Constructor<a class="anchor" href="#rabbitmq-ctor" aria-label="Link to Section">🔗</a></h4>
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenSubscription"><code>rabbitpubsub.OpenSubscription</code></a> constructor opens a RabbitMQ queue.
-You must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
+You must first create an <a href="https://pkg.go.dev/github.com/rabbitmq/amqp091-go#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
-	<span class="s">&#34;github.com/streadway/amqp&#34;</span>
+	<span class="nx">amqp</span> <span class="s">&#34;github.com/rabbitmq/amqp091-go&#34;</span>
 	<span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
 <span class="p">)</span>
 

@@ -28,6 +28,7 @@
     <li><a href="#opening">Opening a Bucket</a>
       <ul>
         <li><a href="#prefix">Prefixed Buckets</a></li>
+        <li><a href="#singlekey">Single Key Buckets</a></li>
       </ul>
     </li>
     <li><a href="#using">Using a Bucket</a>
@@ -125,6 +126,43 @@ URL:</p>
 
 <span class="c1">// Bucket operations on &lt;key&gt; will be translated to &#34;a/subfolder/&lt;key&gt;&#34;.
 </span></code></pre></div>
+<h3 id="singlekey"> Single Key Buckets<a class="anchor" href="#singlekey" aria-label="Link to Section">🔗</a></h3>
+<p>You can wrap a <code>*blob.Bucket</code> to always operate on a single key
+using <code>blob.SingleKeyBucket</code>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/blob&#34;</span>
+
+<span class="c1">// Wrap the bucket using blob.SingleKeyBucket.
+</span><span class="c1">// The bucket always references the provided key.
+</span><span class="c1"></span><span class="nx">bucket</span> <span class="p">=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">SingleKeyBucket</span><span class="p">(</span><span class="nx">bucket</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">)</span>
+
+<span class="c1">// The original bucket is no longer usable; it has been closed.
+</span><span class="c1">// The wrapped bucket should be closed when done.
+</span><span class="c1"></span><span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Bucket operations will ignore the passed-in key and always reference foo.txt.
+</span></code></pre></div>
+<p>Alternatively, you can configure the single key directly in the <code>blob.OpenBucket</code>
+URL:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Connect to a bucket using a URL, using the &#34;key&#34; query parameter to
+</span><span class="c1">// make the bucket always reference that key.
+</span><span class="c1"></span><span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://?key=foo.txt&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Bucket operations will ignore the passed-in key and always reference foo.txt.
+</span></code></pre></div>
+<p>The resulting bucket will ignore the <code>key</code> parameter to its functions,
+and always refer to the single key. This can be useful to allow configuration
+of a specific &ldquo;file&rdquo; via a single URL.</p>
+<p><code>List</code> functions will not work on single key buckets.</p>
 <h2 id="using"> Using a Bucket<a class="anchor" href="#using" aria-label="Link to Section">🔗</a></h2>
 <p>Once you have opened a bucket for the storage provider you want, you can
 store and access data from it using the standard Go I/O patterns described
@@ -315,7 +353,7 @@ Config based on the AWS SDK V2; see <a href="https://aws.github.io/aws-sdk-go-v2
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 
 <span class="c1">// Forcing AWS SDK V2.
-</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;s3://my-bucket?region=us-west-1&amp;awssdk=2&#34;</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;s3://my-bucket?region=us-west-1&amp;awssdk=v2&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -349,7 +387,7 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
-<p>[<code>s3blob.OpenBucketV2</code>][] is similar but uses the AWS SDK V2.</p>
+<p><a href="https://godoc.org/gocloud.dev/blob/s3blob#OpenBucketV2"><code>s3blob.OpenBucketV2</code></a> is similar but uses the AWS SDK V2.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
@@ -360,11 +398,7 @@ create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS 
 
 <span class="c1">// Establish a AWS V2 Config.
 </span><span class="c1">// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
-</span><span class="c1"></span><span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
-<span class="nx">cfg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awsv2cfg</span><span class="p">.</span><span class="nf">LoadDefaultConfig</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-	<span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
+</span><span class="c1"></span><span class="nx">cfg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awsv2cfg</span><span class="p">.</span><span class="nf">LoadDefaultConfig</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -393,8 +427,7 @@ parameters like so:</p>
 <p>Azure Blob Storage URLs in the Go CDK allow you to identify <a href="https://azure.microsoft.com/en-us/services/storage/blobs/">Azure Blob Storage</a> containers
 when opening a bucket with <code>blob.OpenBucket</code>. Go CDK uses the environment
 variables <code>AZURE_STORAGE_ACCOUNT</code>, <code>AZURE_STORAGE_KEY</code>, and
-<code>AZURE_STORAGE_SAS_TOKEN</code> to configure the credentials. <code>AZURE_STORAGE_ACCOUNT</code>
-is required, along with one of the other two.</p>
+<code>AZURE_STORAGE_SAS_TOKEN</code>, among others, to configure the credentials.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
@@ -404,54 +437,78 @@ is required, along with one of the other two.</p>
 
 <span class="c1">// blob.OpenBucket creates a *blob.Bucket from a URL.
 </span><span class="c1">// This URL will open the container &#34;my-container&#34; using default
-</span><span class="c1">// credentials found in the environment variables
-</span><span class="c1">// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
-</span><span class="c1">// and AZURE_STORAGE_SAS_TOKEN.
+</span><span class="c1">// credentials found in environment variables as documented in
+</span><span class="c1">// the package.
+</span><span class="c1">// Assuming AZURE_STORAGE_ACCOUNT is set to &#34;myaccount&#34;,
+</span><span class="c1">// and other options aren&#39;t set, the service URL will look like:
+</span><span class="c1">// &#34;https://myaccount.blob.core.windows.net/my-container&#34;.
 </span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;azblob://my-container&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Another example, against a local emulator.
+</span><span class="c1">// Assuming AZURE_STORAGE_ACCOUNT is set to &#34;myaccount&#34;,
+</span><span class="c1">// the service URL will look like:
+</span><span class="c1">// &#34;http://localhost:10001/myaccount/my-container&#34;.
+</span><span class="c1"></span><span class="nx">localbucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;azblob://my-container?protocol=http&amp;domain=localhost:10001&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">localbucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 </code></pre></div>
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/azureblob#URLOpener"><code>azureblob.URLOpener</code></a>.</p>
 <h4 id="azure-ctor"> Azure Blob Constructor<a class="anchor" href="#azure-ctor" aria-label="Link to Section">🔗</a></h4>
 <p>The <a href="https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket"><code>azureblob.OpenBucket</code></a> constructor opens an Azure Blob Storage container.
 <code>azureblob</code> operates on <a href="https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs">Azure Storage Block Blobs</a>. You must first create
-Azure Storage credentials and then create an Azure Storage pipeline before
-you can open a container.</p>
+an Azure Service Client before you can open a container.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
 	<span class="s">&#34;context&#34;</span>
 
-	<span class="s">&#34;github.com/Azure/azure-storage-blob-go/azblob&#34;</span>
 	<span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
 <span class="p">)</span>
 
 <span class="kd">const</span> <span class="p">(</span>
-	<span class="c1">// Fill in with your Azure Storage Account and Access Key.
-</span><span class="c1"></span>	<span class="nx">accountName</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nx">AccountName</span> <span class="p">=</span> <span class="s">&#34;my-account&#34;</span>
-	<span class="nx">accountKey</span>  <span class="nx">azureblob</span><span class="p">.</span><span class="nx">AccountKey</span>  <span class="p">=</span> <span class="s">&#34;my-account-key&#34;</span>
-	<span class="c1">// Fill in with the storage container to access.
+	<span class="c1">// The storage container to access.
 </span><span class="c1"></span>	<span class="nx">containerName</span> <span class="p">=</span> <span class="s">&#34;my-container&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// Create a credentials object.
-</span><span class="c1"></span><span class="nx">credential</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewCredential</span><span class="p">(</span><span class="nx">accountName</span><span class="p">,</span> <span class="nx">accountKey</span><span class="p">)</span>
+<span class="c1">// Construct the service URL.
+</span><span class="c1">// There are many forms of service URLs, see ServiceURLOptions.
+</span><span class="c1"></span><span class="nx">opts</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewDefaultServiceURLOptions</span><span class="p">()</span>
+<span class="nx">serviceURL</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewServiceURL</span><span class="p">(</span><span class="nx">opts</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
-<span class="c1">// Create a Pipeline, using whatever PipelineOptions you need.
-</span><span class="c1"></span><span class="nx">pipeline</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewPipeline</span><span class="p">(</span><span class="nx">credential</span><span class="p">,</span> <span class="nx">azblob</span><span class="p">.</span><span class="nx">PipelineOptions</span><span class="p">{})</span>
+<span class="c1">// There are many ways to authenticate to Azure.
+</span><span class="c1">// This approach uses environment variables as described in azureblob package
+</span><span class="c1">// documentation.
+</span><span class="c1">// For example, to use shared key authentication, you would set
+</span><span class="c1">// AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_KEY.
+</span><span class="c1">// To use a SAS token, you would set AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_SAS_TOKEN.
+</span><span class="c1">// You can also construct a client using the azblob constructors directly, like
+</span><span class="c1">// azblob.NewServiceClientWithSharedKey.
+</span><span class="c1"></span><span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewDefaultClient</span><span class="p">(</span><span class="nx">serviceURL</span><span class="p">,</span> <span class="nx">containerName</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
 
 <span class="c1">// Create a *blob.Bucket.
-</span><span class="c1">// The credential Option is required if you&#39;re going to use blob.SignedURL.
-</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">pipeline</span><span class="p">,</span> <span class="nx">accountName</span><span class="p">,</span> <span class="nx">containerName</span><span class="p">,</span>
-	<span class="o">&amp;</span><span class="nx">azureblob</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span><span class="nx">Credential</span><span class="p">:</span> <span class="nx">credential</span><span class="p">})</span>
+</span><span class="c1"></span><span class="nx">b</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">client</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
 	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="k">defer</span> <span class="nx">b</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Now we can use b to read or write files to the container.
+</span><span class="c1"></span><span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">b</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;my-key&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">_</span> <span class="p">=</span> <span class="nx">data</span>
 </code></pre></div>
 <h3 id="local"> Local Storage<a class="anchor" href="#local" aria-label="Link to Section">🔗</a></h3>
 <p>The Go CDK provides blob drivers for storing data in memory and on the local
