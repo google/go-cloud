@@ -52,10 +52,10 @@ func ExampleOpenBucket() {
 func ExampleOpenBucketV2() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
 
 	// Establish a AWS V2 Config.
 	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
-	ctx := context.Background()
 	cfg, err := awsv2cfg.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal(err)
