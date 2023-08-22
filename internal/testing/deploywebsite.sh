@@ -19,9 +19,9 @@
 # the website. Now we'll need a separate clone of go-cloud, with the gh-pages
 # branch checked out:
 #
-#    git clone git@github.com:google/go-cloud.git GH-PAGES-CLONE
-#    cd GH-PAGES-CLONE
-#    git co gh-pages
+#   git clone git@github.com:google/go-cloud.git GH-PAGES-CLONE
+#   cd GH-PAGES-CLONE
+#   git co gh-pages
 #
 # This should have the contents of the website (configured in
 # https://github.com/google/go-cloud/settings/pages).
@@ -44,10 +44,3 @@
 #   fqdn: gocloud.dev
 #   skip-cleanup: true
 #   local-dir: internal/website/public
-
-# To do this manually:
-#
-# Invoke the `hugo` command manually (after installing `hugo`).
-# Separately check out the gh-pages branch of this repository.
-# Overwrite the contents of the branch with the public/ directory, and push
-# to the branch.
