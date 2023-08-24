@@ -41,7 +41,7 @@ type CertPoolProvider interface {
 }
 
 // caBundleURL is the URL to the public RDS Certificate Authority keys.
-const caBundleURL = "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
+const caBundleURL = "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem"
 
 // CertFetcher pulls the RDS CA certificates from Amazon's servers. The zero
 // value will fetch certificates using the default HTTP client.
