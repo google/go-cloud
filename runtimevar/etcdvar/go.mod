@@ -72,3 +72,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230731193218-e0aa005b6bdf // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
+
+replace gocloud.dev => ../../
