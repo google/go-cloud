@@ -163,7 +163,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 				fmt.Printf("Warning: unable to load GCP Default Credentials: %v", err)
 				// Use empty credentials, in case the user isn't going to actually use
 				// them; e.g., getting signed URLs with GoogleAccessID=-.
-				creds = &google.Credentials{}
+				creds, _ = google.CredentialsFromJSON(ctx, []byte(`{"type": "service_account"}`))
 			}
 
 			// Populate default values from credentials files, where available.
