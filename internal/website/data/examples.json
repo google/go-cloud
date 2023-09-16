@@ -361,7 +361,7 @@
 	},
 	"gocloud.dev/runtimevar/constantvar.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/constantvar\"\n)",
-		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n\nv, err := runtimevar.OpenVariable(ctx, \"constant://?val=hello+world\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The constant value is in the URL param \"val\".\nv, err := runtimevar.OpenVariable(ctx, \"constant://?val=hello+world\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()\n\n// The constant value is read from an environment variable specified in \"envvar\".\nv2, err := runtimevar.OpenVariable(ctx, \"constant://?envvar=MY_ENVIRONMENT_VARIABLE\u0026decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v2.Close()"
 	},
 	"gocloud.dev/runtimevar/etcdvar.ExampleOpenVariable": {
 		"imports": "import (\n\t\"go.etcd.io/etcd/client/v3\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/etcdvar\"\n)",

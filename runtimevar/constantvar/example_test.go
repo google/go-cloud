@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/constantvar"
@@ -56,6 +57,23 @@ func ExampleNewBytes() {
 	// byte slice of length 11
 }
 
+func ExampleNewFromEnv() {
+	// Construct a *runtimevar.Variable with an environment variable name.
+	os.Setenv("MY_ENVIRONMENT_VARIABLE", "hello world")
+	v := constantvar.NewFromEnv("MY_ENVIRONMENT_VARIABLE", runtimevar.BytesDecoder)
+	defer v.Close()
+
+	// We can now read the value from v.
+	snapshot, err := v.Latest(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("byte slice of length %d\n", len(snapshot.Value.([]byte)))
+
+	// Output:
+	// byte slice of length 11
+}
+
 func ExampleNewError() {
 	// Construct a runtimevar.Variable that always returns errFake.
 	var errFake = errors.New("my error")
@@ -82,12 +100,19 @@ func Example_openVariableFromURL() {
 	ctx := context.Background()
 
 	// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.
-
+	// The constant value is in the URL param "val".
 	v, err := runtimevar.OpenVariable(ctx, "constant://?val=hello+world&decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
+
+	// The constant value is read from an environment variable specified in "envvar".
+	v2, err := runtimevar.OpenVariable(ctx, "constant://?envvar=MY_ENVIRONMENT_VARIABLE&decoder=string")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer v2.Close()
 	// PRAGMA: On gocloud.dev, hide the rest of the function.
 	snapshot, err := v.Latest(ctx)
 	if err != nil {
