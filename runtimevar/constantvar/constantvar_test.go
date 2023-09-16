@@ -17,6 +17,7 @@ package constantvar
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -133,6 +134,35 @@ func TestNewBytes(t *testing.T) {
 	}
 }
 
+func TestNewFromEnv(t *testing.T) {
+	ctx := context.Background()
+	const (
+		content = "hello world"
+		name    = "RUNTIMEVAR_CONST_TEST"
+	)
+	os.Setenv(name, content)
+
+	// Decode succeeds.
+	v := NewFromEnv(name, runtimevar.StringDecoder)
+	defer v.Close()
+	val, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val.Value != content {
+		t.Errorf("got %v want %v", val.Value, content)
+	}
+
+	// Decode fails.
+	var jsonData []string
+	v = NewFromEnv(name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
+	defer v.Close()
+	val, err = v.Watch(ctx)
+	if err == nil {
+		t.Errorf("got nil error and %v, want error", val)
+	}
+}
+
 func TestNewError(t *testing.T) {
 	ctx := context.Background()
 
@@ -145,6 +175,7 @@ func TestNewError(t *testing.T) {
 }
 
 func TestOpenVariable(t *testing.T) {
+	os.Setenv("RUNTIMEVAR_CONST_TEST", "hello world")
 	tests := []struct {
 		URL          string
 		WantErr      bool
@@ -159,6 +190,8 @@ func TestOpenVariable(t *testing.T) {
 		{"constant://?val=hello+world&decoder=string", false, false, "hello world"},
 		// JSON value; val parameter is {"Foo": "Bar"}, URL-encoded.
 		{"constant://?val=%7B%22Foo%22%3A%22Bar%22%7d&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Environment variable value.
+		{"constant://?envvar=RUNTIMEVAR_CONST_TEST&decoder=string", false, false, "hello world"},
 		// Error.
 		{"constant://?err=fail", false, true, nil},
 		// Invalid decoder.
