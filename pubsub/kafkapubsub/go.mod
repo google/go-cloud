@@ -17,7 +17,7 @@ module gocloud.dev/pubsub/kafkapubsub
 go 1.20
 
 require (
-	github.com/Shopify/sarama v1.38.1
+	github.com/IBM/sarama v1.41.2
 	github.com/google/go-cmp v0.5.9
 	gocloud.dev v0.34.0
 )
@@ -65,12 +65,12 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
-	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/crypto v0.13.0 // indirect
+	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.138.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

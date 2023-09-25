@@ -64,7 +64,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/batcher"
@@ -226,7 +226,7 @@ type TopicOptions struct {
 //
 // It uses a sarama.SyncProducer to send messages. Producer options can
 // be configured in the Producer section of the sarama.Config:
-// https://godoc.org/github.com/Shopify/sarama#Config.
+// https://godoc.org/github.com/IBM/sarama#Config.
 //
 // Config.Producer.Return.Success must be set to true.
 func OpenTopic(brokers []string, config *sarama.Config, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
@@ -388,7 +388,7 @@ type SubscriptionOptions struct {
 //
 // It uses a sarama.ConsumerGroup to receive messages. Consumer options can
 // be configured in the Consumer section of the sarama.Config:
-// https://godoc.org/github.com/Shopify/sarama#Config.
+// https://godoc.org/github.com/IBM/sarama#Config.
 func OpenSubscription(brokers []string, config *sarama.Config, group string, topics []string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
 	ds, err := openSubscription(brokers, config, group, topics, opts)
 	if err != nil {
@@ -424,7 +424,7 @@ func openSubscription(brokers []string, config *sarama.Config, group string, top
 	// We're registering ds as our ConsumerGroupHandler, so sarama will
 	// call [Setup, ConsumeClaim (possibly more than once), Cleanup]
 	// repeatedly as the consumer group is rebalanced.
-	// See https://godoc.org/github.com/Shopify/sarama#ConsumerGroup.
+	// See https://godoc.org/github.com/IBM/sarama#ConsumerGroup.
 	go func() {
 		for {
 			ds.closeErr = consumerGroup.Consume(ctx, topics, ds)
