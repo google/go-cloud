@@ -274,7 +274,7 @@ get you started.
 
 {{< goexample "gocloud.dev/pubsub/kafkapubsub.ExampleOpenSubscription" >}}
 
-[`*sarama.Config`]: https://godoc.org/github.com/Shopify/sarama#Config
+[`*sarama.Config`]: https://godoc.org/github.com/IBM/sarama#Config
 [`kafkapubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenSubscription
 [`kafkapubsub.MinimalConfig`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig
 

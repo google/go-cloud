@@ -284,7 +284,7 @@ you started.
 
 {{< goexample "gocloud.dev/pubsub/kafkapubsub.ExampleOpenTopic" >}}
 
-[`*sarama.Config`]: https://godoc.org/github.com/Shopify/sarama#Config
+[`*sarama.Config`]: https://godoc.org/github.com/IBM/sarama#Config
 [`kafkapubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenTopic
 [`kafkapubsub.MinimalConfig`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig
 
