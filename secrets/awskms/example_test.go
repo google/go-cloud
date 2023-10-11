@@ -91,11 +91,12 @@ func Example_openFromURL() {
 	}
 	defer keeperByAlias.Close()
 
-	// 3. By ARN.
+	// 3. By ARN. Note that ARN may contain ":" characters, which cannot be escaped
+	// in the Host part of a URL, so the "awskms:///<ARN>" form should be used.
 	const arn = "arn:aws:kms:us-east-1:111122223333:key/" +
 		"1234abcd-12ab-34bc-56ef-1234567890ab"
 	keeperByARN, err := secrets.OpenKeeper(ctx,
-		"awskms://"+arn+"?region=us-east-1")
+		"awskms:///"+arn+"?region=us-east-1")
 	if err != nil {
 		log.Fatal(err)
 	}
