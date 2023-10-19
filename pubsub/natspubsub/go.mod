@@ -18,7 +18,7 @@ go 1.20
 
 require (
 	github.com/google/go-cmp v0.6.0
-	github.com/nats-io/nats-server/v2 v2.9.20
+	github.com/nats-io/nats-server/v2 v2.9.23
 	github.com/nats-io/nats.go v1.30.2
 	gocloud.dev v0.34.0
 )
@@ -29,7 +29,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
-	github.com/nats-io/jwt/v2 v2.4.1 // indirect
+	github.com/nats-io/jwt/v2 v2.5.0 // indirect
 	github.com/nats-io/nkeys v0.4.5 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
