@@ -152,6 +152,10 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 			return nil, fmt.Errorf("open bucket %v: %v", u, err)
 		}
 		clientV2 := s3v2.NewFromConfig(cfg)
+
+		o.Options.EncryptionType = u.Query().Get("ssetype")
+		o.Options.KMSEncryptionId = u.Query().Get("kmskeyid")
+
 		return OpenBucketV2(ctx, clientV2, u.Host, &o.Options)
 	}
 	configProvider := &gcaws.ConfigOverrider{
@@ -162,6 +166,10 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
+
+	o.Options.EncryptionType = u.Query().Get("ssetype")
+	o.Options.KMSEncryptionId = u.Query().Get("kmskeyid")
+
 	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
 }
 
@@ -171,6 +179,10 @@ type Options struct {
 	// Some S3-compatible services (like CEPH) do not currently support
 	// ListObjectsV2.
 	UseLegacyList bool
+
+	EncryptionType string
+
+	KMSEncryptionId string
 }
 
 // openBucket returns an S3 Bucket.
@@ -193,11 +205,13 @@ func openBucket(ctx context.Context, useV2 bool, sess client.ConfigProvider, cli
 		client = s3.New(sess)
 	}
 	return &bucket{
-		useV2:         useV2,
-		name:          bucketName,
-		client:        client,
-		clientV2:      clientV2,
-		useLegacyList: opts.UseLegacyList,
+		useV2:          useV2,
+		name:           bucketName,
+		client:         client,
+		clientV2:       clientV2,
+		useLegacyList:  opts.UseLegacyList,
+		kmsKeyId:       opts.KMSEncryptionId,
+		encryptionType: opts.EncryptionType,
 	}, nil
 }
 
@@ -365,6 +379,9 @@ type bucket struct {
 	client        *s3.S3
 	clientV2      *s3v2.Client
 	useLegacyList bool
+
+	encryptionType string
+	kmsKeyId       string
 }
 
 func (b *bucket) Close() error {
@@ -973,6 +990,12 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		if len(opts.ContentMD5) > 0 {
 			reqV2.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
 		}
+		if b.encryptionType != "" {
+			reqV2.ServerSideEncryption = typesv2.ServerSideEncryption(b.encryptionType)
+		}
+		if b.kmsKeyId != "" {
+			reqV2.SSEKMSKeyId = aws.String(b.kmsKeyId)
+		}
 		if opts.BeforeWrite != nil {
 			asFunc := func(i interface{}) bool {
 				// Note that since the Go CDK Blob
@@ -1046,6 +1069,12 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		if len(opts.ContentMD5) > 0 {
 			req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
 		}
+		if b.encryptionType != "" {
+			req.ServerSideEncryption = aws.String(b.encryptionType)
+		}
+		if b.kmsKeyId != "" {
+			req.SSEKMSKeyId = aws.String(b.kmsKeyId)
+		}
 		if opts.BeforeWrite != nil {
 			asFunc := func(i interface{}) bool {
 				pu, ok := i.(**s3manager.Uploader)
@@ -1083,6 +1112,12 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 			CopySource: aws.String(b.name + "/" + srcKey),
 			Key:        aws.String(dstKey),
 		}
+		if b.encryptionType != "" {
+			input.ServerSideEncryption = typesv2.ServerSideEncryption(b.encryptionType)
+		}
+		if b.kmsKeyId != "" {
+			input.SSEKMSKeyId = aws.String(b.kmsKeyId)
+		}
 		if opts.BeforeCopy != nil {
 			asFunc := func(i interface{}) bool {
 				switch v := i.(type) {
@@ -1103,6 +1138,12 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 			Bucket:     aws.String(b.name),
 			CopySource: aws.String(b.name + "/" + srcKey),
 			Key:        aws.String(dstKey),
+		}
+		if b.encryptionType != "" {
+			input.ServerSideEncryption = aws.String(b.encryptionType)
+		}
+		if b.kmsKeyId != "" {
+			input.SSEKMSKeyId = aws.String(b.kmsKeyId)
 		}
 		if opts.BeforeCopy != nil {
 			asFunc := func(i interface{}) bool {

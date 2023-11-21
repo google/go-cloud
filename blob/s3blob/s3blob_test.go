@@ -466,6 +466,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?profile=main&region=us-west-1", false},
 		// OK, use V2.
 		{"s3://mybucket?awssdk=v2", false},
+		// OK, use KMS Server Side Encryption
+		{"s3://mybucket?ssetype=aws:kms&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", false},
 		// Invalid parameter together with a valid one.
 		{"s3://mybucket?profile=main&param=value", true},
 		// Invalid parameter.

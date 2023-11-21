@@ -103,6 +103,8 @@ func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 			}
 			cfg.S3ForcePathStyle = aws.Bool(b)
 		case "awssdk":
+		case "ssetype":
+		case "kmskeyid":
 			// ignore, should be handled before this
 		default:
 			return nil, fmt.Errorf("unknown query parameter %q", param)
@@ -198,6 +200,8 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 		case "profile":
 			opts = append(opts, awsv2cfg.WithSharedConfigProfile(value))
 		case "awssdk":
+		case "ssetype":
+		case "kmskeyid":
 			// ignore, should be handled before this
 		default:
 			return awsv2.Config{}, fmt.Errorf("unknown query parameter %q", param)
