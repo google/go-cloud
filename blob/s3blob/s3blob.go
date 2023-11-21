@@ -154,7 +154,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		clientV2 := s3v2.NewFromConfig(cfg)
 
 		o.Options.EncryptionType = u.Query().Get("ssetype")
-		o.Options.KMSEncryptionId = u.Query().Get("kmskeyid")
+		o.Options.KMSEncryptionID = u.Query().Get("kmskeyid")
 
 		return OpenBucketV2(ctx, clientV2, u.Host, &o.Options)
 	}
@@ -168,7 +168,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 
 	o.Options.EncryptionType = u.Query().Get("ssetype")
-	o.Options.KMSEncryptionId = u.Query().Get("kmskeyid")
+	o.Options.KMSEncryptionID = u.Query().Get("kmskeyid")
 
 	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
 }
@@ -180,9 +180,15 @@ type Options struct {
 	// ListObjectsV2.
 	UseLegacyList bool
 
+	// EncryptionType sets the encryption type headers when making write or
+	// copy calls. This is required if the bucket has a restrictive bucket
+	// policy that enforces a specific encryption type
 	EncryptionType string
 
-	KMSEncryptionId string
+	// KMSEncryptionID sets the kms key id header for write or copy calls.
+	// This is required when a bucket policy enforces the use of a specific
+	// KMS key for uploads
+	KMSEncryptionID string
 }
 
 // openBucket returns an S3 Bucket.
@@ -210,7 +216,7 @@ func openBucket(ctx context.Context, useV2 bool, sess client.ConfigProvider, cli
 		client:         client,
 		clientV2:       clientV2,
 		useLegacyList:  opts.UseLegacyList,
-		kmsKeyId:       opts.KMSEncryptionId,
+		kmsKeyId:       opts.KMSEncryptionID,
 		encryptionType: opts.EncryptionType,
 	}, nil
 }
