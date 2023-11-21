@@ -165,11 +165,7 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			query:      url.Values{"region": {"my_region"}},
 			wantRegion: "my_region",
 		},
-		{
-			name:  "Profile",
-			query: url.Values{"profile": {"my_profile"}},
-			// Hard to verify.
-		},
+		// Can't test "profile", since AWS validates that the profile exists.
 	}
 
 	for _, test := range tests {

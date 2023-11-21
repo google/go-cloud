@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7ceyLkBCs1sQAA",
+  "Initial": "AQAAAA7c7u4DGOxu1gAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "31b1ca6e7d564232",
+      "ID": "56299763620670b3",
       "Request": {
         "Method": "POST",
         "URL": "https://sns.us-east-2.amazonaws.com/",
@@ -84,17 +86,17 @@
             "text/xml"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:32:03 GMT"
+            "Tue, 21 Nov 2023 18:29:23 GMT"
           ],
           "X-Amzn-Requestid": [
-            "e6ea8a5d-5bea-5da9-957f-d73e75ce036e"
+            "865c2be1-d4f2-53d6-915c-76372db15502"
           ]
         },
-        "Body": "PENyZWF0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxDcmVhdGVUb3BpY1Jlc3VsdD4KICAgIDxUb3BpY0Fybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDYyMzgwMjI1NzIyOlNOU1RvcGljUmF3VjJFcnJvck9uU2VuZFRvQ2xvc2VkVG9waWMtdG9wLTE8L1RvcGljQXJuPgogIDwvQ3JlYXRlVG9waWNSZXN1bHQ+CiAgPFJlc3BvbnNlTWV0YWRhdGE+CiAgICA8UmVxdWVzdElkPmU2ZWE4YTVkLTViZWEtNWRhOS05NTdmLWQ3M2U3NWNlMDM2ZTwvUmVxdWVzdElkPgogIDwvUmVzcG9uc2VNZXRhZGF0YT4KPC9DcmVhdGVUb3BpY1Jlc3BvbnNlPgo="
+        "Body": "PENyZWF0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxDcmVhdGVUb3BpY1Jlc3VsdD4KICAgIDxUb3BpY0Fybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDYyMzgwMjI1NzIyOlNOU1RvcGljUmF3VjJFcnJvck9uU2VuZFRvQ2xvc2VkVG9waWMtdG9wLTE8L1RvcGljQXJuPgogIDwvQ3JlYXRlVG9waWNSZXN1bHQ+CiAgPFJlc3BvbnNlTWV0YWRhdGE+CiAgICA8UmVxdWVzdElkPjg2NWMyYmUxLWQ0ZjItNTNkNi05MTVjLTc2MzcyZGIxNTUwMjwvUmVxdWVzdElkPgogIDwvUmVzcG9uc2VNZXRhZGF0YT4KPC9DcmVhdGVUb3BpY1Jlc3BvbnNlPgo="
       }
     },
     {
-      "ID": "56c56c2f85e1b912",
+      "ID": "eab04f650993899f",
       "Request": {
         "Method": "POST",
         "URL": "https://sns.us-east-2.amazonaws.com/",
@@ -136,13 +138,13 @@
             "text/xml"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:32:03 GMT"
+            "Tue, 21 Nov 2023 18:29:23 GMT"
           ],
           "X-Amzn-Requestid": [
-            "cba1a636-277b-5b2c-92fd-fb55095f55eb"
+            "074b657c-7257-570d-90ed-38aa8b1411d9"
           ]
         },
-        "Body": "PERlbGV0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD5jYmExYTYzNi0yNzdiLTViMmMtOTJmZC1mYjU1MDk1ZjU1ZWI8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvRGVsZXRlVG9waWNSZXNwb25zZT4K"
+        "Body": "PERlbGV0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD4wNzRiNjU3Yy03MjU3LTU3MGQtOTBlZC0zOGFhOGIxNDExZDk8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvRGVsZXRlVG9waWNSZXNwb25zZT4K"
       }
     }
   ]

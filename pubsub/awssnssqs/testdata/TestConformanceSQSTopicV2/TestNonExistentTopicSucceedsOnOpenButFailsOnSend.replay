@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7ceyMHMrQDxQAA",
+  "Initial": "AQAAAA7c7u4lJi/O8wAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "a6e2e762e8778788",
+      "ID": "001afa88310cfe75",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
@@ -57,18 +59,21 @@
             "attempt=1; max=1"
           ],
           "Content-Length": [
-            "204"
+            "117"
           ],
           "User-Agent": [
             "CLEARED"
           ],
           "X-Amz-Date": [
             "CLEARED"
+          ],
+          "X-Amz-Target": [
+            "AmazonSQS.SendMessageBatch"
           ]
         },
-        "MediaType": "application/x-www-form-urlencoded",
+        "MediaType": "application/x-amz-json-1.0",
         "BodyParts": [
-          "QWN0aW9uPVNlbmRNZXNzYWdlQmF0Y2gmUXVldWVVcmw9aHR0cHMlM0ElMkYlMkZ1cy1lYXN0LTIuYW1hem9uYXdzLmNvbSUyRjQ2MjM4MDIyNTcyMiUyRm5vbmV4aXN0ZW50LXF1ZXVlJlNlbmRNZXNzYWdlQmF0Y2hSZXF1ZXN0RW50cnkuMS5JZD0wJlNlbmRNZXNzYWdlQmF0Y2hSZXF1ZXN0RW50cnkuMS5NZXNzYWdlQm9keT0mVmVyc2lvbj0yMDEyLTExLTA1"
+          "eyJFbnRyaWVzIjpbeyJJZCI6IjAiLCJNZXNzYWdlQm9keSI6IiJ9XSwiUXVldWVVcmwiOiJodHRwczovL3VzLWVhc3QtMi5hbWF6b25hd3MuY29tLzQ2MjM4MDIyNTcyMi9ub25leGlzdGVudC1xdWV1ZSJ9"
         ]
       },
       "Response": {
@@ -78,19 +83,22 @@
         "ProtoMinor": 1,
         "Header": {
           "Content-Length": [
-            "333"
+            "96"
           ],
           "Content-Type": [
-            "text/xml"
+            "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:32:40 GMT"
+            "Tue, 21 Nov 2023 18:29:57 GMT"
+          ],
+          "X-Amzn-Query-Error": [
+            "AWS.SimpleQueueService.NonExistentQueue;Sender"
           ],
           "X-Amzn-Requestid": [
-            "d617b156-6a14-5359-adde-ec35445c74e9"
+            "07e48b2d-d812-5484-83cf-d6fb217782d6"
           ]
         },
-        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PEVycm9yUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9xdWV1ZS5hbWF6b25hd3MuY29tL2RvYy8yMDEyLTExLTA1LyI+PEVycm9yPjxUeXBlPlNlbmRlcjwvVHlwZT48Q29kZT5BV1MuU2ltcGxlUXVldWVTZXJ2aWNlLk5vbkV4aXN0ZW50UXVldWU8L0NvZGU+PE1lc3NhZ2U+VGhlIHNwZWNpZmllZCBxdWV1ZSBkb2VzIG5vdCBleGlzdCBmb3IgdGhpcyB3c2RsIHZlcnNpb24uPC9NZXNzYWdlPjxEZXRhaWwvPjwvRXJyb3I+PFJlcXVlc3RJZD5kNjE3YjE1Ni02YTE0LTUzNTktYWRkZS1lYzM1NDQ1Yzc0ZTk8L1JlcXVlc3RJZD48L0Vycm9yUmVzcG9uc2U+"
+        "Body": "eyJfX3R5cGUiOiJjb20uYW1hem9uYXdzLnNxcyNRdWV1ZURvZXNOb3RFeGlzdCIsIm1lc3NhZ2UiOiJUaGUgc3BlY2lmaWVkIHF1ZXVlIGRvZXMgbm90IGV4aXN0LiJ9"
       }
     }
   ]
