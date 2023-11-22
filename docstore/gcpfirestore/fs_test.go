@@ -194,7 +194,6 @@ func TestResourceIDRegexp(t *testing.T) {
 		"Projects/P/databases/(default)/documents/C",
 		"P/databases/(default)/documents/C",
 		"projects/P/Q/databases/(default)/documents/C",
-		"projects/P/databases/mydb/documents/C",
 		"projects/P/databases/(default)/C",
 		"projects/P/databases/(default)/documents/",
 		"projects/P/databases/(default)",
