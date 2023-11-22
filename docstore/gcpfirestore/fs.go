@@ -149,6 +149,8 @@ func CollectionResourceID(projectID, collPath string) string {
 	return fmt.Sprintf("projects/%s/databases/(default)/documents/%s", projectID, collPath)
 }
 
+// CollectResoureceIDWithDatabase constructs a resource ID for a collection from the project ID, database ID, and the collection path.
+// See the OpenCollection example for use.
 func CollectionResourceIDWithDatabase(projectID, databaseID, collPath string) string {
 	return fmt.Sprintf("projects/%s/databases/%s/documents/%s", projectID, databaseID, collPath)
 }
