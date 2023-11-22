@@ -149,6 +149,12 @@ func CollectionResourceID(projectID, collPath string) string {
 	return fmt.Sprintf("projects/%s/databases/(default)/documents/%s", projectID, collPath)
 }
 
+// CollectResoureceIDWithDatabase constructs a resource ID for a collection from the project ID, database ID, and the collection path.
+// See the OpenCollection example for use.
+func CollectionResourceIDWithDatabase(projectID, databaseID, collPath string) string {
+	return fmt.Sprintf("projects/%s/databases/%s/documents/%s", projectID, databaseID, collPath)
+}
+
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
 //
 // collResourceID must be of the form "project/<projectID>/databases/(default)/documents/<collPath>".
@@ -193,7 +199,7 @@ func OpenCollectionWithNameFunc(client *vkit.Client, collResourceID string, name
 	return docstore.NewCollection(c), nil
 }
 
-var resourceIDRE = regexp.MustCompile(`^(projects/[^/]+/databases/\(default\))/documents/.+`)
+var resourceIDRE = regexp.MustCompile(`^(projects/[^/]+/databases/[^/]+)/documents/.+`)
 
 func newCollection(client *vkit.Client, collResourceID, nameField string, nameFunc func(docstore.Document) string, opts *Options) (*collection, error) {
 	if nameField == "" && nameFunc == nil {

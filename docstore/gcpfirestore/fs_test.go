@@ -183,6 +183,7 @@ func TestResourceIDRegexp(t *testing.T) {
 	for _, good := range []string{
 		"projects/abc-_.309/databases/(default)/documents/C",
 		"projects/P/databases/(default)/documents/C/D/E",
+		"projects/P/databases/mydb/documents/E/F/G",
 	} {
 		if !resourceIDRE.MatchString(good) {
 			t.Errorf("%q did not match but should have", good)
@@ -194,7 +195,6 @@ func TestResourceIDRegexp(t *testing.T) {
 		"Projects/P/databases/(default)/documents/C",
 		"P/databases/(default)/documents/C",
 		"projects/P/Q/databases/(default)/documents/C",
-		"projects/P/databases/mydb/documents/C",
 		"projects/P/databases/(default)/C",
 		"projects/P/databases/(default)/documents/",
 		"projects/P/databases/(default)",
