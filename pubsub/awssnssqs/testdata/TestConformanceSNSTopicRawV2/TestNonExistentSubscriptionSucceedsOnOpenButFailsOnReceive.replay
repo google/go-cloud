@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7ceyLkMLhzhwAA",
+  "Initial": "AQAAAA7c7u4OL5EyYAAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "1b24507f93ff6382",
+      "ID": "bf3f510d1b7e9c1a",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
@@ -57,18 +59,21 @@
             "attempt=1; max=1"
           ],
           "Content-Length": [
-            "198"
+            "165"
           ],
           "User-Agent": [
             "CLEARED"
           ],
           "X-Amz-Date": [
             "CLEARED"
+          ],
+          "X-Amz-Target": [
+            "AmazonSQS.ReceiveMessage"
           ]
         },
-        "MediaType": "application/x-www-form-urlencoded",
+        "MediaType": "application/x-amz-json-1.0",
         "BodyParts": [
-          "QWN0aW9uPVJlY2VpdmVNZXNzYWdlJkF0dHJpYnV0ZU5hbWUuMT1BbGwmTWF4TnVtYmVyT2ZNZXNzYWdlcz0xJk1lc3NhZ2VBdHRyaWJ1dGVOYW1lLjE9QWxsJlF1ZXVlVXJsPWh0dHBzJTNBJTJGJTJGdXMtZWFzdC0yLmFtYXpvbmF3cy5jb20lMkY0NjIzODAyMjU3MjIlMkZub25leGlzdGVudC1zdWJzY3JpcHRpb24mVmVyc2lvbj0yMDEyLTExLTA1"
+          "eyJBdHRyaWJ1dGVOYW1lcyI6WyJBbGwiXSwiTWF4TnVtYmVyT2ZNZXNzYWdlcyI6MSwiTWVzc2FnZUF0dHJpYnV0ZU5hbWVzIjpbIkFsbCJdLCJRdWV1ZVVybCI6Imh0dHBzOi8vdXMtZWFzdC0yLmFtYXpvbmF3cy5jb20vNDYyMzgwMjI1NzIyL25vbmV4aXN0ZW50LXN1YnNjcmlwdGlvbiJ9"
         ]
       },
       "Response": {
@@ -78,19 +83,22 @@
         "ProtoMinor": 1,
         "Header": {
           "Content-Length": [
-            "333"
+            "96"
           ],
           "Content-Type": [
-            "text/xml"
+            "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:32:05 GMT"
+            "Tue, 21 Nov 2023 18:29:35 GMT"
+          ],
+          "X-Amzn-Query-Error": [
+            "AWS.SimpleQueueService.NonExistentQueue;Sender"
           ],
           "X-Amzn-Requestid": [
-            "69971f86-bd87-520e-bd3a-42e593a298e2"
+            "04cfeb76-8b9b-54bd-ae5b-b6a072d49244"
           ]
         },
-        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PEVycm9yUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9xdWV1ZS5hbWF6b25hd3MuY29tL2RvYy8yMDEyLTExLTA1LyI+PEVycm9yPjxUeXBlPlNlbmRlcjwvVHlwZT48Q29kZT5BV1MuU2ltcGxlUXVldWVTZXJ2aWNlLk5vbkV4aXN0ZW50UXVldWU8L0NvZGU+PE1lc3NhZ2U+VGhlIHNwZWNpZmllZCBxdWV1ZSBkb2VzIG5vdCBleGlzdCBmb3IgdGhpcyB3c2RsIHZlcnNpb24uPC9NZXNzYWdlPjxEZXRhaWwvPjwvRXJyb3I+PFJlcXVlc3RJZD42OTk3MWY4Ni1iZDg3LTUyMGUtYmQzYS00MmU1OTNhMjk4ZTI8L1JlcXVlc3RJZD48L0Vycm9yUmVzcG9uc2U+"
+        "Body": "eyJfX3R5cGUiOiJjb20uYW1hem9uYXdzLnNxcyNRdWV1ZURvZXNOb3RFeGlzdCIsIm1lc3NhZ2UiOiJUaGUgc3BlY2lmaWVkIHF1ZXVlIGRvZXMgbm90IGV4aXN0LiJ9"
       }
     }
   ]

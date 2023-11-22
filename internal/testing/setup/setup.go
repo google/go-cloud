@@ -162,6 +162,10 @@ func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2
 		r.ClearHeaders("X-Amz-Date")
 		r.ClearQueryParams("X-Amz-Date")
 		r.ClearHeaders("User-Agent") // AWS includes the Go version
+		// The MessageAttributes parameter is a map, and so the values are
+		// in randomized order, so we can't match against them. Just scrub
+		// them and rely on the ordering.
+		r.ScrubBody("MessageAttributes.*")
 	})
 	cfg, err := awsV2Config(ctx, region, client)
 	if err != nil {

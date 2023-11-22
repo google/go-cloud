@@ -408,7 +408,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if b.useV2 {
 		in := &s3v2.ListObjectsV2Input{
 			Bucket:  aws.String(b.name),
-			MaxKeys: int32(pageSize),
+			MaxKeys: aws.Int32(int32(pageSize)),
 		}
 		if len(opts.PageToken) > 0 {
 			in.ContinuationToken = aws.String(string(opts.PageToken))
@@ -434,7 +434,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 				page.Objects[i] = &driver.ListObject{
 					Key:     unescapeKey(aws.StringValue(obj.Key)),
 					ModTime: *obj.LastModified,
-					Size:    obj.Size,
+					Size:    aws.Int64Value(obj.Size),
 					MD5:     eTagToMD5(obj.ETag),
 					AsFunc: func(i interface{}) bool {
 						p, ok := i.(*typesv2.Object)
@@ -589,7 +589,7 @@ func (b *bucket) listObjectsV2(ctx context.Context, in *s3v2.ListObjectsV2Input,
 	var nextContinuationToken *string
 	if legacyResp.NextMarker != nil {
 		nextContinuationToken = legacyResp.NextMarker
-	} else if legacyResp.IsTruncated {
+	} else if aws.BoolValue(legacyResp.IsTruncated) {
 		nextContinuationToken = aws.String(aws.StringValue(legacyResp.Contents[len(legacyResp.Contents)-1].Key))
 	}
 	return &s3v2.ListObjectsV2Output{
@@ -718,7 +718,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 			Metadata:           md,
 			// CreateTime not supported; left as the zero time.
 			ModTime: aws.TimeValue(resp.LastModified),
-			Size:    resp.ContentLength,
+			Size:    aws.Int64Value(resp.ContentLength),
 			MD5:     eTagToMD5(resp.ETag),
 			ETag:    aws.StringValue(resp.ETag),
 			AsFunc: func(i interface{}) bool {
@@ -820,7 +820,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			attrs: driver.ReaderAttributes{
 				ContentType: aws.StringValue(resp.ContentType),
 				ModTime:     aws.TimeValue(resp.LastModified),
-				Size:        getSize(resp.ContentLength, aws.StringValue(resp.ContentRange)),
+				Size:        getSize(aws.Int64Value(resp.ContentLength), aws.StringValue(resp.ContentRange)),
 			},
 			rawV2: resp,
 		}, nil
