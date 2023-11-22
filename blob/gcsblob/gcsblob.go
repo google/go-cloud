@@ -591,7 +591,7 @@ func escapeKey(key string) string {
 	return escape.HexEscape(key, func(r []rune, i int) bool {
 		switch {
 		// GCS doesn't handle these characters (determined via experimentation).
-		case r[i] == 10 || r[i] == 13:
+		case r[i] == 8 || r[i] == 10 || r[i] == 13:
 			return true
 		// For "../", escape the trailing slash.
 		case i > 1 && r[i] == '/' && r[i-1] == '.' && r[i-2] == '.':
