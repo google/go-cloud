@@ -64,13 +64,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"sort"
-	"strconv"
-	"strings"
-
 	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 	typesv2 "github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -88,6 +81,12 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/gcerr"
+	"io"
+	"net/http"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 const defaultPageSize = 1000
@@ -144,31 +143,57 @@ type URLOpener struct {
 	Options Options
 }
 
+const (
+	SSETypeParamKey  = "ssetype"
+	KMSKeyIdParamKey = "kmskeyid"
+)
+
+func IsValidServerSideEncryptionType(value string) bool {
+	// Surely there is a better way to get the values
+	for _, v := range typesv2.ServerSideEncryptionAes256.Values() {
+		if string(v) == value {
+			return true
+		}
+	}
+	return false
+}
+
 // OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	q := u.Query()
+
+	if sseType := q.Get(SSETypeParamKey); sseType != "" {
+		q.Del(SSETypeParamKey)
+
+		if !IsValidServerSideEncryptionType(sseType) {
+			return nil, fmt.Errorf("ssetype invalid %v", sseType)
+		}
+
+		o.Options.EncryptionType = typesv2.ServerSideEncryption(sseType)
+	}
+
+	if kmsKeyID := u.Query().Get(KMSKeyIdParamKey); kmsKeyID != "" {
+		q.Del(KMSKeyIdParamKey)
+		o.Options.KMSEncryptionID = kmsKeyID
+	}
+
 	if o.UseV2 {
-		cfg, err := gcaws.V2ConfigFromURLParams(ctx, u.Query())
+		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 		if err != nil {
 			return nil, fmt.Errorf("open bucket %v: %v", u, err)
 		}
 		clientV2 := s3v2.NewFromConfig(cfg)
-
-		o.Options.EncryptionType = u.Query().Get("ssetype")
-		o.Options.KMSEncryptionID = u.Query().Get("kmskeyid")
 
 		return OpenBucketV2(ctx, clientV2, u.Host, &o.Options)
 	}
 	configProvider := &gcaws.ConfigOverrider{
 		Base: o.ConfigProvider,
 	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
+	overrideCfg, err := gcaws.ConfigFromURLParams(q)
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-
-	o.Options.EncryptionType = u.Query().Get("ssetype")
-	o.Options.KMSEncryptionID = u.Query().Get("kmskeyid")
 
 	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
 }
@@ -183,7 +208,7 @@ type Options struct {
 	// EncryptionType sets the encryption type headers when making write or
 	// copy calls. This is required if the bucket has a restrictive bucket
 	// policy that enforces a specific encryption type
-	EncryptionType string
+	EncryptionType typesv2.ServerSideEncryption
 
 	// KMSEncryptionID sets the kms key id header for write or copy calls.
 	// This is required when a bucket policy enforces the use of a specific
@@ -386,7 +411,7 @@ type bucket struct {
 	clientV2      *s3v2.Client
 	useLegacyList bool
 
-	encryptionType string
+	encryptionType typesv2.ServerSideEncryption
 	kmsKeyId       string
 }
 
@@ -997,7 +1022,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			reqV2.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
 		}
 		if b.encryptionType != "" {
-			reqV2.ServerSideEncryption = typesv2.ServerSideEncryption(b.encryptionType)
+			reqV2.ServerSideEncryption = b.encryptionType
 		}
 		if b.kmsKeyId != "" {
 			reqV2.SSEKMSKeyId = aws.String(b.kmsKeyId)
@@ -1076,7 +1101,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
 		}
 		if b.encryptionType != "" {
-			req.ServerSideEncryption = aws.String(b.encryptionType)
+			req.ServerSideEncryption = aws.String(string(b.encryptionType))
 		}
 		if b.kmsKeyId != "" {
 			req.SSEKMSKeyId = aws.String(b.kmsKeyId)
@@ -1119,7 +1144,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 			Key:        aws.String(dstKey),
 		}
 		if b.encryptionType != "" {
-			input.ServerSideEncryption = typesv2.ServerSideEncryption(b.encryptionType)
+			input.ServerSideEncryption = b.encryptionType
 		}
 		if b.kmsKeyId != "" {
 			input.SSEKMSKeyId = aws.String(b.kmsKeyId)
@@ -1146,7 +1171,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 			Key:        aws.String(dstKey),
 		}
 		if b.encryptionType != "" {
-			input.ServerSideEncryption = aws.String(b.encryptionType)
+			input.ServerSideEncryption = aws.String(string(b.encryptionType))
 		}
 		if b.kmsKeyId != "" {
 			input.SSEKMSKeyId = aws.String(b.kmsKeyId)
