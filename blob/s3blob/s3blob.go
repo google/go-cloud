@@ -144,8 +144,8 @@ type URLOpener struct {
 }
 
 const (
-	SSETypeParamKey  = "ssetype"
-	KMSKeyIdParamKey = "kmskeyid"
+	sseTypeParamKey  = "ssetype"
+	kmsKeyIdParamKey = "kmskeyid"
 )
 
 func IsValidServerSideEncryptionType(value string) bool {
@@ -162,8 +162,8 @@ func IsValidServerSideEncryptionType(value string) bool {
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	q := u.Query()
 
-	if sseType := q.Get(SSETypeParamKey); sseType != "" {
-		q.Del(SSETypeParamKey)
+	if sseType := q.Get(sseTypeParamKey); sseType != "" {
+		q.Del(sseTypeParamKey)
 
 		if !IsValidServerSideEncryptionType(sseType) {
 			return nil, fmt.Errorf("ssetype invalid %v", sseType)
@@ -172,8 +172,8 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		o.Options.EncryptionType = typesv2.ServerSideEncryption(sseType)
 	}
 
-	if kmsKeyID := u.Query().Get(KMSKeyIdParamKey); kmsKeyID != "" {
-		q.Del(KMSKeyIdParamKey)
+	if kmsKeyID := u.Query().Get(kmsKeyIdParamKey); kmsKeyID != "" {
+		q.Del(kmsKeyIdParamKey)
 		o.Options.KMSEncryptionID = kmsKeyID
 	}
 
