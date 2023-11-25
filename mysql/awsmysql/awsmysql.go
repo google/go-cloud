@@ -33,7 +33,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"net/url"
-	"sync/atomic"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
@@ -112,20 +111,14 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect RDS: %v", err)
 		}
-		// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
-		tlsConfigName := fmt.Sprintf(
-			"gocloud.dev/mysql/awsmysql/%d",
-			atomic.AddUint32(&tlsConfigCounter, 1),
-		)
-		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
-			RootCAs: certPool,
-		})
+		cfg, err := mysql.ParseDSN(c.dsn)
 		if err != nil {
 			c.sem <- struct{}{} // release
-			return nil, fmt.Errorf("connect RDS: register TLS: %v", err)
+			return nil, fmt.Errorf("connect RDS: parse DSN: %v", err)
 		}
-		cfg, _ := mysql.ParseDSN(c.dsn)
-		cfg.TLSConfig = tlsConfigName
+		cfg.TLS = &tls.Config{
+			RootCAs: certPool,
+		}
 		c.dsn = cfg.FormatDSN()
 		close(c.ready)
 		// Don't release sem: make it block forever, so this case won't be run again.
@@ -140,8 +133,6 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 func (c *connector) Driver() driver.Driver {
 	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
 }
-
-var tlsConfigCounter uint32
 
 // A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.
 type CertPoolProvider = rds.CertPoolProvider
