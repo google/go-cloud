@@ -51,7 +51,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 		}
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	sc, err := c.client.RunQuery(ctx, req)
+	sc, err := c.client.RunQuery(withResourceHeader(ctx, c.dbPath), req)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -65,7 +65,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 	}, nil
 }
 
-////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////
 // The code below is adapted from cloud.google.com/go/firestore.
 
 type docIterator struct {
