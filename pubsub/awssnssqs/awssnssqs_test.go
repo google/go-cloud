@@ -458,7 +458,7 @@ func (t awsAsTest) TopicErrorCheck(topic *pubsub.Topic, err error) error {
 				return fmt.Errorf("got %q, want %q", got, want)
 			}
 		case topicKindSQS:
-			if got, want := e.ErrorCode(), buggyQueueNotFoundErrorCode; got != want {
+			if got, want := e.ErrorCode(), sqs.ErrCodeQueueDoesNotExist; got != want {
 				return fmt.Errorf("got %q, want %q", got, want)
 			}
 		default:
@@ -476,7 +476,7 @@ func (t awsAsTest) TopicErrorCheck(topic *pubsub.Topic, err error) error {
 			return fmt.Errorf("got %q, want %q", got, want)
 		}
 	case topicKindSQS:
-		if got, want := ae.Code(), buggyQueueNotFoundErrorCode; got != want {
+		if got, want := ae.Code(), sqs.ErrCodeQueueDoesNotExist; got != want {
 			return fmt.Errorf("got %q, want %q", got, want)
 		}
 	default:
@@ -491,7 +491,7 @@ func (t awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) err
 		if !s.ErrorAs(err, &e) {
 			return errors.New("Subscription.ErrorAs failed")
 		}
-		if got, want := e.ErrorCode(), buggyQueueNotFoundErrorCode; got != want {
+		if got, want := e.ErrorCode(), sqs.ErrCodeQueueDoesNotExist; got != want {
 			return fmt.Errorf("got %q, want %q", got, want)
 		}
 		return nil
@@ -500,7 +500,7 @@ func (t awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) err
 	if !s.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
-	if got, want := ae.Code(), buggyQueueNotFoundErrorCode; got != want {
+	if got, want := ae.Code(), sqs.ErrCodeQueueDoesNotExist; got != want {
 		return fmt.Errorf("got %q, want %q", got, want)
 	}
 	return nil

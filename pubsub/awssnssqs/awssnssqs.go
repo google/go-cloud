@@ -954,9 +954,6 @@ func errorCode(err error) gcerrors.ErrorCode {
 	return ec
 }
 
-// See https://github.com/aws/aws-sdk-go-v2/issues/2348.
-const buggyQueueNotFoundErrorCode = "AWS.SimpleQueueService.NonExistentQueue"
-
 var errorCodeMap = map[string]gcerrors.ErrorCode{
 	sns.ErrCodeAuthorizationErrorException:          gcerrors.PermissionDenied,
 	sns.ErrCodeKMSAccessDeniedException:             gcerrors.PermissionDenied,
@@ -984,7 +981,6 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	sns.ErrCodeKMSNotFoundException:                 gcerrors.NotFound,
 	sns.ErrCodeNotFoundException:                    gcerrors.NotFound,
 	sqs.ErrCodeQueueDoesNotExist:                    gcerrors.NotFound,
-	buggyQueueNotFoundErrorCode:                     gcerrors.NotFound,
 	sns.ErrCodeFilterPolicyLimitExceededException:   gcerrors.ResourceExhausted,
 	sns.ErrCodeSubscriptionLimitExceededException:   gcerrors.ResourceExhausted,
 	sns.ErrCodeTopicLimitExceededException:          gcerrors.ResourceExhausted,
