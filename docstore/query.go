@@ -37,7 +37,7 @@ func (c *Collection) Query() *Query {
 }
 
 // Where expresses a condition on the query.
-// Valid ops are: "=", ">", "<", ">=", "<=".
+// Valid ops are: "=", ">", "<", ">=", "<=, "in", "not-in".
 // Valid values are strings, integers, floating-point numbers, and time.Time values.
 func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 	if q.err != nil {
@@ -49,7 +49,7 @@ func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 		return q
 	}
 	if !validOp[op] {
-		return q.invalidf("invalid filter operator: %q. Use one of: =, >, <, >=, <=", op)
+		return q.invalidf("invalid filter operator: %q. Use one of: =, >, <, >=, <=, in, not-in", op)
 	}
 	if !validFilterValue(value) {
 		return q.invalidf("invalid filter value: %v", value)
@@ -63,11 +63,13 @@ func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 }
 
 var validOp = map[string]bool{
-	"=":  true,
-	">":  true,
-	"<":  true,
-	">=": true,
-	"<=": true,
+	"=":      true,
+	">":      true,
+	"<":      true,
+	">=":     true,
+	"<=":     true,
+	"in":     true,
+	"not-in": true,
 }
 
 func validFilterValue(v interface{}) bool {
@@ -86,6 +88,9 @@ func validFilterValue(v interface{}) bool {
 		return true
 	case reflect.Float32, reflect.Float64:
 		return true
+	// TODO: Properly validate slice values and the in/not-in operators.
+	case reflect.Slice:
+		return true
 	default:
 		return false
 	}
@@ -100,7 +105,7 @@ func (q *Query) Limit(n int) *Query {
 		return q
 	}
 	if n <= 0 {
-		return q.invalidf("limit value of %d must be greater than zero", n)
+		return q.invalidf("limit value of % must be greater than zero", n)
 	}
 	if q.dq.Limit > 0 {
 		return q.invalidf("query can have at most one limit clause")
