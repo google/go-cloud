@@ -37,7 +37,7 @@ func (c *Collection) Query() *Query {
 }
 
 // Where expresses a condition on the query.
-// Valid ops are: "=", ">", "<", ">=", "<=".
+// Valid ops are: "=", ">", "<", ">=", "<=, "in", "not-in".
 // Valid values are strings, integers, floating-point numbers, and time.Time values.
 func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 	if q.err != nil {
@@ -48,10 +48,11 @@ func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 		q.err = err
 		return q
 	}
-	if !validOp[op] {
-		return q.invalidf("invalid filter operator: %q. Use one of: =, >, <, >=, <=", op)
+	validator, ok := validOp[op]
+	if !ok {
+		return q.invalidf("invalid filter operator: %q. Use one of: =, >, <, >=, <=, in, not-in", op)
 	}
-	if !validFilterValue(value) {
+	if !validator(value) {
 		return q.invalidf("invalid filter value: %v", value)
 	}
 	q.dq.Filters = append(q.dq.Filters, driver.Filter{
@@ -62,12 +63,16 @@ func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 	return q
 }
 
-var validOp = map[string]bool{
-	"=":  true,
-	">":  true,
-	"<":  true,
-	">=": true,
-	"<=": true,
+type valueValidator func(interface{}) bool
+
+var validOp = map[string]valueValidator{
+	"=":      validFilterValue,
+	">":      validFilterValue,
+	"<":      validFilterValue,
+	">=":     validFilterValue,
+	"<=":     validFilterValue,
+	"in":     validFilterSlice,
+	"not-in": validFilterSlice,
 }
 
 func validFilterValue(v interface{}) bool {
@@ -89,6 +94,19 @@ func validFilterValue(v interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func validFilterSlice(v interface{}) bool {
+	if v == nil || reflect.TypeOf(v).Kind() != reflect.Slice {
+		return false
+	}
+	vv := reflect.ValueOf(v)
+	for i := 0; i < vv.Len(); i++ {
+		if !validFilterValue(vv.Index(i).Interface()) {
+			return false
+		}
+	}
+	return true
 }
 
 // Limit will limit the results to at most n documents.

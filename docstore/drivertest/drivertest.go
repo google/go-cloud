@@ -1424,6 +1424,16 @@ func testGetQuery(t *testing.T, _ Harness, coll *docstore.Collection) {
 			want: func(h *HighScore) bool { return h.Score >= 50 && h.Time.After(date(4, 1)) },
 		},
 		{
+			name: "PlayerIn",
+			q:    coll.Query().Where("Player", "in", []string{"pat", "billie"}),
+			want: func(h *HighScore) bool { return h.Player == "pat" || h.Player == "billie" },
+		},
+		{
+			name: "PlayerNotIn",
+			q:    coll.Query().Where("Player", "not-in", []string{"pat", "billie"}),
+			want: func(h *HighScore) bool { return h.Player != "pat" && h.Player != "billie" },
+		},
+		{
 			name:   "AllByPlayerAsc",
 			q:      coll.Query().OrderBy("Player", docstore.Ascending),
 			want:   func(h *HighScore) bool { return true },

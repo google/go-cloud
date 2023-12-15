@@ -301,4 +301,23 @@ func TestLowercaseFields(t *testing.T) {
 	var got6 S
 	must(coll.Query().OrderBy("G", docstore.Descending).Get(ctx).Next(ctx, &got6))
 	check(got6, *sdoc2)
+
+	// List queries
+	// select F from coll WHERE G IN (50, 51) ORDER BY G DESC
+	// test that F is 99
+	sdoc3 := &S{ID: 3, F: 99, G: 50}
+	sdoc4 := &S{ID: 4, F: 99, G: 51}
+	must(coll.Put(ctx, sdoc3))
+	must(coll.Put(ctx, sdoc4))
+	var got7, got8 S
+	iter := coll.Query().Where("G", "in", []int{50, 51}).OrderBy("G", docstore.Descending).Get(ctx)
+	must(iter.Next(ctx, &got7))
+	must(iter.Next(ctx, &got8))
+	check(got7, *sdoc4)
+	check(got8, *sdoc3)
+
+	// same query with not-in, expect to get sdoc2 back even though G is higher for sdoc3 and sdoc4
+	var got9 S
+	must(coll.Query().Where("G", "not-in", []int{50, 51}).OrderBy("G", docstore.Descending).Get(ctx).Next(ctx, &got9))
+	check(got9, *sdoc2)
 }
