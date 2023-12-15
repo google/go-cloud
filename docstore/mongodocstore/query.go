@@ -75,6 +75,8 @@ var mongoQueryOps = map[string]string{
 	">=":           "$gte",
 	"<":            "$lt",
 	"<=":           "$lte",
+	"in":           "$in",
+	"not-in":       "$nin",
 }
 
 // filtersToBSON converts a []driver.Filter to the MongoDB equivalent, expressed
