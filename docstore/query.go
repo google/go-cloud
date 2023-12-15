@@ -118,7 +118,7 @@ func (q *Query) Limit(n int) *Query {
 		return q
 	}
 	if n <= 0 {
-		return q.invalidf("limit value of % must be greater than zero", n)
+		return q.invalidf("limit value of %d must be greater than zero", n)
 	}
 	if q.dq.Limit > 0 {
 		return q.invalidf("query can have at most one limit clause")
