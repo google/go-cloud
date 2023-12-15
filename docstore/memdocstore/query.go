@@ -118,6 +118,9 @@ func compare(x1, x2 interface{}) (int, bool) {
 	if v2.Kind() == reflect.Slice {
 		for i := 0; i < v2.Len(); i++ {
 			if c, ok := compare(x1, v2.Index(i).Interface()); ok {
+				if !ok {
+					return 0, false
+				}
 				if c == 0 {
 					return 0, true
 				}
