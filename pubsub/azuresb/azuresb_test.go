@@ -34,6 +34,7 @@ var (
 	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
 	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
 	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")
+	sbHostname = os.Getenv("AZURE_SERVICEBUS_HOSTNAME")
 )
 
 const (
@@ -56,8 +57,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	if connString == "" {
-		return nil, fmt.Errorf("azuresb: test harness requires environment variable SERVICEBUS_CONNECTION_STRING to run")
+	if connString == "" && sbHostname == "" {
+		return nil, fmt.Errorf("azuresb: test harness requires environment variable SERVICEBUS_CONNECTION_STRING or AZURE_SERVICEBUS_HOSTNAME to run")
 	}
 	adminClient, err := admin.NewClientFromConnectionString(connString, nil)
 	if err != nil {
