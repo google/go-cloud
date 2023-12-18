@@ -26,6 +26,7 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	servicebus "github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus/admin"
 )
@@ -311,6 +312,13 @@ func deleteSubscription(ctx context.Context, topicName string, subscriptionName 
 	return nil
 }
 
+// to run test using Azure Entra credentials:
+// 1. grant access to ${AZURE_CLIENT_ID} to Service Bus namespace
+// 2. run test:
+// AZURE_CLIENT_SECRET='secret' \
+// AZURE_CLIENT_ID=client_id_uud \
+// AZURE_TENANT_ID=tenant_id_uuid \
+// AZURE_SERVICEBUS_HOSTNAME=hostname go test -benchmem -run=^$ -bench ^BenchmarkAzureServiceBusPubSub$ gocloud.dev/pubsub/azuresb
 func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	const (
 		benchmarkTopicName        = "benchmark-topic"
@@ -318,16 +326,38 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	)
 	ctx := context.Background()
 
-	if connString == "" {
-		b.Fatal("azuresb: benchmark requires environment variable SERVICEBUS_CONNECTION_STRING to run")
+	var adminClient *admin.Client
+	var sbClient *servicebus.Client
+	var err error
+
+	if connString == "" && sbHostname == "" {
+		b.Fatal("azuresb: benchmark requires environment variable SERVICEBUS_CONNECTION_STRING or AZURE_SERVICEBUS_HOSTNAME to run")
 	}
-	adminClient, err := admin.NewClientFromConnectionString(connString, nil)
-	if err != nil {
-		b.Fatal(err)
+
+	if connString != "" {
+		adminClient, err = admin.NewClientFromConnectionString(connString, nil)
+		if err != nil {
+			b.Fatal(err)
+		}
+		sbClient, err = NewClientFromConnectionString(connString, nil)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
-	sbClient, err := NewClientFromConnectionString(connString, nil)
-	if err != nil {
-		b.Fatal(err)
+
+	if sbHostname != "" {
+		cred, err := azidentity.NewDefaultAzureCredential(nil)
+		if err != nil {
+			b.Fatal(err)
+		}
+		adminClient, err = admin.NewClient(sbHostname, cred, nil)
+		if err != nil {
+			b.Fatal(err)
+		}
+		sbClient, err = NewClientFromServiceBusHostname(sbHostname, nil)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 
 	// Make topic.
