@@ -21,7 +21,7 @@
 // For pubsub.OpenTopic and pubsub.OpenSubscription, azuresb registers
 // for the scheme "azuresb".
 // The default URL opener will use a Service Bus Connection String based on
-// AZURE_SERVICEBUS_HOSTNAME or SERVICEBUS_CONNECTION_STRING environment variables. SERVICEBUS_CONNECTION_STRING takes presendence.
+// AZURE_SERVICEBUS_HOSTNAME or SERVICEBUS_CONNECTION_STRING environment variables. SERVICEBUS_CONNECTION_STRING takes precedence.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -101,7 +101,7 @@ func init() {
 
 // defaultURLOpener creates an URLOpener with ConnectionString initialized from
 // AZURE_SERVICEBUS_HOSTNAME or SERVICEBUS_CONNECTION_STRING environment variables.
-// SERVICEBUS_CONNECTION_STRING takes presendence.
+// SERVICEBUS_CONNECTION_STRING takes precedence.
 type defaultOpener struct {
 	init   sync.Once
 	opener *URLOpener
