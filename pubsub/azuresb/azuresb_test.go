@@ -343,9 +343,7 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-	}
-
-	if sbHostname != "" {
+	} else if sbHostname != "" {
 		cred, err := azidentity.NewDefaultAzureCredential(nil)
 		if err != nil {
 			b.Fatal(err)
