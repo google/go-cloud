@@ -21,7 +21,8 @@
 // For pubsub.OpenTopic and pubsub.OpenSubscription, azuresb registers
 // for the scheme "azuresb".
 // The default URL opener will use a Service Bus Connection String based on
-// AZURE_SERVICEBUS_HOSTNAME or SERVICEBUS_CONNECTION_STRING environment variables. SERVICEBUS_CONNECTION_STRING takes precedence.
+// AZURE_SERVICEBUS_HOSTNAME or SERVICEBUS_CONNECTION_STRING environment variables.
+// SERVICEBUS_CONNECTION_STRING takes precedence.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -113,7 +114,7 @@ func (o *defaultOpener) defaultOpener() (*URLOpener, error) {
 		cs := os.Getenv("SERVICEBUS_CONNECTION_STRING")
 		sbHostname := os.Getenv("AZURE_SERVICEBUS_HOSTNAME")
 		if cs == "" && sbHostname == "" {
-			o.err = errors.New("SERVICEBUS_CONNECTION_STRING or AZURE_SERVICEBUS_HOSTNAME environment variables not set")
+			o.err = errors.New("Neither SERVICEBUS_CONNECTION_STRING nor AZURE_SERVICEBUS_HOSTNAME environment variables are set")
 			return
 		}
 		o.opener = &URLOpener{ConnectionString: cs, ServiceBusHostname: sbHostname}
@@ -154,7 +155,7 @@ type URLOpener struct {
 	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
 	ConnectionString string
 
-	// Azure ServiceBus hostname
+	// Azure ServiceBus hostname.
 	// https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-go-how-to-use-queues?tabs=bash
 	ServiceBusHostname string
 
@@ -173,11 +174,10 @@ type URLOpener struct {
 
 func (o *URLOpener) sbClient(kind string, u *url.URL) (*servicebus.Client, error) {
 	if o.ConnectionString == "" && o.ServiceBusHostname == "" {
-		return nil, fmt.Errorf("open %s %v: ConnectionString or ServiceBusHostname is required", kind, u)
+		return nil, fmt.Errorf("open %s %v: one of ConnectionString or ServiceBusHostname is required", kind, u)
 	}
 
-	// auth using shared key (old method)
-	// ConnectionString approach takes presendence
+	// Auth using shared key.
 	if o.ConnectionString != "" {
 		client, err := NewClientFromConnectionString(o.ConnectionString, o.ServiceBusClientOptions)
 		if err != nil {
@@ -186,15 +186,12 @@ func (o *URLOpener) sbClient(kind string, u *url.URL) (*servicebus.Client, error
 		return client, nil
 	}
 
-	// auth using Azure AAD Workload Identity/AAD Pod Identities/AKS Kubelet Identity/Service Principal
-	if o.ServiceBusHostname != "" {
-		client, err := NewClientFromServiceBusHostname(o.ServiceBusHostname, o.ServiceBusClientOptions)
-		if err != nil {
-			return nil, fmt.Errorf("open %s %v: invalid service bus hostname %q: %v", kind, u, o.ServiceBusHostname, err)
-		}
-		return client, nil
+	// Auth using Azure AAD Workload Identity/AAD Pod Identities/AKS Kubelet Identity/Service Principal.
+	client, err := NewClientFromServiceBusHostname(o.ServiceBusHostname, o.ServiceBusClientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("open %s %v: invalid service bus hostname %q: %v", kind, u, o.ServiceBusHostname, err)
 	}
-	return nil, fmt.Errorf("open %s: please set ServiceBusHostname or ConnectionString", kind)
+	return client, nil
 }
 
 // OpenTopicURL opens a pubsub.Topic based on u.
@@ -256,13 +253,13 @@ type TopicOptions struct {
 	BatcherOptions batcher.Options
 }
 
-// NewClientFromConnectionString returns a *servicebus.Client from a Service Bus connection string.(using shared key for auth)
+// NewClientFromConnectionString returns a *servicebus.Client from a Service Bus connection string, using shared key for auth.
 // https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
 func NewClientFromConnectionString(connectionString string, opts *servicebus.ClientOptions) (*servicebus.Client, error) {
 	return servicebus.NewClientFromConnectionString(connectionString, opts)
 }
 
-// NewClientFromConnectionString returns a *servicebus.Client from a Service Bus connection string.(using shared key for auth)
+// NewClientFromConnectionString returns a *servicebus.Client from a Service Bus connection string, using shared key for auth.
 // for example you can use workload identity autorization.
 // https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-go-how-to-use-queues?tabs=bash
 func NewClientFromServiceBusHostname(serviceBusHostname string, opts *servicebus.ClientOptions) (*servicebus.Client, error) {
