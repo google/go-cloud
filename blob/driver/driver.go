@@ -290,8 +290,8 @@ type Bucket interface {
 	// The object may not be available (and any previous object will remain)
 	// until Close has been called.
 	//
-	// contentType sets the MIME type of the object to be written. It must not be
-	// empty. opts is guaranteed to be non-nil.
+	// contentType sets the MIME type of the object to be written.
+	// opts is guaranteed to be non-nil.
 	//
 	// The caller must call Close on the returned Writer when done writing.
 	//

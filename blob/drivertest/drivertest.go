@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -1367,16 +1368,17 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 	helloWorldMD5 := md5.Sum(helloWorld)
 
 	tests := []struct {
-		name            string
-		key             string
-		exists          bool
-		content         []byte
-		contentType     string
-		contentMD5      []byte
-		firstChunk      int
-		wantContentType string
-		wantErr         bool
-		wantReadErr     bool // if wantErr is true, and Read after err should fail with something other than NotExists
+		name                        string
+		key                         string
+		exists                      bool
+		content                     []byte
+		contentType                 string
+		disableContentTypeDetection bool
+		contentMD5                  []byte
+		firstChunk                  int
+		wantContentType             *regexp.Regexp
+		wantErr                     bool
+		wantReadErr                 bool // if wantErr is true, and Read after err should fail with something other than NotExists
 	}{
 		{
 			name:        "write to empty key fails",
@@ -1401,14 +1403,24 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			name:            "ContentType is discovered if not provided",
 			key:             key,
 			content:         mediumHTML,
-			wantContentType: "text/html",
+			wantContentType: regexp.MustCompile("text/html"),
+		},
+		{
+			name:                        "ContentType is left empty if not provided and DisableContentTypeDetection is true",
+			key:                         key,
+			content:                     mediumHTML,
+			disableContentTypeDetection: true,
+			// Sadly we can't really verify this; even though we write the ContentType
+			// empty, different providers return different values when we read it,
+			// from "application/octet-stream" to their own sniffing.
+			// wantContentType:             regexp.MustCompile("^$"),
 		},
 		{
 			name:            "write with explicit ContentType overrides discovery",
 			key:             key,
 			content:         mediumHTML,
 			contentType:     "application/json",
-			wantContentType: "application/json",
+			wantContentType: regexp.MustCompile("application/json"),
 		},
 		{
 			name:       "Content md5 match",
@@ -1432,23 +1444,23 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			wantErr:    true,
 		},
 		{
-			name:            "a small text file",
+			name:            "a small text file gets a ContentType",
 			key:             key,
 			content:         smallText,
-			wantContentType: "text/html",
+			wantContentType: regexp.MustCompile("text/plain.*"),
 		},
 		{
-			name:            "a large jpg file",
+			name:            "a large jpg file gets a ContentType",
 			key:             key,
 			content:         largeJpg,
-			wantContentType: "image/jpg",
+			wantContentType: regexp.MustCompile("image/jpeg"),
 		},
 		{
-			name:            "a large jpg file written in two chunks",
+			name:            "a large jpg file written in two chunks gets a ContentType",
 			key:             key,
 			firstChunk:      10,
 			content:         largeJpg,
-			wantContentType: "image/jpg",
+			wantContentType: regexp.MustCompile("image/jpeg"),
 		},
 		// TODO(issue #304): Fails for GCS.
 		/*
@@ -1489,8 +1501,9 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 
 			// Write the content.
 			opts := &blob.WriterOptions{
-				ContentType: tc.contentType,
-				ContentMD5:  tc.contentMD5[:],
+				ContentType:                 tc.contentType,
+				DisableContentTypeDetection: tc.disableContentTypeDetection,
+				ContentMD5:                  tc.contentMD5[:],
 			}
 			w, err := b.NewWriter(ctx, tc.key, opts)
 			if err == nil {
@@ -1545,6 +1558,17 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 					t.Errorf("read didn't match write; got \n%s\n want \n%s", string(buf), string(tc.content))
 				} else {
 					t.Error("read didn't match write, content too large to display")
+				}
+			}
+
+			// Verify the ContentType.
+			if tc.wantContentType != nil {
+				attrs, err := b.Attributes(ctx, tc.key)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !tc.wantContentType.MatchString(attrs.ContentType) {
+					t.Errorf("got ContentType %q, want one matching %v", attrs.ContentType, tc.wantContentType)
 				}
 			}
 		})

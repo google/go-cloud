@@ -50,7 +50,7 @@ func newHarness(ctx context.Context, t *testing.T, prefix string, metadataHow me
 		// Skip tests for if no metadata gets written.
 		// For these it is currently undefined whether any gets read (back).
 		switch name := t.Name(); {
-		case strings.HasSuffix(name, "TestAttributes"), strings.Contains(name, "TestMetadata/"):
+		case strings.Contains(name, "ContentType"), strings.HasSuffix(name, "TestAttributes"), strings.Contains(name, "TestMetadata/"):
 			t.SkipNow()
 			return nil, nil
 		}
