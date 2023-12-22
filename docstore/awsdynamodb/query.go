@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -436,9 +437,24 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 		return expression.GreaterThanEqual(name, val)
 	case ">":
 		return expression.GreaterThan(name, val)
+	case "in":
+		return toInCondition(f)
+	case "not-in":
+		return expression.Not(toInCondition(f))
 	default:
 		panic(fmt.Sprint("invalid filter operation:", f.Op))
 	}
+}
+
+func toInCondition(f driver.Filter) expression.ConditionBuilder {
+	name := expression.Name(strings.Join(f.FieldPath, "."))
+	vslice := reflect.ValueOf(f.Value)
+	right := expression.Value(vslice.Index(0).Interface())
+	other := make([]expression.OperandBuilder, vslice.Len()-1)
+	for i := 1; i < vslice.Len(); i++ {
+		other[i-1] = expression.Value(vslice.Index(i).Interface())
+	}
+	return expression.In(name, right, other...)
 }
 
 type documentIterator struct {
