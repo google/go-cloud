@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"sync"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
@@ -106,26 +105,12 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect Azure MySql: %v", err)
 		}
-
-		// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
-		tlsConfigCounter.mu.Lock()
-		tlsConfigNum := tlsConfigCounter.n
-		tlsConfigCounter.n++
-		tlsConfigCounter.mu.Unlock()
-		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/azuremysql/%d", tlsConfigNum)
-		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
-			RootCAs: certPool,
-		})
-		if err != nil {
-			c.sem <- struct{}{} // release
-			return nil, fmt.Errorf("connect Azure MySql: register TLS: %v", err)
-		}
 		cfg := &mysql.Config{
 			Net:                     "tcp",
 			Addr:                    c.addr,
 			User:                    c.user,
 			Passwd:                  c.password,
-			TLSConfig:               tlsConfigName,
+			TLS:                     &tls.Config{RootCAs: certPool},
 			AllowCleartextPasswords: true,
 			AllowNativePasswords:    true,
 			DBName:                  c.dbName,
@@ -143,11 +128,6 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 
 func (c *connector) Driver() driver.Driver {
 	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
-}
-
-var tlsConfigCounter struct {
-	mu sync.Mutex
-	n  int
 }
 
 // A CertPoolProvider obtains a certificate pool that contains the Azure CA certificate.

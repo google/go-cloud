@@ -35,6 +35,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
@@ -97,12 +98,8 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("gcpmysql: URLOpener CertSource is nil")
 	}
-	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
-	dialerCounter.mu.Lock()
-	dialerNum := dialerCounter.n
-	dialerCounter.mu.Unlock()
-	dialerName := fmt.Sprintf("gocloud.dev/mysql/gcpmysql/%d", dialerNum)
-
+	dialerName := fmt.Sprintf("gocloud.dev/mysql/gcpmysql/%d",
+		atomic.AddUint32(&dialerCounter, 1))
 	cfg, err := configFromURL(u, dialerName)
 	if err != nil {
 		return nil, fmt.Errorf("gcpmysql: open config %v", err)
@@ -112,7 +109,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		Port:  3307,
 		Certs: uo.CertSource,
 	}
-	mysql.RegisterDial(dialerName, client.Dial)
+	mysql.RegisterDialContext(dialerName, client.DialContext)
 
 	db := sql.OpenDB(connector{cfg.FormatDSN(), uo.TraceOpts})
 	return db, nil
@@ -161,10 +158,7 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 	return parts[0] + ":" + parts[1] + ":" + parts[2], parts[3], nil
 }
 
-var dialerCounter struct {
-	mu sync.Mutex
-	n  int
-}
+var dialerCounter uint32
 
 type connector struct {
 	dsn       string
