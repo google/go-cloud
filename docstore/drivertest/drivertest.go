@@ -249,7 +249,7 @@ func withColl(t *testing.T, h Harness, kind CollectionKind, f func(*testing.T, H
 	}
 	coll := docstore.NewCollection(dc)
 	defer coll.Close()
-	clearCollection(t, coll)
+	ClearCollection(t, coll)
 	f(t, h, coll)
 }
 
@@ -1541,8 +1541,8 @@ func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 	return res
 }
 
-// clearCollection delete all documents from this collection after test.
-func clearCollection(fataler interface{ Fatalf(string, ...interface{}) }, coll *docstore.Collection) {
+// ClearCollection delete all documents from this collection after test.
+func ClearCollection(fataler interface{ Fatalf(string, ...interface{}) }, coll *docstore.Collection) {
 	ctx := context.Background()
 	iter := coll.Query().Get(ctx)
 	dels := coll.Actions()

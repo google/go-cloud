@@ -236,6 +236,7 @@ func TestLowercaseFields(t *testing.T) {
 	}
 	coll := docstore.NewCollection(dc)
 	defer coll.Close()
+	defer drivertest.ClearCollection(t, coll)
 
 	type S struct {
 		ID, F, G         int
