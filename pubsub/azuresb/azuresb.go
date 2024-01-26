@@ -566,6 +566,9 @@ func errorCode(err error) (gcerrors.ErrorCode, bool) {
 	if strings.Contains(err.Error(), "status code 404") {
 		return gcerrors.NotFound, false
 	}
+	if strings.Contains(err.Error(), "status code 401") {
+		return gcerrors.PermissionDenied, false
+	}
 	var cond amqp.ErrCond
 	var aderr *amqp.LinkError
 	var aerr *amqp.Error
