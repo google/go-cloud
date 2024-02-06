@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7ceyDtOJ54qAAA",
+  "Initial": "AQAAAA7dVMD6GBxRQwAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "4e591bcabb5d87f9",
+      "ID": "dde8fbf7ba8d8f48",
       "Request": {
         "Method": "POST",
         "URL": "https://ssm.us-east-2.amazonaws.com/",
@@ -90,13 +92,13 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:23:42 GMT"
+            "Wed, 07 Feb 2024 00:08:26 GMT"
           ],
           "Server": [
             "Server"
           ],
           "X-Amzn-Requestid": [
-            "073d92b6-19aa-446e-875b-9898ae16c4e2"
+            "6490908f-3434-4884-b0aa-931c35142a7b"
           ]
         },
         "Body": "H4sIAAAAAAAAAKtWio8vqSxIVbJSCkgsSsxNLUkt8ssvccsvzUtRqgUAF48DRR4AAAA="

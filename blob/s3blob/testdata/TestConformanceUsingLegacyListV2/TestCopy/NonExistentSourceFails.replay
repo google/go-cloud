@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7cex+LBwnTvgAA",
+  "Initial": "AQAAAA7dVMB/JqrvtAAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "649e0a7b692ad0fd",
+      "ID": "76c16dca7fbac4c3",
       "Request": {
         "Method": "PUT",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest?x-id=CopyObject",
@@ -74,7 +76,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -87,19 +89,19 @@
             "application/xml"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:17:46 GMT"
+            "Wed, 07 Feb 2024 00:06:23 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "WG4Js7QdgixEcEYpfqa3NRGvzJYjLubUaqgI3TSLiTr0H3Lr2GhSJkxs8t5hQj2qYR8wePsKyQPzTkMJRkvFTQ=="
+            "WCBQZ9TPiJnrosA/CAMLD8nbREd9U9DTod+I35Nu+ZalxgrGglca+E31Rvl7gwAKAnVqNUzpihc="
           ],
           "X-Amz-Request-Id": [
-            "HFR9089XAT09Z9Z5"
+            "KDZJQS7WA1DGR0ZH"
           ]
         },
-        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+SEZSOTA4OVhBVDA5WjlaNTwvUmVxdWVzdElkPjxIb3N0SWQ+V0c0SnM3UWRnaXhFY0VZcGZxYTNOUkd2ekpZakx1YlVhcWdJM1RTTGlUcjBIM0xyMkdoU0preHM4dDVoUWoycVlSOHdlUHNLeVFQelRrTUpSa3ZGVFE9PTwvSG9zdElkPjwvRXJyb3I+"
+        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+S0RaSlFTN1dBMURHUjBaSDwvUmVxdWVzdElkPjxIb3N0SWQ+V0NCUVo5VFBpSm5yb3NBL0NBTUxEOG5iUkVkOVU5RFRvZCtJMzVOdStaYWx4Z3JHZ2xjYStFMzFSdmw3Z3dBS0FuVnFOVXpwaWhjPTwvSG9zdElkPjwvRXJyb3I+"
       }
     }
   ]

@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7cex+FNNrjzQAA",
+  "Initial": "AQAAAA7dVMB5K2RXHgAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "c2cde9ce62a6bd5e",
+      "ID": "b0eb198179089f0b",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
@@ -68,7 +70,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -81,19 +83,19 @@
             "application/xml"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:17:41 GMT"
+            "Wed, 07 Feb 2024 00:06:16 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "2txOETaEwYZIMX560bavoXaYRjOvK+Z2WimYOyjy97ssF483dTTjmnRkxlJ5jMCGPHGPm9CKIZhI2VXW1t4TZQ=="
+            "3bQNX0cNzbvQq1OpNULqmeqx0stZ+Ewn2Dg2ab1HzUI4y3RME4+HMDx+x+T7yqqiwL4EvK9bFJREBVvTZONQig=="
           ],
           "X-Amz-Request-Id": [
-            "88G9731SNCRDJ293"
+            "093RRMRTZY52S1BB"
           ]
         },
-        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1yZWFkaW5nPC9LZXk+PFJlcXVlc3RJZD44OEc5NzMxU05DUkRKMjkzPC9SZXF1ZXN0SWQ+PEhvc3RJZD4ydHhPRVRhRXdZWklNWDU2MGJhdm9YYVlSak92SytaMldpbVlPeWp5OTdzc0Y0ODNkVFRqbW5Sa3hsSjVqTUNHUEhHUG05Q0tJWmhJMlZYVzF0NFRaUT09PC9Ib3N0SWQ+PC9FcnJvcj4="
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1yZWFkaW5nPC9LZXk+PFJlcXVlc3RJZD4wOTNSUk1SVFpZNTJTMUJCPC9SZXF1ZXN0SWQ+PEhvc3RJZD4zYlFOWDBjTnpidlFxMU9wTlVMcW1lcXgwc3RaK0V3bjJEZzJhYjFIelVJNHkzUk1FNCtITUR4K3grVDd5cXFpd0w0RXZLOWJGSlJFQlZ2VFpPTlFpZz09PC9Ib3N0SWQ+PC9FcnJvcj4="
       }
     }
   ]

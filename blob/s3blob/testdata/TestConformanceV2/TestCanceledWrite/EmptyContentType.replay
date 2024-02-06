@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7cex90A+lmbAAA",
+  "Initial": "AQAAAA7dVMBnNQwunAAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "241127856f39edf6",
+      "ID": "9bc4c5aa53b2db4d",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write?x-id=GetObject",
@@ -68,7 +70,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -81,23 +83,23 @@
             "application/xml"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:17:23 GMT"
+            "Wed, 07 Feb 2024 00:05:59 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "Cjap4MHKqBnPoWEn14BZTpwMqynOVtHydeSzdH8Bf7E8EdTWtlIrOliYR9vLlMsctFIT7VWoyFxe11aSY+4z/Q=="
+            "ZxPWjOYHAuHUpm2ADmwSUJoLhQSoW++8u/XDJTU7ot+rb3ZLmKBkD48PuGf/+L1eUdP3AKTjjj7Wkz//gFTKMQ=="
           ],
           "X-Amz-Request-Id": [
-            "BASSCM04FFM4GMF2"
+            "0985M1J0BP8532MF"
           ]
         },
-        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1jYW5jZWxlZC13cml0ZTwvS2V5PjxSZXF1ZXN0SWQ+QkFTU0NNMDRGRk00R01GMjwvUmVxdWVzdElkPjxIb3N0SWQ+Q2phcDRNSEtxQm5Qb1dFbjE0QlpUcHdNcXluT1Z0SHlkZVN6ZEg4QmY3RThFZFRXdGxJck9saVlSOXZMbE1zY3RGSVQ3VldveUZ4ZTExYVNZKzR6L1E9PTwvSG9zdElkPjwvRXJyb3I+"
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1jYW5jZWxlZC13cml0ZTwvS2V5PjxSZXF1ZXN0SWQ+MDk4NU0xSjBCUDg1MzJNRjwvUmVxdWVzdElkPjxIb3N0SWQ+WnhQV2pPWUhBdUhVcG0yQURtd1NVSm9MaFFTb1crKzh1L1hESlRVN290K3JiM1pMbUtCa0Q0OFB1R2YvK0wxZVVkUDNBS1Rqamo3V2t6Ly9nRlRLTVE9PTwvSG9zdElkPjwvRXJyb3I+"
       }
     },
     {
-      "ID": "f7e44339cf0cd7e8",
+      "ID": "b797ebafb0f0f600",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write?x-id=GetObject",
@@ -123,7 +125,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -136,19 +138,19 @@
             "application/xml"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:17:23 GMT"
+            "Wed, 07 Feb 2024 00:05:59 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "aecOtxwUMX2whWNdA7vpA8k6Cf8A3T1R+SFNOip4S3a1vTBGCDxmYh/1IgQeh8KA6KYnHUdv/CYK+KPDRITNlQ=="
+            "a4WiJxiz0P5Q2o/kUkoEKR46+GEZxS+w8lKAvh+tYonq7jtl5Uju8uIrC1vaPJmmVbw8SLCREV7pxTmv+T/VKA=="
           ],
           "X-Amz-Request-Id": [
-            "BASPTQWPFR77RX0M"
+            "DXDV6ZQ331BGF8GG"
           ]
         },
-        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1jYW5jZWxlZC13cml0ZTwvS2V5PjxSZXF1ZXN0SWQ+QkFTUFRRV1BGUjc3UlgwTTwvUmVxdWVzdElkPjxIb3N0SWQ+YWVjT3R4d1VNWDJ3aFdOZEE3dnBBOGs2Q2Y4QTNUMVIrU0ZOT2lwNFMzYTF2VEJHQ0R4bVloLzFJZ1FlaDhLQTZLWW5IVWR2L0NZSytLUERSSVRObFE9PTwvSG9zdElkPjwvRXJyb3I+"
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1jYW5jZWxlZC13cml0ZTwvS2V5PjxSZXF1ZXN0SWQ+RFhEVjZaUTMzMUJHRjhHRzwvUmVxdWVzdElkPjxIb3N0SWQ+YTRXaUp4aXowUDVRMm8va1Vrb0VLUjQ2K0dFWnhTK3c4bEtBdmgrdFlvbnE3anRsNVVqdTh1SXJDMXZhUEptbVZidzhTTENSRVY3cHhUbXYrVC9WS0E9PTwvSG9zdElkPjwvRXJyb3I+"
       }
     }
   ]
