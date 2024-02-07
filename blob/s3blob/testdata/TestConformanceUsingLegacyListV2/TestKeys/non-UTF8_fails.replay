@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7cex+LNS7TJwAA",
+  "Initial": "AQAAAA7dVMCAGr1sMgAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",

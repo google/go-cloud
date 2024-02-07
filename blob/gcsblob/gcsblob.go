@@ -383,7 +383,9 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	if gerr, ok := err.(*googleapi.Error); ok {
 		switch gerr.Code {
 		case http.StatusForbidden:
-			return gcerrors.PermissionDenied
+			// 'Permission 'storage.objects.list' denied on resource (or it may not exist)'
+			// So we have to pick one.
+			return gcerrors.NotFound
 		case http.StatusNotFound:
 			return gcerrors.NotFound
 		case http.StatusPreconditionFailed:

@@ -1,8 +1,10 @@
 {
-  "Initial": "AQAAAA7cex9zAOrWtwAA",
+  "Initial": "AQAAAA7dVMBmKvmXfQAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
       "^Amz-Sdk-Invocation-Id$",
@@ -42,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "ee7132a8e4f42a95",
+      "ID": "a71e58941f05f282",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
@@ -68,7 +70,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -81,19 +83,19 @@
             "application/xml"
           ],
           "Date": [
-            "Fri, 25 Aug 2023 22:17:22 GMT"
+            "Wed, 07 Feb 2024 00:05:58 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "1ygB6kcG2A5XLUo2RmIoU6Y8I0JWRYLo5manNJ2r+z6TanrZX1iPVbhxXGBPzKPm39YonGxHg58="
+            "1dyNfIuBglTrumnIPINX5s+xGJudysysAd4YZykzidmhICWGm/cJ4V2lEm5pUcq5H93mTw07200="
           ],
           "X-Amz-Request-Id": [
-            "KKYPJG2636CWWHSE"
+            "HA1811ZQ44YC302Q"
           ]
         },
-        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1yZWFkaW5nPC9LZXk+PFJlcXVlc3RJZD5LS1lQSkcyNjM2Q1dXSFNFPC9SZXF1ZXN0SWQ+PEhvc3RJZD4xeWdCNmtjRzJBNVhMVW8yUm1Jb1U2WThJMEpXUllMbzVtYW5OSjJyK3o2VGFuclpYMWlQVmJoeFhHQlB6S1BtMzlZb25HeEhnNTg9PC9Ib3N0SWQ+PC9FcnJvcj4="
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5ibG9iLWZvci1yZWFkaW5nPC9LZXk+PFJlcXVlc3RJZD5IQTE4MTFaUTQ0WUMzMDJRPC9SZXF1ZXN0SWQ+PEhvc3RJZD4xZHlOZkl1QmdsVHJ1bW5JUElOWDVzK3hHSnVkeXN5c0FkNFlaeWt6aWRtaElDV0dtL2NKNFYybEVtNXBVY3E1SDkzbVR3MDcyMDA9PC9Ib3N0SWQ+PC9FcnJvcj4="
       }
     }
   ]
