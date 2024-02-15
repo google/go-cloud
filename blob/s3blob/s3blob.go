@@ -64,6 +64,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+
 	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 	typesv2 "github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -81,12 +88,6 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/gcerr"
-	"io"
-	"net/http"
-	"net/url"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 const defaultPageSize = 1000
@@ -148,28 +149,28 @@ const (
 	kmsKeyIdParamKey = "kmskeyid"
 )
 
-func IsValidServerSideEncryptionType(value string) bool {
-	// Surely there is a better way to get the values
-	for _, v := range typesv2.ServerSideEncryptionAes256.Values() {
-		if string(v) == value {
-			return true
+func toServerSideEncryptionType(value string) (typesv2.ServerSideEncryption, error) {
+	for _, sseType := range typesv2.ServerSideEncryptionAes256.Values() {
+		if strings.ToLower(string(sseType)) == strings.ToLower(value) {
+			return sseType, nil
 		}
 	}
-	return false
+	return "", fmt.Errorf("'%s' is not a valid value for '%s'", value, sseTypeParamKey)
 }
 
 // OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	q := u.Query()
 
-	if sseType := q.Get(sseTypeParamKey); sseType != "" {
+	if sseTypeParam := q.Get(sseTypeParamKey); sseTypeParam != "" {
 		q.Del(sseTypeParamKey)
 
-		if !IsValidServerSideEncryptionType(sseType) {
-			return nil, fmt.Errorf("ssetype invalid %v", sseType)
+		sseType, err := toServerSideEncryptionType(sseTypeParam)
+		if err != nil {
+			return nil, err
 		}
 
-		o.Options.EncryptionType = typesv2.ServerSideEncryption(sseType)
+		o.Options.EncryptionType = sseType
 	}
 
 	if kmsKeyID := u.Query().Get(kmsKeyIdParamKey); kmsKeyID != "" {

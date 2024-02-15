@@ -487,3 +487,32 @@ func TestOpenBucketFromURL(t *testing.T) {
 		}
 	}
 }
+
+func TestToServerSideEncryptionType(t *testing.T) {
+	tests := []struct {
+		value         string
+		sseType       typesv2.ServerSideEncryption
+		expectedError error
+	}{
+		// OK.
+		{"AES256", typesv2.ServerSideEncryptionAes256, nil},
+		// OK, KMS
+		{"aws:kms", typesv2.ServerSideEncryptionAwsKms, nil},
+		// OK, KMS
+		{"aws:kms:dsse", typesv2.ServerSideEncryptionAwsKmsDsse, nil},
+		// OK, AES256 mixed case
+		{"Aes256", typesv2.ServerSideEncryptionAes256, nil},
+		// Invalid SSE type
+		{"invalid", "", fmt.Errorf("'invalid' is not a valid value for '%s'", sseTypeParamKey)},
+	}
+
+	for _, test := range tests {
+		sseType, err := toServerSideEncryptionType(test.value)
+		if ((err != nil) != (test.expectedError != nil)) && err.Error() != test.expectedError.Error() {
+			t.Errorf("%s: got error \"%v\", want error \"%v\"", test.value, err, test.expectedError)
+		}
+		if sseType != test.sseType {
+			t.Errorf("%s: got type %v, want type %v", test.value, sseType, test.sseType)
+		}
+	}
+}
