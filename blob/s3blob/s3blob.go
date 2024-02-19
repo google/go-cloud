@@ -173,7 +173,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		o.Options.EncryptionType = sseType
 	}
 
-	if kmsKeyID := u.Query().Get(kmsKeyIdParamKey); kmsKeyID != "" {
+	if kmsKeyID := q.Get(kmsKeyIdParamKey); kmsKeyID != "" {
 		q.Del(kmsKeyIdParamKey)
 		o.Options.KMSEncryptionID = kmsKeyID
 	}
