@@ -466,6 +466,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?profile=main&region=us-west-1", false},
 		// OK, use V2.
 		{"s3://mybucket?awssdk=v2", false},
+		// OK, use KMS Server Side Encryption
+		{"s3://mybucket?ssetype=aws:kms&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", false},
+		// Invalid ssetype
+		{"s3://mybucket?ssetype=aws:notkmsoraes&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", true},
 		// Invalid parameter together with a valid one.
 		{"s3://mybucket?profile=main&param=value", true},
 		// Invalid parameter.
@@ -480,6 +484,35 @@ func TestOpenBucketFromURL(t *testing.T) {
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestToServerSideEncryptionType(t *testing.T) {
+	tests := []struct {
+		value         string
+		sseType       typesv2.ServerSideEncryption
+		expectedError error
+	}{
+		// OK.
+		{"AES256", typesv2.ServerSideEncryptionAes256, nil},
+		// OK, KMS
+		{"aws:kms", typesv2.ServerSideEncryptionAwsKms, nil},
+		// OK, KMS
+		{"aws:kms:dsse", typesv2.ServerSideEncryptionAwsKmsDsse, nil},
+		// OK, AES256 mixed case
+		{"Aes256", typesv2.ServerSideEncryptionAes256, nil},
+		// Invalid SSE type
+		{"invalid", "", fmt.Errorf("'invalid' is not a valid value for '%s'", sseTypeParamKey)},
+	}
+
+	for _, test := range tests {
+		sseType, err := toServerSideEncryptionType(test.value)
+		if ((err != nil) != (test.expectedError != nil)) && err.Error() != test.expectedError.Error() {
+			t.Errorf("%s: got error \"%v\", want error \"%v\"", test.value, err, test.expectedError)
+		}
+		if sseType != test.sseType {
+			t.Errorf("%s: got type %v, want type %v", test.value, sseType, test.sseType)
 		}
 	}
 }
