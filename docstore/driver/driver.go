@@ -192,6 +192,11 @@ type Query struct {
 	// filter, they should be combined with AND.
 	Filters []Filter
 
+	// Offset (also commonly referred to as `Skip`) sets the number of results to skip
+	// before returning results. When Offset <= 0, the driver implementation should
+	// return all possible results.
+	Offset int
+
 	// Limit sets the maximum number of results returned by running the query. When
 	// Limit <= 0, the driver implementation should return all possible results.
 	Limit int

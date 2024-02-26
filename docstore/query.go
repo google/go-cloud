@@ -109,6 +109,25 @@ func validFilterSlice(v interface{}) bool {
 	return true
 }
 
+// Offset (also commonly referred to as `Skip`) specifies the number of
+// documents to skip before returning results.
+// n must be non-negative.
+// It is an error to specify Offset more than once in a Get query, or
+// at all in a Delete or Update query.
+func (q *Query) Offset(n int) *Query {
+	if q.err != nil {
+		return q
+	}
+	if n < 0 {
+		return q.invalidf("offset value of %d must be non-negative", n)
+	}
+	if q.dq.Offset > 0 {
+		return q.invalidf("query can have at most one offset clause")
+	}
+	q.dq.Offset = n
+	return q
+}
+
 // Limit will limit the results to at most n documents.
 // n must be positive.
 // It is an error to specify Limit more than once in a Get query, or
