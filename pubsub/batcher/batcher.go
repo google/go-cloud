@@ -213,16 +213,17 @@ func (b *Batcher) AddNoWait(item interface{}) <-chan error {
 		}
 
 		if batch == nil && len(b.pending) > 0 && b.opts.BatchTimeout > 0 {
-			// If the batch size timeout is zero, this is one of the first items to
-			// be added to the batch under the minimum batch size.  Record when this
-			// happens so that .nextBatch() can grab the batch on timeout.
-			if b.batchSizeTimeout.IsZero() {
-				b.batchSizeTimeout = time.Now()
-			}
 			// Ensure that we send the batch after the given timeout.  Only one
 			// concurrent process can run this goroutine, ensuring that we don't
 			// duplicate work.
 			if atomic.CompareAndSwapInt32(&b.batchTimeoutRunning, 0, 1) {
+				// If the batch size timeout is zero, this is one of the first items to
+				// be added to the batch under the minimum batch size.  Record when this
+				// happens so that .nextBatch() can grab the batch on timeout.
+				if b.batchSizeTimeout.IsZero() {
+					b.batchSizeTimeout = time.Now()
+				}
+
 				go func() {
 					<-time.After(b.opts.BatchTimeout)
 					b.batchTimeoutRunning = 0
@@ -300,10 +301,12 @@ func (b *Batcher) respectMinBatchSize() bool {
 		// If we're shutting down, do not respect minimums.  This takes priority.
 		return false
 	}
-	if b.opts.BatchTimeout > 0 && time.Since(b.batchSizeTimeout) >= b.opts.BatchTimeout {
+	if b.opts.BatchTimeout > 0 {
 		// If we have a maximum wait before sending batches below the minimum, and we've
 		// waited longer than that period, do not respect minimum batches and send!
-		return false
+		if !b.batchSizeTimeout.IsZero() && time.Since(b.batchSizeTimeout) >= b.opts.BatchTimeout {
+			return false
+		}
 	}
 	// At this point, either we're not shutting down and we're not forcing a batch
 	// due to timeouts.  Respect the batch size.
