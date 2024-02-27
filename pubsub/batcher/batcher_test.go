@@ -171,6 +171,34 @@ func TestMinBatchSize(t *testing.T) {
 	}
 }
 
+// TestMinBatchSizeFlushesOnShutdown ensures that Shutdown() flushes batches, even if
+// the pending count is less than the minimum batch size.
+func TestMinBatchSizeFlushesOnShutdown(t *testing.T) {
+	var got [][]int
+
+	batchSize := 3
+
+	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MinBatchSize: batchSize}, func(items interface{}) error {
+		got = append(got, items.([]int))
+		return nil
+	})
+	for i := 0; i < (batchSize - 1); i++ {
+		b.AddNoWait(i)
+	}
+
+	// Ensure that we've received nothing
+	if len(got) > 0 {
+		t.Errorf("got batch unexpectedly: %+v", got)
+	}
+
+	b.Shutdown()
+
+	want := [][]int{{0, 1}}
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %+v, want %+v on shutdown", got, want)
+	}
+}
+
 func TestSaturation(t *testing.T) {
 	// Verify that under high load the maximum number of handlers are running.
 	ctx := context.Background()
