@@ -628,6 +628,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		w.ChunkSize = bufferSize(opts.BufferSize)
 		w.Metadata = opts.Metadata
 		w.MD5 = opts.ContentMD5
+		w.ForceEmptyContentType = opts.DisableContentTypeDetection
 		return w
 	}
 
