@@ -267,4 +267,8 @@
 // https://opencensus.io/quickstart/go/tracing.
 // To enable metric collection in your application, see "Exporting stats" at
 // https://opencensus.io/quickstart/go/metrics.
+//
+// # GORM-like Code Generation
+//
+// You may find https://github.com/bartventer/docstore-gen useful.
 package docstore // import "gocloud.dev/docstore"
