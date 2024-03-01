@@ -31,6 +31,10 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 	if len(q.FieldPaths) > 0 {
 		opts.Projection = c.projectionDoc(q.FieldPaths)
 	}
+	if q.Offset > 0 {
+		offset := int64(q.Offset)
+		opts.Skip = &offset
+	}
 	if q.Limit > 0 {
 		lim := int64(q.Limit)
 		opts.Limit = &lim

@@ -1528,6 +1528,29 @@ func testGetQuery(t *testing.T, _ Harness, coll *docstore.Collection) {
 			t.Errorf("got %v, wanted two documents", got)
 		}
 	})
+	t.Run("Offset", func(t *testing.T) {
+		// For offset, we can't be sure which documents will be skipped, only their count.
+		offsetQ := coll.Query().Offset(2)
+		got := mustCollectHighScores(ctx, t, offsetQ.Get(ctx))
+		if len(got) != len(highScores)-2 {
+			t.Errorf("got %v, wanted %v documents", len(got), len(highScores)-2)
+		}
+	})
+	t.Run("OffsetAndLimit", func(t *testing.T) {
+
+		// Ensure there are at least 4 documents in the collection
+		gotAll := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
+		if len(gotAll) < 4 {
+			t.Skip("Skipping test as there are less than 4 documents in the collection")
+		}
+
+		// Test both offset and limit together.
+		offsetLimitQ := coll.Query().Offset(2).Limit(2)
+		got := mustCollectHighScores(ctx, t, offsetLimitQ.Get(ctx))
+		if len(got) != 2 {
+			t.Errorf("got %v, wanted two documents", len(got))
+		}
+	})
 }
 
 func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {

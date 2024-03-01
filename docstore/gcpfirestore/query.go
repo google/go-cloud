@@ -201,6 +201,11 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []drive
 			p.Select.Fields = append(p.Select.Fields, fieldRef(fp))
 		}
 	}
+	// Apply offset.
+	if q.Offset > 0 {
+		p.Offset = int32(q.Offset)
+	}
+	// Apply limit.
 	if q.Limit > 0 {
 		p.Limit = &wrapperspb.Int32Value{Value: int32(q.Limit)}
 	}

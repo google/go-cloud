@@ -61,11 +61,14 @@ func TestInvalidQuery(t *testing.T) {
 		{"negative Limit", true, c.Query().Limit(-1), "limit"},
 		{"zero Limit", true, c.Query().Limit(0), "limit"},
 		{"two Limits", true, c.Query().Limit(1).Limit(2), "limit"},
+		{"negative Offset", true, c.Query().Offset(-1), "offset"},
+		{"two Offsets", true, c.Query().Offset(1).Offset(2), "offset"},
 		{"empty OrderBy field", true, c.Query().OrderBy("", Ascending), "empty field"},
 		{"bad OrderBy direction", true, c.Query().OrderBy("x", "y"), "direction"},
 		{"two OrderBys", true, c.Query().OrderBy("x", Ascending).OrderBy("y", Descending), "orderby"},
 		{"OrderBy not in Where", true, c.Query().OrderBy("x", Ascending).Where("y", ">", 1), "orderby"},
 		{"any Limit", false, c.Query().Limit(1), "limit"},
+		{"any Offset", false, c.Query().Offset(1), "offset"},
 		{"any OrderBy", false, c.Query().OrderBy("x", Descending), "orderby"},
 	} {
 		check := func(err error) {
