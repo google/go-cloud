@@ -100,6 +100,10 @@ type WriterOptions struct {
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
 	Metadata map[string]string
+	// When true, the driver should attempt to disable any automatic
+	// content-type detection that the provider applies on writes with an
+	// empty ContentType.
+	DisableContentTypeDetection bool
 	// BeforeWrite is a callback that must be called exactly once before
 	// any data is written, unless NewTypedWriter returns an error, in
 	// which case it should not be called.
