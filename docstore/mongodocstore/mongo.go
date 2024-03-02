@@ -416,7 +416,9 @@ func (c *collection) newUpdateDoc(mods []driver.Mod, writeRevision bool) (map[st
 		rev = driver.UniqueString()
 		sets = append(sets, bson.E{Key: c.revisionField, Value: rev})
 	}
-	updateDoc["$set"] = sets
+	if len(sets) > 0 {
+		updateDoc["$set"] = sets
+	}
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}
