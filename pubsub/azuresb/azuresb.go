@@ -61,6 +61,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -232,6 +233,14 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 			return nil, fmt.Errorf("open subscription %v: invalid listener_timeout %q: %v", u, lts, err)
 		}
 		opts.ListenerTimeout = d
+	}
+	if mrbss := q.Get("max_recv_batch_size"); mrbss != "" {
+		q.Del("max_recv_batch_size")
+		mrbs, err := strconv.Atoi(mrbss)
+		if err != nil {
+			return nil, fmt.Errorf("open subscription %v: invalid max_recv_batch_size %q: %v", u, mrbss, err)
+		}
+		opts.ReceiveBatcherOptions.MaxBatchSize = mrbs
 	}
 	for param := range q {
 		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
