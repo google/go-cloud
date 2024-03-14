@@ -1138,10 +1138,11 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
 	dstKey = escapeKey(dstKey)
 	srcKey = escapeKey(srcKey)
+	srcKeyWithBucketEscaped := url.QueryEscape(b.name + "/" + srcKey)
 	if b.useV2 {
 		input := &s3v2.CopyObjectInput{
 			Bucket:     aws.String(b.name),
-			CopySource: aws.String(b.name + "/" + srcKey),
+			CopySource: aws.String(srcKeyWithBucketEscaped),
 			Key:        aws.String(dstKey),
 		}
 		if b.encryptionType != "" {
@@ -1168,7 +1169,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	} else {
 		input := &s3.CopyObjectInput{
 			Bucket:     aws.String(b.name),
-			CopySource: aws.String(b.name + "/" + srcKey),
+			CopySource: aws.String(srcKeyWithBucketEscaped),
 			Key:        aws.String(dstKey),
 		}
 		if b.encryptionType != "" {

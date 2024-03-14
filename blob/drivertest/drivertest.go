@@ -2283,6 +2283,29 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 					t.Errorf("got body %q, want %q", string(got), string(content))
 				}
 			}
+
+			// Copy the blob.
+			// TODO: s3blob's Copy fails on repeatedfwdslashes.
+			if description != "repeatedfwdslashes" {
+				copyToKey := key + "-copy"
+				if err := b.Copy(ctx, copyToKey, key, nil); err != nil {
+					t.Fatal(err)
+				}
+				defer func() {
+					err := b.Delete(ctx, copyToKey)
+					if err != nil {
+						t.Error(err)
+					}
+				}()
+				got, err = b.ReadAll(ctx, copyToKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !cmp.Equal(got, content) {
+					t.Errorf("copied got %q want %q", string(got), string(content))
+				}
+			}
+
 		})
 	}
 }
