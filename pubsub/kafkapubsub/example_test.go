@@ -69,7 +69,7 @@ func Example_openTopicFromURL() {
 	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
 	// The host + path are the topic name to send to.
 	// The set of brokers must be in an environment variable KAFKA_BROKERS.
-	topic, err := pubsub.OpenTopic(ctx, "kafka://my-topic")
+	topic, err := pubsub.OpenTopic(ctx, "kafka://my-topic?key_name=x-partition-key")
 	if err != nil {
 		log.Fatal(err)
 	}
