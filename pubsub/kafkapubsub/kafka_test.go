@@ -471,8 +471,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
-		// OK, but still error because broker doesn't exist.
-		{"kafka://mytopic", true},
+		// OK.
+		{"kafka://mytopic", false},
+		// OK, specifying key_name.
+		{"kafka://mytopic?key_name=x-partition-key", false},
+		// Invalid key_name value.
+		{"kafka://mytopic?key_name=", true},
 		// Invalid parameter.
 		{"kafka://mytopic?param=value", true},
 	}
@@ -480,6 +484,13 @@ func TestOpenTopicFromURL(t *testing.T) {
 	ctx := context.Background()
 	for _, test := range tests {
 		topic, err := pubsub.OpenTopic(ctx, test.URL)
+		if err != nil && errors.Is(err, sarama.ErrOutOfBrokers) {
+			// Since we don't have a real kafka broker to talk to, we will always get an error when
+			// opening a topic. This test is checking specifically for query parameter usage, so
+			// we treat the "no brokers" error message as a nil error.
+			err = nil
+		}
+
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
@@ -497,23 +508,22 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
-		// OK, but still error because broker doesn't exist.
+		// OK.
 		{"kafka://mygroup?topic=mytopic", false},
-		// OK, specifying initial offset, but still error because broker doesn't exist.
+		// OK, specifying initial offset.
 		{"kafka://mygroup?topic=mytopic&offset=oldest", false},
 		{"kafka://mygroup?topic=mytopic&offset=newest", false},
-		// Invalid offset specified
+		// Invalid offset specified.
 		{"kafka://mygroup?topic=mytopic&offset=value", true},
 		// Invalid parameter.
 		{"kafka://mygroup?topic=mytopic&param=value", true},
 	}
 
 	ctx := context.Background()
-	const ignore = "kafka: client has run out of available brokers to talk to"
 
 	for _, test := range tests {
 		sub, err := pubsub.OpenSubscription(ctx, test.URL)
-		if err != nil && strings.Contains(err.Error(), ignore) {
+		if err != nil && errors.Is(err, sarama.ErrOutOfBrokers) {
 			// Since we don't have a real kafka broker to talk to, we will always get an error when
 			// opening a subscription. This test is checking specifically for query parameter usage, so
 			// we treat the "no brokers" error message as a nil error.

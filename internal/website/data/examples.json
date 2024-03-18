@@ -245,7 +245,7 @@
 	},
 	"gocloud.dev/pubsub/kafkapubsub.Example_openTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/kafkapubsub\"\n)",
-		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// The host + path are the topic name to send to.\n// The set of brokers must be in an environment variable KAFKA_BROKERS.\ntopic, err := pubsub.OpenTopic(ctx, \"kafka://my-topic\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+		"code": "// pubsub.OpenTopic creates a *pubsub.Topic from a URL.\n// The host + path are the topic name to send to.\n// The set of brokers must be in an environment variable KAFKA_BROKERS.\ntopic, err := pubsub.OpenTopic(ctx, \"kafka://my-topic?key_name=x-partition-key\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/mempubsub.ExampleNewSubscription": {
 		"imports": "import (\n\t\"context\"\n\t\"time\"\n\n\t\"gocloud.dev/pubsub/mempubsub\"\n)",
