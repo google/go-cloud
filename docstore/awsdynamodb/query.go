@@ -489,6 +489,10 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 		}
 		it.curr = 0
 	}
+	// If there are no more items, return EOF.
+	if len(it.items) == 0 {
+		return io.EOF
+	}
 	if err := decodeDoc(&dyn.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
 		return err
 	}
