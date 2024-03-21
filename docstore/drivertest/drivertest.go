@@ -1551,6 +1551,28 @@ func testGetQuery(t *testing.T, _ Harness, coll *docstore.Collection) {
 			t.Errorf("got %v, wanted two documents", len(got))
 		}
 	})
+	t.Run("EOF", func(t *testing.T) {
+		// To address this issue https://github.com/google/go-cloud/issues/3405#issue-2193025645
+		q := coll.Query()
+		it := q.Get(context.Background())
+		defer it.Stop()
+		h := &HighScore{}
+		for {
+			err := it.Next(context.Background(), h)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+		}
+		// Call Next again to trigger io.EOF
+		err := it.Next(context.Background(), h)
+		if err != io.EOF {
+			t.Errorf("expected io.EOF, got %v", err)
+		}
+	})
 }
 
 func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
