@@ -33,7 +33,7 @@ import (
 
 const (
 	// projectID is the project ID that was used during the last test run using --record.
-	projectID       = "go-cloud-test-216917"
+	projectID       = "go-cdk-415505"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
 	collectionName3 = "docstore-test-3"

@@ -15,6 +15,8 @@
 package awsdynamodb
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -22,6 +24,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore/driver"
@@ -572,5 +575,105 @@ func TestCopyTopLevel(t *testing.T) {
 		if !cmp.Equal(test.dest, test.want) {
 			t.Errorf("src=%+v: got %v, want %v", test.src, test.dest, test.want)
 		}
+	}
+}
+
+func Test_documentIterator_Next(t *testing.T) {
+	type fields struct {
+		qr     *queryRunner
+		items  []map[string]*dyn.AttributeValue
+		curr   int
+		offset int
+		limit  int
+		count  int
+		last   map[string]*dyn.AttributeValue
+		asFunc func(i interface{}) bool
+	}
+	type args struct {
+		ctx context.Context
+		doc driver.Document
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "nextWithNoDecodeError",
+			fields: fields{
+				qr: &queryRunner{},
+				items: []map[string]*dyn.AttributeValue{
+					{"key": {M: map[string]*dyn.AttributeValue{"key": {S: aws.String("value")}}}},
+				},
+				curr:   0,
+				offset: 0,
+				limit:  0,
+				count:  0,
+				last:   map[string]*dyn.AttributeValue{},
+			},
+			args: args{
+				ctx: context.Background(),
+				doc: drivertest.MustDocument(map[string]interface{}{}),
+			},
+			wantErr: false,
+		},
+		{
+			name: "nextWithDecodeError",
+			fields: fields{
+				qr: &queryRunner{},
+				items: []map[string]*dyn.AttributeValue{
+					{"key": {M: nil}}, // set M to nil to trigger decode error
+				},
+				curr:   0,
+				offset: 0,
+				limit:  0,
+				count:  0,
+				last:   map[string]*dyn.AttributeValue{},
+			},
+			args: args{
+				ctx: context.Background(),
+				doc: drivertest.MustDocument(map[string]interface{}{}),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nextWhereCurrIsGreaterThanOrEqualToItemsAndLastIsNotNil",
+			fields: fields{
+				qr: &queryRunner{
+					scanIn: &dyn.ScanInput{},
+					// hack to return error from run
+					beforeRun: func(asFunc func(i interface{}) bool) error { return errors.New("invalid") },
+				},
+				items:  []map[string]*dyn.AttributeValue{{"key": {M: map[string]*dyn.AttributeValue{"key": {S: aws.String("value"), M: nil}}}}},
+				curr:   1,
+				offset: 0,
+				limit:  0,
+				count:  0,
+				last:   map[string]*dyn.AttributeValue{"key": {S: aws.String("value")}},
+			},
+			args: args{
+				ctx: context.Background(),
+				doc: drivertest.MustDocument(map[string]interface{}{}),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			it := &documentIterator{
+				qr:     tt.fields.qr,
+				items:  tt.fields.items,
+				curr:   tt.fields.curr,
+				offset: tt.fields.offset,
+				limit:  tt.fields.limit,
+				count:  tt.fields.count,
+				last:   tt.fields.last,
+				asFunc: tt.fields.asFunc,
+			}
+			if err := it.Next(tt.args.ctx, tt.args.doc); (err != nil) != tt.wantErr {
+				t.Errorf("documentIterator.Next() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

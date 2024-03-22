@@ -46,8 +46,12 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 	}
 
 	// Apply offset
-	if q.Offset > 0 && len(resultDocs) > q.Offset {
-		resultDocs = resultDocs[q.Offset:]
+	if q.Offset > 0 {
+		if q.Offset >= len(resultDocs) {
+			resultDocs = []storedDoc{} // If offset is larger than or equal to the length, result should be an empty slice
+		} else {
+			resultDocs = resultDocs[q.Offset:]
+		}
 	}
 
 	// Apply limit
