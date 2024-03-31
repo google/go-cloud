@@ -305,13 +305,16 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		}
 		q.Del("waittime")
 	}
+	// SQS supports receiving at most 10 messages at a time:
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ReceiveMessage
+	// if value is higher than 10, it will default to 10
 	if receiverMaxBatchStr := q.Get("receivermaxbatch"); receiverMaxBatchStr != "" {
 		var err error
 		opts.ReceiveBatcherOptions.MaxBatchSize, err = strconv.Atoi(receiverMaxBatchStr)
 		if err != nil {
 			return nil, fmt.Errorf("invalid value %q for receivermaxbatch: %v", receiverMaxBatchStr, err)
 		}
-		q.Del("recievermaxbatch")
+		q.Del("receivermaxbatch")
 	}
 	qURL := "https://" + path.Join(u.Host, u.Path)
 	if o.UseV2 {

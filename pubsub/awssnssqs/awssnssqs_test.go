@@ -729,6 +729,10 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?waittime=foo", true},
 		// Invalid parameter.
 		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?param=value", true},
+		// OK, setting receivermaxbatch.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?receivermaxbatch=5", false},
+		// Invalid receivermaxbatch.
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-queue?receivermaxbatch=foo", true},
 	}
 
 	ctx := context.Background()
