@@ -217,6 +217,9 @@ const SQSScheme = "awssqs"
 //   - nacklazy (for "awssqs" Subscriptions only): sets SubscriberOptions.NackLazy. The
 //     value must be parseable by `strconv.ParseBool`.
 //   - waittime: sets SubscriberOptions.WaitTime, in time.ParseDuration formats.
+//   - receivermaxbatch: sets the receiver max batch size as an integer.
+//     SQS supports receiving at most 10 messages at a time:
+//     https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ReceiveMessage
 //
 // See gocloud.dev/aws/ConfigFromURLParams for other query parameters
 // that affect the default AWS session.
@@ -301,6 +304,14 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 			return nil, fmt.Errorf("invalid value %q for waittime: %v", waitTimeStr, err)
 		}
 		q.Del("waittime")
+	}
+	if receiverMaxBatchStr := q.Get("receivermaxbatch"); receiverMaxBatchStr != "" {
+		var err error
+		opts.ReceiveBatcherOptions.MaxBatchSize, err = strconv.Atoi(receiverMaxBatchStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for receivermaxbatch: %v", receiverMaxBatchStr, err)
+		}
+		q.Del("recievermaxbatch")
 	}
 	qURL := "https://" + path.Join(u.Host, u.Path)
 	if o.UseV2 {
