@@ -265,6 +265,74 @@ func TestDownloader(t *testing.T) {
 	}
 }
 
+func TestSeekAfterReadFailure(t *testing.T) {
+	const filename = "f.txt"
+
+	ctx := context.Background()
+
+	bucket := NewBucket(&oneTimeReadBucket{first: true})
+	defer bucket.Close()
+
+	reader, err := bucket.NewRangeReader(ctx, filename, 0, 100, nil)
+	if err != nil {
+		t.Fatalf("failed NewRangeReader: %v", err)
+	}
+	defer reader.Close()
+
+	b := make([]byte, 10)
+
+	_, err = reader.Read(b)
+	if err != nil {
+		t.Fatalf("failed Read#1: %v", err)
+	}
+
+	_, err = reader.Seek(0, io.SeekStart)
+	if err != nil {
+		t.Fatalf("failed Seek#1: %v", err)
+	}
+
+	// This Read will force a recreation of the reader via NewRangeReader,
+	// which will fail.
+	_, err = reader.Read(b)
+	if err == nil {
+		t.Fatalf("unexpectedly succeeded Read#2: %v", err)
+	}
+
+	_, err = reader.Seek(0, io.SeekStart)
+	if err != nil {
+		t.Fatalf("failed Seek#2: %v", err)
+	}
+}
+
+// oneTimeReadBucket implements driver.Bucket for TestSeekAfterReadFailure.
+// It returns a fake reader that succeeds once, then fails.
+type oneTimeReadBucket struct {
+	driver.Bucket
+	first bool
+}
+
+type workingReader struct {
+	driver.Reader
+}
+
+func (r *workingReader) Read(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (r *workingReader) Attributes() *driver.ReaderAttributes { return &driver.ReaderAttributes{} }
+func (r *workingReader) Close() error                         { return nil }
+
+func (b *oneTimeReadBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
+	if b.first {
+		b.first = false
+		return &workingReader{}, nil
+	}
+	return nil, errFake
+}
+
+func (b *oneTimeReadBucket) ErrorCode(err error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (b *oneTimeReadBucket) Close() error                           { return nil }
+
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
 // In addition, when passed the key "work", NewRangeReader and NewTypedWriter
