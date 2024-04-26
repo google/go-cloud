@@ -110,6 +110,9 @@ const Scheme = "file"
 //
 //   - create_dir: (any non-empty value) the directory is created (using os.MkDirAll)
 //     if it does not already exist.
+//   - dir_file_mode: any directories that are created (the base directory when create_dir
+//     is true, or subdirectories for keys) are created using this os.FileMode, parsed
+//     using os.Parseuint. Defaults to 0777.
 //   - no_tmp_dir: (any non-empty value) temporary files are created next to the final
 //     path instead of in os.TempDir.
 //   - base_url: the base URL to use to construct signed URLs; see URLSignerHMAC
@@ -160,6 +163,7 @@ var recognizedParams = map[string]bool{
 	"secret_key_path": true,
 	"metadata":        true,
 	"no_tmp_dir":      true,
+	"dir_file_mode":   true,
 }
 
 type metadataOption string // Not exported as subject to change.
@@ -198,13 +202,20 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 	if q.Get("create_dir") != "" {
 		opts.CreateDir = true
 	}
+	if fms := q.Get("dir_file_mode"); fms != "" {
+		fm, err := strconv.ParseUint(fms, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("fileblob.OpenBucket: invalid dir_file_mode %q: %v", fms, err)
+		}
+		opts.DirFileMode = os.FileMode(fm)
+	}
 	if q.Get("no_tmp_dir") != "" {
 		opts.NoTempDir = true
 	}
 	baseURL := q.Get("base_url")
 	keyPath := q.Get("secret_key_path")
 	if (baseURL == "") != (keyPath == "") {
-		return nil, errors.New("must supply both base_url and secret_key_path query parameters")
+		return nil, errors.New("fileblob.OpenBucket: must supply both base_url and secret_key_path query parameters")
 	}
 	if baseURL != "" {
 		burl, err := url.Parse(baseURL)
@@ -232,6 +243,11 @@ type Options struct {
 	// (using os.MkdirAll).
 	CreateDir bool
 
+	// The FileMode to use when creating directories for the top-level directory
+	// backing the bucket (when CreateDir is true), and for subdirectories for keys.
+	// Defaults to 0777.
+	DirFileMode os.FileMode
+
 	// If true, don't use os.TempDir for temporary files, but instead place them
 	// next to the actual files. This may result in "stranded" temporary files
 	// (e.g., if the application is killed before the file cleanup runs).
@@ -257,6 +273,10 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
+	if opts.DirFileMode == 0 {
+		opts.DirFileMode = os.FileMode(0777)
+	}
+
 	absdir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert %s into an absolute path: %v", dir, err)
@@ -265,7 +285,7 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 
 	// Optionally, create the directory if it does not already exist.
 	if err != nil && opts.CreateDir && os.IsNotExist(err) {
-		err = os.MkdirAll(absdir, os.FileMode(0777))
+		err = os.MkdirAll(absdir, opts.DirFileMode)
 		if err != nil {
 			return nil, fmt.Errorf("tried to create directory but failed: %v", err)
 		}
@@ -699,7 +719,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), os.FileMode(0777)); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), b.opts.DirFileMode); err != nil {
 		return nil, err
 	}
 	f, err := createTemp(path, b.opts.NoTempDir)
