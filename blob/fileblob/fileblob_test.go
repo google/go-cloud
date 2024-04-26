@@ -394,6 +394,12 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"file://" + dirpath + "subdir", "", true, false, ""},
 		// Subdir does not exist, but create_dir creates it. Error is at file read time.
 		{"file://" + dirpath + "subdir2?create_dir=true", "filenotfound.txt", false, true, ""},
+		// Invalid dir_file_mode.
+		{"file://" + dirpath + "subdir?dir_file_mode=x", "myfile.txt", true, false, ""},
+		// Another invalid dir_file_mode.
+		{"file://" + dirpath + "subdir?dir_file_mode=-1", "myfile.txt", true, false, ""},
+		// Valid dir_file_mode.
+		{"file://" + dirpath + "subdir3?dir_file_mode=666&create_dir=true", "filenotfound.txt", false, true, ""},
 		// Invalid query parameter.
 		{"file://" + dirpath + "?param=value", "myfile.txt", true, false, ""},
 		// Unrecognized value for parameter "metadata".
