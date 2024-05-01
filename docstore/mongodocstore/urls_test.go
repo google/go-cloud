@@ -16,6 +16,7 @@ package mongodocstore
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"testing"
 
@@ -61,5 +62,75 @@ func TestOpenCollectionURL(t *testing.T) {
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+func TestDefaultDialerOpenCollectionURL(t *testing.T) {
+	// Defer cleanup
+	oldURLVal := os.Getenv("MONGO_SERVER_URL")
+	defer os.Setenv("MONGO_SERVER_URL", oldURLVal)
+
+	tests := []struct {
+		name                  string
+		currentMongoServerURL string
+		currentWantErr        bool
+		newMongoServerURL     string
+		newWantErr            bool
+	}{
+		{
+			name:                  "fail when MONGO_SERVER_URL is empty / unset",
+			currentMongoServerURL: "",
+			currentWantErr:        true,
+			newMongoServerURL:     "",
+			newWantErr:            true,
+		},
+		{
+			name:                  "fail when updated MONGO_SERVER_URL is empty / unset",
+			currentMongoServerURL: "mongodb://localhost",
+			currentWantErr:        false,
+			newMongoServerURL:     "",
+			newWantErr:            true,
+		},
+		{
+			name:                  "pass when MONGO_SERVER_URL is updated to new value",
+			currentMongoServerURL: "mongodb://localhost",
+			currentWantErr:        false,
+			newMongoServerURL:     "mongodb://localhost:27017",
+			newWantErr:            false,
+		},
+	}
+
+	// Set starting conditions
+	d := new(defaultDialer)
+	ctx := context.Background()
+	mongoURLString := "mongo://mydb/mycollection"
+	u, err := url.Parse(mongoURLString)
+	if err != nil {
+		t.Error(err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// Set MONGO_SERVER_URL
+			os.Setenv("MONGO_SERVER_URL", test.currentMongoServerURL)
+			_, err = d.OpenCollectionURL(ctx, u)
+			if err != nil && !test.currentWantErr {
+				t.Error(err)
+			}
+
+			// Update MONGO_SERVER_URL
+			os.Setenv("MONGO_SERVER_URL", test.newMongoServerURL)
+			_, err = d.OpenCollectionURL(ctx, u)
+			if err != nil && !test.newWantErr {
+				t.Error(err)
+			}
+
+			// Check if the MONGO_SERVER_URL was updated after rotation
+			if !test.newWantErr {
+				if d.mongoServerURL != test.newMongoServerURL {
+					t.Errorf("expected updated MONGO_SERVER_URL to be set to: %s, but got: %s", test.newMongoServerURL, d.mongoServerURL)
+				}
+			}
+		})
 	}
 }

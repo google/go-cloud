@@ -34,27 +34,31 @@ func init() {
 // defaultDialer dials a default Mongo server based on the environment variable
 // MONGO_SERVER_URL.
 type defaultDialer struct {
-	init   sync.Once
-	opener *URLOpener
-	err    error
+	mongoServerURL string
+	mu             sync.Mutex
+	opener         *URLOpener
+	err            error
 }
 
 func (o *defaultDialer) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
-	o.init.Do(func() {
-		serverURL := os.Getenv("MONGO_SERVER_URL")
-		if serverURL == "" {
-			o.err = errors.New("MONGO_SERVER_URL environment variable is not set")
-			return
-		}
-		client, err := Dial(ctx, serverURL)
-		if err != nil {
-			o.err = fmt.Errorf("failed to dial default Mongo server at %q: %v", serverURL, err)
-			return
-		}
-		o.opener = &URLOpener{Client: client}
-	})
-	if o.err != nil {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	currentEnv := os.Getenv("MONGO_SERVER_URL")
+
+	if currentEnv == "" {
+		o.err = errors.New("MONGO_SERVER_URL environment variable is not set")
 		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+	}
+
+	// If MONGO_SERVER_URL has been updated, then update o.opener as well
+	if currentEnv != o.mongoServerURL {
+		client, err := Dial(ctx, currentEnv)
+		if err != nil {
+			o.err = fmt.Errorf("failed to dial default Mongo server at %q: %v", currentEnv, err)
+			return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+		}
+		o.mongoServerURL = currentEnv
+		o.opener = &URLOpener{Client: client}
 	}
 	return o.opener.OpenCollectionURL(ctx, u)
 }
