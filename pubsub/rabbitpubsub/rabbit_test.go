@@ -428,7 +428,7 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		// Invalid parameter.
 		{"rabbit://myqueue?param=value", true},
 		// Invalid value for an existing parameter.
-		{"rabbit://myqueue?qos=value", true},
+		{"rabbit://myqueue?prefetch_count=value", true},
 	}
 
 	ctx := context.Background()
@@ -452,10 +452,10 @@ func TestOpenSubscriptionFromURLViaRealServer(t *testing.T) {
 		WantErr bool
 	}{
 
-		{"url with no qos", "rabbit://%s", false},
+		{"url with no QoS prefetch count", "rabbit://%s", false},
 		{"invalid parameters", "rabbit://%s?param=value", true},
-		{"valid url with qos", "rabbit://%s?qos=1024", false},
-		{"invalid url with qos", "rabbit://%s?qos=value", true},
+		{"valid url with QoS prefetch count", "rabbit://%s?prefetch_count=1024", false},
+		{"invalid url with QoS prefetch count", "rabbit://%s?prefetch_count=value", true},
 	}
 
 	for _, test := range tests {

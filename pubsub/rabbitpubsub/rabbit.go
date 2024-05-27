@@ -98,7 +98,7 @@ const Scheme = "rabbit"
 // For subscriptions, the URL's host+path is used as the queue name.
 //
 // An optional query string can be used to set the Qos consumer prefetch on subscriptions
-// like "rabbit://myqueue?qos=1000" to set the consumer prefetch count to 1000
+// like "rabbit://myqueue?prefetch_count=1000" to set the consumer prefetch count to 1000
 // see also https://www.rabbitmq.com/docs/consumer-prefetch
 type URLOpener struct {
 	// Connection to use for communication with the server.
@@ -121,28 +121,27 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	opts := o.SubscriptionOptions
 	for param, value := range u.Query() {
 		switch param {
-		case "qos":
+		case "prefetch_count":
 			if len(value) == 0 {
 				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 			}
 			count := value[0]
-			if o.SubscriptionOptions.Qos == nil {
-				o.SubscriptionOptions.Qos = new(Qos)
-			}
+
 			prefetchCount, err := strconv.Atoi(count)
 			if err != nil {
 				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, count)
 			}
 
-			o.SubscriptionOptions.Qos.PrefetchCount = prefetchCount
+			opts.PrefetchCount = prefetchCount
 		default:
 			return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 		}
 	}
 	queueName := path.Join(u.Host, u.Path)
-	return OpenSubscription(o.Connection, queueName, &o.SubscriptionOptions), nil
+	return OpenSubscription(o.Connection, queueName, &opts), nil
 }
 
 type topic struct {
@@ -163,12 +162,7 @@ type TopicOptions struct{}
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by RabbitMQ.
 type SubscriptionOptions struct {
-	// Qos properties
-	Qos *Qos
-}
-
-// Qos options to be used when we create a subscription.
-type Qos struct {
+	// Qos property prefetch count.
 	PrefetchCount int
 }
 
@@ -595,7 +589,7 @@ func (s *subscription) establishChannel(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// applay subscription options to channel.
+		// Apply subscription options to channel.
 		err = applyOptionsToChannel(s.opts, ch)
 		if err != nil {
 			return err
@@ -619,11 +613,8 @@ func applyOptionsToChannel(opts *SubscriptionOptions, ch amqpChannel) error {
 		return nil
 	}
 
-	if opts.Qos != nil {
-		err := ch.Qos(opts.Qos.PrefetchCount, 0, false)
-		if err != nil {
-			return fmt.Errorf("unable to set channel Qos: %w", err)
-		}
+	if err := ch.Qos(opts.PrefetchCount, 0, false); err != nil {
+		return fmt.Errorf("unable to set channel Qos: %w", err)
 	}
 
 	return nil
