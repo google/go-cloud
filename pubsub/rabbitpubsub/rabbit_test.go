@@ -43,6 +43,8 @@ const rabbitURL = "amqp://guest:guest@localhost:5672/"
 var logOnce sync.Once
 
 func mustDialRabbit(t testing.TB) amqpConnection {
+	t.Helper()
+
 	if !setup.HasDockerTestEnvironment() {
 		logOnce.Do(func() {
 			t.Log("using the fake because the RabbitMQ server is not available")
@@ -138,12 +140,12 @@ func (h *harness) CreateSubscription(_ context.Context, dt driver.Topic, testNam
 		}
 		ch.QueueDelete(queue)
 	}
-	ds = newSubscription(h.conn, queue)
+	ds = newSubscription(h.conn, queue, nil)
 	return ds, cleanup, nil
 }
 
 func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, func(), error) {
-	return newSubscription(h.conn, "nonexistent-subscription"), func() {}, nil
+	return newSubscription(h.conn, "nonexistent-subscription", nil), func() {}, nil
 }
 
 func (h *harness) Close() {
@@ -436,5 +438,61 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		if sub != nil {
 			sub.Shutdown(ctx)
 		}
+	}
+}
+
+func TestOpenSubscriptionFromURLViaRealServer(t *testing.T) {
+	t.Setenv("RABBIT_SERVER_URL", rabbitURL)
+
+	tests := []struct {
+		label   string
+		URL     string
+		WantErr bool
+	}{
+
+		{"url with no qos", "rabbit://%s", false},
+		{"invalid parameters", "rabbit://%s?param=value", true},
+		{"valid url with qos", "rabbit://%s?qos=1024", false},
+		{"invalid url with qos", "rabbit://%s?qos=value", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.label, func(t *testing.T) {
+			conn := mustDialRabbit(t)
+			_, isFake := conn.(*fakeConnection)
+			if isFake {
+				t.Skip("test requires real rabbitmq")
+			}
+
+			h := &harness{conn: conn}
+
+			ctx := context.Background()
+
+			dt, cleanupTopic, err := h.CreateTopic(ctx, t.Name())
+			if err != nil {
+				t.Fatalf("unable to create topic: %v", err)
+			}
+
+			t.Cleanup(cleanupTopic)
+
+			_, cleanupSubscription, err := h.CreateSubscription(ctx, dt, t.Name())
+			if err != nil {
+				t.Fatalf("unable to create subscription: %v", err)
+			}
+
+			t.Cleanup(cleanupSubscription)
+
+			exchange := dt.(*topic).exchange
+			url := fmt.Sprintf(test.URL, exchange)
+
+			sub, err := pubsub.OpenSubscription(ctx, url)
+			if (err != nil) != test.WantErr {
+				t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+			}
+
+			if sub != nil {
+				sub.Shutdown(ctx)
+			}
+		})
 	}
 }
