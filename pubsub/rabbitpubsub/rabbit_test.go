@@ -427,6 +427,8 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		{"rabbit://myqueue", true},
 		// Invalid parameter.
 		{"rabbit://myqueue?param=value", true},
+		// Invalid value for an existing parameter.
+		{"rabbit://myqueue?qos=value", true},
 	}
 
 	ctx := context.Background()
@@ -475,15 +477,15 @@ func TestOpenSubscriptionFromURLViaRealServer(t *testing.T) {
 
 			t.Cleanup(cleanupTopic)
 
-			_, cleanupSubscription, err := h.CreateSubscription(ctx, dt, t.Name())
+			ds, cleanupSubscription, err := h.CreateSubscription(ctx, dt, t.Name())
 			if err != nil {
 				t.Fatalf("unable to create subscription: %v", err)
 			}
 
 			t.Cleanup(cleanupSubscription)
 
-			exchange := dt.(*topic).exchange
-			url := fmt.Sprintf(test.URL, exchange)
+			queue := ds.(*subscription).queue
+			url := fmt.Sprintf(test.URL, queue)
 
 			sub, err := pubsub.OpenSubscription(ctx, url)
 			if (err != nil) != test.WantErr {

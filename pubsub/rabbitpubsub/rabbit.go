@@ -97,7 +97,9 @@ const Scheme = "rabbit"
 //
 // For subscriptions, the URL's host+path is used as the queue name.
 //
-// No query parameters are supported.
+// An optional query string can be used to set the Qos consumer prefetch on subscriptions
+// like "rabbit://myqueue?qos=1000" to set the consumer prefetch count to 1000
+// see also https://www.rabbitmq.com/docs/consumer-prefetch
 type URLOpener struct {
 	// Connection to use for communication with the server.
 	Connection *amqp.Connection
