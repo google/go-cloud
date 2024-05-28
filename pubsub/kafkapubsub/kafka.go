@@ -136,7 +136,9 @@ const Scheme = "kafka"
 // URLOpener opens Kafka URLs like "kafka://mytopic" for topics and
 // "kafka://group?topic=mytopic" for subscriptions.
 //
-// For topics, the URL's host+path is used as the topic name.
+// For topics, the URL's host+path is used as the topic name,
+// and the "key_name" query parameter is used to extract the routing key
+// from metadata.
 //
 // For subscriptions, the URL's host+path is used as the group name,
 // and the "topic" query parameter(s) are used as the set of topics to
