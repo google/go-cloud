@@ -389,6 +389,14 @@ func (ch *fakeChannel) QueueDelete(name string) error {
 	return nil
 }
 
+func (ch *fakeChannel) Qos(_, _ int, _ bool) error {
+	if ch.isClosed() {
+		return amqp.ErrClosed
+	}
+
+	return nil
+}
+
 // Assumes nothing is ever written to the channel.
 func chanIsClosed(ch chan struct{}) bool {
 	select {

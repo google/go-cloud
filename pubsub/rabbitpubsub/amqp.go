@@ -62,6 +62,7 @@ type amqpChannel interface {
 	QueueDeclareAndBind(qname, ename string) error
 	ExchangeDelete(string) error
 	QueueDelete(qname string) error
+	Qos(prefetchCount, prefetchSize int, global bool) error
 }
 
 // connection adapts an *amqp.Connection to the amqpConnection interface.
@@ -79,6 +80,7 @@ func (c *connection) Channel() (amqpChannel, error) {
 	if err := ch.Confirm(wait); err != nil {
 		return nil, err
 	}
+
 	return &channel{ch}, nil
 }
 
@@ -167,4 +169,8 @@ func (ch *channel) ExchangeDelete(name string) error {
 func (ch *channel) QueueDelete(qname string) error {
 	_, err := ch.ch.QueueDelete(qname, false, false, false)
 	return err
+}
+
+func (ch *channel) Qos(prefetchCount, prefetchSize int, global bool) error {
+	return ch.ch.Qos(prefetchCount, prefetchSize, global)
 }

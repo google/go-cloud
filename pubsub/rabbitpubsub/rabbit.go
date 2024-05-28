@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -96,7 +97,9 @@ const Scheme = "rabbit"
 //
 // For subscriptions, the URL's host+path is used as the queue name.
 //
-// No query parameters are supported.
+// An optional query string can be used to set the Qos consumer prefetch on subscriptions
+// like "rabbit://myqueue?prefetch_count=1000" to set the consumer prefetch count to 1000
+// see also https://www.rabbitmq.com/docs/consumer-prefetch
 type URLOpener struct {
 	// Connection to use for communication with the server.
 	Connection *amqp.Connection
@@ -118,11 +121,27 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+	opts := o.SubscriptionOptions
+	for param, value := range u.Query() {
+		switch param {
+		case "prefetch_count":
+			if len(value) != 1 || len(value[0]) == 0 {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+			}
+
+			prefetchCount, err := strconv.Atoi(value[0])
+			if err != nil {
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %w", u, param, err)
+			}
+
+			opts.PrefetchCount = &prefetchCount
+		default:
+			return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+		}
 	}
+
 	queueName := path.Join(u.Host, u.Path)
-	return OpenSubscription(o.Connection, queueName, &o.SubscriptionOptions), nil
+	return OpenSubscription(o.Connection, queueName, &opts), nil
 }
 
 type topic struct {
@@ -142,7 +161,10 @@ type TopicOptions struct{}
 
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by RabbitMQ.
-type SubscriptionOptions struct{}
+type SubscriptionOptions struct {
+	// Qos property prefetch count. Optional.
+	PrefetchCount *int
+}
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
 // See the package documentation for an example.
@@ -515,13 +537,15 @@ func (*topic) Close() error { return nil }
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenSubscription(conn *amqp.Connection, name string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil, nil)
+	return pubsub.NewSubscription(newSubscription(&connection{conn}, name, opts), nil, nil)
 }
 
 type subscription struct {
 	conn     amqpConnection
 	queue    string // the AMQP queue name
 	consumer string // the client-generated name for this particular subscriber
+
+	opts *SubscriptionOptions
 
 	mu     sync.Mutex
 	ch     amqpChannel // AMQP channel used for all communication.
@@ -533,11 +557,16 @@ type subscription struct {
 
 var nextConsumer int64 // atomic
 
-func newSubscription(conn amqpConnection, name string) *subscription {
+func newSubscription(conn amqpConnection, name string, opts *SubscriptionOptions) *subscription {
+	if opts == nil {
+		opts = &SubscriptionOptions{}
+	}
+
 	return &subscription{
 		conn:             conn,
 		queue:            name,
 		consumer:         fmt.Sprintf("c%d", atomic.AddInt64(&nextConsumer, 1)),
+		opts:             opts,
 		receiveBatchHook: func() {},
 	}
 }
@@ -564,6 +593,11 @@ func (s *subscription) establishChannel(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		// Apply subscription options to channel.
+		err = applyOptionsToChannel(s.opts, ch)
+		if err != nil {
+			return err
+		}
 		// Subscribe to messages from the queue.
 		s.delc, err = ch.Consume(s.queue, s.consumer)
 		return err
@@ -571,8 +605,22 @@ func (s *subscription) establishChannel(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	s.ch = ch
 	s.closec = ch.NotifyClose(make(chan *amqp.Error, 1)) // closec will get at most one element
+
+	return nil
+}
+
+func applyOptionsToChannel(opts *SubscriptionOptions, ch amqpChannel) error {
+	if opts.PrefetchCount == nil {
+		return nil
+	}
+
+	if err := ch.Qos(*opts.PrefetchCount, 0, false); err != nil {
+		return fmt.Errorf("unable to set channel Qos: %w", err)
+	}
+
 	return nil
 }
 
