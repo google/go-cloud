@@ -558,6 +558,10 @@ type subscription struct {
 var nextConsumer int64 // atomic
 
 func newSubscription(conn amqpConnection, name string, opts *SubscriptionOptions) *subscription {
+	if opts == nil {
+		opts = &SubscriptionOptions{}
+	}
+
 	return &subscription{
 		conn:             conn,
 		queue:            name,
@@ -609,10 +613,6 @@ func (s *subscription) establishChannel(ctx context.Context) error {
 }
 
 func applyOptionsToChannel(opts *SubscriptionOptions, ch amqpChannel) error {
-	if opts == nil {
-		return nil
-	}
-
 	if err := ch.Qos(opts.PrefetchCount, 0, false); err != nil {
 		return fmt.Errorf("unable to set channel Qos: %w", err)
 	}
