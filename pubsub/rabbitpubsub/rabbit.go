@@ -125,14 +125,13 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	for param, value := range u.Query() {
 		switch param {
 		case "prefetch_count":
-			if len(value) == 0 {
+			if len(value) != 1 || len(value[0]) == 0 {
 				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 			}
-			count := value[0]
 
-			prefetchCount, err := strconv.Atoi(count)
+			prefetchCount, err := strconv.Atoi(value[0])
 			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, count)
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %w", u, param, err)
 			}
 
 			opts.PrefetchCount = &prefetchCount
