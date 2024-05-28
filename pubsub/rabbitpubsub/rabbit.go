@@ -135,11 +135,12 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, count)
 			}
 
-			opts.PrefetchCount = prefetchCount
+			opts.PrefetchCount = &prefetchCount
 		default:
 			return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 		}
 	}
+
 	queueName := path.Join(u.Host, u.Path)
 	return OpenSubscription(o.Connection, queueName, &opts), nil
 }
@@ -162,8 +163,8 @@ type TopicOptions struct{}
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by RabbitMQ.
 type SubscriptionOptions struct {
-	// Qos property prefetch count.
-	PrefetchCount int
+	// Qos property prefetch count. Optional.
+	PrefetchCount *int
 }
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
@@ -613,7 +614,11 @@ func (s *subscription) establishChannel(ctx context.Context) error {
 }
 
 func applyOptionsToChannel(opts *SubscriptionOptions, ch amqpChannel) error {
-	if err := ch.Qos(opts.PrefetchCount, 0, false); err != nil {
+	if opts.PrefetchCount == nil {
+		return nil
+	}
+
+	if err := ch.Qos(*opts.PrefetchCount, 0, false); err != nil {
 		return fmt.Errorf("unable to set channel Qos: %w", err)
 	}
 
