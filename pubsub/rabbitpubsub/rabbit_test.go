@@ -63,6 +63,8 @@ func mustDialRabbit(t testing.TB) amqpConnection {
 
 func TestConformance(t *testing.T) {
 	harnessMaker := func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return &harness{conn: mustDialRabbit(t)}, nil
 	}
 	_, isFake := mustDialRabbit(t).(*fakeConnection)
@@ -75,6 +77,8 @@ func TestConformance(t *testing.T) {
 	}
 	t.Logf("now running tests with the fake")
 	harnessMaker = func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return &harness{conn: newFakeConnection()}, nil
 	}
 	asTests = []drivertest.AsTest{rabbitAsTest{true}}
@@ -381,75 +385,58 @@ func (rabbitAsTest) AfterSend(as func(interface{}) bool) error {
 	return nil
 }
 
-func fakeConnectionStringInEnv() func() {
-	oldEnvVal := os.Getenv("RABBIT_SERVER_URL")
-	os.Setenv("RABBIT_SERVER_URL", "amqp://localhost:10000/vhost")
-	return func() {
-		os.Setenv("RABBIT_SERVER_URL", oldEnvVal)
-	}
-}
-
 func TestOpenTopicFromURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("RABBIT_SERVER_URL", rabbitURL)
 
 	tests := []struct {
-		URL     string
-		WantErr bool
+		label       string
+		URLTemplate string
+		WantErr     bool
 	}{
-		// OK, but still error because Dial fails.
-		{"rabbit://myexchange", true},
-		// Invalid parameter.
-		{"rabbit://myexchange?param=value", true},
+		{"valid url", "rabbit://%s", false},
+		{"invalid url with parameters", "rabbit://%s?param=value", true},
 	}
 
-	ctx := context.Background()
 	for _, test := range tests {
-		topic, err := pubsub.OpenTopic(ctx, test.URL)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
-		if topic != nil {
-			topic.Shutdown(ctx)
-		}
+		t.Run(test.label, func(t *testing.T) {
+			conn := mustDialRabbit(t)
+			_, isFake := conn.(*fakeConnection)
+			if isFake {
+				t.Skip("test requires real rabbitmq")
+			}
+
+			h := &harness{conn: conn}
+
+			ctx := context.Background()
+
+			dt, cleanupTopic, err := h.CreateTopic(ctx, t.Name())
+			if err != nil {
+				t.Fatalf("unable to create topic: %v", err)
+			}
+
+			t.Cleanup(cleanupTopic)
+
+			exchange := dt.(*topic).exchange
+			url := fmt.Sprintf(test.URLTemplate, exchange)
+
+			topic, err := pubsub.OpenTopic(ctx, url)
+			if (err != nil) != test.WantErr {
+				t.Errorf("%s: got error %v, want error %v", test.URLTemplate, err, test.WantErr)
+			}
+			if topic != nil {
+				topic.Shutdown(ctx)
+			}
+		})
 	}
 }
 
 func TestOpenSubscriptionFromURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
-
-	tests := []struct {
-		URL     string
-		WantErr bool
-	}{
-		// OK, but error because Dial fails.
-		{"rabbit://myqueue", true},
-		// Invalid parameter.
-		{"rabbit://myqueue?param=value", true},
-		// Invalid value for an existing parameter.
-		{"rabbit://myqueue?prefetch_count=value", true},
-	}
-
-	ctx := context.Background()
-	for _, test := range tests {
-		sub, err := pubsub.OpenSubscription(ctx, test.URL)
-		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
-		}
-		if sub != nil {
-			sub.Shutdown(ctx)
-		}
-	}
-}
-
-func TestOpenSubscriptionFromURLViaRealServer(t *testing.T) {
 	t.Setenv("RABBIT_SERVER_URL", rabbitURL)
 
 	tests := []struct {
-		label   string
-		URL     string
-		WantErr bool
+		label       string
+		URLTemplate string
+		WantErr     bool
 	}{
 
 		{"url with no QoS prefetch count", "rabbit://%s", false},
@@ -485,11 +472,11 @@ func TestOpenSubscriptionFromURLViaRealServer(t *testing.T) {
 			t.Cleanup(cleanupSubscription)
 
 			queue := ds.(*subscription).queue
-			url := fmt.Sprintf(test.URL, queue)
+			url := fmt.Sprintf(test.URLTemplate, queue)
 
 			sub, err := pubsub.OpenSubscription(ctx, url)
 			if (err != nil) != test.WantErr {
-				t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+				t.Errorf("%s: got error %v, want error %v", test.URLTemplate, err, test.WantErr)
 			}
 
 			if sub != nil {
