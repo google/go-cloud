@@ -29,10 +29,6 @@ const (
 	// response. We always want to wait.
 	wait = false
 
-	// Always use the empty routing key. This driver expects to be used with topic
-	// exchanges, which disregard the routing key.
-	routingKey = ""
-
 	// If the message can't be enqueued, return it to the sender rather than silently
 	// dropping it.
 	mandatory = true
@@ -49,7 +45,7 @@ type amqpConnection interface {
 
 // See https://pkg.go.dev/github.com/rabbitmq/amqp091-go#Channel for the documentation of these methods.
 type amqpChannel interface {
-	Publish(exchange string, msg amqp.Publishing) error
+	Publish(exchange, routingKey string, msg amqp.Publishing) error
 	Consume(queue, consumer string) (<-chan amqp.Delivery, error)
 	Ack(tag uint64) error
 	Nack(tag uint64) error
@@ -93,7 +89,7 @@ type channel struct {
 	ch *amqp.Channel
 }
 
-func (ch *channel) Publish(exchange string, msg amqp.Publishing) error {
+func (ch *channel) Publish(exchange, routingKey string, msg amqp.Publishing) error {
 	return ch.ch.Publish(exchange, routingKey, mandatory, immediate, msg)
 }
 
