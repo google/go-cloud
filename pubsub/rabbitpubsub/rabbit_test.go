@@ -125,11 +125,11 @@ func (h *harness) CreateTopic(_ context.Context, testName string) (dt driver.Top
 		}
 		ch.ExchangeDelete(exchange)
 	}
-	return newTopic(h.conn, exchange), cleanup, nil
+	return newTopic(h.conn, exchange, nil), cleanup, nil
 }
 
 func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
-	return newTopic(h.conn, "nonexistent-topic"), nil
+	return newTopic(h.conn, "nonexistent-topic", nil), nil
 }
 
 func (h *harness) CreateSubscription(_ context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
@@ -170,7 +170,7 @@ func TestUnroutable(t *testing.T) {
 	if err := declareExchange(conn, "u"); err != nil {
 		t.Fatal(err)
 	}
-	topic := newTopic(conn, "u")
+	topic := newTopic(conn, "u", nil)
 	msgs := []*driver.Message{
 		{Body: []byte("")},
 		{Body: []byte("")},
@@ -394,7 +394,9 @@ func TestOpenTopicFromURL(t *testing.T) {
 		WantErr     bool
 	}{
 		{"valid url", "rabbit://%s", false},
+		{"valid url with key name parameter", "rabbit://%s?key_name=foo", false},
 		{"invalid url with parameters", "rabbit://%s?param=value", true},
+		{"invalid url with key name parameter", "rabbit://%s?key_name=", true},
 	}
 
 	for _, test := range tests {

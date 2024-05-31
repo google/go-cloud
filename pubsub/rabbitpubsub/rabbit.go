@@ -112,11 +112,22 @@ type URLOpener struct {
 
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+	opts := o.TopicOptions
+	for param, value := range u.Query() {
+		switch param {
+		case "key_name":
+			if len(value) != 1 || len(value[0]) == 0 {
+				return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+			}
+
+			opts.KeyName = value[0]
+		default:
+			return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+		}
 	}
+
 	exchangeName := path.Join(u.Host, u.Path)
-	return OpenTopic(o.Connection, exchangeName, &o.TopicOptions), nil
+	return OpenTopic(o.Connection, exchangeName, &opts), nil
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
@@ -147,6 +158,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 type topic struct {
 	exchange string // the AMQP exchange
 	conn     amqpConnection
+	opts     *TopicOptions
 
 	mu     sync.Mutex
 	ch     amqpChannel              // AMQP channel used for all communication.
@@ -157,11 +169,22 @@ type topic struct {
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by
 // RabbitMQ.
-type TopicOptions struct{}
+type TopicOptions struct {
+	// KeyName optionally sets the Message.Metadata key to use as the optional
+	// RabbitMQ message key. If set, and if a matching Message.Metadata key is found,
+	// the value for that key will be used as the routing key when sending to
+	// RabbitMQ, instead of being added to the message headers.
+	KeyName string
+}
 
 // SubscriptionOptions sets options for constructing a *pubsub.Subscription
 // backed by RabbitMQ.
 type SubscriptionOptions struct {
+	// KeyName optionally sets the Message.Metadata key in which to store the
+	// RabbitMQ message key. If set, and if the RabbitMQ message key is non-empty,
+	// the key value will be stored in Message.Metadata under KeyName.
+	KeyName string
+
 	// Qos property prefetch count. Optional.
 	PrefetchCount *int
 }
@@ -181,13 +204,18 @@ type SubscriptionOptions struct {
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(newTopic(&connection{conn}, name), nil)
+	return pubsub.NewTopic(newTopic(&connection{conn}, name, opts), nil)
 }
 
-func newTopic(conn amqpConnection, name string) *topic {
+func newTopic(conn amqpConnection, name string, opts *TopicOptions) *topic {
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+
 	return &topic{
 		conn:     conn,
 		exchange: name,
+		opts:     opts,
 	}
 }
 
@@ -271,7 +299,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	var perr error
 	for _, m := range ms {
-		pub := toPublishing(m)
+		routingKey, pub := toRoutingKeyAndAMQPPublishing(m, t.opts)
 		if m.BeforeSend != nil {
 			asFunc := func(i interface{}) bool {
 				if p, ok := i.(**amqp.Publishing); ok {
@@ -284,7 +312,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 				return err
 			}
 		}
-		if perr = ch.Publish(t.exchange, pub); perr != nil {
+		if perr = ch.Publish(t.exchange, routingKey, pub); perr != nil {
 			cancel()
 			break
 		}
@@ -410,16 +438,23 @@ func closeErr(closec <-chan *amqp.Error) error {
 	}
 }
 
-// toPublishing converts a driver.Message to an amqp.Publishing.
-func toPublishing(m *driver.Message) amqp.Publishing {
+// toRoutingKeyAndAMQPPublishing converts a driver.Message to a pair routingKey + amqp.Publishing.
+func toRoutingKeyAndAMQPPublishing(m *driver.Message, opts *TopicOptions) (routingKey string, msg amqp.Publishing) {
 	h := amqp.Table{}
 	for k, v := range m.Metadata {
-		h[k] = v
+		if opts.KeyName == k {
+			routingKey = v
+		} else {
+			h[k] = v
+		}
 	}
-	return amqp.Publishing{
+
+	msg = amqp.Publishing{
 		Headers: h,
 		Body:    m.Body,
 	}
+
+	return routingKey, msg
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -665,7 +700,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				// error.
 				return nil, errors.New("rabbitpubsub: delivery channel closed unexpectedly")
 			}
-			ms = append(ms, toMessage(d))
+			ms = append(ms, toDriverMessage(d, s.opts))
 			if len(ms) >= maxMessages {
 				return ms, nil
 			}
@@ -679,13 +714,17 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	}
 }
 
-// toMessage converts an amqp.Delivery (a received message) to a driver.Message.
-func toMessage(d amqp.Delivery) *driver.Message {
+// toDriverMessage converts an amqp.Delivery (a received message) to a driver.Message.
+func toDriverMessage(d amqp.Delivery, opts *SubscriptionOptions) *driver.Message {
 	// Delivery.Headers is a map[string]interface{}, so we have to
 	// convert each value to a string.
 	md := map[string]string{}
 	for k, v := range d.Headers {
 		md[k] = fmt.Sprint(v)
+	}
+	// Add a metadata entry for the message routing key if appropriate.
+	if d.RoutingKey != "" && opts.KeyName != "" {
+		md[opts.KeyName] = d.RoutingKey
 	}
 	loggableID := d.MessageId
 	if loggableID == "" {
