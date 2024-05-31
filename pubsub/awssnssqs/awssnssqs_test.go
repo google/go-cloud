@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	snsv2 "github.com/aws/aws-sdk-go-v2/service/sns"
 	snstypesv2 "github.com/aws/aws-sdk-go-v2/service/sns/types"
@@ -33,6 +34,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/smithy-go"
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -41,7 +43,7 @@ import (
 
 const (
 	region        = "us-east-2"
-	accountNumber = "462380225722"
+	accountNumber = "252051715350"
 )
 
 // We run conformance tests against multiple kinds of topics; this enum
@@ -63,16 +65,20 @@ func newSession() (*session.Session, error) {
 }
 
 type harness struct {
-	useV2       bool
-	sess        *session.Session
-	snsClientV2 *snsv2.Client
-	sqsClientV2 *sqsv2.Client
-	topicKind   topicKind
-	rt          http.RoundTripper
-	closer      func()
-	numTopics   uint32
-	numSubs     uint32
+	useV2           bool
+	sess            *session.Session
+	snsClientV2     *snsv2.Client
+	sqsClientV2     *sqsv2.Client
+	topicKind       topicKind
+	rt              http.RoundTripper
+	closer          func()
+	numTopics       uint32
+	numSubs         uint32
+	useFIFO         bool
+	topicAttributes map[string]string
 }
+
+type harnessOption func(h *harness)
 
 func newHarness(ctx context.Context, t *testing.T, topicKind topicKind) (drivertest.Harness, error) {
 	sess, rt, closer, _ := setup.NewAWSSession(ctx, t, region)
@@ -86,15 +92,30 @@ func newHarnessV2(ctx context.Context, t *testing.T, topicKind topicKind) (drive
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	topicName := sanitize(fmt.Sprintf("%s-top-%d", testName, atomic.AddUint32(&h.numTopics, 1)))
-	return createTopic(ctx, topicName, h.useV2, h.sess, h.snsClientV2, h.sqsClientV2, h.topicKind)
+	if h.useFIFO {
+		topicName += ".fifo"
+	}
+	return createTopic(ctx, topicName, h.useV2, h.sess, h.snsClientV2, h.sqsClientV2, h.topicKind, h.topicAttributes)
 }
 
-func createTopic(ctx context.Context, topicName string, useV2 bool, sess *session.Session, snsClientV2 *snsv2.Client, sqsClientV2 *sqsv2.Client, topicKind topicKind) (dt driver.Topic, cleanup func(), err error) {
+func convertStringToPtrMap(m map[string]string) map[string]*string {
+	if m == nil {
+		return nil
+	}
+	out := make(map[string]*string, len(m))
+	for k, v := range m {
+		out[k] = aws.String(v)
+	}
+	return out
+}
+
+func createTopic(ctx context.Context, topicName string, useV2 bool, sess *session.Session, snsClientV2 *snsv2.Client, sqsClientV2 *sqsv2.Client, topicKind topicKind, attributes map[string]string) (dt driver.Topic, cleanup func(), err error) {
 	switch topicKind {
 	case topicKindSNS, topicKindSNSRaw:
 		// Create an SNS topic.
 		if useV2 {
-			out, err := snsClientV2.CreateTopic(ctx, &snsv2.CreateTopicInput{Name: aws.String(topicName)})
+			input := &snsv2.CreateTopicInput{Name: aws.String(topicName), Attributes: attributes}
+			out, err := snsClientV2.CreateTopic(ctx, input)
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
 			}
@@ -104,7 +125,7 @@ func createTopic(ctx context.Context, topicName string, useV2 bool, sess *sessio
 			}
 		} else {
 			client := sns.New(sess)
-			out, err := client.CreateTopicWithContext(ctx, &sns.CreateTopicInput{Name: aws.String(topicName)})
+			out, err := client.CreateTopicWithContext(ctx, &sns.CreateTopicInput{Name: aws.String(topicName), Attributes: convertStringToPtrMap(attributes)})
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
 			}
@@ -117,7 +138,7 @@ func createTopic(ctx context.Context, topicName string, useV2 bool, sess *sessio
 	case topicKindSQS:
 		// Create an SQS queue.
 		if useV2 {
-			qURL, _, err := createSQSQueue(ctx, true, nil, sqsClientV2, topicName)
+			qURL, _, err := createSQSQueue(ctx, true, nil, sqsClientV2, topicName, attributes)
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
 			}
@@ -127,7 +148,7 @@ func createTopic(ctx context.Context, topicName string, useV2 bool, sess *sessio
 			}
 		} else {
 			sqsClient := sqs.New(sess)
-			qURL, _, err := createSQSQueue(ctx, false, sqsClient, nil, topicName)
+			qURL, _, err := createSQSQueue(ctx, false, sqsClient, nil, topicName, attributes)
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
 			}
@@ -175,14 +196,14 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, us
 		var qURL, qARN string
 		var err error
 		if useV2 {
-			qURL, qARN, err = createSQSQueue(ctx, true, nil, sqsClientV2, subName)
+			qURL, qARN, err = createSQSQueue(ctx, true, nil, sqsClientV2, subName, nil)
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
 			}
 			ds = openSubscriptionV2(ctx, sqsClientV2, qURL, &SubscriptionOptions{})
 		} else {
 			sqsClient := sqs.New(sess)
-			qURL, qARN, err = createSQSQueue(ctx, false, sqsClient, nil, subName)
+			qURL, qARN, err = createSQSQueue(ctx, false, sqsClient, nil, subName, nil)
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
 			}
@@ -245,16 +266,16 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, us
 	}
 }
 
-func createSQSQueue(ctx context.Context, useV2 bool, sqsClient *sqs.SQS, sqsClientV2 *sqsv2.Client, topicName string) (string, string, error) {
+func createSQSQueue(ctx context.Context, useV2 bool, sqsClient *sqs.SQS, sqsClientV2 *sqsv2.Client, topicName string, attributes map[string]string) (string, string, error) {
 	var qURL string
 	if useV2 {
-		out, err := sqsClientV2.CreateQueue(ctx, &sqsv2.CreateQueueInput{QueueName: aws.String(topicName)})
+		out, err := sqsClientV2.CreateQueue(ctx, &sqsv2.CreateQueueInput{QueueName: aws.String(topicName), Attributes: attributes})
 		if err != nil {
 			return "", "", fmt.Errorf("creating SQS queue %q: %v", topicName, err)
 		}
 		qURL = aws.StringValue(out.QueueUrl)
 	} else {
-		out, err := sqsClient.CreateQueueWithContext(ctx, &sqs.CreateQueueInput{QueueName: aws.String(topicName)})
+		out, err := sqsClient.CreateQueueWithContext(ctx, &sqs.CreateQueueInput{QueueName: aws.String(topicName), Attributes: convertStringToPtrMap(attributes)})
 		if err != nil {
 			return "", "", fmt.Errorf("creating SQS queue %q: %v", topicName, err)
 		}
@@ -641,7 +662,7 @@ func benchmark(b *testing.B, topicKind topicKind) {
 		b.Fatal(err)
 	}
 	topicName := fmt.Sprintf("%s-topic", b.Name())
-	dt, cleanup1, err := createTopic(ctx, topicName, false, sess, nil, nil, topicKind)
+	dt, cleanup1, err := createTopic(ctx, topicName, false, sess, nil, nil, topicKind, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -740,5 +761,179 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		if sub != nil {
 			sub.Shutdown(ctx)
 		}
+	}
+}
+
+func TestFIFO(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		useV2 bool
+		kind  topicKind
+	}{
+		{
+			name:  "TestSNSTopic",
+			useV2: false,
+			kind:  topicKindSNS,
+		},
+		{
+			name:  "TestSNSTopicV2",
+			useV2: true,
+			kind:  topicKindSNS,
+		},
+		{
+			name:  "TestSQSTopic",
+			useV2: false,
+			kind:  topicKindSQS,
+		},
+		{
+			name:  "TestSQSTopicV2",
+			useV2: true,
+			kind:  topicKindSQS,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			testFIFOTopic(t, tt.useV2, tt.kind)
+		})
+	}
+}
+
+// testFIFOTopic tests FIFO topics.
+//
+// FIFO topics require a message group ID to be set on the message.
+//
+// The content-based deduplication attribute must be set to true on the topic.
+//   - If set to true, the message deduplication ID is generated using the message body (sha256 hash).
+//   - If not set, then the DeduplicationID must be set on the message.
+//
+// For more information see:
+//   - https://pkg.go.dev/github.com/aws/aws-sdk-go/service/sns#CreateTopicInput.Attributes
+//   - https://pkg.go.dev/github.com/aws/aws-sdk-go/service/sqs#CreateQueueInput.Attributes
+func testFIFOTopic(t *testing.T, useV2 bool, kind topicKind) {
+	t.Helper()
+	type harnessArgs struct {
+		attributes map[string]string
+	}
+
+	const (
+		attributeKeyContentBasedDeduplication = "ContentBasedDeduplication"
+		attributeKeyFifoTopic                 = "FifoTopic"
+		attributeKeyFifoQueue                 = "FifoQueue"
+	)
+
+	tests := []struct {
+		name    string
+		harness harnessArgs
+		message *pubsub.Message
+		wantErr bool
+	}{
+		{
+			name: "TestSendReceiveValid",
+			harness: harnessArgs{
+				attributes: map[string]string{
+					attributeKeyContentBasedDeduplication: "true",
+				},
+			},
+			message: &pubsub.Message{
+				Body: []byte("hello world"),
+				Metadata: map[string]string{
+					MetadataKeyMessageGroupID: "1",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "TestSendReceiveInvalidNoMessageGroupID",
+			harness: harnessArgs{
+				attributes: map[string]string{
+					attributeKeyContentBasedDeduplication: "true",
+				},
+			},
+			message: &pubsub.Message{
+				Body: []byte("hello world"),
+				Metadata: map[string]string{
+					MetadataKeyDeduplicationID: "1",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TestSendReceiveInvalidNoDeduplicationID",
+			// We dont set the ContentBasedDeduplication attribute to trigger the error.
+			harness: harnessArgs{},
+			message: &pubsub.Message{
+				Body:     []byte("hello world"),
+				Metadata: map[string]string{},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create the harness.
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			var h drivertest.Harness
+			var err error
+			if useV2 {
+				h, err = newHarnessV2(ctx, t, kind)
+			} else {
+				h, err = newHarness(ctx, t, kind)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer h.Close()
+
+			// Set the FIFO attributes.
+			attributes := make(map[string]string)
+			for k, v := range tt.harness.attributes {
+				attributes[k] = v
+			}
+			switch kind {
+			case topicKindSNS:
+				attributes[attributeKeyFifoTopic] = "true"
+			case topicKindSQS:
+				attributes[attributeKeyFifoQueue] = "true"
+			}
+			h.(*harness).topicAttributes = attributes
+			h.(*harness).useFIFO = true
+
+			// Create the topic and subscription.
+			dt, cleanup, err := h.CreateTopic(ctx, t.Name())
+			if err != nil {
+				t.Errorf("harness.CreateTopic() error = %v", err)
+				return
+			}
+			defer cleanup()
+			topic := pubsub.NewTopic(dt, sendBatcherOptsSNS)
+			defer topic.Shutdown(ctx)
+			ds, cleanup, err := h.CreateSubscription(ctx, dt, t.Name())
+			if err != nil {
+				t.Errorf("harness.CreateSubscription() error = %v", err)
+				return
+			}
+			defer cleanup()
+			sub := pubsub.NewSubscription(ds, recvBatcherOpts, ackBatcherOpts)
+			defer sub.Shutdown(ctx)
+
+			// Send and receive the message.
+			err = topic.Send(ctx, tt.message)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Topic.Send() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+			m, err := sub.Receive(ctx)
+			if err != nil {
+				t.Errorf("Subscription.Receive() error = %v", err)
+				return
+			}
+			if diff := cmp.Diff(tt.message.Body, m.Body); diff != "" {
+				t.Errorf("Received message body: -got, +want: %s", diff)
+			}
+			m.Ack()
+		})
 	}
 }
