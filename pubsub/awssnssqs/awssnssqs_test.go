@@ -43,7 +43,7 @@ import (
 
 const (
 	region        = "us-east-2"
-	accountNumber = "252051715350"
+	accountNumber = "462380225722"
 )
 
 // We run conformance tests against multiple kinds of topics; this enum
