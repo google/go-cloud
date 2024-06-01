@@ -64,7 +64,7 @@ func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 	}
 	conn, err := amqp.Dial(serverURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %v", serverURL, err)
+		return nil, fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %w", serverURL, err)
 	}
 	o.conn = conn
 	o.opener = &URLOpener{Connection: conn}
@@ -74,7 +74,7 @@ func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	opener, err := o.defaultConn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: failed to open default connection: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: failed to open default connection: %w", u, err)
 	}
 	return opener.OpenTopicURL(ctx, u)
 }
@@ -82,7 +82,7 @@ func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.T
 func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	opener, err := o.defaultConn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %w", u, err)
 	}
 	return opener.OpenSubscriptionURL(ctx, u)
 }
