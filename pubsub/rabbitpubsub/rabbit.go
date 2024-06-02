@@ -343,7 +343,8 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	}
 	// If there is only one error, return it rather than a MultiError. That
 	// will work better with ErrorCode and ErrorAs.
-	if merr, ok := err.(MultiError); ok && len(merr) == 1 {
+	var merr MultiError
+	if errors.As(err, &merr) && len(merr) == 1 {
 		return merr[0]
 	}
 	return err
@@ -486,8 +487,8 @@ var errorCodes = map[int]gcerrors.ErrorCode{
 }
 
 func errorCode(err error) gcerrors.ErrorCode {
-	aerr, ok := err.(*amqp.Error)
-	if !ok {
+	var aerr *amqp.Error
+	if !errors.As(err, &aerr) {
 		return gcerrors.Unknown
 	}
 	if ec, ok := errorCodes[aerr.Code]; ok {
@@ -497,8 +498,8 @@ func errorCode(err error) gcerrors.ErrorCode {
 }
 
 func isRetryable(err error) bool {
-	aerr, ok := err.(*amqp.Error)
-	if !ok {
+	var aerr *amqp.Error
+	if !errors.As(err, &aerr) {
 		return false
 	}
 	// amqp.Error has a Recover field which sounds like it should mean "retryable".
@@ -548,18 +549,22 @@ func (*topic) ErrorAs(err error, i interface{}) bool {
 }
 
 func errorAs(err error, i interface{}) bool {
-	switch e := err.(type) {
-	case *amqp.Error:
+	var aerr *amqp.Error
+	if errors.As(err, &aerr) {
 		if p, ok := i.(**amqp.Error); ok {
-			*p = e
-			return true
-		}
-	case MultiError:
-		if p, ok := i.(*MultiError); ok {
-			*p = e
+			*p = aerr
 			return true
 		}
 	}
+
+	var merr MultiError
+	if errors.As(err, &merr) {
+		if p, ok := i.(*MultiError); ok {
+			*p = merr
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -699,7 +704,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				if err := closeErr(s.closec); err != nil {
 					// PreconditionFailed can happen if we send an Ack or Nack for a
 					// message that has already been acked/nacked. Ignore those errors.
-					if aerr, ok := err.(*amqp.Error); ok && aerr.Code == amqp.PreconditionFailed {
+					var aerr *amqp.Error
+					if errors.As(err, &aerr) && aerr.Code == amqp.PreconditionFailed {
 						return nil, nil
 					}
 					return nil, err
