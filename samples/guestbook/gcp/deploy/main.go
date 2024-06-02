@@ -93,7 +93,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	for old, new := range replacements {
 		gby = strings.Replace(gby, old, new, -1)
 	}
-	if err := ioutil.WriteFile(filepath.Join(tempDir, "guestbook.yaml"), []byte(gby), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "guestbook.yaml"), []byte(gby), 0666); err != nil {
 		return fmt.Errorf("writing guestbook.yaml: %v", err)
 	}
 

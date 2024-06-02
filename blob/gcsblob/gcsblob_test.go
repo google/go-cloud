@@ -645,7 +645,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(pkFile.Name())
-	if err := ioutil.WriteFile(pkFile.Name(), []byte("key"), 0666); err != nil {
+	if err := os.WriteFile(pkFile.Name(), []byte("key"), 0666); err != nil {
 		t.Fatal(err)
 	}
 

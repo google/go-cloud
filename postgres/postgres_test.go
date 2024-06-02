@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -71,7 +70,7 @@ func TestOpen(t *testing.T) {
 	}
 	confData := new(bytes.Buffer)
 	fmt.Fprintf(confData, "unix_socket_directories = '%s'\n", socketDir)
-	err = ioutil.WriteFile(filepath.Join(dataDir, "postgresql.conf"), confData.Bytes(), 0666)
+	err = os.WriteFile(filepath.Join(dataDir, "postgresql.conf"), confData.Bytes(), 0666)
 	if err != nil {
 		t.Fatal(err)
 	}

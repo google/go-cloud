@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -344,15 +343,15 @@ func TestOpenBucketFromURL(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, subdir), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
 		t.Fatal(err)
 	}
 	// To avoid making another temp dir, use the bucket directory to hold the secret key file.
 	secretKeyPath := filepath.Join(dir, "secret.key")
-	if err := ioutil.WriteFile(secretKeyPath, []byte("secret key"), 0666); err != nil {
+	if err := os.WriteFile(secretKeyPath, []byte("secret key"), 0666); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0666); err != nil {
 		t.Fatal(err)
 	}
 	// Convert dir to a URL path, adding a leading "/" if needed on Windows.

@@ -177,11 +177,11 @@ func TestOpenVariableURL(t *testing.T) {
 	dir := t.TempDir()
 
 	jsonPath := filepath.Join(dir, "myvar.json")
-	if err := ioutil.WriteFile(jsonPath, []byte(`{"Foo": "Bar"}`), 0666); err != nil {
+	if err := os.WriteFile(jsonPath, []byte(`{"Foo": "Bar"}`), 0666); err != nil {
 		t.Fatal(err)
 	}
 	txtPath := filepath.Join(dir, "myvar.txt")
-	if err := ioutil.WriteFile(txtPath, []byte("hello world!"), 0666); err != nil {
+	if err := os.WriteFile(txtPath, []byte("hello world!"), 0666); err != nil {
 		t.Fatal(err)
 	}
 	nonexistentPath := filepath.Join(dir, "filenotfound")
@@ -285,7 +285,7 @@ func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), err
 	if err != nil {
 		return cleanup, err
 	}
-	if err := ioutil.WriteFile(secretsPath, sc, 0666); err != nil {
+	if err := os.WriteFile(secretsPath, sc, 0666); err != nil {
 		return cleanup, err
 	}
 	return cleanup, nil
