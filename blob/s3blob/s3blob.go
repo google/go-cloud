@@ -151,7 +151,7 @@ const (
 
 func toServerSideEncryptionType(value string) (typesv2.ServerSideEncryption, error) {
 	for _, sseType := range typesv2.ServerSideEncryptionAes256.Values() {
-		if strings.ToLower(string(sseType)) == strings.ToLower(value) {
+		if strings.EqualFold(string(sseType), value) {
 			return sseType, nil
 		}
 	}
