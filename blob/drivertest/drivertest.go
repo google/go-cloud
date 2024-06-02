@@ -2122,12 +2122,14 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 
 	var wg sync.WaitGroup
 
+	errs := make(chan error, numKeys)
+
 	// Write all blobs concurrently.
 	for k := 0; k < numKeys; k++ {
 		wg.Add(1)
 		go func(key int) {
 			if err := b.WriteAll(ctx, blobName(key), keyData[key], nil); err != nil {
-				t.Fatal(err)
+				errs <- fmt.Errorf("WriteAll key=%v: %w", key, err)
 			}
 			wg.Done()
 		}(k)
@@ -2135,21 +2137,34 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	}
 	wg.Wait()
 
+	close(errs)
+
+	for err := range errs {
+		t.Fatalf("got error from concurrent blob write: %v", err)
+	}
+
+	errs = make(chan error, numKeys)
+
 	// Read all blobs concurrently and verify that they contain the expected data.
 	for k := 0; k < numKeys; k++ {
 		wg.Add(1)
 		go func(key int) {
 			buf, err := b.ReadAll(ctx, blobName(key))
 			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(buf, keyData[key]) {
-				t.Errorf("read data mismatch for key %d", key)
+				errs <- err
+			} else if !bytes.Equal(buf, keyData[key]) {
+				errs <- fmt.Errorf("read data mismatch for key %d", key)
 			}
 			wg.Done()
 		}(k)
 	}
 	wg.Wait()
+
+	close(errs)
+
+	for err := range errs {
+		t.Fatalf("got error from concurrent blob write: %v", err)
+	}
 }
 
 // testUploadDownload tests that Upload and Download work. For many drivers,

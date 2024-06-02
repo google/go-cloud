@@ -16,6 +16,7 @@ package pubsub_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -48,10 +49,12 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 	}
 	topic := pubsub.NewTopic(dt, nil)
 
+	errs := make(chan error, 1)
+
 	go func() {
 		m := &pubsub.Message{}
 		if err := topic.Send(context.Background(), m); err == nil {
-			t.Fatal("nil err from Send, expected context cancellation error")
+			errs <- errors.New("nil err from Send, expected context cancellation error")
 		}
 	}()
 
@@ -72,6 +75,8 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 	case <-done:
 	case <-time.After(tooLong):
 		t.Fatalf("waited too long(%v) for Shutdown(ctx) to run", tooLong)
+	case err := <-errs:
+		t.Fatalf("got error from goroutine: %v", err)
 	}
 }
 
