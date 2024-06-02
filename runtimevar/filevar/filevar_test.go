@@ -39,7 +39,7 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	dir, err := ioutil.TempDir("", "filevar_test-")
+	dir, err := os.MkdirTemp("", "filevar_test-")
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 // Filevar-specific tests.
 
 func TestOpenVariable(t *testing.T) {
-	dir, err := ioutil.TempDir("", "filevar_test-")
+	dir, err := os.MkdirTemp("", "filevar_test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestOpenVariable(t *testing.T) {
 }
 
 func TestOpenVariableURL(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gcdk-filevar-example")
+	dir, err := os.MkdirTemp("", "gcdk-filevar-example")
 	if err != nil {
 		t.Fatal(err)
 	}

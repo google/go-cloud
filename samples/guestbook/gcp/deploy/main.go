@@ -68,7 +68,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	if zone == "" {
 		return fmt.Errorf("empty or missing cluster_zone in %s", tfStatePath)
 	}
-	tempDir, err := ioutil.TempDir("", "guestbook-k8s-")
+	tempDir, err := os.MkdirTemp("", "guestbook-k8s-")
 	if err != nil {
 		return fmt.Errorf("making temp dir: %v", err)
 	}

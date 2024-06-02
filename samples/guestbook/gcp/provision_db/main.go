@@ -78,7 +78,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	// Create a temporary directory to hold the service account key.
 	// We resolve all symlinks to avoid Docker on Mac issues, see
 	// https://github.com/google/go-cloud/issues/110.
-	serviceAccountVolDir, err := ioutil.TempDir("", "guestbook-service-acct")
+	serviceAccountVolDir, err := os.MkdirTemp("", "guestbook-service-acct")
 	if err != nil {
 		return fmt.Errorf("creating temp dir to hold service account key: %v", err)
 	}

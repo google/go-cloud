@@ -16,7 +16,6 @@ package memdocstore
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -165,7 +164,7 @@ func TestSortDocs(t *testing.T) {
 
 func TestSaveAndLoad(t *testing.T) {
 	// Save and then load into a file.
-	dir, err := ioutil.TempDir("", t.Name())
+	dir, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

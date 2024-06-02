@@ -96,7 +96,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 }
 
 func TestOpenVariable(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gcdk-blob-var-example")
+	dir, err := os.MkdirTemp("", "gcdk-blob-var-example")
 	if err != nil {
 		t.Fatal(err)
 	}

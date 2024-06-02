@@ -128,7 +128,7 @@ func setup(conf config) (_ *frontend, _ *processor, cleanup func(), err error) {
 
 	burl := conf.bucketURL
 	if burl == "" {
-		dir, err := ioutil.TempDir("", "gocdk-order")
+		dir, err := os.MkdirTemp("", "gocdk-order")
 		if err != nil {
 			return nil, nil, cleanup, err
 		}

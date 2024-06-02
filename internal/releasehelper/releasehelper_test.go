@@ -68,7 +68,7 @@ func createFilesForTest(root string) error {
 }
 
 func Test(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "releasehelper_test")
+	tempDir, err := os.MkdirTemp("", "releasehelper_test")
 	if err != nil {
 		t.Fatal(err)
 	}

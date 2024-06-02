@@ -215,7 +215,7 @@ func BenchmarkFileblob(b *testing.B) {
 // File-specific unit tests.
 func TestNewBucket(t *testing.T) {
 	t.Run("BucketDirMissing", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "fileblob")
+		dir, err := os.MkdirTemp("", "fileblob")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -226,7 +226,7 @@ func TestNewBucket(t *testing.T) {
 		}
 	})
 	t.Run("BucketDirMissingWithCreateDir", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "fileblob")
+		dir, err := os.MkdirTemp("", "fileblob")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -257,7 +257,7 @@ func TestNewBucket(t *testing.T) {
 }
 
 func TestSignedURLReturnsUnimplementedWithNoURLSigner(t *testing.T) {
-	dir, err := ioutil.TempDir("", "fileblob")
+	dir, err := os.MkdirTemp("", "fileblob")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func TestListAtRoot(t *testing.T) {
 	}
 	defer b.Close()
 
-	dir, err := ioutil.TempDir("", "fileblob")
+	dir, err := os.MkdirTemp("", "fileblob")
 	if err != nil {
 		t.Fatalf("Got error creating temp dir: %#v", err)
 	}
@@ -487,7 +487,7 @@ func TestListAtRoot(t *testing.T) {
 }
 
 func TestSkipMetadata(t *testing.T) {
-	dir, err := ioutil.TempDir("", "fileblob*")
+	dir, err := os.MkdirTemp("", "fileblob*")
 	if err != nil {
 		t.Fatalf("Got error creating temp dir: %#v", err)
 	}

@@ -47,7 +47,7 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir, err := ioutil.TempDir("", "gocloud_postgres_test")
+	dir, err := os.MkdirTemp("", "gocloud_postgres_test")
 	if err != nil {
 		t.Fatal(err)
 	}
