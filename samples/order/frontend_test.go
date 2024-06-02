@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
