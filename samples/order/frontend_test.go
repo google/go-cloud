@@ -43,7 +43,7 @@ func TestOrderForm(t *testing.T) {
 	if res.StatusCode != 200 {
 		t.Fatalf("got %d, want 200", res.StatusCode)
 	}
-	wantb, err := ioutil.ReadFile("order-form.htmlt")
+	wantb, err := os.ReadFile("order-form.htmlt")
 	if err != nil {
 		t.Fatal(err)
 	}

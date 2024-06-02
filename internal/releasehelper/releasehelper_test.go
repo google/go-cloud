@@ -86,7 +86,7 @@ func Test(t *testing.T) {
 	gomodAddReplace("samples")
 
 	samplesGomod := filepath.Join("samples", "go.mod")
-	c, err := ioutil.ReadFile(samplesGomod)
+	c, err := os.ReadFile(samplesGomod)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func Test(t *testing.T) {
 
 	// Drop replace lines and expect not to find them.
 	gomodDropReplace("samples")
-	c, err = ioutil.ReadFile(samplesGomod)
+	c, err = os.ReadFile(samplesGomod)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func Test(t *testing.T) {
 
 	// Set new version and check it was set as expected.
 	gomodSetVersion("samples", "v1.8.99")
-	c, err = ioutil.ReadFile(samplesGomod)
+	c, err = os.ReadFile(samplesGomod)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -77,7 +77,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	// Fill in Kubernetes template parameters.
 	proj := strings.Replace(tfState.Project.Value, ":", "/", -1)
 	imageName := fmt.Sprintf("gcr.io/%s/guestbook", proj)
-	gbyin, err := ioutil.ReadFile(filepath.Join(guestbookDir, "gcp", "guestbook.yaml.in"))
+	gbyin, err := os.ReadFile(filepath.Join(guestbookDir, "gcp", "guestbook.yaml.in"))
 	if err != nil {
 		return fmt.Errorf("reading guestbook.yaml.in: %v", err)
 	}

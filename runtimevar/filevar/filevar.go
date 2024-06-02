@@ -44,7 +44,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -280,7 +279,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 		}
 
 		// Read the file.
-		b, err := ioutil.ReadFile(file)
+		b, err := os.ReadFile(file)
 		if err != nil {
 			// File probably does not exist. Try again later.
 			cur = w.updateState(&state{err: &errNotExist{err}}, cur)

@@ -75,7 +75,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 			*pathToPrivateKey = filepath.Join(usr.HomeDir, "Downloads", "gcs-private-key.pem")
 		}
 		// Use a real private key for signing URLs during -record.
-		pk, err := ioutil.ReadFile(*pathToPrivateKey)
+		pk, err := os.ReadFile(*pathToPrivateKey)
 		if err != nil {
 			t.Fatalf("Couldn't find private key at %v: %v", *pathToPrivateKey, err)
 		}

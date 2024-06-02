@@ -46,7 +46,7 @@ func main() {
 	defer b.Close()
 
 	// Prepare the file for upload.
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Failed to read file: %s", err)
 	}
