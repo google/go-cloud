@@ -55,7 +55,6 @@ func (p *processor) run(ctx context.Context) error {
 			return err
 		}
 	}
-	return nil
 }
 
 // handleRequest handles one image-processing request.
