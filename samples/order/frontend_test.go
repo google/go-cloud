@@ -47,7 +47,7 @@ func TestOrderForm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	gotb, err := ioutil.ReadAll(res.Body)
+	gotb, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestCreateOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	gotb, err := ioutil.ReadAll(r)
+	gotb, err := io.ReadAll(r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestListOrders(t *testing.T) {
 	if res.StatusCode != 200 {
 		t.Fatalf("got %d, want 200", res.StatusCode)
 	}
-	gotb, err := ioutil.ReadAll(res.Body)
+	gotb, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}

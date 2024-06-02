@@ -36,7 +36,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -234,7 +234,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		return errorState(err, prev), w.wait
 	}
 
-	respBodyBytes, err := ioutil.ReadAll(resp.Body)
+	respBodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}

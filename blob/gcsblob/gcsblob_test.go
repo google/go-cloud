@@ -19,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -456,7 +457,7 @@ func TestPreconditions(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer reader.Close()
-	gotBytes, err := ioutil.ReadAll(reader)
+	gotBytes, err := io.ReadAll(reader)
 	if err != nil {
 		t.Fatal(err)
 	}
