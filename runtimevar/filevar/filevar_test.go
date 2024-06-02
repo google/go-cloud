@@ -39,10 +39,10 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	dir, err := os.MkdirTemp("", "filevar_test-")
-	if err != nil {
-		return nil, err
-	}
+	t.Helper()
+
+	dir := t.TempDir()
+
 	return &harness{
 		dir:    dir,
 		closer: func() { _ = os.RemoveAll(dir) },
@@ -114,10 +114,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 // Filevar-specific tests.
 
 func TestOpenVariable(t *testing.T) {
-	dir, err := os.MkdirTemp("", "filevar_test-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 
 	tests := []struct {
 		description string
@@ -177,11 +174,7 @@ func TestOpenVariable(t *testing.T) {
 }
 
 func TestOpenVariableURL(t *testing.T) {
-	dir, err := os.MkdirTemp("", "gcdk-filevar-example")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	jsonPath := filepath.Join(dir, "myvar.json")
 	if err := ioutil.WriteFile(jsonPath, []byte(`{"Foo": "Bar"}`), 0666); err != nil {

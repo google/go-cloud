@@ -47,15 +47,9 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir, err := os.MkdirTemp("", "gocloud_postgres_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Errorf("Cleaning up: %v", err)
-		}
-	}()
+
+	dir := t.TempDir()
+
 	dataDir := filepath.Join(dir, "data")
 	initdbCmd := exec.Command(initdbPath, "-U", currUser.Username, "-D", dataDir)
 	initdbOutput := new(bytes.Buffer)

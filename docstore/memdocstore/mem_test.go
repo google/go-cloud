@@ -163,12 +163,7 @@ func TestSortDocs(t *testing.T) {
 }
 
 func TestSaveAndLoad(t *testing.T) {
-	// Save and then load into a file.
-	dir, err := os.MkdirTemp("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	// Load from nonexistent file should return empty data.
 	f := filepath.Join(dir, "saveAndLoad")

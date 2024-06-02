@@ -68,15 +68,12 @@ func createFilesForTest(root string) error {
 }
 
 func Test(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "releasehelper_test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tempDir := t.TempDir()
+
 	fmt.Println("temp dir:", tempDir)
 	if err := createFilesForTest(tempDir); err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tempDir)
 
 	if err := os.Chdir(tempDir); err != nil {
 		t.Fatal(err)
