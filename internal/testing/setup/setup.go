@@ -17,7 +17,6 @@ package setup // import "gocloud.dev/internal/testing/setup"
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -267,7 +266,7 @@ func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (*http.Client
 func FakeGCPDefaultCredentials(t *testing.T) func() {
 	const envVar = "GOOGLE_APPLICATION_CREDENTIALS"
 	jsonCred := []byte(`{"client_id": "foo.apps.googleusercontent.com", "client_secret": "bar", "refresh_token": "baz", "type": "authorized_user"}`)
-	f, err := ioutil.TempFile("", "fake-gcp-creds")
+	f, err := os.CreateTemp("", "fake-gcp-creds")
 	if err != nil {
 		t.Fatal(err)
 	}

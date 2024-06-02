@@ -17,7 +17,6 @@ package filevar
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -58,7 +57,7 @@ func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtime
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	// Write to a temporary file and rename; otherwise,
 	// Watch can read an empty file during the write.
-	tmp, err := ioutil.TempFile(h.dir, "tmp")
+	tmp, err := os.CreateTemp(h.dir, "tmp")
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -520,7 +519,7 @@ func TestURLOpenerForParams(t *testing.T) {
 
 	// Create a file for use as a dummy private key file.
 	privateKey := []byte("some content")
-	pkFile, err := ioutil.TempFile("", "my-private-key")
+	pkFile, err := os.CreateTemp("", "my-private-key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -640,7 +639,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 	cleanup := setup.FakeGCPDefaultCredentials(t)
 	defer cleanup()
 
-	pkFile, err := ioutil.TempFile("", "my-private-key")
+	pkFile, err := os.CreateTemp("", "my-private-key")
 	if err != nil {
 		t.Fatal(err)
 	}
