@@ -93,7 +93,7 @@ func Test(t *testing.T) {
 
 	for _, line := range replaceLines {
 		if !strings.Contains(string(c), line) {
-			t.Errorf("Expected to find '%s' in samples/go.mod", line)
+			t.Errorf("Expected to find %q in samples/go.mod", line)
 		}
 	}
 
@@ -106,7 +106,7 @@ func Test(t *testing.T) {
 
 	for _, line := range replaceLines {
 		if strings.Contains(string(c), line) {
-			t.Errorf("Expected to not find '%s' in samples/go.mod", line)
+			t.Errorf("Expected to not find %q in samples/go.mod", line)
 		}
 	}
 

@@ -155,7 +155,7 @@ func toServerSideEncryptionType(value string) (typesv2.ServerSideEncryption, err
 			return sseType, nil
 		}
 	}
-	return "", fmt.Errorf("'%s' is not a valid value for '%s'", value, sseTypeParamKey)
+	return "", fmt.Errorf("%q is not a valid value for %q", value, sseTypeParamKey)
 }
 
 // OpenBucketURL opens a blob.Bucket based on u.
