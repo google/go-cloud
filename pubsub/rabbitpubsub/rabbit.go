@@ -47,14 +47,6 @@ type defaultDialer struct {
 	opener *URLOpener
 }
 
-var (
-	errEnvironmentVariableNotSet         = errors.New("RABBIT_SERVER_URL environment variable not set")
-	errPublishListenerClosedUnexpectedly = errors.New("rabbitpubsub: publish listener closed unexpectedly")
-	errAckFailedOnPublish                = errors.New("rabbitpubsub: ack failed on publish")
-	errNotifyCloseGoChannelIsOpen        = errors.New("rabbitpubsub: NotifyClose Go channel is unexpectedly open")
-	errDeliveryChannelClosedUnexpectedly = errors.New("rabbitpubsub: delivery channel closed unexpectedly")
-)
-
 func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -68,7 +60,7 @@ func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 	// was closed. Initialize the connection.
 	serverURL := os.Getenv("RABBIT_SERVER_URL")
 	if serverURL == "" {
-		return nil, errEnvironmentVariableNotSet
+		return nil, errors.New("RABBIT_SERVER_URL environment variable not set")
 	}
 	conn, err := amqp.Dial(serverURL)
 	if err != nil {
@@ -399,12 +391,12 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 				}
 				// We shouldn't be here, but if we are, we still want to return an
 				// error.
-				merr = append(merr, errPublishListenerClosedUnexpectedly)
+				merr = append(merr, errors.New("rabbitpubsub: publish listener closed unexpectedly"))
 				return merr
 			}
 			nAcks++
 			if !conf.Ack {
-				merr = append(merr, errAckFailedOnPublish)
+				merr = append(merr, errors.New("rabbitpubsub: ack failed on publish"))
 			}
 		}
 	}
@@ -443,7 +435,7 @@ func closeErr(closec <-chan *amqp.Error) error {
 		}
 		return aerr
 	default:
-		return errNotifyCloseGoChannelIsOpen
+		return errors.New("rabbitpubsub: NotifyClose Go channel is unexpectedly open")
 	}
 }
 
@@ -712,7 +704,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				}
 				// We shouldn't be here, but if we are, we still want to return an
 				// error.
-				return nil, errDeliveryChannelClosedUnexpectedly
+				return nil, errors.New("rabbitpubsub: delivery channel closed unexpectedly")
 			}
 			ms = append(ms, toDriverMessage(d, s.opts))
 			if len(ms) >= maxMessages {
