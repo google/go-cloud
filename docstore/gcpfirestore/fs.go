@@ -83,6 +83,7 @@ import (
 	"gocloud.dev/internal/useragent"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -98,7 +99,8 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error)
 		useragent.ClientOption("docstore"),
 	}
 	if host := os.Getenv("FIRESTORE_EMULATOR_HOST"); host != "" {
-		conn, err := grpc.DialContext(ctx, host, grpc.WithInsecure())
+		conn, err := grpc.DialContext(ctx, host,
+			grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return nil, nil, err
 		}

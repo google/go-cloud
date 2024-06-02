@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -53,7 +54,7 @@ func newNativeCodec() (*nativeCodec, error) {
 	nc := &nativeCodec{}
 
 	conn, err := grpc.Dial(l.Addr().String(),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 		grpc.WithUnaryInterceptor(nc.interceptUnary),
 		grpc.WithStreamInterceptor(nc.interceptStream))
