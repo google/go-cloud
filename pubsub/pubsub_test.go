@@ -69,17 +69,15 @@ func NewDriverSub() *driverSub {
 }
 
 func (s *driverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	for {
-		select {
-		case <-s.sem:
-			ms := s.grabQueue(maxMessages)
-			if len(ms) != 0 {
-				return ms, nil
-			}
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
+	select {
+	case <-s.sem:
+		ms := s.grabQueue(maxMessages)
+		if len(ms) != 0 {
+			return ms, nil
 		}
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
 	}
 }
 
