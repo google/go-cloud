@@ -602,7 +602,6 @@ func (c *collection) doCommitCall(ctx context.Context, call *commitCall, errs []
 			j++
 		}
 	}
-	return
 }
 
 func hasFollowingTransform(writes []*pb.Write, i int) bool {
