@@ -503,7 +503,7 @@ func TestToServerSideEncryptionType(t *testing.T) {
 		// OK, AES256 mixed case
 		{"Aes256", typesv2.ServerSideEncryptionAes256, nil},
 		// Invalid SSE type
-		{"invalid", "", fmt.Errorf("'invalid' is not a valid value for '%s'", sseTypeParamKey)},
+		{"invalid", "", fmt.Errorf("'invalid' is not a valid value for %q", sseTypeParamKey)},
 	}
 
 	for _, test := range tests {

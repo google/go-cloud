@@ -246,7 +246,7 @@ func main() {
 		if len(input.Text()) > 0 && !strings.HasPrefix(input.Text(), "#") {
 			fields := strings.Fields(input.Text())
 			if len(fields) != 2 {
-				log.Fatalf("want 2 fields, got '%s'\n", input.Text())
+				log.Fatalf("want 2 fields, got %q\n", input.Text())
 			}
 			// "tag" only runs if the released field is "yes". Other commands run
 			// for every line.

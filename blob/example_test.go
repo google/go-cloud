@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -570,7 +569,7 @@ func ExampleAttributes_As() {
 }
 
 func newTempDir() (string, func()) {
-	dir, err := ioutil.TempDir("", "go-cloud-blob-example")
+	dir, err := os.MkdirTemp("", "go-cloud-blob-example")
 	if err != nil {
 		panic(err)
 	}

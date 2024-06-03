@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -215,22 +214,16 @@ func BenchmarkFileblob(b *testing.B) {
 // File-specific unit tests.
 func TestNewBucket(t *testing.T) {
 	t.Run("BucketDirMissing", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "fileblob")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dir)
+		dir := t.TempDir()
+
 		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"), nil)
 		if gotErr == nil {
 			t.Errorf("got nil want error")
 		}
 	})
 	t.Run("BucketDirMissingWithCreateDir", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "fileblob")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dir)
+		dir := t.TempDir()
+
 		b, gotErr := OpenBucket(filepath.Join(dir, "notfound"), &Options{CreateDir: true})
 		if gotErr != nil {
 			t.Errorf("got error %v", gotErr)
@@ -244,11 +237,12 @@ func TestNewBucket(t *testing.T) {
 		}
 	})
 	t.Run("BucketIsFile", func(t *testing.T) {
-		f, err := ioutil.TempFile("", "fileblob")
+		dir := t.TempDir()
+
+		f, err := os.CreateTemp(dir, "fileblob")
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(f.Name())
 		_, gotErr := OpenBucket(f.Name(), nil)
 		if gotErr == nil {
 			t.Errorf("got nil want error")
@@ -257,11 +251,8 @@ func TestNewBucket(t *testing.T) {
 }
 
 func TestSignedURLReturnsUnimplementedWithNoURLSigner(t *testing.T) {
-	dir, err := ioutil.TempDir("", "fileblob")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
+
 	b, err := OpenBucket(dir, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -352,15 +343,15 @@ func TestOpenBucketFromURL(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, subdir), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
 		t.Fatal(err)
 	}
 	// To avoid making another temp dir, use the bucket directory to hold the secret key file.
 	secretKeyPath := filepath.Join(dir, "secret.key")
-	if err := ioutil.WriteFile(secretKeyPath, []byte("secret key"), 0666); err != nil {
+	if err := os.WriteFile(secretKeyPath, []byte("secret key"), 0666); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0666); err != nil {
 		t.Fatal(err)
 	}
 	// Convert dir to a URL path, adding a leading "/" if needed on Windows.
@@ -460,10 +451,8 @@ func TestListAtRoot(t *testing.T) {
 	}
 	defer b.Close()
 
-	dir, err := ioutil.TempDir("", "fileblob")
-	if err != nil {
-		t.Fatalf("Got error creating temp dir: %#v", err)
-	}
+	dir := t.TempDir()
+
 	f, err := os.Create(filepath.Join(dir, "file.txt"))
 	if err != nil {
 		t.Fatalf("Got error creating file: %#v", err)
@@ -487,11 +476,8 @@ func TestListAtRoot(t *testing.T) {
 }
 
 func TestSkipMetadata(t *testing.T) {
-	dir, err := ioutil.TempDir("", "fileblob*")
-	if err != nil {
-		t.Fatalf("Got error creating temp dir: %#v", err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
+
 	dirpath := filepath.ToSlash(dir)
 	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
 		dirpath = "/" + dirpath

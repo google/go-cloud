@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,34 +48,31 @@ require (
 `)
 
 func createFilesForTest(root string) error {
-	if err := ioutil.WriteFile(filepath.Join(root, "go.mod"), mainGomod, 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), mainGomod, 0666); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Join(root, "submod"), 0766); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(root, "submod", "go.mod"), submodGomod, 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "submod", "go.mod"), submodGomod, 0666); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Join(root, "samples"), 0766); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(root, "samples", "go.mod"), samplesGomod, 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "samples", "go.mod"), samplesGomod, 0666); err != nil {
 		return err
 	}
 	return nil
 }
 
 func Test(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "releasehelper_test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tempDir := t.TempDir()
+
 	fmt.Println("temp dir:", tempDir)
 	if err := createFilesForTest(tempDir); err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(tempDir)
 
 	if err := os.Chdir(tempDir); err != nil {
 		t.Fatal(err)
@@ -86,7 +82,7 @@ func Test(t *testing.T) {
 	gomodAddReplace("samples")
 
 	samplesGomod := filepath.Join("samples", "go.mod")
-	c, err := ioutil.ReadFile(samplesGomod)
+	c, err := os.ReadFile(samplesGomod)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,26 +93,26 @@ func Test(t *testing.T) {
 
 	for _, line := range replaceLines {
 		if !strings.Contains(string(c), line) {
-			t.Errorf("Expected to find '%s' in samples/go.mod", line)
+			t.Errorf("Expected to find %q in samples/go.mod", line)
 		}
 	}
 
 	// Drop replace lines and expect not to find them.
 	gomodDropReplace("samples")
-	c, err = ioutil.ReadFile(samplesGomod)
+	c, err = os.ReadFile(samplesGomod)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, line := range replaceLines {
 		if strings.Contains(string(c), line) {
-			t.Errorf("Expected to not find '%s' in samples/go.mod", line)
+			t.Errorf("Expected to not find %q in samples/go.mod", line)
 		}
 	}
 
 	// Set new version and check it was set as expected.
 	gomodSetVersion("samples", "v1.8.99")
-	c, err = ioutil.ReadFile(samplesGomod)
+	c, err = os.ReadFile(samplesGomod)
 	if err != nil {
 		t.Fatal(err)
 	}

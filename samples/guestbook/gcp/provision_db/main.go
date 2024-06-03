@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -78,7 +77,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	// Create a temporary directory to hold the service account key.
 	// We resolve all symlinks to avoid Docker on Mac issues, see
 	// https://github.com/google/go-cloud/issues/110.
-	serviceAccountVolDir, err := ioutil.TempDir("", "guestbook-service-acct")
+	serviceAccountVolDir, err := os.MkdirTemp("", "guestbook-service-acct")
 	if err != nil {
 		return fmt.Errorf("creating temp dir to hold service account key: %v", err)
 	}
@@ -93,7 +92,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "create", "--iam-account="+serviceAccount, serviceAccountVolDir+"/key.json")...); err != nil {
 		return fmt.Errorf("creating new service account key: %v", err)
 	}
-	keyJSONb, err := ioutil.ReadFile(filepath.Join(serviceAccountVolDir, "key.json"))
+	keyJSONb, err := os.ReadFile(filepath.Join(serviceAccountVolDir, "key.json"))
 	if err != nil {
 		return fmt.Errorf("reading key.json file: %v", err)
 	}

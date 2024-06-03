@@ -59,9 +59,7 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 		return nil, fmt.Errorf("open collection %v: empty collection name", u)
 	}
 	keyName := u.Path
-	if strings.HasPrefix(keyName, "/") {
-		keyName = keyName[1:]
-	}
+	keyName = strings.TrimPrefix(keyName, "/")
 	if keyName == "" || strings.ContainsRune(keyName, '/') {
 		return nil, fmt.Errorf("open collection %v: invalid key name %q (must be non-empty and have no slashes)", u, keyName)
 	}

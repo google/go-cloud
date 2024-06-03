@@ -310,17 +310,15 @@ func TestVariable_Latest(t *testing.T) {
 	wg.Add(numGoroutines)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
-			for {
-				val, err := v.Latest(ctx)
-				if err != nil {
-					// Errors are unexpected at this point.
-					t.Error(err)
-				} else if val.Value != content2 {
-					t.Errorf("got %v want %s", val.Value, content2)
-				}
-				wg.Done()
-				return
+			val, err := v.Latest(ctx)
+			if err != nil {
+				// Errors are unexpected at this point.
+				t.Error(err)
+			} else if val.Value != content2 {
+				t.Errorf("got %v want %s", val.Value, content2)
 			}
+			wg.Done()
+			return
 		}()
 	}
 	wg.Wait()

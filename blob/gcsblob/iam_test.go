@@ -69,7 +69,7 @@ func TestIAMCredentialsClient(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := credentialsClient{err: test.connectErr, client: test.mockClient}
-			makeSignBytesFn := c.CreateMakeSignBytesWith(nil, serviceAccountID)
+			makeSignBytesFn := c.CreateMakeSignBytesWith(context.TODO(), serviceAccountID)
 
 			signBytesFn := makeSignBytesFn(nil) // Our mocks don't read any context.
 			haveOutput, haveErr := signBytesFn(test.input)

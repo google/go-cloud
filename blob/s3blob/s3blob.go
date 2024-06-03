@@ -151,11 +151,11 @@ const (
 
 func toServerSideEncryptionType(value string) (typesv2.ServerSideEncryption, error) {
 	for _, sseType := range typesv2.ServerSideEncryptionAes256.Values() {
-		if strings.ToLower(string(sseType)) == strings.ToLower(value) {
+		if strings.EqualFold(string(sseType), value) {
 			return sseType, nil
 		}
 	}
-	return "", fmt.Errorf("'%s' is not a valid value for '%s'", value, sseTypeParamKey)
+	return "", fmt.Errorf("%q is not a valid value for %q", value, sseTypeParamKey)
 }
 
 // OpenBucketURL opens a blob.Bucket based on u.

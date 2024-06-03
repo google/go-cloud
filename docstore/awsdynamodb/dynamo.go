@@ -180,17 +180,17 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs
 		for i := 0; i < n; i++ {
 			i := i
 			t.Acquire()
-			go func() {
+			go func(group []*driver.Action) {
 				defer t.Release()
 				c.batchGet(ctx, group, errs, opts, batchSize*i, batchSize*(i+1)-1)
-			}()
+			}(group)
 		}
 		if n*batchSize < len(group) {
 			t.Acquire()
-			go func() {
+			go func(group []*driver.Action) {
 				defer t.Release()
 				c.batchGet(ctx, group, errs, opts, batchSize*n, len(group)-1)
-			}()
+			}(group)
 		}
 	}
 	t.Wait()

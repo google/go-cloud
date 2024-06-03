@@ -153,6 +153,13 @@ func (ch *fakeChannel) QueueDeclareAndBind(queueName, exchangeName string) error
 }
 
 func (ch *fakeChannel) Publish(exchangeName, routingKey string, pub amqp.Publishing) error {
+	return ch.PublishWithContext(context.Background(), exchangeName, routingKey, pub)
+}
+
+func (ch *fakeChannel) PublishWithContext(ctx context.Context,
+	exchangeName, routingKey string,
+	pub amqp.Publishing,
+) error {
 	if ch.isClosed() {
 		return amqp.ErrClosed
 	}

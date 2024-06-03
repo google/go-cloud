@@ -21,7 +21,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/google/wire"
@@ -79,7 +78,7 @@ func (cf *CertFetcher) Fetch(ctx context.Context) ([]*x509.Certificate, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("fetch RDS certificates: HTTP %s", resp.Status)
 	}
-	pemData, err := ioutil.ReadAll(&io.LimitedReader{R: resp.Body, N: 1 << 20}) // limit to 1MiB
+	pemData, err := io.ReadAll(&io.LimitedReader{R: resp.Body, N: 1 << 20}) // limit to 1MiB
 	if err != nil {
 		return nil, fmt.Errorf("fetch RDS certificates: %v", err)
 	}

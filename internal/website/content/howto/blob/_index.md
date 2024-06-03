@@ -140,7 +140,7 @@ ignore the error because the write's failure is expected.
 
 Once you have written data to a bucket, you can read it back by creating a
 reader. The reader implements [`io.Reader`][], so you can use any functions
-that take an `io.Reader` like `io.Copy` or `io/ioutil.ReadAll`. You must
+that take an `io.Reader` like `io.Copy` or `io/io.ReadAll`. You must
 always close a reader after using it to avoid leaking resources.
 
 {{< goexample src="gocloud.dev/blob.ExampleBucket_NewReader" imports="0" >}}

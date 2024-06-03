@@ -12,8 +12,8 @@ import (
 )
 
 func TestPrefixedBucket(t *testing.T) {
-	dir, cleanup := newTempDir()
-	defer cleanup()
+	dir := t.TempDir()
+
 	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -38,8 +38,8 @@ func TestPrefixedBucket(t *testing.T) {
 }
 
 func TestSingleKeyBucket(t *testing.T) {
-	dir, cleanup := newTempDir()
-	defer cleanup()
+	dir := t.TempDir()
+
 	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		t.Fatal(err)

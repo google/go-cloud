@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -68,7 +67,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	if zone == "" {
 		return fmt.Errorf("empty or missing cluster_zone in %s", tfStatePath)
 	}
-	tempDir, err := ioutil.TempDir("", "guestbook-k8s-")
+	tempDir, err := os.MkdirTemp("", "guestbook-k8s-")
 	if err != nil {
 		return fmt.Errorf("making temp dir: %v", err)
 	}
@@ -77,7 +76,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	// Fill in Kubernetes template parameters.
 	proj := strings.Replace(tfState.Project.Value, ":", "/", -1)
 	imageName := fmt.Sprintf("gcr.io/%s/guestbook", proj)
-	gbyin, err := ioutil.ReadFile(filepath.Join(guestbookDir, "gcp", "guestbook.yaml.in"))
+	gbyin, err := os.ReadFile(filepath.Join(guestbookDir, "gcp", "guestbook.yaml.in"))
 	if err != nil {
 		return fmt.Errorf("reading guestbook.yaml.in: %v", err)
 	}
@@ -93,7 +92,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	for old, new := range replacements {
 		gby = strings.Replace(gby, old, new, -1)
 	}
-	if err := ioutil.WriteFile(filepath.Join(tempDir, "guestbook.yaml"), []byte(gby), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "guestbook.yaml"), []byte(gby), 0666); err != nil {
 		return fmt.Errorf("writing guestbook.yaml: %v", err)
 	}
 

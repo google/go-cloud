@@ -18,6 +18,8 @@ package rabbitpubsub
 // Fake implementations of the interfaces are in fake_test.go
 
 import (
+	"context"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -46,6 +48,7 @@ type amqpConnection interface {
 // See https://pkg.go.dev/github.com/rabbitmq/amqp091-go#Channel for the documentation of these methods.
 type amqpChannel interface {
 	Publish(exchange, routingKey string, msg amqp.Publishing) error
+	PublishWithContext(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error
 	Consume(queue, consumer string) (<-chan amqp.Delivery, error)
 	Ack(tag uint64) error
 	Nack(tag uint64) error
@@ -90,7 +93,11 @@ type channel struct {
 }
 
 func (ch *channel) Publish(exchange, routingKey string, msg amqp.Publishing) error {
-	return ch.ch.Publish(exchange, routingKey, mandatory, immediate, msg)
+	return ch.PublishWithContext(context.Background(), exchange, routingKey, msg)
+}
+
+func (ch *channel) PublishWithContext(ctx context.Context, exchange, routingKey string, msg amqp.Publishing) error {
+	return ch.ch.PublishWithContext(ctx, exchange, routingKey, mandatory, immediate, msg)
 }
 
 func (ch *channel) Consume(queue, consumer string) (<-chan amqp.Delivery, error) {

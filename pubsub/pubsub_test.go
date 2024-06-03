@@ -78,7 +78,6 @@ func (s *driverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*drive
 			}
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		default:
 		}
 	}
 }

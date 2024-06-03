@@ -17,7 +17,6 @@ package filevar
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -39,10 +38,10 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	dir, err := ioutil.TempDir("", "filevar_test-")
-	if err != nil {
-		return nil, err
-	}
+	t.Helper()
+
+	dir := t.TempDir()
+
 	return &harness{
 		dir:    dir,
 		closer: func() { _ = os.RemoveAll(dir) },
@@ -58,7 +57,7 @@ func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtime
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	// Write to a temporary file and rename; otherwise,
 	// Watch can read an empty file during the write.
-	tmp, err := ioutil.TempFile(h.dir, "tmp")
+	tmp, err := os.CreateTemp(h.dir, "tmp")
 	if err != nil {
 		return err
 	}
@@ -114,10 +113,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 // Filevar-specific tests.
 
 func TestOpenVariable(t *testing.T) {
-	dir, err := ioutil.TempDir("", "filevar_test-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 
 	tests := []struct {
 		description string
@@ -177,18 +173,14 @@ func TestOpenVariable(t *testing.T) {
 }
 
 func TestOpenVariableURL(t *testing.T) {
-	dir, err := ioutil.TempDir("", "gcdk-filevar-example")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	jsonPath := filepath.Join(dir, "myvar.json")
-	if err := ioutil.WriteFile(jsonPath, []byte(`{"Foo": "Bar"}`), 0666); err != nil {
+	if err := os.WriteFile(jsonPath, []byte(`{"Foo": "Bar"}`), 0666); err != nil {
 		t.Fatal(err)
 	}
 	txtPath := filepath.Join(dir, "myvar.txt")
-	if err := ioutil.WriteFile(txtPath, []byte("hello world!"), 0666); err != nil {
+	if err := os.WriteFile(txtPath, []byte("hello world!"), 0666); err != nil {
 		t.Fatal(err)
 	}
 	nonexistentPath := filepath.Join(dir, "filenotfound")
@@ -292,7 +284,7 @@ func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), err
 	if err != nil {
 		return cleanup, err
 	}
-	if err := ioutil.WriteFile(secretsPath, sc, 0666); err != nil {
+	if err := os.WriteFile(secretsPath, sc, 0666); err != nil {
 		return cleanup, err
 	}
 	return cleanup, nil

@@ -17,7 +17,6 @@ package fileblob_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -46,7 +45,7 @@ func ExampleOpenBucket() {
 
 func Example_openBucketFromURL() {
 	// Create a temporary directory.
-	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
+	dir, err := os.MkdirTemp("", "go-cloud-fileblob-example")
 	if err != nil {
 		log.Fatal(err)
 	}

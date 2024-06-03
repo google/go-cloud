@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -66,7 +65,7 @@ func provisionDb(dbHost, region, securityGroupID, dbName, dbPassword, schemaPath
 	// Create a temporary directory to hold the certificates.
 	// We resolve all symlinks to avoid Docker on Mac issues, see
 	// https://github.com/google/go-cloud/issues/110.
-	tempdir, err := ioutil.TempDir("", "guestbook-ca")
+	tempdir, err := os.MkdirTemp("", "guestbook-ca")
 	if err != nil {
 		return fmt.Errorf("creating temp dir for certs: %v", err)
 	}

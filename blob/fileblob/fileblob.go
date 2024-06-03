@@ -73,7 +73,6 @@ import (
 	"hash"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -222,7 +221,7 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 		if err != nil {
 			return nil, err
 		}
-		sk, err := ioutil.ReadFile(keyPath)
+		sk, err := os.ReadFile(keyPath)
 		if err != nil {
 			return nil, err
 		}
