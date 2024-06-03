@@ -282,18 +282,18 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 
 	const envVar = "GOOGLE_APPLICATION_CREDENTIALS"
 	jsonCred := []byte(`{"client_id": "foo.apps.googleusercontent.com", "client_secret": "bar", "refresh_token": "baz", "type": "authorized_user"}`)
-	f, err := os.CreateTemp("", "fake-gcp-creds")
+
+	f, err := os.CreateTemp(t.TempDir(), "fake-gcp-creds")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(f.Name(), jsonCred, 0666); err != nil {
 		t.Fatal(err)
 	}
-	oldEnvVal := os.Getenv(envVar)
-	os.Setenv(envVar, f.Name())
+
+	t.Setenv(envVar, f.Name())
 	return func() {
-		os.Remove(f.Name())
-		os.Setenv(envVar, oldEnvVal)
+		t.Log("fake gcp default credentials done")
 	}
 }
 
