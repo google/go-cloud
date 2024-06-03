@@ -71,7 +71,6 @@ func BenchmarkPutVSTransact(b *testing.B) {
 				}
 			})
 		})
-
 	}
 }
 

@@ -52,15 +52,18 @@ func TestIAMCredentialsClient(t *testing.T) {
 		wantOutput []byte
 		requestErr error
 	}{
-		{"happy path: signing", nil,
+		{
+			"happy path: signing", nil,
 			mockIAMClient{},
 			[]byte("payload"), []byte(mockSignature), nil,
 		},
-		{"won't connect", errors.New("Missing role: serviceAccountTokenCreator"),
+		{
+			"won't connect", errors.New("Missing role: serviceAccountTokenCreator"),
 			mockIAMClient{},
 			[]byte("payload"), nil, nil,
 		},
-		{"request fails", nil,
+		{
+			"request fails", nil,
 			mockIAMClient{requestErr: context.Canceled},
 			[]byte("payload"), nil, context.Canceled,
 		},

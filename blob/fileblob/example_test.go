@@ -31,7 +31,7 @@ func ExampleOpenBucket() {
 
 	// The directory you pass to fileblob.OpenBucket must exist first.
 	const myDir = "path/to/local/directory"
-	if err := os.MkdirAll(myDir, 0777); err != nil {
+	if err := os.MkdirAll(myDir, 0o777); err != nil {
 		log.Fatal(err)
 	}
 

@@ -73,5 +73,4 @@ func TestSchemeMap(t *testing.T) {
 			t.Errorf("%s: got %v want %v", test.url, got, test.want)
 		}
 	}
-
 }

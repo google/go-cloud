@@ -273,7 +273,7 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 		opts = &Options{}
 	}
 	if opts.DirFileMode == 0 {
-		opts.DirFileMode = os.FileMode(0777)
+		opts.DirFileMode = os.FileMode(0o777)
 	}
 
 	absdir, err := filepath.Abs(dir)
@@ -396,7 +396,6 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
-
 	var pageToken string
 	if len(opts.PageToken) > 0 {
 		pageToken = string(opts.PageToken)
@@ -701,7 +700,7 @@ func createTemp(path string, noTempDir bool) (*os.File, error) {
 			name = filepath.Join(os.TempDir(), filepath.Base(path))
 		}
 		name += "." + strconv.FormatInt(time.Now().UnixNano(), 16) + ".tmp"
-		f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+		f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o666)
 		if os.IsExist(err) {
 			if try++; try < 10000 {
 				continue
@@ -713,7 +712,7 @@ func createTemp(path string, noTempDir bool) (*os.File, error) {
 }
 
 // NewTypedWriter implements driver.NewTypedWriter.
-func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	path, err := b.path(key)
 	if err != nil {
 		return nil, err

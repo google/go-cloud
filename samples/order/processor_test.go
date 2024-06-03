@@ -52,7 +52,6 @@ func TestHandleRequest(t *testing.T) {
 	if err := p.coll.Get(ctx, order); err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func TestProcessOrder(t *testing.T) {

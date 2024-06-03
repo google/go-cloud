@@ -659,6 +659,7 @@ func sanitize(s string) string {
 	}
 	return s
 }
+
 func BenchmarkSNSSQS(b *testing.B) {
 	benchmark(b, topicKindSNS)
 }

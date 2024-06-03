@@ -97,10 +97,10 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 func TestOpenVariable(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(dir, "myvar.json"), []byte(`{"Foo": "Bar"}`), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "myvar.json"), []byte(`{"Foo": "Bar"}`), 0o666); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "myvar.txt"), []byte("hello world!"), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "myvar.txt"), []byte("hello world!"), 0o666); err != nil {
 		t.Fatal(err)
 	}
 

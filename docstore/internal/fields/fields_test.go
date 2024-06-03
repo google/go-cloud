@@ -369,8 +369,10 @@ func TestParsedTag(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []*Field{
-		{Name: "name", NameFromTag: true, Type: intType,
-			Index: []int{0}, ParsedTag: []string{"omitempty"}},
+		{
+			Name: "name", NameFromTag: true, Type: intType,
+			Index: []int{0}, ParsedTag: []string{"omitempty"},
+		},
 	}
 	if msg, ok := compareFields(got, want); !ok {
 		t.Error(msg)

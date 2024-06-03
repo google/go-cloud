@@ -389,6 +389,7 @@ func (b *prefixedBucket) ErrorAs(err error, i interface{}) bool  { return b.base
 func (b *prefixedBucket) Attributes(ctx context.Context, key string) (*Attributes, error) {
 	return b.base.Attributes(ctx, b.prefix+key)
 }
+
 func (b *prefixedBucket) ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error) {
 	var myopts ListOptions
 	if opts != nil {
@@ -404,21 +405,26 @@ func (b *prefixedBucket) ListPaged(ctx context.Context, opts *ListOptions) (*Lis
 	}
 	return page, nil
 }
+
 func (b *prefixedBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (Reader, error) {
 	return b.base.NewRangeReader(ctx, b.prefix+key, offset, length, opts)
 }
+
 func (b *prefixedBucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *WriterOptions) (Writer, error) {
 	if key == "" {
 		return nil, errors.New("invalid key (empty string)")
 	}
 	return b.base.NewTypedWriter(ctx, b.prefix+key, contentType, opts)
 }
+
 func (b *prefixedBucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOptions) error {
 	return b.base.Copy(ctx, b.prefix+dstKey, b.prefix+srcKey, opts)
 }
+
 func (b *prefixedBucket) Delete(ctx context.Context, key string) error {
 	return b.base.Delete(ctx, b.prefix+key)
 }
+
 func (b *prefixedBucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return b.base.SignedURL(ctx, b.prefix+key, opts)
 }
@@ -441,21 +447,27 @@ func (b *singleKeyBucket) ErrorAs(err error, i interface{}) bool  { return b.bas
 func (b *singleKeyBucket) Attributes(ctx context.Context, _ string) (*Attributes, error) {
 	return b.base.Attributes(ctx, b.key)
 }
+
 func (b *singleKeyBucket) ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error) {
 	return nil, errors.New("List not supported for SingleKey buckets")
 }
+
 func (b *singleKeyBucket) NewRangeReader(ctx context.Context, _ string, offset, length int64, opts *ReaderOptions) (Reader, error) {
 	return b.base.NewRangeReader(ctx, b.key, offset, length, opts)
 }
+
 func (b *singleKeyBucket) NewTypedWriter(ctx context.Context, _, contentType string, opts *WriterOptions) (Writer, error) {
 	return b.base.NewTypedWriter(ctx, b.key, contentType, opts)
 }
+
 func (b *singleKeyBucket) Copy(ctx context.Context, dstKey, _ string, opts *CopyOptions) error {
 	return b.base.Copy(ctx, dstKey, b.key, opts)
 }
+
 func (b *singleKeyBucket) Delete(ctx context.Context, _ string) error {
 	return b.base.Delete(ctx, b.key)
 }
+
 func (b *singleKeyBucket) SignedURL(ctx context.Context, _ string, opts *SignedURLOptions) (string, error) {
 	return b.base.SignedURL(ctx, b.key, opts)
 }

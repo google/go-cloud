@@ -48,19 +48,19 @@ require (
 `)
 
 func createFilesForTest(root string) error {
-	if err := os.WriteFile(filepath.Join(root, "go.mod"), mainGomod, 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), mainGomod, 0o666); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(root, "submod"), 0766); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "submod"), 0o766); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(root, "submod", "go.mod"), submodGomod, 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "submod", "go.mod"), submodGomod, 0o666); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(root, "samples"), 0766); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "samples"), 0o766); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(root, "samples", "go.mod"), samplesGomod, 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "samples", "go.mod"), samplesGomod, 0o666); err != nil {
 		return err
 	}
 	return nil
@@ -89,7 +89,8 @@ func Test(t *testing.T) {
 
 	replaceLines := []string{
 		"replace gocloud.dev => " + filepath.Clean("../"),
-		"replace gocloud.dev/submod => " + filepath.Clean("../submod")}
+		"replace gocloud.dev/submod => " + filepath.Clean("../submod"),
+	}
 
 	for _, line := range replaceLines {
 		if !strings.Contains(string(c), line) {

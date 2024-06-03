@@ -412,7 +412,8 @@ func TestDecode(t *testing.T) {
 				"E3": "E3",
 				"E4": "E4",
 			},
-			MyStruct{A: 1, B: &tru, C: []*te{{'T'}}, D: []time.Time{tm}, T: ts,
+			MyStruct{
+				A: 1, B: &tru, C: []*te{{'T'}}, D: []time.Time{tm}, T: ts,
 				Embed1: Embed1{E1: "E1"},
 				Embed2: &Embed2{E2: "E2"},
 				embed3: embed3{E3: "E3"},
@@ -433,7 +434,8 @@ func TestDecode(t *testing.T) {
 				"e3": "E3",
 				"e4": "E4",
 			},
-			MyStruct{A: 1, B: &tru, C: []*te{{'T'}}, D: []time.Time{tm}, T: ts,
+			MyStruct{
+				A: 1, B: &tru, C: []*te{{'T'}}, D: []time.Time{tm}, T: ts,
 				Embed1: Embed1{E1: "E1"},
 				Embed2: &Embed2{E2: "E2"},
 				embed3: embed3{E3: "E3"},
@@ -648,6 +650,7 @@ func (d testDecoder) DecodeList(f func(i int, vd Decoder) bool) {
 		}
 	}
 }
+
 func (d testDecoder) MapLen() (int, bool) {
 	if m, ok := d.val.(map[string]interface{}); ok {
 		return len(m), true
@@ -662,6 +665,7 @@ func (d testDecoder) DecodeMap(f func(key string, vd Decoder, exactMatch bool) b
 		}
 	}
 }
+
 func (d testDecoder) AsInterface() (interface{}, error) {
 	return d.val, nil
 }

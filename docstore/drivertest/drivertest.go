@@ -963,7 +963,6 @@ func testData(t *testing.T, _ Harness, coll *docstore.Collection) {
 	}
 
 	// TODO: strings: valid vs. invalid unicode
-
 }
 
 var (
@@ -1142,17 +1141,21 @@ func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error
 		{in: float32(1.5), want: float64(1.5)},
 		{in: float64(1.5), want: float64(1.5)},
 		{in: []byte{1, 2}, want: []byte{1, 2}},
-		{in: []int{1, 2},
+		{
+			in:    []int{1, 2},
 			want:  []interface{}{int32(1), int32(2)},
-			want2: []interface{}{int64(1), int64(2)}},
+			want2: []interface{}{int64(1), int64(2)},
+		},
 		{in: []float32{1.5, 2.5}, want: []interface{}{float64(1.5), float64(2.5)}},
 		{in: []float64{1.5, 2.5}, want: []interface{}{float64(1.5), float64(2.5)}},
 		{in: milliTime, want: milliTime, want2: "2019-03-27T00:00:00.005Z"},
-		{in: []time.Time{milliTime},
+		{
+			in:    []time.Time{milliTime},
 			want:  []interface{}{milliTime},
 			want2: []interface{}{"2019-03-27T00:00:00.005Z"},
 		},
-		{in: map[string]int{"a": 1},
+		{
+			in:    map[string]int{"a": 1},
 			want:  map[string]interface{}{"a": int64(1)},
 			want2: map[string]interface{}{"a": int32(1)},
 		},
@@ -1692,7 +1695,8 @@ func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 func ClearCollection(fataler interface {
 	Helper()
 	Fatalf(string, ...interface{})
-}, coll *docstore.Collection) {
+}, coll *docstore.Collection,
+) {
 	fataler.Helper()
 
 	ctx := context.Background()

@@ -1942,7 +1942,7 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		contentEncoding    = "identity"
 		contentLanguage    = "en"
 	)
-	var contents = []byte("Hello World")
+	contents := []byte("Hello World")
 
 	ctx := context.Background()
 	t.Run("NonExistentSourceFails", func(t *testing.T) {
@@ -2371,7 +2371,6 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 					t.Errorf("copied got %q want %q", string(got), string(content))
 				}
 			}
-
 		})
 	}
 }
@@ -2618,7 +2617,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		key     = dir + "/as-test"
 		copyKey = dir + "/as-test-copy"
 	)
-	var content = []byte("hello world")
+	content := []byte("hello world")
 	ctx := context.Background()
 
 	h, err := newHarness(ctx, t)

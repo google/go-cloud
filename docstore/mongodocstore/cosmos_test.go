@@ -25,11 +25,9 @@ import (
 
 // Run conformance tests on Azure Cosmos.
 
-var (
-	// See https://docs.microsoft.com/en-us/azure/cosmos-db/connect-mongodb-account
-	// on how to get a MongoDB connection string for Azure Cosmos.
-	cosmosConnString = os.Getenv("COSMOS_CONNECTION_STRING")
-)
+// See https://docs.microsoft.com/en-us/azure/cosmos-db/connect-mongodb-account
+// on how to get a MongoDB connection string for Azure Cosmos.
+var cosmosConnString = os.Getenv("COSMOS_CONNECTION_STRING")
 
 func TestConformanceCosmos(t *testing.T) {
 	if !*setup.Record {

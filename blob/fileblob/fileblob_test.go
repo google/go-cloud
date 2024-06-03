@@ -287,6 +287,7 @@ func (verifyAs) BucketCheck(b *blob.Bucket) error {
 	}
 	return nil
 }
+
 func (verifyAs) BeforeRead(as func(interface{}) bool) error {
 	var f *os.File
 	if !as(&f) {
@@ -294,6 +295,7 @@ func (verifyAs) BeforeRead(as func(interface{}) bool) error {
 	}
 	return nil
 }
+
 func (verifyAs) BeforeWrite(as func(interface{}) bool) error {
 	var f *os.File
 	if !as(&f) {
@@ -301,6 +303,7 @@ func (verifyAs) BeforeWrite(as func(interface{}) bool) error {
 	}
 	return nil
 }
+
 func (verifyAs) BeforeCopy(as func(interface{}) bool) error {
 	var f *os.File
 	if !as(&f) {
@@ -317,6 +320,7 @@ func (verifyAs) AttributesCheck(attrs *blob.Attributes) error {
 	}
 	return nil
 }
+
 func (verifyAs) ReaderCheck(r *blob.Reader) error {
 	var ior io.Reader
 	if !r.As(&ior) {
@@ -324,6 +328,7 @@ func (verifyAs) ReaderCheck(r *blob.Reader) error {
 	}
 	return nil
 }
+
 func (verifyAs) ListObjectCheck(o *blob.ListObject) error {
 	var fi os.FileInfo
 	if !o.As(&fi) {
@@ -353,15 +358,15 @@ func TestOpenBucketFromURL(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, subdir), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	// To avoid making another temp dir, use the bucket directory to hold the secret key file.
 	secretKeyPath := filepath.Join(dir, "secret.key")
-	if err := os.WriteFile(secretKeyPath, []byte("secret key"), 0666); err != nil {
+	if err := os.WriteFile(secretKeyPath, []byte("secret key"), 0o666); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, subdir, "myfileinsubdir.txt"), []byte("hello world in subdir"), 0o666); err != nil {
 		t.Fatal(err)
 	}
 	// Convert dir to a URL path, adding a leading "/" if needed on Windows.

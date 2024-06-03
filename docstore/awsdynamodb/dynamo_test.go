@@ -69,8 +69,10 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (*harness) BeforeDoTypes() []interface{} {
-	return []interface{}{&dyn.BatchGetItemInput{}, &dyn.TransactWriteItemsInput{},
-		&dyn.PutItemInput{}, &dyn.DeleteItemInput{}, &dyn.UpdateItemInput{}}
+	return []interface{}{
+		&dyn.BatchGetItemInput{}, &dyn.TransactWriteItemsInput{},
+		&dyn.PutItemInput{}, &dyn.DeleteItemInput{}, &dyn.UpdateItemInput{},
+	}
 }
 
 func (*harness) BeforeQueryTypes() []interface{} {

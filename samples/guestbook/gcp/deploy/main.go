@@ -92,7 +92,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	for old, new := range replacements {
 		gby = strings.Replace(gby, old, new, -1)
 	}
-	if err := os.WriteFile(filepath.Join(tempDir, "guestbook.yaml"), []byte(gby), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "guestbook.yaml"), []byte(gby), 0o666); err != nil {
 		return fmt.Errorf("writing guestbook.yaml: %v", err)
 	}
 
@@ -162,10 +162,12 @@ func deploy(guestbookDir, tfStatePath string) error {
 	return nil
 }
 
-type service struct{ Status *status }
-type status struct{ LoadBalancer loadBalancer }
-type loadBalancer struct{ Ingress []ingress }
-type ingress struct{ IP string }
+type (
+	service      struct{ Status *status }
+	status       struct{ LoadBalancer loadBalancer }
+	loadBalancer struct{ Ingress []ingress }
+	ingress      struct{ IP string }
+)
 
 type gcloud struct {
 	projectID string
