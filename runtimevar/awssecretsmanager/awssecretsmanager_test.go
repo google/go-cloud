@@ -77,7 +77,7 @@ func waitForMutation(ctx context.Context, check func() error) error {
 	time.Sleep(initial)
 
 	// retryIfNotFound returns true if err is NotFound.
-	var retryIfNotFound = func(err error) bool { return gcerrors.Code(err) == gcerrors.NotFound }
+	retryIfNotFound := func(err error) bool { return gcerrors.Code(err) == gcerrors.NotFound }
 
 	// Poll until the mtuation is seen.
 	return retry.Call(ctx, backoff, retryIfNotFound, check)

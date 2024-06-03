@@ -95,7 +95,7 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
 		t.Logf("Recording into golden file %s", path)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		state := time.Now()
@@ -133,7 +133,8 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
 func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *session.Session,
-	rt http.RoundTripper, cleanup func(), initState int64) {
+	rt http.RoundTripper, cleanup func(), initState int64,
+) {
 	t.Helper()
 
 	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
@@ -287,7 +288,7 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(f.Name(), jsonCred, 0666); err != nil {
+	if err := os.WriteFile(f.Name(), jsonCred, 0o666); err != nil {
 		t.Fatal(err)
 	}
 

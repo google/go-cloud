@@ -42,7 +42,8 @@ func Call(ctx context.Context, bo gax.Backoff, isRetryable func(error) bool, f f
 
 // Split out for testing.
 func call(ctx context.Context, bo gax.Backoff, isRetryable func(error) bool, f func() error,
-	sleep func(context.Context, time.Duration) error) error {
+	sleep func(context.Context, time.Duration) error,
+) error {
 	// Do nothing if context is done on entry.
 	if err := ctx.Err(); err != nil {
 		return &ContextError{CtxErr: err}

@@ -225,7 +225,6 @@ type Filter struct {
 
 // A DocumentIterator iterates through the results (for Get action).
 type DocumentIterator interface {
-
 	// Next tries to get the next item in the query result and decodes into Document
 	// with the driver's codec.
 	// When there are no more results, it should return io.EOF.

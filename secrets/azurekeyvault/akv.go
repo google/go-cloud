@@ -51,20 +51,18 @@ import (
 	"gocloud.dev/secrets"
 )
 
-var (
-	// Map of HTTP Status Code to go-cloud ErrorCode
-	errorCodeMap = map[int]gcerrors.ErrorCode{
-		200: gcerrors.OK,
-		400: gcerrors.InvalidArgument,
-		401: gcerrors.PermissionDenied,
-		403: gcerrors.PermissionDenied,
-		404: gcerrors.NotFound,
-		408: gcerrors.DeadlineExceeded,
-		429: gcerrors.ResourceExhausted,
-		500: gcerrors.Internal,
-		501: gcerrors.Unimplemented,
-	}
-)
+// Map of HTTP Status Code to go-cloud ErrorCode
+var errorCodeMap = map[int]gcerrors.ErrorCode{
+	200: gcerrors.OK,
+	400: gcerrors.InvalidArgument,
+	401: gcerrors.PermissionDenied,
+	403: gcerrors.PermissionDenied,
+	404: gcerrors.NotFound,
+	408: gcerrors.DeadlineExceeded,
+	429: gcerrors.ResourceExhausted,
+	500: gcerrors.Internal,
+	501: gcerrors.Unimplemented,
+}
 
 func init() {
 	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(defaultDialer))
@@ -167,10 +165,8 @@ func DefaultClientMaker(keyVaultURI string) (*azkeys.Client, error) {
 	})
 }
 
-var (
-	// Note that the last binding may be just a key, or key/version.
-	keyIDRE = regexp.MustCompile(`^(https://.+\.vault\.(?:[a-z\d-.]+)/)keys/(.+)$`)
-)
+// Note that the last binding may be just a key, or key/version.
+var keyIDRE = regexp.MustCompile(`^(https://.+\.vault\.(?:[a-z\d-.]+)/)keys/(.+)$`)
 
 // OpenKeeper returns a *secrets.Keeper that uses Azure keyVault.
 //

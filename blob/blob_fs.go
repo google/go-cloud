@@ -25,8 +25,10 @@ import (
 )
 
 // Ensure that Bucket implements various io/fs interfaces.
-var _ = fs.FS(&Bucket{})
-var _ = fs.SubFS(&Bucket{})
+var (
+	_ = fs.FS(&Bucket{})
+	_ = fs.SubFS(&Bucket{})
+)
 
 // iofsFileInfo describes a single file in an io/fs.FS.
 // It implements fs.FileInfo and fs.DirEntry.

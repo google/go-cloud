@@ -76,7 +76,7 @@ func ExampleNewFromEnv() {
 
 func ExampleNewError() {
 	// Construct a runtimevar.Variable that always returns errFake.
-	var errFake = errors.New("my error")
+	errFake := errors.New("my error")
 	v := constantvar.NewError(errFake)
 	defer v.Close()
 

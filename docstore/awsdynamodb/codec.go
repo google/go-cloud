@@ -212,7 +212,6 @@ func (d decoder) AsFloat() (float64, bool) {
 		return 0, false
 	}
 	return f, true
-
 }
 
 func (d decoder) AsComplex() (complex128, bool) {

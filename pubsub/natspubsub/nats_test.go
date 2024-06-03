@@ -599,8 +599,10 @@ func TestCodec(t *testing.T) {
 		{Metadata: map[string]string{"a": "1"}, Body: nil},
 		{Metadata: nil, Body: []byte("hello")},
 		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello")},
-		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello"),
-			AckID: "foo", AsFunc: func(interface{}) bool { return true }},
+		{
+			Metadata: map[string]string{"a": "1"}, Body: []byte("hello"),
+			AckID: "foo", AsFunc: func(interface{}) bool { return true },
+		},
 	} {
 		t.Run("V1", func(t *testing.T) {
 			bytes, err := encodeMessage(dm)

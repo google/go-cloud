@@ -277,6 +277,7 @@ func (d decoder) DecodeList(f func(int, driver.Decoder) bool) {
 		}
 	}
 }
+
 func (d decoder) MapLen() (int, bool) {
 	m := d.pv.GetMapValue()
 	if m == nil {
@@ -284,6 +285,7 @@ func (d decoder) MapLen() (int, bool) {
 	}
 	return len(m.Fields), true
 }
+
 func (d decoder) DecodeMap(f func(string, driver.Decoder, bool) bool) {
 	for k, v := range d.pv.GetMapValue().Fields {
 		if !f(k, decoder{v}, true) {

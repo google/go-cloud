@@ -65,12 +65,12 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(socketDir, 0777); err != nil {
+	if err := os.Mkdir(socketDir, 0o777); err != nil {
 		t.Fatal(err)
 	}
 	confData := new(bytes.Buffer)
 	fmt.Fprintf(confData, "unix_socket_directories = '%s'\n", socketDir)
-	err = os.WriteFile(filepath.Join(dataDir, "postgresql.conf"), confData.Bytes(), 0666)
+	err = os.WriteFile(filepath.Join(dataDir, "postgresql.conf"), confData.Bytes(), 0o666)
 	if err != nil {
 		t.Fatal(err)
 	}

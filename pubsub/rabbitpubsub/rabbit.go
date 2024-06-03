@@ -613,7 +613,6 @@ func newSubscription(conn amqpConnection, name string, opts *SubscriptionOptions
 
 // Must be called with s.mu held.
 func (s *subscription) establishChannel(ctx context.Context) error {
-
 	if s.ch != nil { // We already have a channel.
 		select {
 		// If it was closed, open a new one.

@@ -217,7 +217,8 @@ func TestPlanQuery(t *testing.T) {
 				Filters: []driver.Filter{
 					{[]string{"tableP"}, "=", 1},
 					{[]string{"localS"}, "<=", 1},
-				}},
+				},
+			},
 			want: &dynamodb.QueryInput{
 				IndexName:                 aws.String("local"),
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
@@ -311,7 +312,8 @@ func TestPlanQuery(t *testing.T) {
 				Filters: []driver.Filter{
 					{[]string{"tableP"}, "=", 1},
 					{[]string{"globalS"}, "<=", 1},
-				}},
+				},
+			},
 			want: &dynamodb.QueryInput{
 				IndexName:                 aws.String("global"),
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),

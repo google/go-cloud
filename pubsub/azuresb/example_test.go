@@ -120,7 +120,6 @@ func Example_openSubscriptionFromURL() {
 }
 
 func Example_OpenSubscription_inReceiveAndDeleteMode() {
-
 	ctx := context.Background()
 
 	// Change these as needed for your application.

@@ -129,7 +129,6 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 	if !cmp.Equal(msg, decryptedMsg) {
 		t.Errorf("Got decrypted message %v, want it to match original message %v", string(msg), string(decryptedMsg))
 	}
-
 }
 
 // testMultipleEncryptionsNotEqual tests that encrypting a plaintext multiple

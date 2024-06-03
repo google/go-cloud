@@ -124,7 +124,6 @@ func TestMiddleware(t *testing.T) {
 	if onLogCalled != 2 {
 		t.Fatal("logging middleware was not called for TLS")
 	}
-
 }
 
 type testDriverNoTLS string

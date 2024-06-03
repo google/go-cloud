@@ -298,7 +298,8 @@ func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter,
 			FilterType: &pb.StructuredQuery_Filter_UnaryFilter{
 				UnaryFilter: &pb.StructuredQuery_UnaryFilter{
 					OperandType: &pb.StructuredQuery_UnaryFilter_Field{
-						Field: fieldRef(f.FieldPath)},
+						Field: fieldRef(f.FieldPath),
+					},
 					Op: uop,
 				},
 			},

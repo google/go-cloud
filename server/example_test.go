@@ -91,6 +91,7 @@ func (h *customHealthCheck) CheckHealth() error {
 	}
 	return nil
 }
+
 func ExampleServer_HealthChecks() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 

@@ -386,7 +386,7 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	serr := errors.New("unrecoverable error")
 	receiveHappened := make(chan struct{})
 	ackHappened := make(chan struct{})
-	var ds = &callbackDriverSub{
+	ds := &callbackDriverSub{
 		// First call to receiveBatch will return a single message.
 		receiveBatch: func(context.Context) ([]*driver.Message, error) {
 			ms := []*driver.Message{{AckID: 1}}

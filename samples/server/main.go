@@ -77,7 +77,6 @@ func main() {
 
 	ctx := context.Background()
 	credentials, err := gcp.DefaultCredentials(ctx)
-
 	if err != nil {
 		log.Fatal(err)
 	}

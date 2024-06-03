@@ -440,7 +440,6 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		URLTemplate string
 		WantErr     bool
 	}{
-
 		{"url with no QoS prefetch count", "rabbit://%s", false},
 		{"invalid parameters", "rabbit://%s?param=value", true},
 		{"valid url with QoS prefetch count", "rabbit://%s?prefetch_count=1024", false},

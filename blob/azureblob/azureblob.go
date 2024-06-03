@@ -521,12 +521,15 @@ type reader struct {
 func (r *reader) Read(p []byte) (int, error) {
 	return r.body.Read(p)
 }
+
 func (r *reader) Close() error {
 	return r.body.Close()
 }
+
 func (r *reader) Attributes() *driver.ReaderAttributes {
 	return &r.attrs
 }
+
 func (r *reader) As(i interface{}) bool {
 	p, ok := i.(*azblobblob.DownloadStreamResponse)
 	if !ok {
@@ -742,7 +745,8 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 					*v = *blobPrefix
 				}
 				return ok
-			}})
+			},
+		})
 	}
 	for _, blobInfo := range segment.BlobItems {
 		blobInfo := blobInfo // capture loop variable for use in AsFunc
@@ -758,7 +762,8 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 					*v = *blobInfo
 				}
 				return ok
-			}})
+			},
+		})
 	}
 	if resp.NextMarker != nil {
 		page.NextPageToken = []byte(*resp.NextMarker)

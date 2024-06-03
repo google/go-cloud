@@ -300,7 +300,6 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*grpc.ClientConn, func(), er
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*11)),
 		useragent.GRPCDialOption("pubsub"),
 	)
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -647,6 +646,7 @@ func queryParameterInt(value []string) (int, error) {
 
 	return strconv.Atoi(value[0])
 }
+
 func queryParameterBool(value []string) (bool, error) {
 	if len(value) > 1 {
 		return false, fmt.Errorf("expected only one parameter value, got: %v", len(value))

@@ -27,7 +27,6 @@ import (
 // cipher message, as well as decrypt a cipher message into a plain text
 // message.
 type Keeper interface {
-
 	// Decrypt decrypts the ciphertext and returns the plaintext or an error.
 	// Decrypt *may* decrypt ciphertexts that were encrypted using a different
 	// key than the one provided to Keeper; some drivers encode the key used
