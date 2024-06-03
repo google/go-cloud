@@ -45,7 +45,7 @@
 	},
 	"gocloud.dev/blob/fileblob.ExampleOpenBucket": {
 		"imports": "import (\n\t\"os\"\n\n\t\"gocloud.dev/blob/fileblob\"\n)",
-		"code": "// The directory you pass to fileblob.OpenBucket must exist first.\nconst myDir = \"path/to/local/directory\"\nif err := os.MkdirAll(myDir, 0777); err != nil {\n\treturn err\n}\n\n// Create a file-based bucket.\nbucket, err := fileblob.OpenBucket(myDir, nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+		"code": "// The directory you pass to fileblob.OpenBucket must exist first.\nconst myDir = \"path/to/local/directory\"\nif err := os.MkdirAll(myDir, 0o777); err != nil {\n\treturn err\n}\n\n// Create a file-based bucket.\nbucket, err := fileblob.OpenBucket(myDir, nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
 	},
 	"gocloud.dev/blob/gcsblob.ExampleOpenBucket": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob/gcsblob\"\n\t\"gocloud.dev/gcp\"\n)",
