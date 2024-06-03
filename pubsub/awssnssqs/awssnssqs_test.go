@@ -785,11 +785,18 @@ func TestFIFO(t *testing.T) {
 			useV2: false,
 			kind:  topicKindSQS,
 		},
-		{
-			name:  "TestSQSTopicV2",
-			useV2: true,
-			kind:  topicKindSQS,
-		},
+		// This test is flaky because it sets 2 attributes for CreateTopic,
+		// and the HTTP record/replay randomly re-sorts them. I'm not sure how
+		// to fix that, so disabling the test. It's also unclear why only
+		// this test appears affected, maybe the AWS code iterates over the
+		// map here and doesn't in other cases?
+		/*
+			{
+				name:  "TestSQSTopicV2",
+				useV2: true,
+				kind:  topicKindSQS,
+			},
+		*/
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			testFIFOTopic(t, tt.useV2, tt.kind)
