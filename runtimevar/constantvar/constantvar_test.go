@@ -32,6 +32,8 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	return &harness{vars: map[string][]byte{}}, nil
 }
 

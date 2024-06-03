@@ -37,6 +37,8 @@ var fsFiles = []string{
 }
 
 func initBucket(t *testing.T, files []string) *blob.Bucket {
+	t.Helper()
+
 	ctx := context.Background()
 
 	b := memblob.OpenBucket(nil)

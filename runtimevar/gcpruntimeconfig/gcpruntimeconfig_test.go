@@ -55,6 +55,8 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	ctx := context.Background()
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "runtimevar")
 	client := pb.NewRuntimeConfigManagerClient(conn)

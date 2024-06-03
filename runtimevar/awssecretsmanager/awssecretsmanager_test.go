@@ -102,6 +102,8 @@ func generateClientRequestToken(name string, data []byte) string {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, _, done, _ := setup.NewAWSSession(context.Background(), t, region)
 
 	return &harness{
@@ -112,6 +114,8 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 }
 
 func newHarnessV2(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region)
 	return &harness{
 		useV2:    true,

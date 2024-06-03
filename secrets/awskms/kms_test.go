@@ -55,6 +55,8 @@ func (h *harness) Close() {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, _, done, _ := setup.NewAWSSession(ctx, t, region)
 	return &harness{
 		useV2:  false,
@@ -64,6 +66,8 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func newHarnessV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
 	return &harness{
 		useV2:    true,

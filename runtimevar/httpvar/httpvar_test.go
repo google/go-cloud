@@ -69,6 +69,8 @@ func (h *harness) Mutable() bool {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	return &harness{
 		mockServer: newMockServer(),
 	}, nil

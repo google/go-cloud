@@ -81,11 +81,15 @@ type harness struct {
 type harnessOption func(h *harness)
 
 func newHarness(ctx context.Context, t *testing.T, topicKind topicKind) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, rt, closer, _ := setup.NewAWSSession(ctx, t, region)
 	return &harness{useV2: false, sess: sess, rt: rt, topicKind: topicKind, closer: closer}, nil
 }
 
 func newHarnessV2(ctx context.Context, t *testing.T, topicKind topicKind) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, rt, closer, _ := setup.NewAWSv2Config(context.Background(), t, region)
 	return &harness{useV2: true, snsClientV2: snsv2.NewFromConfig(cfg), sqsClientV2: sqsv2.NewFromConfig(cfg), rt: rt, topicKind: topicKind, closer: closer}, nil
 }
@@ -366,6 +370,8 @@ func (h *harness) SupportsMultipleSubscriptions() bool {
 func TestConformanceSNSTopic(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{useV2: false, topicKind: topicKindSNS}}
 	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, topicKindSNS)
 	}
 	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
@@ -374,6 +380,8 @@ func TestConformanceSNSTopic(t *testing.T) {
 func TestConformanceSNSTopicV2(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{useV2: true, topicKind: topicKindSNS}}
 	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarnessV2(ctx, t, topicKindSNS)
 	}
 	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
@@ -382,6 +390,8 @@ func TestConformanceSNSTopicV2(t *testing.T) {
 func TestConformanceSNSTopicRaw(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{useV2: false, topicKind: topicKindSNSRaw}}
 	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, topicKindSNSRaw)
 	}
 	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
@@ -390,6 +400,8 @@ func TestConformanceSNSTopicRaw(t *testing.T) {
 func TestConformanceSNSTopicRawV2(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{useV2: true, topicKind: topicKindSNSRaw}}
 	newSNSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarnessV2(ctx, t, topicKindSNSRaw)
 	}
 	drivertest.RunConformanceTests(t, newSNSHarness, asTests)
@@ -398,6 +410,8 @@ func TestConformanceSNSTopicRawV2(t *testing.T) {
 func TestConformanceSQSTopic(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{useV2: false, topicKind: topicKindSQS}}
 	newSQSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, topicKindSQS)
 	}
 	drivertest.RunConformanceTests(t, newSQSHarness, asTests)
@@ -406,6 +420,8 @@ func TestConformanceSQSTopic(t *testing.T) {
 func TestConformanceSQSTopicV2(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{useV2: true, topicKind: topicKindSQS}}
 	newSQSHarness := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarnessV2(ctx, t, topicKindSQS)
 	}
 	drivertest.RunConformanceTests(t, newSQSHarness, asTests)
@@ -652,6 +668,8 @@ func BenchmarkSQS(b *testing.B) {
 }
 
 func benchmark(b *testing.B, topicKind topicKind) {
+	b.Helper()
+
 	ctx := context.Background()
 	sess, err := session.NewSession(&aws.Config{
 		HTTPClient: &http.Client{},

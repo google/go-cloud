@@ -43,6 +43,8 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper,
 func (h *harness) Close() {}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	return &harness{}, nil
 }
 

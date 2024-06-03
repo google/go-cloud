@@ -76,6 +76,8 @@ func BenchmarkPutVSTransact(b *testing.B) {
 }
 
 func putItems(b *testing.B, db *dynamodb.DynamoDB, items []map[string]*dynamodb.AttributeValue) {
+	b.Helper()
+
 	for i, item := range items {
 		item["x"].SetN(strconv.Itoa(i + 1))
 		in := &dynamodb.PutItemInput{
@@ -103,6 +105,8 @@ func putItems(b *testing.B, db *dynamodb.DynamoDB, items []map[string]*dynamodb.
 }
 
 func batchGetTransactWrite(b *testing.B, db *dynamodb.DynamoDB, items []map[string]*dynamodb.AttributeValue) {
+	b.Helper()
+
 	keys := make([]map[string]*dynamodb.AttributeValue, len(items))
 	tws := make([]*dynamodb.TransactWriteItem, len(items))
 	for i, item := range items {

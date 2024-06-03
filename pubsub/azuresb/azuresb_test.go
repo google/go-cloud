@@ -58,6 +58,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	if connString == "" && sbHostname == "" {
 		return nil, fmt.Errorf("azuresb: test harness requires environment variable SERVICEBUS_CONNECTION_STRING or AZURE_SERVICEBUS_HOSTNAME to run")
 	}
@@ -79,6 +81,8 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func newHarnessUsingAutodelete(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	h, err := newHarness(ctx, t)
 	if err == nil {
 		h.(*harness).autodelete = true

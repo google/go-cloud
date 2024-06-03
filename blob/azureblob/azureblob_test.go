@@ -67,6 +67,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	var key string
 	if *setup.Record {
 		name := os.Getenv("AZURE_STORAGE_ACCOUNT")

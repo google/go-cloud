@@ -94,6 +94,8 @@ func (verifyAsFailsOnNil) ErrorCheck(v *runtimevar.Variable, err error) (ret err
 // RunConformanceTests runs conformance tests for driver implementations
 // of runtimevar.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
+	t.Helper()
+
 	t.Run("TestNonExistentVariable", func(t *testing.T) {
 		testNonExistentVariable(t, newHarness)
 	})
@@ -140,6 +142,8 @@ func waitTimeForBlockingCheck() time.Duration {
 }
 
 func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	h, err := newHarness(t)
 	if err != nil {
 		t.Fatal(err)
@@ -166,6 +170,8 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testString(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	const (
 		name    = "test-config-variable"
 		content = "hello world"
@@ -235,6 +241,8 @@ type Message struct {
 }
 
 func testJSON(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	const (
 		name        = "test-config-variable"
 		jsonContent = `[
@@ -286,6 +294,8 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	const (
 		name    = "test-config-variable"
 		content = "not-json"
@@ -327,6 +337,8 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testUpdate(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	const (
 		name     = "test-config-variable"
 		content1 = "hello world"
@@ -419,6 +431,8 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testDelete(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	const (
 		name     = "test-config-variable"
 		content1 = "hello world"
@@ -512,6 +526,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	const (
 		name     = "test-updating-variable-to-error"
 		content1 = `[{"Name": "Foo", "Text": "Bar"}]`
@@ -607,6 +623,8 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 
 // testAs tests the various As functions, using AsTest.
 func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
+	t.Helper()
+
 	const (
 		name    = "variable-for-as"
 		content = "hello world"

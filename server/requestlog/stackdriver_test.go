@@ -186,6 +186,8 @@ func BenchmarkStackdriverLog(b *testing.B) {
 
 func BenchmarkE2E(b *testing.B) {
 	run := func(b *testing.B, handler http.Handler) {
+		b.Helper()
+
 		s := httptest.NewServer(handler)
 		defer s.Close()
 		b.ReportAllocs()

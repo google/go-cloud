@@ -46,11 +46,15 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, _, done, _ := setup.NewAWSSession(context.Background(), t, region)
 	return &harness{useV2: false, session: sess, closer: done}, nil
 }
 
 func newHarnessV2(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region)
 	return &harness{useV2: true, clientV2: ssmv2.NewFromConfig(cfg), closer: done}, nil
 }

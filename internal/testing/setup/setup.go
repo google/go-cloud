@@ -89,6 +89,8 @@ func awsV2Config(ctx context.Context, region string, client *http.Client) (awsv2
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
 func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httpreplay.Recorder)) (c *http.Client, cleanup func(), initState int64) {
+	t.Helper()
+
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
@@ -132,6 +134,8 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 // results, for example, a seed to generate random sequences.
 func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *session.Session,
 	rt http.RoundTripper, cleanup func(), initState int64) {
+	t.Helper()
+
 	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature", "X-Amz-Security-Token")
 		r.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
@@ -154,6 +158,8 @@ func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *sess
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
 func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2.Config, rt http.RoundTripper, cleanup func(), initState int64) {
+	t.Helper()
+
 	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature", "X-Amz-Security-Token")
 		r.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
@@ -180,6 +186,8 @@ func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
 func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt http.RoundTripper, done func()) {
+	t.Helper()
+
 	c, cleanup, _ := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.ClearQueryParams("Expires")
 		r.ClearQueryParams("Signature")
@@ -208,6 +216,8 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing RPC and uses fake credentials.
 func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*grpc.ClientConn, func()) {
+	t.Helper()
+
 	filename := t.Name() + ".replay"
 	if *Record {
 		opts, done := newGCPRecordDialOptions(t, filename)
@@ -235,6 +245,8 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 
 // NewAzureTestBlobClient creates a new connection for testing against Azure Blob.
 func NewAzureTestBlobClient(ctx context.Context, t *testing.T) (*http.Client, func()) {
+	t.Helper()
+
 	client, cleanup, _ := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("se", "sig", "st")
 		r.RemoveQueryParams("X-Ms-Date")
@@ -252,6 +264,8 @@ func NewAzureTestBlobClient(ctx context.Context, t *testing.T) (*http.Client, fu
 // NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test
 // recordings.
 func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (*http.Client, func()) {
+	t.Helper()
+
 	client, cleanup, _ := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
 		r.RemoveQueryParams("se", "sig")
 		r.RemoveQueryParams("X-Ms-Date")
@@ -264,6 +278,8 @@ func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (*http.Client
 // FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.
 // It returns a cleanup function.
 func FakeGCPDefaultCredentials(t *testing.T) func() {
+	t.Helper()
+
 	const envVar = "GOOGLE_APPLICATION_CREDENTIALS"
 	jsonCred := []byte(`{"client_id": "foo.apps.googleusercontent.com", "client_secret": "bar", "refresh_token": "baz", "type": "authorized_user"}`)
 	f, err := os.CreateTemp("", "fake-gcp-creds")
@@ -285,6 +301,8 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 // GRPC dial request. These options allow a recorder to intercept RPCs and save
 // RPCs to the file at filename, or read the RPCs from the file and return them.
 func newGCPRecordDialOptions(t *testing.T, filename string) (opts []grpc.DialOption, done func()) {
+	t.Helper()
+
 	path := filepath.Join("testdata", filename)
 	os.MkdirAll(filepath.Dir(path), os.ModePerm)
 	t.Logf("Recording into golden file %s", path)
@@ -304,6 +322,8 @@ func newGCPRecordDialOptions(t *testing.T, filename string) (opts []grpc.DialOpt
 // newGCPReplayer returns a Replayer for GCP gRPC connections, as well as a function
 // to call when done with the Replayer.
 func newGCPReplayer(t *testing.T, filename string) (*grpcreplay.Replayer, func()) {
+	t.Helper()
+
 	path := filepath.Join("testdata", filename)
 	t.Logf("Replaying from golden file %s", path)
 	r, err := grpcreplay.NewReplayer(path, nil)

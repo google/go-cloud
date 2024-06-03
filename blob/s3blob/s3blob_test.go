@@ -62,21 +62,29 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, rt, done, _ := setup.NewAWSSession(ctx, t, region)
 	return &harness{useV2: false, session: sess, opts: nil, rt: rt, closer: done}, nil
 }
 
 func newHarnessUsingLegacyList(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, rt, done, _ := setup.NewAWSSession(ctx, t, region)
 	return &harness{useV2: false, session: sess, opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }
 
 func newHarnessV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
 	return &harness{useV2: true, clientV2: s3v2.NewFromConfig(cfg), opts: nil, rt: rt, closer: done}, nil
 }
 
 func newHarnessUsingLegacyListV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
 	return &harness{useV2: true, clientV2: s3v2.NewFromConfig(cfg), opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }

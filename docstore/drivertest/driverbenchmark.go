@@ -26,24 +26,28 @@ import (
 
 // RunBenchmarks runs benchmarks for docstore drivers.
 func RunBenchmarks(b *testing.B, coll *docstore.Collection) {
+	b.Helper()
+
 	defer coll.Close()
 	ClearCollection(b, coll)
 	b.Run("BenchmarkSingleActionPut", func(b *testing.B) {
-		benchmarkSingleActionPut(10, b, coll)
+		benchmarkSingleActionPut(b, 10, coll)
 	})
 	b.Run("BenchmarkSingleActionGet", func(b *testing.B) {
-		benchmarkSingleActionGet(10, b, coll)
+		benchmarkSingleActionGet(b, 10, coll)
 	})
 	b.Run("BenchmarkActionListPut", func(b *testing.B) {
-		benchmarkActionListPut(50, b, coll)
+		benchmarkActionListPut(b, 50, coll)
 	})
 	b.Run("BenchmarkActionListGet", func(b *testing.B) {
-		benchmarkActionListGet(100, b, coll)
+		benchmarkActionListGet(b, 100, coll)
 	})
 	ClearCollection(b, coll)
 }
 
-func benchmarkSingleActionPut(n int, b *testing.B, coll *docstore.Collection) {
+func benchmarkSingleActionPut(b *testing.B, n int, coll *docstore.Collection) {
+	b.Helper()
+
 	ctx := context.Background()
 	const baseKey = "benchmarksingleaction-put-"
 	var nextID uint32
@@ -62,7 +66,9 @@ func benchmarkSingleActionPut(n int, b *testing.B, coll *docstore.Collection) {
 	})
 }
 
-func benchmarkSingleActionGet(n int, b *testing.B, coll *docstore.Collection) {
+func benchmarkSingleActionGet(b *testing.B, n int, coll *docstore.Collection) {
+	b.Helper()
+
 	ctx := context.Background()
 	const baseKey = "benchmarksingleaction-get-"
 	docs := make([]docmap, n)
@@ -88,7 +94,9 @@ func benchmarkSingleActionGet(n int, b *testing.B, coll *docstore.Collection) {
 	})
 }
 
-func benchmarkActionListPut(n int, b *testing.B, coll *docstore.Collection) {
+func benchmarkActionListPut(b *testing.B, n int, coll *docstore.Collection) {
+	b.Helper()
+
 	ctx := context.Background()
 	const baseKey = "benchmarkactionlist-put-"
 	var nextID uint32
@@ -109,7 +117,9 @@ func benchmarkActionListPut(n int, b *testing.B, coll *docstore.Collection) {
 	})
 }
 
-func benchmarkActionListGet(n int, b *testing.B, coll *docstore.Collection) {
+func benchmarkActionListGet(b *testing.B, n int, coll *docstore.Collection) {
+	b.Helper()
+
 	ctx := context.Background()
 	const baseKey = "benchmarkactionlist-get-"
 	docs := make([]docmap, n)
