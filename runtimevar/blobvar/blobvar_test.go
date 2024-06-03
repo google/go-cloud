@@ -148,7 +148,7 @@ func TestOpenVariable(t *testing.T) {
 	ctx := context.Background()
 	for _, test := range tests {
 		t.Run(test.BucketURL, func(t *testing.T) {
-			os.Setenv("BLOBVAR_BUCKET_URL", test.BucketURL)
+			t.Setenv("BLOBVAR_BUCKET_URL", test.BucketURL)
 
 			opener := &defaultOpener{}
 			defer func() {
