@@ -1520,35 +1520,88 @@ func testGetQuery(t *testing.T, _ Harness, coll *docstore.Collection) {
 			}
 		})
 	}
-	t.Run("Limit", func(t *testing.T) {
-		// For limit, we can't be sure which documents will be returned, only their count.
-		limitQ := coll.Query().Limit(2)
-		got := mustCollectHighScores(ctx, t, limitQ.Get(ctx))
-		if len(got) != 2 {
-			t.Errorf("got %v, wanted two documents", got)
+	t.Run("OffsetAndLimitCounts", func(t *testing.T) {
+		nDocs := len(highScores) // 8
+		tests := []struct {
+			name     string
+			offset   int
+			limit    int
+			expected int
+		}{
+			{
+				name:     "LimitOnly",
+				offset:   0,
+				limit:    2,
+				expected: 2,
+			},
+			{
+				name:     "OffsetOnly",
+				offset:   2,
+				limit:    nDocs,
+				expected: nDocs - 2,
+			},
+			{
+				name:     "OffsetAndLimit",
+				offset:   2,
+				limit:    2,
+				expected: 2,
+			},
+			{
+				name:     "OffsetEqualToFirstPage",
+				offset:   nDocs,
+				limit:    2,
+				expected: 0,
+			},
+			{
+				name:     "OffsetLessThanFirstPage",
+				offset:   nDocs - 1,
+				limit:    2,
+				expected: 1,
+			},
+			{
+				name:     "OffsetGreaterThanFirstPage",
+				offset:   nDocs + 1,
+				limit:    2,
+				expected: 0,
+			},
+			{
+				name:     "OffsetIsZero",
+				offset:   0,
+				limit:    2,
+				expected: 2,
+			},
+			{
+				name:     "OffsetAndLimitGreaterThanPageSize",
+				offset:   nDocs + 1,
+				limit:    nDocs + 1,
+				expected: 0,
+			},
+			{
+				name:     "OffsetLessThanPageSizeAndLimitGreaterThanPageSize",
+				offset:   nDocs - 1,
+				limit:    nDocs + 1,
+				expected: 1,
+			},
+			// Scenarios covered elsewhere:
+			// - /go-cloud/docstore/query_test.go#TestInvalidQuery:
+			//    - NegativeLimit
+			//    - ZeroLimit
+			//    - TwoLimits
+			//    - NegativeOffset
+			//    - TwoOffsets
+			//    - ZeroOffsetAndLimit
+			//    - NegativeOffsetAndLimit
+			//    - ZeroOffsetAndNegativeLimit
 		}
-	})
-	t.Run("Offset", func(t *testing.T) {
-		// For offset, we can't be sure which documents will be skipped, only their count.
-		offsetQ := coll.Query().Offset(2)
-		got := mustCollectHighScores(ctx, t, offsetQ.Get(ctx))
-		if len(got) != len(highScores)-2 {
-			t.Errorf("got %v, wanted %v documents", len(got), len(highScores)-2)
-		}
-	})
-	t.Run("OffsetAndLimit", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				offsetLimitQ := coll.Query().Offset(tt.offset).Limit(tt.limit)
+				got := mustCollectHighScores(ctx, t, offsetLimitQ.Get(ctx))
 
-		// Ensure there are at least 4 documents in the collection
-		gotAll := mustCollectHighScores(ctx, t, coll.Query().Get(ctx))
-		if len(gotAll) < 4 {
-			t.Skip("Skipping test as there are less than 4 documents in the collection")
-		}
-
-		// Test both offset and limit together.
-		offsetLimitQ := coll.Query().Offset(2).Limit(2)
-		got := mustCollectHighScores(ctx, t, offsetLimitQ.Get(ctx))
-		if len(got) != 2 {
-			t.Errorf("got %v, wanted two documents", len(got))
+				if len(got) != tt.expected {
+					t.Errorf("got %v, wanted %v documents", len(got), tt.expected)
+				}
+			})
 		}
 	})
 	t.Run("EOF", func(t *testing.T) {
