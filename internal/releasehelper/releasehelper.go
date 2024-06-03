@@ -175,13 +175,13 @@ func gomodDropReplace(path string) {
 	})
 }
 
-func gomodSetVersion(path string, v string) {
+func gomodSetVersion(path, v string) {
 	runOnGomod(path, func(gomodPath, mod, modPath string) {
 		cmdCheck(fmt.Sprintf("go mod edit -require=%s@%s %s", mod, v, gomodPath))
 	})
 }
 
-func gomodTag(path string, v string) {
+func gomodTag(path, v string) {
 	var tagName string
 	if path == "." {
 		tagName = v

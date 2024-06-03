@@ -275,7 +275,7 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 func (r *reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
-func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if key == "" {
 		return nil, errors.New("invalid key (empty string)")
 	}

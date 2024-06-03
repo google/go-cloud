@@ -712,7 +712,7 @@ func createTemp(path string, noTempDir bool) (*os.File, error) {
 }
 
 // NewTypedWriter implements driver.NewTypedWriter.
-func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	path, err := b.path(key)
 	if err != nil {
 		return nil, err

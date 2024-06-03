@@ -227,7 +227,7 @@ type loaderBucket struct {
 	r stubReader
 }
 
-func (b *loaderBucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *loaderBucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	return &b.w, nil
 }
 
@@ -381,7 +381,7 @@ func (b *erroringBucket) NewRangeReader(ctx context.Context, key string, offset,
 	return nil, errFake
 }
 
-func (b *erroringBucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *erroringBucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if key == "work" {
 		return &erroringWriter{}, nil
 	}

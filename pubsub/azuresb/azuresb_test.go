@@ -294,7 +294,7 @@ func deleteTopic(ctx context.Context, topicName string, adminClient *admin.Clien
 }
 
 // createSubscription ensures the existence of a Service Bus Subscription on a given Namespace and Topic.
-func createSubscription(ctx context.Context, topicName string, subscriptionName string, adminClient *admin.Client, properties *admin.SubscriptionProperties) error {
+func createSubscription(ctx context.Context, topicName, subscriptionName string, adminClient *admin.Client, properties *admin.SubscriptionProperties) error {
 	s, _ := adminClient.GetSubscription(ctx, topicName, subscriptionName, nil)
 	if s != nil {
 		_, _ = adminClient.DeleteSubscription(ctx, topicName, subscriptionName, nil)
@@ -307,7 +307,7 @@ func createSubscription(ctx context.Context, topicName string, subscriptionName 
 }
 
 // deleteSubscription removes a Service Bus Subscription on a given Namespace and Topic.
-func deleteSubscription(ctx context.Context, topicName string, subscriptionName string, adminClient *admin.Client) error {
+func deleteSubscription(ctx context.Context, topicName, subscriptionName string, adminClient *admin.Client) error {
 	se, _ := adminClient.GetSubscription(ctx, topicName, subscriptionName, nil)
 	if se != nil {
 		_, err := adminClient.DeleteSubscription(ctx, topicName, subscriptionName, nil)

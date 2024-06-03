@@ -862,7 +862,7 @@ func unescapeKey(key string) string {
 }
 
 // NewTypedWriter implements driver.NewTypedWriter.
-func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key, false)
 	blobClient := b.client.NewBlockBlobClient(key)
 	if opts.BufferSize == 0 {
