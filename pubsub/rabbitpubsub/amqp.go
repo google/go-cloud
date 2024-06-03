@@ -143,10 +143,10 @@ func (ch *channel) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
 
 func (ch *channel) ExchangeDeclare(name string) error {
 	return ch.ch.ExchangeDeclare(name,
-		"fanout", // kind
-		false,    // durable
-		false,    // delete when unused
-		false,    // internal
+		amqp.ExchangeFanout, // kind
+		false,               // durable
+		false,               // delete when unused
+		false,               // internal
 		wait,
 		nil) // args
 }
