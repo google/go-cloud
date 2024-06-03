@@ -17,7 +17,6 @@ package awsparamstore
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	ssmv2 "github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -47,11 +46,15 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, _, done, _ := setup.NewAWSSession(context.Background(), t, region)
 	return &harness{useV2: false, session: sess, closer: done}, nil
 }
 
 func newHarnessV2(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region)
 	return &harness{useV2: true, clientV2: ssmv2.NewFromConfig(cfg), closer: done}, nil
 }
@@ -169,17 +172,10 @@ func TestEquivalentError(t *testing.T) {
 }
 
 func TestNoConnectionError(t *testing.T) {
-	prevAccessKey := os.Getenv("AWS_ACCESS_KEY")
-	prevSecretKey := os.Getenv("AWS_SECRET_KEY")
-	prevRegion := os.Getenv("AWS_REGION")
-	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
-	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
-	os.Setenv("AWS_REGION", "us-east-1")
-	defer func() {
-		os.Setenv("AWS_ACCESS_KEY", prevAccessKey)
-		os.Setenv("AWS_SECRET_KEY", prevSecretKey)
-		os.Setenv("AWS_REGION", prevRegion)
-	}()
+	t.Setenv("AWS_ACCESS_KEY", "myaccesskey")
+	t.Setenv("AWS_SECRET_KEY", "mysecretkey")
+	t.Setenv("AWS_REGION", "us-east-1")
+
 	sess, err := session.NewSession()
 	if err != nil {
 		t.Fatal(err)

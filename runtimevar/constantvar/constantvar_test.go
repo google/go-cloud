@@ -17,7 +17,6 @@ package constantvar
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -33,6 +32,8 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	return &harness{vars: map[string][]byte{}}, nil
 }
 
@@ -140,7 +141,7 @@ func TestNewFromEnv(t *testing.T) {
 		content = "hello world"
 		name    = "RUNTIMEVAR_CONST_TEST"
 	)
-	os.Setenv(name, content)
+	t.Setenv(name, content)
 
 	// Decode succeeds.
 	v := NewFromEnv(name, runtimevar.StringDecoder)
@@ -175,7 +176,7 @@ func TestNewError(t *testing.T) {
 }
 
 func TestOpenVariable(t *testing.T) {
-	os.Setenv("RUNTIMEVAR_CONST_TEST", "hello world")
+	t.Setenv("RUNTIMEVAR_CONST_TEST", "hello world")
 	tests := []struct {
 		URL          string
 		WantErr      bool

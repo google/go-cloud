@@ -67,6 +67,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	var key string
 	if *setup.Record {
 		name := os.Getenv("AZURE_STORAGE_ACCOUNT")
@@ -401,21 +403,21 @@ func TestOpenerFromEnv(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		os.Setenv("AZURE_STORAGE_ACCOUNT", test.accountName)
-		os.Setenv("AZURE_STORAGE_KEY", test.accountKey)
-		os.Setenv("AZURE_STORAGE_SAS_TOKEN", test.sasToken)
-		os.Setenv("AZURE_STORAGE_CONNECTION_STRING", test.connectionString)
-		os.Setenv("AZURE_STORAGE_DOMAIN", test.domain)
-		os.Setenv("AZURE_STORAGE_PROTOCOL", test.protocol)
+		t.Setenv("AZURE_STORAGE_ACCOUNT", test.accountName)
+		t.Setenv("AZURE_STORAGE_KEY", test.accountKey)
+		t.Setenv("AZURE_STORAGE_SAS_TOKEN", test.sasToken)
+		t.Setenv("AZURE_STORAGE_CONNECTION_STRING", test.connectionString)
+		t.Setenv("AZURE_STORAGE_DOMAIN", test.domain)
+		t.Setenv("AZURE_STORAGE_PROTOCOL", test.protocol)
 		if test.isCDN {
-			os.Setenv("AZURE_STORAGE_IS_CDN", "true")
+			t.Setenv("AZURE_STORAGE_IS_CDN", "true")
 		} else {
-			os.Setenv("AZURE_STORAGE_IS_CDN", "")
+			t.Setenv("AZURE_STORAGE_IS_CDN", "")
 		}
 		if test.isLocalEmulator {
-			os.Setenv("AZURE_STORAGE_IS_LOCAL_EMULATOR", "true")
+			t.Setenv("AZURE_STORAGE_IS_LOCAL_EMULATOR", "true")
 		} else {
-			os.Setenv("AZURE_STORAGE_IS_LOCAL_EMULATOR", "")
+			t.Setenv("AZURE_STORAGE_IS_LOCAL_EMULATOR", "")
 		}
 
 		got := newCredInfoFromEnv()
@@ -603,14 +605,8 @@ func TestNewServiceURL(t *testing.T) {
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
-	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
-	prevKey := os.Getenv("AZURE_STORAGE_KEY")
-	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
-	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
-	defer func() {
-		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
-		os.Setenv("AZURE_STORAGE_KEY", prevKey)
-	}()
+	t.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
+	t.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
 
 	tests := []struct {
 		URL     string

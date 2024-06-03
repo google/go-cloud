@@ -45,6 +45,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T, prefix string, metadataHow metadataOption, noTempDir bool) (drivertest.Harness, error) {
+	t.Helper()
+
 	if metadataHow == MetadataDontWrite {
 		// Skip tests for if no metadata gets written.
 		// For these it is currently undefined whether any gets read (back).
@@ -172,6 +174,8 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, "", MetadataInSidecar, false)
 	}
 	drivertest.RunConformanceTests(t, newHarnessNoPrefix, []drivertest.AsTest{verifyAs{}})
@@ -179,6 +183,8 @@ func TestConformance(t *testing.T) {
 
 func TestConformanceNoTempDir(t *testing.T) {
 	newHarnessNoTmpDir := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, "", MetadataInSidecar, true)
 	}
 	drivertest.RunConformanceTests(t, newHarnessNoTmpDir, []drivertest.AsTest{verifyAs{}})
@@ -187,6 +193,8 @@ func TestConformanceNoTempDir(t *testing.T) {
 func TestConformanceWithPrefix(t *testing.T) {
 	const prefix = "some/prefix/dir/"
 	newHarnessWithPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, prefix, MetadataInSidecar, false)
 	}
 	drivertest.RunConformanceTests(t, newHarnessWithPrefix, []drivertest.AsTest{verifyAs{prefix: prefix}})
@@ -194,6 +202,8 @@ func TestConformanceWithPrefix(t *testing.T) {
 
 func TestConformanceSkipMetadata(t *testing.T) {
 	newHarnessSkipMetadata := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, "", MetadataDontWrite, false)
 	}
 	drivertest.RunConformanceTests(t, newHarnessSkipMetadata, []drivertest.AsTest{verifyAs{}})

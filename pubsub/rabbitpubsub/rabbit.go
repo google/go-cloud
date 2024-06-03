@@ -498,7 +498,7 @@ func isRetryable(err error) bool {
 	// But it actually means "can be recovered by retrying later or with different
 	// parameters," which is not what we want. The error codes for which Recover is
 	// true, defined in the isSoftExceptionCode function of
-	// https://github.com/rabbitmq/amqp091-go/blob/main/spec091.go, includng things
+	// https://github.com/rabbitmq/amqp091-go/blob/main/spec091.go, including things
 	// like NotFound and AccessRefused, which require outside action.
 	//
 	// The following are the codes which might be resolved by retry without external

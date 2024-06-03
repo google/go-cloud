@@ -67,6 +67,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	opts := &Options{GoogleAccessID: serviceAccountID}
 	if *setup.Record {
 		if *pathToPrivateKey == "" {

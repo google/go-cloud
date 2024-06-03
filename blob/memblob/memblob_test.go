@@ -29,6 +29,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T, prefix string) (drivertest.Harness, error) {
+	t.Helper()
+
 	return &harness{prefix: prefix}, nil
 }
 
@@ -53,6 +55,8 @@ func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
 	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, "")
 	}
 	drivertest.RunConformanceTests(t, newHarnessNoPrefix, nil)
@@ -61,6 +65,8 @@ func TestConformance(t *testing.T) {
 func TestConformanceWithPrefix(t *testing.T) {
 	const prefix = "some/prefix/dir/"
 	newHarnessWithPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+		t.Helper()
+
 		return newHarness(ctx, t, prefix)
 	}
 	drivertest.RunConformanceTests(t, newHarnessWithPrefix, nil)

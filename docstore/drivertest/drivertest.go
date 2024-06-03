@@ -164,6 +164,8 @@ func (v verifyAsFailsOnNil) ErrorCheck(c *docstore.Collection, err error) (ret e
 
 // RunConformanceTests runs conformance tests for driver implementations of docstore.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, asTests []AsTest) {
+	t.Helper()
+
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 
@@ -197,6 +199,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 			}
 			t.Run(st.Name(), func(t *testing.T) {
 				withCollection(t, newHarness, TwoKey, func(t *testing.T, _ Harness, coll *docstore.Collection) {
+					t.Helper()
+
 					testAs(t, coll, st)
 				})
 			})
@@ -206,6 +210,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 
 // withCollection calls f with a fresh harness and an empty collection of the given kind.
 func withCollection(t *testing.T, newHarness HarnessMaker, kind CollectionKind, f func(*testing.T, Harness, *docstore.Collection)) {
+	t.Helper()
+
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -220,6 +226,8 @@ func withCollection(t *testing.T, newHarness HarnessMaker, kind CollectionKind, 
 // the standard revision field; and once with the AltRev collection, that uses an alternative revisionf field
 // name.
 func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *docstore.Collection, string)) {
+	t.Helper()
+
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -229,11 +237,15 @@ func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T
 
 	t.Run("StdRev", func(t *testing.T) {
 		withColl(t, h, SingleKey, func(t *testing.T, _ Harness, coll *docstore.Collection) {
+			t.Helper()
+
 			f(t, coll, docstore.DefaultRevisionField)
 		})
 	})
 	t.Run("AltRev", func(t *testing.T) {
 		withColl(t, h, AltRev, func(t *testing.T, _ Harness, coll *docstore.Collection) {
+			t.Helper()
+
 			f(t, coll, AlternateRevisionField)
 		})
 	})
@@ -242,6 +254,8 @@ func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T
 // withColl calls f with h and an empty collection of the given kind. It takes care of closing
 // the collection after f returns.
 func withColl(t *testing.T, h Harness, kind CollectionKind, f func(*testing.T, Harness, *docstore.Collection)) {
+	t.Helper()
+
 	ctx := context.Background()
 	dc, err := h.MakeCollection(ctx, kind)
 	if err != nil {
@@ -333,6 +347,8 @@ type docstruct struct {
 func nonexistentDoc() docmap { return docmap{KeyField: "doesNotExist"} }
 
 func testCreate(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	ctx := context.Background()
 	for _, tc := range []struct {
 		name    string
@@ -394,6 +410,8 @@ func testCreate(t *testing.T, coll *docstore.Collection, revField string) {
 }
 
 func testPut(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -485,6 +503,8 @@ func testPut(t *testing.T, coll *docstore.Collection, revField string) {
 }
 
 func testReplace(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -546,6 +566,7 @@ func checkNoRevisionField(t *testing.T, doc interface{}, revField string) {
 // Check that doc has a non-nil revision field.
 func checkHasRevisionField(t *testing.T, doc interface{}, revField string) {
 	t.Helper()
+
 	ddoc, err := driver.NewDocument(doc)
 	if err != nil {
 		t.Fatal(err)
@@ -556,6 +577,8 @@ func checkHasRevisionField(t *testing.T, doc interface{}, revField string) {
 }
 
 func testGet(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -663,6 +686,8 @@ func testGet(t *testing.T, coll *docstore.Collection, revField string) {
 }
 
 func testDelete(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	ctx := context.Background()
 	var rev interface{}
 
@@ -719,6 +744,8 @@ func testDelete(t *testing.T, coll *docstore.Collection, revField string) {
 }
 
 func testUpdate(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	ctx := context.Background()
 	for _, tc := range []struct {
 		name string
@@ -829,6 +856,8 @@ func testUpdate(t *testing.T, coll *docstore.Collection, revField string) {
 // - Writing a document with a revision field succeeds if the document hasn't changed.
 // - Writing a document with a revision field fails if the document has changed.
 func testRevisionField(t *testing.T, coll *docstore.Collection, revField string, write func(interface{}) error) {
+	t.Helper()
+
 	ctx := context.Background()
 	must := func(err error) {
 		t.Helper()
@@ -872,6 +901,8 @@ func testRevisionField(t *testing.T, coll *docstore.Collection, revField string,
 
 // Verify that the driver can serialize and deserialize revisions.
 func testSerializeRevision(t *testing.T, h Harness, coll *docstore.Collection) {
+	t.Helper()
+
 	ctx := context.Background()
 	doc := docmap{KeyField: "testSerializeRevision", "x": 1, docstore.DefaultRevisionField: nil}
 	if err := coll.Create(ctx, doc); err != nil {
@@ -896,6 +927,8 @@ func testSerializeRevision(t *testing.T, h Harness, coll *docstore.Collection) {
 
 // Test all Go integer types are supported, and they all come back as int64.
 func testData(t *testing.T, _ Harness, coll *docstore.Collection) {
+	t.Helper()
+
 	ctx := context.Background()
 	for _, test := range []struct {
 		in, want interface{}
@@ -944,6 +977,8 @@ var (
 // The decoding is "type-driven" because the decoder knows the expected type of the value
 // it is decoding--it is the type of a struct field.
 func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
+	t.Helper()
+
 	if ct == nil {
 		t.Skip("no CodecTester")
 	}
@@ -1076,6 +1111,8 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 // Since it's fine for different drivers to return different types in this case,
 // each test case compares against a list of possible values.
 func testBlindDecode(t *testing.T, ct CodecTester) {
+	t.Helper()
+
 	if ct == nil {
 		t.Skip("no CodecTester")
 	}
@@ -1084,6 +1121,8 @@ func testBlindDecode(t *testing.T, ct CodecTester) {
 }
 
 func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error), decode func(_, _ interface{}) error) {
+	t.Helper()
+
 	// Encode and decode expect a document, so use this struct to hold the values.
 	type S struct{ X interface{} }
 
@@ -1189,6 +1228,8 @@ type nativeMinimal struct {
 // testProto tests encoding/decoding of a document with protocol buffer
 // and pointer-to-protocol-buffer fields.
 func testProto(t *testing.T, _ Harness, coll *docstore.Collection) {
+	t.Helper()
+
 	ctx := context.Background()
 	type protoStruct struct {
 		Name             string `docstore:"name"`
@@ -1283,6 +1324,8 @@ var highScores = []*HighScore{
 }
 
 func addHighScores(t *testing.T, coll *docstore.Collection) {
+	t.Helper()
+
 	alist := coll.Actions()
 	for _, doc := range highScores {
 		d := *doc
@@ -1294,6 +1337,8 @@ func addHighScores(t *testing.T, coll *docstore.Collection) {
 }
 
 func testGetQueryKeyField(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	// Query the key field of a collection that has one.
 	// (The collection used for testGetQuery uses a key function rather than a key field.)
 	ctx := context.Background()
@@ -1336,6 +1381,8 @@ func sortByKeyField(d1, d2 docmap) bool { return d1[KeyField].(string) < d2[KeyF
 // TODO(shantuo): consider add this test to all action tests, like the AltRev
 // ones.
 func testActionsWithCompositeID(t *testing.T, _ Harness, coll *docstore.Collection) {
+	t.Helper()
+
 	ctx := context.Background()
 	// Create cannot generate an ID for the document when using IDFunc.
 	checkCode(t, coll.Create(ctx, &HighScore{}), gcerrors.InvalidArgument)
@@ -1366,6 +1413,8 @@ func testActionsWithCompositeID(t *testing.T, _ Harness, coll *docstore.Collecti
 }
 
 func testGetQuery(t *testing.T, _ Harness, coll *docstore.Collection) {
+	t.Helper()
+
 	ctx := context.Background()
 	addHighScores(t, coll)
 
@@ -1640,7 +1689,12 @@ func filterHighScores(hs []*HighScore, f func(*HighScore) bool) []*HighScore {
 }
 
 // ClearCollection delete all documents from this collection after test.
-func ClearCollection(fataler interface{ Fatalf(string, ...interface{}) }, coll *docstore.Collection) {
+func ClearCollection(fataler interface {
+	Helper()
+	Fatalf(string, ...interface{})
+}, coll *docstore.Collection) {
+	fataler.Helper()
+
 	ctx := context.Background()
 	iter := coll.Query().Get(ctx)
 	dels := coll.Actions()
@@ -1678,6 +1732,8 @@ func forEach(ctx context.Context, iter *docstore.DocumentIterator, create func()
 }
 
 func mustCollect(ctx context.Context, t *testing.T, iter *docstore.DocumentIterator) []docmap {
+	t.Helper()
+
 	var ms []docmap
 	newDocmap := func() interface{} { return docmap{} }
 	collect := func(m interface{}) error { ms = append(ms, m.(docmap)); return nil }
@@ -1688,6 +1744,8 @@ func mustCollect(ctx context.Context, t *testing.T, iter *docstore.DocumentItera
 }
 
 func mustCollectHighScores(ctx context.Context, t *testing.T, iter *docstore.DocumentIterator) []*HighScore {
+	t.Helper()
+
 	hs, err := collectHighScores(ctx, iter)
 	if err != nil {
 		t.Fatal(err)
@@ -1705,6 +1763,8 @@ func collectHighScores(ctx context.Context, iter *docstore.DocumentIterator) ([]
 }
 
 func testMultipleActions(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
 	ctx := context.Background()
 
 	must := func(err error) {
@@ -1820,6 +1880,8 @@ func testMultipleActions(t *testing.T, coll *docstore.Collection, revField strin
 }
 
 func testActionsOnStructNoRev(t *testing.T, _ Harness, coll *docstore.Collection) {
+	t.Helper()
+
 	type item struct {
 		Name string `docstore:"name"`
 		I    int
@@ -1850,6 +1912,8 @@ func testActionsOnStructNoRev(t *testing.T, _ Harness, coll *docstore.Collection
 }
 
 func testExampleInDoc(t *testing.T, _ Harness, coll *docstore.Collection) {
+	t.Helper()
+
 	type Name struct {
 		First, Last string
 	}
@@ -1917,8 +1981,12 @@ func testExampleInDoc(t *testing.T, _ Harness, coll *docstore.Collection) {
 
 // Verify that BeforeDo is invoked, and its as function behaves as expected.
 func testBeforeDo(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	ctx := context.Background()
 	withCollection(t, newHarness, SingleKey, func(t *testing.T, h Harness, coll *docstore.Collection) {
+		t.Helper()
+
 		var called bool
 		beforeDo := func(asFunc func(interface{}) bool) error {
 			called = true
@@ -1978,8 +2046,12 @@ func testBeforeDo(t *testing.T, newHarness HarnessMaker) {
 
 // Verify that BeforeQuery is invoked, and its as function behaves as expected.
 func testBeforeQuery(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
 	ctx := context.Background()
 	withCollection(t, newHarness, SingleKey, func(t *testing.T, h Harness, coll *docstore.Collection) {
+		t.Helper()
+
 		var called bool
 		beforeQuery := func(asFunc func(interface{}) bool) error {
 			called = true
@@ -2016,6 +2088,8 @@ func testBeforeQuery(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testAs(t *testing.T, coll *docstore.Collection, st AsTest) {
+	t.Helper()
+
 	// Verify Collection.As
 	if err := st.CollectionCheck(coll); err != nil {
 		t.Error(err)

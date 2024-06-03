@@ -102,6 +102,8 @@ func generateClientRequestToken(name string, data []byte) string {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	sess, _, done, _ := setup.NewAWSSession(context.Background(), t, region)
 
 	return &harness{
@@ -112,6 +114,8 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 }
 
 func newHarnessV2(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region)
 	return &harness{
 		useV2:    true,
@@ -349,13 +353,13 @@ func TestNoConnectionError(t *testing.T) {
 	prevAccessKey := os.Getenv("AWS_ACCESS_KEY")
 	prevSecretKey := os.Getenv("AWS_SECRET_KEY")
 	prevRegion := os.Getenv("AWS_REGION")
-	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
-	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
-	os.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_ACCESS_KEY", "myaccesskey")
+	t.Setenv("AWS_SECRET_KEY", "mysecretkey")
+	t.Setenv("AWS_REGION", "us-east-1")
 	defer func() {
-		os.Setenv("AWS_ACCESS_KEY", prevAccessKey)
-		os.Setenv("AWS_SECRET_KEY", prevSecretKey)
-		os.Setenv("AWS_REGION", prevRegion)
+		t.Setenv("AWS_ACCESS_KEY", prevAccessKey)
+		t.Setenv("AWS_SECRET_KEY", prevSecretKey)
+		t.Setenv("AWS_REGION", prevRegion)
 	}()
 	sess, err := session.NewSession()
 	if err != nil {

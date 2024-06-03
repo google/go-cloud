@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -70,6 +69,8 @@ func (h *harness) Mutable() bool {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	return &harness{
 		mockServer: newMockServer(),
 	}, nil
@@ -259,8 +260,8 @@ func TestWithAuth(t *testing.T) {
 	for _, test := range tests {
 		name := fmt.Sprintf("user=%s,pwd=%s", test.AuthUser, test.AuthPwd)
 		t.Run(name, func(t *testing.T) {
-			os.Setenv("HTTPVAR_AUTH_USERNAME", test.AuthUser)
-			os.Setenv("HTTPVAR_AUTH_PASSWORD", test.AuthPwd)
+			t.Setenv("HTTPVAR_AUTH_USERNAME", test.AuthUser)
+			t.Setenv("HTTPVAR_AUTH_PASSWORD", test.AuthPwd)
 
 			v, err := runtimevar.OpenVariable(ctx, testURL)
 			if err != nil {

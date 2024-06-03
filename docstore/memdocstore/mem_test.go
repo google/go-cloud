@@ -29,6 +29,8 @@ import (
 type harness struct{}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	return &harness{}, nil
 }
 

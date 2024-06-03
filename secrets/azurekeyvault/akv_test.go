@@ -98,6 +98,8 @@ func (*dummyToken) GetToken(ctx context.Context, opts policy.TokenRequestOptions
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	httpClient, done := setup.NewAzureKeyVaultTestClient(ctx, t)
 	clientMaker := func(keyVaultURI string) (*azkeys.Client, error) {
 		var creds azcore.TokenCredential

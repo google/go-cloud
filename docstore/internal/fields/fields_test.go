@@ -436,6 +436,8 @@ func setFields(fields []Field, dst, src interface{}) {
 }
 
 func jsonRoundTrip(t *testing.T, in, out interface{}) {
+	t.Helper()
+
 	bytes, err := json.Marshal(in)
 	if err != nil {
 		t.Fatal(err)

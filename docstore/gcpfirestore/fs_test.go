@@ -46,6 +46,8 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "docstore")
 	client, err := vkit.NewClient(ctx, option.WithGRPCConn(conn))
 	if err != nil {

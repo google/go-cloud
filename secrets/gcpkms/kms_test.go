@@ -57,6 +57,8 @@ func (h *harness) Close() {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	t.Helper()
+
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "secrets")
 	client, err := cloudkms.NewKeyManagementClient(ctx, option.WithGRPCConn(conn))
 	if err != nil {

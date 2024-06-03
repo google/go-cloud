@@ -185,6 +185,8 @@ func TestReceivePerformance(t *testing.T) {
 }
 
 func runBenchmark(t *testing.T, description string, numGoRoutines int, receiveProfile func(bool, int) (int, time.Duration), processProfile func(bool) time.Duration) {
+	t.Helper()
+
 	msgs := make([]*driver.Message, maxBatchSize)
 	for i := range msgs {
 		msgs[i] = &driver.Message{}
