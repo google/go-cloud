@@ -568,7 +568,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	attrs := driver.ReaderAttributes{
 		ContentType: to.String(blobDownloadResponse.ContentType),
-		Size:        getSize(*blobDownloadResponse.ContentLength, to.String(blobDownloadResponse.ContentRange)),
+		Size:        getSize(blobDownloadResponse.ContentLength, to.String(blobDownloadResponse.ContentRange)),
 		ModTime:     *blobDownloadResponse.LastModified,
 	}
 	var body io.ReadCloser
@@ -584,11 +584,14 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}, nil
 }
 
-func getSize(contentLength int64, contentRange string) int64 {
+func getSize(contentLength *int64, contentRange string) int64 {
+	var size int64
 	// Default size to ContentLength, but that's incorrect for partial-length reads,
 	// where ContentLength refers to the size of the returned Body, not the entire
 	// size of the blob. ContentRange has the full size.
-	size := contentLength
+	if contentLength != nil {
+		size = *contentLength
+	}
 	if contentRange != "" {
 		// Sample: bytes 10-14/27 (where 27 is the full size).
 		parts := strings.Split(contentRange, "/")
