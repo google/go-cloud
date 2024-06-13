@@ -16,11 +16,13 @@ package blob
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
 	"time"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 )
 
@@ -203,6 +205,13 @@ func (b *Bucket) Open(path string) (fs.File, error) {
 	// It's a file; open it and return a wrapper.
 	r, err := b.NewReader(ctx, path, readerOpts)
 	if err != nil {
+		code := gcerrors.Code(err)
+		switch code {
+		case gcerrors.NotFound:
+			err = fmt.Errorf("%w: %w", err, fs.ErrNotExist)
+		case gcerrors.PermissionDenied:
+			err = fmt.Errorf("%w: %w", err, fs.ErrPermission)
+		}
 		return nil, &fs.PathError{Op: "open", Path: path, Err: err}
 	}
 	return &iofsOpenFile{r, filepath.Base(path)}, nil
