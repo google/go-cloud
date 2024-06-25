@@ -23,6 +23,7 @@ import (
 	"errors"
 	"reflect"
 	"sync"
+	"sync/atomic"
 )
 
 // Split determines how to split n (representing n items) into batches based on
@@ -70,7 +71,7 @@ type Batcher struct {
 
 	mu        sync.Mutex
 	pending   []waiter // items waiting to be handled
-	nHandlers int      // number of currently running handler goroutines
+	nHandlers int32    // number of currently running handler goroutines
 	shutdown  bool
 }
 
@@ -197,21 +198,27 @@ func (b *Batcher) AddNoWait(item interface{}) <-chan error {
 
 	// Add the item to the pending list.
 	b.pending = append(b.pending, waiter{item, c})
-	if b.nHandlers < b.opts.MaxHandlers {
+	if atomic.LoadInt32(&b.nHandlers) < int32(b.opts.MaxHandlers) {
 		// If we can start a handler, do so with the item just added and any others that are pending.
 		batch := b.nextBatch()
-		if batch != nil {
-			b.wg.Add(1)
-			go func() {
-				b.callHandler(batch)
-				b.wg.Done()
-			}()
-			b.nHandlers++
-		}
+		b.handleBatch(batch)
 	}
 	// If we can't start a handler, then one of the currently running handlers will
 	// take our item.
 	return c
+}
+
+func (b *Batcher) handleBatch(batch []waiter) {
+	if batch == nil || len(batch) == 0 {
+		return
+	}
+
+	b.wg.Add(1)
+	go func() {
+		b.callHandler(batch)
+		b.wg.Done()
+	}()
+	atomic.AddInt32(&b.nHandlers, 1)
 }
 
 // nextBatch returns the batch to process, and updates b.pending.
@@ -219,7 +226,15 @@ func (b *Batcher) AddNoWait(item interface{}) <-chan error {
 // b.mu must be held.
 func (b *Batcher) nextBatch() []waiter {
 	if len(b.pending) < b.opts.MinBatchSize {
-		return nil
+		// We handle minimum batch sizes depending on specific
+		// situations.
+		// XXX: If we allow max batch lifetimes, handle that here.
+		if b.shutdown == false {
+			// If we're not shutting down, respect minimums.  If we're
+			// shutting down, though, we ignore minimums to flush the
+			// entire batch.
+			return nil
+		}
 	}
 
 	if b.opts.MaxBatchByteSize == 0 && (b.opts.MaxBatchSize == 0 || len(b.pending) <= b.opts.MaxBatchSize) {
@@ -270,7 +285,7 @@ func (b *Batcher) callHandler(batch []waiter) {
 		// always get to run.
 		batch = b.nextBatch()
 		if batch == nil {
-			b.nHandlers--
+			atomic.AddInt32(&b.nHandlers, -1)
 		}
 		b.mu.Unlock()
 	}
@@ -283,5 +298,13 @@ func (b *Batcher) Shutdown() {
 	b.mu.Lock()
 	b.shutdown = true
 	b.mu.Unlock()
+
+	// On shutdown, ensure that we attempt to flush any pending items
+	// if there's a minimum batch size.
+	if atomic.LoadInt32(&b.nHandlers) < int32(b.opts.MaxHandlers) {
+		batch := b.nextBatch()
+		b.handleBatch(batch)
+	}
+
 	b.wg.Wait()
 }
