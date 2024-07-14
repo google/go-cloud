@@ -53,6 +53,7 @@ func runLocalDB(containerName, guestbookDir string) error {
 		dockerArgs = append(dockerArgs, "--name", containerName)
 	}
 	dockerArgs = append(dockerArgs,
+		"--platform", "linux/amd64",
 		"--env", "MYSQL_DATABASE=guestbook",
 		"--env", "MYSQL_ROOT_PASSWORD=password",
 		"--detach",
