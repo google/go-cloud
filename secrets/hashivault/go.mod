@@ -18,7 +18,7 @@ go 1.21
 
 require (
 	github.com/hashicorp/vault/api v1.13.0
-	gocloud.dev v0.37.0
+	gocloud.dev v0.38.0
 )
 
 require (
@@ -85,5 +85,3 @@ require (
 	google.golang.org/grpc v1.63.2 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )
-
-replace gocloud.dev => ../../
