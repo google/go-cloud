@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -284,16 +285,16 @@ func TestCancelTwoReceives(t *testing.T) {
 type secondReceiveBlockedDriverSub struct {
 	driver.Subscription
 	waitDuration   time.Duration
-	receiveCounter int
+	receiveCounter atomic.Uint64
 }
 
 func (s *secondReceiveBlockedDriverSub) ReceiveBatch(_ context.Context, _ int) ([]*driver.Message, error) {
-	s.receiveCounter++
-	if s.receiveCounter > 1 {
+	s.receiveCounter.Add(1)
+	if s.receiveCounter.Load() > 1 {
 		// wait after 1st request for the specified duration before returning the batch result
 		<-time.After(s.waitDuration)
 	}
-	msg := &driver.Message{Body: []byte(fmt.Sprintf("message #%d", s.receiveCounter))}
+	msg := &driver.Message{Body: []byte(fmt.Sprintf("message #%d", s.receiveCounter.Load()))}
 	return []*driver.Message{msg}, nil
 }
 func (*secondReceiveBlockedDriverSub) CanNack() bool          { return false }
