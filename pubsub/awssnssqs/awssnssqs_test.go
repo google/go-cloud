@@ -43,7 +43,7 @@ import (
 
 const (
 	region        = "us-east-2"
-	accountNumber = "462380225722"
+	accountNumber = "456752665576"
 )
 
 // We run conformance tests against multiple kinds of topics; this enum
@@ -491,7 +491,7 @@ func (t awsAsTest) TopicErrorCheck(topic *pubsub.Topic, err error) error {
 		}
 		switch t.topicKind {
 		case topicKindSNS, topicKindSNSRaw:
-			if got, want := e.ErrorCode(), sns.ErrCodeNotFoundException; got != want {
+			if got, want := e.ErrorCode(), sns.ErrCodeNotFoundException; want != got {
 				return fmt.Errorf("got %q, want %q", got, want)
 			}
 		case topicKindSQS:
@@ -509,7 +509,7 @@ func (t awsAsTest) TopicErrorCheck(topic *pubsub.Topic, err error) error {
 	}
 	switch t.topicKind {
 	case topicKindSNS, topicKindSNSRaw:
-		if got, want := ae.Code(), sns.ErrCodeNotFoundException; got != want {
+		if got, want := ae.Code(), sns.ErrCodeNotFoundException; want != got {
 			return fmt.Errorf("got %q, want %q", got, want)
 		}
 	case topicKindSQS:
