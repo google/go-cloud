@@ -38,7 +38,7 @@ func (c *Collection) Query() *Query {
 
 // Where expresses a condition on the query.
 // Valid ops are: "=", ">", "<", ">=", "<=, "in", "not-in".
-// Valid values are strings, integers, floating-point numbers, and time.Time values.
+// Valid values are strings, integers, floating-point numbers, time.Time and boolean (only for "=", "in" and "not-in") values.
 func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 	if q.err != nil {
 		return q
@@ -66,13 +66,23 @@ func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 type valueValidator func(interface{}) bool
 
 var validOp = map[string]valueValidator{
-	"=":      validFilterValue,
+	"=":      validEqualValue,
 	">":      validFilterValue,
 	"<":      validFilterValue,
 	">=":     validFilterValue,
 	"<=":     validFilterValue,
 	"in":     validFilterSlice,
 	"not-in": validFilterSlice,
+}
+
+func validEqualValue(v interface{}) bool {
+	if v == nil {
+		return false
+	}
+	if reflect.TypeOf(v).Kind() == reflect.Bool {
+		return true
+	}
+	return validFilterValue(v)
 }
 
 func validFilterValue(v interface{}) bool {
@@ -102,7 +112,7 @@ func validFilterSlice(v interface{}) bool {
 	}
 	vv := reflect.ValueOf(v)
 	for i := 0; i < vv.Len(); i++ {
-		if !validFilterValue(vv.Index(i).Interface()) {
+		if !validEqualValue(vv.Index(i).Interface()) {
 			return false
 		}
 	}

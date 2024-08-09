@@ -1272,6 +1272,7 @@ type HighScore struct {
 	Player           string
 	Score            int
 	Time             time.Time
+	WithGlitch       bool
 	DocstoreRevision interface{}
 }
 
@@ -1316,14 +1317,14 @@ const (
 )
 
 var highScores = []*HighScore{
-	{game1, "pat", 49, date(3, 13), nil},
-	{game1, "mel", 60, date(4, 10), nil},
-	{game1, "andy", 81, date(2, 1), nil},
-	{game1, "fran", 33, date(3, 19), nil},
-	{game2, "pat", 120, date(4, 1), nil},
-	{game2, "billie", 111, date(4, 10), nil},
-	{game2, "mel", 190, date(4, 18), nil},
-	{game2, "fran", 33, date(3, 20), nil},
+	{game1, "pat", 49, date(3, 13), false, nil},
+	{game1, "mel", 60, date(4, 10), false, nil},
+	{game1, "andy", 81, date(2, 1), false, nil},
+	{game1, "fran", 33, date(3, 19), false, nil},
+	{game2, "pat", 120, date(4, 1), true, nil},
+	{game2, "billie", 111, date(4, 10), false, nil},
+	{game2, "mel", 190, date(4, 18), true, nil},
+	{game2, "fran", 33, date(3, 20), false, nil},
 }
 
 func addHighScores(t *testing.T, coll *docstore.Collection) {
@@ -1486,6 +1487,21 @@ func testGetQuery(t *testing.T, _ Harness, coll *docstore.Collection) {
 			want: func(h *HighScore) bool { return h.Player != "pat" && h.Player != "billie" },
 		},
 		{
+			name: "WithGlitch",
+			q:    coll.Query().Where("WithGlitch", "=", true),
+			want: func(h *HighScore) bool { return h.WithGlitch },
+		},
+		{
+			name: "WithGlitchIn",
+			q:    coll.Query().Where("WithGlitch", "in", []bool{true}),
+			want: func(h *HighScore) bool { return h.WithGlitch },
+		},
+		{
+			name: "WithGlitchNotIn",
+			q:    coll.Query().Where("WithGlitch", "not-in", []bool{true}),
+			want: func(h *HighScore) bool { return !h.WithGlitch },
+		},
+		{
 			name:   "AllByPlayerAsc",
 			q:      coll.Query().OrderBy("Player", docstore.Ascending),
 			want:   func(h *HighScore) bool { return true },
@@ -1522,13 +1538,14 @@ func testGetQuery(t *testing.T, _ Harness, coll *docstore.Collection) {
 			want: func(h *HighScore) bool {
 				h.Score = 0
 				h.Time = time.Time{}
+				h.WithGlitch = false
 				return true
 			},
 		},
 		{
 			name:   "AllWithScore",
 			q:      coll.Query(),
-			fields: []docstore.FieldPath{"Game", "Player", "Score", docstore.FieldPath(docstore.DefaultRevisionField)},
+			fields: []docstore.FieldPath{"Game", "Player", "Score", "WithGlitch", docstore.FieldPath(docstore.DefaultRevisionField)},
 			want: func(h *HighScore) bool {
 				h.Time = time.Time{}
 				return true
@@ -2118,7 +2135,7 @@ func testAs(t *testing.T, coll *docstore.Collection, st AsTest) {
 	}
 
 	// ErrorCheck
-	doc := &HighScore{game3, "steph", 24, date(4, 25), nil}
+	doc := &HighScore{game3, "steph", 24, date(4, 25), false, nil}
 	if err := coll.Create(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
