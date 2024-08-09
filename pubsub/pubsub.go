@@ -66,6 +66,7 @@ package pubsub // import "gocloud.dev/pubsub"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -225,11 +226,6 @@ type Topic struct {
 	cancel func()
 }
 
-type msgErrChan struct {
-	msg     *Message
-	errChan chan error
-}
-
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
@@ -276,7 +272,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	defer func() { t.tracer.End(ctx, err) }()
 
 	t.mu.Lock()
-	if t.err == errTopicShutdown {
+	if errors.Is(t.err, errTopicShutdown) {
 		defer t.mu.Unlock()
 		return t.err
 	}
@@ -319,7 +315,6 @@ var NewTopic = newTopic
 
 // newSendBatcher creates a batcher for topics, for use with NewTopic.
 func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batcher.Options) *batcher.Batcher {
-	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		dms := items.([]*driver.Message)
 		err := retry.Call(ctx, gax.Backoff{}, dt.IsRetryable, func() (err error) {
@@ -486,10 +481,10 @@ func (s *Subscription) updateBatchSize() int {
 		// We first combine the previous value and the new value, with weighting
 		// based on decay, and then cap the growth/shrinkage.
 		newBatchSize := s.runningBatchSize*(1-decay) + idealBatchSize*decay
-		if max := s.runningBatchSize * maxGrowthFactor; newBatchSize > max {
-			s.runningBatchSize = max
-		} else if min := s.runningBatchSize * maxShrinkFactor; newBatchSize < min {
-			s.runningBatchSize = min
+		if maxSize := s.runningBatchSize * maxGrowthFactor; newBatchSize > maxSize {
+			s.runningBatchSize = maxSize
+		} else if minSize := s.runningBatchSize * maxShrinkFactor; newBatchSize < minSize {
+			s.runningBatchSize = minSize
 		} else {
 			s.runningBatchSize = newBatchSize
 		}
@@ -699,7 +694,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
-	if s.err == errSubscriptionShutdown {
+	if errors.Is(s.err, errSubscriptionShutdown) {
 		// Already Shutdown.
 		defer s.mu.Unlock()
 		return s.err
@@ -774,7 +769,6 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 }
 
 func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
-	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		var acks, nacks []driver.AckID
 		for _, a := range items.([]*driver.AckInfo) {
