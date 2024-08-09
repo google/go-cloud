@@ -284,15 +284,14 @@ func TestCancelTwoReceives(t *testing.T) {
 
 type secondReceiveBlockedDriverSub struct {
 	driver.Subscription
-	waitDuration   time.Duration
 	receiveCounter atomic.Uint64
 }
 
-func (s *secondReceiveBlockedDriverSub) ReceiveBatch(_ context.Context, _ int) ([]*driver.Message, error) {
+func (s *secondReceiveBlockedDriverSub) ReceiveBatch(ctx context.Context, _ int) ([]*driver.Message, error) {
 	s.receiveCounter.Add(1)
 	if s.receiveCounter.Load() > 1 {
-		// wait after 1st request for the specified duration before returning the batch result
-		<-time.After(s.waitDuration)
+		// wait after 1st request for the context to finish before returning the batch result
+		<-ctx.Done()
 	}
 	msg := &driver.Message{Body: []byte(fmt.Sprintf("message #%d", s.receiveCounter.Load()))}
 	return []*driver.Message{msg}, nil
@@ -304,26 +303,19 @@ func (*secondReceiveBlockedDriverSub) Close() error           { return nil }
 func TestIndependentBatchReturn(t *testing.T) {
 	// We want to test the scenario when multiple batch requests are sent, as long as one of them succeeds, it should
 	// not block the Subscription.Receive result
-	receiveWaitDuration := 200 * time.Millisecond
 	s := NewSubscription(
-		&secondReceiveBlockedDriverSub{waitDuration: receiveWaitDuration},
+		&secondReceiveBlockedDriverSub{},
 		&batcher.Options{MaxBatchSize: 1, MaxHandlers: 2}, // force 2 batches, by allowing 2 handlers and 1 msg per batch
 		nil,
 	)
 	// set the false calculated subscription batch size to force 2 batches to be called
 	s.runningBatchSize = 2
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
-	defer cancel()
+	ctx := context.Background()
 	defer s.Shutdown(ctx)
-	start := time.Now()
 	_, err := s.Receive(ctx)
 	if err != nil {
 		t.Fatal("Receive should not fail", err)
 		return
-	}
-	receiveDuration := time.Since(start)
-	if receiveDuration > receiveWaitDuration {
-		t.Error("Receive should not be blocked by hanging batch request")
 	}
 }
 
