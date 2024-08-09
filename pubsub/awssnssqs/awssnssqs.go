@@ -1010,8 +1010,8 @@ func errorCode(err error) gcerrors.ErrorCode {
 	var ae smithy.APIError
 	if errors.As(err, &ae) {
 		code = ae.ErrorCode()
-	} else if ae, ok := err.(awserr.Error); ok {
-		code = ae.Code()
+	} else if awsErr, ok := err.(awserr.Error); ok {
+		code = awsErr.Code()
 	} else {
 		return gcerrors.Unknown
 	}
@@ -1434,7 +1434,7 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 		}
 		numFailed++
 	}
-	if numFailed > 0 {
+	if numFailed > 0 && firstFail != nil {
 		return awserr.New(aws.StringValue(firstFail.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(firstFail.Message)), nil)
 	}
 	return nil
