@@ -42,6 +42,7 @@ aws dynamodb create-table \
         AttributeName=Player,AttributeType=S \
         AttributeName=Score,AttributeType=N \
         AttributeName=Time,AttributeType=S \
+        AttributeName=WithGlitch,AttributeType=BOOL \
   --key-schema AttributeName=Game,KeyType=HASH AttributeName=Player,KeyType=RANGE \
   --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
   --local-secondary-indexes \
