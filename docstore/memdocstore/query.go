@@ -149,6 +149,12 @@ func compare(x1, x2 interface{}) (int, bool) {
 			return driver.CompareTimes(t1, t2), true
 		}
 	}
+	if v1.Kind() == reflect.Bool && v2.Kind() == reflect.Bool {
+		if v1.Bool() == v2.Bool() {
+			return 0, true
+		}
+		return -1, true
+	}
 	return 0, false
 }
 
