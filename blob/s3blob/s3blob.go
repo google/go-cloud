@@ -251,6 +251,8 @@ func openBucket(ctx context.Context, useV2 bool, sess client.ConfigProvider, cli
 // AWS buckets are bound to a region; sess must have been created using an
 // aws.Config with Region set to the right region for bucketName.
 // See the package documentation for an example.
+//
+// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenBucketV2.
 func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, false, sess, nil, bucketName, opts)
 	if err != nil {

@@ -179,6 +179,8 @@ type Options struct {
 // Parameter Store returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
+//
+// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenVariableV2.
 func OpenVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(false, sess, nil, name, decoder, opts)), nil
 }

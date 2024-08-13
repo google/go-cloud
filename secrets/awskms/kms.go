@@ -208,6 +208,8 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 // https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 // for more details.
 // See the package documentation for an example.
+//
+// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenKeeperV2.
 func OpenKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	if opts == nil {
 		opts = &KeeperOptions{}

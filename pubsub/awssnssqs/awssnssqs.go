@@ -373,12 +373,16 @@ type TopicOptions struct {
 }
 
 // OpenTopic is a shortcut for OpenSNSTopic, provided for backwards compatibility.
+//
+// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSNSTopicV2.
 func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
 	return OpenSNSTopic(ctx, sess, topicARN, opts)
 }
 
 // OpenSNSTopic opens a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
+//
+// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSNSTopicV2.
 func OpenSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
 	if opts == nil {
 		opts = &TopicOptions{}
@@ -747,6 +751,8 @@ type sqsTopic struct {
 
 // OpenSQSTopic opens a topic that sends to the SQS topic with the given SQS
 // queue URL.
+//
+// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSQSTopicV2.
 func OpenSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) *pubsub.Topic {
 	if opts == nil {
 		opts = &TopicOptions{}
@@ -1110,6 +1116,8 @@ type SubscriptionOptions struct {
 // OpenSubscription opens a subscription based on AWS SQS for the given SQS
 // queue URL. The queue is assumed to be subscribed to some SNS topic, though
 // there is no check for this.
+//
+// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSubscriptionV2.
 func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
 	if opts == nil {
 		opts = &SubscriptionOptions{}
