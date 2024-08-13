@@ -24,13 +24,10 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         # When updating this, make sure to also update the
         # latest_go_version variable in internal/testing/runchecks.sh.
-        # Restore previous version when go 1.23 is out; go 1.22
-        # purposefully broke some backwards compatibility that breaks
-        # the golden tests, so I've disabled them for now.
-        go-version: [1.22.x]
-          #include:
-          #- go-version: 1.21.x
-          #os: ubuntu-latest
+        go-version: [1.23.x]
+        include:
+          - go-version: 1.22.x
+            os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
     steps:
