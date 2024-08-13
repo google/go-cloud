@@ -108,14 +108,17 @@ func TestUseV2(t *testing.T) {
 		{
 			name:  "No overrides",
 			query: url.Values{},
+			want:  true,
 		},
 		{
 			name:  "unused param",
 			query: url.Values{"foo": {"bar"}},
+			want:  true,
 		},
 		{
 			name:  "force v1",
 			query: url.Values{"awssdk": {"v1"}},
+			want:  false,
 		},
 		{
 			name:  "force v1 cap",

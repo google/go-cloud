@@ -469,9 +469,9 @@ func TestOpenBucketFromURL(t *testing.T) {
 		// OK, setting region.
 		{"s3://mybucket?region=us-west1", false},
 		// OK, setting profile.
-		{"s3://mybucket?profile=main", false},
+		{"s3://mybucket?awssdk=v1&profile=main", false},
 		// OK, setting both profile and region.
-		{"s3://mybucket?profile=main&region=us-west-1", false},
+		{"s3://mybucket?awssdk=v1&profile=main&region=us-west-1", false},
 		// OK, use V2.
 		{"s3://mybucket?awssdk=v2", false},
 		// OK, use KMS Server Side Encryption
