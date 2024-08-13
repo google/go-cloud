@@ -148,15 +148,14 @@ func NewSessionFromURLParams(q url.Values) (*session.Session, url.Values, error)
 //
 // "awssdk=v1" will force V1.
 // "awssdk=v2" will force V2.
-// No "awssdk" parameter (or any other value) will return the default, currently V1.
-// Note that the default may change in the future.
+// No "awssdk" parameter (or any other value) will return the default, currently V2.
 func UseV2(q url.Values) bool {
 	if values, ok := q["awssdk"]; ok {
-		if values[0] == "v2" || values[0] == "V2" {
-			return true
+		if values[0] == "v1" || values[0] == "V1" {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 // NewDefaultV2Config returns a aws.Config for AWS SDK v2, using the default options.
