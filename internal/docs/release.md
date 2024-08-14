@@ -40,15 +40,13 @@ To do a release:
 
 -   Go to [Releases](https://github.com/google/go-cloud/releases). Click `Draft
     a new release`, enter your release name, select your tag from the dropdown,
-    and enter release notes by reviewing the commits since the last release (use
-    the [Compare](https://github.com/google/go-cloud/compare/v0.1.1...v0.2.0)
-    page for this).
+    and enter release notes by clicking "Generate Release Notes".
 
-    -   Put breaking changes in a separate section. They should be marked with a
+    -   Add a section for breaking changes, if any. They should be marked with
         `BREAKING_CHANGE` in the PR title; however, that's not enforced so do
         your best to look for them.
-    -   List highlights in the form: `**<component>**: <description of change,
-        past tense>`. For example, `**blob**: Added feature foo.`.
+    -   Update the list of changes to remove anything that's not interesting
+        (e.g., updating dependencies, prerelease, minor cleanups, etc.).
 
 -   Send an email to
     [go-cloud@googlegroups.com](https://groups.google.com/forum/#!forum/go-cloud)
