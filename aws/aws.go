@@ -188,9 +188,10 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 			customResolver := awsv2.EndpointResolverWithOptionsFunc(
 				func(service, region string, options ...interface{}) (awsv2.Endpoint, error) {
 					return awsv2.Endpoint{
-						PartitionID:   "aws",
-						URL:           value,
-						SigningRegion: region,
+						PartitionID:       "aws",
+						URL:               value,
+						SigningRegion:     region,
+						HostnameImmutable: true,
 					}, nil
 				})
 			opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
