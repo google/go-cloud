@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7eRgRKK7Fb8AAA",
+  "Initial": "AQAAAA7eVxLWFefVsQAA",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -44,10 +44,10 @@
   },
   "Entries": [
     {
-      "ID": "9410b2d0f3d85874",
+      "ID": "5a2383f395382a31",
       "Request": {
         "Method": "PUT",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest?x-id=CopyObject",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-copying-dest?x-id=CopyObject",
         "Header": {
           "Accept-Encoding": [
             "identity"
@@ -68,7 +68,7 @@
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           ],
           "X-Amz-Copy-Source": [
-            "go-cloud-testing%2Fdoes-not-exist"
+            "go-cloud-testing-2%2Fdoes-not-exist"
           ],
           "X-Amz-Date": [
             "CLEARED"
@@ -89,19 +89,19 @@
             "application/xml"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:11:53 GMT"
+            "Tue, 20 Aug 2024 22:42:29 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "/YbzwHw8AQJklL6OxfUpSZ0iK+ZpB+QeE5izPuSHH+2O0Ohopp1rrcCmOrAsXC9I1V5eWKEp67w="
+            "UNgz7sFF460P0xyQa/BW2BJhkRZrC9exBqx5/NMqi50k2NVlOlweqSTmWScYjgyIUEBJ5usR0jU="
           ],
           "X-Amz-Request-Id": [
-            "02E3JARBWBYKD19K"
+            "NK2RE1KM5GZDFT2P"
           ]
         },
-        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+MDJFM0pBUkJXQllLRDE5SzwvUmVxdWVzdElkPjxIb3N0SWQ+L1liendIdzhBUUprbEw2T3hmVXBTWjBpSytacEIrUWVFNWl6UHVTSEgrMk8wT2hvcHAxcnJjQ21PckFzWEM5STFWNWVXS0VwNjd3PTwvSG9zdElkPjwvRXJyb3I+"
+        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+TksyUkUxS001R1pERlQyUDwvUmVxdWVzdElkPjxIb3N0SWQ+VU5nejdzRkY0NjBQMHh5UWEvQlcyQkpoa1JackM5ZXhCcXg1L05NcWk1MGsyTlZsT2x3ZXFTVG1XU2NZamd5SVVFQko1dXNSMGpVPTwvSG9zdElkPjwvRXJyb3I+"
       }
     }
   ]

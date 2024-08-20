@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7eRgQ1FPN0ewAA",
+  "Initial": "AQAAAA7eVxLBLdZdLQAA",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": null,
@@ -41,10 +41,10 @@
   },
   "Entries": [
     {
-      "ID": "4b59df9eac4f0d49",
+      "ID": "85ed80c77e9563eb",
       "Request": {
         "Method": "PUT",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-copying-dest",
         "Header": {
           "Accept-Encoding": [
             "gzip"
@@ -59,7 +59,7 @@
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           ],
           "X-Amz-Copy-Source": [
-            "go-cloud-testing%2Fdoes-not-exist"
+            "go-cloud-testing-2%2Fdoes-not-exist"
           ],
           "X-Amz-Date": [
             "CLEARED"
@@ -80,19 +80,19 @@
             "application/xml"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:11:33 GMT"
+            "Tue, 20 Aug 2024 22:42:09 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "YRAVZNRjzIXd5ZZNiz5V5Q8WOMlMA9aWKoOz9qufKlMCnKriU7IHoq5egOar6HXJfCo6uQmZMSw="
+            "q70Xtklh/CJaq91CDaUqIb+c8ekFpIlFd81uSPIczUyfzimAXMtICDnUeMcaR9bO9M3yvbwltDk="
           ],
           "X-Amz-Request-Id": [
-            "5HBADWTBQS40S30K"
+            "VGH4WVQQVWPE8J7F"
           ]
         },
-        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+NUhCQURXVEJRUzQwUzMwSzwvUmVxdWVzdElkPjxIb3N0SWQ+WVJBVlpOUmp6SVhkNVpaTml6NVY1UThXT01sTUE5YVdLb096OXF1ZktsTUNuS3JpVTdJSG9xNWVnT2FyNkhYSmZDbzZ1UW1aTVN3PTwvSG9zdElkPjwvRXJyb3I+"
+        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+VkdINFdWUVFWV1BFOEo3RjwvUmVxdWVzdElkPjxIb3N0SWQ+cTcwWHRrbGgvQ0phcTkxQ0RhVXFJYitjOGVrRnBJbEZkODF1U1BJY3pVeWZ6aW1BWE10SUNEblVlTWNhUjliTzlNM3l2YndsdERrPTwvSG9zdElkPjwvRXJyb3I+"
       }
     }
   ]

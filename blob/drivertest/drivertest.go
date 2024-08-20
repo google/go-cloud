@@ -2223,6 +2223,8 @@ func testUploadDownload(t *testing.T, newHarness HarnessMaker) {
 
 	const key = "blob-for-upload-download"
 	const contents = "up and down"
+	contentsMD5 := md5.Sum([]byte(contents))
+
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -2251,6 +2253,12 @@ func testUploadDownload(t *testing.T, newHarness HarnessMaker) {
 	if bb.String() != contents {
 		t.Errorf("read data mismatch for key %s", key)
 	}
+
+	// Write another blob using Upload and ContentMD5 checking (this disables the Upload optimization).
+	if err := b.Upload(ctx, key, strings.NewReader(contents), &blob.WriterOptions{ContentMD5: contentsMD5[:], ContentType: "text"}); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Delete(ctx, key)
 }
 
 // testKeys tests a variety of weird keys.

@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7eRgRfM72pCQAA",
+  "Initial": "AQAAAA7eVxLrJ4L0hAAA",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -44,10 +44,10 @@
   },
   "Entries": [
     {
-      "ID": "7742012ce6918471",
+      "ID": "70a4758fe7f2fee8",
       "Request": {
         "Method": "PUT",
-        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest?x-id=CopyObject",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-copying-dest?x-id=CopyObject",
         "Header": {
           "Accept-Encoding": [
             "identity"
@@ -68,7 +68,7 @@
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           ],
           "X-Amz-Copy-Source": [
-            "go-cloud-testing%2Fdoes-not-exist"
+            "go-cloud-testing-2%2Fdoes-not-exist"
           ],
           "X-Amz-Date": [
             "CLEARED"
@@ -89,19 +89,19 @@
             "application/xml"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:12:15 GMT"
+            "Tue, 20 Aug 2024 22:42:51 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "lU6+E5S+XmR+JtVrgQomk3Wiku8fNtv1xrPJQ2lbiGLqfvA8wcXdgMeK51+oMBvll5b2x4Kg2UpiTEEyag7SDA=="
+            "iakDqfwNA3H44nfd5TEV2UVDthaNGqVGkV/hH/YG44Bf7eRMMo6SvRZx/Y/X0Z7oeIgD2yNprmPe5j+C7Q3qSQ=="
           ],
           "X-Amz-Request-Id": [
-            "W7B6MKT3BJV3A7J4"
+            "XQVCQTG3ZJZGTTE5"
           ]
         },
-        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+VzdCNk1LVDNCSlYzQTdKNDwvUmVxdWVzdElkPjxIb3N0SWQ+bFU2K0U1UytYbVIrSnRWcmdRb21rM1dpa3U4Zk50djF4clBKUTJsYmlHTHFmdkE4d2NYZGdNZUs1MStvTUJ2bGw1YjJ4NEtnMlVwaVRFRXlhZzdTREE9PTwvSG9zdElkPjwvRXJyb3I+"
+        "Body": "PEVycm9yPjxDb2RlPk5vU3VjaEtleTwvQ29kZT48TWVzc2FnZT5UaGUgc3BlY2lmaWVkIGtleSBkb2VzIG5vdCBleGlzdC48L01lc3NhZ2U+PEtleT5kb2VzLW5vdC1leGlzdDwvS2V5PjxSZXF1ZXN0SWQ+WFFWQ1FURzNaSlpHVFRFNTwvUmVxdWVzdElkPjxIb3N0SWQ+aWFrRHFmd05BM0g0NG5mZDVURVYyVVZEdGhhTkdxVkdrVi9oSC9ZRzQ0QmY3ZVJNTW82U3ZSWngvWS9YMFo3b2VJZ0QyeU5wcm1QZTVqK0M3UTNxU1E9PTwvSG9zdElkPjwvRXJyb3I+"
       }
     }
   ]

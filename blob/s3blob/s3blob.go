@@ -971,9 +971,6 @@ func escapeKey(key string) string {
 		// For "../", escape the trailing slash.
 		case i > 1 && c == '/' && r[i-1] == '.' && r[i-2] == '.':
 			return true
-		// Escape \.
-		case c == '\\':
-			return true
 		}
 		return false
 	})
