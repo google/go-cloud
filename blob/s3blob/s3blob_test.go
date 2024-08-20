@@ -48,7 +48,7 @@ import (
 //
 //	name from the Terraform output instead (saving a copy of it for replay).
 const (
-	bucketName = "go-cloud-testing"
+	bucketName = "go-cloud-testing-2"
 	region     = "us-west-1"
 )
 

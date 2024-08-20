@@ -514,11 +514,16 @@ func (w *Writer) uploadAndClose(r io.Reader) (err error) {
 		// Shouldn't happen.
 		return gcerr.Newf(gcerr.Internal, nil, "blob: uploadAndClose must be the first write")
 	}
-	driverUploader, ok := w.w.(driver.Uploader)
-	if ok {
-		err = driverUploader.Upload(r)
-	} else {
+	// When ContentMD5 is being checked, we can't use Upload.
+	if len(w.contentMD5) > 0 {
 		_, err = w.ReadFrom(r)
+	} else {
+		driverUploader, ok := w.w.(driver.Uploader)
+		if ok {
+			err = driverUploader.Upload(r)
+		} else {
+			_, err = w.ReadFrom(r)
+		}
 	}
 	cerr := w.Close()
 	if err == nil && cerr != nil {
