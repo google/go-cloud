@@ -158,17 +158,15 @@ func (d *iofsDir) openOnce() error {
 //
 // fn should return a context.Context and *ReaderOptions that can be used in
 // calls to List and NewReader on b. It may be called more than once.
+//
+// If SetIOFSCallback is never called, io.FS functions will use context.Background
+// and a default ReaderOptions.
 func (b *Bucket) SetIOFSCallback(fn func() (context.Context, *ReaderOptions)) {
 	b.ioFSCallback = fn
 }
 
 // Open implements fs.FS.Open (https://pkg.go.dev/io/fs#FS).
-//
-// SetIOFSCallback must be called prior to calling this function.
 func (b *Bucket) Open(path string) (fs.File, error) {
-	if b.ioFSCallback == nil {
-		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Open -- SetIOFSCallback must be called before Open")
-	}
 	if !fs.ValidPath(path) {
 		return nil, &fs.PathError{Op: "open", Path: path, Err: fs.ErrInvalid}
 	}

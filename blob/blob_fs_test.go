@@ -42,7 +42,6 @@ func initBucket(t *testing.T, files []string) *blob.Bucket {
 	ctx := context.Background()
 
 	b := memblob.OpenBucket(nil)
-	b.SetIOFSCallback(func() (context.Context, *blob.ReaderOptions) { return ctx, nil })
 	for _, f := range files {
 		if err := b.WriteAll(ctx, f, []byte("data"), nil); err != nil {
 			t.Fatal(err)

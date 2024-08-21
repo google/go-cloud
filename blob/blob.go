@@ -693,7 +693,8 @@ var NewBucket = newBucket
 // function; see the package documentation for details.
 func newBucket(b driver.Bucket) *Bucket {
 	return &Bucket{
-		b: b,
+		b:            b,
+		ioFSCallback: func() (context.Context, *ReaderOptions) { return context.Background(), nil },
 		tracer: &oc.Tracer{
 			Package:        pkgName,
 			Provider:       oc.ProviderName(b),
