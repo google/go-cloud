@@ -202,19 +202,18 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 		default:
 			return awsv2.Config{}, fmt.Errorf("unknown query parameter %q", param)
 		}
-
-		if endpoint != "" {
-			customResolver := awsv2.EndpointResolverWithOptionsFunc(
-				func(service, region string, options ...interface{}) (awsv2.Endpoint, error) {
-					return awsv2.Endpoint{
-						PartitionID:       "aws",
-						URL:               endpoint,
-						SigningRegion:     region,
-						HostnameImmutable: hostnameImmutable,
-					}, nil
-				})
-			opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
-		}
+	}
+	if endpoint != "" {
+		customResolver := awsv2.EndpointResolverWithOptionsFunc(
+			func(service, region string, options ...interface{}) (awsv2.Endpoint, error) {
+				return awsv2.Endpoint{
+					PartitionID:       "aws",
+					URL:               endpoint,
+					SigningRegion:     region,
+					HostnameImmutable: hostnameImmutable,
+				}, nil
+			})
+		opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
 	}
 	return awsv2cfg.LoadDefaultConfig(ctx, opts...)
 }
