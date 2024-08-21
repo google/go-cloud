@@ -17,8 +17,10 @@ package aws_test
 import (
 	"context"
 	"net/url"
+	"reflect"
 	"testing"
 
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/google/go-cmp/cmp"
 	gcaws "gocloud.dev/aws"
@@ -147,12 +149,16 @@ func TestUseV2(t *testing.T) {
 }
 
 func TestV2ConfigFromURLParams(t *testing.T) {
+	const service = "s3"
+	const region = "us-east-1"
+	const partitionID = "aws"
 	ctx := context.Background()
 	tests := []struct {
-		name       string
-		query      url.Values
-		wantRegion string
-		wantErr    bool
+		name         string
+		query        url.Values
+		wantRegion   string
+		wantErr      bool
+		wantEndpoint *awsv2.Endpoint
 	}{
 		{
 			name:  "No overrides",
@@ -167,6 +173,16 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			name:       "Region",
 			query:      url.Values{"region": {"my_region"}},
 			wantRegion: "my_region",
+		},
+		{
+			name:  "Endpoint and hostname immutable",
+			query: url.Values{"endpoint": {"foo"}, "hostname_immutable": {"true"}},
+			wantEndpoint: &awsv2.Endpoint{
+				PartitionID:       partitionID,
+				SigningRegion:     region,
+				URL:               "foo",
+				HostnameImmutable: true,
+			},
 		},
 		// Can't test "profile", since AWS validates that the profile exists.
 	}
@@ -183,6 +199,19 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			}
 			if test.wantRegion != "" && got.Region != test.wantRegion {
 				t.Errorf("got region %q, want %q", got.Region, test.wantRegion)
+			}
+
+			if test.wantEndpoint != nil {
+				if got.EndpointResolverWithOptions == nil {
+					t.Fatalf("expected an EndpointResolverWithOptions, got nil")
+				}
+				gotE, err := got.EndpointResolverWithOptions.ResolveEndpoint(service, region)
+				if err != nil {
+					return
+				}
+				if !reflect.DeepEqual(gotE, *test.wantEndpoint) {
+					t.Errorf("got endpoint %+v, want %+v", gotE, *test.wantEndpoint)
+				}
 			}
 		})
 	}

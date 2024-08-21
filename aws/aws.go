@@ -177,23 +177,24 @@ func NewDefaultV2Config(ctx context.Context) (awsv2.Config, error) {
 //   - region: The AWS region for requests; sets WithRegion.
 //   - profile: The shared config profile to use; sets SharedConfigProfile.
 //   - endpoint: The AWS service endpoint to send HTTP request.
+//   - hostname_immutable: Make the hostname immutable, only works if endpoint is also set.
 func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, error) {
+	var endpoint string
+	var hostnameImmutable bool
 	var opts []func(*awsv2cfg.LoadOptions) error
 	for param, values := range q {
 		value := values[0]
 		switch param {
+		case "hostname_immutable":
+			var err error
+			hostnameImmutable, err = strconv.ParseBool(value)
+			if err != nil {
+				return awsv2.Config{}, fmt.Errorf("invalid value for hostname_immutable: %w", err)
+			}
 		case "region":
 			opts = append(opts, awsv2cfg.WithRegion(value))
 		case "endpoint":
-			customResolver := awsv2.EndpointResolverWithOptionsFunc(
-				func(service, region string, options ...interface{}) (awsv2.Endpoint, error) {
-					return awsv2.Endpoint{
-						PartitionID:   "aws",
-						URL:           value,
-						SigningRegion: region,
-					}, nil
-				})
-			opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
+			endpoint = value
 		case "profile":
 			opts = append(opts, awsv2cfg.WithSharedConfigProfile(value))
 		case "awssdk":
@@ -201,6 +202,18 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 		default:
 			return awsv2.Config{}, fmt.Errorf("unknown query parameter %q", param)
 		}
+	}
+	if endpoint != "" {
+		customResolver := awsv2.EndpointResolverWithOptionsFunc(
+			func(service, region string, options ...interface{}) (awsv2.Endpoint, error) {
+				return awsv2.Endpoint{
+					PartitionID:       "aws",
+					URL:               endpoint,
+					SigningRegion:     region,
+					HostnameImmutable: hostnameImmutable,
+				}, nil
+			})
+		opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
 	}
 	return awsv2cfg.LoadDefaultConfig(ctx, opts...)
 }
