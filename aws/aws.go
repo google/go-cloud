@@ -177,6 +177,7 @@ func NewDefaultV2Config(ctx context.Context) (awsv2.Config, error) {
 //   - region: The AWS region for requests; sets WithRegion.
 //   - profile: The shared config profile to use; sets SharedConfigProfile.
 //   - endpoint: The AWS service endpoint to send HTTP request.
+//   - hostname_immutable: Make the hostname immutable, only works if endpoint is also set.
 func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, error) {
 	var endpoint string
 	var hostnameImmutable bool
@@ -184,11 +185,11 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 	for param, values := range q {
 		value := values[0]
 		switch param {
-		case "awsHostnameImmutable":
+		case "hostname_immutable":
 			var err error
 			hostnameImmutable, err = strconv.ParseBool(value)
 			if err != nil {
-				return awsv2.Config{}, err
+				return awsv2.Config{}, fmt.Errorf("invalid value for hostname_immutable: %w", err)
 			}
 		case "region":
 			opts = append(opts, awsv2cfg.WithRegion(value))

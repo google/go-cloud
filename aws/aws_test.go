@@ -176,7 +176,7 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 		},
 		{
 			name:  "Endpoint and hostname immutable",
-			query: url.Values{"endpoint": {"foo"}, "awsHostnameImmutable": {"true"}},
+			query: url.Values{"endpoint": {"foo"}, "hostname_immutable": {"true"}},
 			wantEndpoint: &awsv2.Endpoint{
 				PartitionID:       partitionID,
 				SigningRegion:     region,
