@@ -76,7 +76,7 @@
 //
 // azureblob exposes the following types for As:
 //   - Bucket: *container.Client
-//   - Error: *azcore.ReponseError. You can use bloberror.HasCode directly though.
+//   - Error: *azcore.ResponseError. You can use bloberror.HasCode directly though.
 //   - ListObject: container.BlobItem for objects, container.BlobPrefix for "directories"
 //   - ListOptions.BeforeList: *container.ListBlobsHierarchyOptions
 //   - Reader: azblobblob.DownloadStreamResponse
