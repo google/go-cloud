@@ -34,7 +34,7 @@
 //   - AZURE_STORAGE_KEY: To use a shared key credential. The service account
 //     name and key are passed to NewSharedKeyCredential and then the
 //     resulting credential is passed to NewClientWithSharedKeyCredential.
-//   - AZURE_STORAGE_CONNECTION_STRING: To use a connection string, passed to
+//   - AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGEBLOB_CONNECTIONSTRING: To use a connection string, passed to
 //     NewClientFromConnectionString.
 //   - AZURE_STORAGE_SAS_TOKEN: To use a SAS token. The SAS token is added
 //     as a URL parameter to the service URL, and passed to
@@ -320,6 +320,9 @@ func newCredInfoFromEnv() *credInfoT {
 	accountKey := os.Getenv("AZURE_STORAGE_KEY")
 	sasToken := os.Getenv("AZURE_STORAGE_SAS_TOKEN")
 	connectionString := os.Getenv("AZURE_STORAGE_CONNECTION_STRING")
+	if connectionString == "" {
+		connectionString = os.Getenv("AZURE_STORAGEBLOB_CONNECTIONSTRING")
+	}
 	credInfo := &credInfoT{
 		AccountName: accountName,
 	}
