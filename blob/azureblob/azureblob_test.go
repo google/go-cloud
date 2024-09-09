@@ -311,14 +311,15 @@ func TestOpenBucket(t *testing.T) {
 
 func TestOpenerFromEnv(t *testing.T) {
 	tests := []struct {
-		accountName      string
-		accountKey       string
-		sasToken         string
-		connectionString string
-		domain           string
-		protocol         string
-		isCDN            bool
-		isLocalEmulator  bool
+		accountName       string
+		accountKey        string
+		sasToken          string
+		connectionString  string
+		connectionString2 string
+		domain            string
+		protocol          string
+		isCDN             bool
+		isLocalEmulator   bool
 
 		want     *credInfoT
 		wantOpts *ServiceURLOptions
@@ -353,6 +354,19 @@ func TestOpenerFromEnv(t *testing.T) {
 			// Connection string.
 			accountName:      "myaccount",
 			connectionString: "a-connection-string",
+			want: &credInfoT{
+				CredType:         credTypeConnectionString,
+				AccountName:      "myaccount",
+				ConnectionString: "a-connection-string",
+			},
+			wantOpts: &ServiceURLOptions{
+				AccountName: "myaccount",
+			},
+		},
+		{
+			// Alternate connection string.
+			accountName:       "myaccount",
+			connectionString2: "a-connection-string",
 			want: &credInfoT{
 				CredType:         credTypeConnectionString,
 				AccountName:      "myaccount",
@@ -407,6 +421,7 @@ func TestOpenerFromEnv(t *testing.T) {
 		t.Setenv("AZURE_STORAGE_KEY", test.accountKey)
 		t.Setenv("AZURE_STORAGE_SAS_TOKEN", test.sasToken)
 		t.Setenv("AZURE_STORAGE_CONNECTION_STRING", test.connectionString)
+		t.Setenv("AZURE_STORAGEBLOB_CONNECTIONSTRING", test.connectionString2)
 		t.Setenv("AZURE_STORAGE_DOMAIN", test.domain)
 		t.Setenv("AZURE_STORAGE_PROTOCOL", test.protocol)
 		if test.isCDN {
