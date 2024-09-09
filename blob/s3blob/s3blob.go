@@ -47,7 +47,7 @@
 //   - ListOptions.BeforeList: (V1) *s3.ListObjectsV2Input or *s3.ListObjectsInput
 //     when Options.UseLegacyList == true; (V2) *s3v2.ListObjectsV2Input or *[]func(*s3v2.Options), or *s3v2.ListObjectsInput
 //     when Options.UseLegacyList == true
-//   - Reader: (V1) s3.GetObjectOutput; (V2) s3v2.GetObjectInput
+//   - Reader: (V1) s3.GetObjectOutput; (V2) s3v2.GetObjectOutput
 //   - ReaderOptions.BeforeRead: (V1) *s3.GetObjectInput; (V2) *s3v2.GetObjectInput or *[]func(*s3v2.Options)
 //   - Attributes: (V1) s3.HeadObjectOutput; (V2)s3v2.HeadObjectOutput
 //   - CopyOptions.BeforeCopy: *(V1) s3.CopyObjectInput; (V2) s3v2.CopyObjectInput
