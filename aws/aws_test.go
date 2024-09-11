@@ -184,6 +184,10 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 				HostnameImmutable: true,
 			},
 		},
+		{
+			name:  "FIPS and dual stack",
+			query: url.Values{"fips": {"true"}, "dualstack": {"true"}},
+		},
 		// Can't test "profile", since AWS validates that the profile exists.
 	}
 

@@ -476,6 +476,26 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?awssdk=v2", false},
 		// OK, use KMS Server Side Encryption
 		{"s3://mybucket?ssetype=aws:kms&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", false},
+		// OK, use S3 Transfer acceleration and dual stack endpoints
+		{"s3://mybucket?accelerate=true&dualstack=true", false},
+		// OK, use FIPS endpoints
+		{"s3://mybucket?fips=true", false},
+		// OK, use S3 Transfer accleration and dual stack endpoints (v1)
+		{"s3://mybucket?awssdk=v1&accelerate=true&dualstack=true", false},
+		// OK, use FIPS endpoints (v1)
+		{"s3://mybucket?awssdk=v1&fips=true", false},
+		// Invalid accelerate (v1)
+		{"s3://mybucket?awssdk=v1&accelerate=bogus", true},
+		// Invalid accelerate (v2)
+		{"s3://mybucket?accelerate=bogus", true},
+		// Invalid FIPS (v1)
+		{"s3://mybucket?awssdk=v1&fips=bogus", true},
+		// Invalid FIPS (v2)
+		{"s3://mybucket?fips=bogus", true},
+		// Invalid dualstack (v1)
+		{"s3://mybucket?awssdk=v1&dualstack=bad", true},
+		// Invalid dualstack (v2)
+		{"s3://mybucket?dualstack=bad", true},
 		// Invalid ssetype
 		{"s3://mybucket?ssetype=aws:notkmsoraes&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", true},
 		// Invalid parameter together with a valid one.
