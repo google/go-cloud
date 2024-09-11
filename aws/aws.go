@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/google/wire"
 )
@@ -81,6 +82,8 @@ func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) 
 //   - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
 //   - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
 //   - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
+//   - dualstack: A value of "true" enables dual stack (IPv4 and IPv6) endpoints
+//   - fips: A value of "true" enables the use of FIPS endpoints
 func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 	var cfg aws.Config
 	for param, values := range q {
@@ -102,6 +105,20 @@ func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
 			}
 			cfg.S3ForcePathStyle = aws.Bool(b)
+		case "dualstack":
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
+			}
+			cfg.UseDualStack = aws.Bool(b)
+		case "fips":
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
+			}
+			if b {
+				cfg.UseFIPSEndpoint = endpoints.FIPSEndpointStateEnabled
+			}
 		case "awssdk":
 			// ignore, should be handled before this
 		default:
@@ -178,6 +195,8 @@ func NewDefaultV2Config(ctx context.Context) (awsv2.Config, error) {
 //   - profile: The shared config profile to use; sets SharedConfigProfile.
 //   - endpoint: The AWS service endpoint to send HTTP request.
 //   - hostname_immutable: Make the hostname immutable, only works if endpoint is also set.
+//   - dualstack: A value of "true" enables dual stack (IPv4 and IPv6) endpoints.
+//   - fips: A value of "true" enables the use of FIPS endpoints.
 func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, error) {
 	var endpoint string
 	var hostnameImmutable bool
@@ -197,6 +216,22 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 			endpoint = value
 		case "profile":
 			opts = append(opts, awsv2cfg.WithSharedConfigProfile(value))
+		case "dualstack":
+			dualStack, err := strconv.ParseBool(value)
+			if err != nil {
+				return awsv2.Config{}, fmt.Errorf("invalid value for dualstack: %w", err)
+			}
+			if dualStack {
+				opts = append(opts, awsv2cfg.WithUseDualStackEndpoint(awsv2.DualStackEndpointStateEnabled))
+			}
+		case "fips":
+			fips, err := strconv.ParseBool(value)
+			if err != nil {
+				return awsv2.Config{}, fmt.Errorf("invalid value for fips: %w", err)
+			}
+			if fips {
+				opts = append(opts, awsv2cfg.WithUseFIPSEndpoint(awsv2.FIPSEndpointStateEnabled))
+			}
 		case "awssdk":
 			// ignore, should be handled before this
 		default:
@@ -215,5 +250,6 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 			})
 		opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
 	}
+
 	return awsv2cfg.LoadDefaultConfig(ctx, opts...)
 }

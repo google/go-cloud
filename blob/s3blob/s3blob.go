@@ -130,6 +130,11 @@ const Scheme = "s3"
 // Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
 // or anything else to accept the default.
 //
+// The following S3-specific query options are also supported:
+//   - ssetype: The type of server side encryption used (AES256, aws:kms, aws:kms:dsse)
+//   - kmskeyid: The KMS key ID for server side encryption
+//   - accelerate: A value of "true" uses the S3 Transfer Accleration endpoints
+//
 // For V1, see gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // for overriding the aws.Session from the URL.
 // For V2, see gocloud.dev/aws/V2ConfigFromURLParams.
@@ -145,8 +150,9 @@ type URLOpener struct {
 }
 
 const (
-	sseTypeParamKey  = "ssetype"
-	kmsKeyIdParamKey = "kmskeyid"
+	sseTypeParamKey    = "ssetype"
+	kmsKeyIdParamKey   = "kmskeyid"
+	accelerateParamKey = "accelerate"
 )
 
 func toServerSideEncryptionType(value string) (typesv2.ServerSideEncryption, error) {
@@ -178,12 +184,24 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		o.Options.KMSEncryptionID = kmsKeyID
 	}
 
+	accelerate := false
+	if accelerateParam := q.Get(accelerateParamKey); accelerateParam != "" {
+		q.Del(accelerateParamKey)
+		var err error
+		accelerate, err = strconv.ParseBool(accelerateParam)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %q: %v", accelerateParamKey, err)
+		}
+	}
+
 	if o.UseV2 {
 		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 		if err != nil {
 			return nil, fmt.Errorf("open bucket %v: %v", u, err)
 		}
-		clientV2 := s3v2.NewFromConfig(cfg)
+		clientV2 := s3v2.NewFromConfig(cfg, func(o *s3v2.Options) {
+			o.UseAccelerate = accelerate
+		})
 
 		return OpenBucketV2(ctx, clientV2, u.Host, &o.Options)
 	}
@@ -194,6 +212,8 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
+
+	overrideCfg.S3UseAccelerate = &accelerate
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 
 	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
