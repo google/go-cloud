@@ -218,7 +218,7 @@ alternatives, including using environment variables.
 If you set the "awssdk=v2" query parameter, it will instead create an AWS
 Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
 
-If no "awssdk" query parameter is set, Go CDK will use a default (currently V1).
+If no "awssdk" query parameter is set, Go CDK will use a default (currently V2).
 
 Full details about acceptable URLs can be found under the API reference for
 [`s3blob.URLOpener`][].
