@@ -284,6 +284,9 @@ type Options struct {
 	// MakeSignBytes is a factory for functions that are being used in place of an empty SignBytes.
 	// If your implementation of 'SignBytes' needs a request context, set this instead.
 	MakeSignBytes func(requestCtx context.Context) SignBytesFunc
+
+	// ClientOptions are passed when constructing the storage.Client.
+	ClientOptions []option.ClientOption
 }
 
 // clear clears all the fields of o.
@@ -306,6 +309,7 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 		return nil, errors.New("gcsblob.OpenBucket: bucketName is required")
 	}
 
+	// We wrap the provided http.Client to add a Go CDK User-Agent.
 	clientOpts := []option.ClientOption{option.WithHTTPClient(useragent.HTTPClient(&client.Client, "blob"))}
 	if host := os.Getenv("STORAGE_EMULATOR_HOST"); host != "" {
 		clientOpts = []option.ClientOption{
@@ -314,14 +318,13 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 			option.WithHTTPClient(http.DefaultClient),
 		}
 	}
-
-	// We wrap the provided http.Client to add a Go CDK User-Agent.
+	if opts == nil {
+		opts = &Options{}
+	}
+	clientOpts = append(clientOpts, opts.ClientOptions...)
 	c, err := storage.NewClient(ctx, clientOpts...)
 	if err != nil {
 		return nil, err
-	}
-	if opts == nil {
-		opts = &Options{}
 	}
 	return &bucket{name: bucketName, client: c, opts: opts}, nil
 }
