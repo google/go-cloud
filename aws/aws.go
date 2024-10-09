@@ -22,6 +22,9 @@ import (
 	"strconv"
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/ratelimit"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
+	"github.com/aws/aws-sdk-go-v2/config"
 	awsv2cfg "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -197,9 +200,13 @@ func NewDefaultV2Config(ctx context.Context) (awsv2.Config, error) {
 //   - hostname_immutable: Make the hostname immutable, only works if endpoint is also set.
 //   - dualstack: A value of "true" enables dual stack (IPv4 and IPv6) endpoints.
 //   - fips: A value of "true" enables the use of FIPS endpoints.
+//   - rate_limiter_capacity: A integer value configures the capacity of a token bucket used
+//     in client-side rate limits. If no value is set, the client-side rate limiting is disabled.
+//     See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/retries-timeouts/#client-side-rate-limiting.
 func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, error) {
 	var endpoint string
 	var hostnameImmutable bool
+	var rateLimitCapacity int64
 	var opts []func(*awsv2cfg.LoadOptions) error
 	for param, values := range q {
 		value := values[0]
@@ -232,6 +239,12 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 			if fips {
 				opts = append(opts, awsv2cfg.WithUseFIPSEndpoint(awsv2.FIPSEndpointStateEnabled))
 			}
+		case "rate_limiter_capacity":
+			var err error
+			rateLimitCapacity, err = strconv.ParseInt(value, 10, 32)
+			if err != nil {
+				return awsv2.Config{}, fmt.Errorf("invalid value for capacity: %w", err)
+			}
 		case "awssdk":
 			// ignore, should be handled before this
 		default:
@@ -250,6 +263,17 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 			})
 		opts = append(opts, awsv2cfg.WithEndpointResolverWithOptions(customResolver))
 	}
+
+	var rateLimiter retry.RateLimiter
+	rateLimiter = ratelimit.None
+	if rateLimitCapacity > 0 {
+		rateLimiter = ratelimit.NewTokenRateLimit(uint(rateLimitCapacity))
+	}
+	opts = append(opts, config.WithRetryer(func() awsv2.Retryer {
+		return retry.NewStandard(func(so *retry.StandardOptions) {
+			so.RateLimiter = rateLimiter
+		})
+	}))
 
 	return awsv2cfg.LoadDefaultConfig(ctx, opts...)
 }
