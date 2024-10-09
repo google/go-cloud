@@ -482,6 +482,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?fips=true", false},
 		// OK, use S3 Transfer accleration and dual stack endpoints (v1)
 		{"s3://mybucket?awssdk=v1&accelerate=true&dualstack=true", false},
+		// OK, use use_path_style
+		{"s3://mybucket?use_path_style=true", false},
+		// OK, use disable_https
+		{"s3://mybucket?disable_https=true", false},
 		// OK, use FIPS endpoints (v1)
 		{"s3://mybucket?awssdk=v1&fips=true", false},
 		// Invalid accelerate (v1)
@@ -500,6 +504,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?ssetype=aws:notkmsoraes&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", true},
 		// Invalid parameter together with a valid one.
 		{"s3://mybucket?profile=main&param=value", true},
+		// Invalid use_path_style (v1)
+		{"s3://mybucket?awssdk=v1&usePathStyle=bad", true},
+		// Invalid disable_https (v2)
+		{"s3://mybucket?usePathStyle=bad", true},
 		// Invalid parameter.
 		{"s3://mybucket?param=value", true},
 	}
