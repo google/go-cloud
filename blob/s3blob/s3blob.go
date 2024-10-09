@@ -150,9 +150,11 @@ type URLOpener struct {
 }
 
 const (
-	sseTypeParamKey    = "ssetype"
-	kmsKeyIdParamKey   = "kmskeyid"
-	accelerateParamKey = "accelerate"
+	sseTypeParamKey      = "ssetype"
+	kmsKeyIdParamKey     = "kmskeyid"
+	accelerateParamKey   = "accelerate"
+	usePathStyleParamkey = "use_path_style"
+	disableHTTPSParamKey = "disable_https"
 )
 
 func toServerSideEncryptionType(value string) (typesv2.ServerSideEncryption, error) {
@@ -195,13 +197,37 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	}
 
 	if o.UseV2 {
+		opts := []func(*s3v2.Options){
+			func(o *s3v2.Options) {
+				o.UseAccelerate = accelerate
+			},
+		}
+		if disableHTTPSParam := q.Get(disableHTTPSParamKey); disableHTTPSParam != "" {
+			q.Del(disableHTTPSParamKey)
+			value, err := strconv.ParseBool(disableHTTPSParam)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for %q: %v", disableHTTPSParamKey, err)
+			}
+			opts = append(opts, func(o *s3v2.Options) {
+				o.EndpointOptions.DisableHTTPS = value
+			})
+		}
+		if usePathStyleParam := q.Get(usePathStyleParamkey); usePathStyleParam != "" {
+			q.Del(usePathStyleParamkey)
+			value, err := strconv.ParseBool(usePathStyleParam)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for %q: %v", usePathStyleParamkey, err)
+			}
+			opts = append(opts, func(o *s3v2.Options) {
+				o.UsePathStyle = value
+			})
+		}
+
 		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 		if err != nil {
 			return nil, fmt.Errorf("open bucket %v: %v", u, err)
 		}
-		clientV2 := s3v2.NewFromConfig(cfg, func(o *s3v2.Options) {
-			o.UseAccelerate = accelerate
-		})
+		clientV2 := s3v2.NewFromConfig(cfg, opts...)
 
 		return OpenBucketV2(ctx, clientV2, u.Host, &o.Options)
 	}
