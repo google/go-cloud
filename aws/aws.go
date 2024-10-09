@@ -80,8 +80,8 @@ func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) 
 // The following query options are supported:
 //   - region: The AWS region for requests; sets aws.Config.Region.
 //   - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
-//   - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
-//   - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
+//   - disable_ssl (or disableSSL): A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
+//   - s3_force_path_style (or s3ForcePathStyle): A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
 //   - dualstack: A value of "true" enables dual stack (IPv4 and IPv6) endpoints
 //   - fips: A value of "true" enables the use of FIPS endpoints
 func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
@@ -93,13 +93,13 @@ func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 			cfg.Region = aws.String(value)
 		case "endpoint":
 			cfg.Endpoint = aws.String(value)
-		case "disableSSL":
+		case "disable_ssl", "disableSSL":
 			b, err := strconv.ParseBool(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
 			}
 			cfg.DisableSSL = aws.Bool(b)
-		case "s3ForcePathStyle":
+		case "s3_force_path_style", "s3ForcePathStyle":
 			b, err := strconv.ParseBool(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)

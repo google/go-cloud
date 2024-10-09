@@ -54,6 +54,11 @@ func TestConfigFromURLParams(t *testing.T) {
 			wantCfg: &aws.Config{Endpoint: aws.String("foo")},
 		},
 		{
+			name:    "disable_ssl true",
+			query:   url.Values{"disable_ssl": {"true"}},
+			wantCfg: &aws.Config{DisableSSL: aws.Bool(true)},
+		},
+		{
 			name:    "DisableSSL true",
 			query:   url.Values{"disableSSL": {"true"}},
 			wantCfg: &aws.Config{DisableSSL: aws.Bool(true)},
@@ -67,6 +72,11 @@ func TestConfigFromURLParams(t *testing.T) {
 			name:    "DisableSSL false",
 			query:   url.Values{"disableSSL": {"invalid"}},
 			wantErr: true,
+		},
+		{
+			name:    "s3_force_path_style true",
+			query:   url.Values{"s3_force_path_style": {"true"}},
+			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(true)},
 		},
 		{
 			name:    "S3ForcePathStyle true",
