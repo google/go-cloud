@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	awsv2retry "github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/google/go-cmp/cmp"
 	gcaws "gocloud.dev/aws"
@@ -198,6 +199,10 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			name:  "FIPS and dual stack",
 			query: url.Values{"fips": {"true"}, "dualstack": {"true"}},
 		},
+		{
+			name:  "Rate limit capacity",
+			query: url.Values{"rate_limiter_capacity": {"500"}},
+		},
 		// Can't test "profile", since AWS validates that the profile exists.
 	}
 
@@ -226,6 +231,12 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 				if !reflect.DeepEqual(gotE, *test.wantEndpoint) {
 					t.Errorf("got endpoint %+v, want %+v", gotE, *test.wantEndpoint)
 				}
+			}
+
+			// Unfortunately, we can't look at the options set for the rate limiter.
+			r, ok := got.Retryer().(*awsv2retry.Standard)
+			if !ok {
+				t.Errorf("expected a standard retryer, got %v, expected awsv2retry.Standard", r)
 			}
 		})
 	}
