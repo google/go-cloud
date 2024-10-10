@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	go.etcd.io/etcd v3.3.27+incompatible
 	go.etcd.io/etcd/client/v3 v3.5.15
-	gocloud.dev v0.39.0
+	gocloud.dev v0.40.0
 	google.golang.org/grpc v1.65.0
 )
 
@@ -79,5 +79,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240812133136-8ffd90a71988 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
-
-replace gocloud.dev => ../../
