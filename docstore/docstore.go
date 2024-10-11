@@ -143,10 +143,11 @@ type ActionList struct {
 // An Action is a read or write on a single document.
 // Use the methods of ActionList to create and execute Actions.
 type Action struct {
-	kind       driver.ActionKind
-	doc        Document
-	fieldpaths []FieldPath // paths to retrieve, for Get
-	mods       Mods        // modifications to make, for Update
+	kind        driver.ActionKind
+	doc         Document
+	fieldpaths  []FieldPath // paths to retrieve, for Get
+	mods        Mods        // modifications to make, for Update
+	transaction bool        // if this action is a part of transaction
 }
 
 func (l *ActionList) add(a *Action) *ActionList {
@@ -173,6 +174,10 @@ func (l *ActionList) Create(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Create, doc: doc})
 }
 
+func (l *ActionList) CreateTx(doc Document) *ActionList {
+	return l.add(&Action{kind: driver.Create, doc: doc, transaction: true})
+}
+
 // Replace adds an action that replaces a document to the given ActionList, and
 // returns the ActionList. The key fields of the doc argument must be set. The
 // document must already exist; an error with code NotFound is returned if it does
@@ -183,6 +188,10 @@ func (l *ActionList) Create(doc Document) *ActionList {
 // handled.
 func (l *ActionList) Replace(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Replace, doc: doc})
+}
+
+func (l *ActionList) ReplaceTx(doc Document) *ActionList {
+	return l.add(&Action{kind: driver.Replace, doc: doc, transaction: true})
 }
 
 // Put adds an action that adds or replaces a document to the given ActionList, and returns the ActionList.
@@ -198,6 +207,10 @@ func (l *ActionList) Put(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Put, doc: doc})
 }
 
+func (l *ActionList) PutTx(doc Document) *ActionList {
+	return l.add(&Action{kind: driver.Put, doc: doc, transaction: true})
+}
+
 // Delete adds an action that deletes a document to the given ActionList, and returns
 // the ActionList. Only the key and revision fields of doc are used.
 // See the Revisions section of the package documentation for how revisions are
@@ -211,6 +224,10 @@ func (l *ActionList) Delete(doc Document) *ActionList {
 	// list of Deletes just because one of the docs was not present, and that seems
 	// wrong, or at least something you'd want to turn off.
 	return l.add(&Action{kind: driver.Delete, doc: doc})
+}
+
+func (l *ActionList) DeleteTx(doc Document) *ActionList {
+	return l.add(&Action{kind: driver.Delete, doc: doc, transaction: true})
 }
 
 // Get adds an action that retrieves a document to the given ActionList, and
@@ -255,6 +272,15 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 		kind: driver.Update,
 		doc:  doc,
 		mods: mods,
+	})
+}
+
+func (l *ActionList) UpdateTx(doc Document, mods Mods) *ActionList {
+	return l.add(&Action{
+		kind:        driver.Update,
+		doc:         doc,
+		mods:        mods,
+		transaction: true,
 	})
 }
 
@@ -430,7 +456,7 @@ func (c *Collection) toDriverAction(a *Action) (*driver.Action, error) {
 		// A Put with a revision field is equivalent to a Replace.
 		kind = driver.Replace
 	}
-	d := &driver.Action{Kind: kind, Doc: ddoc, Key: key}
+	d := &driver.Action{Kind: kind, Doc: ddoc, Key: key, Transaction: a.transaction}
 	if a.fieldpaths != nil {
 		d.FieldPaths, err = parseFieldPaths(a.fieldpaths)
 		if err != nil {
