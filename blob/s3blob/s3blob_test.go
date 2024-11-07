@@ -484,6 +484,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?awssdk=v1&accelerate=true&dualstack=true", false},
 		// OK, use use_path_style
 		{"s3://mybucket?use_path_style=true", false},
+		// OK, use s3ForcePathStyle
+		{"s3://mybucket?s3ForcePathStyle=true", false},
 		// OK, use disable_https
 		{"s3://mybucket?disable_https=true", false},
 		// OK, use FIPS endpoints (v1)

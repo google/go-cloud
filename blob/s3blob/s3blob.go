@@ -135,6 +135,11 @@ const Scheme = "s3"
 //   - kmskeyid: The KMS key ID for server side encryption
 //   - accelerate: A value of "true" uses the S3 Transfer Accleration endpoints
 //
+// V2 additionally supports:
+//   - use_path_style: A value of true sets the UsePathStyle option.
+//   - s3ForcePathStyle: Same as use_path_style, for backwards compatibility with V1.
+//   - disable_https: A value of true disables HTTPS in the Endpoint options.
+//
 // For V1, see gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // for overriding the aws.Session from the URL.
 // For V2, see gocloud.dev/aws/V2ConfigFromURLParams.
@@ -150,11 +155,12 @@ type URLOpener struct {
 }
 
 const (
-	sseTypeParamKey      = "ssetype"
-	kmsKeyIdParamKey     = "kmskeyid"
-	accelerateParamKey   = "accelerate"
-	usePathStyleParamkey = "use_path_style"
-	disableHTTPSParamKey = "disable_https"
+	sseTypeParamKey            = "ssetype"
+	kmsKeyIdParamKey           = "kmskeyid"
+	accelerateParamKey         = "accelerate"
+	usePathStyleParamKey       = "use_path_style"
+	legacyUsePathStyleParamKey = "s3ForcePathStyle" // for backwards compatibility
+	disableHTTPSParamKey       = "disable_https"
 )
 
 func toServerSideEncryptionType(value string) (typesv2.ServerSideEncryption, error) {
@@ -212,15 +218,17 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 				o.EndpointOptions.DisableHTTPS = value
 			})
 		}
-		if usePathStyleParam := q.Get(usePathStyleParamkey); usePathStyleParam != "" {
-			q.Del(usePathStyleParamkey)
-			value, err := strconv.ParseBool(usePathStyleParam)
-			if err != nil {
-				return nil, fmt.Errorf("invalid value for %q: %v", usePathStyleParamkey, err)
+		for _, key := range []string{usePathStyleParamKey, legacyUsePathStyleParamKey} {
+			if usePathStyleParam := q.Get(key); usePathStyleParam != "" {
+				q.Del(key)
+				value, err := strconv.ParseBool(usePathStyleParam)
+				if err != nil {
+					return nil, fmt.Errorf("invalid value for %q: %v", key, err)
+				}
+				opts = append(opts, func(o *s3v2.Options) {
+					o.UsePathStyle = value
+				})
 			}
-			opts = append(opts, func(o *s3v2.Options) {
-				o.UsePathStyle = value
-			})
 		}
 
 		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
