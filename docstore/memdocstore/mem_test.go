@@ -16,6 +16,7 @@ package memdocstore
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -126,6 +127,49 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestQueryNested(t *testing.T) {
+	ctx := context.Background()
+
+	count := func(iter *docstore.DocumentIterator) (c int) {
+		doc := docmap{}
+		for {
+			if err := iter.Next(ctx, doc); err != nil {
+				if err == io.EOF {
+					break
+				}
+				t.Fatal(err)
+			}
+			c++
+		}
+		return c
+	}
+
+	dc, err := newCollection(drivertest.KeyField, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	defer coll.Close()
+
+	doc := docmap{drivertest.KeyField: "TestQueryNested",
+		"list":             []any{docmap{"a": "A"}},
+		"map":              docmap{"b": "B"},
+		dc.RevisionField(): nil,
+	}
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+
+	got := count(coll.Query().Where("list.a", "=", "A").Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by list.a, want 1", got)
+	}
+	got = count(coll.Query().Where("map.b", "=", "B").Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by map.b, want 1", got)
 	}
 }
 
