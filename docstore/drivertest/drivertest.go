@@ -1938,11 +1938,15 @@ func testExampleInDoc(t *testing.T, _ Harness, coll *docstore.Collection) {
 	type Name struct {
 		First, Last string
 	}
+	type Publication struct {
+		Year      int    `docstore:"year"`
+		Publisher string `docstore:"publisher"`
+	}
 	type Book struct {
-		Title            string `docstore:"name"`
-		Author           Name   `docstore:"author"`
-		PublicationYears []int  `docstore:"pub_years,omitempty"`
-		NumPublications  int    `docstore:"-"`
+		Title        string        `docstore:"name"`
+		Author       Name          `docstore:"author"`
+		Publications []Publication `docstore:"pubs,omitempty"`
+		Reviews      int           `docstore:"-"`
 	}
 
 	must := func(err error) {
@@ -1968,8 +1972,11 @@ func testExampleInDoc(t *testing.T, _ Harness, coll *docstore.Collection) {
 			First: "Mikhail",
 			Last:  "Bulgakov",
 		},
-		PublicationYears: []int{1967, 1973},
-		NumPublications:  2,
+		Publications: []Publication{
+			{Year: 1967, Publisher: "Moscow magazine "},
+			{Year: 1973, Publisher: "YMCA Press"},
+		},
+		Reviews: 22950,
 	}
 
 	doc2 := map[string]interface{}{
@@ -1978,7 +1985,15 @@ func testExampleInDoc(t *testing.T, _ Harness, coll *docstore.Collection) {
 			"First": "Mikhail",
 			"Last":  "Bulgakov",
 		},
-		"pub_years": []int{1968, 1987},
+		"pubs": []map[string]interface{}{
+			{
+				"year":      1968,
+				"publisher": "Harcourt Brace",
+			},
+			{
+				"year": 1987,
+			},
+		},
 	}
 
 	ctx := context.Background()
@@ -1987,15 +2002,21 @@ func testExampleInDoc(t *testing.T, _ Harness, coll *docstore.Collection) {
 	got2 := &Book{Title: doc2[KeyField].(string)}
 	must(coll.Actions().Get(got1).Get(got2).Do(ctx))
 
-	if got1.NumPublications != 0 {
+	if got1.Reviews != 0 {
 		t.Errorf("docstore:\"-\" tagged field isn't ignored")
 	}
 	checkFieldEqual(got1, doc1, "author")
-	checkFieldEqual(got2, doc2, "pub_years")
+	if len(got2.Publications) != len(doc2["pubs"].([]map[string]interface{})) {
+		t.Errorf("docstore: unexpected amount of pubs: %d/%d", len(got2.Publications), len(doc2["pubs"].([]map[string]interface{})))
+	}
 
 	gots := mustCollect(ctx, t, coll.Query().Where("author.Last", "=", "Bulgakov").Get(ctx))
 	if len(gots) != 2 {
 		t.Errorf("got %v want all two results", gots)
+	}
+	gots = mustCollect(ctx, t, coll.Query().Where("pubs.year", "=", 1967).Get(ctx))
+	if len(gots) != 1 {
+		t.Errorf("got %v want The Heart of a Dog", gots)
 	}
 	must(coll.Actions().Delete(doc1).Delete(doc2).Do(ctx))
 }
