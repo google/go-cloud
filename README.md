@@ -98,7 +98,7 @@ The Go CDK provides generic APIs for:
 *   Unstructured binary (blob) storage
 *   Publish/Subscribe (pubsub)
 *   Variables that change at runtime (runtimevar)
-*   Connecting to MySQL and PostgreSQL databases (mysql, postgres)
+*   Connecting to MariaDB/MySQL and PostgreSQL databases (mariadb, mysql, postgres)
 *   Server startup and diagnostics: request logging, tracing, and health
     checking (server)
 
