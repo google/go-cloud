@@ -21,6 +21,9 @@ import (
 	"gocloud.dev/gcp"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/gcppubsub"
+
+	raw "cloud.google.com/go/pubsub/apiv1"
+	pb "cloud.google.com/go/pubsub/apiv1/pubsubpb"
 )
 
 func ExampleOpenTopic() {
@@ -104,6 +107,50 @@ func ExampleOpenSubscription() {
 		log.Fatal(err)
 	}
 	defer subscription.Shutdown(ctx)
+}
+
+func ExampleExtendingAckDeadline() {
+	ctx := context.Background()
+
+	// Construct a *pubsub.Subscription, in this example using a URL.
+	const subName = "projects/myprojectID/subscriptions/example-subscription"
+	subscription, err := pubsub.OpenSubscription(ctx, "gcppubsub://"+subName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
+
+	// Get the underlying SubscriberClient. If you used the constructor to create
+	// the subscription (e.g., gcppubsub.OpenSubscriptionByPath), you may already
+	// have the client.
+	var client *raw.SubscriberClient
+	if !subscription.As(&client) {
+		log.Fatal("Couldn't get SubscriberClient using As")
+	}
+
+	// Now assume you've got a message, and processing is going to take a long time;
+	// you want to extend the default Ack deadline.
+	msg, err := subscription.Receive(ctx)
+	if err != nil {
+		log.Fatalf("Failed to receive message: %v", err)
+	}
+
+	// Get the underlying ReceivedMessage.
+	var rm *pb.ReceivedMessage
+	if !msg.As(&rm) {
+		log.Fatal("Couldn't get ReceivedMessage using As")
+	}
+
+	// Call ModifyAckDeadline.
+	if err := client.ModifyAckDeadline(ctx, &pb.ModifyAckDeadlineRequest{
+		Subscription:       subName,
+		AckIds:             []string{rm.AckId},
+		AckDeadlineSeconds: 30 * 60, // 30m, or whatever you need
+	}); err != nil {
+		log.Fatalf("Failed to ModifyAckDeadline: %v", err)
+	}
+	// ... eventually Ack the message.
+	msg.Ack()
 }
 
 func Example_openSubscriptionFromURL() {
