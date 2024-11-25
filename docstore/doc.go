@@ -212,6 +212,13 @@
 //
 //	iter := coll.Query().Where("Author.Last", "=", "Bulgakov").Limit(3).Get(ctx)
 //
+// Dot-separated paths work as you'd expect for nested structs and maps, addressing
+// the nested struct field or map key. For nested slices, some providers (notably
+// MongoDB) treat s.f, where s is a sequence, as the slice of e.f for each e in s.
+// However, others do not support field selectors inside slices, so docstore does
+// not support them -- while you may find that they work with some providers, you
+// cannot rely on that if you need fully portable code.
+//
 // You can make multiple Where calls. In some cases, parts of a Where clause may be
 // processed in the driver rather than natively by the backing service, which may have
 // performance implications for large result sets. See the driver package
