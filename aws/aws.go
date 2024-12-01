@@ -195,6 +195,7 @@ func NewDefaultV2Config(ctx context.Context) (awsv2.Config, error) {
 //
 // The following query options are supported:
 //   - region: The AWS region for requests; sets WithRegion.
+//   - anonymous: A value of "true" forces use of anonymous credentials.
 //   - profile: The shared config profile to use; sets SharedConfigProfile.
 //   - endpoint: The AWS service endpoint to send HTTP request.
 //   - hostname_immutable: Make the hostname immutable, only works if endpoint is also set.
@@ -244,6 +245,14 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 			rateLimitCapacity, err = strconv.ParseInt(value, 10, 32)
 			if err != nil {
 				return awsv2.Config{}, fmt.Errorf("invalid value for capacity: %w", err)
+			}
+		case "anonymous":
+			anon, err := strconv.ParseBool(value)
+			if err != nil {
+				return awsv2.Config{}, fmt.Errorf("invalid value for anonymous: %w", err)
+			}
+			if anon {
+				opts = append(opts, awsv2cfg.WithCredentialsProvider(awsv2.AnonymousCredentials{}))
 			}
 		case "awssdk":
 			// ignore, should be handled before this
