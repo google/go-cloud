@@ -200,6 +200,10 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			query: url.Values{"fips": {"true"}, "dualstack": {"true"}},
 		},
 		{
+			name:  "anonymous",
+			query: url.Values{"anonymous": {"true"}},
+		},
+		{
 			name:  "Rate limit capacity",
 			query: url.Values{"rate_limiter_capacity": {"500"}},
 		},

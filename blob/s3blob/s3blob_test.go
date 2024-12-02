@@ -490,6 +490,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?disable_https=true", false},
 		// OK, use FIPS endpoints (v1)
 		{"s3://mybucket?awssdk=v1&fips=true", false},
+		// OK, use anonymous.
+		{"s3://mybucket?awssdk=v2&anonymous=true", false},
 		// Invalid accelerate (v1)
 		{"s3://mybucket?awssdk=v1&accelerate=bogus", true},
 		// Invalid accelerate (v2)

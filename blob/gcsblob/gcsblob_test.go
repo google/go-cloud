@@ -578,6 +578,22 @@ func TestURLOpenerForParams(t *testing.T) {
 			wantOpts: Options{GoogleAccessID: "bar"},
 		},
 		{
+			name: "Invalid value for anonymous",
+			query: url.Values{
+				"anonymous": {"bad"},
+			},
+			wantErr: true,
+		},
+		{
+			name:     "Anonymous",
+			currOpts: Options{GoogleAccessID: "foo"},
+			query: url.Values{
+				"anonymous": {"true"},
+			},
+			wantOpts:   Options{}, // cleared
+			wantClient: true,
+		},
+		{
 			name: "BadPrivateKeyPath",
 			query: url.Values{
 				"private_key_path": {"/path/does/not/exist"},
