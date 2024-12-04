@@ -138,6 +138,19 @@ func compare(x1, x2 interface{}) (int, bool) {
 		}
 		return -1, true
 	}
+	if v1.Kind() == reflect.Slice {
+		for i := 0; i < v1.Len(); i++ {
+			if c, ok := compare(x2, v1.Index(i).Interface()); ok {
+				if !ok {
+					return 0, false
+				}
+				if c == 0 {
+					return 0, true
+				}
+			}
+		}
+		return -1, true
+	}
 	if v1.Kind() == reflect.String && v2.Kind() == reflect.String {
 		return strings.Compare(v1.String(), v2.String()), true
 	}

@@ -399,16 +399,31 @@ func (c *collection) checkRevision(arg driver.Document, current storedDoc) error
 
 // getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
 // (see getParentMap).
-func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) {
-	m2, err := getParentMap(m, fp, false)
-	if err != nil {
-		return nil, err
+func getAtFieldPath(m map[string]interface{}, fp []string) (result interface{}, err error) {
+
+	var get func(m interface{}, name string) interface{}
+	get = func(m interface{}, name string) interface{} {
+		switch concrete := m.(type) {
+		case map[string]interface{}:
+			return concrete[name]
+		case []interface{}:
+			result := []interface{}{}
+			for _, e := range concrete {
+				result = append(result, get(e, name))
+			}
+			return result
+		}
+		return nil
 	}
-	v, ok := m2[fp[len(fp)-1]]
-	if ok {
-		return v, nil
+	result = m
+	for _, k := range fp {
+		next := get(result, k)
+		if next == nil {
+			return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", strings.Join(fp, "."))
+		}
+		result = next
 	}
-	return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", fp)
+	return result, nil
 }
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
@@ -420,14 +435,6 @@ func setAtFieldPath(m map[string]interface{}, fp []string, val interface{}) erro
 	}
 	m2[fp[len(fp)-1]] = val
 	return nil
-}
-
-// Delete the value from m at the given field path, if it exists.
-func deleteAtFieldPath(m map[string]interface{}, fp []string) {
-	m2, _ := getParentMap(m, fp, false) // ignore error
-	if m2 != nil {
-		delete(m2, fp[len(fp)-1])
-	}
 }
 
 // getParentMap returns the map that directly contains the given field path;
