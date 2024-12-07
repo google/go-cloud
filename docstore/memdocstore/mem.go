@@ -191,7 +191,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 		}
 	}
 
-	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	beforeGets, gets, writes, _, afterGets := driver.GroupActions(actions)
 	run(beforeGets)
 	run(gets)
 	run(writes)

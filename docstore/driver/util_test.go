@@ -79,7 +79,7 @@ func TestGroupActions(t *testing.T) {
 	}{
 		{
 			in:   []*Action{{Kind: Get, Key: 1}},
-			want: [][]int{nil, {0}, nil, nil},
+			want: [][]int{nil, {0}, nil, nil, nil},
 		},
 		{
 			in: []*Action{
@@ -89,16 +89,16 @@ func TestGroupActions(t *testing.T) {
 				{Kind: Replace, Key: 2},
 				{Kind: Get, Key: 2},
 			},
-			want: [][]int{{0}, {1}, {2, 3}, {4}},
+			want: [][]int{{0}, {1}, {2, 3}, nil, {4}},
 		},
 		{
 			in:   []*Action{{Kind: Create}, {Kind: Create}, {Kind: Create}},
-			want: [][]int{nil, nil, {0, 1, 2}, nil},
+			want: [][]int{nil, nil, {0, 1, 2}, nil, nil},
 		},
 	} {
-		got := make([][]*Action, 4)
-		got[0], got[1], got[2], got[3] = GroupActions(test.in)
-		want := make([][]*Action, 4)
+		got := make([][]*Action, 5)
+		got[0], got[1], got[2], got[3], got[4] = GroupActions(test.in)
+		want := make([][]*Action, 5)
 		for i, s := range test.want {
 			for _, x := range s {
 				want[i] = append(want[i], test.in[x])

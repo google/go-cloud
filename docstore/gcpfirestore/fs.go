@@ -265,7 +265,7 @@ func (c *collection) RevisionField() string {
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
-	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	beforeGets, gets, writes, _, afterGets := driver.GroupActions(actions)
 	calls := c.buildCommitCalls(writes, errs)
 	// runGets does not issue concurrent RPCs, so it doesn't need a throttle.
 	c.runGets(ctx, beforeGets, errs, opts)
