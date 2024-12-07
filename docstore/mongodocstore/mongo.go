@@ -204,7 +204,7 @@ const mongoIDField = "_id"
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
-	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	beforeGets, gets, writes, _, afterGets := driver.GroupActions(actions)
 	c.runGets(ctx, beforeGets, errs, opts)
 	ch := make(chan []error)
 	go func() { ch <- c.bulkWrite(ctx, writes, errs, opts) }()
