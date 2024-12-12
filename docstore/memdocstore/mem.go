@@ -68,11 +68,11 @@ type Options struct {
 	// When the collection is closed, its contents are saved to the file.
 	Filename string
 
-	// AllowNestedSlicesQuery allows querying with nested slices.
+	// AllowNestedSliceQueries allows querying with nested slices.
 	// This makes the memdocstore more compatible with MongoDB,
 	// but other providers may not support this feature.
 	// See https://github.com/google/go-cloud/pull/3511 for more details.
-	AllowNestedSlicesQuery bool
+	AllowNestedSliceQueries bool
 
 	// Call this function when the collection is closed.
 	// For internal use only.
@@ -405,18 +405,17 @@ func (c *collection) checkRevision(arg driver.Document, current storedDoc) error
 
 // getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
 // (see getParentMap).
-func getAtFieldPath(m map[string]interface{}, fp []string, nested bool) (result interface{}, err error) {
-
-	var get func(m interface{}, name string) interface{}
-	get = func(m interface{}, name string) interface{} {
+func getAtFieldPath(m map[string]any, fp []string, nested bool) (result any, err error) {
+	var get func(m any, name string) any
+	get = func(m any, name string) any {
 		switch concrete := m.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			return concrete[name]
-		case []interface{}:
+		case []any:
 			if !nested {
 				return nil
 			}
-			result := []interface{}{}
+			var result []any
 			for _, e := range concrete {
 				result = append(result, get(e, name))
 			}
