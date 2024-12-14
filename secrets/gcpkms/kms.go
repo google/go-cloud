@@ -180,7 +180,7 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 func (k *keeper) Close() error { return nil }
 
 // ErrorAs implements driver.Keeper.ErrorAs.
-func (k *keeper) ErrorAs(err error, i interface{}) bool {
+func (k *keeper) ErrorAs(err error, i any) bool {
 	s, ok := status.FromError(err)
 	if !ok {
 		return false

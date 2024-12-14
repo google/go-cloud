@@ -75,11 +75,11 @@ func TestStackdriverLog(t *testing.T) {
 		t.Fatal("Unmarshal:", err)
 	}
 
-	var r map[string]interface{}
+	var r map[string]any
 	if err := json.Unmarshal(got, &r); err != nil {
 		t.Error("Unmarshal record:", err)
 	} else {
-		rr, _ := r["httpRequest"].(map[string]interface{})
+		rr, _ := r["httpRequest"].(map[string]any)
 		if rr == nil {
 			t.Error("httpRequest does not exist in record or is not a JSON object")
 		}
@@ -110,7 +110,7 @@ func TestStackdriverLog(t *testing.T) {
 		if got, want := jsonString(rr, "latency"), "5.123456789"; parseLatency(got) != want {
 			t.Errorf("httpRequest.latency = %q; want %q", got, want+"s")
 		}
-		ts, _ := r["timestamp"].(map[string]interface{})
+		ts, _ := r["timestamp"].(map[string]any)
 		if ts == nil {
 			t.Error("timestamp does not exist in record or is not a JSON object")
 		}
@@ -143,12 +143,12 @@ func parseLatency(s string) string {
 	return s
 }
 
-func jsonString(obj map[string]interface{}, k string) string {
+func jsonString(obj map[string]any, k string) string {
 	v, _ := obj[k].(string)
 	return v
 }
 
-func jsonNumber(obj map[string]interface{}, k string) float64 {
+func jsonNumber(obj map[string]any, k string) float64 {
 	v, _ := obj[k].(float64)
 	return v
 }

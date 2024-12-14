@@ -323,13 +323,13 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	dm := dms[0]
 	sbms := &servicebus.Message{Body: dm.Body}
 	if len(dm.Metadata) > 0 {
-		sbms.ApplicationProperties = map[string]interface{}{}
+		sbms.ApplicationProperties = map[string]any{}
 		for k, v := range dm.Metadata {
 			sbms.ApplicationProperties[k] = v
 		}
 	}
 	if dm.BeforeSend != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			if p, ok := i.(**servicebus.Message); ok {
 				*p = sbms
 				return true
@@ -345,7 +345,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		return err
 	}
 	if dm.AfterSend != nil {
-		asFunc := func(i interface{}) bool { return false }
+		asFunc := func(i any) bool { return false }
 		if err := dm.AfterSend(asFunc); err != nil {
 			return err
 		}
@@ -358,7 +358,7 @@ func (t *topic) IsRetryable(err error) bool {
 	return retryable
 }
 
-func (t *topic) As(i interface{}) bool {
+func (t *topic) As(i any) bool {
 	p, ok := i.(**servicebus.Sender)
 	if !ok {
 		return false
@@ -368,11 +368,11 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(err error, i interface{}) bool {
+func (*topic) ErrorAs(err error, i any) bool {
 	return errorAs(err, i)
 }
 
-func errorAs(err error, i interface{}) bool {
+func errorAs(err error, i any) bool {
 	switch v := err.(type) {
 	case *amqp.LinkError:
 		if p, ok := i.(**amqp.LinkError); ok {
@@ -466,7 +466,7 @@ func (s *subscription) IsRetryable(err error) bool {
 }
 
 // As implements driver.Subscription.As.
-func (s *subscription) As(i interface{}) bool {
+func (s *subscription) As(i any) bool {
 	p, ok := i.(**servicebus.Receiver)
 	if !ok {
 		return false
@@ -476,7 +476,7 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (s *subscription) ErrorAs(err error, i interface{}) bool {
+func (s *subscription) ErrorAs(err error, i any) bool {
 	return errorAs(err, i)
 }
 
@@ -517,8 +517,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	return messages, err
 }
 
-func messageAsFunc(sbmsg *servicebus.ReceivedMessage) func(interface{}) bool {
-	return func(i interface{}) bool {
+func messageAsFunc(sbmsg *servicebus.ReceivedMessage) func(any) bool {
+	return func(i any) bool {
 		p, ok := i.(**servicebus.ReceivedMessage)
 		if !ok {
 			return false

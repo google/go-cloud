@@ -301,7 +301,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	for _, m := range ms {
 		routingKey, pub := toRoutingKeyAndAMQPPublishing(m, t.opts)
 		if m.BeforeSend != nil {
-			asFunc := func(i interface{}) bool {
+			asFunc := func(i any) bool {
 				if p, ok := i.(**amqp.Publishing); ok {
 					*p = &pub
 					return true
@@ -317,7 +317,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 			break
 		}
 		if m.AfterSend != nil {
-			asFunc := func(i interface{}) bool { return false }
+			asFunc := func(i any) bool { return false }
 			if err := m.AfterSend(asFunc); err != nil {
 				return err
 			}
@@ -522,7 +522,7 @@ func isRetryable(err error) bool {
 }
 
 // As implements driver.Topic.As.
-func (t *topic) As(i interface{}) bool {
+func (t *topic) As(i any) bool {
 	c, ok := i.(**amqp.Connection)
 	if !ok {
 		return false
@@ -536,11 +536,11 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(err error, i interface{}) bool {
+func (*topic) ErrorAs(err error, i any) bool {
 	return errorAs(err, i)
 }
 
-func errorAs(err error, i interface{}) bool {
+func errorAs(err error, i any) bool {
 	var aerr *amqp.Error
 	if errors.As(err, &aerr) {
 		if p, ok := i.(**amqp.Error); ok {
@@ -721,7 +721,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 // toDriverMessage converts an amqp.Delivery (a received message) to a driver.Message.
 func toDriverMessage(d amqp.Delivery, opts *SubscriptionOptions) *driver.Message {
-	// Delivery.Headers is a map[string]interface{}, so we have to
+	// Delivery.Headers is a map[string]any, so we have to
 	// convert each value to a string.
 	md := map[string]string{}
 	for k, v := range d.Headers {
@@ -743,7 +743,7 @@ func toDriverMessage(d amqp.Delivery, opts *SubscriptionOptions) *driver.Message
 		Body:       d.Body,
 		AckID:      d.DeliveryTag,
 		Metadata:   md,
-		AsFunc: func(i interface{}) bool {
+		AsFunc: func(i any) bool {
 			p, ok := i.(*amqp.Delivery)
 			if !ok {
 				return false
@@ -808,7 +808,7 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 // As implements driver.Subscription.As.
-func (s *subscription) As(i interface{}) bool {
+func (s *subscription) As(i any) bool {
 	c, ok := i.(**amqp.Connection)
 	if !ok {
 		return false
@@ -822,7 +822,7 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (*subscription) ErrorAs(err error, i interface{}) bool {
+func (*subscription) ErrorAs(err error, i any) bool {
 	return errorAs(err, i)
 }
 

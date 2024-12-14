@@ -117,7 +117,7 @@ func TestOpenVariable(t *testing.T) {
 		URL          string
 		WantErr      bool
 		WantWatchErr bool
-		Want         interface{}
+		Want         any
 	}{
 		// myvar does not exist.
 		{"mem://", "blob://myvar", false, true, nil},
@@ -138,7 +138,7 @@ func TestOpenVariable(t *testing.T) {
 		// Working example with string decoder.
 		{bucketURL, "blob://myvar.txt?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
-		{bucketURL, "blob://myvar.json?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{bucketURL, "blob://myvar.json?decoder=jsonmap", false, false, &map[string]any{"Foo": "Bar"}},
 		// Setting wait.
 		{bucketURL, "blob://myvar.txt?wait=2m", false, false, []byte("hello world!")},
 		// Invalid wait.

@@ -25,7 +25,7 @@ import (
 // SchemeMap maps URL schemes to values. The zero value is an empty map, ready for use.
 type SchemeMap struct {
 	api string
-	m   map[string]interface{}
+	m   map[string]any
 }
 
 // Register registers scheme for value; subsequent calls to FromString or
@@ -34,9 +34,9 @@ type SchemeMap struct {
 // be passed. It should be in all lowercase.
 // typ is the portable type (e.g., "Bucket").
 // Register panics if scheme has already been registered.
-func (m *SchemeMap) Register(api, typ, scheme string, value interface{}) {
+func (m *SchemeMap) Register(api, typ, scheme string, value any) {
 	if m.m == nil {
-		m.m = map[string]interface{}{}
+		m.m = map[string]any{}
 	}
 	if api != strings.ToLower(api) {
 		panic(fmt.Errorf("api should be lowercase: %q", api))
@@ -53,7 +53,7 @@ func (m *SchemeMap) Register(api, typ, scheme string, value interface{}) {
 }
 
 // FromString parses urlstr as an URL and looks up the value for the URL's scheme.
-func (m *SchemeMap) FromString(typ, urlstr string) (interface{}, *url.URL, error) {
+func (m *SchemeMap) FromString(typ, urlstr string) (any, *url.URL, error) {
 	u, err := url.Parse(urlstr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open %s.%s: %v", m.api, typ, err)
@@ -66,7 +66,7 @@ func (m *SchemeMap) FromString(typ, urlstr string) (interface{}, *url.URL, error
 }
 
 // FromURL looks up the value for u's scheme.
-func (m *SchemeMap) FromURL(typ string, u *url.URL) (interface{}, error) {
+func (m *SchemeMap) FromURL(typ string, u *url.URL) (any, error) {
 	scheme := u.Scheme
 	if scheme == "" {
 		return nil, fmt.Errorf("open %s.%s: no scheme in URL %q", m.api, typ, u)

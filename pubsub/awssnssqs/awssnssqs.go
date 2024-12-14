@@ -539,7 +539,7 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 				// with the fields from PublishBatchRequestEntry that were set, and
 				// then copy all of the matching fields back after calling dm.BeforeSend.
 				var pi *snsv2.PublishInput
-				asFunc := func(i interface{}) bool {
+				asFunc := func(i any) bool {
 					if p, ok := i.(**snsv2.PublishInput); ok {
 						pi = &snsv2.PublishInput{
 							// Id does not exist on PublishInput.
@@ -581,7 +581,7 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		if len(resp.Successful) == len(dms) {
 			for n, dm := range dms {
 				if dm.AfterSend != nil {
-					asFunc := func(i interface{}) bool {
+					asFunc := func(i any) bool {
 						if p, ok := i.(*snstypesv2.PublishBatchResultEntry); ok {
 							*p = resp.Successful[n]
 							return true
@@ -638,7 +638,7 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			// with the fields from PublishBatchRequestEntry that were set, and
 			// then copy all of the matching fields back after calling dm.BeforeSend.
 			var pi *sns.PublishInput
-			asFunc := func(i interface{}) bool {
+			asFunc := func(i any) bool {
 				if p, ok := i.(**sns.PublishInput); ok {
 					pi = &sns.PublishInput{
 						// Id does not exist on PublishInput.
@@ -680,7 +680,7 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	if len(resp.Successful) == len(dms) {
 		for n, dm := range dms {
 			if dm.AfterSend != nil {
-				asFunc := func(i interface{}) bool {
+				asFunc := func(i any) bool {
 					if p, ok := i.(*sns.PublishBatchResultEntry); ok {
 						*p = *resp.Successful[n]
 						return true
@@ -711,7 +711,7 @@ func (t *snsTopic) IsRetryable(error) bool {
 }
 
 // As implements driver.Topic.As.
-func (t *snsTopic) As(i interface{}) bool {
+func (t *snsTopic) As(i any) bool {
 	if t.useV2 {
 		c, ok := i.(**snsv2.Client)
 		if !ok {
@@ -729,7 +729,7 @@ func (t *snsTopic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs.
-func (t *snsTopic) ErrorAs(err error, i interface{}) bool {
+func (t *snsTopic) ErrorAs(err error, i any) bool {
 	return errorAs(err, t.useV2, i)
 }
 
@@ -844,7 +844,7 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			}
 			reviseSqsV2EntryAttributes(dm, entry)
 			if dm.BeforeSend != nil {
-				asFunc := func(i interface{}) bool {
+				asFunc := func(i any) bool {
 					if p, ok := i.(**sqstypesv2.SendMessageBatchRequestEntry); ok {
 						*p = entry
 						return true
@@ -868,7 +868,7 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		if len(resp.Successful) == len(dms) {
 			for n, dm := range dms {
 				if dm.AfterSend != nil {
-					asFunc := func(i interface{}) bool {
+					asFunc := func(i any) bool {
 						if p, ok := i.(*sqstypesv2.SendMessageBatchResultEntry); ok {
 							*p = resp.Successful[n]
 							return true
@@ -918,7 +918,7 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			// with the fields from SendMessageBatchRequestEntry that were set, and
 			// then copy all of the matching fields back after calling dm.BeforeSend.
 			var smi *sqs.SendMessageInput
-			asFunc := func(i interface{}) bool {
+			asFunc := func(i any) bool {
 				if p, ok := i.(**sqs.SendMessageInput); ok {
 					smi = &sqs.SendMessageInput{
 						// Id does not exist on SendMessageInput.
@@ -958,7 +958,7 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	if len(resp.Successful) == len(dms) {
 		for n, dm := range dms {
 			if dm.AfterSend != nil {
-				asFunc := func(i interface{}) bool {
+				asFunc := func(i any) bool {
 					if p, ok := i.(**sqs.SendMessageBatchResultEntry); ok {
 						*p = resp.Successful[n]
 						return true
@@ -981,7 +981,7 @@ func (t *sqsTopic) IsRetryable(error) bool {
 }
 
 // As implements driver.Topic.As.
-func (t *sqsTopic) As(i interface{}) bool {
+func (t *sqsTopic) As(i any) bool {
 	if t.useV2 {
 		c, ok := i.(**sqsv2.Client)
 		if !ok {
@@ -999,7 +999,7 @@ func (t *sqsTopic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs.
-func (t *sqsTopic) ErrorAs(err error, i interface{}) bool {
+func (t *sqsTopic) ErrorAs(err error, i any) bool {
 	return errorAs(err, t.useV2, i)
 }
 
@@ -1213,7 +1213,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				Body:       b,
 				Metadata:   attrs,
 				AckID:      m.ReceiptHandle,
-				AsFunc: func(i interface{}) bool {
+				AsFunc: func(i any) bool {
 					p, ok := i.(*sqstypesv2.Message)
 					if !ok {
 						return false
@@ -1277,7 +1277,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				Body:       b,
 				Metadata:   attrs,
 				AckID:      m.ReceiptHandle,
-				AsFunc: func(i interface{}) bool {
+				AsFunc: func(i any) bool {
 					p, ok := i.(**sqs.Message)
 					if !ok {
 						return false
@@ -1455,7 +1455,7 @@ func (*subscription) IsRetryable(error) bool {
 }
 
 // As implements driver.Subscription.As.
-func (s *subscription) As(i interface{}) bool {
+func (s *subscription) As(i any) bool {
 	if s.useV2 {
 		c, ok := i.(**sqsv2.Client)
 		if !ok {
@@ -1473,7 +1473,7 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs.
-func (s *subscription) ErrorAs(err error, i interface{}) bool {
+func (s *subscription) ErrorAs(err error, i any) bool {
 	return errorAs(err, s.useV2, i)
 }
 
@@ -1482,7 +1482,7 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
-func errorAs(err error, useV2 bool, i interface{}) bool {
+func errorAs(err error, useV2 bool, i any) bool {
 	if useV2 {
 		return errors.As(err, i)
 	}

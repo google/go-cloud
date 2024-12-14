@@ -38,13 +38,13 @@ func WaitDuration(d time.Duration) time.Duration {
 // State represents the current state of a variable.
 type State interface {
 	// Value returns the current variable value.
-	Value() (interface{}, error)
+	Value() (any, error)
 	// UpdateTime returns the update time for the variable.
 	UpdateTime() time.Time
 
 	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	As(interface{}) bool
+	As(any) bool
 }
 
 // Watcher watches for updates on a variable and returns an updated Variable object if
@@ -91,7 +91,7 @@ type Watcher interface {
 
 	// ErrorAs allows drivers to expose driver-specific types for returned
 	// errors; see State.As for more details.
-	ErrorAs(error, interface{}) bool
+	ErrorAs(error, any) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.

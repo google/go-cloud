@@ -103,7 +103,7 @@ func (ch *fakeChannel) getExchange(name string) (*exchange, error) {
 // errorf returns an amqp.Error and closes the channel. (In the AMQP protocol, any channel error
 // closes the channel and makes it unusable.)
 // It must be called with ch.conn.mu held.
-func (ch *fakeChannel) errorf(code int, reasonFormat string, args ...interface{}) error {
+func (ch *fakeChannel) errorf(code int, reasonFormat string, args ...any) error {
 	_ = ch.Close()
 	return &amqp.Error{Code: code, Reason: fmt.Sprintf(reasonFormat, args...)}
 }

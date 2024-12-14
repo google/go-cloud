@@ -178,7 +178,7 @@ func (v verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	return nil
 }
 
-func (v verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
+func (v verifyContentLanguage) BeforeRead(as func(any) bool) error {
 	if v.useV2 {
 		var (
 			req  *s3v2.GetObjectInput
@@ -196,7 +196,7 @@ func (v verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
 	return nil
 }
 
-func (v verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+func (v verifyContentLanguage) BeforeWrite(as func(any) bool) error {
 	if v.useV2 {
 		var (
 			req      *s3v2.PutObjectInput
@@ -224,7 +224,7 @@ func (v verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
-func (v verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+func (v verifyContentLanguage) BeforeCopy(as func(any) bool) error {
 	if v.useV2 {
 		var in *s3v2.CopyObjectInput
 		if !as(&in) {
@@ -239,7 +239,7 @@ func (v verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
 	return nil
 }
 
-func (v verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
+func (v verifyContentLanguage) BeforeList(as func(any) bool) error {
 	if v.useV2 {
 		if v.usingLegacyList {
 			var req *s3v2.ListObjectsInput
@@ -272,7 +272,7 @@ func (v verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	return nil
 }
 
-func (v verifyContentLanguage) BeforeSign(as func(interface{}) bool) error {
+func (v verifyContentLanguage) BeforeSign(as func(any) bool) error {
 	if v.useV2 {
 		var (
 			get *s3v2.GetObjectInput

@@ -24,7 +24,7 @@ import (
 )
 
 // AckID is the identifier of a message for purposes of acknowledgement.
-type AckID interface{}
+type AckID any
 
 // AckInfo represents an action on an AckID.
 type AckInfo struct {
@@ -56,7 +56,7 @@ type Message struct {
 	// AsFunc allows drivers to expose driver-specific types;
 	// see Topic.As for more details.
 	// AsFunc must be populated on messages returned from ReceiveBatch.
-	AsFunc func(interface{}) bool
+	AsFunc func(any) bool
 
 	// BeforeSend is a callback used when sending a message. It should remain
 	// nil on messages returned from ReceiveBatch.
@@ -65,7 +65,7 @@ type Message struct {
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeSend func(asFunc func(interface{}) bool) error
+	BeforeSend func(asFunc func(any) bool) error
 
 	// AfterSend is a callback used when sending a message. It should remain
 	// nil on messages returned from ReceiveBatch.
@@ -75,7 +75,7 @@ type Message struct {
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	AfterSend func(asFunc func(interface{}) bool) error
+	AfterSend func(asFunc func(any) bool) error
 }
 
 // ByteSize estimates the size in bytes of the message for the purpose of restricting batch sizes.
@@ -117,11 +117,11 @@ type Topic interface {
 
 	// As allows drivers to expose driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	As(i interface{}) bool
+	As(i any) bool
 
 	// ErrorAs allows drivers to expose driver-specific types for errors.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	ErrorAs(error, interface{}) bool
+	ErrorAs(error, any) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
@@ -204,11 +204,11 @@ type Subscription interface {
 
 	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	As(i interface{}) bool
+	As(i any) bool
 
 	// ErrorAs allows drivers to expose driver-specific types for errors.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	ErrorAs(error, interface{}) bool
+	ErrorAs(error, any) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.

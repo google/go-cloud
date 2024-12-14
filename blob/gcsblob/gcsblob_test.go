@@ -156,7 +156,7 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeRead(as func(any) bool) error {
 	var objp **storage.ObjectHandle
 	if !as(&objp) {
 		return errors.New("BeforeRead.As failed to get ObjectHandle")
@@ -168,7 +168,7 @@ func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeWrite(as func(any) bool) error {
 	var objp **storage.ObjectHandle
 	if !as(&objp) {
 		return errors.New("Writer.As failed to get ObjectHandle")
@@ -181,7 +181,7 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeCopy(as func(any) bool) error {
 	var coh *CopyObjectHandles
 	if !as(&coh) {
 		return errors.New("BeforeCopy.As failed to get CopyObjectHandles")
@@ -193,7 +193,7 @@ func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeList(as func(any) bool) error {
 	var q *storage.Query
 	if !as(&q) {
 		return errors.New("List.As failed")
@@ -202,7 +202,7 @@ func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeSign(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeSign(as func(any) bool) error {
 	var opts *storage.SignedURLOptions
 	if !as(&opts) {
 		return errors.New("BeforeSign.As failed")
@@ -346,7 +346,7 @@ func TestBeforeReadNonExistentKey(t *testing.T) {
 
 	// Try reading a nonexistent key.
 	_, err = bucket.NewReader(ctx, "nonexistent-key", &blob.ReaderOptions{
-		BeforeRead: func(asFunc func(interface{}) bool) error {
+		BeforeRead: func(asFunc func(any) bool) error {
 			var objp **storage.ObjectHandle
 			if !asFunc(&objp) {
 				return errors.New("Reader.As failed to get ObjectHandle")
@@ -387,7 +387,7 @@ func TestPreconditions(t *testing.T) {
 
 	// Try writing with a failing precondition.
 	if err := bucket.WriteAll(ctx, key, []byte(content), &blob.WriterOptions{
-		BeforeWrite: func(asFunc func(interface{}) bool) error {
+		BeforeWrite: func(asFunc func(any) bool) error {
 			var objp **storage.ObjectHandle
 			if !asFunc(&objp) {
 				return errors.New("Writer.As failed to get ObjectHandle")
@@ -402,7 +402,7 @@ func TestPreconditions(t *testing.T) {
 
 	// Repeat with a precondition that will pass.
 	if err := bucket.WriteAll(ctx, key, []byte(content), &blob.WriterOptions{
-		BeforeWrite: func(asFunc func(interface{}) bool) error {
+		BeforeWrite: func(asFunc func(any) bool) error {
 			var objp **storage.ObjectHandle
 			if !asFunc(&objp) {
 				return errors.New("Writer.As failed to get ObjectHandle")
@@ -418,7 +418,7 @@ func TestPreconditions(t *testing.T) {
 
 	// Try reading with a failing precondition.
 	_, err = bucket.NewReader(ctx, key, &blob.ReaderOptions{
-		BeforeRead: func(asFunc func(interface{}) bool) error {
+		BeforeRead: func(asFunc func(any) bool) error {
 			var objp **storage.ObjectHandle
 			if !asFunc(&objp) {
 				return errors.New("Reader.As failed to get ObjectHandle")
@@ -444,7 +444,7 @@ func TestPreconditions(t *testing.T) {
 
 	// Repeat with a precondition that will pass.
 	reader, err := bucket.NewReader(ctx, key, &blob.ReaderOptions{
-		BeforeRead: func(asFunc func(interface{}) bool) error {
+		BeforeRead: func(asFunc func(any) bool) error {
 			var objp **storage.ObjectHandle
 			if !asFunc(&objp) {
 				return errors.New("Reader.As failed to get ObjectHandle")
@@ -468,7 +468,7 @@ func TestPreconditions(t *testing.T) {
 
 	// Try copying with a failing precondition on Dst.
 	err = bucket.Copy(ctx, key2, key, &blob.CopyOptions{
-		BeforeCopy: func(asFunc func(interface{}) bool) error {
+		BeforeCopy: func(asFunc func(any) bool) error {
 			var coh *CopyObjectHandles
 			if !asFunc(&coh) {
 				return errors.New("Copy.As failed to get CopyObjectHandles")
@@ -484,7 +484,7 @@ func TestPreconditions(t *testing.T) {
 
 	// Try copying with a failing precondition on Src.
 	err = bucket.Copy(ctx, key2, key, &blob.CopyOptions{
-		BeforeCopy: func(asFunc func(interface{}) bool) error {
+		BeforeCopy: func(asFunc func(any) bool) error {
 			var coh *CopyObjectHandles
 			if !asFunc(&coh) {
 				return errors.New("Copy.As failed to get CopyObjectHandles")
@@ -500,7 +500,7 @@ func TestPreconditions(t *testing.T) {
 
 	// Repeat with preconditions on Dst and Src that will succeed.
 	err = bucket.Copy(ctx, key2, key, &blob.CopyOptions{
-		BeforeCopy: func(asFunc func(interface{}) bool) error {
+		BeforeCopy: func(asFunc func(any) bool) error {
 			var coh *CopyObjectHandles
 			if !asFunc(&coh) {
 				return errors.New("Reader.As failed to get CopyObjectHandles")

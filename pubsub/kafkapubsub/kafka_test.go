@@ -173,7 +173,7 @@ func (asTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (asTest) BeforeSend(as func(interface{}) bool) error {
+func (asTest) BeforeSend(as func(any) bool) error {
 	var pm *sarama.ProducerMessage
 	if !as(&pm) {
 		return fmt.Errorf("cast failed for %T", &pm)
@@ -181,7 +181,7 @@ func (asTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
-func (asTest) AfterSend(as func(interface{}) bool) error {
+func (asTest) AfterSend(as func(any) bool) error {
 	return nil
 }
 
@@ -232,7 +232,7 @@ func TestKafkaKey(t *testing.T) {
 			keyName: keyValue,
 		},
 		Body: []byte("hello world"),
-		BeforeSend: func(as func(interface{}) bool) error {
+		BeforeSend: func(as func(any) bool) error {
 			// Verify that the Key field was set correctly on the outgoing Kafka
 			// message.
 			var pm *sarama.ProducerMessage

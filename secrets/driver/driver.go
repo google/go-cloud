@@ -43,7 +43,7 @@ type Keeper interface {
 	// errors.
 	//
 	// See https://gocloud.dev/concepts/as/ for background information.
-	ErrorAs(err error, i interface{}) bool
+	ErrorAs(err error, i any) bool
 
 	// ErrorCode should return a code that describes the error, which was returned
 	// by one of the other methods in this interface.

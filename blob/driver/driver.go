@@ -34,7 +34,7 @@ type ReaderOptions struct {
 	// which case it should not be called at all.
 	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
-	BeforeRead func(asFunc func(interface{}) bool) error
+	BeforeRead func(asFunc func(any) bool) error
 }
 
 // Reader reads an object from the blob.
@@ -47,7 +47,7 @@ type Reader interface {
 
 	// As allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
-	As(interface{}) bool
+	As(any) bool
 }
 
 // Downloader has an optional extra method for readers.
@@ -109,7 +109,7 @@ type WriterOptions struct {
 	// which case it should not be called.
 	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
-	BeforeWrite func(asFunc func(interface{}) bool) error
+	BeforeWrite func(asFunc func(any) bool) error
 }
 
 // CopyOptions controls options for Copy.
@@ -117,7 +117,7 @@ type CopyOptions struct {
 	// BeforeCopy is a callback that must be called before initiating the Copy.
 	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
-	BeforeCopy func(asFunc func(interface{}) bool) error
+	BeforeCopy func(asFunc func(any) bool) error
 }
 
 // ReaderAttributes contains a subset of attributes about a blob that are
@@ -171,7 +171,7 @@ type Attributes struct {
 	// AsFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	// If not set, no driver-specific types are supported.
-	AsFunc func(interface{}) bool
+	AsFunc func(any) bool
 }
 
 // ListOptions sets options for listing objects in the bucket.
@@ -202,7 +202,7 @@ type ListOptions struct {
 	// before the underlying service's list is executed.
 	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
-	BeforeList func(asFunc func(interface{}) bool) error
+	BeforeList func(asFunc func(any) bool) error
 }
 
 // ListObject represents a specific blob object returned from ListPaged.
@@ -223,7 +223,7 @@ type ListObject struct {
 	// AsFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	// If not set, no driver-specific types are supported.
-	AsFunc func(interface{}) bool
+	AsFunc func(any) bool
 }
 
 // ListPage represents a page of results return from ListPaged.
@@ -252,12 +252,12 @@ type Bucket interface {
 
 	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	As(i interface{}) bool
+	As(i any) bool
 
 	// ErrorAs allows drivers to expose driver-specific types for returned
 	// errors.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	ErrorAs(error, interface{}) bool
+	ErrorAs(error, any) bool
 
 	// Attributes returns attributes for the blob. If the specified object does
 	// not exist, Attributes must return an error for which ErrorCode returns
@@ -368,7 +368,7 @@ type SignedURLOptions struct {
 	// the underlying service's sign functionality.
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeSign func(asFunc func(interface{}) bool) error
+	BeforeSign func(asFunc func(any) bool) error
 }
 
 // prefixedBucket implements Bucket by prepending prefix to all keys.
@@ -384,8 +384,8 @@ func NewPrefixedBucket(b Bucket, prefix string) Bucket {
 }
 
 func (b *prefixedBucket) ErrorCode(err error) gcerrors.ErrorCode { return b.base.ErrorCode(err) }
-func (b *prefixedBucket) As(i interface{}) bool                  { return b.base.As(i) }
-func (b *prefixedBucket) ErrorAs(err error, i interface{}) bool  { return b.base.ErrorAs(err, i) }
+func (b *prefixedBucket) As(i any) bool                          { return b.base.As(i) }
+func (b *prefixedBucket) ErrorAs(err error, i any) bool          { return b.base.ErrorAs(err, i) }
 func (b *prefixedBucket) Attributes(ctx context.Context, key string) (*Attributes, error) {
 	return b.base.Attributes(ctx, b.prefix+key)
 }
@@ -442,8 +442,8 @@ func NewSingleKeyBucket(b Bucket, key string) Bucket {
 }
 
 func (b *singleKeyBucket) ErrorCode(err error) gcerrors.ErrorCode { return b.base.ErrorCode(err) }
-func (b *singleKeyBucket) As(i interface{}) bool                  { return b.base.As(i) }
-func (b *singleKeyBucket) ErrorAs(err error, i interface{}) bool  { return b.base.ErrorAs(err, i) }
+func (b *singleKeyBucket) As(i any) bool                          { return b.base.As(i) }
+func (b *singleKeyBucket) ErrorAs(err error, i any) bool          { return b.base.ErrorAs(err, i) }
 func (b *singleKeyBucket) Attributes(ctx context.Context, _ string) (*Attributes, error) {
 	return b.base.Attributes(ctx, b.key)
 }

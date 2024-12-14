@@ -138,7 +138,7 @@ func OpenVariable(client *http.Client, urlStr string, decoder *runtimevar.Decode
 }
 
 type state struct {
-	val        interface{}
+	val        any
 	raw        *http.Response
 	rawBytes   []byte
 	updateTime time.Time
@@ -146,7 +146,7 @@ type state struct {
 }
 
 // Value implements driver.State.Value.
-func (s *state) Value() (interface{}, error) {
+func (s *state) Value() (any, error) {
 	return s.val, s.err
 }
 
@@ -156,7 +156,7 @@ func (s *state) UpdateTime() time.Time {
 }
 
 // As implements driver.State.As.
-func (s *state) As(i interface{}) bool {
+func (s *state) As(i any) bool {
 	if s.raw == nil {
 		return false
 	}
@@ -263,7 +263,7 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
+func (w *watcher) ErrorAs(err error, i any) bool {
 	switch v := err.(type) {
 	case *url.Error:
 		if p, ok := i.(*url.Error); ok {

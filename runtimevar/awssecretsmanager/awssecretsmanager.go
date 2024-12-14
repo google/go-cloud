@@ -200,7 +200,7 @@ func OpenVariableV2(client *secretsmanagerv2.Client, name string, decoder *runti
 
 // state implements driver.State.
 type state struct {
-	val        interface{}
+	val        any
 	rawGetV1   *secretsmanager.GetSecretValueOutput
 	rawGetV2   *secretsmanagerv2.GetSecretValueOutput
 	rawDescV1  *secretsmanager.DescribeSecretOutput
@@ -211,7 +211,7 @@ type state struct {
 }
 
 // Value implements driver.State.Value.
-func (s *state) Value() (interface{}, error) {
+func (s *state) Value() (any, error) {
 	return s.val, s.err
 }
 
@@ -221,7 +221,7 @@ func (s *state) UpdateTime() time.Time {
 }
 
 // As implements driver.State.As.
-func (s *state) As(i interface{}) bool {
+func (s *state) As(i any) bool {
 	switch p := i.(type) {
 	case **secretsmanager.GetSecretValueOutput:
 		*p = s.rawGetV1
@@ -426,7 +426,7 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
+func (w *watcher) ErrorAs(err error, i any) bool {
 	if w.useV2 {
 		return errors.As(err, i)
 	}

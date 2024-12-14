@@ -46,9 +46,9 @@ type state struct {
 	err        error
 }
 
-func (s *state) Value() (interface{}, error) { return s.val, s.err }
-func (s *state) UpdateTime() time.Time       { return s.updateTime }
-func (s *state) As(i interface{}) bool       { return false }
+func (s *state) Value() (any, error)   { return s.val, s.err }
+func (s *state) UpdateTime() time.Time { return s.updateTime }
+func (s *state) As(i any) bool         { return false }
 
 // fakeWatcher is a fake implementation of driver.Watcher that returns a set *state.
 type fakeWatcher struct {
@@ -535,7 +535,7 @@ func (o *fakeOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable
 func TestDecoder(t *testing.T) {
 	type Struct struct {
 		FieldA string
-		FieldB map[string]interface{}
+		FieldB map[string]any
 	}
 
 	num := 4321
@@ -543,7 +543,7 @@ func TestDecoder(t *testing.T) {
 	str := "boring string"
 	strptr := &str
 
-	inputs := []interface{}{
+	inputs := []any{
 		str,
 		strptr,
 		num,
@@ -551,7 +551,7 @@ func TestDecoder(t *testing.T) {
 		100.1,
 		Struct{
 			FieldA: "hello",
-			FieldB: map[string]interface{}{
+			FieldB: map[string]any{
 				"hello": "world",
 			},
 		},
@@ -561,7 +561,7 @@ func TestDecoder(t *testing.T) {
 		map[string]string{
 			"slice": "pizza",
 		},
-		&map[string]interface{}{},
+		&map[string]any{},
 		[]string{"hello", "world"},
 		&[]int{1, 0, 1},
 		[...]float64{3.1415},
@@ -570,7 +570,7 @@ func TestDecoder(t *testing.T) {
 
 	for _, tc := range []struct {
 		desc     string
-		encodeFn func(interface{}) ([]byte, error)
+		encodeFn func(any) ([]byte, error)
 		decodeFn Decode
 	}{
 		{
@@ -606,7 +606,7 @@ func TestDecoder(t *testing.T) {
 	}
 }
 
-func gobMarshal(v interface{}) ([]byte, error) {
+func gobMarshal(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
 		return nil, err
@@ -646,19 +646,19 @@ func TestDecryptDecoder(t *testing.T) {
 
 	tests := []struct {
 		desc      string
-		in        interface{}
-		encodeFn  func(interface{}) ([]byte, error)
+		in        any
+		encodeFn  func(any) ([]byte, error)
 		postDecFn Decode
 	}{
 		{
 			desc:     "Bytes",
 			in:       []byte("hello world"),
-			encodeFn: func(obj interface{}) ([]byte, error) { return obj.([]byte), nil },
+			encodeFn: func(obj any) ([]byte, error) { return obj.([]byte), nil },
 		},
 		{
 			desc:      "String",
 			in:        "hello world",
-			encodeFn:  func(obj interface{}) ([]byte, error) { return []byte(obj.(string)), nil },
+			encodeFn:  func(obj any) ([]byte, error) { return []byte(obj.(string)), nil },
 			postDecFn: StringDecode,
 		},
 		{

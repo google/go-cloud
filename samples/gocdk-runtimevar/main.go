@@ -73,7 +73,7 @@ func (*catCmd) Usage() string {
 
 func (*catCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (*catCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*catCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -112,7 +112,7 @@ func (*watchCmd) Usage() string {
 
 func (*watchCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (*watchCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*watchCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError

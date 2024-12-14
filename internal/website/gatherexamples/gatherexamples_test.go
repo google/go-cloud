@@ -34,7 +34,7 @@ func TestGather(t *testing.T) {
 			name: "NoExamples",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\nfunc main() {}\n",
 				},
 			},
@@ -44,7 +44,7 @@ func TestGather(t *testing.T) {
 			name: "EmptyExample",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -57,7 +57,7 @@ func Example() {}`,
 			name: "EmptyExampleFoo",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -71,7 +71,7 @@ func ExampleFoo() {
 			name: "NonSignifiedExampleWithPragma",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -87,7 +87,7 @@ func ExampleFoo() {
 			name: "EmptyExampleWithComment",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -104,7 +104,7 @@ func Example() {
 			name: "EmptyExampleFooWithComment",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -121,7 +121,7 @@ func ExampleFoo() {
 			name: "NoImportsExample",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -151,7 +151,7 @@ func Example() {
 			name: "OneImportExample",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -174,7 +174,7 @@ func Example() {
 			name: "TwoImportsExample",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -198,7 +198,7 @@ func Example() {
 			name: "LogFatalToReturnErr",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -222,7 +222,7 @@ func Example() {
 			name: "IgnoreSections",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 
@@ -252,7 +252,7 @@ func Example() {
 			name: "BlankImports",
 			module: packagestest.Module{
 				Name: "example.com/foo",
-				Files: map[string]interface{}{
+				Files: map[string]any{
 					"foo.go": "package foo\n",
 					"example_test.go": `package foo_test
 

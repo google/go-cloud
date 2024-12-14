@@ -26,7 +26,7 @@ func TestSchemeMap(t *testing.T) {
 	tests := []struct {
 		url     string
 		wantErr bool
-		want    interface{}
+		want    any
 	}{
 		{"invalid url", true, nil},
 		{"foo://a/b/c", false, foo},

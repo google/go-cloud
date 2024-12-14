@@ -36,7 +36,7 @@ type Tracer struct {
 // ProviderName returns the name of the provider associated with the driver value.
 // It is intended to be used to set Tracer.Provider.
 // It actually returns the package path of the driver's type.
-func ProviderName(driver interface{}) string {
+func ProviderName(driver any) string {
 	// Return the last component of the package path.
 	if driver == nil {
 		return ""

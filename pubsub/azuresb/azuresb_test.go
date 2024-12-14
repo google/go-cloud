@@ -245,7 +245,7 @@ func (sbAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (sbAsTest) BeforeSend(as func(interface{}) bool) error {
+func (sbAsTest) BeforeSend(as func(any) bool) error {
 	var m *servicebus.Message
 	if !as(&m) {
 		return fmt.Errorf("cast failed for %T", &m)
@@ -253,7 +253,7 @@ func (sbAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
-func (sbAsTest) AfterSend(as func(interface{}) bool) error {
+func (sbAsTest) AfterSend(as func(any) bool) error {
 	return nil
 }
 

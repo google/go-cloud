@@ -217,7 +217,7 @@ func TestOpenVariableURL(t *testing.T) {
 		URL          string
 		WantErr      bool
 		WantWatchErr bool
-		Want         interface{}
+		Want         any
 	}{
 		// Variable construction succeeds, but the file does not exist.
 		{"file://" + nonexistentPath, false, true, nil},
@@ -230,15 +230,15 @@ func TestOpenVariableURL(t *testing.T) {
 		// Working example with string decoder.
 		{"file://" + txtPath + "?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
-		{"file://" + jsonPath + "?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"file://" + jsonPath + "?decoder=jsonmap", false, false, &map[string]any{"Foo": "Bar"}},
 		// Working example with decrypt (default) decoder.
 		{"file://" + secretsPath + "?decoder=decrypt", false, false, []byte(`{"Foo":"Bar"}`)},
 		// Working example with decrypt+bytes decoder.
 		{"file://" + secretsPath + "?decoder=decrypt+bytes", false, false, []byte(`{"Foo":"Bar"}`)},
 		// Working example with decrypt+json decoder.
-		{"file://" + secretsPath + "?decoder=decrypt+jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"file://" + secretsPath + "?decoder=decrypt+jsonmap", false, false, &map[string]any{"Foo": "Bar"}},
 		// Working example with escaped decrypt+json decoder
-		{"file://" + secretsPath + "?decoder=" + url.QueryEscape("decrypt+jsonmap"), false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"file://" + secretsPath + "?decoder=" + url.QueryEscape("decrypt+jsonmap"), false, false, &map[string]any{"Foo": "Bar"}},
 		// Setting wait.
 		{"file://" + txtPath + "?decoder=string&wait=1m", false, false, "hello world!"},
 		// Invalid wait.

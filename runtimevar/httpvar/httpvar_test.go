@@ -302,7 +302,7 @@ func TestOpenVariableURL(t *testing.T) {
 		URL          string
 		WantErr      bool
 		WantWatchErr bool
-		Want         interface{}
+		Want         any
 	}{
 		// Nonexistentvar does not exist, so we get an error from Watch.
 		{baseURL + "/nonexistentvar", false, true, nil},
@@ -313,7 +313,7 @@ func TestOpenVariableURL(t *testing.T) {
 		// Working example with default decoder.
 		{baseURL + "/string-var", false, false, []byte("hello world")},
 		// Working example with JSON decoder.
-		{baseURL + "/json-var?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{baseURL + "/json-var?decoder=jsonmap", false, false, &map[string]any{"Foo": "Bar"}},
 		// Setting wait.
 		{baseURL + "/string-var?decoder=string&wait=1m", false, false, "hello world"},
 		// Invalid wait.
@@ -347,12 +347,12 @@ func TestOpenVariableURL(t *testing.T) {
 type mockServer struct {
 	baseURL   string
 	close     func()
-	responses map[string]interface{}
+	responses map[string]any
 	authUser  string
 	authPwd   string
 }
 
-func (m *mockServer) SetResponse(name string, response interface{}) {
+func (m *mockServer) SetResponse(name string, response any) {
 	m.responses[name] = response
 }
 
@@ -361,7 +361,7 @@ func (m *mockServer) DeleteResponse(name string) {
 }
 
 func newMockServer() *mockServer {
-	mock := &mockServer{responses: map[string]interface{}{}}
+	mock := &mockServer{responses: map[string]any{}}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

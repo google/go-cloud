@@ -59,19 +59,19 @@ import (
 type Snapshot struct {
 	// Value contains the value of the variable.
 	// The type for Value depends on the decoder used when creating the Variable.
-	Value interface{}
+	Value any
 
 	// UpdateTime is the time when the last change was detected.
 	UpdateTime time.Time
 
-	asFunc func(interface{}) bool
+	asFunc func(any) bool
 }
 
 // As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (s *Snapshot) As(i interface{}) bool {
+func (s *Snapshot) As(i any) bool {
 	if s.asFunc == nil {
 		return false
 	}
@@ -329,7 +329,7 @@ func wrapError(w driver.Watcher, err error) error {
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://gocloud.dev/concepts/as/ for background information.
-func (c *Variable) ErrorAs(err error, i interface{}) bool {
+func (c *Variable) ErrorAs(err error, i any) bool {
 	return gcerr.ErrorAs(err, i, c.dw.ErrorAs)
 }
 
@@ -405,7 +405,7 @@ func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
 // an arbitrary type. Decode functions are used when creating a Decoder via
 // NewDecoder. This package provides common Decode functions including
 // GobDecode and JSONDecode.
-type Decode func(context.Context, []byte, interface{}) error
+type Decode func(context.Context, []byte, any) error
 
 // Decoder decodes a slice of bytes into a particular Go object.
 //
@@ -423,7 +423,7 @@ type Decoder struct {
 // This package provides some common Decode functions, including JSONDecode
 // and GobDecode, which can be passed to this function to create Decoders for
 // JSON and gob values.
-func NewDecoder(obj interface{}, fn Decode) *Decoder {
+func NewDecoder(obj any, fn Decode) *Decoder {
 	return &Decoder{
 		typ: reflect.TypeOf(obj),
 		fn:  fn,
@@ -431,7 +431,7 @@ func NewDecoder(obj interface{}, fn Decode) *Decoder {
 }
 
 // Decode decodes b into a new instance of the target type.
-func (d *Decoder) Decode(ctx context.Context, b []byte) (interface{}, error) {
+func (d *Decoder) Decode(ctx context.Context, b []byte) (any, error) {
 	nv := reflect.New(d.typ).Interface()
 	if err := d.fn(ctx, b, nv); err != nil {
 		return nil, err
@@ -449,24 +449,24 @@ var (
 )
 
 // JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
-func JSONDecode(ctx context.Context, data []byte, obj interface{}) error {
+func JSONDecode(ctx context.Context, data []byte, obj any) error {
 	return json.Unmarshal(data, obj)
 }
 
 // GobDecode can be passed to NewDecoder when decoding gobs (https://golang.org/pkg/encoding/gob/).
-func GobDecode(ctx context.Context, data []byte, obj interface{}) error {
+func GobDecode(ctx context.Context, data []byte, obj any) error {
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(obj)
 }
 
 // StringDecode decodes raw bytes b into a string.
-func StringDecode(ctx context.Context, b []byte, obj interface{}) error {
+func StringDecode(ctx context.Context, b []byte, obj any) error {
 	v := obj.(*string)
 	*v = string(b)
 	return nil
 }
 
 // BytesDecode copies the slice of bytes b into obj.
-func BytesDecode(ctx context.Context, b []byte, obj interface{}) error {
+func BytesDecode(ctx context.Context, b []byte, obj any) error {
 	v := obj.(*[]byte)
 	*v = b[:]
 	return nil
@@ -478,7 +478,7 @@ func BytesDecode(ctx context.Context, b []byte, obj interface{}) error {
 // post defaults to BytesDecode. An optional decoder can be passed in to do
 // further decode operation based on the decrypted message.
 func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
-	return func(ctx context.Context, b []byte, obj interface{}) error {
+	return func(ctx context.Context, b []byte, obj any) error {
 		decrypted, err := k.Decrypt(ctx, b)
 		if err != nil {
 			return err
@@ -499,8 +499,8 @@ func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
 //     BytesDecoder if URLOpener.Decoder is nil (which is true if you're
 //     using the default URLOpener).
 //   - "bytes": Returns a BytesDecoder; Snapshot.Value will be of type []byte.
-//   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
-//     Snapshot.Value will be of type *map[string]interface{}.
+//   - "jsonmap": Returns a JSON decoder for a map[string]any;
+//     Snapshot.Value will be of type *map[string]any.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
 //
 // It also supports using "decrypt+<decoderName>" (or "decrypt" for default
@@ -524,7 +524,7 @@ func DecoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Dec
 	case "bytes":
 		return maybeDecrypt(ctx, k, BytesDecoder), nil
 	case "jsonmap":
-		var m map[string]interface{}
+		var m map[string]any
 		return maybeDecrypt(ctx, k, NewDecoder(&m, JSONDecode)), nil
 	case "string":
 		return maybeDecrypt(ctx, k, StringDecoder), nil
