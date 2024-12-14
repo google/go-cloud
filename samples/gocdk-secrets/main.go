@@ -78,7 +78,7 @@ func (cmd *decryptCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.base64out, "base64out", false, "the resulting plaintext should be base64 encoded before printing it out")
 }
 
-func (cmd *decryptCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *decryptCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -140,7 +140,7 @@ func (cmd *encryptCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.base64out, "base64out", true, "the resulting ciphertext should be base64-encoded before printing it out")
 }
 
-func (cmd *encryptCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *encryptCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError

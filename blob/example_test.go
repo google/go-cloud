@@ -403,7 +403,7 @@ func ExampleWriterOptions() {
 	}
 	defer b.Close()
 
-	beforeWrite := func(as func(interface{}) bool) error {
+	beforeWrite := func(as func(any) bool) error {
 		var sw *storage.Writer
 		if as(&sw) {
 			fmt.Println(sw.ChunkSize)
@@ -462,7 +462,7 @@ func ExampleListOptions() {
 	}
 	defer b.Close()
 
-	beforeList := func(as func(interface{}) bool) error {
+	beforeList := func(as func(any) bool) error {
 		// Access storage.Query via q here.
 		var q *storage.Query
 		if as(&q) {

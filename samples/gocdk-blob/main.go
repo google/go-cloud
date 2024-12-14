@@ -72,7 +72,7 @@ func (*downloadCmd) Usage() string {
 
 func (*downloadCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (*downloadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*downloadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -126,7 +126,7 @@ func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.delimiter, "d", "/", "directory delimiter; empty string returns flattened listing")
 }
 
-func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -175,7 +175,7 @@ func (*uploadCmd) Usage() string {
 
 func (*uploadCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (*uploadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) (status subcommands.ExitStatus) {
+func (*uploadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) (status subcommands.ExitStatus) {
 	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError

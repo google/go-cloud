@@ -184,7 +184,7 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeRead(as func(any) bool) error {
 	var u *azblob.DownloadStreamOptions
 	if !as(&u) {
 		return fmt.Errorf("BeforeRead As failed to get %T", u)
@@ -192,7 +192,7 @@ func (verifyContentLanguage) BeforeRead(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeWrite(as func(any) bool) error {
 	var azOpts *azblob.UploadStreamOptions
 	if !as(&azOpts) {
 		return errors.New("Writer.As failed")
@@ -201,7 +201,7 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeCopy(as func(any) bool) error {
 	var co *azblobblob.StartCopyFromURLOptions
 	if !as(&co) {
 		return errors.New("BeforeCopy.As failed")
@@ -209,7 +209,7 @@ func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeList(as func(any) bool) error {
 	var azOpts *container.ListBlobsHierarchyOptions
 	if !as(&azOpts) {
 		return errors.New("BeforeList.As failed")
@@ -217,7 +217,7 @@ func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeSign(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeSign(as func(any) bool) error {
 	var azOpts *sas.BlobPermissions
 	if !as(&azOpts) {
 		return errors.New("BeforeSign.As failed")

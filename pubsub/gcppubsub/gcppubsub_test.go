@@ -264,7 +264,7 @@ func (gcpAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (gcpAsTest) BeforeSend(as func(interface{}) bool) error {
+func (gcpAsTest) BeforeSend(as func(any) bool) error {
 	var ppm *pubsubpb.PubsubMessage
 	if !as(&ppm) {
 		return fmt.Errorf("cast failed for %T", &ppm)
@@ -272,7 +272,7 @@ func (gcpAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
-func (gcpAsTest) AfterSend(as func(interface{}) bool) error {
+func (gcpAsTest) AfterSend(as func(any) bool) error {
 	var msgId string
 	if !as(&msgId) {
 		return fmt.Errorf("cast failed for %T", &msgId)

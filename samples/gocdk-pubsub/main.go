@@ -73,7 +73,7 @@ func (*pubCmd) Usage() string {
 
 func (*pubCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (*pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -129,7 +129,7 @@ func (cmd *subCmd) SetFlags(f *flag.FlagSet) {
 	f.IntVar(&cmd.n, "n", 0, "number of messages to receive, or 0 for unlimited")
 }
 
-func (cmd *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError

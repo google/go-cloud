@@ -163,7 +163,7 @@ func TestOpenVariable(t *testing.T) {
 		URL          string
 		WantErr      bool
 		WantWatchErr bool
-		Want         interface{}
+		Want         any
 	}{
 		// Nonexistentvar does not exist, so we get an error from Watch.
 		{"etcd://nonexistentvar", false, true, nil},
@@ -176,7 +176,7 @@ func TestOpenVariable(t *testing.T) {
 		// Working example with default decoder.
 		{"etcd://string-var", false, false, []byte("hello world")},
 		// Working example with JSON decoder.
-		{"etcd://json-var?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"etcd://json-var?decoder=jsonmap", false, false, &map[string]any{"Foo": "Bar"}},
 	}
 
 	for _, test := range tests {

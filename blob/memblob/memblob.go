@@ -195,10 +195,10 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 }
 
 // As implements driver.As.
-func (b *bucket) As(i interface{}) bool { return false }
+func (b *bucket) As(i any) bool { return false }
 
 // As implements driver.ErrorAs.
-func (b *bucket) ErrorAs(err error, i interface{}) bool { return false }
+func (b *bucket) ErrorAs(err error, i any) bool { return false }
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
@@ -223,7 +223,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 
 	if opts.BeforeRead != nil {
-		if err := opts.BeforeRead(func(interface{}) bool { return false }); err != nil {
+		if err := opts.BeforeRead(func(any) bool { return false }); err != nil {
 			return nil, err
 		}
 	}
@@ -272,7 +272,7 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 	return &r.attrs
 }
 
-func (r *reader) As(i interface{}) bool { return false }
+func (r *reader) As(i any) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
@@ -283,7 +283,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 	defer b.mu.Unlock()
 
 	if opts.BeforeWrite != nil {
-		if err := opts.BeforeWrite(func(interface{}) bool { return false }); err != nil {
+		if err := opts.BeforeWrite(func(any) bool { return false }); err != nil {
 			return nil, err
 		}
 	}
@@ -367,7 +367,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	defer b.mu.Unlock()
 
 	if opts.BeforeCopy != nil {
-		if err := opts.BeforeCopy(func(interface{}) bool { return false }); err != nil {
+		if err := opts.BeforeCopy(func(any) bool { return false }); err != nil {
 			return err
 		}
 	}

@@ -245,7 +245,7 @@ func SecretKey(projectID gcp.ProjectID, secretID string) string {
 
 // state implements driver.State.
 type state struct {
-	val        interface{}
+	val        any
 	raw        *secretmanagerpb.AccessSecretVersionResponse
 	updateTime time.Time
 	rawBytes   []byte
@@ -253,7 +253,7 @@ type state struct {
 }
 
 // Value implements driver.State.Value.
-func (s *state) Value() (interface{}, error) {
+func (s *state) Value() (any, error) {
 	return s.val, s.err
 }
 
@@ -263,7 +263,7 @@ func (s *state) UpdateTime() time.Time {
 }
 
 // As implements driver.State.As.
-func (s *state) As(i interface{}) bool {
+func (s *state) As(i any) bool {
 	if s.raw == nil {
 		return false
 	}
@@ -359,7 +359,7 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
+func (w *watcher) ErrorAs(err error, i any) bool {
 	// FromError converts err to a *status.Status.
 	s, _ := status.FromError(err)
 	if p, ok := i.(**status.Status); ok {

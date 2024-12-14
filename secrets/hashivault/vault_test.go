@@ -74,7 +74,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 			t.Fatal(err, "; run secrets/hashivault/localvault.sh to start a dev vault container")
 		}
 		if _, ok := s.Data["transit/"]; !ok {
-			if _, err := c.Logical().Write("sys/mounts/transit", map[string]interface{}{"type": "transit"}); err != nil {
+			if _, err := c.Logical().Write("sys/mounts/transit", map[string]any{"type": "transit"}); err != nil {
 				t.Fatal(err, "; run secrets/hashivault/localvault.sh to start a dev vault container")
 			}
 		}

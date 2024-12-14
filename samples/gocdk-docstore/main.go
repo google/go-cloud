@@ -62,7 +62,7 @@ type Message struct {
 	ID               string // unique ID of each document
 	Date             string
 	Content          string
-	DocstoreRevision interface{}
+	DocstoreRevision any
 }
 
 func (m Message) String() string {
@@ -88,7 +88,7 @@ func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.date, "d", "", "get the messages from this date, in the format YYYY-MM-DD")
 }
 
-func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *listCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -145,7 +145,7 @@ func (p *putCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.date, "d", "", "date of document")
 }
 
-func (p *putCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *putCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -195,7 +195,7 @@ func (*updateCmd) Usage() string {
 
 func (*updateCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (cmd *updateCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *updateCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 3 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -241,7 +241,7 @@ func (cmd *deleteCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.date, "d", "", "delete the messages from this date, in the format YYYY-MM-DD")
 }
 
-func (cmd *deleteCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *deleteCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError

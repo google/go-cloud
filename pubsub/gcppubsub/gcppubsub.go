@@ -374,7 +374,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	for _, dm := range dms {
 		psm := &pb.PubsubMessage{Data: dm.Body, Attributes: dm.Metadata}
 		if dm.BeforeSend != nil {
-			asFunc := func(i interface{}) bool {
+			asFunc := func(i any) bool {
 				if p, ok := i.(**pb.PubsubMessage); ok {
 					*p = psm
 					return true
@@ -395,7 +395,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	if len(pr.MessageIds) == len(dms) {
 		for n, dm := range dms {
 			if dm.AfterSend != nil {
-				asFunc := func(i interface{}) bool {
+				asFunc := func(i any) bool {
 					if p, ok := i.(*string); ok {
 						*p = pr.MessageIds[n]
 						return true
@@ -418,7 +418,7 @@ func (t *topic) IsRetryable(error) bool {
 }
 
 // As implements driver.Topic.As.
-func (t *topic) As(i interface{}) bool {
+func (t *topic) As(i any) bool {
 	c, ok := i.(**raw.PublisherClient)
 	if !ok {
 		return false
@@ -428,11 +428,11 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(err error, i interface{}) bool {
+func (*topic) ErrorAs(err error, i any) bool {
 	return errorAs(err, i)
 }
 
-func errorAs(err error, i interface{}) bool {
+func errorAs(err error, i any) bool {
 	s, ok := status.FromError(err)
 	if !ok {
 		return false
@@ -566,8 +566,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	return ms, nil
 }
 
-func messageAsFunc(pm *pb.PubsubMessage, rm *pb.ReceivedMessage) func(interface{}) bool {
-	return func(i interface{}) bool {
+func messageAsFunc(pm *pb.PubsubMessage, rm *pb.ReceivedMessage) func(any) bool {
+	return func(i any) bool {
 		ip, ok := i.(**pb.PubsubMessage)
 		if ok {
 			*ip = pm
@@ -618,7 +618,7 @@ func (s *subscription) IsRetryable(err error) bool {
 }
 
 // As implements driver.Subscription.As.
-func (s *subscription) As(i interface{}) bool {
+func (s *subscription) As(i any) bool {
 	c, ok := i.(**raw.SubscriberClient)
 	if !ok {
 		return false
@@ -628,7 +628,7 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (*subscription) ErrorAs(err error, i interface{}) bool {
+func (*subscription) ErrorAs(err error, i any) bool {
 	return errorAs(err, i)
 }
 

@@ -174,15 +174,15 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	for i, m := range ms {
 		m.AckID = t.nextAckID + i
 		m.LoggableID = fmt.Sprintf("msg #%d", m.AckID)
-		m.AsFunc = func(interface{}) bool { return false }
+		m.AsFunc = func(any) bool { return false }
 
 		if m.BeforeSend != nil {
-			if err := m.BeforeSend(func(interface{}) bool { return false }); err != nil {
+			if err := m.BeforeSend(func(any) bool { return false }); err != nil {
 				return err
 			}
 		}
 		if m.AfterSend != nil {
-			if err := m.AfterSend(func(interface{}) bool { return false }); err != nil {
+			if err := m.AfterSend(func(any) bool { return false }); err != nil {
 				return err
 			}
 		}
@@ -201,7 +201,7 @@ func (*topic) IsRetryable(error) bool { return false }
 // It supports *topic so that NewSubscription can recover a *topic
 // from the portable type (see below). External users won't be able
 // to use As because topic isn't exported.
-func (t *topic) As(i interface{}) bool {
+func (t *topic) As(i any) bool {
 	x, ok := i.(**topic)
 	if !ok {
 		return false
@@ -211,7 +211,7 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(error, interface{}) bool {
+func (*topic) ErrorAs(error, any) bool {
 	return false
 }
 
@@ -390,10 +390,10 @@ func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) err
 func (*subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
-func (s *subscription) As(i interface{}) bool { return false }
+func (s *subscription) As(i any) bool { return false }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (*subscription) ErrorAs(error, interface{}) bool {
+func (*subscription) ErrorAs(error, any) bool {
 	return false
 }
 

@@ -224,7 +224,7 @@ func (f *frontend) newID() string {
 
 // executeTemplate executes t into a buffer using data, and if that succeeds it
 // writes the bytes to w.
-func executeTemplate(t *template.Template, data interface{}, w http.ResponseWriter) error {
+func executeTemplate(t *template.Template, data any, w http.ResponseWriter) error {
 	var buf bytes.Buffer
 	if err := t.Execute(&buf, data); err != nil {
 		return err

@@ -468,7 +468,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	srcBlobClient := b.client.NewBlobClient(srcKey)
 	copyOptions := &azblobblob.StartCopyFromURLOptions{}
 	if opts.BeforeCopy != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			switch v := i.(type) {
 			case **azblobblob.StartCopyFromURLOptions:
 				*v = copyOptions
@@ -533,7 +533,7 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 	return &r.attrs
 }
 
-func (r *reader) As(i interface{}) bool {
+func (r *reader) As(i any) bool {
 	p, ok := i.(*azblobblob.DownloadStreamResponse)
 	if !ok {
 		return false
@@ -554,7 +554,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		downloadOpts.Range.Count = length
 	}
 	if opts.BeforeRead != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			if p, ok := i.(**azblobblob.DownloadStreamOptions); ok {
 				*p = &downloadOpts
 				return true
@@ -608,7 +608,7 @@ func getSize(contentLength *int64, contentRange string) int64 {
 }
 
 // As implements driver.As.
-func (b *bucket) As(i interface{}) bool {
+func (b *bucket) As(i any) bool {
 	p, ok := i.(**container.Client)
 	if !ok {
 		return false
@@ -618,7 +618,7 @@ func (b *bucket) As(i interface{}) bool {
 }
 
 // As implements driver.ErrorAs.
-func (b *bucket) ErrorAs(err error, i interface{}) bool {
+func (b *bucket) ErrorAs(err error, i any) bool {
 	switch v := err.(type) {
 	case *azcore.ResponseError:
 		if p, ok := i.(**azcore.ResponseError); ok {
@@ -687,7 +687,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		MD5:                blobPropertiesResponse.ContentMD5,
 		ETag:               eTag,
 		Metadata:           md,
-		AsFunc: func(i interface{}) bool {
+		AsFunc: func(i any) bool {
 			p, ok := i.(*azblobblob.GetPropertiesResponse)
 			if !ok {
 				return false
@@ -719,7 +719,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		Marker:     marker,
 	}
 	if opts.BeforeList != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			p, ok := i.(**container.ListBlobsHierarchyOptions)
 			if !ok {
 				return false
@@ -745,7 +745,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			Key:   unescapeKey(to.String(blobPrefix.Name)),
 			Size:  0,
 			IsDir: true,
-			AsFunc: func(i interface{}) bool {
+			AsFunc: func(i any) bool {
 				v, ok := i.(*container.BlobPrefix)
 				if ok {
 					*v = *blobPrefix
@@ -762,7 +762,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			Size:    *blobInfo.Properties.ContentLength,
 			MD5:     blobInfo.Properties.ContentMD5,
 			IsDir:   false,
-			AsFunc: func(i interface{}) bool {
+			AsFunc: func(i any) bool {
 				v, ok := i.(*container.BlobItem)
 				if ok {
 					*v = *blobInfo
@@ -804,7 +804,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	}
 
 	if opts.BeforeSign != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			v, ok := i.(**sas.BlobPermissions)
 			if ok {
 				*v = &perms
@@ -914,7 +914,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		},
 	}
 	if opts.BeforeWrite != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			p, ok := i.(**azblob.UploadStreamOptions)
 			if !ok {
 				return false

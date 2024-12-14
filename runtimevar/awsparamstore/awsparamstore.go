@@ -210,7 +210,7 @@ func newWatcher(useV2 bool, sess client.ConfigProvider, clientV2 *ssmv2.Client, 
 
 // state implements driver.State.
 type state struct {
-	val        interface{}
+	val        any
 	rawGetV1   *ssm.GetParameterOutput
 	rawGetV2   *ssmv2.GetParameterOutput
 	updateTime time.Time
@@ -219,7 +219,7 @@ type state struct {
 }
 
 // Value implements driver.State.Value.
-func (s *state) Value() (interface{}, error) {
+func (s *state) Value() (any, error) {
 	return s.val, s.err
 }
 
@@ -229,7 +229,7 @@ func (s *state) UpdateTime() time.Time {
 }
 
 // As implements driver.State.As.
-func (s *state) As(i interface{}) bool {
+func (s *state) As(i any) bool {
 	switch p := i.(type) {
 	case **ssm.GetParameterOutput:
 		*p = s.rawGetV1
@@ -375,7 +375,7 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
+func (w *watcher) ErrorAs(err error, i any) bool {
 	if w.useV2 {
 		return errors.As(err, i)
 	}

@@ -64,7 +64,7 @@ func Split(n int, opts *Options) []int {
 // A Batcher batches items.
 type Batcher struct {
 	opts          Options
-	handler       func(interface{}) error
+	handler       func(any) error
 	itemSliceZero reflect.Value  // nil (zero value) for slice of items
 	wg            sync.WaitGroup // tracks active Add calls
 
@@ -82,7 +82,7 @@ type sizableItem interface {
 }
 
 type waiter struct {
-	item interface{}
+	item any
 	errc chan error
 }
 
@@ -150,7 +150,7 @@ func (o *Options) NewMergedOptions(opts *Options) *Options {
 //
 // handler is a function that will be called on each bundle. If itemExample is
 // of type T, the argument to handler is of type []T.
-func New(itemType reflect.Type, opts *Options, handler func(interface{}) error) *Batcher {
+func New(itemType reflect.Type, opts *Options, handler func(any) error) *Batcher {
 	return &Batcher{
 		opts:          newOptionsWithDefaults(opts),
 		handler:       handler,
@@ -161,7 +161,7 @@ func New(itemType reflect.Type, opts *Options, handler func(interface{}) error) 
 // Add adds an item to the batcher. It blocks until the handler has
 // processed the item and reports the error that the handler returned.
 // If Shutdown has been called, Add immediately returns an error.
-func (b *Batcher) Add(ctx context.Context, item interface{}) error {
+func (b *Batcher) Add(ctx context.Context, item any) error {
 	c := b.AddNoWait(item)
 	// Wait until either our result is ready or the context is done.
 	select {
@@ -175,7 +175,7 @@ func (b *Batcher) Add(ctx context.Context, item interface{}) error {
 // AddNoWait adds an item to the batcher and returns immediately. When the handler is
 // called on the item, the handler's error return value will be sent to the channel
 // returned from AddNoWait.
-func (b *Batcher) AddNoWait(item interface{}) <-chan error {
+func (b *Batcher) AddNoWait(item any) <-chan error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

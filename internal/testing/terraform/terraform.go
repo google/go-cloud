@@ -39,7 +39,7 @@ func ReadOutput(dir string) (map[string]Output, error) {
 
 // Output describes a single output value.
 type Output struct {
-	Type      string      `json:"type"` // one of "string", "list", or "map"
-	Sensitive bool        `json:"sensitive"`
-	Value     interface{} `json:"value"`
+	Type      string `json:"type"` // one of "string", "list", or "map"
+	Sensitive bool   `json:"sensitive"`
+	Value     any    `json:"value"`
 }

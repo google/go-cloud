@@ -379,7 +379,7 @@ func (r *reader) Attributes() *driver.ReaderAttributes {
 	return &r.attrs
 }
 
-func (r *reader) As(i interface{}) bool {
+func (r *reader) As(i any) bool {
 	p, ok := i.(**storage.Reader)
 	if !ok {
 		return false
@@ -421,7 +421,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		Delimiter: escapeKey(opts.Delimiter),
 	}
 	if opts.BeforeList != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			p, ok := i.(**storage.Query)
 			if !ok {
 				return false
@@ -449,7 +449,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		page.Objects = make([]*driver.ListObject, len(objects))
 		for i, obj := range objects {
 			toCopy := obj
-			asFunc := func(val interface{}) bool {
+			asFunc := func(val any) bool {
 				p, ok := val.(*storage.ObjectAttrs)
 				if !ok {
 					return false
@@ -484,7 +484,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 }
 
 // As implements driver.As.
-func (b *bucket) As(i interface{}) bool {
+func (b *bucket) As(i any) bool {
 	p, ok := i.(**storage.Client)
 	if !ok {
 		return false
@@ -494,7 +494,7 @@ func (b *bucket) As(i interface{}) bool {
 }
 
 // As implements driver.ErrorAs.
-func (b *bucket) ErrorAs(err error, i interface{}) bool {
+func (b *bucket) ErrorAs(err error, i any) bool {
 	switch v := err.(type) {
 	case *googleapi.Error:
 		if p, ok := i.(**googleapi.Error); ok {
@@ -532,7 +532,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes
 		Size:               attrs.Size,
 		MD5:                attrs.MD5,
 		ETag:               eTag,
-		AsFunc: func(i interface{}) bool {
+		AsFunc: func(i any) bool {
 			p, ok := i.(*storage.ObjectAttrs)
 			if !ok {
 				return false
@@ -561,7 +561,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	var rerr error
 	madeReader := false
 	if opts.BeforeRead != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			if p, ok := i.(***storage.ObjectHandle); ok && !madeReader {
 				*p = objp
 				return true
@@ -646,7 +646,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 
 	var w *storage.Writer
 	if opts.BeforeWrite != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			if p, ok := i.(***storage.ObjectHandle); ok && w == nil {
 				*p = objp
 				return true
@@ -695,7 +695,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 
 	var copier *storage.Copier
 	if opts.BeforeCopy != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			if p, ok := i.(**CopyObjectHandles); ok && copier == nil {
 				*p = &handles
 				return true
@@ -756,7 +756,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.Signed
 		opts.SignBytes = b.opts.MakeSignBytes(ctx)
 	}
 	if dopts.BeforeSign != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			v, ok := i.(**storage.SignedURLOptions)
 			if ok {
 				*v = opts

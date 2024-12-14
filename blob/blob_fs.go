@@ -44,7 +44,7 @@ func (f *iofsFileInfo) Size() int64                { return f.lo.Size }
 func (f *iofsFileInfo) Mode() fs.FileMode          { return fs.ModeIrregular }
 func (f *iofsFileInfo) ModTime() time.Time         { return f.lo.ModTime }
 func (f *iofsFileInfo) IsDir() bool                { return false }
-func (f *iofsFileInfo) Sys() interface{}           { return f.lo }
+func (f *iofsFileInfo) Sys() any                   { return f.lo }
 func (f *iofsFileInfo) Info() (fs.FileInfo, error) { return f, nil }
 func (f *iofsFileInfo) Type() fs.FileMode          { return fs.ModeIrregular }
 
@@ -58,7 +58,7 @@ type iofsOpenFile struct {
 func (f *iofsOpenFile) Name() string               { return f.name }
 func (f *iofsOpenFile) Mode() fs.FileMode          { return fs.ModeIrregular }
 func (f *iofsOpenFile) IsDir() bool                { return false }
-func (f *iofsOpenFile) Sys() interface{}           { return f.r }
+func (f *iofsOpenFile) Sys() any                   { return f.r }
 func (f *iofsOpenFile) Stat() (fs.FileInfo, error) { return f, nil }
 
 // iofsDir describes a single directory in an io/fs.FS.
@@ -83,7 +83,7 @@ func (d *iofsDir) Mode() fs.FileMode          { return fs.ModeDir }
 func (d *iofsDir) Type() fs.FileMode          { return fs.ModeDir }
 func (d *iofsDir) ModTime() time.Time         { return time.Time{} }
 func (d *iofsDir) IsDir() bool                { return true }
-func (d *iofsDir) Sys() interface{}           { return d }
+func (d *iofsDir) Sys() any                   { return d }
 func (d *iofsDir) Info() (fs.FileInfo, error) { return d, nil }
 func (d *iofsDir) Stat() (fs.FileInfo, error) { return d, nil }
 func (d *iofsDir) Read([]byte) (int, error) {

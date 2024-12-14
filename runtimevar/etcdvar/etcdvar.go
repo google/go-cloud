@@ -155,7 +155,7 @@ var errNotExist = errors.New("variable does not exist")
 
 // state implements driver.State.
 type state struct {
-	val        interface{}
+	val        any
 	raw        *clientv3.GetResponse
 	updateTime time.Time
 	version    int64
@@ -163,7 +163,7 @@ type state struct {
 }
 
 // Value implements driver.State.Value.
-func (s *state) Value() (interface{}, error) {
+func (s *state) Value() (any, error) {
 	return s.val, s.err
 }
 
@@ -173,7 +173,7 @@ func (s *state) UpdateTime() time.Time {
 }
 
 // As implements driver.State.As.
-func (s *state) As(i interface{}) bool {
+func (s *state) As(i any) bool {
 	if s.raw == nil {
 		return false
 	}
@@ -305,7 +305,7 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
+func (w *watcher) ErrorAs(err error, i any) bool {
 	switch v := err.(type) {
 	case rpctypes.EtcdError:
 		if p, ok := i.(*rpctypes.EtcdError); ok {

@@ -181,7 +181,7 @@ func TestOpenVariable(t *testing.T) {
 		URL          string
 		WantErr      bool
 		WantWatchErr bool
-		Want         interface{}
+		Want         any
 	}{
 		// Empty URL results in empty byte slice.
 		{"constant://", false, false, []byte("")},
@@ -190,7 +190,7 @@ func TestOpenVariable(t *testing.T) {
 		// String value.
 		{"constant://?val=hello+world&decoder=string", false, false, "hello world"},
 		// JSON value; val parameter is {"Foo": "Bar"}, URL-encoded.
-		{"constant://?val=%7B%22Foo%22%3A%22Bar%22%7d&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"constant://?val=%7B%22Foo%22%3A%22Bar%22%7d&decoder=jsonmap", false, false, &map[string]any{"Foo": "Bar"}},
 		// Environment variable value.
 		{"constant://?envvar=RUNTIMEVAR_CONST_TEST&decoder=string", false, false, "hello world"},
 		// Error.

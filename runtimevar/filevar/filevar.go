@@ -184,13 +184,13 @@ func (e *errNotExist) Error() string {
 
 // state implements driver.State.
 type state struct {
-	val        interface{}
+	val        any
 	updateTime time.Time
 	raw        []byte
 	err        error
 }
 
-func (s *state) Value() (interface{}, error) {
+func (s *state) Value() (any, error) {
 	return s.val, s.err
 }
 
@@ -198,7 +198,7 @@ func (s *state) UpdateTime() time.Time {
 	return s.updateTime
 }
 
-func (s *state) As(i interface{}) bool {
+func (s *state) As(i any) bool {
 	return false
 }
 
@@ -333,7 +333,7 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool { return false }
+func (w *watcher) ErrorAs(err error, i any) bool { return false }
 
 // ErrorCode implements driver.ErrorCode.
 func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {

@@ -27,7 +27,7 @@ type Order struct {
 	CreateTime       time.Time // time the order was created
 	FinishTime       time.Time // time the order was finished
 	Note             string    // note to the customer from the processor, describing success or error
-	DocstoreRevision interface{}
+	DocstoreRevision any
 }
 
 // OrderRequest is a request for an order. It is the contents of the messages

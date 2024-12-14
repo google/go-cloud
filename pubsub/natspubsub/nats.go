@@ -361,7 +361,7 @@ func (t *topic) sendMessage(m *driver.Message) error {
 		return err
 	}
 	if m.BeforeSend != nil {
-		asFunc := func(i interface{}) bool { return false }
+		asFunc := func(i any) bool { return false }
 		if err := m.BeforeSend(asFunc); err != nil {
 			return err
 		}
@@ -370,7 +370,7 @@ func (t *topic) sendMessage(m *driver.Message) error {
 		return err
 	}
 	if m.AfterSend != nil {
-		asFunc := func(i interface{}) bool { return false }
+		asFunc := func(i any) bool { return false }
 		if err := m.AfterSend(asFunc); err != nil {
 			return err
 		}
@@ -381,7 +381,7 @@ func (t *topic) sendMessage(m *driver.Message) error {
 func (t *topic) sendMessageV2(m *driver.Message) error {
 	msg := encodeMessageV2(m, t.subj)
 	if m.BeforeSend != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			if nm, ok := i.(**nats.Msg); ok {
 				*nm = msg
 				return true
@@ -398,7 +398,7 @@ func (t *topic) sendMessageV2(m *driver.Message) error {
 	}
 
 	if m.AfterSend != nil {
-		asFunc := func(i interface{}) bool { return false }
+		asFunc := func(i any) bool { return false }
 		if err := m.AfterSend(asFunc); err != nil {
 			return err
 		}
@@ -410,7 +410,7 @@ func (t *topic) sendMessageV2(m *driver.Message) error {
 func (*topic) IsRetryable(error) bool { return false }
 
 // As implements driver.Topic.As.
-func (t *topic) As(i interface{}) bool {
+func (t *topic) As(i any) bool {
 	c, ok := i.(**nats.Conn)
 	if !ok {
 		return false
@@ -420,7 +420,7 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(error, interface{}) bool {
+func (*topic) ErrorAs(error, any) bool {
 	return false
 }
 
@@ -535,7 +535,7 @@ func decode(msg *nats.Msg) (*driver.Message, error) {
 	return &dm, nil
 }
 
-func messageAsFunc(msg *nats.Msg) func(interface{}) bool {
+func messageAsFunc(msg *nats.Msg) func(any) bool {
 	return func(i any) bool {
 		p, ok := i.(**nats.Msg)
 		if !ok {
@@ -565,7 +565,7 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 func (s *subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
-func (s *subscription) As(i interface{}) bool {
+func (s *subscription) As(i any) bool {
 	c, ok := i.(**nats.Subscription)
 	if !ok {
 		return false
@@ -575,7 +575,7 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (*subscription) ErrorAs(error, interface{}) bool {
+func (*subscription) ErrorAs(error, any) bool {
 	return false
 }
 

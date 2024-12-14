@@ -562,7 +562,7 @@ func (t awsAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
+func (t awsAsTest) BeforeSend(as func(any) bool) error {
 	switch t.topicKind {
 	case topicKindSNS, topicKindSNSRaw:
 		if t.useV2 {
@@ -606,7 +606,7 @@ func (t awsAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
-func (t awsAsTest) AfterSend(as func(interface{}) bool) error {
+func (t awsAsTest) AfterSend(as func(any) bool) error {
 	switch t.topicKind {
 	case topicKindSNS, topicKindSNSRaw:
 		if t.useV2 {

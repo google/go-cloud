@@ -106,10 +106,10 @@ type AsTest interface {
 	MessageCheck(m *pubsub.Message) error
 	// BeforeSend will be used as Message.BeforeSend as part of sending a test
 	// message.
-	BeforeSend(as func(interface{}) bool) error
+	BeforeSend(as func(any) bool) error
 	// AfterSend will be used as Message.AfterSend as part of sending a test
 	// message.
-	AfterSend(as func(interface{}) bool) error
+	AfterSend(as func(any) bool) error
 }
 
 // Many tests set the maximum batch size to 1 to make record/replay stable.
@@ -162,14 +162,14 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) BeforeSend(as func(interface{}) bool) error {
+func (verifyAsFailsOnNil) BeforeSend(as func(any) bool) error {
 	if as(nil) {
 		return errors.New("want Message.BeforeSend's As function to return false when passed nil")
 	}
 	return nil
 }
 
-func (verifyAsFailsOnNil) AfterSend(as func(interface{}) bool) error {
+func (verifyAsFailsOnNil) AfterSend(as func(any) bool) error {
 	if as(nil) {
 		return errors.New("want Message.AfterSend's As function to return false when passed nil")
 	}

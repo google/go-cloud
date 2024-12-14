@@ -23,7 +23,7 @@ type testDriver struct{}
 
 func TestProviderName(t *testing.T) {
 	for _, test := range []struct {
-		in   interface{}
+		in   any
 		want string
 	}{
 		{nil, ""},

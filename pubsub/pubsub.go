@@ -115,7 +115,7 @@ type Message struct {
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeSend func(asFunc func(interface{}) bool) error
+	BeforeSend func(asFunc func(any) bool) error
 
 	// AfterSend is a callback used when sending a message. It will always be
 	// set to nil for received messages.
@@ -125,10 +125,10 @@ type Message struct {
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	AfterSend func(asFunc func(interface{}) bool) error
+	AfterSend func(asFunc func(any) bool) error
 
 	// asFunc invokes driver.Message.AsFunc.
-	asFunc func(interface{}) bool
+	asFunc func(any) bool
 
 	// ack is a closure that queues this message for the action (ack or nack).
 	ack func(isAck bool)
@@ -207,7 +207,7 @@ func (m *Message) Nack() {
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
 // As panics unless it is called on a message obtained from Subscription.Receive.
-func (m *Message) As(i interface{}) bool {
+func (m *Message) As(i any) bool {
 	if m.asFunc == nil {
 		panic("As called on a Message that was not obtained from Receive")
 	}
@@ -298,7 +298,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (t *Topic) As(i interface{}) bool {
+func (t *Topic) As(i any) bool {
 	return t.driver.As(i)
 }
 
@@ -306,7 +306,7 @@ func (t *Topic) As(i interface{}) bool {
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://gocloud.dev/concepts/as/ for background information.
-func (t *Topic) ErrorAs(err error, i interface{}) bool {
+func (t *Topic) ErrorAs(err error, i any) bool {
 	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
 
@@ -315,7 +315,7 @@ var NewTopic = newTopic
 
 // newSendBatcher creates a batcher for topics, for use with NewTopic.
 func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batcher.Options) *batcher.Batcher {
-	handler := func(items interface{}) error {
+	handler := func(items any) error {
 		dms := items.([]*driver.Message)
 		err := retry.Call(ctx, gax.Backoff{}, dt.IsRetryable, func() (err error) {
 			ctx2 := t.tracer.Start(ctx, "driver.Topic.SendBatch")
@@ -355,7 +355,7 @@ var (
 	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
 )
 
-func newTracer(driver interface{}) *oc.Tracer {
+func newTracer(driver any) *oc.Tracer {
 	return &oc.Tracer{
 		Package:        pkgName,
 		Provider:       oc.ProviderName(driver),
@@ -729,7 +729,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (s *Subscription) As(i interface{}) bool {
+func (s *Subscription) As(i any) bool {
 	return s.driver.As(i)
 }
 
@@ -737,7 +737,7 @@ func (s *Subscription) As(i interface{}) bool {
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See Topic.As for more details.
-func (s *Subscription) ErrorAs(err error, i interface{}) bool {
+func (s *Subscription) ErrorAs(err error, i any) bool {
 	return gcerr.ErrorAs(err, i, s.driver.ErrorAs)
 }
 
@@ -769,7 +769,7 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 }
 
 func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
-	handler := func(items interface{}) error {
+	handler := func(items any) error {
 		var acks, nacks []driver.AckID
 		for _, a := range items.([]*driver.AckInfo) {
 			if a.IsAck {

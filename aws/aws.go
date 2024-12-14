@@ -262,7 +262,7 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (awsv2.Config, err
 	}
 	if endpoint != "" {
 		customResolver := awsv2.EndpointResolverWithOptionsFunc(
-			func(service, region string, options ...interface{}) (awsv2.Endpoint, error) {
+			func(service, region string, options ...any) (awsv2.Endpoint, error) {
 				return awsv2.Endpoint{
 					PartitionID:       "aws",
 					URL:               endpoint,

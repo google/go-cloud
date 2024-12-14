@@ -373,7 +373,7 @@ func (r rabbitAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (rabbitAsTest) BeforeSend(as func(interface{}) bool) error {
+func (rabbitAsTest) BeforeSend(as func(any) bool) error {
 	var pub *amqp.Publishing
 	if !as(&pub) {
 		return fmt.Errorf("cast failed for %T", &pub)
@@ -381,7 +381,7 @@ func (rabbitAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
-func (rabbitAsTest) AfterSend(as func(interface{}) bool) error {
+func (rabbitAsTest) AfterSend(as func(any) bool) error {
 	return nil
 }
 

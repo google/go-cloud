@@ -148,7 +148,7 @@ func (k *Keeper) Close() error {
 //
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-func (k *Keeper) ErrorAs(err error, i interface{}) bool {
+func (k *Keeper) ErrorAs(err error, i any) bool {
 	return gcerr.ErrorAs(err, i, k.k.ErrorAs)
 }
 

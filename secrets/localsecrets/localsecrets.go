@@ -169,7 +169,7 @@ func (k *keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 func (k *keeper) Close() error { return nil }
 
 // ErrorAs implements driver.Keeper.ErrorAs.
-func (k *keeper) ErrorAs(err error, i interface{}) bool {
+func (k *keeper) ErrorAs(err error, i any) bool {
 	return false
 }
 

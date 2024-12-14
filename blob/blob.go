@@ -226,7 +226,7 @@ func (r *Reader) Size() int64 {
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (r *Reader) As(i interface{}) bool {
+func (r *Reader) As(i any) bool {
 	return r.r.As(i)
 }
 
@@ -339,14 +339,14 @@ type Attributes struct {
 	// ETag for the blob; see https://en.wikipedia.org/wiki/HTTP_ETag.
 	ETag string
 
-	asFunc func(interface{}) bool
+	asFunc func(any) bool
 }
 
 // As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (a *Attributes) As(i interface{}) bool {
+func (a *Attributes) As(i any) bool {
 	if a.asFunc == nil {
 		return false
 	}
@@ -556,7 +556,7 @@ type ListOptions struct {
 	// the underlying service's list functionality.
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeList func(asFunc func(interface{}) bool) error
+	BeforeList func(asFunc func(any) bool) error
 }
 
 // ListIterator iterates over List results.
@@ -623,14 +623,14 @@ type ListObject struct {
 	// Fields other than Key and IsDir will not be set if IsDir is true.
 	IsDir bool
 
-	asFunc func(interface{}) bool
+	asFunc func(any) bool
 }
 
 // As converts i to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (o *ListObject) As(i interface{}) bool {
+func (o *ListObject) As(i any) bool {
 	if o.asFunc == nil {
 		return false
 	}
@@ -707,7 +707,7 @@ func newBucket(b driver.Bucket) *Bucket {
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (b *Bucket) As(i interface{}) bool {
+func (b *Bucket) As(i any) bool {
 	if i == nil {
 		return false
 	}
@@ -718,7 +718,7 @@ func (b *Bucket) As(i interface{}) bool {
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://gocloud.dev/concepts/as/ for background information.
-func (b *Bucket) ErrorAs(err error, i interface{}) bool {
+func (b *Bucket) ErrorAs(err error, i any) bool {
 	return gcerr.ErrorAs(err, i, b.b.ErrorAs)
 }
 
@@ -1330,7 +1330,7 @@ type SignedURLOptions struct {
 	// the underlying service's sign functionality.
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeSign func(asFunc func(interface{}) bool) error
+	BeforeSign func(asFunc func(any) bool) error
 }
 
 // ReaderOptions sets options for NewReader and NewRangeReader.
@@ -1344,7 +1344,7 @@ type ReaderOptions struct {
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeRead func(asFunc func(interface{}) bool) error
+	BeforeRead func(asFunc func(any) bool) error
 }
 
 // WriterOptions sets options for NewWriter.
@@ -1421,7 +1421,7 @@ type WriterOptions struct {
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeWrite func(asFunc func(interface{}) bool) error
+	BeforeWrite func(asFunc func(any) bool) error
 }
 
 // CopyOptions sets options for Copy.
@@ -1431,7 +1431,7 @@ type CopyOptions struct {
 	//
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	BeforeCopy func(asFunc func(interface{}) bool) error
+	BeforeCopy func(asFunc func(any) bool) error
 }
 
 // BucketURLOpener represents types that can open buckets based on a URL.

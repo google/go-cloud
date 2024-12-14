@@ -104,7 +104,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 var errNotExist = errors.New("variable does not exist")
 
 // New constructs a *runtimevar.Variable holding value.
-func New(value interface{}) *runtimevar.Variable {
+func New(value any) *runtimevar.Variable {
 	return runtimevar.New(&watcher{value: value, t: time.Now()})
 }
 
@@ -144,13 +144,13 @@ func NewError(err error) *runtimevar.Variable {
 
 // watcher implements driver.Watcher and driver.State.
 type watcher struct {
-	value interface{}
+	value any
 	err   error
 	t     time.Time
 }
 
 // Value implements driver.State.Value.
-func (w *watcher) Value() (interface{}, error) {
+func (w *watcher) Value() (any, error) {
 	return w.value, w.err
 }
 
@@ -160,7 +160,7 @@ func (w *watcher) UpdateTime() time.Time {
 }
 
 // As implements driver.State.As.
-func (w *watcher) As(i interface{}) bool {
+func (w *watcher) As(i any) bool {
 	return false
 }
 
@@ -180,7 +180,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 func (*watcher) Close() error { return nil }
 
 // ErrorAs implements driver.ErrorAs.
-func (*watcher) ErrorAs(err error, i interface{}) bool { return false }
+func (*watcher) ErrorAs(err error, i any) bool { return false }
 
 // ErrorCode implements driver.ErrorCode
 func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
