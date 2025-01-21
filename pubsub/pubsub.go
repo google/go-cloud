@@ -562,7 +562,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 				}
 				resultChannel := s.getNextBatch(batchSize)
 				for msgsOrError := range resultChannel {
-					if msgsOrError.msgs != nil && len(msgsOrError.msgs) > 0 {
+					if len(msgsOrError.msgs) > 0 {
 						// messages received from channel
 						s.mu.Lock()
 						s.q = append(s.q, msgsOrError.msgs...)
