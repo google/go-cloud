@@ -24,7 +24,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore/driver"
@@ -583,12 +582,12 @@ func TestCopyTopLevel(t *testing.T) {
 func Test_documentIterator_Next(t *testing.T) {
 	type fields struct {
 		qr     *queryRunner
-		items  []map[string]*dyn.AttributeValue
+		items  []map[string]*dynamodb.AttributeValue
 		curr   int
 		offset int
 		limit  int
 		count  int
-		last   map[string]*dyn.AttributeValue
+		last   map[string]*dynamodb.AttributeValue
 		asFunc func(i interface{}) bool
 	}
 	type args struct {
@@ -605,14 +604,14 @@ func Test_documentIterator_Next(t *testing.T) {
 			name: "nextWithNoDecodeError",
 			fields: fields{
 				qr: &queryRunner{},
-				items: []map[string]*dyn.AttributeValue{
-					{"key": {M: map[string]*dyn.AttributeValue{"key": {S: aws.String("value")}}}},
+				items: []map[string]*dynamodb.AttributeValue{
+					{"key": {M: map[string]*dynamodb.AttributeValue{"key": {S: aws.String("value")}}}},
 				},
 				curr:   0,
 				offset: 0,
 				limit:  0,
 				count:  0,
-				last:   map[string]*dyn.AttributeValue{},
+				last:   map[string]*dynamodb.AttributeValue{},
 			},
 			args: args{
 				ctx: context.Background(),
@@ -624,14 +623,14 @@ func Test_documentIterator_Next(t *testing.T) {
 			name: "nextWithDecodeError",
 			fields: fields{
 				qr: &queryRunner{},
-				items: []map[string]*dyn.AttributeValue{
+				items: []map[string]*dynamodb.AttributeValue{
 					{"key": {M: nil}}, // set M to nil to trigger decode error
 				},
 				curr:   0,
 				offset: 0,
 				limit:  0,
 				count:  0,
-				last:   map[string]*dyn.AttributeValue{},
+				last:   map[string]*dynamodb.AttributeValue{},
 			},
 			args: args{
 				ctx: context.Background(),
@@ -643,16 +642,16 @@ func Test_documentIterator_Next(t *testing.T) {
 			name: "nextWhereCurrIsGreaterThanOrEqualToItemsAndLastIsNotNil",
 			fields: fields{
 				qr: &queryRunner{
-					scanIn: &dyn.ScanInput{},
+					scanIn: &dynamodb.ScanInput{},
 					// hack to return error from run
 					beforeRun: func(asFunc func(i interface{}) bool) error { return errors.New("invalid") },
 				},
-				items:  []map[string]*dyn.AttributeValue{{"key": {M: map[string]*dyn.AttributeValue{"key": {S: aws.String("value"), M: nil}}}}},
+				items:  []map[string]*dynamodb.AttributeValue{{"key": {M: map[string]*dynamodb.AttributeValue{"key": {S: aws.String("value"), M: nil}}}}},
 				curr:   1,
 				offset: 0,
 				limit:  0,
 				count:  0,
-				last:   map[string]*dyn.AttributeValue{"key": {S: aws.String("value")}},
+				last:   map[string]*dynamodb.AttributeValue{"key": {S: aws.String("value")}},
 			},
 			args: args{
 				ctx: context.Background(),
