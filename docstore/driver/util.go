@@ -70,7 +70,9 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, writesTxLi
 		} else if a.Kind == Get {
 			// If there was a prior write with this key, make sure this get
 			// happens after the writes.
-			if valueExistsInMaps(a.Key, writes, writesTx) {
+			if _, ok := writes[a.Key]; ok {
+				agets[a.Key] = a
+			} else if _, ok := writesTx[a.Key]; ok {
 				agets[a.Key] = a
 			} else {
 				cgets[a.Key] = a
@@ -101,15 +103,6 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, writesTxLi
 	}
 
 	return vals(bgets), vals(cgets), append(vals(writes), nilkeys...), vals(writesTx), vals(agets)
-}
-
-func valueExistsInMaps(key interface{}, maps ...map[interface{}]*Action) bool {
-	for _, m := range maps {
-		if _, ok := m[key]; ok {
-			return true
-		}
-	}
-	return false
 }
 
 // AsFunc creates and returns an "as function" that behaves as follows:

@@ -95,6 +95,38 @@ func TestGroupActions(t *testing.T) {
 			in:   []*Action{{Kind: Create}, {Kind: Create}, {Kind: Create}},
 			want: [][]int{nil, nil, {0, 1, 2}, nil, nil},
 		},
+		{
+			in: []*Action{
+				{Kind: Get, Key: 1},
+				{Kind: Get, Key: 3},
+				{Kind: Put, Key: 1, InAtomicWrite: true},
+				{Kind: Replace, Key: 2, InAtomicWrite: true},
+				{Kind: Get, Key: 2},
+			},
+			want: [][]int{{0}, {1}, nil, {2, 3}, {4}},
+		},
+		{
+			in: []*Action{
+				{Kind: Get, Key: 1},
+				{Kind: Get, Key: 3},
+				{Kind: Put, Key: 1, InAtomicWrite: true},
+				{Kind: Replace, Key: 2},
+				{Kind: Put, Key: 2, InAtomicWrite: true},
+				{Kind: Get, Key: 2},
+			},
+			want: [][]int{{0}, {1}, {3}, {2, 4}, {5}},
+		},
+		{
+			in: []*Action{
+				{Kind: Get, Key: 1},
+				{Kind: Get, Key: 3},
+				{Kind: Put, Key: 1, InAtomicWrite: true},
+				{Kind: Replace, Key: 2, InAtomicWrite: true},
+				{Kind: Put, Key: 2, InAtomicWrite: true},
+				{Kind: Get, Key: 2},
+			},
+			want: [][]int{{0}, {1}, nil, {2, 4}, {5}},
+		},
 	} {
 		got := make([][]*Action, 5)
 		got[0], got[1], got[2], got[3], got[4] = GroupActions(test.in)

@@ -170,6 +170,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 	go func() { defer close(ch2); c.transactWrite(ctx, writesTx, errs, opts) }()
 	c.runGets(ctx, gets, errs, opts)
 	<-ch
+	<-ch2
 	c.runGets(ctx, afterGets, errs, opts)
 	return driver.NewActionListError(errs)
 }
@@ -615,10 +616,12 @@ func revisionPrecondition(doc driver.Document, revField string) (*expression.Con
 	return &cb, nil
 }
 
+// transactWrite execute the write actions in an atomic manner, either they all succeed or they all fail together.
 func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
 	if len(actions) == 0 {
 		return
 	}
+	// all actions will fail atomically even if a single action fails
 	setErr := func(err error) {
 		for _, a := range actions {
 			errs[a.Index] = err
@@ -630,7 +633,8 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 	for _, w := range actions {
 		op, err := c.newWriteOp(w, opts)
 		if err != nil {
-			errs[w.Index] = err
+			setErr(err)
+			return
 		} else {
 			ops = append(ops, op)
 			tws = append(tws, op.writeItem)

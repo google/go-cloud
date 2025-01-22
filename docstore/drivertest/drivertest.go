@@ -29,7 +29,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
@@ -1934,9 +1933,9 @@ func testAtomicWrites(t *testing.T, coll *docstore.Collection, revField string) 
 		}
 	}
 
-	// Put the first six docs.
+	// Put the nine docs.
 	actions := coll.Actions()
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 9; i++ {
 		actions.Create(docs[i])
 	}
 	must(actions.Do(ctx))
@@ -1955,8 +1954,8 @@ func testAtomicWrites(t *testing.T, coll *docstore.Collection, revField string) 
 	actions.Delete(docs[2])
 	actions.Get(gdocs[2])
 	actions.AtomicWrites()
-	actions.Update(docs[6], docstore.Mods{"s": "66'"})
-	actions.Update(docs[7], docstore.Mods{"s": "77'"})
+	actions.Update(docs[6], docstore.Mods{"s": "66"})
+	actions.Update(docs[7], docstore.Mods{"s": "77"})
 	actions.Update(docs[8], docstore.Mods{"s": "88"})
 
 	must(actions.Do(ctx))
@@ -1967,13 +1966,90 @@ func testAtomicWrites(t *testing.T, coll *docstore.Collection, revField string) 
 
 	doc := docmap{KeyField: docs[6][KeyField]}
 	_ = coll.Get(ctx, doc)
-	assert.Equal(t, "66", doc["s"])
+	cmpDiff("66", doc["s"])
 	doc = docmap{KeyField: docs[7][KeyField]}
 	_ = coll.Get(ctx, doc)
-	assert.Equal(t, "77", doc["s"])
+	cmpDiff("77", doc["s"])
 	doc = docmap{KeyField: docs[8][KeyField]}
 	_ = coll.Get(ctx, doc)
-	assert.Equal(t, "88", doc["s"])
+	cmpDiff("88", doc["s"])
+}
+
+func testAtomicWritesFail(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var docs []docmap
+	for i := 0; i < 9; i++ {
+		docs = append(docs, docmap{
+			KeyField: fmt.Sprintf("testAtomicWrites%d", i),
+			"s":      fmt.Sprint(i),
+			revField: nil,
+		})
+	}
+
+	compare := func(gots, wants []docmap) {
+		t.Helper()
+		for i := 0; i < len(gots); i++ {
+			got := gots[i]
+			want := clone(wants[i])
+			want[revField] = got[revField]
+			if !cmp.Equal(got, want, cmpopts.IgnoreUnexported(tspb.Timestamp{})) {
+				t.Errorf("index #%d:\ngot  %v\nwant %v", i, got, want)
+			}
+		}
+	}
+
+	// Put the first eight docs.
+	actions := coll.Actions()
+	for i := 0; i < 8; i++ {
+		actions.Create(docs[i])
+	}
+	must(actions.Do(ctx))
+
+	// Delete the first three, get the second three, and update last three in transaction.
+	gdocs := []docmap{
+		{KeyField: docs[3][KeyField]},
+		{KeyField: docs[4][KeyField]},
+		{KeyField: docs[5][KeyField]},
+	}
+	actions = coll.Actions()
+	actions.Get(gdocs[0])
+	actions.Delete(docs[0])
+	actions.Delete(docs[1])
+	actions.Get(gdocs[1])
+	actions.Delete(docs[2])
+	actions.Get(gdocs[2])
+	actions.AtomicWrites()
+	actions.Update(docs[6], docstore.Mods{"s": "66"})
+	actions.Update(docs[7], docstore.Mods{"s": "77"})
+	// this document doesn't exist so it will fail the transaction
+	actions.Update(docs[8], docstore.Mods{"s": "88"})
+
+	err := actions.Do(ctx)
+	if err == nil {
+		t.Fatal("want transaction to fail")
+	}
+	compare(gdocs, docs[3:6])
+
+	// Get the docs updated as part of atomic writes and verify that it didn't get written.
+	actions = coll.Actions()
+
+	// validate that the mods didn't get applied to all docs in transaction.
+	doc := docmap{KeyField: docs[6][KeyField]}
+	_ = coll.Get(ctx, doc)
+	cmpDiff("6", doc["s"])
+	doc = docmap{KeyField: docs[7][KeyField]}
+	_ = coll.Get(ctx, doc)
+	cmpDiff("7", doc["s"])
 }
 
 func testActionsOnStructNoRev(t *testing.T, _ Harness, coll *docstore.Collection) {

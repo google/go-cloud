@@ -537,7 +537,7 @@ func (l *ActionList) String() string {
 	return "[" + strings.Join(as, ", ") + "]"
 }
 
-// AtomicWrites causes all following writes in the list to execute atomically.
+// AtomicWrites causes all following writes in the list to execute as a single atomic operation.
 func (l *ActionList) AtomicWrites() *ActionList {
 	l.enableAtomicWrites = true
 	return l
