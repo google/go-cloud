@@ -616,7 +616,7 @@ func revisionPrecondition(doc driver.Document, revField string) (*expression.Con
 	return &cb, nil
 }
 
-// transactWrite execute the write actions in an atomic manner, either they all succeed or they all fail together.
+// transactWrite executes the write actions atomically: either they all succeed or they all fail together.
 func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
 	if len(actions) == 0 {
 		return

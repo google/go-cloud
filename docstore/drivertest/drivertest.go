@@ -1961,18 +1961,26 @@ func testAtomicWrites(t *testing.T, coll *docstore.Collection, revField string) 
 	must(actions.Do(ctx))
 	compare(gdocs, docs[3:6])
 
-	// Get the docs updated as part of atomic writes and verify that got written.
+	// Get the docs updated as part of atomic writes and verify that the values were updated successfully.
 	actions = coll.Actions()
 
 	doc := docmap{KeyField: docs[6][KeyField]}
 	_ = coll.Get(ctx, doc)
-	cmpDiff("66", doc["s"])
+	if diff := cmpDiff("66", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+
 	doc = docmap{KeyField: docs[7][KeyField]}
 	_ = coll.Get(ctx, doc)
-	cmpDiff("77", doc["s"])
+	if diff := cmpDiff("77", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+
 	doc = docmap{KeyField: docs[8][KeyField]}
 	_ = coll.Get(ctx, doc)
-	cmpDiff("88", doc["s"])
+	if diff := cmpDiff("88", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
 }
 
 func testAtomicWritesFail(t *testing.T, coll *docstore.Collection, revField string) {
@@ -2040,16 +2048,18 @@ func testAtomicWritesFail(t *testing.T, coll *docstore.Collection, revField stri
 	}
 	compare(gdocs, docs[3:6])
 
-	// Get the docs updated as part of atomic writes and verify that it didn't get written.
-	actions = coll.Actions()
-
-	// validate that the mods didn't get applied to all docs in transaction.
+	// validate that the values still remains the original
 	doc := docmap{KeyField: docs[6][KeyField]}
 	_ = coll.Get(ctx, doc)
-	cmpDiff("6", doc["s"])
+	if diff := cmpDiff("6", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+
 	doc = docmap{KeyField: docs[7][KeyField]}
 	_ = coll.Get(ctx, doc)
-	cmpDiff("7", doc["s"])
+	if diff := cmpDiff("7", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
 }
 
 func testActionsOnStructNoRev(t *testing.T, _ Harness, coll *docstore.Collection) {
