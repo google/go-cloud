@@ -55,12 +55,13 @@ func SplitActions(actions []*Action, split func(a, b *Action) bool) [][]*Action 
 
 // GroupActions separates actions into four sets: writes, gets that must happen before the writes,
 // gets that must happen after the writes, and gets that can happen concurrently with the writes.
-func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets []*Action) {
+func GroupActions(actions []*Action) (beforeGets, getList, writeList, writesTxList, afterGets []*Action) {
 	// maps from key to action
 	bgets := map[interface{}]*Action{}
 	agets := map[interface{}]*Action{}
 	cgets := map[interface{}]*Action{}
 	writes := map[interface{}]*Action{}
+	writesTx := map[interface{}]*Action{}
 	var nilkeys []*Action
 	for _, a := range actions {
 		if a.Key == nil {
@@ -70,6 +71,8 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets 
 			// If there was a prior write with this key, make sure this get
 			// happens after the writes.
 			if _, ok := writes[a.Key]; ok {
+				agets[a.Key] = a
+			} else if _, ok := writesTx[a.Key]; ok {
 				agets[a.Key] = a
 			} else {
 				cgets[a.Key] = a
@@ -81,7 +84,11 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets 
 				delete(cgets, a.Key)
 				bgets[a.Key] = g
 			}
-			writes[a.Key] = a
+			if a.InAtomicWrite {
+				writesTx[a.Key] = a
+			} else {
+				writes[a.Key] = a
+			}
 		}
 	}
 
@@ -95,7 +102,7 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, afterGets 
 		return as
 	}
 
-	return vals(bgets), vals(cgets), append(vals(writes), nilkeys...), vals(agets)
+	return vals(bgets), vals(cgets), append(vals(writes), nilkeys...), vals(writesTx), vals(agets)
 }
 
 // AsFunc creates and returns an "as function" that behaves as follows:

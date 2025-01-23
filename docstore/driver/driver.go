@@ -125,14 +125,14 @@ const (
 
 //go:generate stringer -type=ActionKind
 
-// An Action describes a single operation on a single document.
 type Action struct {
-	Kind       ActionKind  // the kind of action
-	Doc        Document    // the document on which to perform the action
-	Key        interface{} // the document key returned by Collection.Key, to avoid recomputing it
-	FieldPaths [][]string  // field paths to retrieve, for Get only
-	Mods       []Mod       // modifications to make, for Update only
-	Index      int         // the index of the action in the original action list
+	Kind          ActionKind  // the kind of action
+	Doc           Document    // the document on which to perform the action
+	Key           interface{} // the document key returned by Collection.Key, to avoid recomputing it
+	FieldPaths    [][]string  // field paths to retrieve, for Get only
+	Mods          []Mod       // modifications to make, for Update only
+	Index         int         // the index of the action in the original action list
+	InAtomicWrite bool        // if this action is a part of transaction
 }
 
 // A Mod is a modification to a field path in a document.

@@ -1900,6 +1900,168 @@ func testMultipleActions(t *testing.T, coll *docstore.Collection, revField strin
 	}
 }
 
+func testAtomicWrites(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var docs []docmap
+	for i := 0; i < 9; i++ {
+		docs = append(docs, docmap{
+			KeyField: fmt.Sprintf("testAtomicWrites%d", i),
+			"s":      fmt.Sprint(i),
+			revField: nil,
+		})
+	}
+
+	compare := func(gots, wants []docmap) {
+		t.Helper()
+		for i := 0; i < len(gots); i++ {
+			got := gots[i]
+			want := clone(wants[i])
+			want[revField] = got[revField]
+			if !cmp.Equal(got, want, cmpopts.IgnoreUnexported(tspb.Timestamp{})) {
+				t.Errorf("index #%d:\ngot  %v\nwant %v", i, got, want)
+			}
+		}
+	}
+
+	// Put the nine docs.
+	actions := coll.Actions()
+	for i := 0; i < 9; i++ {
+		actions.Create(docs[i])
+	}
+	must(actions.Do(ctx))
+
+	// Delete the first three, get the second three, and update last three in transaction.
+	gdocs := []docmap{
+		{KeyField: docs[3][KeyField]},
+		{KeyField: docs[4][KeyField]},
+		{KeyField: docs[5][KeyField]},
+	}
+	actions = coll.Actions()
+	actions.Get(gdocs[0])
+	actions.Delete(docs[0])
+	actions.Delete(docs[1])
+	actions.Get(gdocs[1])
+	actions.Delete(docs[2])
+	actions.Get(gdocs[2])
+	actions.AtomicWrites()
+	actions.Update(docs[6], docstore.Mods{"s": "66"})
+	actions.Update(docs[7], docstore.Mods{"s": "77"})
+	actions.Update(docs[8], docstore.Mods{"s": "88"})
+
+	must(actions.Do(ctx))
+	compare(gdocs, docs[3:6])
+
+	// Get the docs updated as part of atomic writes and verify that the values were updated successfully.
+	actions = coll.Actions()
+
+	doc := docmap{KeyField: docs[6][KeyField]}
+	_ = coll.Get(ctx, doc)
+	if diff := cmpDiff("66", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+
+	doc = docmap{KeyField: docs[7][KeyField]}
+	_ = coll.Get(ctx, doc)
+	if diff := cmpDiff("77", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+
+	doc = docmap{KeyField: docs[8][KeyField]}
+	_ = coll.Get(ctx, doc)
+	if diff := cmpDiff("88", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+}
+
+func testAtomicWritesFail(t *testing.T, coll *docstore.Collection, revField string) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var docs []docmap
+	for i := 0; i < 9; i++ {
+		docs = append(docs, docmap{
+			KeyField: fmt.Sprintf("testAtomicWrites%d", i),
+			"s":      fmt.Sprint(i),
+			revField: nil,
+		})
+	}
+
+	compare := func(gots, wants []docmap) {
+		t.Helper()
+		for i := 0; i < len(gots); i++ {
+			got := gots[i]
+			want := clone(wants[i])
+			want[revField] = got[revField]
+			if !cmp.Equal(got, want, cmpopts.IgnoreUnexported(tspb.Timestamp{})) {
+				t.Errorf("index #%d:\ngot  %v\nwant %v", i, got, want)
+			}
+		}
+	}
+
+	// Put the first eight docs.
+	actions := coll.Actions()
+	for i := 0; i < 8; i++ {
+		actions.Create(docs[i])
+	}
+	must(actions.Do(ctx))
+
+	// Delete the first three, get the second three, and update last three in transaction.
+	gdocs := []docmap{
+		{KeyField: docs[3][KeyField]},
+		{KeyField: docs[4][KeyField]},
+		{KeyField: docs[5][KeyField]},
+	}
+	actions = coll.Actions()
+	actions.Get(gdocs[0])
+	actions.Delete(docs[0])
+	actions.Delete(docs[1])
+	actions.Get(gdocs[1])
+	actions.Delete(docs[2])
+	actions.Get(gdocs[2])
+	actions.AtomicWrites()
+	actions.Update(docs[6], docstore.Mods{"s": "66"})
+	actions.Update(docs[7], docstore.Mods{"s": "77"})
+	// this document doesn't exist so it will fail the transaction
+	actions.Update(docs[8], docstore.Mods{"s": "88"})
+
+	err := actions.Do(ctx)
+	if err == nil {
+		t.Fatal("want transaction to fail")
+	}
+	compare(gdocs, docs[3:6])
+
+	// validate that the values still remains the original
+	doc := docmap{KeyField: docs[6][KeyField]}
+	_ = coll.Get(ctx, doc)
+	if diff := cmpDiff("6", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+
+	doc = docmap{KeyField: docs[7][KeyField]}
+	_ = coll.Get(ctx, doc)
+	if diff := cmpDiff("7", doc["s"]); diff != "" {
+		t.Fatal(diff)
+	}
+}
+
 func testActionsOnStructNoRev(t *testing.T, _ Harness, coll *docstore.Collection) {
 	t.Helper()
 

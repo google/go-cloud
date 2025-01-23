@@ -162,12 +162,15 @@ func (c *collection) RevisionField() string { return c.opts.RevisionField }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
-	beforeGets, gets, writes, afterGets := driver.GroupActions(actions)
+	beforeGets, gets, writes, writesTx, afterGets := driver.GroupActions(actions)
 	c.runGets(ctx, beforeGets, errs, opts)
 	ch := make(chan struct{})
+	ch2 := make(chan struct{})
 	go func() { defer close(ch); c.runWrites(ctx, writes, errs, opts) }()
+	go func() { defer close(ch2); c.transactWrite(ctx, writesTx, errs, opts) }()
 	c.runGets(ctx, gets, errs, opts)
 	<-ch
+	<-ch2
 	c.runGets(ctx, afterGets, errs, opts)
 	return driver.NewActionListError(errs)
 }
@@ -613,25 +616,29 @@ func revisionPrecondition(doc driver.Document, revField string) (*expression.Con
 	return &cb, nil
 }
 
-// TODO(jba): use this if/when we support atomic writes.
-func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions, start, end int) {
+// transactWrite executes the write actions atomically: either they all succeed or they all fail together.
+func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action, errs []error, opts *driver.RunActionsOptions) {
+	if len(actions) == 0 {
+		return
+	}
+	// all actions will fail atomically even if a single action fails
 	setErr := func(err error) {
-		for i := start; i <= end; i++ {
-			errs[actions[i].Index] = err
+		for _, a := range actions {
+			errs[a.Index] = err
 		}
 	}
 
+	tws := make([]*dyn.TransactWriteItem, 0, len(actions))
 	var ops []*writeOp
-	tws := make([]*dyn.TransactWriteItem, 0, end-start+1)
-	for i := start; i <= end; i++ {
-		a := actions[i]
-		op, err := c.newWriteOp(a, opts)
+	for _, w := range actions {
+		op, err := c.newWriteOp(w, opts)
 		if err != nil {
 			setErr(err)
 			return
+		} else {
+			ops = append(ops, op)
+			tws = append(tws, op.writeItem)
 		}
-		ops = append(ops, op)
-		tws = append(tws, op.writeItem)
 	}
 
 	in := &dyn.TransactWriteItemsInput{
