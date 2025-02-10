@@ -33,7 +33,9 @@ type encoder struct {
 
 func (e *encoder) EncodeNil()        { e.av = nullValue }
 func (e *encoder) EncodeBool(x bool) { e.av = &dyn2Types.AttributeValueMemberBOOL{Value: x} }
-func (e *encoder) EncodeInt(x int64) { e.av = &dyn2Types.AttributeValueMemberN{Value: strconv.FormatInt(x, 10)} }
+func (e *encoder) EncodeInt(x int64) {
+	e.av = &dyn2Types.AttributeValueMemberN{Value: strconv.FormatInt(x, 10)}
+}
 func (e *encoder) EncodeUint(x uint64) {
 	e.av = &dyn2Types.AttributeValueMemberN{Value: strconv.FormatUint(x, 10)}
 }

@@ -18,17 +18,19 @@ import (
 	"reflect"
 	"testing"
 
+	dynattr "github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	dyn2Types "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	// dynattr "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore/driver"
-	// "gocloud.dev/docstore/drivertest"
+	"gocloud.dev/docstore/drivertest"
 )
 
 func TestEncodeValue(t *testing.T) {
 	avn := func(s string) dyn2Types.AttributeValue { return &dyn2Types.AttributeValueMemberN{Value: s} }
-	avl := func(avs ...dyn2Types.AttributeValue) dyn2Types.AttributeValue { return &dyn2Types.AttributeValueMemberL{Value: avs} }
+	avl := func(avs ...dyn2Types.AttributeValue) dyn2Types.AttributeValue {
+		return &dyn2Types.AttributeValueMemberL{Value: avs}
+	}
 
 	var seven int32 = 7
 	var nullptr *int
@@ -100,24 +102,24 @@ func TestDecodeErrorOnUnsupported(t *testing.T) {
 	}
 }
 
-// type codecTester struct{}
+type codecTester struct{}
 
-// func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
-// 	return []drivertest.UnsupportedType{drivertest.BinarySet}
-// }
+func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
+	return []drivertest.UnsupportedType{drivertest.BinarySet}
+}
 
-// func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
-// 	return dynattr.Marshal(obj)
-// }
+func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
+	return dynattr.Marshal(obj)
+}
 
-// func (ct *codecTester) NativeDecode(value, dest interface{}) error {
-// 	return dynattr.Unmarshal(value.(*dyn.AttributeValue), dest)
-// }
+func (ct *codecTester) NativeDecode(value, dest interface{}) error {
+	return dynattr.Unmarshal(value.(dyn2Types.AttributeValue), dest)
+}
 
-// func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
-// 	return encodeDoc(drivertest.MustDocument(obj))
-// }
+func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
+	return encodeDoc(drivertest.MustDocument(obj))
+}
 
-// func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
-// 	return decodeDoc(value.(*dyn.AttributeValue), drivertest.MustDocument(dest))
-// }
+func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
+	return decodeDoc(value.(dyn2Types.AttributeValue), drivertest.MustDocument(dest))
+}
