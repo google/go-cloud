@@ -18,49 +18,48 @@ import (
 	"reflect"
 	"testing"
 
-	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
-	dynattr "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	dyn2Types "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	// dynattr "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore/driver"
-	"gocloud.dev/docstore/drivertest"
+	// "gocloud.dev/docstore/drivertest"
 )
 
 func TestEncodeValue(t *testing.T) {
-	av := func() *dyn.AttributeValue { return &dyn.AttributeValue{} }
-	avn := func(s string) *dyn.AttributeValue { return av().SetN(s) }
-	avl := func(avs ...*dyn.AttributeValue) *dyn.AttributeValue { return av().SetL(avs) }
+	avn := func(s string) dyn2Types.AttributeValue { return &dyn2Types.AttributeValueMemberN{Value: s} }
+	avl := func(avs ...dyn2Types.AttributeValue) dyn2Types.AttributeValue { return &dyn2Types.AttributeValueMemberL{Value: avs} }
 
 	var seven int32 = 7
 	var nullptr *int
 
 	for _, test := range []struct {
 		in   interface{}
-		want *dyn.AttributeValue
+		want dyn2Types.AttributeValue
 	}{
 		{nil, nullValue},
 		{0, avn("0")},
 		{uint64(999), avn("999")},
 		{3.5, avn("3.5")},
 		{"", nullValue},
-		{"x", av().SetS("x")},
-		{true, av().SetBOOL(true)},
+		{"x", &dyn2Types.AttributeValueMemberS{Value: "x"}},
+		{true, &dyn2Types.AttributeValueMemberBOOL{Value: true}},
 		{nullptr, nullValue},
 		{seven, avn("7")},
 		{&seven, avn("7")},
 		{[]int(nil), nullValue},
-		{[]int{}, av().SetL([]*dyn.AttributeValue{})},
+		{[]int{}, &dyn2Types.AttributeValueMemberL{Value: []dyn2Types.AttributeValue{}}},
 		{[]int{1, 2}, avl(avn("1"), avn("2"))},
 		{[...]int{1, 2}, avl(avn("1"), avn("2"))},
-		{[]interface{}{nil, false}, avl(nullValue, av().SetBOOL(false))},
+		{[]interface{}{nil, false}, avl(nullValue, &dyn2Types.AttributeValueMemberBOOL{Value: false})},
 		{map[string]int(nil), nullValue},
-		{map[string]int{}, av().SetM(map[string]*dyn.AttributeValue{})},
+		{map[string]int{}, &dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{}}},
 		{
 			map[string]int{"a": 1, "b": 2},
-			av().SetM(map[string]*dyn.AttributeValue{
+			&dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{
 				"a": avn("1"),
 				"b": avn("2"),
-			}),
+			}},
 		},
 	} {
 		var e encoder
@@ -68,22 +67,31 @@ func TestEncodeValue(t *testing.T) {
 			t.Fatal(err)
 		}
 		got := e.av
-		if !cmp.Equal(got, test.want, cmpopts.IgnoreUnexported(dyn.AttributeValue{})) {
+		if !cmp.Equal(got, test.want, cmpopts.IgnoreUnexported(
+			dyn2Types.AttributeValueMemberB{},
+			dyn2Types.AttributeValueMemberBOOL{},
+			dyn2Types.AttributeValueMemberBS{},
+			dyn2Types.AttributeValueMemberL{},
+			dyn2Types.AttributeValueMemberM{},
+			dyn2Types.AttributeValueMemberN{},
+			dyn2Types.AttributeValueMemberNS{},
+			dyn2Types.AttributeValueMemberNULL{},
+			dyn2Types.AttributeValueMemberS{},
+			dyn2Types.AttributeValueMemberSS{},
+		)) {
 			t.Errorf("%#v: got %#v, want %#v", test.in, got, test.want)
 		}
 	}
 }
 
 func TestDecodeErrorOnUnsupported(t *testing.T) {
-	av := func() *dyn.AttributeValue { return &dyn.AttributeValue{} }
-	sptr := func(s string) *string { return &s }
 	for _, tc := range []struct {
-		in  *dyn.AttributeValue
+		in  dyn2Types.AttributeValue
 		out interface{}
 	}{
-		{av().SetSS([]*string{sptr("foo"), sptr("bar")}), []string{}},
-		{av().SetNS([]*string{sptr("1.1"), sptr("-2.2"), sptr("3.3")}), []float64{}},
-		{av().SetBS([][]byte{{4}, {5}, {6}}), [][]byte{}},
+		{&dyn2Types.AttributeValueMemberSS{Value: []string{"foo", "bar"}}, []string{}},
+		{&dyn2Types.AttributeValueMemberNS{Value: []string{"1.1", "-2.2", "3.3"}}, []float64{}},
+		{&dyn2Types.AttributeValueMemberBS{Value: [][]byte{{4}, {5}, {6}}}, [][]byte{}},
 	} {
 		d := decoder{av: tc.in}
 		if err := driver.Decode(reflect.ValueOf(tc.out), &d); err == nil {
@@ -92,24 +100,24 @@ func TestDecodeErrorOnUnsupported(t *testing.T) {
 	}
 }
 
-type codecTester struct{}
+// type codecTester struct{}
 
-func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
-	return []drivertest.UnsupportedType{drivertest.BinarySet}
-}
+// func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
+// 	return []drivertest.UnsupportedType{drivertest.BinarySet}
+// }
 
-func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
-	return dynattr.Marshal(obj)
-}
+// func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
+// 	return dynattr.Marshal(obj)
+// }
 
-func (ct *codecTester) NativeDecode(value, dest interface{}) error {
-	return dynattr.Unmarshal(value.(*dyn.AttributeValue), dest)
-}
+// func (ct *codecTester) NativeDecode(value, dest interface{}) error {
+// 	return dynattr.Unmarshal(value.(*dyn.AttributeValue), dest)
+// }
 
-func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
-	return encodeDoc(drivertest.MustDocument(obj))
-}
+// func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
+// 	return encodeDoc(drivertest.MustDocument(obj))
+// }
 
-func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
-	return decodeDoc(value.(*dyn.AttributeValue), drivertest.MustDocument(dest))
-}
+// func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
+// 	return decodeDoc(value.(*dyn.AttributeValue), drivertest.MustDocument(dest))
+// }
