@@ -17,8 +17,6 @@ package awsdynamodb
 import (
 	"net/url"
 	"testing"
-
-	gcaws "gocloud.dev/aws"
 )
 
 func TestProcessURL(t *testing.T) {
@@ -46,11 +44,7 @@ func TestProcessURL(t *testing.T) {
 		{"dynamodb://docstore-test?sort_key=_id", true},
 	}
 
-	sess, err := gcaws.NewDefaultSession()
-	if err != nil {
-		t.Fatal(err)
-	}
-	o := &URLOpener{ConfigProvider: sess}
+	o := &URLOpener{}
 	for _, test := range tests {
 		u, err := url.Parse(test.URL)
 		if err != nil {

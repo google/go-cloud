@@ -21,8 +21,8 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws/client"
-	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	dyn "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/docstore"
 )
@@ -39,14 +39,8 @@ type lazySessionOpener struct {
 
 func (o *lazySessionOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
 	o.init.Do(func() {
-		sess, err := gcaws.NewDefaultSession()
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{
-			ConfigProvider: sess,
-		}
+
+		o.opener = &URLOpener{}
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
@@ -75,8 +69,6 @@ const Scheme = "dynamodb"
 // See https://godoc.org/gocloud.dev/aws#ConfigFromURLParams for supported query
 // parameters for overriding the aws.Session from the URL.
 type URLOpener struct {
-	// ConfigProvider must be set to a non-nil value.
-	ConfigProvider client.ConfigProvider
 }
 
 // OpenCollectionURL opens the collection at the URL's path. See the package doc for more details.
@@ -88,7 +80,7 @@ func (o *URLOpener) OpenCollectionURL(_ context.Context, u *url.URL) (*docstore.
 	return OpenCollection(db, tableName, partitionKey, sortKey, opts)
 }
 
-func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options, err error) {
+func (o *URLOpener) processURL(u *url.URL) (db *dyn.Client, tableName, partitionKey, sortKey string, opts *Options, err error) {
 	q := u.Query()
 
 	partitionKey = q.Get("partition_key")
@@ -115,15 +107,11 @@ func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partiti
 		return nil, "", "", "", nil, fmt.Errorf("open collection %s: URL path must be empty, only the host is needed", u)
 	}
 
-	configProvider := &gcaws.ConfigOverrider{
-		Base: o.ConfigProvider,
-	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(q)
+	cfg, err := gcaws.V2ConfigFromURLParams(context.Background(), q)
 	if err != nil {
 		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
 	}
-	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	db, err = Dial(configProvider)
+	db, err = Dial(cfg)
 	if err != nil {
 		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
 	}
@@ -131,9 +119,9 @@ func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partiti
 }
 
 // Dial gets an AWS DynamoDB service client.
-func Dial(p client.ConfigProvider) (*dyn.DynamoDB, error) {
-	if p == nil {
+func Dial(p aws.Config) (*dyn.Client, error) {
+	if p.Credentials == nil {
 		return nil, errors.New("getting Dynamo service: no AWS session provided")
 	}
-	return dyn.New(p), nil
+	return dyn.NewFromConfig(p), nil
 }
