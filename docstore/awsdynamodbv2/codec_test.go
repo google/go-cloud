@@ -39,21 +39,27 @@ func TestEncodeValue(t *testing.T) {
 		in   interface{}
 		want dyn2Types.AttributeValue
 	}{
+		// null
 		{nil, nullValue},
+		{nullptr, nullValue},
+		// number
 		{0, avn("0")},
 		{uint64(999), avn("999")},
 		{3.5, avn("3.5")},
-		{"", nullValue},
-		{"x", &dyn2Types.AttributeValueMemberS{Value: "x"}},
-		{true, &dyn2Types.AttributeValueMemberBOOL{Value: true}},
-		{nullptr, nullValue},
 		{seven, avn("7")},
 		{&seven, avn("7")},
+		// string
+		{"", nullValue},
+		{"x", &dyn2Types.AttributeValueMemberS{Value: "x"}},
+		// bool
+		{true, &dyn2Types.AttributeValueMemberBOOL{Value: true}},
+		// list
 		{[]int(nil), nullValue},
 		{[]int{}, &dyn2Types.AttributeValueMemberL{Value: []dyn2Types.AttributeValue{}}},
 		{[]int{1, 2}, avl(avn("1"), avn("2"))},
 		{[...]int{1, 2}, avl(avn("1"), avn("2"))},
 		{[]interface{}{nil, false}, avl(nullValue, &dyn2Types.AttributeValueMemberBOOL{Value: false})},
+		// map
 		{map[string]int(nil), nullValue},
 		{map[string]int{}, &dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{}}},
 		{
