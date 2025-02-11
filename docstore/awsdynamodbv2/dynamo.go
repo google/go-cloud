@@ -39,6 +39,7 @@ package awsdynamodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -727,36 +728,65 @@ func (c *collection) ErrorAs(err error, i interface{}) bool {
 }
 
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
-	ae, ok := err.(smithy.APIError)
-	if !ok {
-		return gcerrors.Unknown
+
+	var (
+		conditionalCheckFailedException          *dyn2Types.ConditionalCheckFailedException
+		idempotentParameterMismatchException     *dyn2Types.IdempotentParameterMismatchException
+		internalServerError                      *dyn2Types.InternalServerError
+		itemCollectionSizeLimitExceededException *dyn2Types.ItemCollectionSizeLimitExceededException
+		provisionedThroughputExceededException   *dyn2Types.ProvisionedThroughputExceededException
+		requestLimitExceeded                     *dyn2Types.RequestLimitExceeded
+		resourceNotFoundException                *dyn2Types.ResourceNotFoundException
+		transactionCanceledException             *dyn2Types.TransactionCanceledException
+		transactionConflictException             *dyn2Types.TransactionConflictException
+		transactionInProgressException           *dyn2Types.TransactionInProgressException
+	)
+
+	switch {
+	case errors.As(err, &conditionalCheckFailedException):
+		return gcerrors.FailedPrecondition
+	case errors.As(err, &idempotentParameterMismatchException):
+		return gcerrors.InvalidArgument
+	case errors.As(err, &internalServerError):
+		return gcerrors.Internal
+	case errors.As(err, &itemCollectionSizeLimitExceededException):
+		return gcerrors.ResourceExhausted
+	case errors.As(err, &provisionedThroughputExceededException):
+		return gcerrors.ResourceExhausted
+	case errors.As(err, &requestLimitExceeded):
+		return gcerrors.ResourceExhausted
+	case errors.As(err, &resourceNotFoundException):
+		return gcerrors.NotFound
+	case errors.As(err, &transactionCanceledException):
+		return gcerrors.FailedPrecondition
+	case errors.As(err, &transactionConflictException):
+		return gcerrors.Internal
+	case errors.As(err, &transactionInProgressException):
+		return gcerrors.InvalidArgument
 	}
-	ec, ok := errorCodeMap[ae.ErrorCode()]
-	if !ok {
-		return gcerrors.Unknown
+
+	for k, errCode := range errorCodeMap {
+		if strings.Contains(err.Error(), k) {
+			return errCode
+		}
 	}
-	return ec
+
+	return gcerrors.Unknown
 }
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
-
-	string(dyn2Types.BatchStatementErrorCodeEnumConditionalCheckFailed):          gcerrors.FailedPrecondition,
-	string(dyn2Types.BatchStatementErrorCodeEnumProvisionedThroughputExceeded):   gcerrors.ResourceExhausted,
-	string(dyn2Types.BatchStatementErrorCodeEnumResourceNotFound):                gcerrors.NotFound,
-	string(dyn2Types.BatchStatementErrorCodeEnumItemCollectionSizeLimitExceeded): gcerrors.ResourceExhausted,
-	string(dyn2Types.BatchStatementErrorCodeEnumTransactionConflict):             gcerrors.Internal,
-	string(dyn2Types.BatchStatementErrorCodeEnumRequestLimitExceeded):            gcerrors.ResourceExhausted,
-	string(dyn2Types.BatchStatementErrorCodeEnumInternalServerError):             gcerrors.Internal,
-	string(dyn2Types.BatchStatementErrorCodeEnumValidationError):                 gcerrors.InvalidArgument,
-
-	// TODO: these didn't have equivalents in V2, implementing using the pattern of the other errors, need to test
-
-	// dyn.ErrCodeTransactionCanceledException:             gcerrors.FailedPrecondition,
-	// dyn.ErrCodeTransactionInProgressException:           gcerrors.InvalidArgument,
-	// dyn.ErrCodeIdempotentParameterMismatchException:     gcerrors.InvalidArgument,
-	"TransactionCanceled":         gcerrors.FailedPrecondition,
-	"TransactionInProgress":       gcerrors.InvalidArgument,
-	"IdempotentParameterMismatch": gcerrors.InvalidArgument,
+	// "ConditionalCheckFailedException":          gcerrors.FailedPrecondition,
+	// "IdempotentParameterMismatchException":     gcerrors.InvalidArgument,
+	// "InternalServerErrorException":             gcerrors.Internal,
+	// "ItemCollectionSizeLimitExceededException": gcerrors.ResourceExhausted,
+	// "ProvisionedThroughputExceededException":   gcerrors.ResourceExhausted,
+	// "RequestLimitExceededException":            gcerrors.ResourceExhausted,
+	// "ResourceNotFoundException":                gcerrors.NotFound,
+	// "TransactionCanceledException":             gcerrors.FailedPrecondition,
+	// "TransactionConflictException":             gcerrors.Internal,
+	// "TransactionInProgressException":           gcerrors.InvalidArgument,
+	"ValidationErrorException": gcerrors.InvalidArgument,
+	"ValidationException":      gcerrors.InvalidArgument,
 }
 
 // Close implements driver.Collection.Close.
