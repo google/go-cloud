@@ -21,10 +21,10 @@ import (
 	"io"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	dyn "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/smithy-go"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"
@@ -56,14 +56,14 @@ const (
 )
 
 type harness struct {
-	sess   *session.Session
+	sess   aws.Config
 	closer func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	sess, _, done, state := setup.NewAWSSession(ctx, t, region)
+	sess, _, done, state := setup.NewAWSv2Config(ctx, t, region)
 	drivertest.MakeUniqueStringDeterministicForTesting(state)
 	return &harness{sess: sess, closer: done}, nil
 }
@@ -90,19 +90,19 @@ func (h *harness) Close() {
 func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
 	switch kind {
 	case drivertest.SingleKey, drivertest.NoRev:
-		return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "", &Options{
+		return newCollection(dyn.NewFromConfig(h.sess), collectionName1, drivertest.KeyField, "", &Options{
 			AllowScans:     true,
 			ConsistentRead: true,
 		})
 	case drivertest.TwoKey:
 		// For query test we don't use strong consistency mode since some tests are
 		// running on global secondary index and it doesn't support ConsistentRead.
-		return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player", &Options{
+		return newCollection(dyn.NewFromConfig(h.sess), collectionName2, "Game", "Player", &Options{
 			AllowScans:       true,
 			RunQueryFallback: InMemorySortFallback(func() interface{} { return new(drivertest.HighScore) }),
 		})
 	case drivertest.AltRev:
-		return newCollection(dyn.New(h.sess), collectionName1, drivertest.KeyField, "",
+		return newCollection(dyn.NewFromConfig(h.sess), collectionName1, drivertest.KeyField, "",
 			&Options{
 				AllowScans:     true,
 				RevisionField:  drivertest.AlternateRevisionField,
@@ -158,7 +158,7 @@ func (verifyAs) Name() string {
 }
 
 func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
-	var db *dyn.DynamoDB
+	var db *dyn.Client
 	if !coll.As(&db) {
 		return errors.New("Collection.As failed")
 	}
@@ -175,7 +175,7 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 }
 
 func (v verifyAs) ErrorCheck(k *docstore.Collection, err error) error {
-	var e awserr.Error
+	var e smithy.APIError
 	if !k.ErrorAs(err, &e) {
 		return errors.New("Collection.ErrorAs failed")
 	}
@@ -190,10 +190,11 @@ func TestConformance(t *testing.T) {
 }
 
 func BenchmarkConformance(b *testing.B) {
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	}))
-	coll, err := newCollection(dyn.New(sess), collectionName3, drivertest.KeyField, "", &Options{AllowScans: true})
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
+	if err != nil {
+		b.Fatal("Error loading AWS config for benchmark: ", err)
+	}
+	coll, err := newCollection(dyn.NewFromConfig(cfg), collectionName3, drivertest.KeyField, "", &Options{AllowScans: true})
 	if err != nil {
 		b.Fatal(err)
 	}

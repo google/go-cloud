@@ -43,10 +43,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
+	dyn "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	dyn2Types "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/smithy-go"
 	"github.com/google/wire"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
@@ -60,11 +61,11 @@ var Set = wire.NewSet(
 )
 
 type collection struct {
-	db           *dyn.DynamoDB
+	db           *dyn.Client
 	table        string // DynamoDB table name
 	partitionKey string
 	sortKey      string
-	description  *dyn.TableDescription
+	description  *dyn2Types.TableDescription
 	opts         *Options
 }
 
@@ -116,7 +117,7 @@ type Options struct {
 type RunQueryFunc func(context.Context, *driver.Query) (driver.DocumentIterator, error)
 
 // OpenCollection creates a *docstore.Collection representing a DynamoDB collection.
-func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options) (*docstore.Collection, error) {
+func OpenCollection(db *dyn.Client, tableName, partitionKey, sortKey string, opts *Options) (*docstore.Collection, error) {
 	c, err := newCollection(db, tableName, partitionKey, sortKey, opts)
 	if err != nil {
 		return nil, err
@@ -124,8 +125,8 @@ func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, o
 	return docstore.NewCollection(c), nil
 }
 
-func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string, opts *Options) (*collection, error) {
-	out, err := db.DescribeTable(&dyn.DescribeTableInput{TableName: &tableName})
+func newCollection(db *dyn.Client, tableName, partitionKey, sortKey string, opts *Options) (*collection, error) {
+	out, err := db.DescribeTable(context.Background(), &dyn.DescribeTableInput{TableName: &tableName})
 	if err != nil {
 		return nil, err
 	}
@@ -207,16 +208,23 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		}
 	}
 
-	keys := make([]map[string]*dyn.AttributeValue, 0, end-start+1)
+	keys := make([]map[string]dyn2Types.AttributeValue, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		av, err := encodeDocKeyFields(gets[i].Doc, c.partitionKey, c.sortKey)
 		if err != nil {
 			errs[gets[i].Index] = err
 		}
 
-		keys = append(keys, av.M)
+		i, ok := av.(*dyn2Types.AttributeValueMemberM)
+		if !ok {
+
+			// TODO
+
+		}
+
+		keys = append(keys, i.Value)
 	}
-	ka := &dyn.KeysAndAttributes{
+	ka := dyn2Types.KeysAndAttributes{
 		Keys:           keys,
 		ConsistentRead: aws.Bool(c.opts.ConsistentRead),
 	}
@@ -250,14 +258,14 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		ka.ProjectionExpression = expr.Projection()
 		ka.ExpressionAttributeNames = expr.Names()
 	}
-	in := &dyn.BatchGetItemInput{RequestItems: map[string]*dyn.KeysAndAttributes{c.table: ka}}
+	in := &dyn.BatchGetItemInput{RequestItems: map[string]dyn2Types.KeysAndAttributes{c.table: ka}}
 	if opts.BeforeDo != nil {
 		if err := opts.BeforeDo(driver.AsFunc(in)); err != nil {
 			setErr(err)
 			return
 		}
 	}
-	out, err := c.db.BatchGetItemWithContext(ctx, in)
+	out, err := c.db.BatchGetItem(ctx, in)
 	if err != nil {
 		setErr(err)
 		return
@@ -274,7 +282,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 			if err != nil {
 				panic(err)
 			}
-			err = decodeDoc(&dyn.AttributeValue{M: item}, keysOnly)
+			err = decodeDoc(&dyn2Types.AttributeValueMemberM{Value: item}, keysOnly)
 			if err != nil {
 				continue
 			}
@@ -283,7 +291,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 				continue
 			}
 			i := am[decKey]
-			errs[gets[i].Index] = decodeDoc(&dyn.AttributeValue{M: item}, gets[i].Doc)
+			errs[gets[i].Index] = decodeDoc(&dyn2Types.AttributeValueMemberM{Value: item}, gets[i].Doc)
 			found[i-start] = true
 		}
 	}
@@ -336,8 +344,8 @@ func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, err
 // on its own, or included as part of a transaction.
 type writeOp struct {
 	action          *driver.Action
-	writeItem       *dyn.TransactWriteItem // for inclusion in a transaction
-	newPartitionKey string                 // for a Create on a document without a partition key
+	writeItem       dyn2Types.TransactWriteItem // for inclusion in a transaction
+	newPartitionKey string                      // for a Create on a document without a partition key
 	newRevision     string
 	run             func(context.Context) error // run as a single RPC
 }
@@ -360,14 +368,18 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 	if err != nil {
 		return nil, err
 	}
-	mf := c.missingKeyField(av.M)
+	avm, ok := av.(*dyn2Types.AttributeValueMemberM)
+	if !ok {
+		// TODO
+	}
+	mf := c.missingKeyField(avm.Value)
 	if a.Kind != driver.Create && mf != "" {
 		return nil, fmt.Errorf("missing key field %q", mf)
 	}
 	var newPartitionKey string
 	if mf == c.partitionKey {
 		newPartitionKey = driver.UniqueString()
-		av.M[c.partitionKey] = new(dyn.AttributeValue).SetS(newPartitionKey)
+		avm.Value[c.partitionKey] = &dyn2Types.AttributeValueMemberS{Value: newPartitionKey}
 	}
 	if c.sortKey != "" && mf == c.sortKey {
 		// It doesn't make sense to generate a random sort key.
@@ -376,13 +388,13 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 	var rev string
 	if a.Doc.HasField(c.opts.RevisionField) {
 		rev = driver.UniqueString()
-		if av.M[c.opts.RevisionField], err = encodeValue(rev); err != nil {
+		if avm.Value[c.opts.RevisionField], err = encodeValue(rev); err != nil {
 			return nil, err
 		}
 	}
-	dput := &dyn.Put{
+	dput := &dyn2Types.Put{
 		TableName: &c.table,
-		Item:      av.M,
+		Item:      avm.Value,
 	}
 	cb, err := c.precondition(a)
 	if err != nil {
@@ -399,7 +411,7 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 	}
 	return &writeOp{
 		action:          a,
-		writeItem:       &dyn.TransactWriteItem{Put: dput},
+		writeItem:       dyn2Types.TransactWriteItem{Put: dput},
 		newPartitionKey: newPartitionKey,
 		newRevision:     rev,
 		run: func(ctx context.Context) error {
@@ -408,7 +420,7 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 	}, nil
 }
 
-func (c *collection) runPut(ctx context.Context, dput *dyn.Put, a *driver.Action, opts *driver.RunActionsOptions) error {
+func (c *collection) runPut(ctx context.Context, dput *dyn2Types.Put, a *driver.Action, opts *driver.RunActionsOptions) error {
 	in := &dyn.PutItemInput{
 		TableName:                 dput.TableName,
 		Item:                      dput.Item,
@@ -421,8 +433,8 @@ func (c *collection) runPut(ctx context.Context, dput *dyn.Put, a *driver.Action
 			return err
 		}
 	}
-	_, err := c.db.PutItemWithContext(ctx, in)
-	if ae, ok := err.(awserr.Error); ok && ae.Code() == dyn.ErrCodeConditionalCheckFailedException {
+	_, err := c.db.PutItem(ctx, in)
+	if ae, ok := err.(smithy.APIError); ok && ae.ErrorCode() == string(dyn2Types.BatchStatementErrorCodeEnumConditionalCheckFailed) {
 		if a.Kind == driver.Create {
 			err = gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
 		}
@@ -438,9 +450,13 @@ func (c *collection) newDelete(a *driver.Action, opts *driver.RunActionsOptions)
 	if err != nil {
 		return nil, err
 	}
-	del := &dyn.Delete{
+	avm, ok := av.(*dyn2Types.AttributeValueMemberM)
+	if !ok {
+		// TODO
+	}
+	del := &dyn2Types.Delete{
 		TableName: &c.table,
-		Key:       av.M,
+		Key:       avm.Value,
 	}
 	cb, err := c.precondition(a)
 	if err != nil {
@@ -457,7 +473,7 @@ func (c *collection) newDelete(a *driver.Action, opts *driver.RunActionsOptions)
 	}
 	return &writeOp{
 		action:    a,
-		writeItem: &dyn.TransactWriteItem{Delete: del},
+		writeItem: dyn2Types.TransactWriteItem{Delete: del},
 		run: func(ctx context.Context) error {
 			in := &dyn.DeleteItemInput{
 				TableName:                 del.TableName,
@@ -471,7 +487,7 @@ func (c *collection) newDelete(a *driver.Action, opts *driver.RunActionsOptions)
 					return err
 				}
 			}
-			_, err := c.db.DeleteItemWithContext(ctx, in)
+			_, err := c.db.DeleteItem(ctx, in)
 			return err
 		},
 	}, nil
@@ -481,6 +497,10 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 	av, err := encodeDocKeyFields(a.Doc, c.partitionKey, c.sortKey)
 	if err != nil {
 		return nil, err
+	}
+	avm, ok := av.(*dyn2Types.AttributeValueMemberM)
+	if !ok {
+		// TODO
 	}
 	var ub expression.UpdateBuilder
 	for _, m := range a.Mods {
@@ -507,9 +527,9 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 	if err != nil {
 		return nil, err
 	}
-	up := &dyn.Update{
+	up := &dyn2Types.Update{
 		TableName:                 &c.table,
-		Key:                       av.M,
+		Key:                       avm.Value,
 		ConditionExpression:       ce.Condition(),
 		UpdateExpression:          ce.Update(),
 		ExpressionAttributeNames:  ce.Names(),
@@ -517,7 +537,7 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 	}
 	return &writeOp{
 		action:      a,
-		writeItem:   &dyn.TransactWriteItem{Update: up},
+		writeItem:   dyn2Types.TransactWriteItem{Update: up},
 		newRevision: rev,
 		run: func(ctx context.Context) error {
 			in := &dyn.UpdateItemInput{
@@ -533,7 +553,7 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 					return err
 				}
 			}
-			_, err := c.db.UpdateItemWithContext(ctx, in)
+			_, err := c.db.UpdateItem(ctx, in)
 			return err
 		},
 	}, nil
@@ -551,13 +571,25 @@ func (c *collection) onSuccess(op *writeOp) error {
 	return nil
 }
 
-func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
-	if v, ok := m[c.partitionKey]; !ok || v.NULL != nil {
+func (c *collection) missingKeyField(m map[string]dyn2Types.AttributeValue) string {
+	v, ok := m[c.partitionKey]
+	if !ok {
 		return c.partitionKey
 	}
-	if v, ok := m[c.sortKey]; (!ok || v.NULL != nil) && c.sortKey != "" {
-		return c.sortKey
+	if n, ok := v.(*dyn2Types.AttributeValueMemberNULL); ok || n.Value {
+		return c.partitionKey
 	}
+
+	if c.sortKey != "" {
+		v, ok := m[c.sortKey]
+		if !ok {
+			return c.sortKey
+		}
+		if n, ok := v.(*dyn2Types.AttributeValueMemberNULL); ok || n.Value {
+			return c.sortKey
+		}
+	}
+
 	return ""
 }
 
@@ -628,7 +660,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 		}
 	}
 
-	tws := make([]*dyn.TransactWriteItem, 0, len(actions))
+	tws := make([]dyn2Types.TransactWriteItem, 0, len(actions))
 	var ops []*writeOp
 	for _, w := range actions {
 		op, err := c.newWriteOp(w, opts)
@@ -660,7 +692,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 			return
 		}
 	}
-	if _, err := c.db.TransactWriteItemsWithContext(ctx, in); err != nil {
+	if _, err := c.db.TransactWriteItems(ctx, in); err != nil {
 		setErr(err)
 		return
 	}
@@ -684,7 +716,7 @@ func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
 }
 
 func (c *collection) As(i interface{}) bool {
-	p, ok := i.(**dyn.DynamoDB)
+	p, ok := i.(**dyn.Client)
 	if !ok {
 		return false
 	}
@@ -694,11 +726,11 @@ func (c *collection) As(i interface{}) bool {
 
 // ErrorAs implements driver.Collection.ErrorAs.
 func (c *collection) ErrorAs(err error, i interface{}) bool {
-	e, ok := err.(awserr.Error)
+	e, ok := err.(smithy.APIError)
 	if !ok {
 		return false
 	}
-	p, ok := i.(*awserr.Error)
+	p, ok := i.(*smithy.APIError)
 	if !ok {
 		return false
 	}
@@ -707,11 +739,11 @@ func (c *collection) ErrorAs(err error, i interface{}) bool {
 }
 
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
-	ae, ok := err.(awserr.Error)
+	ae, ok := err.(smithy.APIError)
 	if !ok {
 		return gcerrors.Unknown
 	}
-	ec, ok := errorCodeMap[ae.Code()]
+	ec, ok := errorCodeMap[ae.ErrorCode()]
 	if !ok {
 		return gcerrors.Unknown
 	}
@@ -719,17 +751,24 @@ func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
-	dyn.ErrCodeConditionalCheckFailedException:          gcerrors.FailedPrecondition,
-	dyn.ErrCodeProvisionedThroughputExceededException:   gcerrors.ResourceExhausted,
-	dyn.ErrCodeResourceNotFoundException:                gcerrors.NotFound,
-	dyn.ErrCodeItemCollectionSizeLimitExceededException: gcerrors.ResourceExhausted,
-	dyn.ErrCodeTransactionConflictException:             gcerrors.Internal,
-	dyn.ErrCodeRequestLimitExceeded:                     gcerrors.ResourceExhausted,
-	dyn.ErrCodeInternalServerError:                      gcerrors.Internal,
-	dyn.ErrCodeTransactionCanceledException:             gcerrors.FailedPrecondition,
-	dyn.ErrCodeTransactionInProgressException:           gcerrors.InvalidArgument,
-	dyn.ErrCodeIdempotentParameterMismatchException:     gcerrors.InvalidArgument,
-	"ValidationException":                               gcerrors.InvalidArgument,
+
+	string(dyn2Types.BatchStatementErrorCodeEnumConditionalCheckFailed):          gcerrors.FailedPrecondition,
+	string(dyn2Types.BatchStatementErrorCodeEnumProvisionedThroughputExceeded):   gcerrors.ResourceExhausted,
+	string(dyn2Types.BatchStatementErrorCodeEnumResourceNotFound):                gcerrors.NotFound,
+	string(dyn2Types.BatchStatementErrorCodeEnumItemCollectionSizeLimitExceeded): gcerrors.ResourceExhausted,
+	string(dyn2Types.BatchStatementErrorCodeEnumTransactionConflict):             gcerrors.Internal,
+	string(dyn2Types.BatchStatementErrorCodeEnumRequestLimitExceeded):            gcerrors.ResourceExhausted,
+	string(dyn2Types.BatchStatementErrorCodeEnumInternalServerError):             gcerrors.Internal,
+	string(dyn2Types.BatchStatementErrorCodeEnumValidationError):                 gcerrors.InvalidArgument,
+
+	// TODO: these didn't have equivalents in V2, implementing using the pattern of the other errors, need to test
+
+	// dyn.ErrCodeTransactionCanceledException:             gcerrors.FailedPrecondition,
+	// dyn.ErrCodeTransactionInProgressException:           gcerrors.InvalidArgument,
+	// dyn.ErrCodeIdempotentParameterMismatchException:     gcerrors.InvalidArgument,
+	"TransactionCanceled":         gcerrors.FailedPrecondition,
+	"TransactionInProgress":       gcerrors.InvalidArgument,
+	"IdempotentParameterMismatch": gcerrors.InvalidArgument,
 }
 
 // Close implements driver.Collection.Close.
