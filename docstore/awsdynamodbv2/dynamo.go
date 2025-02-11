@@ -429,7 +429,8 @@ func (c *collection) runPut(ctx context.Context, dput *dyn2Types.Put, a *driver.
 		}
 	}
 	_, err := c.db.PutItem(ctx, in)
-	if ae, ok := err.(smithy.APIError); ok && ae.ErrorCode() == string(dyn2Types.BatchStatementErrorCodeEnumConditionalCheckFailed) {
+	var ccf *dyn2Types.ConditionalCheckFailedException
+	if errors.As(err, &ccf) {
 		if a.Kind == driver.Create {
 			err = gcerr.Newf(gcerr.AlreadyExists, err, "document already exists")
 		}
