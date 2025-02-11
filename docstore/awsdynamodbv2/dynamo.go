@@ -215,14 +215,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 			errs[gets[i].Index] = err
 		}
 
-		i, ok := av.(*dyn2Types.AttributeValueMemberM)
-		if !ok {
-
-			// TODO
-
-		}
-
-		keys = append(keys, i.Value)
+		keys = append(keys, av.Value)
 	}
 	ka := dyn2Types.KeysAndAttributes{
 		Keys:           keys,
@@ -451,13 +444,10 @@ func (c *collection) newDelete(a *driver.Action, opts *driver.RunActionsOptions)
 	if err != nil {
 		return nil, err
 	}
-	avm, ok := av.(*dyn2Types.AttributeValueMemberM)
-	if !ok {
-		// TODO
-	}
+
 	del := &dyn2Types.Delete{
 		TableName: &c.table,
-		Key:       avm.Value,
+		Key:       av.Value,
 	}
 	cb, err := c.precondition(a)
 	if err != nil {
@@ -499,10 +489,7 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 	if err != nil {
 		return nil, err
 	}
-	avm, ok := av.(*dyn2Types.AttributeValueMemberM)
-	if !ok {
-		// TODO
-	}
+
 	var ub expression.UpdateBuilder
 	for _, m := range a.Mods {
 		// TODO(shantuo): check for invalid field paths
@@ -530,7 +517,7 @@ func (c *collection) newUpdate(a *driver.Action, opts *driver.RunActionsOptions)
 	}
 	up := &dyn2Types.Update{
 		TableName:                 &c.table,
-		Key:                       avm.Value,
+		Key:                       av.Value,
 		ConditionExpression:       ce.Condition(),
 		UpdateExpression:          ce.Update(),
 		ExpressionAttributeNames:  ce.Names(),

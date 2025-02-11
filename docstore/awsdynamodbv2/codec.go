@@ -108,7 +108,7 @@ func encodeDoc(doc driver.Document) (dyn2Types.AttributeValue, error) {
 // Encode the key fields of the given document into a map AttributeValue.
 // pkey and skey are the names of the partition key field and the sort key field.
 // pkey must always be non-empty, but skey may be empty if the collection has no sort key.
-func encodeDocKeyFields(doc driver.Document, pkey, skey string) (dyn2Types.AttributeValue, error) {
+func encodeDocKeyFields(doc driver.Document, pkey, skey string) (*dyn2Types.AttributeValueMemberM, error) {
 	m := map[string]dyn2Types.AttributeValue{}
 
 	set := func(fieldName string) error {
