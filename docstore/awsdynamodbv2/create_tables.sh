@@ -27,6 +27,7 @@ set -uxo pipefail
 
 
 aws dynamodb create-table \
+  --region us-east-2 \
   --table-name docstore-test-1 \
   --attribute-definitions AttributeName=name,AttributeType=S \
   --key-schema AttributeName=name,KeyType=HASH \
@@ -36,6 +37,7 @@ aws dynamodb create-table \
 # The docstore-test-2 table has both a partition and a sort key, and two indexes.
 
 aws dynamodb create-table \
+  --region us-east-2 \
   --table-name docstore-test-2 \
   --attribute-definitions \
         AttributeName=Game,AttributeType=S \
