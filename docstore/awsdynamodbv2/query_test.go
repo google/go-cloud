@@ -22,8 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	dyn "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	dyn2Types "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/docstore/driver"
@@ -34,27 +35,27 @@ func TestPlanQuery(t *testing.T) {
 	c := &collection{
 		table:        "T",
 		partitionKey: "tableP",
-		description:  &dynamodb.TableDescription{},
+		description:  &dyn2Types.TableDescription{},
 		opts:         &Options{AllowScans: true, RevisionField: "rev"},
 	}
 
 	// Build an ExpressionAttributeNames map with the given names.
-	eans := func(names ...string) map[string]*string {
-		m := map[string]*string{}
+	eans := func(names ...string) map[string]string {
+		m := map[string]string{}
 		for i, n := range names {
-			m[fmt.Sprintf("#%d", i)] = aws.String(n)
+			m[fmt.Sprintf("#%d", i)] = n
 		}
 		return m
 	}
 
 	// Build an ExpressionAttributeValues map. Filter values are always the number 1
 	// and the keys are always :0, :1, ..., so we only need to know how many entries.
-	eavs := func(n int) map[string]*dynamodb.AttributeValue {
+	eavs := func(n int) map[string]dyn2Types.AttributeValue {
 		if n == 0 {
 			return nil
 		}
-		one := new(dynamodb.AttributeValue).SetN("1")
-		m := map[string]*dynamodb.AttributeValue{}
+		one := &dyn2Types.AttributeValueMemberN{Value: "1"}
+		m := map[string]dyn2Types.AttributeValue{}
 		for i := 0; i < n; i++ {
 			m[fmt.Sprintf(":%d", i)] = one
 		}
@@ -63,8 +64,22 @@ func TestPlanQuery(t *testing.T) {
 
 	// Ignores the ConsistentRead field from both QueryInput and ScanInput.
 	opts := []cmp.Option{
-		cmpopts.IgnoreFields(dynamodb.ScanInput{}, "ConsistentRead"),
-		cmpopts.IgnoreFields(dynamodb.QueryInput{}, "ConsistentRead"),
+		cmpopts.IgnoreFields(dyn.ScanInput{}, "ConsistentRead"),
+		cmpopts.IgnoreFields(dyn.QueryInput{}, "ConsistentRead"),
+		cmpopts.IgnoreUnexported(dyn.ScanInput{}),
+		cmpopts.IgnoreUnexported(dyn.QueryInput{}),
+		cmpopts.IgnoreUnexported(
+			dyn2Types.AttributeValueMemberB{},
+			dyn2Types.AttributeValueMemberBOOL{},
+			dyn2Types.AttributeValueMemberBS{},
+			dyn2Types.AttributeValueMemberL{},
+			dyn2Types.AttributeValueMemberM{},
+			dyn2Types.AttributeValueMemberN{},
+			dyn2Types.AttributeValueMemberNS{},
+			dyn2Types.AttributeValueMemberNULL{},
+			dyn2Types.AttributeValueMemberS{},
+			dyn2Types.AttributeValueMemberSS{},
+		),
 	}
 
 	for _, test := range []struct {
@@ -84,7 +99,7 @@ func TestPlanQuery(t *testing.T) {
 			desc: "empty query",
 			// A query with no filters requires a scan.
 			query:    &driver.Query{},
-			want:     &dynamodb.ScanInput{TableName: &c.table},
+			want:     &dyn.ScanInput{TableName: &c.table},
 			wantPlan: "Scan",
 		},
 		{
@@ -92,7 +107,7 @@ func TestPlanQuery(t *testing.T) {
 			// A filter that compares the table's partition key for equality is the minimum
 			// requirement for querying the table.
 			query: &driver.Query{Filters: []driver.Filter{{[]string{"tableP"}, "=", 1}}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("#0 = :0"),
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
@@ -104,7 +119,7 @@ func TestPlanQuery(t *testing.T) {
 			// Same as above, but the table has a sort key; shouldn't make a difference.
 			tableSortKey: "tableS",
 			query:        &driver.Query{Filters: []driver.Filter{{[]string{"tableP"}, "=", 1}}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("#0 = :0"),
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
@@ -116,7 +131,7 @@ func TestPlanQuery(t *testing.T) {
 			// This query has an equality filter, but not on the table's partition key.
 			// Since there are no matching indexes, we must scan.
 			query: &driver.Query{Filters: []driver.Filter{{[]string{"other"}, "=", 1}}},
-			want: &dynamodb.ScanInput{
+			want: &dyn.ScanInput{
 				FilterExpression:          aws.String("#0 = :0"),
 				ExpressionAttributeNames:  eans("other"),
 				ExpressionAttributeValues: eavs(1),
@@ -129,7 +144,7 @@ func TestPlanQuery(t *testing.T) {
 			// are no indexes, we must scan. The filter becomes a FilterExpression, evaluated
 			// on the backend.
 			query: &driver.Query{Filters: []driver.Filter{{[]string{"tableP"}, ">", 1}}},
-			want: &dynamodb.ScanInput{
+			want: &dyn.ScanInput{
 				FilterExpression:          aws.String("#0 > :0"),
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
@@ -144,7 +159,7 @@ func TestPlanQuery(t *testing.T) {
 				{[]string{"tableP"}, "=", 1},
 				{[]string{"other"}, "<=", 1},
 			}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("#1 = :1"),
 				FilterExpression:          aws.String("#0 <= :0"),
 				ExpressionAttributeNames:  eans("other", "tableP"),
@@ -162,7 +177,7 @@ func TestPlanQuery(t *testing.T) {
 				{[]string{"tableP"}, "=", 1},
 				{[]string{"tableS"}, "<=", 1},
 			}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames:  eans("tableP", "tableS"),
 				ExpressionAttributeValues: eavs(2),
@@ -179,7 +194,7 @@ func TestPlanQuery(t *testing.T) {
 				{[]string{"tableP"}, "=", 1},
 				{[]string{"localS"}, "<=", 1},
 			}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				IndexName:                aws.String("local"),
 				KeyConditionExpression:   aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames: eans("tableP", "localS"),
@@ -198,7 +213,7 @@ func TestPlanQuery(t *testing.T) {
 				{[]string{"tableP"}, "=", 1},
 				{[]string{"localS"}, "<=", 1},
 			}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				KeyConditionExpression:   aws.String("#1 = :1"),
 				FilterExpression:         aws.String("#0 <= :0"),
 				ExpressionAttributeNames: eans("localS", "tableP"),
@@ -218,7 +233,7 @@ func TestPlanQuery(t *testing.T) {
 					{[]string{"localS"}, "<=", 1},
 				},
 			},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				IndexName:                 aws.String("local"),
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames:  eans("tableP", "localS"),
@@ -237,7 +252,7 @@ func TestPlanQuery(t *testing.T) {
 				{[]string{"localS"}, "<=", 1},
 				{[]string{"tableS"}, ">", 1},
 			}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				IndexName:                nil,
 				KeyConditionExpression:   aws.String("(#1 = :1) AND (#2 > :2)"),
 				FilterExpression:         aws.String("#0 <= :0"),
@@ -251,7 +266,7 @@ func TestPlanQuery(t *testing.T) {
 			// is a global index with that field as partition key, so we can query it.
 			globalIndexPartitionKey: "other",
 			query:                   &driver.Query{Filters: []driver.Filter{{[]string{"other"}, "=", 1}}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				IndexName:                aws.String("global"),
 				KeyConditionExpression:   aws.String("#0 = :0"),
 				ExpressionAttributeNames: eans("other"),
@@ -270,7 +285,7 @@ func TestPlanQuery(t *testing.T) {
 				{[]string{"tableP"}, "=", 1},
 				{[]string{"globalS"}, "<=", 1},
 			}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				IndexName:                aws.String("global"),
 				KeyConditionExpression:   aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames: eans("tableP", "globalS"),
@@ -291,7 +306,7 @@ func TestPlanQuery(t *testing.T) {
 				{[]string{"tableP"}, "=", 1},
 				{[]string{"globalS"}, "<=", 1},
 			}},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				IndexName:                nil,
 				KeyConditionExpression:   aws.String("#1 = :1"),
 				FilterExpression:         aws.String("#0 <= :0"),
@@ -313,7 +328,7 @@ func TestPlanQuery(t *testing.T) {
 					{[]string{"globalS"}, "<=", 1},
 				},
 			},
-			want: &dynamodb.QueryInput{
+			want: &dyn.QueryInput{
 				IndexName:                 aws.String("global"),
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ProjectionExpression:      aws.String("#2, #0"),
@@ -328,7 +343,7 @@ func TestPlanQuery(t *testing.T) {
 			if test.localIndexSortKey == "" {
 				c.description.LocalSecondaryIndexes = nil
 			} else {
-				c.description.LocalSecondaryIndexes = []*dynamodb.LocalSecondaryIndexDescription{
+				c.description.LocalSecondaryIndexes = []dyn2Types.LocalSecondaryIndexDescription{
 					{
 						IndexName:  aws.String("local"),
 						KeySchema:  keySchema("tableP", test.localIndexSortKey),
@@ -339,7 +354,7 @@ func TestPlanQuery(t *testing.T) {
 			if test.globalIndexPartitionKey == "" {
 				c.description.GlobalSecondaryIndexes = nil
 			} else {
-				c.description.GlobalSecondaryIndexes = []*dynamodb.GlobalSecondaryIndexDescription{
+				c.description.GlobalSecondaryIndexes = []dyn2Types.GlobalSecondaryIndexDescription{
 					{
 						IndexName:  aws.String("global"),
 						KeySchema:  keySchema(test.globalIndexPartitionKey, test.globalIndexSortKey),
@@ -353,13 +368,13 @@ func TestPlanQuery(t *testing.T) {
 			}
 			var got interface{}
 			switch tw := test.want.(type) {
-			case *dynamodb.ScanInput:
+			case *dyn.ScanInput:
 				got = gotRunner.scanIn
 				tw.TableName = &c.table
 				if tw.ExpressionAttributeValues == nil {
 					tw.ExpressionAttributeValues = eavs(len(tw.ExpressionAttributeNames))
 				}
-			case *dynamodb.QueryInput:
+			case *dyn.QueryInput:
 				got = gotRunner.queryIn
 				tw.TableName = &c.table
 				if tw.ExpressionAttributeValues == nil {
@@ -383,7 +398,7 @@ func TestQueryNoScans(t *testing.T) {
 	c := &collection{
 		table:        "T",
 		partitionKey: "tableP",
-		description:  &dynamodb.TableDescription{},
+		description:  &dyn2Types.TableDescription{},
 		opts:         &Options{AllowScans: false},
 	}
 
@@ -410,34 +425,34 @@ func TestQueryNoScans(t *testing.T) {
 }
 
 // Make a key schema from the names of the partition and sort keys.
-func keySchema(pkey, skey string) []*dynamodb.KeySchemaElement {
-	return []*dynamodb.KeySchemaElement{
-		{AttributeName: &pkey, KeyType: aws.String("HASH")},
-		{AttributeName: &skey, KeyType: aws.String("RANGE")},
+func keySchema(pkey, skey string) []dyn2Types.KeySchemaElement {
+	return []dyn2Types.KeySchemaElement{
+		{AttributeName: &pkey, KeyType: dyn2Types.KeyTypeHash},
+		{AttributeName: &skey, KeyType: dyn2Types.KeyTypeRange},
 	}
 }
 
-func indexProjection(fields []string) *dynamodb.Projection {
-	var ptype string
+func indexProjection(fields []string) *dyn2Types.Projection {
+	var ptype dyn2Types.ProjectionType
 	switch {
 	case fields == nil:
-		ptype = "ALL"
+		ptype = dyn2Types.ProjectionTypeAll
 	case len(fields) == 0:
-		ptype = "KEYS_ONLY"
+		ptype = dyn2Types.ProjectionTypeKeysOnly
 	default:
-		ptype = "INCLUDE"
+		ptype = dyn2Types.ProjectionTypeInclude
 	}
-	proj := &dynamodb.Projection{ProjectionType: &ptype}
+	proj := &dyn2Types.Projection{ProjectionType: ptype}
 	for _, f := range fields {
 		f := f
-		proj.NonKeyAttributes = append(proj.NonKeyAttributes, &f)
+		proj.NonKeyAttributes = append(proj.NonKeyAttributes, f)
 	}
 	return proj
 }
 
 func TestGlobalFieldsIncluded(t *testing.T) {
 	c := &collection{partitionKey: "tableP", sortKey: "tableS"}
-	gi := &dynamodb.GlobalSecondaryIndexDescription{
+	gi := dyn2Types.GlobalSecondaryIndexDescription{
 		KeySchema: keySchema("globalP", "globalS"),
 	}
 	for _, test := range []struct {
@@ -485,7 +500,7 @@ func TestGlobalFieldsIncluded(t *testing.T) {
 			q := &driver.Query{FieldPaths: fps}
 			for _, p := range []struct {
 				name string
-				proj *dynamodb.Projection
+				proj *dyn2Types.Projection
 				want bool
 			}{
 				{"ALL", indexProjection(nil), true},
@@ -582,12 +597,12 @@ func TestCopyTopLevel(t *testing.T) {
 func Test_documentIterator_Next(t *testing.T) {
 	type fields struct {
 		qr     *queryRunner
-		items  []map[string]*dynamodb.AttributeValue
+		items  []map[string]dyn2Types.AttributeValue
 		curr   int
 		offset int
 		limit  int
 		count  int
-		last   map[string]*dynamodb.AttributeValue
+		last   map[string]dyn2Types.AttributeValue
 		asFunc func(i interface{}) bool
 	}
 	type args struct {
@@ -604,14 +619,14 @@ func Test_documentIterator_Next(t *testing.T) {
 			name: "nextWithNoDecodeError",
 			fields: fields{
 				qr: &queryRunner{},
-				items: []map[string]*dynamodb.AttributeValue{
-					{"key": {M: map[string]*dynamodb.AttributeValue{"key": {S: aws.String("value")}}}},
+				items: []map[string]dyn2Types.AttributeValue{
+					{"key": &dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{"key": &dyn2Types.AttributeValueMemberS{Value: "value"}}}},
 				},
 				curr:   0,
 				offset: 0,
 				limit:  0,
 				count:  0,
-				last:   map[string]*dynamodb.AttributeValue{},
+				last:   map[string]dyn2Types.AttributeValue{},
 			},
 			args: args{
 				ctx: context.Background(),
@@ -623,14 +638,14 @@ func Test_documentIterator_Next(t *testing.T) {
 			name: "nextWithDecodeError",
 			fields: fields{
 				qr: &queryRunner{},
-				items: []map[string]*dynamodb.AttributeValue{
-					{"key": {M: nil}}, // set M to nil to trigger decode error
+				items: []map[string]dyn2Types.AttributeValue{
+					{"key": &dyn2Types.AttributeValueMemberM{Value: nil}}, // set M to nil to trigger decode error
 				},
 				curr:   0,
 				offset: 0,
 				limit:  0,
 				count:  0,
-				last:   map[string]*dynamodb.AttributeValue{},
+				last:   map[string]dyn2Types.AttributeValue{},
 			},
 			args: args{
 				ctx: context.Background(),
@@ -646,12 +661,12 @@ func Test_documentIterator_Next(t *testing.T) {
 					// hack to return error from run
 					beforeRun: func(asFunc func(i interface{}) bool) error { return errors.New("invalid") },
 				},
-				items:  []map[string]*dynamodb.AttributeValue{{"key": {M: map[string]*dynamodb.AttributeValue{"key": {S: aws.String("value"), M: nil}}}}},
+				items:  []map[string]dyn2Types.AttributeValue{{"key": &dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{"key": &dyn2Types.AttributeValueMemberS{Value: "value"}}}}},
 				curr:   1,
 				offset: 0,
 				limit:  0,
 				count:  0,
-				last:   map[string]*dynamodb.AttributeValue{"key": {S: aws.String("value")}},
+				last:   map[string]dyn2Types.AttributeValue{"key": &dyn2Types.AttributeValueMemberS{Value: "value"}},
 			},
 			args: args{
 				ctx: context.Background(),

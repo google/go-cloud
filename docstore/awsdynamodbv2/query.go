@@ -25,9 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
+	dyn "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	dyn2Types "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -39,7 +40,7 @@ import (
 // return an empty result set and a LastEvaluatedKey if all the items read for the
 // page of results are filtered out."
 
-type avmap = map[string]*dyn.AttributeValue
+type avmap = map[string]dyn2Types.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
 	qr, err := c.planQuery(q)
@@ -216,8 +217,8 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 // they are not projected into the index, the only case where a local index cannot
 // be used is when the query wants all the fields, and the index projection is not ALL.
 // See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html#LSI.Projections.
-func localFieldsIncluded(q *driver.Query, li *dyn.LocalSecondaryIndexDescription) bool {
-	return len(q.FieldPaths) > 0 || *li.Projection.ProjectionType == "ALL"
+func localFieldsIncluded(q *driver.Query, li dyn2Types.LocalSecondaryIndexDescription) bool {
+	return len(q.FieldPaths) > 0 || li.Projection.ProjectionType == dyn2Types.ProjectionTypeAll
 }
 
 // orderingConsistent reports whether the ordering constraint is consistent with the sort key field.
@@ -231,9 +232,9 @@ func orderingConsistent(q *driver.Query, sortField string) bool {
 // check before using the index, because if a global index doesn't have all the
 // desired fields, then a separate RPC for each returned item would be necessary to
 // retrieve those fields, and we'd rather scan than do that.
-func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dyn.GlobalSecondaryIndexDescription) bool {
+func (c *collection) globalFieldsIncluded(q *driver.Query, gi dyn2Types.GlobalSecondaryIndexDescription) bool {
 	proj := gi.Projection
-	if *proj.ProjectionType == "ALL" {
+	if proj.ProjectionType == dyn2Types.ProjectionTypeAll {
 		// The index has all the fields of the table: we're good.
 		return true
 	}
@@ -252,7 +253,7 @@ func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dyn.GlobalSeconda
 		indexFields[skey] = true
 	}
 	for _, nka := range proj.NonKeyAttributes {
-		indexFields[*nka] = true
+		indexFields[nka] = true
 	}
 	// Every field path in the query must be in the index.
 	for _, fp := range q.FieldPaths {
@@ -265,15 +266,15 @@ func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dyn.GlobalSeconda
 
 // Extract the names of the partition and sort key attributes from the schema of a
 // table or index.
-func keyAttributes(ks []*dyn.KeySchemaElement) (pkey, skey string) {
+func keyAttributes(ks []dyn2Types.KeySchemaElement) (pkey, skey string) {
 	for _, k := range ks {
-		switch *k.KeyType {
-		case "HASH":
+		switch k.KeyType {
+		case dyn2Types.KeyTypeHash:
 			pkey = *k.AttributeName
-		case "RANGE":
+		case dyn2Types.KeyTypeRange:
 			skey = *k.AttributeName
 		default:
-			panic("bad key type: " + *k.KeyType)
+			panic("bad key type: " + k.KeyType)
 		}
 	}
 	return pkey, skey
@@ -325,7 +326,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 				return nil, nil, nil, err
 			}
 		}
-		out, err := qr.c.db.ScanWithContext(ctx, qr.scanIn)
+		out, err := qr.c.db.Scan(ctx, qr.scanIn)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -353,7 +354,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 			return nil, nil, nil, err
 		}
 	}
-	out, err := qr.c.db.QueryWithContext(ctx, qr.queryIn)
+	out, err := qr.c.db.Query(ctx, qr.queryIn)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -459,14 +460,14 @@ func toInCondition(f driver.Filter) expression.ConditionBuilder {
 }
 
 type documentIterator struct {
-	qr     *queryRunner                     // the query runner
-	items  []map[string]*dyn.AttributeValue // items from the last query
-	curr   int                              // index of the current item in items
-	offset int                              // number of items to skip
-	limit  int                              // number of items to return
-	count  int                              // number of items returned
-	last   map[string]*dyn.AttributeValue   // lastEvaluatedKey from the last query
-	asFunc func(i interface{}) bool         // for As
+	qr     *queryRunner                          // the query runner
+	items  []map[string]dyn2Types.AttributeValue // items from the last query
+	curr   int                                   // index of the current item in items
+	offset int                                   // number of items to skip
+	limit  int                                   // number of items to return
+	count  int                                   // number of items returned
+	last   map[string]dyn2Types.AttributeValue   // lastEvaluatedKey from the last query
+	asFunc func(i interface{}) bool              // for As
 }
 
 func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error {
@@ -498,7 +499,7 @@ func (it *documentIterator) next(ctx context.Context, doc driver.Document, decod
 		it.curr = 0
 	}
 	if decode {
-		if err := decodeDoc(&dyn.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
+		if err := decodeDoc(&dyn2Types.AttributeValueMemberM{Value: it.items[it.curr]}, doc); err != nil {
 			return err
 		}
 	}
