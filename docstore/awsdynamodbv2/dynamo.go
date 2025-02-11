@@ -776,6 +776,7 @@ func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
+	// handled by type above
 	// "ConditionalCheckFailedException":          gcerrors.FailedPrecondition,
 	// "IdempotentParameterMismatchException":     gcerrors.InvalidArgument,
 	// "InternalServerErrorException":             gcerrors.Internal,
@@ -786,7 +787,8 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	// "TransactionCanceledException":             gcerrors.FailedPrecondition,
 	// "TransactionConflictException":             gcerrors.Internal,
 	// "TransactionInProgressException":           gcerrors.InvalidArgument,
-	"ValidationErrorException": gcerrors.InvalidArgument,
+
+	// V2 doesn't have a type for this, inspect message instead
 	"ValidationException":      gcerrors.InvalidArgument,
 }
 
