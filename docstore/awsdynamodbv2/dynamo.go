@@ -21,7 +21,7 @@
 // For docstore.OpenCollection, awsdynamodb registers for the scheme
 // "dynamodb". The default URL opener will use an AWS session with the default
 // credentials and configuration; see
-// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more details.
+// https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more details.
 // To customize the URL opener, or for more details on the URL format, see
 // URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -34,7 +34,7 @@
 //     or *dynamodb.UpdateItemInput
 //   - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //   - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
-//   - ErrorAs: awserr.Error
+//   - ErrorAs: smithy.APIError
 package awsdynamodb
 
 import (
