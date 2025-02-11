@@ -55,7 +55,6 @@ func (e *encoder) EncodeString(x string) {
 
 func (e *encoder) EncodeComplex(x complex128) {
 	e.av = &dyn2Types.AttributeValueMemberL{Value: []dyn2Types.AttributeValue{encodeFloat(real(x)), encodeFloat(imag(x))}}
-	// e.av = new(dyn.AttributeValue).SetL([]*dyn.AttributeValue{encodeFloat(real(x)), encodeFloat(imag(x))})
 }
 
 func (e *encoder) EncodeList(n int) driver.Encoder {
