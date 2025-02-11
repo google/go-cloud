@@ -628,7 +628,7 @@ func Test_documentIterator_Next(t *testing.T) {
 			fields: fields{
 				qr: &queryRunner{},
 				items: []map[string]dyn2Types.AttributeValue{
-					{"key": &dyn2Types.AttributeValueMemberM{Value: nil}}, // set M to nil to trigger decode error
+					{"key": nil}, // set M to nil to trigger decode error
 				},
 				curr:   0,
 				offset: 0,
