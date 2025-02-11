@@ -267,7 +267,9 @@ func (d decoder) ListLen() (int, bool) {
 func (d decoder) DecodeList(f func(i int, vd driver.Decoder) bool) {
 	iface, ok := d.av.(*dyn2Types.AttributeValueMemberL)
 	if !ok {
-		// TODO: error handling?
+		// V1 behavior treated this as indistinct from an empty list, 
+		// which this return replicates.
+		// Should this be explicitly handled in some way?
 		return
 	}
 	for i, el := range iface.Value {
@@ -288,7 +290,9 @@ func (d decoder) MapLen() (int, bool) {
 func (d decoder) DecodeMap(f func(key string, vd driver.Decoder, exactMatch bool) bool) {
 	i, ok := d.av.(*dyn2Types.AttributeValueMemberM)
 	if !ok {
-		// TODO: error handling?
+		// V1 behavior treated this as indistinct from an empty map, 
+		// which this return replicates.
+		// Should this be explicitly handled in some way?
 		return
 	}
 	for k, av := range i.Value {
