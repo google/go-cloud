@@ -664,7 +664,7 @@ func Test_documentIterator_Next(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	for _, tt := range tests {
+	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			it := &documentIterator{
 				qr:     tt.fields.qr,
@@ -677,7 +677,7 @@ func Test_documentIterator_Next(t *testing.T) {
 				asFunc: tt.fields.asFunc,
 			}
 			if err := it.Next(tt.args.ctx, tt.args.doc); (err != nil) != tt.wantErr {
-				t.Errorf("documentIterator.Next() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("documentIterator.Next() test=%v(%v) error = %v, wantErr %v", i+1, tt.name, err, tt.wantErr)
 			}
 		})
 	}
