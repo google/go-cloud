@@ -18,20 +18,20 @@ import (
 	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/awsdynamodb"
 )
 
 func ExampleOpenCollection() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	sess, err := session.NewSession()
+	cfg, err := config.LoadDefaultConfig(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
 	coll, err := awsdynamodb.OpenCollection(
-		dynamodb.New(sess), "docstore-test", "partitionKeyField", "", nil)
+		dynamodb.NewFromConfig(cfg), "docstore-test", "partitionKeyField", "", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
