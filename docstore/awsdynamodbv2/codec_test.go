@@ -97,6 +97,66 @@ func TestEncodeValue(t *testing.T) {
 	}
 }
 
+func TestDecodeValue(t *testing.T) {
+	avn := func(s string) dyn2Types.AttributeValue { return &dyn2Types.AttributeValueMemberN{Value: s} }
+	avl := func(vals ...dyn2Types.AttributeValue) dyn2Types.AttributeValue {
+		return &dyn2Types.AttributeValueMemberL{Value: vals}
+	}
+
+	for _, test := range []struct {
+		in   dyn2Types.AttributeValue
+		want interface{}
+	}{
+		// null
+		// {nullValue, nil}, // cant reflect new, how best to test?
+		// bool
+		{&dyn2Types.AttributeValueMemberBOOL{Value: false}, false},
+		{&dyn2Types.AttributeValueMemberBOOL{Value: true}, true},
+		// string
+		{&dyn2Types.AttributeValueMemberS{Value: "x"}, "x"},
+		// int64
+		{avn("7"), int64(7)},
+		{avn("-7"), int64(-7)},
+		{avn("0"), int64(0)},
+		// uint64
+		{avn("7"), uint64(7)},
+		{avn("0"), uint64(0)},
+		// float64
+		{avn("7"), float64(7)},
+		{avn("0"), float64(0)},
+		{avn("3.1415"), float64(3.1415)},
+		// []byte
+		{&dyn2Types.AttributeValueMemberB{Value: []byte(`123`)}, []byte(`123`)},
+		// List
+		{avl(avn("12"), avn("37")), []int64{12, 37}},
+		{avl(avn("12"), avn("37")), []uint64{12, 37}},
+		{avl(avn("12.8"), avn("37.1")), []float64{12.8, 37.1}},
+		// Map
+		{
+			&dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{}},
+			map[string]int{},
+		},
+		{
+			&dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{"a": avn("1"), "b": avn("2")}},
+			map[string]int{"a": 1, "b": 2},
+		},
+	} {
+		var (
+			target = reflect.New(reflect.TypeOf(test.want))
+		)
+
+		dec := decoder{av: test.in}
+		if err := driver.Decode(target.Elem(), dec); err != nil {
+			t.Errorf(" error decoding value %#v, got error: %#v", test.in, err)
+			continue
+		}
+
+		if !cmp.Equal(target.Elem().Interface(), test.want, compareIgnoreAttributeUnexported) {
+			t.Errorf(" %#v: got %#v, want %#v", test.in, target.Elem().Interface(), test.want)
+		}
+	}
+}
+
 func TestDecodeErrorOnUnsupported(t *testing.T) {
 	for _, tc := range []struct {
 		in  dyn2Types.AttributeValue
