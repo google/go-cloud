@@ -565,7 +565,7 @@ func (c *collection) missingKeyField(m map[string]dyn2Types.AttributeValue) stri
 	if !ok {
 		return c.partitionKey
 	}
-	if n, ok := v.(*dyn2Types.AttributeValueMemberNULL); ok || n.Value {
+	if n, ok := v.(*dyn2Types.AttributeValueMemberNULL); ok && n.Value {
 		return c.partitionKey
 	}
 
@@ -574,7 +574,7 @@ func (c *collection) missingKeyField(m map[string]dyn2Types.AttributeValue) stri
 		if !ok {
 			return c.sortKey
 		}
-		if n, ok := v.(*dyn2Types.AttributeValueMemberNULL); ok || n.Value {
+		if n, ok := v.(*dyn2Types.AttributeValueMemberNULL); ok && n.Value {
 			return c.sortKey
 		}
 	}
