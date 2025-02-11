@@ -175,7 +175,7 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 }
 
 func (v verifyAs) ErrorCheck(k *docstore.Collection, err error) error {
-	var e smithy.APIError
+	var e smithy.OperationError
 	if !k.ErrorAs(err, &e) {
 		return errors.New("Collection.ErrorAs failed")
 	}

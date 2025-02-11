@@ -34,7 +34,7 @@
 //     or *dynamodb.UpdateItemInput
 //   - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //   - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
-//   - ErrorAs: smithy.APIError
+//   - ErrorAs: smithy.OperationError
 package awsdynamodb
 
 import (
@@ -714,15 +714,15 @@ func (c *collection) As(i interface{}) bool {
 
 // ErrorAs implements driver.Collection.ErrorAs.
 func (c *collection) ErrorAs(err error, i interface{}) bool {
-	e, ok := err.(smithy.APIError)
+	e, ok := err.(*smithy.OperationError)
 	if !ok {
 		return false
 	}
-	p, ok := i.(*smithy.APIError)
+	p, ok := i.(*smithy.OperationError)
 	if !ok {
 		return false
 	}
-	*p = e
+	*p = *e
 	return true
 }
 
