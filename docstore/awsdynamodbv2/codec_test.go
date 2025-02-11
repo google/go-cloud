@@ -26,6 +26,19 @@ import (
 	"gocloud.dev/docstore/drivertest"
 )
 
+var compareIgnoreAttributeUnexported = cmpopts.IgnoreUnexported(
+	dyn2Types.AttributeValueMemberB{},
+	dyn2Types.AttributeValueMemberBOOL{},
+	dyn2Types.AttributeValueMemberBS{},
+	dyn2Types.AttributeValueMemberL{},
+	dyn2Types.AttributeValueMemberM{},
+	dyn2Types.AttributeValueMemberN{},
+	dyn2Types.AttributeValueMemberNS{},
+	dyn2Types.AttributeValueMemberNULL{},
+	dyn2Types.AttributeValueMemberS{},
+	dyn2Types.AttributeValueMemberSS{},
+)
+
 func TestEncodeValue(t *testing.T) {
 	avn := func(s string) dyn2Types.AttributeValue { return &dyn2Types.AttributeValueMemberN{Value: s} }
 	avl := func(avs ...dyn2Types.AttributeValue) dyn2Types.AttributeValue {
@@ -78,18 +91,7 @@ func TestEncodeValue(t *testing.T) {
 			t.Fatal(err)
 		}
 		got := e.av
-		if !cmp.Equal(got, test.want, cmpopts.IgnoreUnexported(
-			dyn2Types.AttributeValueMemberB{},
-			dyn2Types.AttributeValueMemberBOOL{},
-			dyn2Types.AttributeValueMemberBS{},
-			dyn2Types.AttributeValueMemberL{},
-			dyn2Types.AttributeValueMemberM{},
-			dyn2Types.AttributeValueMemberN{},
-			dyn2Types.AttributeValueMemberNS{},
-			dyn2Types.AttributeValueMemberNULL{},
-			dyn2Types.AttributeValueMemberS{},
-			dyn2Types.AttributeValueMemberSS{},
-		)) {
+		if !cmp.Equal(got, test.want, compareIgnoreAttributeUnexported) {
 			t.Errorf("%#v: got %#v, want %#v", test.in, got, test.want)
 		}
 	}

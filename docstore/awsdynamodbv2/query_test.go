@@ -68,18 +68,7 @@ func TestPlanQuery(t *testing.T) {
 		cmpopts.IgnoreFields(dyn.QueryInput{}, "ConsistentRead"),
 		cmpopts.IgnoreUnexported(dyn.ScanInput{}),
 		cmpopts.IgnoreUnexported(dyn.QueryInput{}),
-		cmpopts.IgnoreUnexported(
-			dyn2Types.AttributeValueMemberB{},
-			dyn2Types.AttributeValueMemberBOOL{},
-			dyn2Types.AttributeValueMemberBS{},
-			dyn2Types.AttributeValueMemberL{},
-			dyn2Types.AttributeValueMemberM{},
-			dyn2Types.AttributeValueMemberN{},
-			dyn2Types.AttributeValueMemberNS{},
-			dyn2Types.AttributeValueMemberNULL{},
-			dyn2Types.AttributeValueMemberS{},
-			dyn2Types.AttributeValueMemberSS{},
-		),
+		compareIgnoreAttributeUnexported,
 	}
 
 	for _, test := range []struct {
