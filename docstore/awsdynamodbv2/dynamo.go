@@ -370,7 +370,8 @@ func (c *collection) newPut(a *driver.Action, opts *driver.RunActionsOptions) (*
 	}
 	avm, ok := av.(*dyn2Types.AttributeValueMemberM)
 	if !ok {
-		// TODO
+		// should never happen, but handle
+		return nil, fmt.Errorf("unable to put document, unable to encode to map")
 	}
 	mf := c.missingKeyField(avm.Value)
 	if a.Kind != driver.Create && mf != "" {
