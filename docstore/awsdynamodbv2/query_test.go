@@ -646,7 +646,7 @@ func Test_documentIterator_Next(t *testing.T) {
 			name: "nextWhereCurrIsGreaterThanOrEqualToItemsAndLastIsNotNil",
 			fields: fields{
 				qr: &queryRunner{
-					scanIn: &dynamodb.ScanInput{},
+					scanIn: &dyn.ScanInput{},
 					// hack to return error from run
 					beforeRun: func(asFunc func(i interface{}) bool) error { return errors.New("invalid") },
 				},
