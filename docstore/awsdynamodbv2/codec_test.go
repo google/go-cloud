@@ -51,8 +51,11 @@ func TestEncodeValue(t *testing.T) {
 		// string
 		{"", nullValue},
 		{"x", &dyn2Types.AttributeValueMemberS{Value: "x"}},
+		{"abc123", &dyn2Types.AttributeValueMemberS{Value: "abc123"}},
+		{"abc 123", &dyn2Types.AttributeValueMemberS{Value: "abc 123"}},
 		// bool
 		{true, &dyn2Types.AttributeValueMemberBOOL{Value: true}},
+		{false, &dyn2Types.AttributeValueMemberBOOL{Value: false}},
 		// list
 		{[]int(nil), nullValue},
 		{[]int{}, &dyn2Types.AttributeValueMemberL{Value: []dyn2Types.AttributeValue{}}},
