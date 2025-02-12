@@ -263,10 +263,6 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/mempubsub\"\n)",
 		"code": "topic, err := pubsub.OpenTopic(ctx, \"mem://topicA\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
-	"gocloud.dev/pubsub/natspubsub.ExampleOpenQueueSubscription": {
-		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
-		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscription(\n\tnatsConn,\n\t\"example.mysubject\",\n\t\u0026natspubsub.SubscriptionOptions{Queue: \"queue1\"})\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
-	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
 		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscription(\n\tnatsConn,\n\t\"example.mysubject\",\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
@@ -274,6 +270,10 @@
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenSubscriptionV2": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
 		"code": "subscription, err := natspubsub.OpenSubscriptionV2(\n\tnatsConn,\n\t\"example.mysubject\",\n\tnil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/natspubsub.ExampleOpenSubscription_queue": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
+		"code": "natsConn, err := nats.Connect(\"nats://nats.example.com\")\nif err != nil {\n\treturn err\n}\ndefer natsConn.Close()\n\nsubscription, err := natspubsub.OpenSubscription(\n\tnatsConn,\n\t\"example.mysubject\",\n\t\u0026natspubsub.SubscriptionOptions{Queue: \"queue1\"})\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/natspubsub.ExampleOpenTopic": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/nats-io/nats.go\"\n\t\"gocloud.dev/pubsub/natspubsub\"\n)",
@@ -451,15 +451,15 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/localsecrets\"\n)",
 		"code": "// Using \"base64key://\", a new random key will be generated.\nrandomKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://\")\nif err != nil {\n\treturn err\n}\ndefer randomKeyKeeper.Close()\n\n// Otherwise, the URL hostname must be a base64-encoded key, of length 32 bytes when decoded.\n// Note that base64.URLEncode should be used, to avoid URL-unsafe characters.\nsavedKeyKeeper, err := secrets.OpenKeeper(ctx, \"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=\")\nif err != nil {\n\treturn err\n}\ndefer savedKeyKeeper.Close()"
 	},
-	"gocloud.dev/server.ExampleServer_HealthChecks": {
-		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\t\"time\"\n\n\t\"gocloud.dev/server\"\n\t\"gocloud.dev/server/health\"\n)",
-		"code": "// Create a health.Checker from the type we defined for our application.\n// In this example, healthCheck will report the server is unhealthy for 10 seconds\n// after startup, and as healthy henceforth. Check the /healthz/readiness\n// HTTP path to see readiness.\nhealthCheck := new(customHealthCheck)\ntime.AfterFunc(10*time.Second, func() {\n\thealthCheck.mu.Lock()\n\tdefer healthCheck.mu.Unlock()\n\thealthCheck.healthy = true\n})\n\n// The server.Options struct takes a slice of health checks, because you\n// may need to check several things.\nsrvOptions := \u0026server.Options{\n\tHealthChecks: []health.Checker{healthCheck},\n}\n\n// Pass the options to the Server constructor.\nsrv := server.New(http.DefaultServeMux, srvOptions)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. You will see requests logged to STDOUT.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
-	},
-	"gocloud.dev/server.ExampleServer_New": {
+	"gocloud.dev/server.ExampleServer": {
 		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\n\t\"gocloud.dev/server\"\n)",
 		"code": "// Use the constructor function to create the server.\nsrv := server.New(http.DefaultServeMux, nil)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. If ListenAndServe returns an error, print it and exit.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
 	},
-	"gocloud.dev/server.ExampleServer_RequestLogger": {
+	"gocloud.dev/server.ExampleServer_withHealthChecks": {
+		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\t\"time\"\n\n\t\"gocloud.dev/server\"\n\t\"gocloud.dev/server/health\"\n)",
+		"code": "// Create a health.Checker from the type we defined for our application.\n// In this example, healthCheck will report the server is unhealthy for 10 seconds\n// after startup, and as healthy henceforth. Check the /healthz/readiness\n// HTTP path to see readiness.\nhealthCheck := new(customHealthCheck)\ntime.AfterFunc(10*time.Second, func() {\n\thealthCheck.mu.Lock()\n\tdefer healthCheck.mu.Unlock()\n\thealthCheck.healthy = true\n})\n\n// The server.Options struct takes a slice of health checks, because you\n// may need to check several things.\nsrvOptions := \u0026server.Options{\n\tHealthChecks: []health.Checker{healthCheck},\n}\n\n// Pass the options to the Server constructor.\nsrv := server.New(http.DefaultServeMux, srvOptions)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. You will see requests logged to STDOUT.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
+	},
+	"gocloud.dev/server.ExampleServer_withRequestLogger": {
 		"imports": "import (\n\t\"fmt\"\n\t\"net/http\"\n\t\"os\"\n\n\t\"gocloud.dev/server\"\n\t\"gocloud.dev/server/requestlog\"\n)",
 		"code": "// Create a logger, and assign it to the RequestLogger field of a\n// server.Options struct.\nsrvOptions := \u0026server.Options{\n\tRequestLogger: requestlog.NewNCSALogger(os.Stdout, func(error) {}),\n}\n\n// Pass the options to the Server constructor.\nsrv := server.New(http.DefaultServeMux, srvOptions)\n\n// Register a route.\nhttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintln(w, \"Hello, World!\")\n})\n\n// Start the server. You will see requests logged to STDOUT.\nif err := srv.ListenAndServe(\":8080\"); err != nil {\n\tlog.Fatalf(\"%v\", err)\n}"
 	}

@@ -119,7 +119,7 @@ func Example_openSubscriptionFromURL() {
 	defer subscription.Shutdown(ctx)
 }
 
-func Example_OpenSubscription_inReceiveAndDeleteMode() {
+func ExampleOpenSubscription_inReceiveAndDeleteMode() {
 	ctx := context.Background()
 
 	// Change these as needed for your application.
