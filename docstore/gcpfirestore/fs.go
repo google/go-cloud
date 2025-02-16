@@ -265,8 +265,9 @@ func (c *collection) RevisionField() string {
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
-	beforeGets, gets, writes, _, afterGets := driver.GroupActions(actions)
+	beforeGets, gets, writes, writesTx, afterGets := driver.GroupActions(actions)
 	calls := c.buildCommitCalls(writes, errs)
+	atomicWritesCall := c.buildAtomicWritesCommitCall(writesTx, errs)
 	// runGets does not issue concurrent RPCs, so it doesn't need a throttle.
 	c.runGets(ctx, beforeGets, errs, opts)
 	t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
@@ -278,6 +279,15 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 			c.doCommitCall(ctx, call, errs, opts)
 		}()
 	}
+	// commit the atomic writes
+	if atomicWritesCall != nil {
+		t.Acquire()
+		go func() {
+			defer t.Release()
+			c.doCommitCall(ctx, atomicWritesCall, errs, opts)
+		}()
+	}
+
 	t.Acquire()
 	c.runGets(ctx, gets, errs, opts)
 	t.Release()
@@ -405,6 +415,23 @@ func (c *collection) buildCommitCalls(actions []*driver.Action, errs []error) []
 		return pCalls
 	}
 	return append(pCalls, nCall)
+}
+
+// Construct a commit call with all the atomic writes
+func (c *collection) buildAtomicWritesCommitCall(actions []*driver.Action, errs []error) *commitCall {
+	atomicWritesCommitCall := &commitCall{}
+	for _, a := range actions {
+		ws, nn, err := c.actionToWrites(a)
+		if err != nil {
+			errs[a.Index] = err
+			return nil
+		} else {
+			atomicWritesCommitCall.writes = append(atomicWritesCommitCall.writes, ws...)
+			atomicWritesCommitCall.actions = append(atomicWritesCommitCall.actions, a)
+			atomicWritesCommitCall.newNames = append(atomicWritesCommitCall.newNames, nn)
+		}
+	}
+	return atomicWritesCommitCall
 }
 
 // Convert an action to one or more Firestore Write protos.
