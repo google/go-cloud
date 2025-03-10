@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	serverURIV4     = "mongodb://localhost:27017"
-	serverURIV3     = "mongodb://localhost:27018"
+	serverURIV3     = "mongodb://localhost:27020"
+	serverURIV4     = "mongodb://localhost:27017/?directConnection=true"
 	dbName          = "docstore-test"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
@@ -45,7 +45,8 @@ const (
 )
 
 type harness struct {
-	db *mongo.Database
+	db                  *mongo.Database
+	supportAtomicWrites bool
 }
 
 func (h *harness) MakeCollection(ctx context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
@@ -77,6 +78,8 @@ func (h *harness) MakeCollection(ctx context.Context, kind drivertest.Collection
 	}
 	return coll, nil
 }
+
+func (h *harness) SupportsAtomicWrites() bool { return h.supportAtomicWrites }
 
 func (*harness) BeforeDoTypes() []interface{} {
 	return []interface{}{
@@ -161,16 +164,17 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 }
 
 func TestConformance(t *testing.T) {
-	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV4) })
-	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV3) })
+	// mongo 3 doesn't support atomic writes
+	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV3, false) })
+	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV4, true) })
 }
 
-func testConformance(t *testing.T, serverURI string) {
+func testConformance(t *testing.T, serverURI string, supportsAtomicWrites bool) {
 	client := newTestClient(t, serverURI)
 	defer client.Disconnect(context.Background())
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
-		return &harness{client.Database(dbName)}, nil
+		return &harness{client.Database(dbName), supportsAtomicWrites}, nil
 	}
 	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
@@ -196,12 +200,12 @@ func BenchmarkConformance(b *testing.B) {
 	defer cancel()
 
 	// Only run benchmark once (against MongoDB v4).
-	client, err := Dial(ctx, serverURIV4)
+	client, err := Dial(ctx, serverURIV3)
 	if err != nil {
-		b.Fatalf("dialing to %s: %v", serverURIV4, err)
+		b.Fatalf("dialing to %s: %v", serverURIV3, err)
 	}
 	if err := client.Ping(ctx, nil); err != nil {
-		b.Fatalf("connecting to %s: %v", serverURIV4, err)
+		b.Fatalf("connecting to %s: %v", serverURIV3, err)
 	}
 	defer func() { client.Disconnect(context.Background()) }()
 
@@ -227,7 +231,7 @@ func TestLowercaseFields(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client := newTestClient(t, serverURIV4)
+	client := newTestClient(t, serverURIV3)
 	defer func() { client.Disconnect(ctx) }()
 	db := client.Database(dbName)
 	dc, err := newCollection(db.Collection("lowercase-fields"), "id", nil, &Options{LowercaseFields: true})

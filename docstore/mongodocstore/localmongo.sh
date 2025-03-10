@@ -19,15 +19,15 @@
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euo pipefail
 
-echo "Starting MongoDB v4 listening on 27017..."
-docker rm -f mongo4 &> /dev/null || :
-docker run -d --name mongo4  -p 27017:27017 mongo:4 &> /dev/null
-echo "...done. Run \"docker rm -f mongo4\" to clean up the container."
+echo "Starting MongoDB v4 listening on 27017, 27018, 27019..."
+docker rm -f mongo41 mongo42 mongo43 mongosetup &> /dev/null || :
+docker compose up --wait &> /dev/null
+echo "...done. Run \"docker rm -f mongo41 mongo42 mongo43 mongosetup\" to clean up the container."
 echo
 
-echo "Starting MongoDB v3 listening on 27018..."
+echo "Starting MongoDB v3 listening on 27020..."
 docker rm -f mongo3 &> /dev/null || :
-docker run -d --name mongo3  -p 27018:27017 mongo:3 &> /dev/null
+docker run -d --name mongo3  -p 27020:27017 mongo:3 &> /dev/null
 echo "...done. Run \"docker rm -f mongo3\" to clean up the container."
 echo
 

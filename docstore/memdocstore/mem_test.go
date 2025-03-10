@@ -52,6 +52,8 @@ func (*harness) BeforeQueryTypes() []interface{} { return nil }
 
 func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool { return rev1 == rev2 }
 
+func (*harness) SupportsAtomicWrites() bool { return false }
+
 func (*harness) Close() {}
 
 func TestConformance(t *testing.T) {

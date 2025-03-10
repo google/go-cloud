@@ -45,6 +45,10 @@ type harness struct {
 	done   func()
 }
 
+func (h *harness) SupportsAtomicWrites() bool {
+	return true
+}
+
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  mongo41:
+    image: mongo:4.4
+    container_name: mongo41
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo41_data:/data/db
+
+  mongo42:
+    image: mongo:4.4
+    container_name: mongo42
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo42_data:/data/db
+
+  mongo43:
+    image: mongo:4.4
+    container_name: mongo43
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo43_data:/data/db
+
+  mongosetup:
+    image: mongo:4.4
+    container_name: mongosetup
+    depends_on:
+      - mongo41
+      - mongo42
+      - mongo43
+    entrypoint: >
+      bash -c "sleep 5 &&
+      mongo --host mongo41:27017 --eval '
+        rs.initiate({
+          _id: \"rs0\",
+          members: [
+            { _id: 0, host: \"mongo41:27017\", priority: 10 },
+            { _id: 1, host: \"mongo42:27017\", priority: 0 },
+            { _id: 2, host: \"mongo43:27017\", priority: 0 }
+          ]
+        })
+      '"
+
+volumes:
+  mongo41_data:
+  mongo42_data:
+  mongo43_data:

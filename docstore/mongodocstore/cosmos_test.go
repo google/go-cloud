@@ -52,7 +52,7 @@ func TestConformanceCosmos(t *testing.T) {
 	}()
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
-		return &harness{client.Database(dbName)}, nil
+		return &harness{client.Database(dbName), true}, nil
 	}
 	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
