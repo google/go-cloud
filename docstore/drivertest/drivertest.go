@@ -174,8 +174,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 
 	t.Run("Create", func(t *testing.T) { withRevCollections(t, newHarness, testCreate) })
-	t.Run("TestAtomicWrites", func(t *testing.T) { withRevCollections(t, newHarness, testAtomicWrites) })
-	t.Run("TestAtomicWritesFail", func(t *testing.T) { withRevCollections(t, newHarness, testAtomicWritesFail) })
+	t.Run("AtomicWrites", func(t *testing.T) { withRevCollections(t, newHarness, testAtomicWrites) })
+	t.Run("AtomicWritesFail", func(t *testing.T) { withRevCollections(t, newHarness, testAtomicWritesFail) })
 	t.Run("Put", func(t *testing.T) { withRevCollections(t, newHarness, testPut) })
 	t.Run("Replace", func(t *testing.T) { withRevCollections(t, newHarness, testReplace) })
 	t.Run("Get", func(t *testing.T) { withRevCollections(t, newHarness, testGet) })
@@ -240,7 +240,7 @@ func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T
 		t.Fatal(err)
 	}
 	defer h.Close()
-	if strings.Contains(t.Name(), "TestAtomicWrites") && !h.SupportsAtomicWrites() {
+	if strings.Contains(t.Name(), "AtomicWrites") && !h.SupportsAtomicWrites() {
 		t.Skip()
 	}
 
