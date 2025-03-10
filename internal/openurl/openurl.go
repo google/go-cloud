@@ -23,6 +23,7 @@ import (
 )
 
 // SchemeMap maps URL schemes to values. The zero value is an empty map, ready for use.
+// All schemes are stored and compared case-insensitively.
 type SchemeMap struct {
 	api string
 	m   map[string]any
@@ -46,6 +47,7 @@ func (m *SchemeMap) Register(api, typ, scheme string, value any) {
 	} else if m.api != api {
 		panic(fmt.Errorf("previously registered using api %q (now %q)", m.api, api))
 	}
+	scheme = strings.ToLower(scheme)
 	if _, exists := m.m[scheme]; exists {
 		panic(fmt.Errorf("scheme %q already registered for %s.%s", scheme, api, typ))
 	}
@@ -67,7 +69,7 @@ func (m *SchemeMap) FromString(typ, urlstr string) (any, *url.URL, error) {
 
 // FromURL looks up the value for u's scheme.
 func (m *SchemeMap) FromURL(typ string, u *url.URL) (any, error) {
-	scheme := u.Scheme
+	scheme := strings.ToLower(u.Scheme)
 	if scheme == "" {
 		return nil, fmt.Errorf("open %s.%s: no scheme in URL %q", m.api, typ, u)
 	}
@@ -96,10 +98,6 @@ func (m *SchemeMap) Schemes() []string {
 
 // ValidScheme returns true iff scheme has been registered.
 func (m *SchemeMap) ValidScheme(scheme string) bool {
-	for s := range m.m {
-		if scheme == s {
-			return true
-		}
-	}
-	return false
+	_, exists := m.m[strings.ToLower(scheme)]
+	return exists
 }

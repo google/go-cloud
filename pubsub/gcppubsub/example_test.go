@@ -109,7 +109,7 @@ func ExampleOpenSubscription() {
 	defer subscription.Shutdown(ctx)
 }
 
-func ExampleExtendingAckDeadline() {
+func Example_extendingAckDeadline() {
 	ctx := context.Background()
 
 	// Construct a *pubsub.Subscription, in this example using a URL.

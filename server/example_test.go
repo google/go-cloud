@@ -31,7 +31,7 @@ import (
 	"gocloud.dev/server/requestlog"
 )
 
-func ExampleServer_New() {
+func ExampleServer() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Use the constructor function to create the server.
@@ -48,7 +48,7 @@ func ExampleServer_New() {
 	}
 }
 
-func ExampleServer_RequestLogger() {
+func ExampleServer_withRequestLogger() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Create a logger, and assign it to the RequestLogger field of a
@@ -92,7 +92,7 @@ func (h *customHealthCheck) CheckHealth() error {
 	return nil
 }
 
-func ExampleServer_HealthChecks() {
+func ExampleServer_withHealthChecks() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Create a health.Checker from the type we defined for our application.
