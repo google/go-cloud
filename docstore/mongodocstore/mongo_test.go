@@ -200,12 +200,12 @@ func BenchmarkConformance(b *testing.B) {
 	defer cancel()
 
 	// Only run benchmark once (against MongoDB v4).
-	client, err := Dial(ctx, serverURIV3)
+	client, err := Dial(ctx, serverURIV4)
 	if err != nil {
-		b.Fatalf("dialing to %s: %v", serverURIV3, err)
+		b.Fatalf("dialing to %s: %v", serverURIV4, err)
 	}
 	if err := client.Ping(ctx, nil); err != nil {
-		b.Fatalf("connecting to %s: %v", serverURIV3, err)
+		b.Fatalf("connecting to %s: %v", serverURIV4, err)
 	}
 	defer func() { client.Disconnect(context.Background()) }()
 
@@ -231,7 +231,7 @@ func TestLowercaseFields(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	client := newTestClient(t, serverURIV3)
+	client := newTestClient(t, serverURIV4)
 	defer func() { client.Disconnect(ctx) }()
 	db := client.Database(dbName)
 	dc, err := newCollection(db.Collection("lowercase-fields"), "id", nil, &Options{LowercaseFields: true})

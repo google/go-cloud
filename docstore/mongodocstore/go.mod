@@ -19,7 +19,7 @@ go 1.22
 require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/wire v0.6.0
-	go.mongodb.org/mongo-driver v1.17.3
+	go.mongodb.org/mongo-driver v1.16.1
 	gocloud.dev v0.40.0
 )
 

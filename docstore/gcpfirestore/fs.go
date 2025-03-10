@@ -280,7 +280,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 		}()
 	}
 	// commit the atomic writes
-	if atomicWritesCall != nil {
+	if atomicWritesCall != nil && len(atomicWritesCall.actions) > 0 {
 		t.Acquire()
 		go func() {
 			defer t.Release()
