@@ -33,7 +33,7 @@ import (
 
 const (
 	// projectID is the project ID that was used during the last test run using --record.
-	projectID       = "go-cloud-test-216917"
+	projectID       = "go-cloud-test-216918"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
 	collectionName3 = "docstore-test-3"
@@ -43,6 +43,10 @@ const (
 type harness struct {
 	client *vkit.Client
 	done   func()
+}
+
+func (h *harness) SupportsAtomicWrites() bool {
+	return true
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {

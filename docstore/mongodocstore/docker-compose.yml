@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:4.4
+    container_name: mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    command: ["--replSet", "dbrs", "--bind_ip_all"]
+
+  mongosetup:
+    image: mongo:4.4
+    container_name: mongosetup
+    depends_on:
+      - mongo
+    entrypoint: >
+      bash -c "sleep 5 &&
+      mongo --host mongo:27017 --eval '
+        rs.initiate({
+          _id: \"dbrs\",
+          members: [
+            { _id: 0, host: \"mongo:27017\"}
+          ]
+        })
+      '"
+
+volumes:
+  mongo_data:

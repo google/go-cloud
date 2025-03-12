@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	serverURIV4     = "mongodb://localhost:27017"
-	serverURIV3     = "mongodb://localhost:27018"
+	serverURIV3     = "mongodb://localhost:27020"
+	serverURIV4     = "mongodb://localhost:27017/?directConnection=true"
 	dbName          = "docstore-test"
 	collectionName1 = "docstore-test-1"
 	collectionName2 = "docstore-test-2"
@@ -45,7 +45,8 @@ const (
 )
 
 type harness struct {
-	db *mongo.Database
+	db                  *mongo.Database
+	supportAtomicWrites bool
 }
 
 func (h *harness) MakeCollection(ctx context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
@@ -77,6 +78,8 @@ func (h *harness) MakeCollection(ctx context.Context, kind drivertest.Collection
 	}
 	return coll, nil
 }
+
+func (h *harness) SupportsAtomicWrites() bool { return h.supportAtomicWrites }
 
 func (*harness) BeforeDoTypes() []interface{} {
 	return []interface{}{
@@ -161,16 +164,17 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 }
 
 func TestConformance(t *testing.T) {
-	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV4) })
-	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV3) })
+	// mongo 3 doesn't support atomic writes
+	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV3, false) })
+	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV4, true) })
 }
 
-func testConformance(t *testing.T, serverURI string) {
+func testConformance(t *testing.T, serverURI string, supportsAtomicWrites bool) {
 	client := newTestClient(t, serverURI)
 	defer client.Disconnect(context.Background())
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
-		return &harness{client.Database(dbName)}, nil
+		return &harness{client.Database(dbName), supportsAtomicWrites}, nil
 	}
 	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
