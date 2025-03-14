@@ -37,7 +37,7 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 
 	var resultDocs []storedDoc
 	for _, doc := range c.docs {
-		if filtersMatch(q.Filters, doc) {
+		if filtersMatch(q.Filters, doc, c.opts.AllowNestedSliceQueries) {
 			resultDocs = append(resultDocs, doc)
 		}
 	}
@@ -74,17 +74,17 @@ func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.Doc
 	}, nil
 }
 
-func filtersMatch(fs []driver.Filter, doc storedDoc) bool {
+func filtersMatch(fs []driver.Filter, doc storedDoc, nested bool) bool {
 	for _, f := range fs {
-		if !filterMatches(f, doc) {
+		if !filterMatches(f, doc, nested) {
 			return false
 		}
 	}
 	return true
 }
 
-func filterMatches(f driver.Filter, doc storedDoc) bool {
-	docval, err := getAtFieldPath(doc, f.FieldPath)
+func filterMatches(f driver.Filter, doc storedDoc, nested bool) bool {
+	docval, err := getAtFieldPath(doc, f.FieldPath, nested)
 	// missing or bad field path => no match
 	if err != nil {
 		return false
@@ -137,6 +137,20 @@ func compare(x1, x2 interface{}) (int, bool) {
 			}
 		}
 		return -1, true
+	}
+	// for AllowNestedSliceQueries
+	// when querying for x2 in the document and x1 is a list of values we only need one value to match
+	if v1.Kind() == reflect.Slice {
+		for i := 0; i < v1.Len(); i++ {
+			if c, ok := compare(x2, v1.Index(i).Interface()); ok {
+				if !ok {
+					return 0, false
+				}
+				if c == 0 {
+					return 0, true
+				}
+			}
+		}
 	}
 	if v1.Kind() == reflect.String && v2.Kind() == reflect.String {
 		return strings.Compare(v1.String(), v2.String()), true
