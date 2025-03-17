@@ -21,7 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"gocloud.dev/docstore"
-	"gocloud.dev/docstore/awsdynamodb"
+	awsdynamodb "gocloud.dev/docstore/awsdynamodb/v2"
 )
 
 func ExampleOpenCollection() {
