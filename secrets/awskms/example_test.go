@@ -18,8 +18,7 @@ import (
 	"context"
 	"log"
 
-	awsv2cfg "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/awskms"
 )
@@ -27,43 +26,22 @@ import (
 func ExampleOpenKeeper() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// Establish an AWS session.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	sess, err := session.NewSession(nil)
+	// Establish a AWS V2 Config.
+	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Get a client to use with the KMS API.
-	client, err := awskms.Dial(sess)
+	client, err := awskms.Dial(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a *secrets.Keeper.
 	keeper := awskms.OpenKeeper(client, "alias/test-secrets", nil)
-	defer keeper.Close()
-}
-
-func ExampleOpenKeeperV2() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-
-	// Establish a AWS V2 Config.
-	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
-	ctx := context.Background()
-	cfg, err := awsv2cfg.LoadDefaultConfig(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Get a client to use with the KMS API.
-	client, err := awskms.DialV2(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Construct a *secrets.Keeper.
-	keeper := awskms.OpenKeeperV2(client, "alias/test-secrets", nil)
 	defer keeper.Close()
 }
 
@@ -101,12 +79,4 @@ func Example_openFromURL() {
 		log.Fatal(err)
 	}
 	defer keeperByARN.Close()
-
-	// Use "awssdk=v1" or "v2" to force a specific AWS SDK version.
-	keeperUsingV2, err := secrets.OpenKeeper(ctx,
-		"awskms://1234abcd-12ab-34cd-56ef-1234567890ab?region=us-east-1&awssdk=v2")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer keeperUsingV2.Close()
 }

@@ -21,8 +21,8 @@
 //
 // For runtimevar.OpenVariable, awsparamstore registers for the scheme "awsparamstore".
 // The default URL opener will use an AWS session with the default credentials
-// and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-// for more details.
+// and configuration.
+//
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -30,8 +30,8 @@
 // # As
 //
 // awsparamstore exposes the following types for As:
-//   - Snapshot: (V1) *ssm.GetParameterOutput, (V2) *ssmv2.GetParameterOutput
-//   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
+//   - Snapshot: *ssm.GetParameterOutput
+//   - Error: any error type returned by the service, notably smithy.APIError
 package awsparamstore // import "gocloud.dev/runtimevar/awsparamstore"
 
 import (
@@ -44,13 +44,8 @@ import (
 	"sync"
 	"time"
 
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
-	ssmv2 "github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/smithy-go"
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
@@ -65,17 +60,17 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	wire.Struct(new(URLOpener), "ConfigProvider"),
+	Dial,
 )
+
+// Dial gets an AWS SSM service client using the AWS SDK V2.
+func Dial(cfg aws.Config) *ssm.Client {
+	return ssm.NewFromConfig(cfg)
+}
 
 // URLOpener opens AWS Paramstore URLs like "awsparamstore://myvar".
 //
-// Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
-// or anything else to accept the default.
-//
-// For V1, see https://pkg.go.dev/gocloud.dev/aws#ConfigFromURLParams for supported query parameters
-// for overriding the aws.Session from the URL.
-// For V2, see https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
+// See https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
 //
 // In addition, the following URL parameters are supported:
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
@@ -84,12 +79,6 @@ var Set = wire.NewSet(
 //   - wait: The poll interval, in time.ParseDuration formats.
 //     Defaults to 30s.
 type URLOpener struct {
-	// UseV2 indicates whether the AWS SDK V2 should be used.
-	UseV2 bool
-
-	// ConfigProvider must be set to a non-nil value if UseV2 is false.
-	ConfigProvider client.ConfigProvider
-
 	// Decoder specifies the decoder to use if one is not specified in the URL.
 	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
@@ -107,22 +96,8 @@ type lazySessionOpener struct {
 }
 
 func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
-	if gcaws.UseV2(u.Query()) {
-		opener := &URLOpener{UseV2: true}
-		return opener.OpenVariableURL(ctx, u)
-	}
-	o.init.Do(func() {
-		sess, err := gcaws.NewDefaultSession()
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{ConfigProvider: sess}
-	})
-	if o.err != nil {
-		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
-	}
-	return o.opener.OpenVariableURL(ctx, u)
+	opener := &URLOpener{}
+	return opener.OpenVariableURL(ctx, u)
 }
 
 // Scheme is the URL scheme awsparamstore registers its URLOpener under on runtimevar.DefaultMux.
@@ -149,22 +124,11 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		opts.WaitDuration = d
 	}
 
-	if o.UseV2 {
-		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %v: %v", u, err)
-		}
-		return OpenVariableV2(ssmv2.NewFromConfig(cfg), path.Join(u.Host, u.Path), decoder, &opts)
-	}
-	configProvider := &gcaws.ConfigOverrider{
-		Base: o.ConfigProvider,
-	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(q)
+	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: %v", u, err)
 	}
-	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	return OpenVariable(configProvider, path.Join(u.Host, u.Path), decoder, &opts)
+	return OpenVariable(ssm.NewFromConfig(cfg), path.Join(u.Host, u.Path), decoder, &opts)
 }
 
 // Options sets options.
@@ -175,44 +139,32 @@ type Options struct {
 }
 
 // OpenVariable constructs a *runtimevar.Variable backed by the variable name in
-// AWS Systems Manager Parameter Store.
-// Parameter Store returns raw bytes; provide a decoder to decode the raw bytes
-// into the appropriate type for runtimevar.Snapshot.Value.
-// See the runtimevar package documentation for examples of decoders.
-//
-// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenVariableV2.
-func OpenVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(false, sess, nil, name, decoder, opts)), nil
-}
-
-// OpenVariableV2 constructs a *runtimevar.Variable backed by the variable name in
 // AWS Systems Manager Parameter Store, using AWS SDK V2.
 // Parameter Store returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func OpenVariableV2(client *ssmv2.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(true, nil, client, name, decoder, opts)), nil
+func OpenVariable(client *ssm.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	return runtimevar.New(newWatcher(client, name, decoder, opts)), nil
 }
 
-func newWatcher(useV2 bool, sess client.ConfigProvider, clientV2 *ssmv2.Client, name string, decoder *runtimevar.Decoder, opts *Options) *watcher {
+var OpenVariableV2 = OpenVariable
+
+func newWatcher(client *ssm.Client, name string, decoder *runtimevar.Decoder, opts *Options) *watcher {
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &watcher{
-		useV2:    useV2,
-		sess:     sess,
-		clientV2: clientV2,
-		name:     name,
-		wait:     driver.WaitDuration(opts.WaitDuration),
-		decoder:  decoder,
+		client:  client,
+		name:    name,
+		wait:    driver.WaitDuration(opts.WaitDuration),
+		decoder: decoder,
 	}
 }
 
 // state implements driver.State.
 type state struct {
 	val        any
-	rawGetV1   *ssm.GetParameterOutput
-	rawGetV2   *ssmv2.GetParameterOutput
+	rawGet     *ssm.GetParameterOutput
 	updateTime time.Time
 	version    int64
 	err        error
@@ -232,9 +184,7 @@ func (s *state) UpdateTime() time.Time {
 func (s *state) As(i any) bool {
 	switch p := i.(type) {
 	case **ssm.GetParameterOutput:
-		*p = s.rawGetV1
-	case **ssmv2.GetParameterOutput:
-		*p = s.rawGetV2
+		*p = s.rawGet
 	default:
 		return false
 	}
@@ -245,7 +195,7 @@ func (s *state) As(i any) bool {
 // the same error, in which case it returns nil.
 func errorState(err error, prevS driver.State) driver.State {
 	// Map aws.RequestCanceled to the more standard context package errors.
-	if getErrorCode(err) == request.CanceledErrorCode {
+	if getErrorCode(err) == "CancelledError" {
 		msg := err.Error()
 		if strings.Contains(msg, "context deadline exceeded") {
 			err = context.DeadlineExceeded
@@ -281,12 +231,8 @@ func equivalentError(err1, err2 error) bool {
 }
 
 type watcher struct {
-	// useV2 indicates whether we're using clientV2.
-	useV2 bool
-	// sess is the AWS session to use to talk to AWS.
-	sess client.ConfigProvider
-	// clientV2 is the client to use when useV2 is true.
-	clientV2 *ssmv2.Client
+	// client is the client to use.
+	client *ssm.Client
 	// name is the parameter to retrieve.
 	name string
 	// wait is the amount of time to wait between querying AWS.
@@ -295,8 +241,8 @@ type watcher struct {
 	decoder *runtimevar.Decoder
 }
 
-func getParameter(svc *ssm.SSM, name string) (int64, []byte, time.Time, *ssm.GetParameterOutput, error) {
-	getResp, err := svc.GetParameter(&ssm.GetParameterInput{
+func getParameter(ctx context.Context, client *ssm.Client, name string) (int64, []byte, time.Time, *ssm.GetParameterOutput, error) {
+	getResp, err := client.GetParameter(ctx, &ssm.GetParameterInput{
 		Name: aws.String(name),
 		// Ignored if the parameter is not encrypted.
 		WithDecryption: aws.Bool(true),
@@ -307,22 +253,7 @@ func getParameter(svc *ssm.SSM, name string) (int64, []byte, time.Time, *ssm.Get
 	if getResp.Parameter == nil {
 		return 0, nil, time.Time{}, getResp, fmt.Errorf("unable to get %q parameter", name)
 	}
-	return aws.Int64Value(getResp.Parameter.Version), []byte(aws.StringValue(getResp.Parameter.Value)), aws.TimeValue(getResp.Parameter.LastModifiedDate), getResp, nil
-}
-
-func getParameterV2(ctx context.Context, client *ssmv2.Client, name string) (int64, []byte, time.Time, *ssmv2.GetParameterOutput, error) {
-	getResp, err := client.GetParameter(ctx, &ssmv2.GetParameterInput{
-		Name: aws.String(name),
-		// Ignored if the parameter is not encrypted.
-		WithDecryption: aws.Bool(true),
-	})
-	if err != nil {
-		return 0, nil, time.Time{}, nil, err
-	}
-	if getResp.Parameter == nil {
-		return 0, nil, time.Time{}, getResp, fmt.Errorf("unable to get %q parameter", name)
-	}
-	return getResp.Parameter.Version, []byte(awsv2.ToString(getResp.Parameter.Value)), awsv2.ToTime(getResp.Parameter.LastModifiedDate), getResp, nil
+	return getResp.Parameter.Version, []byte(aws.ToString(getResp.Parameter.Value)), aws.ToTime(getResp.Parameter.LastModifiedDate), getResp, nil
 }
 
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
@@ -330,23 +261,9 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if prev != nil {
 		lastVersion = prev.(*state).version
 	}
-	var svc *ssm.SSM
-	if !w.useV2 {
-		svc = ssm.New(w.sess)
-	}
 
 	// GetParameter from S3 to get the current value and version.
-	var newVersion int64
-	var newVal []byte
-	var newLastModified time.Time
-	var rawGetV1 *ssm.GetParameterOutput
-	var rawGetV2 *ssmv2.GetParameterOutput
-	var err error
-	if w.useV2 {
-		newVersion, newVal, newLastModified, rawGetV2, err = getParameterV2(ctx, w.clientV2, w.name)
-	} else {
-		newVersion, newVal, newLastModified, rawGetV1, err = getParameter(svc, w.name)
-	}
+	newVersion, newVal, newLastModified, rawGet, err := getParameter(ctx, w.client, w.name)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
@@ -362,8 +279,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	}
 	return &state{
 		val:        val,
-		rawGetV1:   rawGetV1,
-		rawGetV2:   rawGetV2,
+		rawGet:     rawGet,
 		updateTime: newLastModified,
 		version:    newVersion,
 	}, w.wait
@@ -376,23 +292,10 @@ func (w *watcher) Close() error {
 
 // ErrorAs implements driver.ErrorAs.
 func (w *watcher) ErrorAs(err error, i any) bool {
-	if w.useV2 {
-		return errors.As(err, i)
-	}
-	switch v := err.(type) {
-	case awserr.Error:
-		if p, ok := i.(*awserr.Error); ok {
-			*p = v
-			return true
-		}
-	}
-	return false
+	return errors.As(err, i)
 }
 
 func getErrorCode(err error) string {
-	if awsErr, ok := err.(awserr.Error); ok {
-		return awsErr.Code()
-	}
 	var ae smithy.APIError
 	if errors.As(err, &ae) {
 		return ae.ErrorCode()

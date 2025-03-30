@@ -21,10 +21,8 @@ import (
 	"net/url"
 	"testing"
 
-	kmsv2 "github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/aws/smithy-go"
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/internal/testing/setup"
@@ -40,14 +38,12 @@ const (
 )
 
 type harness struct {
-	useV2    bool
-	client   *kms.KMS
-	clientV2 *kmsv2.Client
-	close    func()
+	client *kms.Client
+	close  func()
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	return &keeper{useV2: h.useV2, keyID: keyID1, client: h.client, clientV2: h.clientV2}, &keeper{useV2: h.useV2, keyID: keyID2, client: h.client, clientV2: h.clientV2}, nil
+	return &keeper{keyID: keyID1, client: h.client}, &keeper{keyID: keyID2, client: h.client}, nil
 }
 
 func (h *harness) Close() {
@@ -57,35 +53,18 @@ func (h *harness) Close() {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	sess, _, done, _ := setup.NewAWSSession(ctx, t, region)
+	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
 	return &harness{
-		useV2:  false,
-		client: kms.New(sess),
+		client: kms.NewFromConfig(cfg),
 		close:  done,
 	}, nil
 }
 
-func newHarnessV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	t.Helper()
-
-	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
-	return &harness{
-		useV2:    true,
-		clientV2: kmsv2.NewFromConfig(cfg),
-		close:    done,
-	}, nil
-}
-
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{v2: false}})
-}
-
-func TestConformanceV2(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarnessV2, []drivertest.AsTest{verifyAs{v2: true}})
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
 }
 
 type verifyAs struct {
-	v2 bool
 }
 
 func (v verifyAs) Name() string {
@@ -93,55 +72,19 @@ func (v verifyAs) Name() string {
 }
 
 func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
-	var code string
-	if v.v2 {
-		var e smithy.APIError
-		if !k.ErrorAs(err, &e) {
-			return errors.New("Keeper.ErrorAs failed")
-		}
-		code = e.ErrorCode()
-	} else {
-		var e awserr.Error
-		if !k.ErrorAs(err, &e) {
-			return errors.New("Keeper.ErrorAs failed")
-		}
-		code = e.Code()
+	var e smithy.APIError
+	if !k.ErrorAs(err, &e) {
+		return errors.New("Keeper.ErrorAs failed")
 	}
-	if code != kms.ErrCodeInvalidCiphertextException {
-		return fmt.Errorf("got %q, want %q", code, kms.ErrCodeInvalidCiphertextException)
+	code := e.ErrorCode()
+	want := (&types.InvalidCiphertextException{}).ErrorCode()
+	if code != want {
+		return fmt.Errorf("got %q, want %q", code, want)
 	}
 	return nil
 }
 
 // KMS-specific tests.
-
-func TestNoSessionProvidedError(t *testing.T) {
-	if _, err := Dial(nil); err == nil {
-		t.Error("got nil, want no AWS session provided")
-	}
-}
-
-func TestNoConnectionError(t *testing.T) {
-	t.Setenv("AWS_ACCESS_KEY", "myaccesskey")
-	t.Setenv("AWS_SECRET_KEY", "mysecretkey")
-	t.Setenv("AWS_REGION", "us-east-1")
-
-	sess, err := session.NewSession()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	client, err := Dial(sess)
-	if err != nil {
-		t.Fatal(err)
-	}
-	keeper := OpenKeeper(client, keyID1, nil)
-	defer keeper.Close()
-
-	if _, err := keeper.Encrypt(context.Background(), []byte("test")); err == nil {
-		t.Error("got nil, want UnrecognizedClientException")
-	}
-}
 
 func TestEncryptionContext(t *testing.T) {
 	tests := []struct {
@@ -198,10 +141,6 @@ func TestOpenKeeper(t *testing.T) {
 		{"awskms:///arn:aws:kms:us-east-1:932528106278:key/8be0dcc5-da0a-4164-a99f-649015e344b5", false},
 		// OK, overriding region.
 		{"awskms://alias/my-key?region=us-west1", false},
-		// OK, using V1.
-		{"awskms://alias/my-key?awssdk=v1", false},
-		// OK, using V2.
-		{"awskms://alias/my-key?awssdk=v2", false},
 		// OK, adding EncryptionContext.
 		{"awskms://alias/my-key?context_abc=foo&context_def=bar", false},
 		// Multiple values for an EncryptionContext.

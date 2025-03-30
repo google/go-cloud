@@ -12,7 +12,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
-	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/go-sql-driver/mysql"
 	"go.opencensus.io/trace"
 	"gocloud.dev/aws"
@@ -55,17 +56,19 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	if err != nil {
 		return nil, nil, err
 	}
-	session, err := aws.NewDefaultSession()
+	config, err := aws.NewDefaultV2Config(ctx)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	bucket, cleanup2, err := awsBucket(ctx, session, flags)
+	s3Client := s3blob.Dial(config)
+	bucket, cleanup2, err := awsBucket(ctx, s3Client, flags)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	variable, err := awsMOTDVar(ctx, session, flags)
+	ssmClient := awsparamstore.Dial(config)
+	variable, err := awsMOTDVar(ctx, ssmClient, flags)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -75,6 +78,13 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	router := newRouter(mainApplication)
 	ncsaLogger := xrayserver.NewRequestLogger()
 	v, cleanup3 := appHealthChecks(db)
+	session, err := aws.NewDefaultSession()
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	xRay := xrayserver.NewXRayClient(session)
 	exporter, cleanup4, err := xrayserver.NewExporter(xRay)
 	if err != nil {
@@ -285,8 +295,8 @@ var (
 
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
 // command-line flags.
-func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, func(), error) {
-	b, err := s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
+func awsBucket(ctx context.Context, client *s3.Client, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := s3blob.OpenBucketV2(ctx, client, flags.bucket, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -310,8 +320,8 @@ func openAWSDatabase(ctx context.Context, opener *awsmysql.URLOpener, flags *cli
 
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
-func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
-	return awsparamstore.OpenVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
+func awsMOTDVar(ctx context.Context, client *ssm.Client, flags *cliFlags) (*runtimevar.Variable, error) {
+	return awsparamstore.OpenVariableV2(client, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -324,8 +334,8 @@ func bucketName(flags *cliFlags) azureblob.ContainerName {
 
 // azureBucket is a Wire provider function that returns the Azure bucket based
 // on the command-line flags.
-func azureBucket(ctx context.Context, client2 *container.Client, flags *cliFlags) (*blob.Bucket, func(), error) {
-	b, err := azureblob.OpenBucket(ctx, client2, nil)
+func azureBucket(ctx context.Context, client *container.Client, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := azureblob.OpenBucket(ctx, client, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -344,8 +354,8 @@ func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtim
 
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
-func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, func(), error) {
-	b, err := gcsblob.OpenBucket(ctx, client2, flags.bucket, nil)
+func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, func(), error) {
+	b, err := gcsblob.OpenBucket(ctx, client, flags.bucket, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -369,9 +379,9 @@ func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id gcp.Pro
 
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from Runtime Configurator.
-func gcpMOTDVar(ctx context.Context, client2 runtimeconfig.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
+func gcpMOTDVar(ctx context.Context, client runtimeconfig.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	variableKey := gcpruntimeconfig.VariableKey(project, flags.runtimeConfigName, flags.motdVar)
-	v, err := gcpruntimeconfig.OpenVariable(client2, variableKey, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
+	v, err := gcpruntimeconfig.OpenVariable(client, variableKey, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {

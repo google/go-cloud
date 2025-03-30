@@ -18,9 +18,8 @@ import (
 	"context"
 	"log"
 
-	awsv2cfg "github.com/aws/aws-sdk-go-v2/config"
-	secretsmanagerv2 "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/awssecretsmanager"
 )
@@ -28,37 +27,18 @@ import (
 func ExampleOpenVariable() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
-	// Establish an AWS session.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	sess, err := session.NewSession(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Construct a *runtimevar.Variable that watches the variable.
-	// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).
-	v, err := awssecretsmanager.OpenVariable(sess, "secret-variable-name", runtimevar.StringDecoder, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer v.Close()
-}
-
-func ExampleOpenVariableV2() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-
 	// Establish a AWS V2 Config.
 	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
 	ctx := context.Background()
-	cfg, err := awsv2cfg.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a *runtimevar.Variable that watches the variable.
 	// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).
-	clientV2 := secretsmanagerv2.NewFromConfig(cfg)
-	v, err := awssecretsmanager.OpenVariableV2(clientV2, "secret-variable-name", runtimevar.StringDecoder, nil)
+	client := secretsmanager.NewFromConfig(cfg)
+	v, err := awssecretsmanager.OpenVariable(client, "secret-variable-name", runtimevar.StringDecoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,11 +58,4 @@ func Example_openVariableFromURL() {
 		log.Fatal(err)
 	}
 	defer v.Close()
-
-	// Use "awssdk=v1" or "v2" to force a specific AWS SDK version.
-	vUsingV2, err := runtimevar.OpenVariable(ctx, "awssecretsmanager://secret-variable-name?region=us-east-2&decoder=string&awssdk=v2")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer vUsingV2.Close()
 }

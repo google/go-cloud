@@ -24,8 +24,8 @@
 // it registers for the scheme "awssqs".
 //
 // The default URL opener will use an AWS session with the default credentials
-// and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-// for more details.
+// and configuration.
+//
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -55,12 +55,12 @@
 // # As
 //
 // awssnssqs exposes the following types for As:
-//   - Topic: (V1) *sns.SNS for OpenSNSTopic, *sqs.SQS for OpenSQSTopic; (V2) *snsv2.Client for OpenSNSTopicV2, *sqsv2.Client for OpenSQSTopicV2
-//   - Subscription: (V1) *sqs.SQS; (V2) *sqsv2.Client
-//   - Message: (V1) *sqs.Message; (V2) sqstypesv2.Message
-//   - Message.BeforeSend: (V1) *sns.PublishBatchRequestEntry or *sns.PublishInput (deprecated) for OpenSNSTopic, *sqs.SendMessageBatchRequestEntry or *sqs.SendMessageInput (deprecated) for OpenSQSTopic; (V2) *snsv2.PublishBatchRequestEntry or *snsv2.PublishInput (deprecated) for OpenSNSTopicV2, *sqstypesv2.SendMessageBatchRequestEntry for OpenSQSTopicV2
-//   - Message.AfterSend: (V1) sns.PublishBatchResultEntry or *sns.PublishOutput (deprecated) for OpenSNSTopic, *sqs.SendMessageBatchResultEntry for OpenSQSTopic; (V2) snstypesv2.PublishBatchResultEntry or *snsv2.PublishOutput (deprecated) for OpenSNSTopicV2, sqstypesv2.SendMessageBatchResultEntry for OpenSQSTopicV2
-//   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
+//   - Topic: *sns.Client for OpenSNSTopic, *sqs.Client for OpenSQSTopic
+//   - Subscription: *sqs.Client
+//   - Message: sqstypes.Message
+//   - Message.BeforeSend: *sns.PublishBatchRequestEntry or *sns.PublishInput (deprecated) for OpenSNSTopic, *sqstypes.SendMessageBatchRequestEntry for OpenSQSTopic
+//   - Message.AfterSend: snstypes.PublishBatchResultEntry or *sns.PublishOutput (deprecated) for OpenSNSTopic, sqstypes.SendMessageBatchResultEntry for OpenSQSTopic
+//   - Error: any error type returned by the service, notably smithy.APIError
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
 import (
@@ -77,15 +77,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	snsv2 "github.com/aws/aws-sdk-go-v2/service/sns"
-	snstypesv2 "github.com/aws/aws-sdk-go-v2/service/sns/types"
-	sqsv2 "github.com/aws/aws-sdk-go-v2/service/sqs"
-	sqstypesv2 "github.com/aws/aws-sdk-go-v2/service/sqs/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
+	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/aws/smithy-go"
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
@@ -139,8 +135,19 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	wire.Struct(new(URLOpener), "ConfigProvider"),
+	DialSNS,
+	DialSQS,
 )
+
+// DialSNS gets an AWS SNS service client using the AWS SDK V2.
+func DialSNS(cfg aws.Config) *sns.Client {
+	return sns.NewFromConfig(cfg)
+}
+
+// DialSQS gets an AWS SQS service client using the AWS SDK V2.
+func DialSQS(cfg aws.Config) *sqs.Client {
+	return sqs.NewFromConfig(cfg)
+}
 
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenXXXURL.
@@ -151,20 +158,7 @@ type lazySessionOpener struct {
 }
 
 func (o *lazySessionOpener) defaultOpener(u *url.URL) (*URLOpener, error) {
-	if gcaws.UseV2(u.Query()) {
-		return &URLOpener{UseV2: true}, nil
-	}
-	o.init.Do(func() {
-		sess, err := gcaws.NewDefaultSession()
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{
-			ConfigProvider: sess,
-		}
-	})
-	return o.opener, o.err
+	return &URLOpener{}, nil
 }
 
 func (o *lazySessionOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
@@ -203,12 +197,7 @@ const SQSScheme = "awssqs"
 // For SQS topics and subscriptions, the URL's host+path is prefixed with
 // "https://" to create the queue URL.
 //
-// Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
-// or anything else to accept the default.
-//
-// For V1, see https://pkg.go.dev/gocloud.dev/aws#ConfigFromURLParams for supported query parameters
-// for overriding the aws.Session from the URL.
-// For V2, see https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
+// See https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
 //
 // In addition, the following query parameters are supported:
 //
@@ -221,13 +210,6 @@ const SQSScheme = "awssqs"
 // See gocloud.dev/aws/ConfigFromURLParams for other query parameters
 // that affect the default AWS session.
 type URLOpener struct {
-	// UseV2 indicates whether the AWS SDK V2 should be used.
-	UseV2 bool
-
-	// ConfigProvider configures the connection to AWS.
-	// It must be set to a non-nil value if UseV2 is false.
-	ConfigProvider client.ConfigProvider
-
 	// TopicOptions specifies the options to pass to OpenTopic.
 	TopicOptions TopicOptions
 	// SubscriptionOptions specifies the options to pass to OpenSubscription.
@@ -241,33 +223,15 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	// gives "arn:..." instead of "/arn:...".
 	topicARN := strings.TrimPrefix(path.Join(u.Host, u.Path), "/")
 	qURL := "https://" + path.Join(u.Host, u.Path)
-	if o.UseV2 {
-		cfg, err := gcaws.V2ConfigFromURLParams(ctx, u.Query())
-		if err != nil {
-			return nil, fmt.Errorf("open topic %v: %v", u, err)
-		}
-		switch u.Scheme {
-		case SNSScheme:
-			return OpenSNSTopicV2(ctx, snsv2.NewFromConfig(cfg), topicARN, &o.TopicOptions), nil
-		case SQSScheme:
-			return OpenSQSTopicV2(ctx, sqsv2.NewFromConfig(cfg), qURL, &o.TopicOptions), nil
-		default:
-			return nil, fmt.Errorf("open topic %v: unsupported scheme", u)
-		}
-	}
-	configProvider := &gcaws.ConfigOverrider{
-		Base: o.ConfigProvider,
-	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
+	cfg, err := gcaws.V2ConfigFromURLParams(ctx, u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open topic %v: %v", u, err)
 	}
-	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	switch u.Scheme {
 	case SNSScheme:
-		return OpenSNSTopic(ctx, configProvider, topicARN, &o.TopicOptions), nil
+		return OpenSNSTopic(ctx, sns.NewFromConfig(cfg), topicARN, &o.TopicOptions), nil
 	case SQSScheme:
-		return OpenSQSTopic(ctx, configProvider, qURL, &o.TopicOptions), nil
+		return OpenSQSTopic(ctx, sqs.NewFromConfig(cfg), qURL, &o.TopicOptions), nil
 	default:
 		return nil, fmt.Errorf("open topic %v: unsupported scheme", u)
 	}
@@ -303,30 +267,17 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		q.Del("waittime")
 	}
 	qURL := "https://" + path.Join(u.Host, u.Path)
-	if o.UseV2 {
-		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
-		if err != nil {
-			return nil, fmt.Errorf("open subscription %v: %v", u, err)
-		}
-		return OpenSubscriptionV2(ctx, sqsv2.NewFromConfig(cfg), qURL, &opts), nil
-	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(q)
+	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: %v", u, err)
 	}
-	configProvider := &gcaws.ConfigOverrider{
-		Base: o.ConfigProvider,
-	}
-	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	return OpenSubscription(ctx, configProvider, qURL, &opts), nil
+	return OpenSubscription(ctx, sqs.NewFromConfig(cfg), qURL, &opts), nil
 }
 
 type snsTopic struct {
-	useV2    bool
-	client   *sns.SNS
-	clientV2 *snsv2.Client
-	arn      string
-	opts     *TopicOptions
+	client *sns.Client
+	arn    string
+	opts   *TopicOptions
 }
 
 // BodyBase64Encoding is an enum of strategies for when to base64 message
@@ -372,54 +323,25 @@ type TopicOptions struct {
 	BatcherOptions batcher.Options
 }
 
-// OpenTopic is a shortcut for OpenSNSTopic, provided for backwards compatibility.
-//
-// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSNSTopicV2.
-func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return OpenSNSTopic(ctx, sess, topicARN, opts)
-}
-
 // OpenSNSTopic opens a topic that sends to the SNS topic with the given Amazon
-// Resource Name (ARN).
-//
-// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSNSTopicV2.
-func OpenSNSTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
+// Resource Name (ARN), using AWS SDK V2.
+func OpenSNSTopic(ctx context.Context, client *sns.Client, topicARN string, opts *TopicOptions) *pubsub.Topic {
 	if opts == nil {
 		opts = &TopicOptions{}
 	}
 	bo := sendBatcherOptsSNS.NewMergedOptions(&opts.BatcherOptions)
-	return pubsub.NewTopic(openSNSTopic(ctx, sns.New(sess), topicARN, opts), bo)
+	return pubsub.NewTopic(openSNSTopic(ctx, client, topicARN, opts), bo)
 }
 
-// OpenSNSTopicV2 opens a topic that sends to the SNS topic with the given Amazon
-// Resource Name (ARN), using AWS SDK V2.
-func OpenSNSTopicV2(ctx context.Context, client *snsv2.Client, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	if opts == nil {
-		opts = &TopicOptions{}
-	}
-	bo := sendBatcherOptsSNS.NewMergedOptions(&opts.BatcherOptions)
-	return pubsub.NewTopic(openSNSTopicV2(ctx, client, topicARN, opts), bo)
-}
+var OpenSNSTopicV2 = OpenSNSTopic
 
 // openSNSTopic returns the driver for OpenSNSTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openSNSTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) driver.Topic {
+func openSNSTopic(ctx context.Context, client *sns.Client, topicARN string, opts *TopicOptions) driver.Topic {
 	return &snsTopic{
-		useV2:  false,
 		client: client,
 		arn:    topicARN,
 		opts:   opts,
-	}
-}
-
-// openSNSTopicV2 returns the driver for OpenSNSTopic. This function exists so the test
-// harness can get the driver interface implementation if it needs to.
-func openSNSTopicV2(ctx context.Context, client *snsv2.Client, topicARN string, opts *TopicOptions) driver.Topic {
-	return &snsTopic{
-		useV2:    true,
-		clientV2: client,
-		arn:      topicARN,
-		opts:     opts,
 	}
 }
 
@@ -459,8 +381,8 @@ func maybeEncodeBody(body []byte, opt BodyBase64Encoding) (string, bool) {
 }
 
 // Defines values for Metadata keys used by the driver for setting message
-// attributes on SNS ([sns.PublishBatchRequestEntry]/[snstypesv2.PublishBatchRequestEntry])
-// and SQS ([sqs.SendMessageBatchRequestEntry]/[sqstypesv2.SendMessageBatchRequestEntry])
+// attributes on SNS ([sns.PublishBatchRequestEntry]/[snstypes.PublishBatchRequestEntry])
+// and SQS ([sqs.SendMessageBatchRequestEntry]/[sqstypes.SendMessageBatchRequestEntry])
 // messages.
 //
 // For example, to set a deduplication ID and message group ID on a message:
@@ -482,18 +404,8 @@ const (
 	MetadataKeyMessageGroupID  = "MessageGroupId"
 )
 
-// reviseSnsEntryAttributes sets attributes on a [sns.PublishBatchRequestEntry] based on [driver.Message.Metadata].
-func reviseSnsEntryAttributes(dm *driver.Message, entry *sns.PublishBatchRequestEntry) {
-	if dedupID, ok := dm.Metadata[MetadataKeyDeduplicationID]; ok {
-		entry.MessageDeduplicationId = aws.String(dedupID)
-	}
-	if groupID, ok := dm.Metadata[MetadataKeyMessageGroupID]; ok {
-		entry.MessageGroupId = aws.String(groupID)
-	}
-}
-
-// reviseSnsV2EntryAttributes sets attributes on a [snstypesv2.PublishBatchRequestEntry] based on [driver.Message.Metadata].
-func reviseSnsV2EntryAttributes(dm *driver.Message, entry *snstypesv2.PublishBatchRequestEntry) {
+// reviseSnsEntryAttributes sets attributes on a [snstypes.PublishBatchRequestEntry] based on [driver.Message.Metadata].
+func reviseSnsEntryAttributes(dm *driver.Message, entry *snstypes.PublishBatchRequestEntry) {
 	if dedupID, ok := dm.Metadata[MetadataKeyDeduplicationID]; ok {
 		entry.MessageDeduplicationId = aws.String(dedupID)
 	}
@@ -504,120 +416,20 @@ func reviseSnsV2EntryAttributes(dm *driver.Message, entry *snstypesv2.PublishBat
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	if t.useV2 {
-		req := &snsv2.PublishBatchInput{
-			TopicArn: &t.arn,
-		}
-		for _, dm := range dms {
-			attrs := map[string]snstypesv2.MessageAttributeValue{}
-			for k, v := range encodeMetadata(dm.Metadata) {
-				attrs[k] = snstypesv2.MessageAttributeValue{
-					DataType:    stringDataType,
-					StringValue: aws.String(v),
-				}
-			}
-			body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
-			if didEncode {
-				attrs[base64EncodedKey] = snstypesv2.MessageAttributeValue{
-					DataType:    stringDataType,
-					StringValue: aws.String("true"),
-				}
-			}
-			if len(attrs) == 0 {
-				attrs = nil
-			}
-			entry := &snstypesv2.PublishBatchRequestEntry{
-				Id:                aws.String(strconv.Itoa(len(req.PublishBatchRequestEntries))),
-				MessageAttributes: attrs,
-				Message:           aws.String(body),
-			}
-			reviseSnsV2EntryAttributes(dm, entry)
-			if dm.BeforeSend != nil {
-				// A previous revision used the non-batch API PublishInput, which takes
-				// a *snsv2.PublishInput. For backwards compatibility for As, continue
-				// to support that type. If it is requested, create a PublishInput
-				// with the fields from PublishBatchRequestEntry that were set, and
-				// then copy all of the matching fields back after calling dm.BeforeSend.
-				var pi *snsv2.PublishInput
-				asFunc := func(i any) bool {
-					if p, ok := i.(**snsv2.PublishInput); ok {
-						pi = &snsv2.PublishInput{
-							// Id does not exist on PublishInput.
-							MessageAttributes: entry.MessageAttributes,
-							Message:           entry.Message,
-						}
-						*p = pi
-						return true
-					}
-					if p, ok := i.(**snstypesv2.PublishBatchRequestEntry); ok {
-						*p = entry
-						return true
-					}
-					return false
-				}
-				if err := dm.BeforeSend(asFunc); err != nil {
-					return err
-				}
-				if pi != nil {
-					// Copy all of the fields that may have been modified back to the entry.
-					entry.MessageAttributes = pi.MessageAttributes
-					entry.Message = pi.Message
-					entry.MessageDeduplicationId = pi.MessageDeduplicationId
-					entry.MessageGroupId = pi.MessageGroupId
-					entry.MessageStructure = pi.MessageStructure
-					entry.Subject = pi.Subject
-				}
-			}
-			req.PublishBatchRequestEntries = append(req.PublishBatchRequestEntries, *entry)
-		}
-		resp, err := t.clientV2.PublishBatch(ctx, req)
-		if err != nil {
-			return err
-		}
-		if numFailed := len(resp.Failed); numFailed > 0 {
-			first := resp.Failed[0]
-			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sns.PublishBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
-		}
-		if len(resp.Successful) == len(dms) {
-			for n, dm := range dms {
-				if dm.AfterSend != nil {
-					asFunc := func(i any) bool {
-						if p, ok := i.(*snstypesv2.PublishBatchResultEntry); ok {
-							*p = resp.Successful[n]
-							return true
-						}
-						if p, ok := i.(**snsv2.PublishOutput); ok {
-							// For backwards compability.
-							*p = &snsv2.PublishOutput{
-								MessageId:      resp.Successful[n].MessageId,
-								SequenceNumber: resp.Successful[n].SequenceNumber,
-							}
-							return true
-						}
-						return false
-					}
-					if err := dm.AfterSend(asFunc); err != nil {
-						return err
-					}
-				}
-			}
-		}
-		return nil
-	}
 	req := &sns.PublishBatchInput{
 		TopicArn: &t.arn,
 	}
 	for _, dm := range dms {
-		attrs := map[string]*sns.MessageAttributeValue{}
+		attrs := map[string]snstypes.MessageAttributeValue{}
 		for k, v := range encodeMetadata(dm.Metadata) {
-			attrs[k] = &sns.MessageAttributeValue{
+			attrs[k] = snstypes.MessageAttributeValue{
 				DataType:    stringDataType,
 				StringValue: aws.String(v),
 			}
 		}
 		body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
 		if didEncode {
-			attrs[base64EncodedKey] = &sns.MessageAttributeValue{
+			attrs[base64EncodedKey] = snstypes.MessageAttributeValue{
 				DataType:    stringDataType,
 				StringValue: aws.String("true"),
 			}
@@ -625,7 +437,7 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		if len(attrs) == 0 {
 			attrs = nil
 		}
-		entry := &sns.PublishBatchRequestEntry{
+		entry := &snstypes.PublishBatchRequestEntry{
 			Id:                aws.String(strconv.Itoa(len(req.PublishBatchRequestEntries))),
 			MessageAttributes: attrs,
 			Message:           aws.String(body),
@@ -633,7 +445,7 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		reviseSnsEntryAttributes(dm, entry)
 		if dm.BeforeSend != nil {
 			// A previous revision used the non-batch API PublishInput, which takes
-			// a *snsv2.PublishInput. For backwards compatibility for As, continue
+			// a *sns.PublishInput. For backwards compatibility for As, continue
 			// to support that type. If it is requested, create a PublishInput
 			// with the fields from PublishBatchRequestEntry that were set, and
 			// then copy all of the matching fields back after calling dm.BeforeSend.
@@ -648,7 +460,7 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 					*p = pi
 					return true
 				}
-				if p, ok := i.(**sns.PublishBatchRequestEntry); ok {
+				if p, ok := i.(**snstypes.PublishBatchRequestEntry); ok {
 					*p = entry
 					return true
 				}
@@ -667,22 +479,22 @@ func (t *snsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 				entry.Subject = pi.Subject
 			}
 		}
-		req.PublishBatchRequestEntries = append(req.PublishBatchRequestEntries, entry)
+		req.PublishBatchRequestEntries = append(req.PublishBatchRequestEntries, *entry)
 	}
-	resp, err := t.client.PublishBatchWithContext(ctx, req)
+	resp, err := t.client.PublishBatch(ctx, req)
 	if err != nil {
 		return err
 	}
 	if numFailed := len(resp.Failed); numFailed > 0 {
 		first := resp.Failed[0]
-		return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sns.PublishBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+		return fmt.Errorf("sns.PublishBatch failed for %d message(s): %s, %s", numFailed, aws.ToString(first.Code), aws.ToString(first.Message))
 	}
 	if len(resp.Successful) == len(dms) {
 		for n, dm := range dms {
 			if dm.AfterSend != nil {
 				asFunc := func(i any) bool {
-					if p, ok := i.(*sns.PublishBatchResultEntry); ok {
-						*p = *resp.Successful[n]
+					if p, ok := i.(*snstypes.PublishBatchResultEntry); ok {
+						*p = resp.Successful[n]
 						return true
 					}
 					if p, ok := i.(**sns.PublishOutput); ok {
@@ -712,15 +524,7 @@ func (t *snsTopic) IsRetryable(error) bool {
 
 // As implements driver.Topic.As.
 func (t *snsTopic) As(i any) bool {
-	if t.useV2 {
-		c, ok := i.(**snsv2.Client)
-		if !ok {
-			return false
-		}
-		*c = t.clientV2
-		return true
-	}
-	c, ok := i.(**sns.SNS)
+	c, ok := i.(**sns.Client)
 	if !ok {
 		return false
 	}
@@ -730,7 +534,7 @@ func (t *snsTopic) As(i any) bool {
 
 // ErrorAs implements driver.Topic.ErrorAs.
 func (t *snsTopic) ErrorAs(err error, i any) bool {
-	return errorAs(err, t.useV2, i)
+	return errorAs(err, i)
 }
 
 // ErrorCode implements driver.Topic.ErrorCode.
@@ -742,69 +546,35 @@ func (t *snsTopic) ErrorCode(err error) gcerrors.ErrorCode {
 func (*snsTopic) Close() error { return nil }
 
 type sqsTopic struct {
-	useV2    bool
-	client   *sqs.SQS
-	clientV2 *sqsv2.Client
-	qURL     string
-	opts     *TopicOptions
+	client *sqs.Client
+	qURL   string
+	opts   *TopicOptions
 }
 
 // OpenSQSTopic opens a topic that sends to the SQS topic with the given SQS
-// queue URL.
-//
-// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSQSTopicV2.
-func OpenSQSTopic(ctx context.Context, sess client.ConfigProvider, qURL string, opts *TopicOptions) *pubsub.Topic {
+// queue URL, using AWS SDK V2.
+func OpenSQSTopic(ctx context.Context, client *sqs.Client, qURL string, opts *TopicOptions) *pubsub.Topic {
 	if opts == nil {
 		opts = &TopicOptions{}
 	}
 	bo := sendBatcherOptsSQS.NewMergedOptions(&opts.BatcherOptions)
-	return pubsub.NewTopic(openSQSTopic(ctx, sqs.New(sess), qURL, opts), bo)
+	return pubsub.NewTopic(openSQSTopic(ctx, client, qURL, opts), bo)
 }
 
-// OpenSQSTopicV2 opens a topic that sends to the SQS topic with the given SQS
-// queue URL, using AWS SDK V2.
-func OpenSQSTopicV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *TopicOptions) *pubsub.Topic {
-	if opts == nil {
-		opts = &TopicOptions{}
-	}
-	bo := sendBatcherOptsSQS.NewMergedOptions(&opts.BatcherOptions)
-	return pubsub.NewTopic(openSQSTopicV2(ctx, client, qURL, opts), bo)
-}
+var OpenSQSTopicV2 = OpenSQSTopic
 
 // openSQSTopic returns the driver for OpenSQSTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openSQSTopic(ctx context.Context, client *sqs.SQS, qURL string, opts *TopicOptions) driver.Topic {
+func openSQSTopic(ctx context.Context, client *sqs.Client, qURL string, opts *TopicOptions) driver.Topic {
 	return &sqsTopic{
-		useV2:  false,
 		client: client,
 		qURL:   qURL,
 		opts:   opts,
 	}
 }
 
-// openSQSTopicV2 returns the driver for OpenSQSTopic. This function exists so the test
-// harness can get the driver interface implementation if it needs to.
-func openSQSTopicV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *TopicOptions) driver.Topic {
-	return &sqsTopic{
-		useV2:    true,
-		clientV2: client,
-		qURL:     qURL,
-		opts:     opts,
-	}
-}
-
-// reviseSqsEntryAttributes sets attributes on a [sqs.SendMessageBatchRequestEntry] based on [driver.Message.Metadata].
-func reviseSqsEntryAttributes(dm *driver.Message, entry *sqs.SendMessageBatchRequestEntry) {
-	if dedupID, ok := dm.Metadata[MetadataKeyDeduplicationID]; ok {
-		entry.MessageDeduplicationId = aws.String(dedupID)
-	}
-	if groupID, ok := dm.Metadata[MetadataKeyMessageGroupID]; ok {
-		entry.MessageGroupId = aws.String(groupID)
-	}
-}
-
-// reviseSqsV2EntryAttributes sets attributes on a [sqstypesv2.SendMessageBatchRequestEntry] based on [driver.Message.Metadata].
-func reviseSqsV2EntryAttributes(dm *driver.Message, entry *sqstypesv2.SendMessageBatchRequestEntry) {
+// reviseSqsEntryAttributes sets attributes on a [sqstypes.SendMessageBatchRequestEntry] based on [driver.Message.Metadata].
+func reviseSqsEntryAttributes(dm *driver.Message, entry *sqstypes.SendMessageBatchRequestEntry) {
 	if dedupID, ok := dm.Metadata[MetadataKeyDeduplicationID]; ok {
 		entry.MessageDeduplicationId = aws.String(dedupID)
 	}
@@ -815,88 +585,20 @@ func reviseSqsV2EntryAttributes(dm *driver.Message, entry *sqstypesv2.SendMessag
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	if t.useV2 {
-		req := &sqsv2.SendMessageBatchInput{
-			QueueUrl: aws.String(t.qURL),
-		}
-		for _, dm := range dms {
-			attrs := map[string]sqstypesv2.MessageAttributeValue{}
-			for k, v := range encodeMetadata(dm.Metadata) {
-				attrs[k] = sqstypesv2.MessageAttributeValue{
-					DataType:    stringDataType,
-					StringValue: aws.String(v),
-				}
-			}
-			body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
-			if didEncode {
-				attrs[base64EncodedKey] = sqstypesv2.MessageAttributeValue{
-					DataType:    stringDataType,
-					StringValue: aws.String("true"),
-				}
-			}
-			if len(attrs) == 0 {
-				attrs = nil
-			}
-			entry := &sqstypesv2.SendMessageBatchRequestEntry{
-				Id:                aws.String(strconv.Itoa(len(req.Entries))),
-				MessageAttributes: attrs,
-				MessageBody:       aws.String(body),
-			}
-			reviseSqsV2EntryAttributes(dm, entry)
-			if dm.BeforeSend != nil {
-				asFunc := func(i any) bool {
-					if p, ok := i.(**sqstypesv2.SendMessageBatchRequestEntry); ok {
-						*p = entry
-						return true
-					}
-					return false
-				}
-				if err := dm.BeforeSend(asFunc); err != nil {
-					return err
-				}
-			}
-			req.Entries = append(req.Entries, *entry)
-		}
-		resp, err := t.clientV2.SendMessageBatch(ctx, req)
-		if err != nil {
-			return err
-		}
-		if numFailed := len(resp.Failed); numFailed > 0 {
-			first := resp.Failed[0]
-			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.SendMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
-		}
-		if len(resp.Successful) == len(dms) {
-			for n, dm := range dms {
-				if dm.AfterSend != nil {
-					asFunc := func(i any) bool {
-						if p, ok := i.(*sqstypesv2.SendMessageBatchResultEntry); ok {
-							*p = resp.Successful[n]
-							return true
-						}
-						return false
-					}
-					if err := dm.AfterSend(asFunc); err != nil {
-						return err
-					}
-				}
-			}
-		}
-		return nil
-	}
 	req := &sqs.SendMessageBatchInput{
 		QueueUrl: aws.String(t.qURL),
 	}
 	for _, dm := range dms {
-		attrs := map[string]*sqs.MessageAttributeValue{}
+		attrs := map[string]sqstypes.MessageAttributeValue{}
 		for k, v := range encodeMetadata(dm.Metadata) {
-			attrs[k] = &sqs.MessageAttributeValue{
+			attrs[k] = sqstypes.MessageAttributeValue{
 				DataType:    stringDataType,
 				StringValue: aws.String(v),
 			}
 		}
 		body, didEncode := maybeEncodeBody(dm.Body, t.opts.BodyBase64Encoding)
 		if didEncode {
-			attrs[base64EncodedKey] = &sqs.MessageAttributeValue{
+			attrs[base64EncodedKey] = sqstypes.MessageAttributeValue{
 				DataType:    stringDataType,
 				StringValue: aws.String("true"),
 			}
@@ -904,31 +606,15 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		if len(attrs) == 0 {
 			attrs = nil
 		}
-		entry := &sqs.SendMessageBatchRequestEntry{
+		entry := &sqstypes.SendMessageBatchRequestEntry{
 			Id:                aws.String(strconv.Itoa(len(req.Entries))),
 			MessageAttributes: attrs,
 			MessageBody:       aws.String(body),
 		}
 		reviseSqsEntryAttributes(dm, entry)
-		req.Entries = append(req.Entries, entry)
 		if dm.BeforeSend != nil {
-			// A previous revision used the non-batch API SendMessage, which takes
-			// a *sqs.SendMessageInput. For backwards compatibility for As, continue
-			// to support that type. If it is requested, create a SendMessageInput
-			// with the fields from SendMessageBatchRequestEntry that were set, and
-			// then copy all of the matching fields back after calling dm.BeforeSend.
-			var smi *sqs.SendMessageInput
 			asFunc := func(i any) bool {
-				if p, ok := i.(**sqs.SendMessageInput); ok {
-					smi = &sqs.SendMessageInput{
-						// Id does not exist on SendMessageInput.
-						MessageAttributes: entry.MessageAttributes,
-						MessageBody:       entry.MessageBody,
-					}
-					*p = smi
-					return true
-				}
-				if p, ok := i.(**sqs.SendMessageBatchRequestEntry); ok {
+				if p, ok := i.(**sqstypes.SendMessageBatchRequestEntry); ok {
 					*p = entry
 					return true
 				}
@@ -937,29 +623,22 @@ func (t *sqsTopic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			if err := dm.BeforeSend(asFunc); err != nil {
 				return err
 			}
-			if smi != nil {
-				// Copy all of the fields that may have been modified back to the entry.
-				entry.DelaySeconds = smi.DelaySeconds
-				entry.MessageAttributes = smi.MessageAttributes
-				entry.MessageBody = smi.MessageBody
-				entry.MessageDeduplicationId = smi.MessageDeduplicationId
-				entry.MessageGroupId = smi.MessageGroupId
-			}
 		}
+		req.Entries = append(req.Entries, *entry)
 	}
-	resp, err := t.client.SendMessageBatchWithContext(ctx, req)
+	resp, err := t.client.SendMessageBatch(ctx, req)
 	if err != nil {
 		return err
 	}
 	if numFailed := len(resp.Failed); numFailed > 0 {
 		first := resp.Failed[0]
-		return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.SendMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+		return fmt.Errorf("sqs.SendMessageBatch failed for %d message(s): %s, %s", numFailed, aws.ToString(first.Code), aws.ToString(first.Message))
 	}
 	if len(resp.Successful) == len(dms) {
 		for n, dm := range dms {
 			if dm.AfterSend != nil {
 				asFunc := func(i any) bool {
-					if p, ok := i.(**sqs.SendMessageBatchResultEntry); ok {
+					if p, ok := i.(*sqstypes.SendMessageBatchResultEntry); ok {
 						*p = resp.Successful[n]
 						return true
 					}
@@ -982,15 +661,7 @@ func (t *sqsTopic) IsRetryable(error) bool {
 
 // As implements driver.Topic.As.
 func (t *sqsTopic) As(i any) bool {
-	if t.useV2 {
-		c, ok := i.(**sqsv2.Client)
-		if !ok {
-			return false
-		}
-		*c = t.clientV2
-		return true
-	}
-	c, ok := i.(**sqs.SQS)
+	c, ok := i.(**sqs.Client)
 	if !ok {
 		return false
 	}
@@ -1000,7 +671,7 @@ func (t *sqsTopic) As(i any) bool {
 
 // ErrorAs implements driver.Topic.ErrorAs.
 func (t *sqsTopic) ErrorAs(err error, i any) bool {
-	return errorAs(err, t.useV2, i)
+	return errorAs(err, i)
 }
 
 // ErrorCode implements driver.Topic.ErrorCode.
@@ -1016,8 +687,6 @@ func errorCode(err error) gcerrors.ErrorCode {
 	var ae smithy.APIError
 	if errors.As(err, &ae) {
 		code = ae.ErrorCode()
-	} else if awsErr, ok := err.(awserr.Error); ok {
-		code = awsErr.Code()
 	} else {
 		return gcerrors.Unknown
 	}
@@ -1029,49 +698,48 @@ func errorCode(err error) gcerrors.ErrorCode {
 }
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
-	sns.ErrCodeAuthorizationErrorException:          gcerrors.PermissionDenied,
-	sns.ErrCodeKMSAccessDeniedException:             gcerrors.PermissionDenied,
-	sns.ErrCodeKMSDisabledException:                 gcerrors.FailedPrecondition,
-	sns.ErrCodeKMSInvalidStateException:             gcerrors.FailedPrecondition,
-	sns.ErrCodeKMSOptInRequired:                     gcerrors.FailedPrecondition,
-	sqs.ErrCodeMessageNotInflight:                   gcerrors.FailedPrecondition,
-	sqs.ErrCodePurgeQueueInProgress:                 gcerrors.FailedPrecondition,
-	sqs.ErrCodeQueueDeletedRecently:                 gcerrors.FailedPrecondition,
-	sqs.ErrCodeQueueNameExists:                      gcerrors.FailedPrecondition,
-	sns.ErrCodeInternalErrorException:               gcerrors.Internal,
-	sns.ErrCodeInvalidParameterException:            gcerrors.InvalidArgument,
-	sns.ErrCodeInvalidParameterValueException:       gcerrors.InvalidArgument,
-	sqs.ErrCodeBatchEntryIdsNotDistinct:             gcerrors.InvalidArgument,
-	sqs.ErrCodeBatchRequestTooLong:                  gcerrors.InvalidArgument,
-	sqs.ErrCodeEmptyBatchRequest:                    gcerrors.InvalidArgument,
-	sqs.ErrCodeInvalidAttributeName:                 gcerrors.InvalidArgument,
-	sqs.ErrCodeInvalidBatchEntryId:                  gcerrors.InvalidArgument,
-	sqs.ErrCodeInvalidIdFormat:                      gcerrors.InvalidArgument,
-	sqs.ErrCodeInvalidMessageContents:               gcerrors.InvalidArgument,
-	sqs.ErrCodeReceiptHandleIsInvalid:               gcerrors.InvalidArgument,
-	sqs.ErrCodeTooManyEntriesInBatchRequest:         gcerrors.InvalidArgument,
-	sqs.ErrCodeUnsupportedOperation:                 gcerrors.InvalidArgument,
-	sns.ErrCodeInvalidSecurityException:             gcerrors.PermissionDenied,
-	sns.ErrCodeKMSNotFoundException:                 gcerrors.NotFound,
-	sns.ErrCodeNotFoundException:                    gcerrors.NotFound,
-	sqs.ErrCodeQueueDoesNotExist:                    gcerrors.NotFound,
-	sns.ErrCodeFilterPolicyLimitExceededException:   gcerrors.ResourceExhausted,
-	sns.ErrCodeSubscriptionLimitExceededException:   gcerrors.ResourceExhausted,
-	sns.ErrCodeTopicLimitExceededException:          gcerrors.ResourceExhausted,
-	sqs.ErrCodeOverLimit:                            gcerrors.ResourceExhausted,
-	sns.ErrCodeKMSThrottlingException:               gcerrors.ResourceExhausted,
-	sns.ErrCodeThrottledException:                   gcerrors.ResourceExhausted,
-	"RequestCanceled":                               gcerrors.Canceled,
-	sns.ErrCodeEndpointDisabledException:            gcerrors.Unknown,
-	sns.ErrCodePlatformApplicationDisabledException: gcerrors.Unknown,
+	(&snstypes.AuthorizationErrorException{}).ErrorCode():        gcerrors.PermissionDenied,
+	(&snstypes.KMSAccessDeniedException{}).ErrorCode():           gcerrors.PermissionDenied,
+	(&snstypes.KMSDisabledException{}).ErrorCode():               gcerrors.FailedPrecondition,
+	(&snstypes.KMSInvalidStateException{}).ErrorCode():           gcerrors.FailedPrecondition,
+	(&snstypes.KMSOptInRequired{}).ErrorCode():                   gcerrors.FailedPrecondition,
+	(&sqstypes.MessageNotInflight{}).ErrorCode():                 gcerrors.FailedPrecondition,
+	(&sqstypes.PurgeQueueInProgress{}).ErrorCode():               gcerrors.FailedPrecondition,
+	(&sqstypes.QueueDeletedRecently{}).ErrorCode():               gcerrors.FailedPrecondition,
+	(&sqstypes.QueueNameExists{}).ErrorCode():                    gcerrors.FailedPrecondition,
+	(&snstypes.InternalErrorException{}).ErrorCode():             gcerrors.Internal,
+	(&snstypes.InvalidParameterException{}).ErrorCode():          gcerrors.InvalidArgument,
+	(&snstypes.InvalidParameterValueException{}).ErrorCode():     gcerrors.InvalidArgument,
+	(&sqstypes.BatchEntryIdsNotDistinct{}).ErrorCode():           gcerrors.InvalidArgument,
+	(&sqstypes.BatchRequestTooLong{}).ErrorCode():                gcerrors.InvalidArgument,
+	(&sqstypes.EmptyBatchRequest{}).ErrorCode():                  gcerrors.InvalidArgument,
+	(&sqstypes.InvalidAttributeName{}).ErrorCode():               gcerrors.InvalidArgument,
+	(&sqstypes.InvalidBatchEntryId{}).ErrorCode():                gcerrors.InvalidArgument,
+	(&sqstypes.InvalidIdFormat{}).ErrorCode():                    gcerrors.InvalidArgument,
+	(&sqstypes.InvalidMessageContents{}).ErrorCode():             gcerrors.InvalidArgument,
+	(&sqstypes.ReceiptHandleIsInvalid{}).ErrorCode():             gcerrors.InvalidArgument,
+	(&sqstypes.TooManyEntriesInBatchRequest{}).ErrorCode():       gcerrors.InvalidArgument,
+	(&sqstypes.UnsupportedOperation{}).ErrorCode():               gcerrors.InvalidArgument,
+	(&snstypes.InvalidSecurityException{}).ErrorCode():           gcerrors.PermissionDenied,
+	(&snstypes.KMSNotFoundException{}).ErrorCode():               gcerrors.NotFound,
+	(&snstypes.NotFoundException{}).ErrorCode():                  gcerrors.NotFound,
+	(&sqstypes.QueueDoesNotExist{}).ErrorCode():                  gcerrors.NotFound,
+	"AWS.SimpleQueueService.NonExistentQueue":                    gcerrors.NotFound,
+	(&snstypes.FilterPolicyLimitExceededException{}).ErrorCode(): gcerrors.ResourceExhausted,
+	(&snstypes.SubscriptionLimitExceededException{}).ErrorCode(): gcerrors.ResourceExhausted,
+	(&snstypes.TopicLimitExceededException{}).ErrorCode():        gcerrors.ResourceExhausted,
+	(&sqstypes.OverLimit{}).ErrorCode():                          gcerrors.ResourceExhausted,
+	(&snstypes.KMSThrottlingException{}).ErrorCode():             gcerrors.ResourceExhausted,
+	(&snstypes.ThrottledException{}).ErrorCode():                 gcerrors.ResourceExhausted,
+	"RequestCanceled": gcerrors.Canceled,
+	(&snstypes.EndpointDisabledException{}).ErrorCode():            gcerrors.Unknown,
+	(&snstypes.PlatformApplicationDisabledException{}).ErrorCode(): gcerrors.Unknown,
 }
 
 type subscription struct {
-	useV2    bool
-	client   *sqs.SQS
-	clientV2 *sqsv2.Client
-	qURL     string
-	opts     *SubscriptionOptions
+	client *sqs.Client
+	qURL   string
+	opts   *SubscriptionOptions
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -1114,180 +782,93 @@ type SubscriptionOptions struct {
 }
 
 // OpenSubscription opens a subscription based on AWS SQS for the given SQS
-// queue URL. The queue is assumed to be subscribed to some SNS topic, though
-// there is no check for this.
-//
-// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenSubscriptionV2.
-func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	if opts == nil {
-		opts = &SubscriptionOptions{}
-	}
-	rbo := recvBatcherOpts.NewMergedOptions(&opts.ReceiveBatcherOptions)
-	abo := ackBatcherOpts.NewMergedOptions(&opts.AckBatcherOptions)
-	return pubsub.NewSubscription(openSubscription(ctx, sqs.New(sess), qURL, opts), rbo, abo)
-}
-
-// OpenSubscriptionV2 opens a subscription based on AWS SQS for the given SQS
 // queue URL, using AWS SDK V2. The queue is assumed to be subscribed to some SNS topic, though
 // there is no check for this.
-func OpenSubscriptionV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
+func OpenSubscription(ctx context.Context, client *sqs.Client, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
 	if opts == nil {
 		opts = &SubscriptionOptions{}
 	}
 	rbo := recvBatcherOpts.NewMergedOptions(&opts.ReceiveBatcherOptions)
 	abo := ackBatcherOpts.NewMergedOptions(&opts.AckBatcherOptions)
-	return pubsub.NewSubscription(openSubscriptionV2(ctx, client, qURL, opts), rbo, abo)
+	return pubsub.NewSubscription(openSubscription(ctx, client, qURL, opts), rbo, abo)
 }
+
+var OpenSubscriptionV2 = OpenSubscription
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) driver.Subscription {
+func openSubscription(ctx context.Context, client *sqs.Client, qURL string, opts *SubscriptionOptions) driver.Subscription {
 	return &subscription{
-		useV2:  false,
 		client: client,
-		qURL:   qURL, opts: opts,
-	}
-}
-
-// openSubscriptionV2 returns a driver.Subscription.
-func openSubscriptionV2(ctx context.Context, client *sqsv2.Client, qURL string, opts *SubscriptionOptions) driver.Subscription {
-	return &subscription{
-		useV2:    true,
-		clientV2: client,
-		qURL:     qURL, opts: opts,
+		qURL:   qURL,
+		opts:   opts,
 	}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	var ms []*driver.Message
-	if s.useV2 {
-		req := &sqsv2.ReceiveMessageInput{
-			QueueUrl:              aws.String(s.qURL),
-			MaxNumberOfMessages:   int32(maxMessages),
-			MessageAttributeNames: []string{"All"},
-			AttributeNames:        []sqstypesv2.QueueAttributeName{"All"},
+	req := &sqs.ReceiveMessageInput{
+		QueueUrl:              aws.String(s.qURL),
+		MaxNumberOfMessages:   int32(maxMessages),
+		MessageAttributeNames: []string{"All"},
+		AttributeNames:        []sqstypes.QueueAttributeName{"All"},
+	}
+	if s.opts.WaitTime != 0 {
+		req.WaitTimeSeconds = int32(s.opts.WaitTime.Seconds())
+	}
+	output, err := s.client.ReceiveMessage(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range output.Messages {
+		m := m
+		bodyStr := aws.ToString(m.Body)
+		rawAttrs := map[string]string{}
+		for k, v := range m.MessageAttributes {
+			rawAttrs[k] = aws.ToString(v.StringValue)
 		}
-		if s.opts.WaitTime != 0 {
-			req.WaitTimeSeconds = int32(s.opts.WaitTime.Seconds())
-		}
-		output, err := s.clientV2.ReceiveMessage(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		for _, m := range output.Messages {
-			m := m
-			bodyStr := aws.StringValue(m.Body)
-			rawAttrs := map[string]string{}
-			for k, v := range m.MessageAttributes {
-				rawAttrs[k] = aws.StringValue(v.StringValue)
-			}
-			bodyStr, rawAttrs = extractBody(bodyStr, rawAttrs, s.opts.Raw)
+		bodyStr, rawAttrs = extractBody(bodyStr, rawAttrs, s.opts.Raw)
 
-			decodeIt := false
-			attrs := map[string]string{}
-			for k, v := range rawAttrs {
-				// See BodyBase64Encoding for details on when we base64 decode message bodies.
-				if k == base64EncodedKey {
-					decodeIt = true
-					continue
-				}
-				// See the package comments for more details on escaping of metadata
-				// keys & values.
-				attrs[escape.HexUnescape(k)] = escape.URLUnescape(v)
+		decodeIt := false
+		attrs := map[string]string{}
+		for k, v := range rawAttrs {
+			// See BodyBase64Encoding for details on when we base64 decode message bodies.
+			if k == base64EncodedKey {
+				decodeIt = true
+				continue
 			}
+			// See the package comments for more details on escaping of metadata
+			// keys & values.
+			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v)
+		}
 
-			var b []byte
-			if decodeIt {
-				var err error
-				b, err = base64.StdEncoding.DecodeString(bodyStr)
-				if err != nil {
-					// Fall back to using the raw message.
-					b = []byte(bodyStr)
-				}
-			} else {
+		var b []byte
+		if decodeIt {
+			var err error
+			b, err = base64.StdEncoding.DecodeString(bodyStr)
+			if err != nil {
+				// Fall back to using the raw message.
 				b = []byte(bodyStr)
 			}
+		} else {
+			b = []byte(bodyStr)
+		}
 
-			m2 := &driver.Message{
-				LoggableID: aws.StringValue(m.MessageId),
-				Body:       b,
-				Metadata:   attrs,
-				AckID:      m.ReceiptHandle,
-				AsFunc: func(i any) bool {
-					p, ok := i.(*sqstypesv2.Message)
-					if !ok {
-						return false
-					}
-					*p = m
-					return true
-				},
-			}
-			ms = append(ms, m2)
-		}
-	} else {
-		req := &sqs.ReceiveMessageInput{
-			QueueUrl:              aws.String(s.qURL),
-			MaxNumberOfMessages:   aws.Int64(int64(maxMessages)),
-			MessageAttributeNames: []*string{aws.String("All")},
-			AttributeNames:        []*string{aws.String("All")},
-		}
-		if s.opts.WaitTime != 0 {
-			req.WaitTimeSeconds = aws.Int64(int64(s.opts.WaitTime.Seconds()))
-		}
-		output, err := s.client.ReceiveMessageWithContext(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		for _, m := range output.Messages {
-			m := m
-			bodyStr := aws.StringValue(m.Body)
-			rawAttrs := map[string]string{}
-			for k, v := range m.MessageAttributes {
-				rawAttrs[k] = aws.StringValue(v.StringValue)
-			}
-			bodyStr, rawAttrs = extractBody(bodyStr, rawAttrs, s.opts.Raw)
-
-			decodeIt := false
-			attrs := map[string]string{}
-			for k, v := range rawAttrs {
-				// See BodyBase64Encoding for details on when we base64 decode message bodies.
-				if k == base64EncodedKey {
-					decodeIt = true
-					continue
+		m2 := &driver.Message{
+			LoggableID: aws.ToString(m.MessageId),
+			Body:       b,
+			Metadata:   attrs,
+			AckID:      m.ReceiptHandle,
+			AsFunc: func(i any) bool {
+				p, ok := i.(*sqstypes.Message)
+				if !ok {
+					return false
 				}
-				// See the package comments for more details on escaping of metadata
-				// keys & values.
-				attrs[escape.HexUnescape(k)] = escape.URLUnescape(v)
-			}
-
-			var b []byte
-			if decodeIt {
-				var err error
-				b, err = base64.StdEncoding.DecodeString(bodyStr)
-				if err != nil {
-					// Fall back to using the raw message.
-					b = []byte(bodyStr)
-				}
-			} else {
-				b = []byte(bodyStr)
-			}
-
-			m2 := &driver.Message{
-				LoggableID: aws.StringValue(m.MessageId),
-				Body:       b,
-				Metadata:   attrs,
-				AckID:      m.ReceiptHandle,
-				AsFunc: func(i any) bool {
-					p, ok := i.(**sqs.Message)
-					if !ok {
-						return false
-					}
-					*p = m
-					return true
-				},
-			}
-			ms = append(ms, m2)
+				*p = m
+				return true
+			},
 		}
+		ms = append(ms, m2)
 	}
 	if len(ms) == 0 {
 		// When we return no messages and no error, the portable type will call
@@ -1338,34 +919,14 @@ func extractBody(bodyStr string, rawAttrs map[string]string, raw bool) (body str
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	if s.useV2 {
-		req := &sqsv2.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
-		for _, id := range ids {
-			req.Entries = append(req.Entries, sqstypesv2.DeleteMessageBatchRequestEntry{
-				Id:            aws.String(strconv.Itoa(len(req.Entries))),
-				ReceiptHandle: id.(*string),
-			})
-		}
-		resp, err := s.clientV2.DeleteMessageBatch(ctx, req)
-		if err != nil {
-			return err
-		}
-		// Note: DeleteMessageBatch doesn't return failures when you try
-		// to Delete an id that isn't found.
-		if numFailed := len(resp.Failed); numFailed > 0 {
-			first := resp.Failed[0]
-			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.DeleteMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
-		}
-		return nil
-	}
 	req := &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
 	for _, id := range ids {
-		req.Entries = append(req.Entries, &sqs.DeleteMessageBatchRequestEntry{
+		req.Entries = append(req.Entries, sqstypes.DeleteMessageBatchRequestEntry{
 			Id:            aws.String(strconv.Itoa(len(req.Entries))),
 			ReceiptHandle: id.(*string),
 		})
 	}
-	resp, err := s.client.DeleteMessageBatchWithContext(ctx, req)
+	resp, err := s.client.DeleteMessageBatch(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -1373,7 +934,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	// to Delete an id that isn't found.
 	if numFailed := len(resp.Failed); numFailed > 0 {
 		first := resp.Failed[0]
-		return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.DeleteMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+		return fmt.Errorf("sqs.DeleteMessageBatch failed for %d message(s): %s, %s", numFailed, aws.ToString(first.Code), aws.ToString(first.Message))
 	}
 	return nil
 }
@@ -1386,55 +947,24 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 	if s.opts.NackLazy {
 		return nil
 	}
-	if s.useV2 {
-		req := &sqsv2.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
-		for _, id := range ids {
-			req.Entries = append(req.Entries, sqstypesv2.ChangeMessageVisibilityBatchRequestEntry{
-				Id:                aws.String(strconv.Itoa(len(req.Entries))),
-				ReceiptHandle:     id.(*string),
-				VisibilityTimeout: 1,
-			})
-		}
-		resp, err := s.clientV2.ChangeMessageVisibilityBatch(ctx, req)
-		if err != nil {
-			return err
-		}
-		// Note: ChangeMessageVisibilityBatch returns failures when you try to
-		// modify an id that isn't found; drop those.
-		var firstFail sqstypesv2.BatchResultErrorEntry
-		numFailed := 0
-		for _, fail := range resp.Failed {
-			if aws.StringValue(fail.Code) == sqs.ErrCodeReceiptHandleIsInvalid {
-				continue
-			}
-			if numFailed == 0 {
-				firstFail = fail
-			}
-			numFailed++
-		}
-		if numFailed > 0 {
-			return awserr.New(aws.StringValue(firstFail.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(firstFail.Message)), nil)
-		}
-		return nil
-	}
 	req := &sqs.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
 	for _, id := range ids {
-		req.Entries = append(req.Entries, &sqs.ChangeMessageVisibilityBatchRequestEntry{
+		req.Entries = append(req.Entries, sqstypes.ChangeMessageVisibilityBatchRequestEntry{
 			Id:                aws.String(strconv.Itoa(len(req.Entries))),
 			ReceiptHandle:     id.(*string),
-			VisibilityTimeout: aws.Int64(0),
+			VisibilityTimeout: 1,
 		})
 	}
-	resp, err := s.client.ChangeMessageVisibilityBatchWithContext(ctx, req)
+	resp, err := s.client.ChangeMessageVisibilityBatch(ctx, req)
 	if err != nil {
 		return err
 	}
 	// Note: ChangeMessageVisibilityBatch returns failures when you try to
 	// modify an id that isn't found; drop those.
-	var firstFail *sqs.BatchResultErrorEntry
+	var firstFail sqstypes.BatchResultErrorEntry
 	numFailed := 0
 	for _, fail := range resp.Failed {
-		if aws.StringValue(fail.Code) == sqs.ErrCodeReceiptHandleIsInvalid {
+		if aws.ToString(fail.Code) == (&sqstypes.ReceiptHandleIsInvalid{}).ErrorCode() {
 			continue
 		}
 		if numFailed == 0 {
@@ -1442,8 +972,8 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 		}
 		numFailed++
 	}
-	if numFailed > 0 && firstFail != nil {
-		return awserr.New(aws.StringValue(firstFail.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(firstFail.Message)), nil)
+	if numFailed > 0 {
+		return fmt.Errorf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s, %s", numFailed, aws.ToString(firstFail.Code), aws.ToString(firstFail.Message))
 	}
 	return nil
 }
@@ -1456,15 +986,7 @@ func (*subscription) IsRetryable(error) bool {
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i any) bool {
-	if s.useV2 {
-		c, ok := i.(**sqsv2.Client)
-		if !ok {
-			return false
-		}
-		*c = s.clientV2
-		return true
-	}
-	c, ok := i.(**sqs.SQS)
+	c, ok := i.(**sqs.Client)
 	if !ok {
 		return false
 	}
@@ -1474,7 +996,7 @@ func (s *subscription) As(i any) bool {
 
 // ErrorAs implements driver.Subscription.ErrorAs.
 func (s *subscription) ErrorAs(err error, i any) bool {
-	return errorAs(err, s.useV2, i)
+	return errorAs(err, i)
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode.
@@ -1482,20 +1004,8 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
-func errorAs(err error, useV2 bool, i any) bool {
-	if useV2 {
-		return errors.As(err, i)
-	}
-	e, ok := err.(awserr.Error)
-	if !ok {
-		return false
-	}
-	p, ok := i.(*awserr.Error)
-	if !ok {
-		return false
-	}
-	*p = e
-	return true
+func errorAs(err error, i any) bool {
+	return errors.As(err, i)
 }
 
 // Close implements driver.Subscription.Close.
