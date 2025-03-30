@@ -461,7 +461,7 @@ func testPut(t *testing.T, coll *docstore.Collection, revField string) {
 			got := newDoc(tc.doc)
 			must(coll.Get(ctx, got))
 			if diff := cmpDiff(got, tc.doc); diff != "" {
-				t.Fatalf(diff)
+				t.Fatal(diff)
 			}
 			if tc.rev {
 				switch v := tc.doc.(type) {
@@ -545,7 +545,7 @@ func testReplace(t *testing.T, coll *docstore.Collection, revField string) {
 			got := newDoc(tc.doc2)
 			must(coll.Get(ctx, got))
 			if diff := cmpDiff(got, tc.doc2); diff != "" {
-				t.Fatalf(diff)
+				t.Fatal(diff)
 			}
 		})
 	}
