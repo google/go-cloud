@@ -140,7 +140,8 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	// See setup instructions above for more details.
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
+	// Disable the conformance tests, we don't have an Azure account anymore.
+	// drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
 func BenchmarkAzureblob(b *testing.B) {
