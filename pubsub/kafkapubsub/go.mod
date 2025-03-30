@@ -19,7 +19,7 @@ go 1.24
 require (
 	github.com/IBM/sarama v1.45.1
 	github.com/google/go-cmp v0.7.0
-	gocloud.dev v0.40.0
+	gocloud.dev v0.41.0
 )
 
 require (
@@ -86,5 +86,3 @@ require (
 	google.golang.org/grpc v1.71.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
-
-replace gocloud.dev => ../../
