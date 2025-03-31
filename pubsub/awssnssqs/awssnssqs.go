@@ -206,9 +206,9 @@ const SQSScheme = "awssqs"
 // Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
 // or anything else to accept the default.
 //
-// For V1, see gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// For V1, see https://pkg.go.dev/gocloud.dev/aws#ConfigFromURLParams for supported query parameters
 // for overriding the aws.Session from the URL.
-// For V2, see gocloud.dev/aws/V2ConfigFromURLParams.
+// For V2, see https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
 //
 // In addition, the following query parameters are supported:
 //

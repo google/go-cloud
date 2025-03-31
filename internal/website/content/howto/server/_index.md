@@ -16,7 +16,7 @@ The Go CDK Server constructor takes an `http.Handler` and an `Options` struct.
 The simplest way to start the server is to use `http.DefaultServeMux` and
 pass `nil` for the options.
 
-{{< goexample src="gocloud.dev/server.ExampleServer_New" >}}
+{{< goexample src="gocloud.dev/server.ExampleServer" >}}
 
 ### Adding a request logger
 
@@ -26,7 +26,7 @@ The example is shown with the Go CDK [`requestlog`](https://godoc.org/gocloud.de
 To get logs in the Stackdriver JSON format, use `NewStackdriverLogger` in place
 of `NewNCSALogger`.
 
-{{< goexample src="gocloud.dev/server.ExampleServer_RequestLogger" >}}
+{{< goexample src="gocloud.dev/server.ExampleServer_withRequestLogger" >}}
 
 ### Adding health checks
 
@@ -64,7 +64,7 @@ func (h *customHealthCheck) CheckHealth() error {
 }
 ```
 
-{{< goexample src="gocloud.dev/server.ExampleServer_HealthChecks" >}}
+{{< goexample src="gocloud.dev/server.ExampleServer_withHealthChecks" >}}
 
 ## Other Usage Samples
 

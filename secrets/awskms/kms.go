@@ -124,14 +124,14 @@ const Scheme = "awskms"
 // Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
 // or anything else to accept the default.
 //
+// For V1, see https://pkg.go.dev/gocloud.dev/aws#ConfigFromURLParams for supported query parameters
+// for overriding the aws.Session from the URL.
+// For V2, see https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
+//
 // EncryptionContext key/value pairs can be provided by providing URL parameters prefixed
 // with "context_"; e.g., "...&context_abc=foo&context_def=bar" would result in
 // an EncryptionContext of {abc=foo, def=bar}.
 // See https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context.
-//
-// For V1, see gocloud.dev/aws/ConfigFromURLParams for supported query parameters
-// for overriding the aws.Session from the URL.
-// For V2, see gocloud.dev/aws/V2ConfigFromURLParams.
 type URLOpener struct {
 	// UseV2 indicates whether the AWS SDK V2 should be used.
 	UseV2 bool

@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7eRhD4Lt4yswAA",
+  "Initial": "AQAAAA7fe3IRIvzNegAA",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -44,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "fd23cab1fa2d7a29",
+      "ID": "9d30ce491bb1eb3f",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
@@ -69,6 +69,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.CreateQueue"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -89,17 +92,17 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 01:06:01 GMT"
+            "Sun, 30 Mar 2025 17:10:42 GMT"
           ],
           "X-Amzn-Requestid": [
-            "20b14106-76da-5f4e-818d-1e286ae27784"
+            "b0efdacf-d8f7-5c33-b7f7-baaca5a6b01d"
           ]
         },
         "Body": "eyJRdWV1ZVVybCI6Imh0dHBzOi8vc3FzLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tLzQ1Njc1MjY2NTU3Ni9TUVNUb3BpY1YyRXJyb3JPblNlbmRUb0Nsb3NlZFRvcGljLXRvcC0xIn0="
       }
     },
     {
-      "ID": "d0d9e8b0278e5e4c",
+      "ID": "05f36e06530bdfdd",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
@@ -124,6 +127,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.GetQueueAttributes"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -144,17 +150,17 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 01:06:01 GMT"
+            "Sun, 30 Mar 2025 17:10:42 GMT"
           ],
           "X-Amzn-Requestid": [
-            "7923c3b3-c310-5a15-a894-9c9ddf2902df"
+            "d24851e2-5430-5603-a7ee-318129623a2d"
           ]
         },
         "Body": "eyJBdHRyaWJ1dGVzIjp7IlF1ZXVlQXJuIjoiYXJuOmF3czpzcXM6dXMtZWFzdC0yOjQ1Njc1MjY2NTU3NjpTUVNUb3BpY1YyRXJyb3JPblNlbmRUb0Nsb3NlZFRvcGljLXRvcC0xIn19"
       }
     },
     {
-      "ID": "df08d2c702ecfce9",
+      "ID": "bd8d9a294dd6f254",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
@@ -179,6 +185,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.SetQueueAttributes"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -199,17 +208,17 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 01:06:01 GMT"
+            "Sun, 30 Mar 2025 17:10:42 GMT"
           ],
           "X-Amzn-Requestid": [
-            "ce8e16f7-82d0-5373-aa00-49d99ee96bb9"
+            "6dfed60c-b505-55f6-bfe6-b66fc85749d8"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "10aa48996f291b01",
+      "ID": "d9b70fb9144ffb7e",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
@@ -234,6 +243,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.DeleteQueue"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -254,10 +266,10 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 01:06:01 GMT"
+            "Sun, 30 Mar 2025 17:10:42 GMT"
           ],
           "X-Amzn-Requestid": [
-            "40b8ca7b-67d6-5266-8b7e-95557bef5aac"
+            "eaef5d21-3e7b-5f67-8908-3d424329d349"
           ]
         },
         "Body": ""

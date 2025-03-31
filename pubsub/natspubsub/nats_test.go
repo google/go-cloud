@@ -237,7 +237,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	}
 	m, err := nsub.NextMsgWithContext(ctx)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	if !bytes.Equal(m.Data, body) {
 		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
@@ -291,7 +291,7 @@ func TestInteropWithDirectNATSV2(t *testing.T) {
 	}
 	m, err := nsub.NextMsgWithContext(ctx)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	if !bytes.Equal(m.Data, body) {
 		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)

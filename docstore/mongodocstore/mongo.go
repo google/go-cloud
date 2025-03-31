@@ -204,12 +204,15 @@ const mongoIDField = "_id"
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, opts *driver.RunActionsOptions) driver.ActionListError {
 	errs := make([]error, len(actions))
-	beforeGets, gets, writes, _, afterGets := driver.GroupActions(actions)
+	beforeGets, gets, writes, writesTx, afterGets := driver.GroupActions(actions)
 	c.runGets(ctx, beforeGets, errs, opts)
 	ch := make(chan []error)
 	go func() { ch <- c.bulkWrite(ctx, writes, errs, opts) }()
+	ch2 := make(chan []error)
+	go func() { ch2 <- c.txWrite(ctx, writesTx, errs, opts) }()
 	c.runGets(ctx, gets, errs, opts)
 	writeErrs := <-ch
+	<-ch2
 	c.runGets(ctx, afterGets, errs, opts)
 	alerr := driver.NewActionListError(errs)
 	for _, werr := range writeErrs {
@@ -560,8 +563,136 @@ func (c *collection) bulkWrite(ctx context.Context, actions []*driver.Action, er
 	return reterrs
 }
 
-func (c *collection) determineDeleteErrors(ctx context.Context, models []mongo.WriteModel, actions []*driver.Action, errs []error) {
+func (c *collection) txWrite(ctx context.Context, actions []*driver.Action, errs []error, dopts *driver.RunActionsOptions) []error {
+	var (
+		models          []mongo.WriteModel
+		modelActions    []*driver.Action // corresponding action for each model
+		newIDs          []interface{}    // new IDs for Create actions, corresponding to models slice
+		revs            []string         // new revisions, corresponding to models slice
+		nDeletes        int64
+		nNonCreateWrite int64 // total operations expected from Put, Replace and Update
+	)
+
+	// all actions will fail atomically even if a single action fails
+	setErr := func(err error) {
+		for _, a := range actions {
+			errs[a.Index] = err
+		}
+	}
+
+	for _, a := range actions {
+		var m mongo.WriteModel
+		var err error
+		var newID interface{}
+		var rev string
+		switch a.Kind {
+		case driver.Create:
+			m, newID, rev, err = c.newCreateModel(a)
+		case driver.Delete:
+			m, err = c.newDeleteModel(a)
+			if err == nil {
+				nDeletes++
+			}
+		case driver.Replace, driver.Put:
+			m, rev, err = c.newReplaceModel(a, a.Kind == driver.Put)
+			if err == nil {
+				nNonCreateWrite++
+			}
+		case driver.Update:
+			m, rev, err = c.newUpdateModel(a)
+			if err == nil && m != nil {
+				nNonCreateWrite++
+			}
+		default:
+			err = gcerr.Newf(gcerr.Internal, nil, "bad action %+v", a)
+		}
+		if err != nil {
+			setErr(err)
+			return nil
+		} else if m != nil { // m can be nil for a no-op update
+			models = append(models, m)
+			modelActions = append(modelActions, a)
+			newIDs = append(newIDs, newID)
+			revs = append(revs, rev)
+		}
+	}
+	if len(models) == 0 {
+		return nil
+	}
+
+	bopts := options.BulkWrite().SetOrdered(true)
+	if dopts.BeforeDo != nil {
+		asFunc := func(target interface{}) bool {
+			switch t := target.(type) {
+			case *[]mongo.WriteModel:
+				*t = models
+			case **options.BulkWriteOptions:
+				*t = bopts
+			default:
+				return false
+			}
+			return true
+		}
+		if err := dopts.BeforeDo(asFunc); err != nil {
+			return []error{err}
+		}
+	}
+
+	client := c.coll.Database().Client()
+	session, err := client.StartSession()
+	if err != nil {
+		setErr(err)
+		return nil
+	}
+	defer session.EndSession(ctx)
+
+	callback := func(sessionCtx mongo.SessionContext) error {
+		if err := session.StartTransaction(); err != nil {
+			return err
+		}
+
+		res, err := c.coll.BulkWrite(sessionCtx, models, bopts)
+		if res.DeletedCount != nDeletes {
+			// Some Delete actions failed. It's not an error if a Delete failed because
+			// the document didn't exist, but it is an error if it failed because of a
+			// precondition mismatch. Find all the documents with revisions we tried to delete; if
+			// any are still present, that's an error.
+			if c.determineDeleteErrors(ctx, models, modelActions, errs) {
+				setErr(gcerr.Newf(gcerr.FailedPrecondition, nil,
+					"wrong revision for document to be deleted"))
+			}
+		}
+		if res.MatchedCount+res.UpsertedCount != nNonCreateWrite {
+			err = gcerr.Newf(gcerr.NotFound, nil, "some writes failed (replaced %d, upserted %d, out of total %d)", res.MatchedCount, res.UpsertedCount, nNonCreateWrite)
+		}
+		if err != nil {
+			abortTxErr := session.AbortTransaction(context.Background())
+			if abortTxErr != nil {
+				return err
+			}
+			return err
+		}
+
+		if err = session.CommitTransaction(sessionCtx); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err = mongo.WithSession(ctx, session, callback)
+
+	if err != nil {
+		setErr(err)
+		return nil
+	}
+	return nil
+}
+
+// determineDeleteErrors find the errors for the delete and return true if found any
+func (c *collection) determineDeleteErrors(ctx context.Context, models []mongo.WriteModel, actions []*driver.Action, errs []error) bool {
 	// TODO(jba): do this concurrently.
+	foundErr := false
 	for i, m := range models {
 		if dm, ok := m.(*mongo.DeleteOneModel); ok {
 			filter := dm.Filter.(bson.D)
@@ -580,10 +711,12 @@ func (c *collection) determineDeleteErrors(ctx context.Context, models []mongo.W
 					// revision.
 					errs[actions[i].Index] = gcerr.Newf(gcerr.FailedPrecondition, nil,
 						"wrong revision for document with ID %v", actions[i].Key)
+					foundErr = true
 				}
 			}
 		}
 	}
+	return foundErr
 }
 
 func (c *collection) newCreateModel(a *driver.Action) (*mongo.InsertOneModel, interface{}, string, error) {

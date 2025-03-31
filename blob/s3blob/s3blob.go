@@ -130,6 +130,10 @@ const Scheme = "s3"
 // Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
 // or anything else to accept the default.
 //
+// For V1, see https://pkg.go.dev/gocloud.dev/aws#ConfigFromURLParams for supported query parameters
+// for overriding the aws.Session from the URL.
+// For V2, see https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
+//
 // The following S3-specific query options are also supported:
 //   - ssetype: The type of server side encryption used (AES256, aws:kms, aws:kms:dsse)
 //   - kmskeyid: The KMS key ID for server side encryption
@@ -139,10 +143,6 @@ const Scheme = "s3"
 //   - use_path_style: A value of true sets the UsePathStyle option.
 //   - s3ForcePathStyle: Same as use_path_style, for backwards compatibility with V1.
 //   - disable_https: A value of true disables HTTPS in the Endpoint options.
-//
-// For V1, see gocloud.dev/aws/ConfigFromURLParams for supported query parameters
-// for overriding the aws.Session from the URL.
-// For V2, see gocloud.dev/aws/V2ConfigFromURLParams.
 type URLOpener struct {
 	// UseV2 indicates whether the AWS SDK V2 should be used.
 	UseV2 bool

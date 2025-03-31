@@ -23,6 +23,7 @@ import (
 	"io"
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -79,6 +80,9 @@ type Harness interface {
 
 	// RevisionsEqual reports whether two revisions are equal.
 	RevisionsEqual(rev1, rev2 interface{}) bool
+
+	// SupportsAtomicWrites should report if a collection supports atomic writes
+	SupportsAtomicWrites() bool
 
 	// Close closes resources used by the harness.
 	Close()
@@ -170,6 +174,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, 
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 
 	t.Run("Create", func(t *testing.T) { withRevCollections(t, newHarness, testCreate) })
+	t.Run("AtomicWrites", func(t *testing.T) { withRevCollections(t, newHarness, testAtomicWrites) })
+	t.Run("AtomicWritesFail", func(t *testing.T) { withRevCollections(t, newHarness, testAtomicWritesFail) })
 	t.Run("Put", func(t *testing.T) { withRevCollections(t, newHarness, testPut) })
 	t.Run("Replace", func(t *testing.T) { withRevCollections(t, newHarness, testReplace) })
 	t.Run("Get", func(t *testing.T) { withRevCollections(t, newHarness, testGet) })
@@ -234,6 +240,9 @@ func withRevCollections(t *testing.T, newHarness HarnessMaker, f func(*testing.T
 		t.Fatal(err)
 	}
 	defer h.Close()
+	if strings.Contains(t.Name(), "AtomicWrites") && !h.SupportsAtomicWrites() {
+		t.Skip()
+	}
 
 	t.Run("StdRev", func(t *testing.T) {
 		withColl(t, h, SingleKey, func(t *testing.T, _ Harness, coll *docstore.Collection) {
@@ -452,7 +461,7 @@ func testPut(t *testing.T, coll *docstore.Collection, revField string) {
 			got := newDoc(tc.doc)
 			must(coll.Get(ctx, got))
 			if diff := cmpDiff(got, tc.doc); diff != "" {
-				t.Fatalf(diff)
+				t.Fatal(diff)
 			}
 			if tc.rev {
 				switch v := tc.doc.(type) {
@@ -536,7 +545,7 @@ func testReplace(t *testing.T, coll *docstore.Collection, revField string) {
 			got := newDoc(tc.doc2)
 			must(coll.Get(ctx, got))
 			if diff := cmpDiff(got, tc.doc2); diff != "" {
-				t.Fatalf(diff)
+				t.Fatal(diff)
 			}
 		})
 	}
