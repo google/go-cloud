@@ -22,7 +22,8 @@ import (
 	"database/sql"
 	"net/url"
 
-	awsclient "github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/wire"
 	"gocloud.dev/aws/awscloud"
 	"gocloud.dev/blob"
@@ -55,8 +56,8 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
 // command-line flags.
-func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags) (*blob.Bucket, func(), error) {
-	b, err := s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
+func awsBucket(ctx context.Context, client *s3.Client, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := s3blob.OpenBucketV2(ctx, client, flags.bucket, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,8 +81,8 @@ func openAWSDatabase(ctx context.Context, opener *awsmysql.URLOpener, flags *cli
 
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
-func awsMOTDVar(ctx context.Context, sess awsclient.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
-	return awsparamstore.OpenVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
+func awsMOTDVar(ctx context.Context, client *ssm.Client, flags *cliFlags) (*runtimevar.Variable, error) {
+	return awsparamstore.OpenVariableV2(client, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }

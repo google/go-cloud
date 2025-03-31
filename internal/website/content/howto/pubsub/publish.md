@@ -126,12 +126,7 @@ application connects to the correct region.
 
 [SNS]: https://aws.amazon.com/sns/
 
-`pubsub.OpenTopic` will create a default AWS Session with the
-`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
-it will use those credentials. See [AWS Session][] to learn about authentication
-alternatives, including using environment variables.
-
-[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+It will create an AWS Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
 
 {{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSNSTopicFromURL" >}}
 
@@ -145,16 +140,16 @@ you may need to manually Base64 decode the message payload.
 
 [Base64]: https://en.wikipedia.org/wiki/Base64
 [SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
+[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
 
 #### Amazon SNS Constructor {#sns-ctor}
 
 The [`awssnssqs.OpenSNSTopic`][] constructor opens an SNS topic. You must first
-create an [AWS session][] with the same region as your topic:
+create an AWS Config with the same region as your topic:
 
 {{< goexample "gocloud.dev/pubsub/awssnssqs.ExampleOpenSNSTopic" >}}
 
 [`awssnssqs.OpenSNSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSNSTopic
-[AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 ### Amazon Simple Queue Service {#sqs}
 
@@ -182,12 +177,11 @@ you may need to manually Base64 decode the message payload.
 #### Amazon SQS Constructor {#sqs-ctor}
 
 The [`awssnssqs.OpenSQSTopic`][] constructor opens an SQS topic. You must first
-create an [AWS session][] with the same region as your topic:
+create an AWS Config with the same region as your topic:
 
 {{< goexample "gocloud.dev/pubsub/awssnssqs.ExampleOpenSQSTopic" >}}
 
 [`awssnssqs.OpenSQSTopic`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSQSTopic
-[AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 ### Azure Service Bus {#azure}
 

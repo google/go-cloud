@@ -20,8 +20,8 @@
 //
 // For runtimevar.OpenVariable, awssecretsmanager registers for the scheme "awssecretsmanager".
 // The default URL opener will use an AWS session with the default credentials
-// and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-// for more details.
+// and configuration.
+//
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
@@ -29,8 +29,8 @@
 // # As
 //
 // awssecretsmanager exposes the following types for As:
-//   - Snapshot: (V1) *secretsmanager.GetSecretValueOutput, *secretsmanager.DescribeSecretOutput, (V2) *secretsmanagerv2.GetSecretValueOutput, *secretsmanagerv2.DescribeSecretOutput
-//   - Error: (V1) awserr.Error, (V2) any error type returned by the service, notably smithy.APIError
+//   - Snapshot: *secretsmanager.GetSecretValueOutput, *secretsmanager.DescribeSecretOutput
+//   - Error: any error type returned by the service, notably smithy.APIError
 package awssecretsmanager // import "gocloud.dev/runtimevar/awssecretsmanager"
 
 import (
@@ -43,13 +43,9 @@ import (
 	"sync"
 	"time"
 
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
-	secretsmanagerv2 "github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/smithy-go"
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
@@ -64,18 +60,18 @@ func init() {
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	wire.Struct(new(URLOpener), "ConfigProvider"),
+	Dial,
 )
+
+// Dial gets an AWS secretsmanager service client using the AWS SDK V2.
+func Dial(cfg aws.Config) *secretsmanager.Client {
+	return secretsmanager.NewFromConfig(cfg)
+}
 
 // URLOpener opens AWS Secrets Manager URLs like "awssecretsmanager://my-secret-var-name".
 // A friendly name of the secret must be specified. You can NOT specify the Amazon Resource Name (ARN).
 //
-// Use "awssdk=v1" to force using AWS SDK v1, "awssdk=v2" to force using AWS SDK v2,
-// or anything else to accept the default.
-//
-// For V1, see https://pkg.go.dev/gocloud.dev/aws#ConfigFromURLParams for supported query parameters
-// for overriding the aws.Session from the URL.
-// For V2, see https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
+// See https://pkg.go.dev/gocloud.dev/aws#V2ConfigFromURLParams.
 //
 // In addition, the following URL parameters are supported:
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
@@ -84,12 +80,6 @@ var Set = wire.NewSet(
 //   - wait: The poll interval, in time.ParseDuration formats.
 //     Defaults to 30s.
 type URLOpener struct {
-	// UseV2 indicates whether the AWS SDK V2 should be used.
-	UseV2 bool
-
-	// ConfigProvider must be set to a non-nil value if UseV2 is false.
-	ConfigProvider client.ConfigProvider
-
 	// Decoder specifies the decoder to use if one is not specified in the URL.
 	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
@@ -107,24 +97,8 @@ type lazySessionOpener struct {
 }
 
 func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
-	if gcaws.UseV2(u.Query()) {
-		opener := &URLOpener{UseV2: true}
-		return opener.OpenVariableURL(ctx, u)
-	}
-	o.init.Do(func() {
-		sess, err := gcaws.NewDefaultSession()
-		if err != nil {
-			o.err = err
-			return
-		}
-		o.opener = &URLOpener{
-			ConfigProvider: sess,
-		}
-	})
-	if o.err != nil {
-		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
-	}
-	return o.opener.OpenVariableURL(ctx, u)
+	opener := &URLOpener{}
+	return opener.OpenVariableURL(ctx, u)
 }
 
 // Scheme is the URL scheme awssecretsmanager registers its URLOpener under on runtimevar.DefaultMux.
@@ -150,24 +124,11 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		}
 		opts.WaitDuration = d
 	}
-	if o.UseV2 {
-		cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %v: %v", u, err)
-		}
-		return OpenVariableV2(secretsmanagerv2.NewFromConfig(cfg), path.Join(u.Host, u.Path), decoder, &opts)
-	}
-	configProvider := &gcaws.ConfigOverrider{
-		Base: o.ConfigProvider,
-	}
-	overrideCfg, err := gcaws.ConfigFromURLParams(q)
+	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: %v", u, err)
 	}
-
-	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-
-	return OpenVariable(configProvider, path.Join(u.Host, u.Path), decoder, &opts)
+	return OpenVariable(secretsmanager.NewFromConfig(cfg), path.Join(u.Host, u.Path), decoder, &opts)
 }
 
 // Options sets options.
@@ -177,34 +138,23 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// OpenVariable constructs a *runtimevar.Variable backed by the variable name in AWS Secrets Manager.
-// A friendly name of the secret must be specified. You can NOT specify the Amazon Resource Name (ARN).
-// Secrets Manager returns raw bytes; provide a decoder to decode the raw bytes
-// into the appropriate type for runtimevar.Snapshot.Value.
-// See the runtimevar package documentation for examples of decoders.
-//
-// Deprecated: AWS no longer supports their V1 API. Please migrate to OpenVariableV2.
-func OpenVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(false, sess, nil, name, decoder, opts)), nil
-}
-
-// OpenVariableV2 constructs a *runtimevar.Variable backed by the variable name in AWS Secrets Manager,
+// OpenVariable constructs a *runtimevar.Variable backed by the variable name in AWS Secrets Manager,
 // using AWS SDK V2.
 // A friendly name of the secret must be specified. You can NOT specify the Amazon Resource Name (ARN).
 // Secrets Manager returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func OpenVariableV2(client *secretsmanagerv2.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(true, nil, client, name, decoder, opts)), nil
+func OpenVariable(client *secretsmanager.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	return runtimevar.New(newWatcher(client, name, decoder, opts)), nil
 }
+
+var OpenVariableV2 = OpenVariable
 
 // state implements driver.State.
 type state struct {
 	val        any
-	rawGetV1   *secretsmanager.GetSecretValueOutput
-	rawGetV2   *secretsmanagerv2.GetSecretValueOutput
-	rawDescV1  *secretsmanager.DescribeSecretOutput
-	rawDescV2  *secretsmanagerv2.DescribeSecretOutput
+	rawGet     *secretsmanager.GetSecretValueOutput
+	rawDesc    *secretsmanager.DescribeSecretOutput
 	updateTime time.Time
 	versionID  string
 	err        error
@@ -224,13 +174,9 @@ func (s *state) UpdateTime() time.Time {
 func (s *state) As(i any) bool {
 	switch p := i.(type) {
 	case **secretsmanager.GetSecretValueOutput:
-		*p = s.rawGetV1
-	case **secretsmanagerv2.GetSecretValueOutput:
-		*p = s.rawGetV2
+		*p = s.rawGet
 	case **secretsmanager.DescribeSecretOutput:
-		*p = s.rawDescV1
-	case **secretsmanagerv2.DescribeSecretOutput:
-		*p = s.rawDescV2
+		*p = s.rawDesc
 	default:
 		return false
 	}
@@ -243,7 +189,7 @@ func errorState(err error, prevS driver.State) driver.State {
 	// Map to the more standard context package error.
 	if strings.Contains(err.Error(), "context deadline exceeded") {
 		err = context.DeadlineExceeded
-	} else if getErrorCode(err) == request.CanceledErrorCode {
+	} else if getErrorCode(err) == "CancelledError" {
 		err = context.Canceled
 	}
 	s := &state{err: err}
@@ -274,12 +220,8 @@ func equivalentError(err1, err2 error) bool {
 }
 
 type watcher struct {
-	// useV2 indicates whether we're using clientV2.
-	useV2 bool
-	// sess is the AWS session to use to talk to AWS.
-	sess client.ConfigProvider
-	// clientV2 is the client to use when useV2 is true.
-	clientV2 *secretsmanagerv2.Client
+	// client is the client to use.
+	client *secretsmanager.Client
 	// name is an ID of a secret to retrieve.
 	name string
 	// wait is the amount of time to wait between querying AWS.
@@ -288,58 +230,36 @@ type watcher struct {
 	decoder *runtimevar.Decoder
 }
 
-func newWatcher(useV2 bool, sess client.ConfigProvider, clientV2 *secretsmanagerv2.Client, name string, decoder *runtimevar.Decoder, opts *Options) *watcher {
+func newWatcher(client *secretsmanager.Client, name string, decoder *runtimevar.Decoder, opts *Options) *watcher {
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &watcher{
-		useV2:    useV2,
-		sess:     sess,
-		clientV2: clientV2,
-		name:     name,
-		wait:     driver.WaitDuration(opts.WaitDuration),
-		decoder:  decoder,
+		client:  client,
+		name:    name,
+		wait:    driver.WaitDuration(opts.WaitDuration),
+		decoder: decoder,
 	}
 }
 
-func getSecretValue(ctx context.Context, svc *secretsmanager.SecretsManager, secretID string) (string, []byte, string, *secretsmanager.GetSecretValueOutput, error) {
-	getResp, err := svc.GetSecretValueWithContext(ctx, &secretsmanager.GetSecretValueInput{
+func getSecretValue(ctx context.Context, client *secretsmanager.Client, secretID string) (string, []byte, string, *secretsmanager.GetSecretValueOutput, error) {
+	getResp, err := client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretID),
 	})
 	if err != nil {
 		return "", nil, "", nil, err
 	}
-	return aws.StringValue(getResp.VersionId), getResp.SecretBinary, aws.StringValue(getResp.SecretString), getResp, nil
+	return aws.ToString(getResp.VersionId), getResp.SecretBinary, aws.ToString(getResp.SecretString), getResp, nil
 }
 
-func getSecretValueV2(ctx context.Context, client *secretsmanagerv2.Client, secretID string) (string, []byte, string, *secretsmanagerv2.GetSecretValueOutput, error) {
-	getResp, err := client.GetSecretValue(ctx, &secretsmanagerv2.GetSecretValueInput{
-		SecretId: awsv2.String(secretID),
-	})
-	if err != nil {
-		return "", nil, "", nil, err
-	}
-	return awsv2.ToString(getResp.VersionId), getResp.SecretBinary, awsv2.ToString(getResp.SecretString), getResp, nil
-}
-
-func describeSecret(ctx context.Context, svc *secretsmanager.SecretsManager, secretID string) (time.Time, *secretsmanager.DescribeSecretOutput, error) {
-	descResp, err := svc.DescribeSecretWithContext(ctx, &secretsmanager.DescribeSecretInput{
+func describeSecret(ctx context.Context, client *secretsmanager.Client, secretID string) (time.Time, *secretsmanager.DescribeSecretOutput, error) {
+	descResp, err := client.DescribeSecret(ctx, &secretsmanager.DescribeSecretInput{
 		SecretId: aws.String(secretID),
 	})
 	if err != nil {
 		return time.Time{}, nil, err
 	}
-	return aws.TimeValue(descResp.LastChangedDate), descResp, nil
-}
-
-func describeSecretV2(ctx context.Context, client *secretsmanagerv2.Client, secretID string) (time.Time, *secretsmanagerv2.DescribeSecretOutput, error) {
-	descResp, err := client.DescribeSecret(ctx, &secretsmanagerv2.DescribeSecretInput{
-		SecretId: awsv2.String(secretID),
-	})
-	if err != nil {
-		return time.Time{}, nil, err
-	}
-	return aws.TimeValue(descResp.LastChangedDate), descResp, nil
+	return aws.ToTime(descResp.LastChangedDate), descResp, nil
 }
 
 // WatchVariable implements driver.WatchVariable.
@@ -348,23 +268,9 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if prev != nil {
 		lastVersionID = prev.(*state).versionID
 	}
-	var svc *secretsmanager.SecretsManager
-	if !w.useV2 {
-		svc = secretsmanager.New(w.sess)
-	}
 
 	// GetParameter from S3 to get the current value and version.
-	var newVersionID string
-	var newValBinary []byte
-	var newValString string
-	var rawGetV1 *secretsmanager.GetSecretValueOutput
-	var rawGetV2 *secretsmanagerv2.GetSecretValueOutput
-	var err error
-	if w.useV2 {
-		newVersionID, newValBinary, newValString, rawGetV2, err = getSecretValueV2(ctx, w.clientV2, w.name)
-	} else {
-		newVersionID, newValBinary, newValString, rawGetV1, err = getSecretValue(ctx, svc, w.name)
-	}
+	newVersionID, newValBinary, newValString, rawGet, err := getSecretValue(ctx, w.client, w.name)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
@@ -391,14 +297,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	}
 
 	// DescribeParameters from S3 to get the LastModified date.
-	var newLastModified time.Time
-	var rawDescV1 *secretsmanager.DescribeSecretOutput
-	var rawDescV2 *secretsmanagerv2.DescribeSecretOutput
-	if w.useV2 {
-		newLastModified, rawDescV2, err = describeSecretV2(ctx, w.clientV2, w.name)
-	} else {
-		newLastModified, rawDescV1, err = describeSecret(ctx, svc, w.name)
-	}
+	newLastModified, rawDesc, err := describeSecret(ctx, w.client, w.name)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
@@ -411,10 +310,8 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 
 	return &state{
 		val:        val,
-		rawGetV1:   rawGetV1,
-		rawGetV2:   rawGetV2,
-		rawDescV1:  rawDescV1,
-		rawDescV2:  rawDescV2,
+		rawGet:     rawGet,
+		rawDesc:    rawDesc,
 		updateTime: newLastModified,
 		versionID:  newVersionID,
 	}, w.wait
@@ -427,23 +324,10 @@ func (w *watcher) Close() error {
 
 // ErrorAs implements driver.ErrorAs.
 func (w *watcher) ErrorAs(err error, i any) bool {
-	if w.useV2 {
-		return errors.As(err, i)
-	}
-	switch v := err.(type) {
-	case awserr.Error:
-		if p, ok := i.(*awserr.Error); ok {
-			*p = v
-			return true
-		}
-	}
-	return false
+	return errors.As(err, i)
 }
 
 func getErrorCode(err error) string {
-	if awsErr, ok := err.(awserr.Error); ok {
-		return awsErr.Code()
-	}
 	var ae smithy.APIError
 	if errors.As(err, &ae) {
 		return ae.ErrorCode()
@@ -454,29 +338,23 @@ func getErrorCode(err error) string {
 // ErrorCode implements driver.ErrorCode.
 func (w *watcher) ErrorCode(err error) gcerrors.ErrorCode {
 	code := getErrorCode(err)
-	switch code {
-	case secretsmanager.ErrCodeResourceNotFoundException:
-		return gcerrors.NotFound
-
-	case secretsmanager.ErrCodeInvalidParameterException,
-		secretsmanager.ErrCodeInvalidRequestException,
-		secretsmanager.ErrCodeInvalidNextTokenException:
-		return gcerrors.InvalidArgument
-
-	case secretsmanager.ErrCodeEncryptionFailure,
-		secretsmanager.ErrCodeDecryptionFailure,
-		secretsmanager.ErrCodeInternalServiceError:
-		return gcerrors.Internal
-
-	case secretsmanager.ErrCodeResourceExistsException:
-		return gcerrors.AlreadyExists
-
-	case secretsmanager.ErrCodePreconditionNotMetException,
-		secretsmanager.ErrCodeMalformedPolicyDocumentException:
-		return gcerrors.FailedPrecondition
-
-	case secretsmanager.ErrCodeLimitExceededException:
-		return gcerrors.ResourceExhausted
+	ec, ok := errorCodeMap[code]
+	if !ok {
+		return gcerrors.Unknown
 	}
-	return gcerrors.Unknown
+	return ec
+}
+
+var errorCodeMap = map[string]gcerrors.ErrorCode{
+	(&types.ResourceNotFoundException{}).ErrorCode():        gcerrors.NotFound,
+	(&types.InvalidParameterException{}).ErrorCode():        gcerrors.InvalidArgument,
+	(&types.InvalidRequestException{}).ErrorCode():          gcerrors.InvalidArgument,
+	(&types.InvalidNextTokenException{}).ErrorCode():        gcerrors.InvalidArgument,
+	(&types.EncryptionFailure{}).ErrorCode():                gcerrors.Internal,
+	(&types.DecryptionFailure{}).ErrorCode():                gcerrors.Internal,
+	(&types.InternalServiceError{}).ErrorCode():             gcerrors.Internal,
+	(&types.ResourceExistsException{}).ErrorCode():          gcerrors.AlreadyExists,
+	(&types.PreconditionNotMetException{}).ErrorCode():      gcerrors.FailedPrecondition,
+	(&types.MalformedPolicyDocumentException{}).ErrorCode(): gcerrors.FailedPrecondition,
+	(&types.LimitExceededException{}).ErrorCode():           gcerrors.ResourceExhausted,
 }

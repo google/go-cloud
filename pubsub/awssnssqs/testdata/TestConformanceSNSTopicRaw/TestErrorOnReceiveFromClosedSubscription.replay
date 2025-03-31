@@ -1,10 +1,13 @@
 {
-  "Initial": "AQAAAA7fe3HhDmq37wAA",
+  "Initial": "AQAAAA7ffPOJOd0TMQAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
       "^X-Amz-Date$",
       "^User-Agent$"
     ],
@@ -41,13 +44,19 @@
   },
   "Entries": [
     {
-      "ID": "57315fd261f2e66c",
+      "ID": "1c99bbc3b0650925",
       "Request": {
         "Method": "POST",
         "URL": "https://sns.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "96"
@@ -77,23 +86,29 @@
             "text/xml"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:53 GMT"
+            "Mon, 31 Mar 2025 20:35:22 GMT"
           ],
           "X-Amzn-Requestid": [
-            "56b3ceb5-39af-5218-a14c-aed6448e06de"
+            "48e3a8f4-6932-5a28-98d8-c89097f8f767"
           ]
         },
-        "Body": "PENyZWF0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxDcmVhdGVUb3BpY1Jlc3VsdD4KICAgIDxUb3BpY0Fybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDU2NzUyNjY1NTc2OlNOU1RvcGljUmF3RXJyb3JPblJlY2VpdmVGcm9tQ2xvc2VkU3Vic2NyaXB0aW9uLXRvcC0xPC9Ub3BpY0Fybj4KICA8L0NyZWF0ZVRvcGljUmVzdWx0PgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD41NmIzY2ViNS0zOWFmLTUyMTgtYTE0Yy1hZWQ2NDQ4ZTA2ZGU8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvQ3JlYXRlVG9waWNSZXNwb25zZT4K"
+        "Body": "PENyZWF0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxDcmVhdGVUb3BpY1Jlc3VsdD4KICAgIDxUb3BpY0Fybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDU2NzUyNjY1NTc2OlNOU1RvcGljUmF3RXJyb3JPblJlY2VpdmVGcm9tQ2xvc2VkU3Vic2NyaXB0aW9uLXRvcC0xPC9Ub3BpY0Fybj4KICA8L0NyZWF0ZVRvcGljUmVzdWx0PgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD40OGUzYThmNC02OTMyLTVhMjgtOThkOC1jODkwOTdmOGY3Njc8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvQ3JlYXRlVG9waWNSZXNwb25zZT4K"
       }
     },
     {
-      "ID": "1c34dba34e163886",
+      "ID": "5424d4d3d13687af",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "69"
@@ -106,6 +121,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.CreateQueue"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -126,23 +144,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:53 GMT"
+            "Mon, 31 Mar 2025 20:35:22 GMT"
           ],
           "X-Amzn-Requestid": [
-            "f3255cd1-2d4d-5903-a549-3cb2506c2f17"
+            "32d12afd-5449-5112-ac23-4a99aa83615a"
           ]
         },
         "Body": "eyJRdWV1ZVVybCI6Imh0dHBzOi8vc3FzLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tLzQ1Njc1MjY2NTU3Ni9TTlNUb3BpY1Jhd0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi1zdWItMSJ9"
       }
     },
     {
-      "ID": "80c427965a8ac9dd",
+      "ID": "9fdf576d2da43a67",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "147"
@@ -155,6 +179,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.GetQueueAttributes"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -175,23 +202,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:53 GMT"
+            "Mon, 31 Mar 2025 20:35:22 GMT"
           ],
           "X-Amzn-Requestid": [
-            "e9af752d-c88b-5f22-815b-154eb5aaa936"
+            "a4e3bf3c-4980-5d2a-91c0-df58b74a1d62"
           ]
         },
         "Body": "eyJBdHRyaWJ1dGVzIjp7IlF1ZXVlQXJuIjoiYXJuOmF3czpzcXM6dXMtZWFzdC0yOjQ1Njc1MjY2NTU3NjpTTlNUb3BpY1Jhd0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi1zdWItMSJ9fQ=="
       }
     },
     {
-      "ID": "28666ccc1fe0db4e",
+      "ID": "f5f93482c77f82bc",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "520"
@@ -204,6 +237,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.SetQueueAttributes"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -224,23 +260,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:54 GMT"
+            "Mon, 31 Mar 2025 20:35:22 GMT"
           ],
           "X-Amzn-Requestid": [
-            "264ec52b-9885-5374-a85a-a548e5a7b560"
+            "573a41d8-e103-5e7b-bf6f-21bc1fc9be33"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "47bf4d4e4d4c6ff1",
+      "ID": "f594916efc50bceb",
       "Request": {
         "Method": "POST",
         "URL": "https://sns.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "336"
@@ -270,23 +312,29 @@
             "text/xml"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:54 GMT"
+            "Mon, 31 Mar 2025 20:35:23 GMT"
           ],
           "X-Amzn-Requestid": [
-            "8604c572-73c6-5bbf-9d83-a5110ee4bf79"
+            "b762b0b9-4fcc-5110-8978-d0ddb106ac5f"
           ]
         },
-        "Body": "PFN1YnNjcmliZVJlc3BvbnNlIHhtbG5zPSJodHRwOi8vc25zLmFtYXpvbmF3cy5jb20vZG9jLzIwMTAtMDMtMzEvIj4KICA8U3Vic2NyaWJlUmVzdWx0PgogICAgPFN1YnNjcmlwdGlvbkFybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDU2NzUyNjY1NTc2OlNOU1RvcGljUmF3RXJyb3JPblJlY2VpdmVGcm9tQ2xvc2VkU3Vic2NyaXB0aW9uLXRvcC0xOjlmY2U5MmFiLTZhMDUtNDNiNS05MTI5LTllYzM3ZTUxZTAxMzwvU3Vic2NyaXB0aW9uQXJuPgogIDwvU3Vic2NyaWJlUmVzdWx0PgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD44NjA0YzU3Mi03M2M2LTViYmYtOWQ4My1hNTExMGVlNGJmNzk8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvU3Vic2NyaWJlUmVzcG9uc2U+Cg=="
+        "Body": "PFN1YnNjcmliZVJlc3BvbnNlIHhtbG5zPSJodHRwOi8vc25zLmFtYXpvbmF3cy5jb20vZG9jLzIwMTAtMDMtMzEvIj4KICA8U3Vic2NyaWJlUmVzdWx0PgogICAgPFN1YnNjcmlwdGlvbkFybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDU2NzUyNjY1NTc2OlNOU1RvcGljUmF3RXJyb3JPblJlY2VpdmVGcm9tQ2xvc2VkU3Vic2NyaXB0aW9uLXRvcC0xOjI1NzVjZmZjLTJmZDgtNDEzMy04NDYzLTZkZmQ5ZDA3NDM5MzwvU3Vic2NyaXB0aW9uQXJuPgogIDwvU3Vic2NyaWJlUmVzdWx0PgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD5iNzYyYjBiOS00ZmNjLTUxMTAtODk3OC1kMGRkYjEwNmFjNWY8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvU3Vic2NyaWJlUmVzcG9uc2U+Cg=="
       }
     },
     {
-      "ID": "48b13d7e061316fe",
+      "ID": "02a3972eeed51447",
       "Request": {
         "Method": "POST",
         "URL": "https://sns.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "191"
@@ -300,7 +348,7 @@
         },
         "MediaType": "application/x-www-form-urlencoded",
         "BodyParts": [
-          "QWN0aW9uPVVuc3Vic2NyaWJlJlN1YnNjcmlwdGlvbkFybj1hcm4lM0Fhd3MlM0FzbnMlM0F1cy1lYXN0LTIlM0E0NTY3NTI2NjU1NzYlM0FTTlNUb3BpY1Jhd0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi10b3AtMSUzQTlmY2U5MmFiLTZhMDUtNDNiNS05MTI5LTllYzM3ZTUxZTAxMyZWZXJzaW9uPTIwMTAtMDMtMzE="
+          "QWN0aW9uPVVuc3Vic2NyaWJlJlN1YnNjcmlwdGlvbkFybj1hcm4lM0Fhd3MlM0FzbnMlM0F1cy1lYXN0LTIlM0E0NTY3NTI2NjU1NzYlM0FTTlNUb3BpY1Jhd0Vycm9yT25SZWNlaXZlRnJvbUNsb3NlZFN1YnNjcmlwdGlvbi10b3AtMSUzQTI1NzVjZmZjLTJmZDgtNDEzMy04NDYzLTZkZmQ5ZDA3NDM5MyZWZXJzaW9uPTIwMTAtMDMtMzE="
         ]
       },
       "Response": {
@@ -316,23 +364,29 @@
             "text/xml"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:54 GMT"
+            "Mon, 31 Mar 2025 20:35:23 GMT"
           ],
           "X-Amzn-Requestid": [
-            "05cd1250-f19f-56d5-b516-72338cbd6213"
+            "b6eb0823-4626-513f-8c76-6847b8ed8c70"
           ]
         },
-        "Body": "PFVuc3Vic2NyaWJlUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD4wNWNkMTI1MC1mMTlmLTU2ZDUtYjUxNi03MjMzOGNiZDYyMTM8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvVW5zdWJzY3JpYmVSZXNwb25zZT4K"
+        "Body": "PFVuc3Vic2NyaWJlUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD5iNmViMDgyMy00NjI2LTUxM2YtOGM3Ni02ODQ3YjhlZDhjNzA8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvVW5zdWJzY3JpYmVSZXNwb25zZT4K"
       }
     },
     {
-      "ID": "e2eb69f8314ce4c4",
+      "ID": "c4fe4e1daaa9e9ff",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "117"
@@ -345,6 +399,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.DeleteQueue"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -365,23 +422,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:54 GMT"
+            "Mon, 31 Mar 2025 20:35:23 GMT"
           ],
           "X-Amzn-Requestid": [
-            "b4002702-454d-5cc9-ae04-4761386fbadd"
+            "d300b37d-32a3-5e45-818d-d319cc687e0d"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "f08f21fa91bd95ed",
+      "ID": "45e534f6cffc6209",
       "Request": {
         "Method": "POST",
         "URL": "https://sns.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "145"
@@ -411,13 +474,13 @@
             "text/xml"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:09:54 GMT"
+            "Mon, 31 Mar 2025 20:35:23 GMT"
           ],
           "X-Amzn-Requestid": [
-            "33fdb656-425a-5899-91a7-d6353f78bc5f"
+            "a2ccb57c-dfdc-5865-9f21-d5182117452a"
           ]
         },
-        "Body": "PERlbGV0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD4zM2ZkYjY1Ni00MjVhLTU4OTktOTFhNy1kNjM1M2Y3OGJjNWY8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvRGVsZXRlVG9waWNSZXNwb25zZT4K"
+        "Body": "PERlbGV0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxSZXNwb25zZU1ldGFkYXRhPgogICAgPFJlcXVlc3RJZD5hMmNjYjU3Yy1kZmRjLTU4NjUtOWYyMS1kNTE4MjExNzQ1MmE8L1JlcXVlc3RJZD4KICA8L1Jlc3BvbnNlTWV0YWRhdGE+CjwvRGVsZXRlVG9waWNSZXNwb25zZT4K"
       }
     }
   ]

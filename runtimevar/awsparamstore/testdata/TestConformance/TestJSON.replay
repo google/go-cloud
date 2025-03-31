@@ -1,10 +1,13 @@
 {
-  "Initial": "AQAAAA7eRgWIDFtY9wAA",
+  "Initial": "AQAAAA7ffPV5M+HHVQAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
       "^X-Amz-Date$",
       "^User-Agent$"
     ],
@@ -41,13 +44,19 @@
   },
   "Entries": [
     {
-      "ID": "a4e22a8dec0cfa71",
+      "ID": "8f31ac5de8eaabd3",
       "Request": {
         "Method": "POST",
         "URL": "https://ssm.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "177"
@@ -83,26 +92,32 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:17:12 GMT"
+            "Mon, 31 Mar 2025 20:43:38 GMT"
           ],
           "Server": [
             "Server"
           ],
           "X-Amzn-Requestid": [
-            "35afb97d-0acb-4bde-8a9d-1c115cdf6449"
+            "7ca0c327-6618-428a-85f3-40eb121c6035"
           ]
         },
-        "Body": "H4sIAAAAAAAAAKtWCslMLVKyUgouScxLSSxKUdJRCkstKs7Mz1OyMqwFAFB+6N8fAAAA"
+        "Body": "H4sIAAAAAAAA/6tWCslMLVKyUgouScxLSSxKUdJRCkstKs7Mz1OyMqwFAFB+6N8fAAAA"
       }
     },
     {
-      "ID": "0968fab1fe685c28",
+      "ID": "289171e92bc9f1ac",
       "Request": {
         "Method": "POST",
         "URL": "https://ssm.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "53"
@@ -132,32 +147,38 @@
             "gzip"
           ],
           "Content-Length": [
-            "233"
+            "235"
           ],
           "Content-Type": [
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:17:12 GMT"
+            "Mon, 31 Mar 2025 20:43:38 GMT"
           ],
           "Server": [
             "Server"
           ],
           "X-Amzn-Requestid": [
-            "0d097cae-d08a-4f2b-8217-f86e3002b905"
+            "d887742a-6d10-4c75-bda8-b96e3462a022"
           ]
         },
-        "Body": "H4sIAAAAAAAAAG2Oy27CMBBFfyWaDZuExwAN9aaqVFZQhAqii7qLKRnAgtjINn0oyr8zoe0GsRlr7tU54wrm5KnkyB5UBY8vM1BA3ir6CiqEUp1CxhRihmpwh/1RF3GYI6rjP9WJLO3a2Y3ZZp/kDX0cGFJ4okjLnyOLLvJ3lGQqmmdXmI3hQlppeu0c+91cvDjA3vg+hZlIL8RN559vEb2xW9lXdDg1wZu2lb6wGlSiYVxoSOVdyuHfZGLdep/sm9nWUKdXwILKa+J151ohiTv2/CCEtu/NQfbBOCs/r+szrTIoMDoBAAA="
+        "Body": "H4sIAAAAAAAA/23NT0/CQBQE8K/SzMXLFi39B3sxJnBSiREiB9fDkz5gA92S3Ydimn53U9EL8TKHSX4zLZ7IU83CHrrF3fMMGuSdps+gQ6j1McRMQeKhzvKizIdFkedloQ9/6lo4SLxq3Npu4g/ylt73DIUJCS2+DgwN4ZNA4YGCPDaVXVuuJiQMnQzKLM3ydJSMbsbpdKwwo/os/t383ZuLt24DhRfaH/vi1bjW/FgDHRlMKwMVGSz4JOfm3jWrXbTrc2DQqQswp/pSLLfNVYhky55vDTrj3vpD9sE2Djrpum+rNwxsOgEAAA=="
       }
     },
     {
-      "ID": "46f79a4906219b6a",
+      "ID": "283278b305544a55",
       "Request": {
         "Method": "POST",
         "URL": "https://ssm.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "31"
@@ -193,16 +214,16 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:17:12 GMT"
+            "Mon, 31 Mar 2025 20:43:38 GMT"
           ],
           "Server": [
             "Server"
           ],
           "X-Amzn-Requestid": [
-            "b81eb6be-f1c3-453a-a3f1-12fc2ce2b720"
+            "93cc8498-04ca-4f05-90a6-9873c8fe44f1"
           ]
         },
-        "Body": "H4sIAAAAAAAAAKuuBQBDv6ajAgAAAA=="
+        "Body": "H4sIAAAAAAAA/6uuBQBDv6ajAgAAAA=="
       }
     }
   ]

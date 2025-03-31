@@ -1,10 +1,13 @@
 {
-  "Initial": "AQAAAA7eRgXnACyYwwAA",
+  "Initial": "AQAAAA7ffPXaOt8ZlQAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
       "^X-Amz-Date$",
       "^User-Agent$"
     ],
@@ -41,13 +44,19 @@
   },
   "Entries": [
     {
-      "ID": "3d0eb1210c29c387",
+      "ID": "3ac9c9ccbdb74ca3",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "30"
@@ -80,23 +89,29 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:46 GMT"
+            "Mon, 31 Mar 2025 20:45:15 GMT"
           ],
           "X-Amzn-Requestid": [
-            "c8f1913a-a686-4177-9b9d-8ed585ef9bb8"
+            "dfcfe7fd-2387-4e1a-aa69-049ad5207f64"
           ]
         },
         "Body": "eyJfX3R5cGUiOiJSZXNvdXJjZU5vdEZvdW5kRXhjZXB0aW9uIiwiTWVzc2FnZSI6IlNlY3JldHMgTWFuYWdlciBjYW4ndCBmaW5kIHRoZSBzcGVjaWZpZWQgc2VjcmV0LiJ9"
       }
     },
     {
-      "ID": "5cedd16e68f7866b",
+      "ID": "da3de8252936818e",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "140"
@@ -129,23 +144,29 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:47 GMT"
+            "Mon, 31 Mar 2025 20:45:15 GMT"
           ],
           "X-Amzn-Requestid": [
-            "f30a1631-f62f-4ac5-828b-7ed132e68ed1"
+            "4579d12d-64c5-4a46-88ff-cbd06e09e442"
           ]
         },
-        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NjIzODAyMjU3MjI6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy1lNXRVZU8iLCJOYW1lIjoidmFyaWFibGUtZm9yLWFzIiwiVmVyc2lvbklkIjoidmFyaWFibGUtZm9yLWFzLTJhYWU2YzM1Yzk0ZmNmYjQxNWRiZTk1ZjQwOGI5Y2U5MWVlODQ2ZWQifQ=="
+        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NTY3NTI2NjU1NzY6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy02ZXVJYjkiLCJOYW1lIjoidmFyaWFibGUtZm9yLWFzIiwiVmVyc2lvbklkIjoidmFyaWFibGUtZm9yLWFzLTJhYWU2YzM1Yzk0ZmNmYjQxNWRiZTk1ZjQwOGI5Y2U5MWVlODQ2ZWQifQ=="
       }
     },
     {
-      "ID": "372b53ced4b1c474",
+      "ID": "dc1a34c440c8348b",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "30"
@@ -178,23 +199,29 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:50 GMT"
+            "Mon, 31 Mar 2025 20:45:18 GMT"
           ],
           "X-Amzn-Requestid": [
-            "aa3da1d8-aff6-4d06-a8c4-902515bd2253"
+            "8310123d-eadf-4dc9-a19d-e1d671c0a070"
           ]
         },
-        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NjIzODAyMjU3MjI6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy1lNXRVZU8iLCJDcmVhdGVkRGF0ZSI6MS43MjMwNzYzMjc1NTNFOSwiTmFtZSI6InZhcmlhYmxlLWZvci1hcyIsIlNlY3JldEJpbmFyeSI6ImFHVnNiRzhnZDI5eWJHUT0iLCJWZXJzaW9uSWQiOiJ2YXJpYWJsZS1mb3ItYXMtMmFhZTZjMzVjOTRmY2ZiNDE1ZGJlOTVmNDA4YjljZTkxZWU4NDZlZCIsIlZlcnNpb25TdGFnZXMiOlsiQVdTQ1VSUkVOVCJdfQ=="
+        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NTY3NTI2NjU1NzY6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy02ZXVJYjkiLCJDcmVhdGVkRGF0ZSI6MS43NDM0NTM5MTU1OTJFOSwiTmFtZSI6InZhcmlhYmxlLWZvci1hcyIsIlNlY3JldEJpbmFyeSI6ImFHVnNiRzhnZDI5eWJHUT0iLCJWZXJzaW9uSWQiOiJ2YXJpYWJsZS1mb3ItYXMtMmFhZTZjMzVjOTRmY2ZiNDE1ZGJlOTVmNDA4YjljZTkxZWU4NDZlZCIsIlZlcnNpb25TdGFnZXMiOlsiQVdTQ1VSUkVOVCJdfQ=="
       }
     },
     {
-      "ID": "3e10b64ed107d639",
+      "ID": "ca2f8af8dc6e531f",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "30"
@@ -227,23 +254,29 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:50 GMT"
+            "Mon, 31 Mar 2025 20:45:18 GMT"
           ],
           "X-Amzn-Requestid": [
-            "1b2d3e31-94c4-4fbc-aeea-6bae4b6b2b91"
+            "2fe00bbe-5338-4993-8d50-58913dc746dc"
           ]
         },
-        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NjIzODAyMjU3MjI6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy1lNXRVZU8iLCJDcmVhdGVkRGF0ZSI6MS43MjMwNzYzMjc1NTNFOSwiTmFtZSI6InZhcmlhYmxlLWZvci1hcyIsIlNlY3JldEJpbmFyeSI6ImFHVnNiRzhnZDI5eWJHUT0iLCJWZXJzaW9uSWQiOiJ2YXJpYWJsZS1mb3ItYXMtMmFhZTZjMzVjOTRmY2ZiNDE1ZGJlOTVmNDA4YjljZTkxZWU4NDZlZCIsIlZlcnNpb25TdGFnZXMiOlsiQVdTQ1VSUkVOVCJdfQ=="
+        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NTY3NTI2NjU1NzY6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy02ZXVJYjkiLCJDcmVhdGVkRGF0ZSI6MS43NDM0NTM5MTU1OTJFOSwiTmFtZSI6InZhcmlhYmxlLWZvci1hcyIsIlNlY3JldEJpbmFyeSI6ImFHVnNiRzhnZDI5eWJHUT0iLCJWZXJzaW9uSWQiOiJ2YXJpYWJsZS1mb3ItYXMtMmFhZTZjMzVjOTRmY2ZiNDE1ZGJlOTVmNDA4YjljZTkxZWU4NDZlZCIsIlZlcnNpb25TdGFnZXMiOlsiQVdTQ1VSUkVOVCJdfQ=="
       }
     },
     {
-      "ID": "9a9d5cedad7bb309",
+      "ID": "834eddc33d91ae31",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "30"
@@ -276,23 +309,29 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:50 GMT"
+            "Mon, 31 Mar 2025 20:45:18 GMT"
           ],
           "X-Amzn-Requestid": [
-            "e7cdacbb-7a43-4082-bf67-20d2fd32fa2a"
+            "3a9cd1bd-76a4-4602-981a-4ac90c31e824"
           ]
         },
-        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NjIzODAyMjU3MjI6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy1lNXRVZU8iLCJDcmVhdGVkRGF0ZSI6MS43MjMwNzYzMjc1MjlFOSwiTGFzdEFjY2Vzc2VkRGF0ZSI6MS43MjMwNzUyRTksIkxhc3RDaGFuZ2VkRGF0ZSI6MS43MjMwNzYzMjc1NTZFOSwiTmFtZSI6InZhcmlhYmxlLWZvci1hcyIsIlZlcnNpb25JZHNUb1N0YWdlcyI6eyJ2YXJpYWJsZS1mb3ItYXMtMmFhZTZjMzVjOTRmY2ZiNDE1ZGJlOTVmNDA4YjljZTkxZWU4NDZlZCI6WyJBV1NDVVJSRU5UIl19fQ=="
+        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NTY3NTI2NjU1NzY6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy02ZXVJYjkiLCJDcmVhdGVkRGF0ZSI6MS43NDM0NTM5MTU1NjVFOSwiTGFzdEFjY2Vzc2VkRGF0ZSI6MS43NDMzNzkyRTksIkxhc3RDaGFuZ2VkRGF0ZSI6MS43NDM0NTM5MTU1OTZFOSwiTmFtZSI6InZhcmlhYmxlLWZvci1hcyIsIlZlcnNpb25JZHNUb1N0YWdlcyI6eyJ2YXJpYWJsZS1mb3ItYXMtMmFhZTZjMzVjOTRmY2ZiNDE1ZGJlOTVmNDA4YjljZTkxZWU4NDZlZCI6WyJBV1NDVVJSRU5UIl19fQ=="
       }
     },
     {
-      "ID": "efa26411e9508c37",
+      "ID": "3ec6ef7a9cf0cc96",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "64"
@@ -325,23 +364,29 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:50 GMT"
+            "Mon, 31 Mar 2025 20:45:19 GMT"
           ],
           "X-Amzn-Requestid": [
-            "0bb0a39c-5279-4534-bdcd-f1df096857d2"
+            "fcc07a67-0962-465f-8336-b703af1d2e70"
           ]
         },
-        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NjIzODAyMjU3MjI6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy1lNXRVZU8iLCJEZWxldGlvbkRhdGUiOjEuNzIzMDc2MzMwODYxRTksIk5hbWUiOiJ2YXJpYWJsZS1mb3ItYXMifQ=="
+        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NTY3NTI2NjU1NzY6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy02ZXVJYjkiLCJEZWxldGlvbkRhdGUiOjEuNzQzNDUzOTE4OTY1RTksIk5hbWUiOiJ2YXJpYWJsZS1mb3ItYXMifQ=="
       }
     },
     {
-      "ID": "06806808b5367e6e",
+      "ID": "89de49b73d134cf9",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "30"
@@ -374,23 +419,84 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:53 GMT"
+            "Mon, 31 Mar 2025 20:45:22 GMT"
           ],
           "X-Amzn-Requestid": [
-            "80551a27-c82a-4b13-92e4-81029b1a92a3"
+            "4e32a045-a266-4e17-a18a-ccc457cebba3"
           ]
         },
-        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NjIzODAyMjU3MjI6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy1lNXRVZU8iLCJDcmVhdGVkRGF0ZSI6MS43MjMwNzYzMjc1MjlFOSwiRGVsZXRlZERhdGUiOjEuNzIzMDc2MzMwODcxRTksIkxhc3RBY2Nlc3NlZERhdGUiOjEuNzIzMDc1MkU5LCJMYXN0Q2hhbmdlZERhdGUiOjEuNzIzMDc2MzMwODc2RTksIk5hbWUiOiJ2YXJpYWJsZS1mb3ItYXMiLCJWZXJzaW9uSWRzVG9TdGFnZXMiOnsidmFyaWFibGUtZm9yLWFzLTJhYWU2YzM1Yzk0ZmNmYjQxNWRiZTk1ZjQwOGI5Y2U5MWVlODQ2ZWQiOlsiQVdTQ1VSUkVOVCJdfX0="
+        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NTY3NTI2NjU1NzY6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy02ZXVJYjkiLCJDcmVhdGVkRGF0ZSI6MS43NDM0NTM5MTU1NjVFOSwiRGVsZXRlZERhdGUiOjEuNzQzNDUzOTE4OTczRTksIkxhc3RBY2Nlc3NlZERhdGUiOjEuNzQzMzc5MkU5LCJMYXN0Q2hhbmdlZERhdGUiOjEuNzQzNDUzOTE4OTc5RTksIk5hbWUiOiJ2YXJpYWJsZS1mb3ItYXMiLCJWZXJzaW9uSWRzVG9TdGFnZXMiOnsidmFyaWFibGUtZm9yLWFzLTJhYWU2YzM1Yzk0ZmNmYjQxNWRiZTk1ZjQwOGI5Y2U5MWVlODQ2ZWQiOlsiQVdTQ1VSUkVOVCJdfX0="
       }
     },
     {
-      "ID": "a1b334d8c6375470",
+      "ID": "0325df4b735e39d8",
       "Request": {
         "Method": "POST",
         "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "Content-Length": [
+            "30"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ],
+          "X-Amz-Target": [
+            "secretsmanager.DescribeSecret"
+          ]
+        },
+        "MediaType": "application/x-amz-json-1.1",
+        "BodyParts": [
+          "eyJTZWNyZXRJZCI6InZhcmlhYmxlLWZvci1hcyJ9"
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "335"
+          ],
+          "Content-Type": [
+            "application/x-amz-json-1.1"
+          ],
+          "Date": [
+            "Mon, 31 Mar 2025 20:45:22 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "fbbb08e0-a672-41b7-b516-5166b3126bdd"
+          ]
+        },
+        "Body": "eyJBUk4iOiJhcm46YXdzOnNlY3JldHNtYW5hZ2VyOnVzLWVhc3QtMjo0NTY3NTI2NjU1NzY6c2VjcmV0OnZhcmlhYmxlLWZvci1hcy02ZXVJYjkiLCJDcmVhdGVkRGF0ZSI6MS43NDM0NTM5MTU1NjVFOSwiRGVsZXRlZERhdGUiOjEuNzQzNDUzOTE4OTczRTksIkxhc3RBY2Nlc3NlZERhdGUiOjEuNzQzMzc5MkU5LCJMYXN0Q2hhbmdlZERhdGUiOjEuNzQzNDUzOTE4OTc5RTksIk5hbWUiOiJ2YXJpYWJsZS1mb3ItYXMiLCJWZXJzaW9uSWRzVG9TdGFnZXMiOnsidmFyaWFibGUtZm9yLWFzLTJhYWU2YzM1Yzk0ZmNmYjQxNWRiZTk1ZjQwOGI5Y2U5MWVlODQ2ZWQiOlsiQVdTQ1VSUkVOVCJdfX0="
+      }
+    },
+    {
+      "ID": "4af07d3618423b05",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://secretsmanager.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "30"
@@ -423,10 +529,10 @@
             "application/x-amz-json-1.1"
           ],
           "Date": [
-            "Thu, 08 Aug 2024 00:18:55 GMT"
+            "Mon, 31 Mar 2025 20:45:23 GMT"
           ],
           "X-Amzn-Requestid": [
-            "4cfb8b6b-7748-401c-9552-d01101c41aeb"
+            "018caa55-aa32-46aa-b98e-c9279e1a8e60"
           ]
         },
         "Body": "eyJfX3R5cGUiOiJSZXNvdXJjZU5vdEZvdW5kRXhjZXB0aW9uIiwiTWVzc2FnZSI6IlNlY3JldHMgTWFuYWdlciBjYW4ndCBmaW5kIHRoZSBzcGVjaWZpZWQgc2VjcmV0LiJ9"

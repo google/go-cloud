@@ -1,10 +1,13 @@
 {
-  "Initial": "AQAAAA7fe2+yLdJwVQAA",
+  "Initial": "AQAAAA7ffPP9NxsaCAAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
       "^X-Amz-Date$",
       "^User-Agent$"
     ],
@@ -41,16 +44,25 @@
   },
   "Entries": [
     {
-      "ID": "7a5fd9041797226a",
+      "ID": "b89e439618ee661d",
       "Request": {
         "Method": "PUT",
-        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=PutObject",
         "Header": {
           "Accept-Encoding": [
-            "gzip"
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "Content-Encoding": [
+            "aws-chunked"
           ],
           "Content-Length": [
-            "27"
+            "69"
           ],
           "Content-Md5": [
             "PflsWr6X8pZ9OAEIcAMKXw=="
@@ -59,15 +71,21 @@
             "CLEARED"
           ],
           "X-Amz-Content-Sha256": [
-            "355c18667d5796dc2b15043b99f68331b6af560f4f9facb5c4719ba9d09147c6"
+            "STREAMING-UNSIGNED-PAYLOAD-TRAILER"
           ],
           "X-Amz-Date": [
             "CLEARED"
+          ],
+          "X-Amz-Decoded-Content-Length": [
+            "27"
+          ],
+          "X-Amz-Trailer": [
+            "x-amz-checksum-crc32"
           ]
         },
         "MediaType": "text/plain",
         "BodyParts": [
-          "YWJjZGVmZ2hpamtsbW5vcHF1cnN0dXZ3eHl6"
+          "MWINCmFiY2RlZmdoaWprbG1ub3BxdXJzdHV2d3h5eg0KMA0KeC1hbXotY2hlY2tzdW0tY3JjMzI6UnlQZzVRPT0NCg0K"
         ]
       },
       "Response": {
@@ -80,7 +98,7 @@
             "0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:18 GMT"
           ],
           "Etag": [
             "\"3df96c5abe97f2967d38010870030a5f\""
@@ -88,17 +106,17 @@
           "Server": [
             "AmazonS3"
           ],
-          "X-Amz-Checksum-Crc64nvme": [
-            "oCIlK6+sBAk="
+          "X-Amz-Checksum-Crc32": [
+            "RyPg5Q=="
           ],
           "X-Amz-Checksum-Type": [
             "FULL_OBJECT"
           ],
           "X-Amz-Id-2": [
-            "alweLv/ORlKPtPDbf2BliT9+imtIqcneWPVzu/50EHLCkY+4AJxB0Jim8hve2detNhyNdtDVhv4="
+            "ZbPvSC8v2p3hb7F91YUED02GkjlkMH1ZwOyAWa6qbGFKUSnuLWQ5HorvaIqY7zjo0mPPupQd4ks="
           ],
           "X-Amz-Request-Id": [
-            "XSKPQEEG7R6TCR8G"
+            "ZVV7ZQHABJASFCSD"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -108,16 +126,28 @@
       }
     },
     {
-      "ID": "575db872e32f0738",
+      "ID": "452b3b0ba857d789",
       "Request": {
         "Method": "GET",
-        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
         "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
           "Range": [
             "bytes=10-"
           ],
           "User-Agent": [
             "CLEARED"
+          ],
+          "X-Amz-Checksum-Mode": [
+            "ENABLED"
           ],
           "X-Amz-Content-Sha256": [
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -128,7 +158,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -150,22 +180,22 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:19 GMT"
           ],
           "Etag": [
             "\"3df96c5abe97f2967d38010870030a5f\""
           ],
           "Last-Modified": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:18 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "fS134/q/zZbnASlTRkVOm8fEtiB62ncoBhFUWr5mO1J1998ks6gZChulRLL0kZKHpAO2U0fimQw="
+            "upStnAMRnqYE/aQiO/L+7Z/RkPk5YfZKJY4gsSHCUsK6l1zZ3MiAUYTL+fQXL1heNwbW0GqiYVc="
           ],
           "X-Amz-Request-Id": [
-            "XSKJ93BGRJJ1GXBT"
+            "RDDJMMTGY1Y1AHHG"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -175,16 +205,28 @@
       }
     },
     {
-      "ID": "29518edba7c6defd",
+      "ID": "8803cfc768a5c692",
       "Request": {
         "Method": "GET",
-        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
         "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
           "Range": [
             "bytes=10-"
           ],
           "User-Agent": [
             "CLEARED"
+          ],
+          "X-Amz-Checksum-Mode": [
+            "ENABLED"
           ],
           "X-Amz-Content-Sha256": [
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -195,7 +237,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -217,22 +259,22 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:19 GMT"
           ],
           "Etag": [
             "\"3df96c5abe97f2967d38010870030a5f\""
           ],
           "Last-Modified": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:18 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "+awKrLrzXrInwyOf5XMJLcTBD7kRMf/JU5Xwc9jxr+YxeZ4H/OQ7ATbnmx2TevzUuHo8RimNHG8="
+            "jHirMY6dIqypq4ZKKl+/AlKHc0HyCYfVmqx4JRpN5BJubbujrRXh6G0jvcH+nQRmgaLSY7D94e0="
           ],
           "X-Amz-Request-Id": [
-            "XSKJWNHG74KA1G42"
+            "RDDYM9PAMCETYV0Q"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -242,16 +284,28 @@
       }
     },
     {
-      "ID": "3d9bceb0ef8b1932",
+      "ID": "5d8161c9ec19146f",
       "Request": {
         "Method": "GET",
-        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
         "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
           "Range": [
             "bytes=22-"
           ],
           "User-Agent": [
             "CLEARED"
+          ],
+          "X-Amz-Checksum-Mode": [
+            "ENABLED"
           ],
           "X-Amz-Content-Sha256": [
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -262,7 +316,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -284,22 +338,22 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:19 GMT"
           ],
           "Etag": [
             "\"3df96c5abe97f2967d38010870030a5f\""
           ],
           "Last-Modified": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:18 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "0p9q1w9Ko1RddhYN3GxbByZ5dc85G84VtT1trAA1PlRdArEfho2wXKgSwJ5d+SXfwGpBTPgvvwg="
+            "twuZ3NwliME+gZFMwJis62QRs38ErooFG/q8ihmMBQTteegkmwJZR0n8ky20NJ9InY2iJ5hXIoE="
           ],
           "X-Amz-Request-Id": [
-            "XSKT41R4G80J44HT"
+            "RDDSTQXESS1MQ4D3"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -309,16 +363,28 @@
       }
     },
     {
-      "ID": "8460349f08f62268",
+      "ID": "8159e3b7d72bb45d",
       "Request": {
         "Method": "GET",
-        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
         "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
           "Range": [
             "bytes=22-"
           ],
           "User-Agent": [
             "CLEARED"
+          ],
+          "X-Amz-Checksum-Mode": [
+            "ENABLED"
           ],
           "X-Amz-Content-Sha256": [
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -329,7 +395,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -351,22 +417,22 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:19 GMT"
           ],
           "Etag": [
             "\"3df96c5abe97f2967d38010870030a5f\""
           ],
           "Last-Modified": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:18 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "YIcuWuqGi+TIyIaYhTL29jmrp0gsw8uhtkxeIdJl4g89zOHdVyAnVck/KX0avDLE/rEvrvHOrAE="
+            "oitBkSz3sjTmbFO6EoN4/izaQWz0Xf/YP7uSxvFRS4U2GXRDimo6tPtRZHyQQkAX6MKdgfSuAzw="
           ],
           "X-Amz-Request-Id": [
-            "XSKWCDXT3YKH3X5T"
+            "RDDPRFEETC66BPDS"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -376,17 +442,29 @@
       }
     },
     {
-      "ID": "318eb5cc1e70aac1",
+      "ID": "6c686280905d04d0",
       "Request": {
         "Method": "GET",
-        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
         "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
           "Range": [
             "bytes=16-"
           ],
           "User-Agent": [
             "CLEARED"
           ],
+          "X-Amz-Checksum-Mode": [
+            "ENABLED"
+          ],
           "X-Amz-Content-Sha256": [
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           ],
@@ -396,7 +474,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -418,22 +496,22 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:19 GMT"
           ],
           "Etag": [
             "\"3df96c5abe97f2967d38010870030a5f\""
           ],
           "Last-Modified": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:18 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "nKzYRgXuXNR0h7Aa5oiXc/5umtas/NjDda4uJkOIYc5QC2JArL3beFUHoHuRLPQ3btRU8cOTmBM="
+            "woif/yrXFs4gpErRW4yj6rDEOtAfL/AaErDcmnbXzwtOMGnAE6XYTKr0ZJR1yjDhvgHDie6vr7Y="
           ],
           "X-Amz-Request-Id": [
-            "XSKHT4DE4WMP6HNC"
+            "RDDN7RSKYBWE4WKB"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -443,11 +521,20 @@
       }
     },
     {
-      "ID": "a66a3ddabea917e4",
+      "ID": "eeb3cb0ebab3f0ca",
       "Request": {
         "Method": "HEAD",
         "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
         "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
           "User-Agent": [
             "CLEARED"
           ],
@@ -460,7 +547,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -479,22 +566,22 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:00:36 GMT"
+            "Mon, 31 Mar 2025 20:37:19 GMT"
           ],
           "Etag": [
             "\"3df96c5abe97f2967d38010870030a5f\""
           ],
           "Last-Modified": [
-            "Sun, 30 Mar 2025 17:00:35 GMT"
+            "Mon, 31 Mar 2025 20:37:18 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "E8e44PLbLxeO6yWYY1rqyPX4vJ8bPTgUamdM2NrUyAtTSAq7RgFq5KiRszLzgK9SFpQgqH50aUY="
+            "Pv7dEKDjMAnP5Qiz+5LgAtM7QW0+4SWFBluAqX/RJa5X1G5dwGAFvsEvLK3juDBBECZ+6LixKuM="
           ],
           "X-Amz-Request-Id": [
-            "Y46XGWCZDA9Y53X3"
+            "RDDKTDKYMA5K38CW"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -504,13 +591,19 @@
       }
     },
     {
-      "ID": "2a9c2517b370af9f",
+      "ID": "c4ab11fa8bffe52a",
       "Request": {
         "Method": "DELETE",
-        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
+        "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=DeleteObject",
         "Header": {
           "Accept-Encoding": [
-            "gzip"
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "User-Agent": [
             "CLEARED"
@@ -524,7 +617,7 @@
         },
         "MediaType": "",
         "BodyParts": [
-          ""
+          null
         ]
       },
       "Response": {
@@ -534,16 +627,16 @@
         "ProtoMinor": 1,
         "Header": {
           "Date": [
-            "Sun, 30 Mar 2025 17:00:36 GMT"
+            "Mon, 31 Mar 2025 20:37:19 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "Qmjq0REDjcOUMb2dd5N9Lx/yVRa/vfVka1W4tjZBGxQbu0cs+sS+2qg5bR3S8AnJgAPcj6yMIQk="
+            "xiqfoxnFh/dQsQov3R/T7xLHCG4ss+s0Vj7KzMAsCAGqZiyJMPzT84Gw8YuVqqGUGi0WquQjeIw="
           ],
           "X-Amz-Request-Id": [
-            "Y46R7P8YMCY37H1Z"
+            "RDDNTX6SX9EK2RRF"
           ]
         },
         "Body": ""

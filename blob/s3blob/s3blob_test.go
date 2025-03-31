@@ -21,15 +21,11 @@ import (
 	"net/http"
 	"testing"
 
-	s3managerv2 "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
-	typesv2 "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
@@ -53,40 +49,24 @@ const (
 )
 
 type harness struct {
-	useV2    bool
-	session  *session.Session
-	clientV2 *s3v2.Client
-	opts     *Options
-	rt       http.RoundTripper
-	closer   func()
+	client *s3.Client
+	opts   *Options
+	rt     http.RoundTripper
+	closer func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	sess, rt, done, _ := setup.NewAWSSession(ctx, t, region)
-	return &harness{useV2: false, session: sess, opts: nil, rt: rt, closer: done}, nil
+	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	return &harness{client: s3.NewFromConfig(cfg), opts: nil, rt: rt, closer: done}, nil
 }
 
 func newHarnessUsingLegacyList(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	sess, rt, done, _ := setup.NewAWSSession(ctx, t, region)
-	return &harness{useV2: false, session: sess, opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
-}
-
-func newHarnessV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	t.Helper()
-
 	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
-	return &harness{useV2: true, clientV2: s3v2.NewFromConfig(cfg), opts: nil, rt: rt, closer: done}, nil
-}
-
-func newHarnessUsingLegacyListV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	t.Helper()
-
-	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
-	return &harness{useV2: true, clientV2: s3v2.NewFromConfig(cfg), opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
+	return &harness{client: s3.NewFromConfig(cfg), opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -94,11 +74,11 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, h.useV2, h.session, h.clientV2, bucketName, h.opts)
+	return openBucket(ctx, h.client, bucketName, h.opts)
 }
 
 func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, h.useV2, h.session, h.clientV2, "go-cdk-bucket-does-not-exist", h.opts)
+	return openBucket(ctx, h.client, "go-cdk-bucket-does-not-exist", h.opts)
 }
 
 func (h *harness) Close() {
@@ -106,29 +86,21 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{useV2: false, usingLegacyList: false}})
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{usingLegacyList: false}})
 }
 
 func TestConformanceUsingLegacyList(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarnessUsingLegacyList, []drivertest.AsTest{verifyContentLanguage{useV2: false, usingLegacyList: true}})
-}
-
-func TestConformanceV2(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarnessV2, []drivertest.AsTest{verifyContentLanguage{useV2: true, usingLegacyList: false}})
-}
-
-func TestConformanceUsingLegacyListV2(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarnessUsingLegacyListV2, []drivertest.AsTest{verifyContentLanguage{useV2: true, usingLegacyList: true}})
+	drivertest.RunConformanceTests(t, newHarnessUsingLegacyList, []drivertest.AsTest{verifyContentLanguage{usingLegacyList: true}})
 }
 
 func BenchmarkS3blob(b *testing.B) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	})
+	ctx := context.Background()
+	cfg, err := awscfg.LoadDefaultConfig(ctx)
 	if err != nil {
 		b.Fatal(err)
 	}
-	bkt, err := OpenBucket(context.Background(), sess, bucketName, nil)
+	client := s3.NewFromConfig(cfg)
+	bkt, err := OpenBucket(ctx, client, bucketName, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -140,7 +112,6 @@ const language = "nl"
 // verifyContentLanguage uses As to access the underlying AWS types and
 // read/write the ContentLanguage field.
 type verifyContentLanguage struct {
-	useV2           bool
 	usingLegacyList bool
 }
 
@@ -149,14 +120,7 @@ func (verifyContentLanguage) Name() string {
 }
 
 func (v verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
-	if v.useV2 {
-		var client *s3v2.Client
-		if !b.As(&client) {
-			return errors.New("Bucket.As failed")
-		}
-		return nil
-	}
-	var client *s3.S3
+	var client *s3.Client
 	if !b.As(&client) {
 		return errors.New("Bucket.As failed")
 	}
@@ -164,57 +128,31 @@ func (v verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 }
 
 func (v verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
-	if v.useV2 {
-		var e smithy.APIError
-		if !b.ErrorAs(err, &e) {
-			return errors.New("blob.ErrorAs failed")
-		}
-	} else {
-		var e awserr.Error
-		if !b.ErrorAs(err, &e) {
-			return errors.New("blob.ErrorAs failed")
-		}
+	var e smithy.APIError
+	if !b.ErrorAs(err, &e) {
+		return errors.New("blob.ErrorAs failed")
 	}
 	return nil
 }
 
 func (v verifyContentLanguage) BeforeRead(as func(any) bool) error {
-	if v.useV2 {
-		var (
-			req  *s3v2.GetObjectInput
-			opts *[]func(*s3v2.Options)
-		)
-		if !as(&req) || !as(&opts) {
-			return errors.New("BeforeRead As failed")
-		}
-		return nil
-	}
-	var req *s3.GetObjectInput
-	if !as(&req) {
+	var (
+		req  *s3.GetObjectInput
+		opts *[]func(*s3.Options)
+	)
+	if !as(&req) || !as(&opts) {
 		return errors.New("BeforeRead As failed")
 	}
 	return nil
 }
 
 func (v verifyContentLanguage) BeforeWrite(as func(any) bool) error {
-	if v.useV2 {
-		var (
-			req      *s3v2.PutObjectInput
-			uploader *s3managerv2.Uploader
-		)
-		if !as(&req) || !as(&uploader) {
-			return errors.New("Writer.As failed for PutObjectInput")
-		}
-		req.ContentLanguage = aws.String(language)
-		var u *s3managerv2.Uploader
-		if !as(&u) {
-			return errors.New("Writer.As failed for Uploader")
-		}
-		return nil
-	}
-	var req *s3manager.UploadInput
-	if !as(&req) {
-		return errors.New("Writer.As failed for UploadInput")
+	var (
+		req      *s3.PutObjectInput
+		uploader *s3manager.Uploader
+	)
+	if !as(&req) || !as(&uploader) {
+		return errors.New("Writer.As failed for PutObjectInput")
 	}
 	req.ContentLanguage = aws.String(language)
 	var u *s3manager.Uploader
@@ -225,13 +163,6 @@ func (v verifyContentLanguage) BeforeWrite(as func(any) bool) error {
 }
 
 func (v verifyContentLanguage) BeforeCopy(as func(any) bool) error {
-	if v.useV2 {
-		var in *s3v2.CopyObjectInput
-		if !as(&in) {
-			return errors.New("BeforeCopy.As failed")
-		}
-		return nil
-	}
 	var in *s3.CopyObjectInput
 	if !as(&in) {
 		return errors.New("BeforeCopy.As failed")
@@ -240,50 +171,25 @@ func (v verifyContentLanguage) BeforeCopy(as func(any) bool) error {
 }
 
 func (v verifyContentLanguage) BeforeList(as func(any) bool) error {
-	if v.useV2 {
-		if v.usingLegacyList {
-			var req *s3v2.ListObjectsInput
-			if !as(&req) {
-				return errors.New("List.As failed")
-			}
-		} else {
-			var (
-				list *s3v2.ListObjectsV2Input
-				opts *[]func(*s3v2.Options)
-			)
-			if !as(&list) || !as(&opts) {
-				return errors.New("List.As failed")
-			}
-			return nil
-		}
-		return nil
-	}
 	if v.usingLegacyList {
 		var req *s3.ListObjectsInput
 		if !as(&req) {
 			return errors.New("List.As failed")
 		}
 	} else {
-		var req *s3.ListObjectsV2Input
-		if !as(&req) {
+		var (
+			list *s3.ListObjectsV2Input
+			opts *[]func(*s3.Options)
+		)
+		if !as(&list) || !as(&opts) {
 			return errors.New("List.As failed")
 		}
+		return nil
 	}
 	return nil
 }
 
 func (v verifyContentLanguage) BeforeSign(as func(any) bool) error {
-	if v.useV2 {
-		var (
-			get *s3v2.GetObjectInput
-			put *s3v2.PutObjectInput
-			del *s3v2.DeleteObjectInput
-		)
-		if as(&get) || as(&put) || as(&del) {
-			return nil
-		}
-		return errors.New("BeforeSign.As failed")
-	}
 	var (
 		get *s3.GetObjectInput
 		put *s3.PutObjectInput
@@ -296,16 +202,6 @@ func (v verifyContentLanguage) BeforeSign(as func(any) bool) error {
 }
 
 func (v verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
-	if v.useV2 {
-		var hoo s3v2.HeadObjectOutput
-		if !attrs.As(&hoo) {
-			return errors.New("Attributes.As returned false")
-		}
-		if got := *hoo.ContentLanguage; got != language {
-			return fmt.Errorf("got %q want %q", got, language)
-		}
-		return nil
-	}
 	var hoo s3.HeadObjectOutput
 	if !attrs.As(&hoo) {
 		return errors.New("Attributes.As returned false")
@@ -317,16 +213,6 @@ func (v verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
 }
 
 func (v verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
-	if v.useV2 {
-		var goo s3v2.GetObjectOutput
-		if !r.As(&goo) {
-			return errors.New("Reader.As returned false")
-		}
-		if got := *goo.ContentLanguage; got != language {
-			return fmt.Errorf("got %q want %q", got, language)
-		}
-		return nil
-	}
 	var goo s3.GetObjectOutput
 	if !r.As(&goo) {
 		return errors.New("Reader.As returned false")
@@ -338,31 +224,14 @@ func (v verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 }
 
 func (v verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
-	if v.useV2 {
-		if o.IsDir {
-			var commonPrefix typesv2.CommonPrefix
-			if !o.As(&commonPrefix) {
-				return errors.New("ListObject.As for directory returned false")
-			}
-			return nil
-		}
-		var obj typesv2.Object
-		if !o.As(&obj) {
-			return errors.New("ListObject.As for object returned false")
-		}
-		if obj.Key == nil || o.Key != *obj.Key {
-			return errors.New("ListObject.As for object returned a different item")
-		}
-		return nil
-	}
 	if o.IsDir {
-		var commonPrefix s3.CommonPrefix
+		var commonPrefix types.CommonPrefix
 		if !o.As(&commonPrefix) {
 			return errors.New("ListObject.As for directory returned false")
 		}
 		return nil
 	}
-	var obj s3.Object
+	var obj types.Object
 	if !o.As(&obj) {
 		return errors.New("ListObject.As for object returned false")
 	}
@@ -375,7 +244,6 @@ func (v verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 func TestOpenBucket(t *testing.T) {
 	tests := []struct {
 		description string
-		useV2       bool
 		bucketName  string
 		nilClient   bool
 		want        string
@@ -386,20 +254,8 @@ func TestOpenBucket(t *testing.T) {
 			wantErr:     true,
 		},
 		{
-			description: "empty bucket name results in error V2",
-			useV2:       true,
-			wantErr:     true,
-		},
-		{
 			description: "nil client results in error",
 			bucketName:  "foo",
-			nilClient:   true,
-			wantErr:     true,
-		},
-		{
-			description: "nil client results in error V2",
-			bucketName:  "foo",
-			useV2:       true,
 			nilClient:   true,
 			wantErr:     true,
 		},
@@ -408,33 +264,20 @@ func TestOpenBucket(t *testing.T) {
 			bucketName:  "foo",
 			want:        "foo",
 		},
-		{
-			description: "success V2",
-			bucketName:  "foo",
-			useV2:       true,
-			want:        "foo",
-		},
 	}
 
 	ctx := context.Background()
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			var sess client.ConfigProvider
-			var clientV2 *s3v2.Client
+			var client *s3.Client
 			if !test.nilClient {
-				if test.useV2 {
-					cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
-					defer done()
-					clientV2 = s3v2.NewFromConfig(cfg)
-				} else {
-					s, _, done, _ := setup.NewAWSSession(ctx, t, region)
-					defer done()
-					sess = s
-				}
+				cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
+				defer done()
+				client = s3.NewFromConfig(cfg)
 			}
 
 			// Create driver impl.
-			drv, err := openBucket(ctx, test.useV2, sess, clientV2, test.bucketName, nil)
+			drv, err := openBucket(ctx, client, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -443,12 +286,7 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create portable type.
-			var b *blob.Bucket
-			if test.useV2 {
-				b, err = OpenBucketV2(ctx, clientV2, test.bucketName, nil)
-			} else {
-				b, err = OpenBucket(ctx, sess, test.bucketName, nil)
-			}
+			b, err := OpenBucket(ctx, client, test.bucketName, nil)
 			if b != nil {
 				defer b.Close()
 			}
@@ -468,49 +306,37 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket", false},
 		// OK, setting region.
 		{"s3://mybucket?region=us-west1", false},
-		// OK, setting profile.
-		{"s3://mybucket?awssdk=v1&profile=main", false},
-		// OK, setting both profile and region.
-		{"s3://mybucket?awssdk=v1&profile=main&region=us-west-1", false},
-		// OK, use V2.
-		{"s3://mybucket?awssdk=v2", false},
 		// OK, use KMS Server Side Encryption
 		{"s3://mybucket?ssetype=aws:kms&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", false},
 		// OK, use S3 Transfer acceleration and dual stack endpoints
 		{"s3://mybucket?accelerate=true&dualstack=true", false},
 		// OK, use FIPS endpoints
 		{"s3://mybucket?fips=true", false},
-		// OK, use S3 Transfer accleration and dual stack endpoints (v1)
-		{"s3://mybucket?awssdk=v1&accelerate=true&dualstack=true", false},
+		// OK, use S3 Transfer accleration and dual stack endpoints
+		{"s3://mybucket?accelerate=true&dualstack=true", false},
 		// OK, use use_path_style
 		{"s3://mybucket?use_path_style=true", false},
 		// OK, use s3ForcePathStyle
 		{"s3://mybucket?s3ForcePathStyle=true", false},
 		// OK, use disable_https
 		{"s3://mybucket?disable_https=true", false},
-		// OK, use FIPS endpoints (v1)
-		{"s3://mybucket?awssdk=v1&fips=true", false},
+		// OK, use FIPS endpoints
+		{"s3://mybucket?fips=true", false},
 		// OK, use anonymous.
-		{"s3://mybucket?awssdk=v2&anonymous=true", false},
-		// Invalid accelerate (v1)
-		{"s3://mybucket?awssdk=v1&accelerate=bogus", true},
-		// Invalid accelerate (v2)
+		{"s3://mybucket?anonymous=true", false},
+		// Invalid accelerate
 		{"s3://mybucket?accelerate=bogus", true},
-		// Invalid FIPS (v1)
-		{"s3://mybucket?awssdk=v1&fips=bogus", true},
-		// Invalid FIPS (v2)
+		// Invalid FIPS
 		{"s3://mybucket?fips=bogus", true},
-		// Invalid dualstack (v1)
-		{"s3://mybucket?awssdk=v1&dualstack=bad", true},
-		// Invalid dualstack (v2)
+		// Invalid dualstack
 		{"s3://mybucket?dualstack=bad", true},
 		// Invalid ssetype
 		{"s3://mybucket?ssetype=aws:notkmsoraes&kmskeyid=arn:aws:us-east-1:12345:key/1-a-2-b", true},
 		// Invalid parameter together with a valid one.
 		{"s3://mybucket?profile=main&param=value", true},
-		// Invalid use_path_style (v1)
-		{"s3://mybucket?awssdk=v1&usePathStyle=bad", true},
-		// Invalid disable_https (v2)
+		// Invalid use_path_style
+		{"s3://mybucket?usePathStyle=bad", true},
+		// Invalid disable_https
 		{"s3://mybucket?usePathStyle=bad", true},
 		// Invalid parameter.
 		{"s3://mybucket?param=value", true},
@@ -531,17 +357,17 @@ func TestOpenBucketFromURL(t *testing.T) {
 func TestToServerSideEncryptionType(t *testing.T) {
 	tests := []struct {
 		value         string
-		sseType       typesv2.ServerSideEncryption
+		sseType       types.ServerSideEncryption
 		expectedError error
 	}{
 		// OK.
-		{"AES256", typesv2.ServerSideEncryptionAes256, nil},
+		{"AES256", types.ServerSideEncryptionAes256, nil},
 		// OK, KMS
-		{"aws:kms", typesv2.ServerSideEncryptionAwsKms, nil},
+		{"aws:kms", types.ServerSideEncryptionAwsKms, nil},
 		// OK, KMS
-		{"aws:kms:dsse", typesv2.ServerSideEncryptionAwsKmsDsse, nil},
+		{"aws:kms:dsse", types.ServerSideEncryptionAwsKmsDsse, nil},
 		// OK, AES256 mixed case
-		{"Aes256", typesv2.ServerSideEncryptionAes256, nil},
+		{"Aes256", types.ServerSideEncryptionAes256, nil},
 		// Invalid SSE type
 		{"invalid", "", fmt.Errorf("'invalid' is not a valid value for %q", sseTypeParamKey)},
 	}

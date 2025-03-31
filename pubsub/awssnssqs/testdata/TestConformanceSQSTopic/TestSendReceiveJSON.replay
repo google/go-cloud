@@ -1,10 +1,13 @@
 {
-  "Initial": "AQAAAA7fe3IDH47Z4gAA",
+  "Initial": "AQAAAA7ffPOcDXqkMwAA",
   "Version": "0.2",
   "Converter": {
-    "ScrubBody": null,
+    "ScrubBody": [
+      "MessageAttributes.*"
+    ],
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
       "^X-Amz-Date$",
       "^User-Agent$"
     ],
@@ -41,13 +44,19 @@
   },
   "Entries": [
     {
-      "ID": "011507358f1ea31d",
+      "ID": "69fc3df15cb57f48",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "45"
@@ -60,6 +69,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.CreateQueue"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -80,23 +92,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:10:27 GMT"
+            "Mon, 31 Mar 2025 20:35:40 GMT"
           ],
           "X-Amzn-Requestid": [
-            "eaf6eabe-e34e-58ce-a9db-8add9e0dd840"
+            "41c9cb9b-d05d-5548-ad7b-abff2e81b3ba"
           ]
         },
         "Body": "eyJRdWV1ZVVybCI6Imh0dHBzOi8vc3FzLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tLzQ1Njc1MjY2NTU3Ni9TUVNUb3BpY1NlbmRSZWNlaXZlSlNPTi10b3AtMSJ9"
       }
     },
     {
-      "ID": "7c4322722d6bf9d5",
+      "ID": "32974119fc27cdc2",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "123"
@@ -109,6 +127,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.GetQueueAttributes"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -129,23 +150,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:10:27 GMT"
+            "Mon, 31 Mar 2025 20:35:40 GMT"
           ],
           "X-Amzn-Requestid": [
-            "403f1b65-f23f-589a-9edd-7b068f7c2814"
+            "26cff3c1-a800-5069-814f-93a556dca69b"
           ]
         },
         "Body": "eyJBdHRyaWJ1dGVzIjp7IlF1ZXVlQXJuIjoiYXJuOmF3czpzcXM6dXMtZWFzdC0yOjQ1Njc1MjY2NTU3NjpTUVNUb3BpY1NlbmRSZWNlaXZlSlNPTi10b3AtMSJ9fQ=="
       }
     },
     {
-      "ID": "efd6ad6b113b160e",
+      "ID": "4fc84b8153d429a1",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "472"
@@ -158,6 +185,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.SetQueueAttributes"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -178,23 +208,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:10:27 GMT"
+            "Mon, 31 Mar 2025 20:35:40 GMT"
           ],
           "X-Amzn-Requestid": [
-            "57256ac8-93b0-540b-81ec-0aabeef33485"
+            "d2d8b44f-7d17-54fc-8b4a-d42b83cb420e"
           ]
         },
         "Body": ""
       }
     },
     {
-      "ID": "2df973a0909652c6",
+      "ID": "360d7a5be45a6198",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "151"
@@ -207,6 +243,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.SendMessageBatch"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -227,23 +266,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:10:27 GMT"
+            "Mon, 31 Mar 2025 20:35:40 GMT"
           ],
           "X-Amzn-Requestid": [
-            "e2638d20-e4bd-51a1-ae04-ed4399fe812f"
+            "c437241c-638a-514f-9e25-44789d56f7bd"
           ]
         },
-        "Body": "eyJTdWNjZXNzZnVsIjpbeyJJZCI6IjAiLCJNRDVPZk1lc3NhZ2VCb2R5IjoiMzMzMzk5YmEyYjc2YTE5NjQzMjYwN2YyM2IzZWNiOTUiLCJNZXNzYWdlSWQiOiIxNTZiYTc4Yi04YzJkLTRlNWYtOWE1Yy0yZjc2NjI1NTEyZmUifV19"
+        "Body": "eyJTdWNjZXNzZnVsIjpbeyJJZCI6IjAiLCJNRDVPZk1lc3NhZ2VCb2R5IjoiMzMzMzk5YmEyYjc2YTE5NjQzMjYwN2YyM2IzZWNiOTUiLCJNZXNzYWdlSWQiOiI0M2E4MjNiYS05ZGY3LTRlNzgtYmFmMi1kNGU5OTg3YjM2YjQifV19"
       }
     },
     {
-      "ID": "d28f4a71b40e6151",
+      "ID": "7ee2e1b2bbce1df4",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "174"
@@ -256,6 +301,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.ReceiveMessage"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -276,23 +324,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:10:28 GMT"
+            "Mon, 31 Mar 2025 20:35:40 GMT"
           ],
           "X-Amzn-Requestid": [
-            "ef614b17-fcc3-5533-a311-2b74818785bd"
+            "9d1d6efb-1e88-5e33-bf88-0e9fe05408c1"
           ]
         },
-        "Body": "eyJNZXNzYWdlcyI6W3siQXR0cmlidXRlcyI6eyJTZW5kZXJJZCI6IkFJREFXVVdFVVNQVUlHQkxPNEdKRCIsIkFwcHJveGltYXRlRmlyc3RSZWNlaXZlVGltZXN0YW1wIjoiMTc0MzM1NDYyODAzOCIsIkFwcHJveGltYXRlUmVjZWl2ZUNvdW50IjoiMSIsIlNlbnRUaW1lc3RhbXAiOiIxNzQzMzU0NjI3OTY2In0sIkJvZHkiOiJ7XCJGb29cIjogXCJCYXJcIn0iLCJNRDVPZkJvZHkiOiIzMzMzOTliYTJiNzZhMTk2NDMyNjA3ZjIzYjNlY2I5NSIsIk1lc3NhZ2VJZCI6IjE1NmJhNzhiLThjMmQtNGU1Zi05YTVjLTJmNzY2MjU1MTJmZSIsIlJlY2VpcHRIYW5kbGUiOiJBUUVCSi9zWXF3dThvSjFxc0lFakNRbW1vcStPWFlEUXpWWXg1ZXVCR0tzcDRYZGZYZU1NTmxBSFpSTHBKeGZVT1RXQTVxaVEyNzFOYzhGQU1NTHVQK1BtUlE4UHVIWUF2N0ttTUV3WC8zeU5FaDJsUHR0U1lxcHpFVEZZcStISVRKMjY0VGhJM3F2N2ErSzY1WSt6T2t6VzMyZ1NYb2NqRnBjRkRURnpNMW1MNEZtb1VuY1hzQk5aVTdXUUd5MkVFY1NXN0VKK3h4aVJrMUVrRUM4ZjU5NjhkNmlBb09VM25RNEpzWFBvakQ3aS9CcmtNMFRUWCtpNGgvZU9pMS9JWEVSUTEvNmp4ZGNxOW1yUEErQk01MUZhZm9tT1hhT05ieGpEb0pYRmdpYnFpdGlBbWQyMDJRT29oQVFGYm5RL2tXWSt6QWc3dzVGZFZudUxZQmIzc0NGUlFvMGc3VFlady93SW9yU0JUUVlnUHFSMWtMYms3ZWdyOEYzRVVqVUE4YzZOWVRybDN4ZlQ3c2hSOHFURkp0L09LTFp4RGVtOUtVMzVuRWF6V1QrY1dhQT0ifV19"
+        "Body": "eyJNZXNzYWdlcyI6W3siQXR0cmlidXRlcyI6eyJTZW5kZXJJZCI6IkFJREFXVVdFVVNQVUlHQkxPNEdKRCIsIkFwcHJveGltYXRlRmlyc3RSZWNlaXZlVGltZXN0YW1wIjoiMTc0MzQ1MzM0MDg5MCIsIkFwcHJveGltYXRlUmVjZWl2ZUNvdW50IjoiMSIsIlNlbnRUaW1lc3RhbXAiOiIxNzQzNDUzMzQwODIxIn0sIkJvZHkiOiJ7XCJGb29cIjogXCJCYXJcIn0iLCJNRDVPZkJvZHkiOiIzMzMzOTliYTJiNzZhMTk2NDMyNjA3ZjIzYjNlY2I5NSIsIk1lc3NhZ2VJZCI6IjQzYTgyM2JhLTlkZjctNGU3OC1iYWYyLWQ0ZTk5ODdiMzZiNCIsIlJlY2VpcHRIYW5kbGUiOiJBUUVCWGV4R3VCYXFLZkM2MDB1dlpOWFNObUsydDBHOWpsL3ZaS094d2dZSXpaQk1GWFlRWkd1KzBTOWJ4TTcvZk1XSU90eDd4Q2hlOUU4OTQzSXJSYmZobEZNeHdPcExrTzg2dWxveFZGUHlPd2FlZkJVV0dYdVFUeTgyYkl3Ym9Eb1VJVDlRM3VSM1FjZWJYdi9CSVRPdTVUaEdQRlZna3MwNUZIWStuSm9WczJaUm1lTjdzdG5lKytWbXZPcVNnRUxNSmg3OUJKQ2RXSVdDeVhwdU9jcGNZbmIwcTFWTVJ3OEx5Q0hnbFN5Q2RwQ241RnB4Zmp0Z0pOSjg3a2pOSmdQZ3g4eTNLQmRScjBRcXA0UUFOMUZ5V3h1ZkZYdm9xR1F1Vkc3TmxZcitmcjBPY012TVRMMkU2U281K2hEOEwxQ21Qak0vbjZKL0E1bzBLYkZPcE12ZlBOUHI2b1c0cy9tSEl5QUtJSXB5MWV6SUlJTWtJYnNUS0o0cUJrK0I4OWdJMWxvZHhaOUJudllRQkRYMmpMYnZYb3o0OFFCV2VwdGQxcTZHVEFRWk5DST0ifV19"
       }
     },
     {
-      "ID": "8d15e8abf58dacbf",
+      "ID": "4620bfb37d4c4f12",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "567"
@@ -305,11 +359,14 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.DeleteMessageBatch"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
         "BodyParts": [
-          "eyJFbnRyaWVzIjpbeyJJZCI6IjAiLCJSZWNlaXB0SGFuZGxlIjoiQVFFQkovc1lxd3U4b0oxcXNJRWpDUW1tb3ErT1hZRFF6Vll4NWV1QkdLc3A0WGRmWGVNTU5sQUhaUkxwSnhmVU9UV0E1cWlRMjcxTmM4RkFNTUx1UCtQbVJROFB1SFlBdjdLbU1Fd1gvM3lORWgybFB0dFNZcXB6RVRGWXErSElUSjI2NFRoSTNxdjdhK0s2NVkrek9relczMmdTWG9jakZwY0ZEVEZ6TTFtTDRGbW9VbmNYc0JOWlU3V1FHeTJFRWNTVzdFSit4eGlSazFFa0VDOGY1OTY4ZDZpQW9PVTNuUTRKc1hQb2pEN2kvQnJrTTBUVFgraTRoL2VPaTEvSVhFUlExLzZqeGRjcTltclBBK0JNNTFGYWZvbU9YYU9OYnhqRG9KWEZnaWJxaXRpQW1kMjAyUU9vaEFRRmJuUS9rV1krekFnN3c1RmRWbnVMWUJiM3NDRlJRbzBnN1RZWncvd0lvclNCVFFZZ1BxUjFrTGJrN2VncjhGM0VValVBOGM2TllUcmwzeGZUN3NoUjhxVEZKdC9PS0xaeERlbTlLVTM1bkVheldUK2NXYUE9In1dLCJRdWV1ZVVybCI6Imh0dHBzOi8vc3FzLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tLzQ1Njc1MjY2NTU3Ni9TUVNUb3BpY1NlbmRSZWNlaXZlSlNPTi10b3AtMSJ9"
+          "eyJFbnRyaWVzIjpbeyJJZCI6IjAiLCJSZWNlaXB0SGFuZGxlIjoiQVFFQlhleEd1QmFxS2ZDNjAwdXZaTlhTTm1LMnQwRzlqbC92WktPeHdnWUl6WkJNRlhZUVpHdSswUzlieE03L2ZNV0lPdHg3eENoZTlFODk0M0lyUmJmaGxGTXh3T3BMa084NnVsb3hWRlB5T3dhZWZCVVdHWHVRVHk4MmJJd2JvRG9VSVQ5UTN1UjNRY2ViWHYvQklUT3U1VGhHUEZWZ2tzMDVGSFkrbkpvVnMyWlJtZU43c3RuZSsrVm12T3FTZ0VMTUpoNzlCSkNkV0lXQ3lYcHVPY3BjWW5iMHExVk1SdzhMeUNIZ2xTeUNkcENuNUZweGZqdGdKTko4N2tqTkpnUGd4OHkzS0JkUnIwUXFwNFFBTjFGeVd4dWZGWHZvcUdRdVZHN05sWXIrZnIwT2NNdk1UTDJFNlNvNStoRDhMMUNtUGpNL242Si9BNW8wS2JGT3BNdmZQTlByNm9XNHMvbUhJeUFLSUlweTFleklJSU1rSWJzVEtKNHFCaytCODlnSTFsb2R4WjlCbnZZUUJEWDJqTGJ2WG96NDhRQldlcHRkMXE2R1RBUVpOQ0k9In1dLCJRdWV1ZVVybCI6Imh0dHBzOi8vc3FzLnVzLWVhc3QtMi5hbWF6b25hd3MuY29tLzQ1Njc1MjY2NTU3Ni9TUVNUb3BpY1NlbmRSZWNlaXZlSlNPTi10b3AtMSJ9"
         ]
       },
       "Response": {
@@ -325,23 +382,29 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:10:28 GMT"
+            "Mon, 31 Mar 2025 20:35:40 GMT"
           ],
           "X-Amzn-Requestid": [
-            "940db6ab-986b-5534-aed8-d6c8e52f25ba"
+            "e33bc5c9-399e-55d4-8dc1-a5adc7420326"
           ]
         },
         "Body": "eyJTdWNjZXNzZnVsIjpbeyJJZCI6IjAifV19"
       }
     },
     {
-      "ID": "2ff7685de140b405",
+      "ID": "b6adb1d84bfafbe5",
       "Request": {
         "Method": "POST",
         "URL": "https://sqs.us-east-2.amazonaws.com/",
         "Header": {
           "Accept-Encoding": [
             "gzip"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
           ],
           "Content-Length": [
             "93"
@@ -354,6 +417,9 @@
           ],
           "X-Amz-Target": [
             "AmazonSQS.DeleteQueue"
+          ],
+          "X-Amzn-Query-Mode": [
+            "true"
           ]
         },
         "MediaType": "application/x-amz-json-1.0",
@@ -374,10 +440,10 @@
             "application/x-amz-json-1.0"
           ],
           "Date": [
-            "Sun, 30 Mar 2025 17:10:28 GMT"
+            "Mon, 31 Mar 2025 20:35:41 GMT"
           ],
           "X-Amzn-Requestid": [
-            "48e2b171-dace-5856-a621-d112a78ab8d8"
+            "8354e6a0-abe2-5a3d-bbbf-86c4553f8ccf"
           ]
         },
         "Body": ""

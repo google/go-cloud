@@ -135,12 +135,7 @@ query parameter to ensure your application connects to the correct region.
 
 [SQS]: https://aws.amazon.com/sqs/
 
-`pubsub.OpenSubscription` will create a default AWS Session with the
-`SharedConfigEnable` option enabled; if you have authenticated with the AWS CLI,
-it will use those credentials. See [AWS Session][] to learn about authentication
-alternatives, including using environment variables.
-
-[AWS Session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+`pubsub.OpenSubscription` will open a subscription using a default AWS Config.
 
 {{< goexample "gocloud.dev/pubsub/awssnssqs.Example_openSubscriptionFromURL" >}}
 
@@ -162,12 +157,11 @@ or the [SQS publishing guide][] for more details.
 #### Amazon SQS Constructor {#sqs-ctor}
 
 The [`awssnssqs.OpenSubscription`][] constructor opens an SQS queue. You must
-first create an [AWS session][] with the same region as your topic:
+first create an AWS Config with the same region as your topic:
 
 {{< goexample "gocloud.dev/pubsub/awssnssqs.ExampleOpenSubscription" >}}
 
 [`awssnssqs.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSubscription
-[AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 
 ### Azure Service Bus {#azure}
 

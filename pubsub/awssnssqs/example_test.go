@@ -18,8 +18,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/awssnssqs"
 )
@@ -29,19 +30,17 @@ func ExampleOpenSNSTopic() {
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
-	// Establish an AWS session.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	// The region must match the region for the SNS topic "mytopic".
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-east-2"),
-	})
+	// Establish a AWS V2 Config.
+	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a *pubsub.Topic.
 	const topicARN = "arn:aws:sns:us-east-2:123456789012:mytopic"
-	topic := awssnssqs.OpenSNSTopic(ctx, sess, topicARN, nil)
+	client := sns.NewFromConfig(cfg)
+	topic := awssnssqs.OpenSNSTopic(ctx, client, topicARN, nil)
 	defer topic.Shutdown(ctx)
 }
 
@@ -50,19 +49,17 @@ func ExampleOpenSQSTopic() {
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
-	// Establish an AWS session.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	// The region must match the region for the SQS queue "myqueue".
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-east-2"),
-	})
+	// Establish a AWS V2 Config.
+	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a *pubsub.Topic.
 	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/myqueue"
-	topic := awssnssqs.OpenSQSTopic(ctx, sess, queueURL, nil)
+	client := sqs.NewFromConfig(cfg)
+	topic := awssnssqs.OpenSQSTopic(ctx, client, queueURL, nil)
 	defer topic.Shutdown(ctx)
 }
 
@@ -102,12 +99,9 @@ func ExampleOpenSubscription() {
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
-	// Establish an AWS session.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	// The region must match the region for "MyQueue".
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-east-2"),
-	})
+	// Establish a AWS V2 Config.
+	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,7 +109,8 @@ func ExampleOpenSubscription() {
 	// Construct a *pubsub.Subscription.
 	// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
 	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue"
-	subscription := awssnssqs.OpenSubscription(ctx, sess, queueURL, nil)
+	client := sqs.NewFromConfig(cfg)
+	subscription := awssnssqs.OpenSubscription(ctx, client, queueURL, nil)
 	defer subscription.Shutdown(ctx)
 }
 
