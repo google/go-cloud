@@ -1098,6 +1098,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		MaxConcurrency:              opts.MaxConcurrency,
 		BeforeWrite:                 opts.BeforeWrite,
 		DisableContentTypeDetection: opts.DisableContentTypeDetection,
+		IfNotExist:                  opts.IfNotExist,
 	}
 	if len(opts.Metadata) > 0 {
 		// Services are inconsistent, but at least some treat keys
@@ -1422,6 +1423,20 @@ type WriterOptions struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeWrite func(asFunc func(any) bool) error
+
+	// IfNotExist is used for conditional writes.
+	// When set to 'true', if a blob exists for the same key in the
+	// bucket, the write operation won't succeed and the current blob
+	// for the key will be left untouched.
+	// For 'fileblob' and 'memblob', an error of type 'PreconditionFailed'
+	// will be returned by the 'Close' method. This is due to how those driver
+	// are implemented, which buffers the content during writes and perform
+	// the actual write at close time.
+	// For cloud providers (aws, azure, google), an error of type 'PreconditionFailed'
+	// will be returned by the 'Write' method, since a call to 'Write' results
+	// in an API call to the cloud provider.
+	// Default is set to 'false'.
+	IfNotExist bool
 }
 
 // CopyOptions sets options for Copy.

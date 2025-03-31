@@ -260,6 +260,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestSignedURL", func(t *testing.T) {
 		testSignedURL(t, newHarness)
 	})
+	//t.Run("TestIfNotExist", func(t *testing.T) {
+	//	testIfNotExist(t, newHarness)
+	//})
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("TestAs", func(t *testing.T) {
 		for _, st := range asTests {
@@ -2733,6 +2736,70 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		}
 	}
 }
+
+//func testIfNotExist(t *testing.T, newHarness HarnessMaker) {
+//	t.Helper()
+//
+//	const key = "blob-for-if-not-exist"
+//	const contents = "up and down"
+//
+//	ctx := context.Background()
+//	h, err := newHarness(ctx, t)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	defer h.Close()
+//	drv, err := h.MakeDriver(ctx)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	b := blob.NewBucket(drv)
+//	defer func() { _ = b.Close() }()
+//
+//	opts := blob.WriterOptions{
+//		ContentType: "text",
+//		IfNotExist:  true,
+//	}
+//
+//	// Create one file for the key
+//	w1, err := b.NewWriter(ctx, key, &opts)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	defer func() {
+//		_ = b.Delete(ctx, key)
+//	}()
+//
+//	// Write to the file
+//	if _, err := w1.Write([]byte(contents)); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Closing the file (ie: thus writing the content to the file)
+//	// should not return an error
+//	if err := w1.Close(); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Create a new writer for the same key
+//	w2, err := b.NewWriter(ctx, key, &opts)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Write to the file
+//	if _, err := w2.Write([]byte(contents)); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Closing the file (ie: thus writing the content to the file)
+//	// should return a 'PreconditionFailed' error since the file
+//	// already exists
+//	if err = w2.Close(); err == nil {
+//		t.Fatal(err)
+//	}
+//}
 
 func benchmarkRead(b *testing.B, bkt *blob.Bucket) {
 	b.Helper()

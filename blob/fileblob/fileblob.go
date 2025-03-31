@@ -739,9 +739,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 
 	if b.opts.Metadata == MetadataDontWrite {
 		w := &writer{
-			ctx:  ctx,
-			File: f,
-			path: path,
+			ctx:        ctx,
+			File:       f,
+			path:       path,
+			ifNotExist: opts.IfNotExist,
 		}
 		return w, nil
 	}
@@ -765,6 +766,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		attrs:      attrs,
 		contentMD5: opts.ContentMD5,
 		md5hash:    md5.New(),
+		ifNotExist: opts.IfNotExist,
 	}
 	return w, nil
 }
@@ -778,7 +780,8 @@ type writerWithSidecar struct {
 	contentMD5 []byte
 	// We compute the MD5 hash so that we can store it with the file attributes,
 	// not for verification.
-	md5hash hash.Hash
+	md5hash    hash.Hash
+	ifNotExist bool
 }
 
 func (w *writerWithSidecar) Write(p []byte) (n int, err error) {
@@ -794,11 +797,7 @@ func (w *writerWithSidecar) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (w *writerWithSidecar) Close() error {
-	err := w.f.Close()
-	if err != nil {
-		return err
-	}
+func (w *writerWithSidecar) Close() (err error) {
 	// Always delete the temp file. On success, it will have been renamed so
 	// the Remove will fail.
 	defer func() {
@@ -806,7 +805,7 @@ func (w *writerWithSidecar) Close() error {
 	}()
 
 	// Check if the write was cancelled.
-	if err := w.ctx.Err(); err != nil {
+	if err = w.ctx.Err(); err != nil {
 		return err
 	}
 
@@ -814,13 +813,39 @@ func (w *writerWithSidecar) Close() error {
 	w.attrs.MD5 = md5sum
 
 	// Write the attributes file.
-	if err := setAttrs(w.path, w.attrs); err != nil {
+	if err = setAttrs(w.path, w.attrs); err != nil {
 		return err
 	}
-	// Rename the temp file to path.
-	if err := os.Rename(w.f.Name(), w.path); err != nil {
-		_ = os.Remove(w.path + attrsExt)
-		return err
+
+	defer func() {
+		if err != nil {
+			_ = os.Remove(w.path + attrsExt)
+		}
+	}()
+
+	if w.ifNotExist {
+		fileOptions := os.O_RDWR | os.O_CREATE | os.O_EXCL
+		fd, err := os.OpenFile(w.path, fileOptions, 0666)
+		if err != nil {
+			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "File already exist")
+		}
+		defer func() { _ = fd.Close() }()
+
+		// Set offset at the beginning of the file
+		_, err = w.f.Seek(0, 0)
+		if err != nil {
+			return err
+		}
+
+		// Copy content from the temp file to the new file
+		_, err = w.f.WriteTo(fd)
+		if err != nil {
+			return err
+		}
+	} else {
+		if err := os.Rename(w.f.Name(), w.path); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -831,8 +856,9 @@ func (w *writerWithSidecar) Close() error {
 // which is why it is not folded into writerWithSidecar.
 type writer struct {
 	*os.File
-	ctx  context.Context
-	path string
+	ctx        context.Context
+	path       string
+	ifNotExist bool
 }
 
 func (w *writer) Upload(r io.Reader) error {
@@ -841,10 +867,6 @@ func (w *writer) Upload(r io.Reader) error {
 }
 
 func (w *writer) Close() error {
-	err := w.File.Close()
-	if err != nil {
-		return err
-	}
 	// Always delete the temp file. On success, it will have been renamed so
 	// the Remove will fail.
 	tempname := w.File.Name()
@@ -855,9 +877,29 @@ func (w *writer) Close() error {
 		return err
 	}
 
-	// Rename the temp file to path.
-	if err := os.Rename(tempname, w.path); err != nil {
-		return err
+	if w.ifNotExist {
+		fileOptions := os.O_RDWR | os.O_CREATE | os.O_EXCL
+		fd, err := os.OpenFile(w.path, fileOptions, 0666)
+		if err != nil {
+			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "File already exist")
+		}
+		defer func() { _ = fd.Close() }()
+
+		// Set offset at the beginning of the file
+		_, err = w.File.Seek(0, 0)
+		if err != nil {
+			return err
+		}
+
+		// Copy content from the temp file to the new file
+		_, err = w.File.WriteTo(fd)
+		if err != nil {
+			return err
+		}
+	} else {
+		if err := os.Rename(w.File.Name(), w.path); err != nil {
+			return err
+		}
 	}
 	return nil
 }
