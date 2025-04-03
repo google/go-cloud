@@ -16,6 +16,7 @@ package memdocstore
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -128,6 +129,72 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestQueryNested(t *testing.T) {
+	ctx := context.Background()
+
+	count := func(iter *docstore.DocumentIterator) (c int) {
+		doc := docmap{}
+		for {
+			if err := iter.Next(ctx, doc); err != nil {
+				if err == io.EOF {
+					break
+				}
+				t.Fatal(err)
+			}
+			c++
+		}
+		return c
+	}
+
+	dc, err := newCollection(drivertest.KeyField, nil, &Options{AllowNestedSliceQueries: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	defer coll.Close()
+
+	doc := docmap{drivertest.KeyField: "TestQueryNested",
+		"list":             []any{docmap{"a": "A"}},
+		"map":              docmap{"b": "B"},
+		"listOfMaps":       []any{docmap{"id": "1"}, docmap{"id": "2"}, docmap{"id": "3"}},
+		"mapOfLists":       docmap{"ids": []any{"1", "2", "3"}},
+		"deep":             []any{docmap{"nesting": []any{docmap{"of": docmap{"elements": "yes"}}}}},
+		dc.RevisionField(): nil,
+	}
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+
+	got := count(coll.Query().Where("list.a", "=", "A").Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by list.a, want 1", got)
+	}
+	got = count(coll.Query().Where("list.a", "=", "missing").Get(ctx))
+	if got != 0 {
+		t.Errorf("got %v docs when filtering by list.a, want 0", got)
+	}
+	got = count(coll.Query().Where("map.b", "=", "B").Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by map.b, want 1", got)
+	}
+	got = count(coll.Query().Where("listOfMaps.id", "=", "1").Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by listOfMaps.id, want 1", got)
+	}
+	got = count(coll.Query().Where("listOfMaps.id", "=", "123").Get(ctx))
+	if got != 0 {
+		t.Errorf("got %v docs when filtering by listOfMaps.id, want 0", got)
+	}
+	got = count(coll.Query().Where("mapOfLists.ids", "=", "1").Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by listOfMaps.1, want 1", got)
+	}
+	got = count(coll.Query().Where("deep.nesting.of.elements", "=", "yes").Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by deep.nesting.of.elements, want 1", got)
 	}
 }
 
