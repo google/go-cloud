@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package postgres provides functions to open PostgreSQL databases with OpenCensus instrumentation.
+// Package postgres provides functions to open PostgreSQL databases with OpenTelemetry instrumentation.
 package postgres
 
 import (
@@ -21,10 +21,11 @@ import (
 	"database/sql/driver"
 	"net/url"
 
+	"github.com/XSAM/otelsql"
 	"github.com/lib/pq"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/internal/openurl"
-
-	"contrib.go.opencensus.io/integrations/ocsql"
 )
 
 // Scheme is the URL scheme this package registers its URLOpener under on
@@ -39,12 +40,20 @@ func init() {
 // See https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details.
 type URLOpener struct{}
 
-// OpenPostgresURL opens a new database connection wrapped with OpenCensus instrumentation.
+// OpenPostgresURL opens a new database connection wrapped with OpenTelemetry instrumentation.
 func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	u2 := new(url.URL)
 	*u2 = *u
 	u2.Scheme = "postgres"
-	return sql.OpenDB(connector{dsn: u2.String()}), nil
+	
+	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
+	return otelsql.Open("postgres", u2.String(),
+		otelsql.WithAttributes(
+			semconv.DBSystemKey.String("postgresql"),
+			semconv.DBNameKey.String("postgres"),
+			attribute.String("service.name", "go-cloud-postgres"),
+		),
+	)
 }
 
 type connector struct {
@@ -56,7 +65,8 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(&pq.Driver{})
+	// Direct OpenTelemetry driver registration happens in otelsql.Open
+	return &pq.Driver{}
 }
 
 // PostgresURLOpener can open Postgres connections based on a URL.

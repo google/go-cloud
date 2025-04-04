@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Logger wraps the Log method.  Log must be safe to call from multiple
@@ -53,7 +53,8 @@ func NewHandler(log Logger, h http.Handler) *Handler {
 // Log after the handler returns.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	sc := trace.FromContext(r.Context()).SpanContext()
+	span := trace.SpanFromContext(r.Context())
+	sc := span.SpanContext()
 	ent := &Entry{
 		Request:           cloneRequestWithoutBody(r),
 		ReceivedTime:      start,
@@ -64,8 +65,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Referer:           r.Referer(),
 		Proto:             r.Proto,
 		RemoteIP:          ipFromHostPort(r.RemoteAddr),
-		TraceID:           sc.TraceID,
-		SpanID:            sc.SpanID,
+		TraceID:           sc.TraceID(),
+		SpanID:            sc.SpanID(),
 	}
 	if addr, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
 		ent.ServerIP = ipFromHostPort(addr.String())
@@ -129,7 +130,7 @@ type Entry struct {
 	RequestHeaderSize int64
 	// Deprecated. This value is available by evaluating Request.Header.
 	UserAgent string
-	// Deprecated. This value is available by evaluating Request.RemoteAddr..
+	// Deprecated. This value is available by evaluating Request.RemoteAddr.
 	RemoteIP string
 	// Deprecated. This value is available by evaluating reading the
 	// http.LocalAddrContextKey value from the context returned by Request.Context().

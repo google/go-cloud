@@ -39,9 +39,11 @@ import (
 	"sync"
 	"time"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
+	"github.com/XSAM/otelsql"
 	"github.com/lib/pq"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/postgres"
@@ -90,12 +92,9 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain authentication information.
 	// CertSource must not be nil.
 	CertSource proxy.CertSource
-
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
 }
 
-// OpenPostgresURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
+// OpenPostgresURL opens a new GCP database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("gcppostgres: URLOpener CertSource is nil")
@@ -120,15 +119,22 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	u2.Host = "cloudsql"
 	u2.Path = "/" + dbName
 	u2.RawQuery = query.Encode()
-	db := sql.OpenDB(connector{
+	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
+	connector := &pqConnector{
 		client: &proxy.Client{
 			Port:  3307,
 			Certs: uo.CertSource,
 		},
-		instance:  instance,
-		pqConn:    u2.String(),
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
-	})
+		instance: instance,
+		pqConn:   u2.String(),
+	}
+	db := otelsql.OpenDB(connector, 
+		otelsql.WithAttributes(
+			semconv.DBSystemKey.String("postgresql"),
+			semconv.DBNameKey.String("postgres"),
+			attribute.String("service.name", "go-cloud-gcppostgres"),
+			attribute.String("cloud.provider", "gcp"),
+		))
 	return db, nil
 }
 
@@ -149,7 +155,6 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 type pqDriver struct {
 	client    *proxy.Client
 	instance  string
-	traceOpts []ocsql.TraceOption
 }
 
 func (d pqDriver) Open(name string) (driver.Conn, error) {
@@ -158,26 +163,21 @@ func (d pqDriver) Open(name string) (driver.Conn, error) {
 }
 
 func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
-	return connector{d.client, d.instance, name, d.traceOpts}, nil
+	return &pqConnector{d.client, d.instance, name}, nil
 }
 
-type connector struct {
+type pqConnector struct {
 	client    *proxy.Client
 	instance  string
 	pqConn    string
-	traceOpts []ocsql.TraceOption
 }
 
-func (c connector) Connect(context.Context) (driver.Conn, error) {
-	conn, err := pq.DialOpen(dialer{c.client, c.instance}, c.pqConn)
-	if err != nil {
-		return nil, err
-	}
-	return ocsql.WrapConn(conn, c.traceOpts...), nil
+func (c *pqConnector) Connect(ctx context.Context) (driver.Conn, error) {
+	return pq.DialOpen(dialer{c.client, c.instance}, c.pqConn)
 }
 
-func (c connector) Driver() driver.Driver {
-	return pqDriver{c.client, c.instance, c.traceOpts}
+func (c *pqConnector) Driver() driver.Driver {
+	return pqDriver{c.client, c.instance}
 }
 
 type dialer struct {

@@ -31,12 +31,12 @@
 // The Bucket.ErrorAs method can retrieve the driver error underlying the returned
 // error.
 //
-// # OpenCensus Integration
+// # OpenTelemetry Integration
 //
-// OpenCensus supports tracing and metric collection for multiple languages and
-// backend providers. See https://opencensus.io.
+// OpenTelemetry supports tracing, metrics, and logs collection for multiple languages and
+// backend providers. See https://opentelemetry.io.
 //
-// This API collects OpenCensus traces and metrics for the following methods:
+// This API collects OpenTelemetry traces and metrics for the following methods:
 //   - Attributes
 //   - Copy
 //   - Delete
@@ -57,10 +57,10 @@
 //   - gocloud.dev/blob/bytes_read: the total number of bytes read, by driver.
 //   - gocloud.dev/blob/bytes_written: the total number of bytes written, by driver.
 //
-// To enable trace collection in your application, see "Configure Exporter" at
-// https://opencensus.io/quickstart/go/tracing.
-// To enable metric collection in your application, see "Exporting stats" at
-// https://opencensus.io/quickstart/go/metrics.
+// To enable trace collection in your application, see the documentation at
+// https://opentelemetry.io/docs/instrumentation/go/getting-started/.
+// To enable metric collection in your application, see the documentation at
+// https://opentelemetry.io/docs/instrumentation/go/manual/.
 package blob // import "gocloud.dev/blob"
 
 import (
@@ -80,13 +80,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"go.opencensus.io/stats"
-	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/oc"
+	gcdkotel "gocloud.dev/internal/otel"
 	"gocloud.dev/internal/openurl"
 )
 
@@ -108,7 +107,7 @@ type Reader struct {
 	savedOffset    int64                 // Last relativeOffset for r, saved after relativeOffset is changed in Seek, or -1 if no Seek.
 	end            func(error)           // Called at Close to finish trace and metric collection.
 	// for metric collection;
-	statsTagMutators []tag.Mutator
+	provider         string               // Provider name for metrics
 	bytesRead        int
 	closed           bool
 }
@@ -200,10 +199,13 @@ func (r *Reader) Close() error {
 	err := wrapError(r.b, r.r.Close(), r.key)
 	r.end(err)
 	// Emit only on close to avoid an allocation on each call to Read().
-	stats.RecordWithTags(
-		context.Background(),
-		r.statsTagMutators,
-		bytesReadMeasure.M(int64(r.bytesRead)))
+	// Record bytes read metric with OpenTelemetry
+	if bytesReadCounter != nil && r.bytesRead > 0 {
+		bytesReadCounter.Add(
+			context.Background(), 
+			int64(r.bytesRead),
+			metric.WithAttributes(gcdkotel.ProviderKey.String(r.provider)))
+	}
 	return err
 }
 
@@ -365,7 +367,7 @@ type Writer struct {
 	cancel           func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5       []byte
 	md5hash          hash.Hash
-	statsTagMutators []tag.Mutator // for metric collection
+	provider         string      // Provider name for metrics
 	bytesWritten     int
 	closed           bool
 
@@ -434,10 +436,13 @@ func (w *Writer) Close() (err error) {
 	defer func() {
 		w.end(err)
 		// Emit only on close to avoid an allocation on each call to Write().
-		stats.RecordWithTags(
-			context.Background(),
-			w.statsTagMutators,
-			bytesWrittenMeasure.M(int64(w.bytesWritten)))
+			// Record bytes written metric with OpenTelemetry
+		if bytesWrittenCounter != nil && w.bytesWritten > 0 {
+			bytesWrittenCounter.Add(
+				context.Background(),
+				int64(w.bytesWritten),
+				metric.WithAttributes(gcdkotel.ProviderKey.String(w.provider)))
+		}
 	}()
 	if len(w.contentMD5) > 0 {
 		// Verify the MD5 hash of what was written matches the ContentMD5 provided
@@ -642,7 +647,7 @@ func (o *ListObject) As(i any) bool {
 // To create a Bucket, use constructors found in driver subpackages.
 type Bucket struct {
 	b      driver.Bucket
-	tracer *oc.Tracer
+	tracer *gcdkotel.Tracer
 
 	// ioFSCallback is set via SetIOFSCallback, which must be
 	// called before calling various functions implementing interfaces
@@ -659,31 +664,41 @@ type Bucket struct {
 const pkgName = "gocloud.dev/blob"
 
 var (
-	latencyMeasure      = oc.LatencyMeasure(pkgName)
-	bytesReadMeasure    = stats.Int64(pkgName+"/bytes_read", "Total bytes read", stats.UnitBytes)
-	bytesWrittenMeasure = stats.Int64(pkgName+"/bytes_written", "Total bytes written", stats.UnitBytes)
-
-	// OpenCensusViews are predefined views for OpenCensus metrics.
-	// The views include counts and latency distributions for API method calls,
-	// and total bytes read and written.
-	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
-	OpenCensusViews = append(
-		oc.Views(pkgName, latencyMeasure),
-		&view.View{
-			Name:        pkgName + "/bytes_read",
-			Measure:     bytesReadMeasure,
-			Description: "Sum of bytes read from the service.",
-			TagKeys:     []tag.Key{oc.ProviderKey},
-			Aggregation: view.Sum(),
-		},
-		&view.View{
-			Name:        pkgName + "/bytes_written",
-			Measure:     bytesWrittenMeasure,
-			Description: "Sum of bytes written to the service.",
-			TagKeys:     []tag.Key{oc.ProviderKey},
-			Aggregation: view.Sum(),
-		})
+	// Initialize OpenTelemetry meter
+	meter = otel.GetMeterProvider().Meter(pkgName)
+	
+	// Define counter instruments for bytes read/written
+	bytesReadCounter    metric.Int64Counter
+	bytesWrittenCounter metric.Int64Counter
+	
+	// Tracer for creating spans
+	tracer = otel.GetTracerProvider().Tracer(pkgName)
 )
+
+// Initialize the metrics
+func init() {
+	var err error
+	
+	// Create the bytes read counter
+	bytesReadCounter, err = meter.Int64Counter(
+		pkgName + "/bytes_read",
+		metric.WithDescription("Total bytes read from blob storage"),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		log.Printf("Failed to create bytes_read counter: %v", err)
+	}
+	
+	// Create the bytes written counter
+	bytesWrittenCounter, err = meter.Int64Counter(
+		pkgName + "/bytes_written",
+		metric.WithDescription("Total bytes written to blob storage"),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		log.Printf("Failed to create bytes_written counter: %v", err)
+	}
+}
 
 // NewBucket is intended for use by drivers only. Do not use in application code.
 var NewBucket = newBucket
@@ -692,14 +707,11 @@ var NewBucket = newBucket
 // End users should use subpackages to construct a *Bucket instead of this
 // function; see the package documentation for details.
 func newBucket(b driver.Bucket) *Bucket {
+	providerName := gcdkotel.ProviderName(b)
 	return &Bucket{
 		b:            b,
 		ioFSCallback: func() (context.Context, *ReaderOptions) { return context.Background(), nil },
-		tracer: &oc.Tracer{
-			Package:        pkgName,
-			Provider:       oc.ProviderName(b),
-			LatencyMeasure: latencyMeasure,
-		},
+		tracer: gcdkotel.NewTracer(pkgName, providerName),
 	}
 }
 
@@ -827,8 +839,8 @@ func (b *Bucket) ListPage(ctx context.Context, pageToken []byte, pageSize int, o
 		return nil, nil, errClosed
 	}
 
-	ctx = b.tracer.Start(ctx, "ListPage")
-	defer func() { b.tracer.End(ctx, err) }()
+	ctx, span := b.tracer.Start(ctx, "ListPage")
+	defer func() { b.tracer.End(span, err) }()
 
 	dopts := &driver.ListOptions{
 		Prefix:     opts.Prefix,
@@ -911,8 +923,8 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 	if b.closed {
 		return nil, errClosed
 	}
-	ctx = b.tracer.Start(ctx, "Attributes")
-	defer func() { b.tracer.End(ctx, err) }()
+	ctx, span := b.tracer.Start(ctx, "Attributes")
+	defer func() { b.tracer.End(span, err) }()
 
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
@@ -987,12 +999,12 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	dopts := &driver.ReaderOptions{
 		BeforeRead: opts.BeforeRead,
 	}
-	tctx := b.tracer.Start(ctx, "NewRangeReader")
+	_, span := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
 		// If err == nil, we handed the end closure off to the returned *Reader; it
 		// will be called when the Reader is Closed.
 		if err != nil {
-			b.tracer.End(tctx, err)
+			b.tracer.End(span, err)
 		}
 	}()
 	var dr driver.Reader
@@ -1000,7 +1012,7 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, wrapError(b.b, err, key)
 	}
-	end := func(err error) { b.tracer.End(tctx, err) }
+	end := func(err error) { b.tracer.End(span, err) }
 	r := &Reader{
 		b:                b.b,
 		r:                dr,
@@ -1011,7 +1023,7 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 		baseLength:       length,
 		savedOffset:      -1,
 		end:              end,
-		statsTagMutators: []tag.Mutator{tag.Upsert(oc.ProviderKey, b.tracer.Provider)},
+		provider: b.tracer.Provider,
 	}
 	_, file, lineno, ok := runtime.Caller(2)
 	runtime.SetFinalizer(r, func(r *Reader) {
@@ -1128,8 +1140,8 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		return nil, errClosed
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	tctx := b.tracer.Start(ctx, "NewWriter")
-	end := func(err error) { b.tracer.End(tctx, err) }
+	_, span := b.tracer.Start(ctx, "NewWriter")
+	end := func(err error) { b.tracer.End(span, err) }
 	defer func() {
 		if err != nil {
 			end(err)
@@ -1143,7 +1155,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		key:              key,
 		contentMD5:       opts.ContentMD5,
 		md5hash:          md5.New(),
-		statsTagMutators: []tag.Mutator{tag.Upsert(oc.ProviderKey, b.tracer.Provider)},
+		provider: b.tracer.Provider,
 	}
 	if opts.ContentType != "" || opts.DisableContentTypeDetection {
 		var ct string
@@ -1206,8 +1218,8 @@ func (b *Bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOpti
 	if b.closed {
 		return errClosed
 	}
-	ctx = b.tracer.Start(ctx, "Copy")
-	defer func() { b.tracer.End(ctx, err) }()
+	ctx, span := b.tracer.Start(ctx, "Copy")
+	defer func() { b.tracer.End(span, err) }()
 	return wrapError(b.b, b.b.Copy(ctx, dstKey, srcKey, dopts), fmt.Sprintf("%s -> %s", srcKey, dstKey))
 }
 
@@ -1224,8 +1236,8 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	if b.closed {
 		return errClosed
 	}
-	ctx = b.tracer.Start(ctx, "Delete")
-	defer func() { b.tracer.End(ctx, err) }()
+	ctx, span := b.tracer.Start(ctx, "Delete")
+	defer func() { b.tracer.End(span, err) }()
 	return wrapError(b.b, b.b.Delete(ctx, key), key)
 }
 

@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/wire"
-	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
 	"gocloud.dev/runtimevar"
@@ -44,7 +43,6 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	// wire.Build.
 	wire.Build(
 		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
-		wire.InterfaceValue(new(trace.Exporter), trace.Exporter(nil)),
 		server.Set,
 		applicationSet,
 		dialLocalSQL,
@@ -85,3 +83,5 @@ func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	}
 	return v, func() { v.Close() }, nil
 }
+
+

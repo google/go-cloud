@@ -37,9 +37,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
 	cdkmysql "gocloud.dev/mysql"
@@ -88,12 +90,9 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain authentication information.
 	// CertSource must not be nil.
 	CertSource proxy.CertSource
-
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
 }
 
-// OpenMySQLURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
+// OpenMySQLURL opens a new GCP database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("gcpmysql: URLOpener CertSource is nil")
@@ -111,7 +110,18 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	}
 	mysql.RegisterDialContext(dialerName, client.DialContext)
 
-	db := sql.OpenDB(connector{cfg.FormatDSN(), uo.TraceOpts})
+	// Create a connector with the DSN
+	conn := &mysqlConnector{dsn: cfg.FormatDSN()}
+	
+	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
+	db := otelsql.OpenDB(conn, 
+		otelsql.WithAttributes(
+			semconv.DBSystemKey.String("mysql"),
+			semconv.DBNameKey.String(cfg.DBName),
+			attribute.String("service.name", "go-cloud-gcpmysql"),
+			attribute.String("cloud.provider", "gcp"),
+			attribute.String("gcp.instance", cfg.Addr),
+		))
 	return db, nil
 }
 
@@ -160,15 +170,16 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 
 var dialerCounter uint32
 
-type connector struct {
-	dsn       string
-	traceOpts []ocsql.TraceOption
+type mysqlConnector struct {
+	dsn string
 }
 
-func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
+func (c *mysqlConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	return c.Driver().Open(c.dsn)
 }
 
-func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+func (c *mysqlConnector) Driver() driver.Driver {
+	// Return the standard MySQL driver, XSAM/otelsql will handle instrumentation
+	return &mysql.MySQLDriver{}
 }
+

@@ -23,19 +23,24 @@ import (
 	"time"
 
 	"github.com/google/wire"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/trace"
+	
 	"gocloud.dev/server/driver"
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/requestlog"
-
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/trace"
 )
 
 // Set is a Wire provider set that produces a *Server given the fields of
 // Options.
 var Set = wire.NewSet(
 	New,
-	wire.Struct(new(Options), "RequestLogger", "HealthChecks", "TraceExporter", "DefaultSamplingPolicy", "Driver"),
+	wire.Struct(new(Options), "RequestLogger", "HealthChecks", "TraceExporter", "DefaultSamplingPolicy", "TracerProvider", "Driver"),
 	wire.Value(&DefaultDriver{}),
 	wire.Bind(new(driver.Server), new(*DefaultDriver)),
 )
@@ -47,8 +52,9 @@ type Server struct {
 	handler        http.Handler
 	wrappedHandler http.Handler
 	healthHandler  health.Handler
-	te             trace.Exporter
-	sampler        trace.Sampler
+	te             sdktrace.SpanExporter
+	sampler        sdktrace.Sampler
+	tracerProvider trace.TracerProvider
 	once           sync.Once
 	driver         driver.Server
 }
@@ -63,12 +69,18 @@ type Options struct {
 	HealthChecks []health.Checker
 
 	// TraceExporter exports sampled trace spans.
-	TraceExporter trace.Exporter
+	// Deprecated: Use TracerProvider instead. If both are provided, TracerProvider takes precedence.
+	TraceExporter sdktrace.SpanExporter
 
 	// DefaultSamplingPolicy is a function that takes a
-	// trace.SamplingParameters struct and returns a true or false decision about
+	// trace.SpanStartOptions struct and returns a decision about
 	// whether it should be sampled and exported.
-	DefaultSamplingPolicy trace.Sampler
+	// Deprecated: Use TracerProvider instead. If TracerProvider is provided, this is ignored.
+	DefaultSamplingPolicy sdktrace.Sampler
+
+	// TracerProvider is a configured OpenTelemetry TracerProvider.
+	// If set, this is used directly instead of creating one from TraceExporter and DefaultSamplingPolicy.
+	TracerProvider trace.TracerProvider
 
 	// Driver serves HTTP requests.
 	Driver driver.Server
@@ -84,6 +96,7 @@ func New(h http.Handler, opts *Options) *Server {
 			srv.healthHandler.Add(c)
 		}
 		srv.sampler = opts.DefaultSamplingPolicy
+		srv.tracerProvider = opts.TracerProvider
 		srv.driver = opts.Driver
 	}
 	return srv
@@ -91,11 +104,40 @@ func New(h http.Handler, opts *Options) *Server {
 
 func (srv *Server) init() {
 	srv.once.Do(func() {
-		if srv.te != nil {
-			trace.RegisterExporter(srv.te)
-		}
-		if srv.sampler != nil {
-			trace.ApplyConfig(trace.Config{DefaultSampler: srv.sampler})
+		// If a TracerProvider was provided, use it directly
+		if srv.tracerProvider != nil {
+			// Set the global tracer provider if a custom one was provided
+			otel.SetTracerProvider(srv.tracerProvider)
+			otel.SetTextMapPropagator(propagation.TraceContext{})
+		} else if srv.te != nil {
+			// Legacy approach: create a provider from an exporter
+			// Create resource
+			res, err := resource.New(context.Background(),
+				resource.WithTelemetrySDK(),
+				resource.WithAttributes(
+					semconv.ServiceNameKey.String("gocloud-server"),
+				),
+			)
+			if err == nil {
+				// Set up OpenTelemetry tracer provider with the exporter
+				tp := sdktrace.NewTracerProvider(
+					sdktrace.WithBatcher(srv.te),
+					sdktrace.WithResource(res),
+				)
+				
+				if srv.sampler != nil {
+					// Create a new provider with the sampler
+					tp = sdktrace.NewTracerProvider(
+						sdktrace.WithBatcher(srv.te),
+						sdktrace.WithSampler(srv.sampler),
+						sdktrace.WithResource(res),
+					)
+				}
+				
+				// Set the global tracer provider
+				otel.SetTracerProvider(tp)
+				otel.SetTextMapPropagator(propagation.TraceContext{})
+			}
 		}
 		if srv.driver == nil {
 			srv.driver = NewDefaultDriver()
@@ -115,10 +157,8 @@ func (srv *Server) init() {
 		if srv.reqlog != nil {
 			h = requestlog.NewHandler(srv.reqlog, h)
 		}
-		h = &ochttp.Handler{
-			Handler:          h,
-			IsPublicEndpoint: true,
-		}
+		// Wrap with OpenTelemetry HTTP handler
+		h = otelhttp.NewHandler(h, "go-cloud-server")
 		mux.Handle("/", h)
 		srv.wrappedHandler = mux
 	})

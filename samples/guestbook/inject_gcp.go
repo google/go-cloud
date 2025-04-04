@@ -92,3 +92,5 @@ func gcpMOTDVar(ctx context.Context, client pb.RuntimeConfigManagerClient, proje
 	}
 	return v, func() { v.Close() }, nil
 }
+
+

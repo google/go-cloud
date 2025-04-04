@@ -33,8 +33,10 @@ import (
 	"net/url"
 	"strings"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/azure/azuredb"
 	cdkmysql "gocloud.dev/mysql"
 )
@@ -45,8 +47,6 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain the Azure Certificate
 	// Authority. If nil, it will use the default *azuredb.CertFetcher.
 	CertSource azuredb.CertPoolProvider
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
 }
 
 // Scheme is the URL scheme azuremysql registers its URLOpener under on
@@ -57,7 +57,7 @@ func init() {
 	cdkmysql.DefaultURLMux().RegisterMySQL(Scheme, &URLOpener{})
 }
 
-// OpenMySQLURL opens an encrypted connection to an Azure MySQL database.
+// OpenMySQLURL opens an encrypted connection to an Azure MySQL database with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	source := uo.CertSource
 	if source == nil {
@@ -67,28 +67,35 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		return nil, fmt.Errorf("open Azure database: empty endpoint")
 	}
 	password, _ := u.User.Password()
-	c := &connector{
+	
+	// Create a connector that will handle certificate retrieval and setup
+	conn := &mysqlConnector{
 		addr:     u.Host,
 		user:     u.User.Username(),
 		password: password,
 		dbName:   strings.TrimPrefix(u.Path, "/"),
-		// Make a copy of TraceOpts to avoid caller modifying.
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
-		provider:  source,
-
-		sem:   make(chan struct{}, 1),
-		ready: make(chan struct{}),
+		provider: source,
+		sem:     make(chan struct{}, 1),
+		ready:   make(chan struct{}),
 	}
-	c.sem <- struct{}{}
-	return sql.OpenDB(c), nil
+	conn.sem <- struct{}{}
+	
+	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
+	db := otelsql.OpenDB(conn, 
+		otelsql.WithAttributes(
+			semconv.DBSystemKey.String("mysql"),
+			semconv.DBNameKey.String(conn.dbName),
+			attribute.String("service.name", "go-cloud-azuremysql"),
+			attribute.String("cloud.provider", "azure"),
+		))
+	return db, nil
 }
 
-type connector struct {
+type mysqlConnector struct {
 	addr      string
 	user      string
 	password  string
 	dbName    string
-	traceOpts []ocsql.TraceOption
 
 	sem      chan struct{}    // receive to acquire, send to release
 	provider CertPoolProvider // provides the CA certificate pool
@@ -97,7 +104,7 @@ type connector struct {
 	dsn   string
 }
 
-func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
+func (c *mysqlConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	select {
 	case <-c.sem:
 		certPool, err := c.provider.AzureCertPool(ctx)
@@ -126,9 +133,11 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	return c.Driver().Open(c.dsn)
 }
 
-func (c *connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+func (c *mysqlConnector) Driver() driver.Driver {
+	// Return the standard MySQL driver, XSAM/otelsql will handle instrumentation
+	return &mysql.MySQLDriver{}
 }
+
 
 // A CertPoolProvider obtains a certificate pool that contains the Azure CA certificate.
 type CertPoolProvider = azuredb.CertPoolProvider

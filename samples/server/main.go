@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command server runs a simple HTTP server with integrated Stackdriver tracing
+// Command server runs a simple HTTP server with integrated Cloud Trace (OpenTelemetry)
 // and health checks.
 package main
 
@@ -26,7 +26,10 @@ import (
 	"sync"
 	"time"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"gocloud.dev/gcp"
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
@@ -86,14 +89,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var exporter trace.Exporter
+	var traceProvider trace.TracerProvider = nooptrace.NewTracerProvider()
 	if *doTrace {
-		fmt.Println("Exporting traces to Stackdriver")
+		fmt.Println("Exporting traces to Google Cloud Trace")
 		mr := GlobalMonitoredResource{projectID: string(projectID)}
-		exporter, _, err = sdserver.NewExporter(projectID, tokenSource, mr)
+		exporter, _, err := sdserver.NewOTelExporter(sdserver.ProjectID(projectID), sdserver.TokenSource(tokenSource), mr)
 		if err != nil {
 			log.Fatal(err)
 		}
+		
+		// Create resource with project information
+		res := resource.NewWithAttributes(
+			resource.SchemaURL,
+			// Add relevant resource attributes here
+		)
+		
+		// Create and register tracer provider
+		tp := trace.NewTracerProvider(
+			trace.WithBatcher(exporter),
+			trace.WithResource(res),
+			trace.WithSampler(trace.AlwaysSample()),
+		)
+		traceProvider = tp
+		otel.SetTracerProvider(tp)
 	}
 
 	mux := http.NewServeMux()
@@ -113,13 +131,12 @@ func main() {
 	options := &server.Options{
 		RequestLogger: sdserver.NewRequestLogger(),
 		HealthChecks:  []health.Checker{healthCheck},
-		TraceExporter: exporter,
+		TracerProvider: traceProvider,
 
-		// In production you will likely want to use trace.ProbabilitySampler
-		// instead, since AlwaysSample will start and export a trace for every
-		// request - this may be prohibitively slow with significant traffic.
-		DefaultSamplingPolicy: trace.AlwaysSample(),
-		Driver:                &server.DefaultDriver{},
+		// Note: Sampling is now configured at the TracerProvider level above
+		// In production you will likely want to use a probabilistic sampler
+		// instead of AlwaysSample to avoid generating too much data
+		Driver: &server.DefaultDriver{},
 	}
 
 	s := server.New(mux, options)

@@ -86,3 +86,5 @@ func awsMOTDVar(ctx context.Context, client *ssm.Client, flags *cliFlags) (*runt
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
+
+
