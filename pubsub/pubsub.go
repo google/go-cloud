@@ -74,6 +74,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -87,6 +88,8 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"golang.org/x/sync/errgroup"
 )
+
+var aa, bb, cc atomic.Int32
 
 // Message contains data to be published.
 type Message struct {
@@ -557,6 +560,17 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			// log.Printf("BATCH SIZE %d", batchSize)
 
 			go func() {
+				n := aa.Add(1)
+				if n > 2 {
+					log.Printf("starting fetcher goroutine, now %d", n)
+				}
+				defer func() {
+					n := aa.Add(-1)
+					if n > 2 {
+						log.Printf("exiting fetcher goroutine, now %d", n)
+					}
+				}()
+
 				if s.preReceiveBatchHook != nil {
 					s.preReceiveBatchHook(batchSize)
 				}
@@ -661,6 +675,16 @@ func (s *Subscription) getNextBatch(nMessages int) chan msgsOrError {
 		// Make a copy of the loop variable since it will be used by a goroutine.
 		curMaxMessagesInBatch := maxMessagesInBatch
 		g.Go(func() error {
+			n := bb.Add(1)
+			if n > 2 {
+				log.Printf("starting errgrp goroutine, now %d", n)
+			}
+			defer func() {
+				n := bb.Add(-1)
+				if n > 2 {
+					log.Printf("exiting errgrp goroutine, now %d", n)
+				}
+			}()
 			var msgs []*driver.Message
 			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 				var err error
@@ -677,6 +701,16 @@ func (s *Subscription) getNextBatch(nMessages int) chan msgsOrError {
 		})
 	}
 	go func() {
+		n := cc.Add(1)
+		if n > 2 {
+			log.Printf("starting waiter goroutine, now %d", n)
+		}
+		defer func() {
+			n := cc.Add(-1)
+			if n > 2 {
+				log.Printf("exiting waiter goroutine, now %d", n)
+			}
+		}()
 		// wait on group completion on the background and proper channel closing
 		if err := g.Wait(); err != nil {
 			result <- msgsOrError{err: err}
