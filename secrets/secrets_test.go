@@ -17,10 +17,12 @@ package secrets
 import (
 	"context"
 	"errors"
+	"gocloud.dev/internal/testing/oteltest"
 	"net/url"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
@@ -92,34 +94,39 @@ func TestKeeperIsClosed(t *testing.T) {
 }
 
 func TestOpenTelemetry(t *testing.T) {
-	// Skip this test during migration - we'll address OpenTelemetry testing separately
-	// This is part of the OpenCensus to OpenTelemetry migration
-	t.Skip("Skipping OpenTelemetry test during migration")
 
-	// Original test logic remains as a reference for future improvement
-	/*
-		ctx := context.Background()
-		te := oteltest.NewTestExporter()
-		defer te.Shutdown(ctx)
+	ctx := context.Background()
 
-		k := NewKeeper(&erroringKeeper{})
-		defer k.Close()
-		k.Encrypt(ctx, nil)
-		k.Decrypt(ctx, nil)
+	te := oteltest.NewTestExporter()
 
-		// Wait for spans to be processed
-		time.Sleep(100 * time.Millisecond)
+	k := NewKeeper(&erroringKeeper{})
+	defer k.Close()
+	_, _ = k.Encrypt(ctx, nil)
 
-		// Check collected spans
-		spanStubs := te.SpanStubs()
-		diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/secrets", "", []oteltest.Call{
-			{Method: "Encrypt", Status: "13"},  // 13 is the code for Internal
-			{Method: "Decrypt", Status: "13"},  // 13 is the code for Internal
-		})
-		if diff != "" {
-			t.Error(diff)
-		}
-	*/
+	_, _ = k.Decrypt(ctx, nil)
+
+	// Force flush to ensure spans are exported
+	_ = te.ForceFlush(ctx)
+	time.Sleep(5 * time.Second)
+
+	// Check collected spans
+	spanStubs := te.SpanStubs()
+	diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/secrets", "", []oteltest.Call{
+		{Method: "Encrypt", Status: "13"}, // 13 is the code for Internal
+		{Method: "Decrypt", Status: "13"}, // 13 is the code for Internal
+	})
+	if diff != "" {
+		t.Error(diff)
+	}
+
+	// Safe shutdown with very short timeout to avoid hanging
+	sctx, scancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer scancel()
+	if err := te.Shutdown(sctx); err != nil {
+		// Just log and continue - not failing the test on shutdown errors
+		t.Logf("OpenTelemetry shutdown error (non-fatal): %v", err)
+	}
+
 }
 
 var (

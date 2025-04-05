@@ -196,7 +196,6 @@ func (te *TestExporter) ForceFlush(ctx context.Context) error {
 
 // Shutdown unregisters and shuts down the exporter.
 func (te *TestExporter) Shutdown(ctx context.Context) error {
-
 	// Reset global providers
 	otel.SetTracerProvider(nooptrace.NewTracerProvider())
 	otel.SetMeterProvider(noopmetric.NewMeterProvider())

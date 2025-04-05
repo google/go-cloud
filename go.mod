@@ -78,7 +78,6 @@ require (
 require (
 	go.opentelemetry.io/contrib/detectors/gcp v1.35.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.35.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.35.0
 )
 
 require (
