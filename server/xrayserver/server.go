@@ -46,38 +46,45 @@ var Set = wire.NewSet(
 //
 // The second return value is a Wire cleanup function that calls Shutdown
 // on the exporter, ignoring the error.
-func NewAwsTraceExporter(option ...otlptracegrpc.Option) (*trace.TracerProvider, error) {
+func NewAwsTraceExporter(exporter trace.SpanExporter, res *resource.Resource, sampler trace.Sampler) (*trace.TracerProvider, error) {
 	ctx := context.Background()
-
-	// Create a resource with basic information
-	res, err := resource.New(ctx,
-		resource.WithOS(),
-		resource.WithProcess(),
-		resource.WithTelemetrySDK(),
-		resource.WithAttributes(
-			attribute.String("service.name", "go-cloud-server"),
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
+	var err error
+	if res == nil {
+		// Create a resource with basic information
+		res, err = resource.New(ctx,
+			resource.WithOS(),
+			resource.WithProcess(),
+			resource.WithTelemetrySDK(),
+			resource.WithAttributes(
+				attribute.String("service.name", "go-cloud-server"),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create resource: %w", err)
+		}
 	}
 
-	// Create OTLP exporter configured for AWS X-Ray
-	// AWS X-Ray typically uses the OpenTelemetry Collector with the AWS X-Ray exporter
-	client := otlptracegrpc.NewClient(
-		otlptracegrpc.WithEndpoint("0.0.0.0:4317"), // Default OTLP gRPC endpoint where collector should be running
-		otlptracegrpc.WithInsecure(),               // For production, consider using TLS
-	)
-	exporter, err := otlptrace.New(ctx, client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+	if sampler == nil {
+		sampler = trace.AlwaysSample()
 	}
 
+	if exporter == nil {
+		// Create OTLP exporter configured for AWS X-Ray
+		// AWS X-Ray typically uses the OpenTelemetry Collector with the AWS X-Ray exporter
+		client := otlptracegrpc.NewClient(
+			otlptracegrpc.WithEndpoint("0.0.0.0:4317"), // Default OTLP gRPC endpoint where collector should be running
+			otlptracegrpc.WithInsecure(),               // For production, consider using TLS
+		)
+		exporter, err = otlptrace.New(ctx, client)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+		}
+	}
 	// Create a tracer provider with the exporter
 	tp := trace.NewTracerProvider(
 		trace.WithBatcher(exporter),
 		trace.WithResource(res),
-		trace.WithSampler(trace.AlwaysSample()),
+		trace.WithSampler(sampler),
 	)
 
 	// Set the global tracer provider
