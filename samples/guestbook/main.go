@@ -165,7 +165,6 @@ func provideSampler() sdktrace.Sampler {
 	return sdktrace.AlwaysSample()
 }
 
-
 func newRouter(app *application) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", app.index)

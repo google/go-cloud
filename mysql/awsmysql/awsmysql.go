@@ -80,7 +80,7 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create a connector that will handle certificate retrieval and setup
 	conn := &mysqlConnector{
 		dsn:      cfg.FormatDSN(),
@@ -89,15 +89,15 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 		ready:    make(chan struct{}),
 	}
 	conn.sem <- struct{}{}
-	
+
 	// Extract database name from the DSN for attributes
 	dbName := ""
 	if parsedCfg, err := mysql.ParseDSN(cfg.FormatDSN()); err == nil {
 		dbName = parsedCfg.DBName
 	}
-	
+
 	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
-	db := otelsql.OpenDB(conn, 
+	db := otelsql.OpenDB(conn,
 		otelsql.WithAttributes(
 			semconv.DBSystemKey.String("mysql"),
 			semconv.DBNameKey.String(dbName),
@@ -146,7 +146,6 @@ func (c *mysqlConnector) Driver() driver.Driver {
 	// Return the standard MySQL driver, XSAM/otelsql will handle instrumentation
 	return &mysql.MySQLDriver{}
 }
-
 
 // A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.
 type CertPoolProvider = rds.CertPoolProvider

@@ -112,9 +112,9 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 
 	// Create a connector with the DSN
 	conn := &mysqlConnector{dsn: cfg.FormatDSN()}
-	
+
 	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
-	db := otelsql.OpenDB(conn, 
+	db := otelsql.OpenDB(conn,
 		otelsql.WithAttributes(
 			semconv.DBSystemKey.String("mysql"),
 			semconv.DBNameKey.String(cfg.DBName),
@@ -182,4 +182,3 @@ func (c *mysqlConnector) Driver() driver.Driver {
 	// Return the standard MySQL driver, XSAM/otelsql will handle instrumentation
 	return &mysql.MySQLDriver{}
 }
-

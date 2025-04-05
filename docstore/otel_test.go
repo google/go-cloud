@@ -25,7 +25,7 @@ import (
 
 func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
-	
+
 	// Setup the test exporter for both trace and metrics
 	te := oteltest.NewTestExporter()
 	defer te.Shutdown(ctx)
@@ -54,7 +54,7 @@ func TestOpenTelemetry(t *testing.T) {
 	spanStubs := te.SpanStubs()
 	providerFound := false
 	const driver = "gocloud.dev/docstore/memdocstore"
-	
+
 	// Look for spans with the expected provider attribute
 	for _, span := range spanStubs {
 		for _, attr := range span.Attributes {
@@ -67,12 +67,12 @@ func TestOpenTelemetry(t *testing.T) {
 			break
 		}
 	}
-	
+
 	// Skip span check as span attributes might have changed during migration
 	// if !providerFound {
 	// 	t.Errorf("did not see span with provider=%s", driver)
 	// }
-	
+
 	// Check metrics - during migration, we may need to look for different metric names
 	metrics := te.Metrics()
 	metricsFound := false

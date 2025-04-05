@@ -84,7 +84,7 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	u2.RawQuery = query.Encode()
 	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
 	connector := &pqConnector{provider: source, pqConn: u2.String()}
-	db := otelsql.OpenDB(connector, 
+	db := otelsql.OpenDB(connector,
 		otelsql.WithAttributes(
 			semconv.DBSystemKey.String("postgresql"),
 			semconv.DBNameKey.String("postgres"),

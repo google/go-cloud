@@ -45,7 +45,7 @@ func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	u2 := new(url.URL)
 	*u2 = *u
 	u2.Scheme = "postgres"
-	
+
 	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
 	return otelsql.Open("postgres", u2.String(),
 		otelsql.WithAttributes(

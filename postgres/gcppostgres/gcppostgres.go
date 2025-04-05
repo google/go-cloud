@@ -128,7 +128,7 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 		instance: instance,
 		pqConn:   u2.String(),
 	}
-	db := otelsql.OpenDB(connector, 
+	db := otelsql.OpenDB(connector,
 		otelsql.WithAttributes(
 			semconv.DBSystemKey.String("postgresql"),
 			semconv.DBNameKey.String("postgres"),
@@ -153,8 +153,8 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 }
 
 type pqDriver struct {
-	client    *proxy.Client
-	instance  string
+	client   *proxy.Client
+	instance string
 }
 
 func (d pqDriver) Open(name string) (driver.Conn, error) {
@@ -167,9 +167,9 @@ func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
 }
 
 type pqConnector struct {
-	client    *proxy.Client
-	instance  string
-	pqConn    string
+	client   *proxy.Client
+	instance string
+	pqConn   string
 }
 
 func (c *pqConnector) Connect(ctx context.Context) (driver.Conn, error) {

@@ -91,5 +91,3 @@ func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
 func provideLocalRequestLogger() *requestlog.NCSALogger {
 	return requestlog.NewNCSALogger(os.Stdout, func(e error) { fmt.Println(e) })
 }
-
-

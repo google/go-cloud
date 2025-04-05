@@ -95,30 +95,30 @@ func TestOpenTelemetry(t *testing.T) {
 	// Skip this test during migration - we'll address OpenTelemetry testing separately
 	// This is part of the OpenCensus to OpenTelemetry migration
 	t.Skip("Skipping OpenTelemetry test during migration")
-	
+
 	// Original test logic remains as a reference for future improvement
 	/*
-	ctx := context.Background()
-	te := oteltest.NewTestExporter()
-	defer te.Shutdown(ctx)
+		ctx := context.Background()
+		te := oteltest.NewTestExporter()
+		defer te.Shutdown(ctx)
 
-	k := NewKeeper(&erroringKeeper{})
-	defer k.Close()
-	k.Encrypt(ctx, nil)
-	k.Decrypt(ctx, nil)
-	
-	// Wait for spans to be processed
-	time.Sleep(100 * time.Millisecond)
-	
-	// Check collected spans
-	spanStubs := te.SpanStubs()
-	diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/secrets", "", []oteltest.Call{
-		{Method: "Encrypt", Status: "13"},  // 13 is the code for Internal
-		{Method: "Decrypt", Status: "13"},  // 13 is the code for Internal
-	})
-	if diff != "" {
-		t.Error(diff)
-	}
+		k := NewKeeper(&erroringKeeper{})
+		defer k.Close()
+		k.Encrypt(ctx, nil)
+		k.Decrypt(ctx, nil)
+
+		// Wait for spans to be processed
+		time.Sleep(100 * time.Millisecond)
+
+		// Check collected spans
+		spanStubs := te.SpanStubs()
+		diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/secrets", "", []oteltest.Call{
+			{Method: "Encrypt", Status: "13"},  // 13 is the code for Internal
+			{Method: "Decrypt", Status: "13"},  // 13 is the code for Internal
+		})
+		if diff != "" {
+			t.Error(diff)
+		}
 	*/
 }
 

@@ -84,10 +84,10 @@ const pkgName = "gocloud.dev/secrets"
 var (
 	// Meter is the OpenTelemetry meter for this package
 	meter = otel.GetMeterProvider().Meter(pkgName)
-	
+
 	// latencyHistogram measures the latency of method calls
 	latencyHistogram metric.Float64Histogram
-	
+
 	// completedCallsCounter counts the number of method calls
 	completedCallsCounter metric.Int64Counter
 )
@@ -101,7 +101,7 @@ func init() {
 	if err != nil {
 		otel.Handle(err)
 	}
-	
+
 	completedCallsCounter, err = meter.Int64Counter(
 		pkgName+"/completed_calls",
 		metric.WithDescription("Count of completed method calls"),
@@ -148,7 +148,7 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []by
 			attribute.String("method", "Encrypt"),
 			attribute.String("provider", providerName(k.k)),
 		))
-		
+
 		status := "ok"
 		if err != nil {
 			status = "error"
@@ -196,7 +196,7 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 			attribute.String("method", "Decrypt"),
 			attribute.String("provider", providerName(k.k)),
 		))
-		
+
 		status := "ok"
 		if err != nil {
 			status = "error"

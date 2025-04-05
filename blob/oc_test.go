@@ -34,7 +34,7 @@ func TestOpenTelemetry(t *testing.T) {
 	te := oteltest.NewTestExporter()
 	// Don't use defer for shutdown as it can lead to deadlocks
 	// We'll manually shut down at the end of the test
-	
+
 	// Create a bucket and perform operations to generate spans and metrics
 	bytes := []byte("hello world")
 	b := memblob.OpenBucket(nil)
@@ -86,9 +86,9 @@ func TestOpenTelemetry(t *testing.T) {
 	expectedOps := map[string]bool{
 		"NewWriter":      false,
 		"NewRangeReader": false,
-		"Attributes":    false,
-		"ListPage":      false,
-		"Delete":        false,
+		"Attributes":     false,
+		"ListPage":       false,
+		"Delete":         false,
 	}
 
 	// Check the spans we received
@@ -119,7 +119,7 @@ func TestOpenTelemetry(t *testing.T) {
 	metrics, ok := te.WaitForMetrics(500 * time.Millisecond)
 	if ok {
 		t.Logf("Collected metrics: %d", len(metrics.Metrics))
-		
+
 		// Log metric names
 		for _, m := range metrics.Metrics {
 			t.Logf("Metric: %s", m.Name)

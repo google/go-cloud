@@ -45,7 +45,7 @@ func TestOpenTelemetry(t *testing.T) {
 	spanStubs := te.SpanStubs()
 	providerFound := false
 	const driver = "gocloud.dev/runtimevar/constantvar"
-	
+
 	// Look for spans with the expected provider attribute
 	for _, span := range spanStubs {
 		for _, attr := range span.Attributes {
@@ -58,19 +58,19 @@ func TestOpenTelemetry(t *testing.T) {
 			break
 		}
 	}
-	
+
 	// Skip span check as span attributes might have changed during migration
 	// if !providerFound {
 	// 	t.Errorf("did not see span with provider=%s", driver)
 	// }
-	
+
 	// Check metrics - during migration, we may need to look for different metric names
 	metrics := te.Metrics()
 	metricsFound := false
 	possibleMetricNames := []string{
 		"gocloud.dev/runtimevar/value_changes",
 		"gocloud.dev/runtimevar/completed_calls",
-		"gocloud.dev/runtimevar/watch_calls", 
+		"gocloud.dev/runtimevar/watch_calls",
 	}
 
 	for _, scopeMetric := range metrics {

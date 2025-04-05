@@ -85,8 +85,8 @@ import (
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
-	gcdkotel "gocloud.dev/internal/otel"
 	"gocloud.dev/internal/openurl"
+	gcdkotel "gocloud.dev/internal/otel"
 )
 
 // Ensure that Reader implements io.ReadSeekCloser.
@@ -107,9 +107,9 @@ type Reader struct {
 	savedOffset    int64                 // Last relativeOffset for r, saved after relativeOffset is changed in Seek, or -1 if no Seek.
 	end            func(error)           // Called at Close to finish trace and metric collection.
 	// for metric collection;
-	provider         string               // Provider name for metrics
-	bytesRead        int
-	closed           bool
+	provider  string // Provider name for metrics
+	bytesRead int
+	closed    bool
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
@@ -202,7 +202,7 @@ func (r *Reader) Close() error {
 	// Record bytes read metric with OpenTelemetry
 	if bytesReadCounter != nil && r.bytesRead > 0 {
 		bytesReadCounter.Add(
-			context.Background(), 
+			context.Background(),
 			int64(r.bytesRead),
 			metric.WithAttributes(gcdkotel.ProviderKey.String(r.provider)))
 	}
@@ -360,16 +360,16 @@ func (a *Attributes) As(i any) bool {
 // It implements io.WriteCloser (https://golang.org/pkg/io/#Closer), and must be
 // closed after all writes are done.
 type Writer struct {
-	b                driver.Bucket
-	w                driver.Writer
-	key              string
-	end              func(error) // called at Close to finish trace and metric collection
-	cancel           func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
-	contentMD5       []byte
-	md5hash          hash.Hash
-	provider         string      // Provider name for metrics
-	bytesWritten     int
-	closed           bool
+	b            driver.Bucket
+	w            driver.Writer
+	key          string
+	end          func(error) // called at Close to finish trace and metric collection
+	cancel       func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
+	contentMD5   []byte
+	md5hash      hash.Hash
+	provider     string // Provider name for metrics
+	bytesWritten int
+	closed       bool
 
 	// These fields are non-zero values only when w is nil (not yet created).
 	//
@@ -436,7 +436,7 @@ func (w *Writer) Close() (err error) {
 	defer func() {
 		w.end(err)
 		// Emit only on close to avoid an allocation on each call to Write().
-			// Record bytes written metric with OpenTelemetry
+		// Record bytes written metric with OpenTelemetry
 		if bytesWrittenCounter != nil && w.bytesWritten > 0 {
 			bytesWrittenCounter.Add(
 				context.Background(),
@@ -666,11 +666,11 @@ const pkgName = "gocloud.dev/blob"
 var (
 	// Initialize OpenTelemetry meter
 	meter = otel.GetMeterProvider().Meter(pkgName)
-	
+
 	// Define counter instruments for bytes read/written
 	bytesReadCounter    metric.Int64Counter
 	bytesWrittenCounter metric.Int64Counter
-	
+
 	// Tracer for creating spans
 	tracer = otel.GetTracerProvider().Tracer(pkgName)
 )
@@ -678,20 +678,20 @@ var (
 // Initialize the metrics
 func init() {
 	var err error
-	
+
 	// Create the bytes read counter
 	bytesReadCounter, err = meter.Int64Counter(
-		pkgName + "/bytes_read",
+		pkgName+"/bytes_read",
 		metric.WithDescription("Total bytes read from blob storage"),
 		metric.WithUnit("By"),
 	)
 	if err != nil {
 		log.Printf("Failed to create bytes_read counter: %v", err)
 	}
-	
+
 	// Create the bytes written counter
 	bytesWrittenCounter, err = meter.Int64Counter(
-		pkgName + "/bytes_written",
+		pkgName+"/bytes_written",
 		metric.WithDescription("Total bytes written to blob storage"),
 		metric.WithUnit("By"),
 	)
@@ -711,7 +711,7 @@ func newBucket(b driver.Bucket) *Bucket {
 	return &Bucket{
 		b:            b,
 		ioFSCallback: func() (context.Context, *ReaderOptions) { return context.Background(), nil },
-		tracer: gcdkotel.NewTracer(pkgName, providerName),
+		tracer:       gcdkotel.NewTracer(pkgName, providerName),
 	}
 }
 
@@ -1014,16 +1014,16 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	}
 	end := func(err error) { b.tracer.End(span, err) }
 	r := &Reader{
-		b:                b.b,
-		r:                dr,
-		key:              key,
-		ctx:              ctx,
-		dopts:            dopts,
-		baseOffset:       offset,
-		baseLength:       length,
-		savedOffset:      -1,
-		end:              end,
-		provider: b.tracer.Provider,
+		b:           b.b,
+		r:           dr,
+		key:         key,
+		ctx:         ctx,
+		dopts:       dopts,
+		baseOffset:  offset,
+		baseLength:  length,
+		savedOffset: -1,
+		end:         end,
+		provider:    b.tracer.Provider,
 	}
 	_, file, lineno, ok := runtime.Caller(2)
 	runtime.SetFinalizer(r, func(r *Reader) {
@@ -1149,13 +1149,13 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	}()
 
 	w := &Writer{
-		b:                b.b,
-		end:              end,
-		cancel:           cancel,
-		key:              key,
-		contentMD5:       opts.ContentMD5,
-		md5hash:          md5.New(),
-		provider: b.tracer.Provider,
+		b:          b.b,
+		end:        end,
+		cancel:     cancel,
+		key:        key,
+		contentMD5: opts.ContentMD5,
+		md5hash:    md5.New(),
+		provider:   b.tracer.Provider,
 	}
 	if opts.ContentType != "" || opts.DisableContentTypeDetection {
 		var ct string

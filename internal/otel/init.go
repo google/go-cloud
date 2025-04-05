@@ -50,7 +50,7 @@ func ConfigureTraceProvider(ctx context.Context, exporter sdktrace.SpanExporter,
 
 	// Set the global trace provider
 	otel.SetTracerProvider(tp)
-	
+
 	// Set the global propagator to tracecontext (the default is no-op)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 

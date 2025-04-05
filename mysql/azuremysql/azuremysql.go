@@ -67,7 +67,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		return nil, fmt.Errorf("open Azure database: empty endpoint")
 	}
 	password, _ := u.User.Password()
-	
+
 	// Create a connector that will handle certificate retrieval and setup
 	conn := &mysqlConnector{
 		addr:     u.Host,
@@ -75,13 +75,13 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		password: password,
 		dbName:   strings.TrimPrefix(u.Path, "/"),
 		provider: source,
-		sem:     make(chan struct{}, 1),
-		ready:   make(chan struct{}),
+		sem:      make(chan struct{}, 1),
+		ready:    make(chan struct{}),
 	}
 	conn.sem <- struct{}{}
-	
+
 	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
-	db := otelsql.OpenDB(conn, 
+	db := otelsql.OpenDB(conn,
 		otelsql.WithAttributes(
 			semconv.DBSystemKey.String("mysql"),
 			semconv.DBNameKey.String(conn.dbName),
@@ -92,10 +92,10 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 }
 
 type mysqlConnector struct {
-	addr      string
-	user      string
-	password  string
-	dbName    string
+	addr     string
+	user     string
+	password string
+	dbName   string
 
 	sem      chan struct{}    // receive to acquire, send to release
 	provider CertPoolProvider // provides the CA certificate pool
@@ -137,7 +137,6 @@ func (c *mysqlConnector) Driver() driver.Driver {
 	// Return the standard MySQL driver, XSAM/otelsql will handle instrumentation
 	return &mysql.MySQLDriver{}
 }
-
 
 // A CertPoolProvider obtains a certificate pool that contains the Azure CA certificate.
 type CertPoolProvider = azuredb.CertPoolProvider

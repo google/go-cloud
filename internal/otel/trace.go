@@ -62,7 +62,7 @@ func NewTracer(pkg string, provider ...string) *Tracer {
 	if len(provider) > 0 && provider[0] != "" {
 		providerName = provider[0]
 	}
-	
+
 	return &Tracer{
 		Package:  pkg,
 		Provider: providerName,
@@ -72,17 +72,17 @@ func NewTracer(pkg string, provider ...string) *Tracer {
 // Start creates and starts a new span and returns the updated context and span.
 func (t *Tracer) Start(ctx context.Context, methodName string) (context.Context, trace.Span) {
 	fullName := t.Package + "." + methodName
-	
+
 	// Build attributes list
 	attrs := []attribute.KeyValue{
 		PackageKey.String(t.Package),
 		MethodKey.String(methodName),
 	}
-	
+
 	if t.Provider != "" {
 		attrs = append(attrs, ProviderKey.String(t.Provider))
 	}
-	
+
 	// Use the global tracer provider
 	return otel.Tracer(t.Package).Start(ctx, fullName, trace.WithAttributes(attrs...))
 }
@@ -100,7 +100,7 @@ func (t *Tracer) End(span trace.Span, err error) {
 	} else {
 		span.SetStatus(codes.Ok, "")
 	}
-	
+
 	span.End()
 }
 
@@ -113,13 +113,13 @@ func StartSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (c
 func TraceCall(ctx context.Context, name string, fn func(context.Context) error) error {
 	ctx, span := StartSpan(ctx, name)
 	defer span.End()
-	
+
 	err := fn(ctx)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
-	
+
 	return err
 }
 

@@ -103,13 +103,13 @@ func (sh *testSpanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sh.spanCtx = trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01}, // First byte set to 1, rest zeros
 		SpanID:  trace.SpanID{0x01},  // First byte set to 1, rest zeros
-		Remote:  true,               // Mark as remote to make it valid
+		Remote:  true,                // Mark as remote to make it valid
 	})
-	
+
 	// Create a context containing this SpanContext
 	ctx := trace.ContextWithSpanContext(r.Context(), sh.spanCtx)
 	r = r.WithContext(ctx)
-	
+
 	// Let the handler use our context with the fixed SpanContext
 	sh.h.ServeHTTP(w, r)
 }
@@ -141,8 +141,8 @@ func roundTrip(r *http.Request, h http.Handler) (*Entry, trace.SpanContext, erro
 	if !handler.spanCtx.IsValid() {
 		handler.spanCtx = trace.NewSpanContext(trace.SpanContextConfig{
 			TraceID: trace.TraceID{0x01}, // Non-zero TraceID
-			SpanID:  trace.SpanID{0x01}, // Non-zero SpanID
-			Remote:  true,             // Mark as remote to make it valid
+			SpanID:  trace.SpanID{0x01},  // Non-zero SpanID
+			Remote:  true,                // Mark as remote to make it valid
 		})
 	}
 	return &capture.ent, handler.spanCtx, nil

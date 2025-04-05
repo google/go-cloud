@@ -61,13 +61,13 @@ const pkgName = "gocloud.dev/docstore"
 var (
 	// Initialize OpenTelemetry meter and tracer
 	meter = otel.GetMeterProvider().Meter(pkgName)
-	
+
 	// Define counter instrument for completed calls (replaces the previous OpenCensus metrics)
 	completedCallsCounter metric.Int64Counter
-	
+
 	// Define histogram instrument for latency measurement
 	latencyHistogram metric.Float64Histogram
-	
+
 	// Tracer for creating spans
 	tracer = otel.GetTracerProvider().Tracer(pkgName)
 )
@@ -75,20 +75,20 @@ var (
 // Initialize the metrics
 func init() {
 	var err error
-	
+
 	// Create the completed calls counter
 	completedCallsCounter, err = meter.Int64Counter(
-		pkgName + "/completed_calls",
+		pkgName+"/completed_calls",
 		metric.WithDescription("Total number of completed method calls"),
 		metric.WithUnit("{call}"),
 	)
 	if err != nil {
 		log.Printf("Failed to create completed_calls counter: %v", err)
 	}
-	
+
 	// Create the latency histogram
 	latencyHistogram, err = meter.Float64Histogram(
-		pkgName + "/latency",
+		pkgName+"/latency",
 		metric.WithDescription("Latency of method calls"),
 		metric.WithUnit("ms"),
 	)
@@ -378,13 +378,13 @@ func (l *ActionList) do(ctx context.Context, withTracing bool) (err error) {
 
 	var startTime time.Time
 	var span trace.Span
-	
+
 	if withTracing {
 		startTime = time.Now()
 		ctx, span = l.coll.tracer.Start(ctx, "ActionList.Do")
-		defer func() { 
+		defer func() {
 			l.coll.tracer.End(span, err)
-			
+
 			// Record metrics
 			if completedCallsCounter != nil {
 				attr := []attribute.KeyValue{
@@ -393,7 +393,7 @@ func (l *ActionList) do(ctx context.Context, withTracing bool) (err error) {
 				}
 				completedCallsCounter.Add(context.Background(), 1, metric.WithAttributes(attr...))
 			}
-			
+
 			if latencyHistogram != nil {
 				attr := []attribute.KeyValue{
 					gcdkotel.MethodKey.String("ActionList.Do"),

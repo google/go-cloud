@@ -633,16 +633,16 @@ func validateCalls(t *testing.T, te *oteltest.TestExporter, expectedNames []stri
 	// In environments where spans are collected asynchronously, we need to give
 	// the exporter time to collect the spans
 	time.Sleep(100 * time.Millisecond)
-	
+
 	spans := te.SpanStubs()
-	
+
 	// If no spans were collected at all, it may be because tracing is disabled
 	// or configured differently in the test environment
 	if len(spans) == 0 {
 		t.Skip("No spans were collected, skipping test")
 		return
 	}
-	
+
 	gotNames := make([]string, 0, len(spans))
 	for _, span := range spans {
 		gotNames = append(gotNames, span.Name)

@@ -50,20 +50,20 @@ func TestProviderName(t *testing.T) {
 func TestTracer(t *testing.T) {
 	// Create a test span exporter
 	spanRecorder := tracetest.NewSpanRecorder()
-	
+
 	// Create a test provider
 	testProvider := trace.NewTracerProvider(
 		trace.WithSampler(trace.AlwaysSample()),
 		trace.WithSpanProcessor(spanRecorder),
 	)
-	
+
 	// Store the original provider
 	origProvider := otel.GetTracerProvider()
-	
+
 	// Set our test provider as the global provider
 	otel.SetTracerProvider(testProvider)
 	defer otel.SetTracerProvider(origProvider)
-	
+
 	// Create a tracer with test values
 	tracer := NewTracer("test", "test-provider")
 
@@ -82,13 +82,13 @@ func TestTracer(t *testing.T) {
 
 	// End the span so it gets recorded
 	span.End()
-	
+
 	// Verify a span was recorded
 	spans := spanRecorder.Ended()
 	if len(spans) == 0 {
 		t.Fatal("Expected at least one recorded span")
 	}
-	
+
 	// The name should include the package and method name
 	if spans[0].Name() != "test.TestMethod" {
 		t.Errorf("Expected span name %q, got %q", "test.TestMethod", spans[0].Name())
@@ -96,24 +96,24 @@ func TestTracer(t *testing.T) {
 
 	// Reset the recorder for the next test
 	spanRecorder.Reset()
-	
+
 	// Test End with error properly sets span status
 	ctx = context.Background()
 	ctx, span = tracer.Start(ctx, "TestErrorMethod")
 	testError := errors.New("test error")
 	tracer.End(span, testError)
-	
+
 	// Check the recorded error span
 	spans = spanRecorder.Ended()
 	if len(spans) == 0 {
 		t.Fatal("Expected at least one recorded span for error test")
 	}
-	
+
 	// Test SpanFromContext returns the right span
 	spanRecorder.Reset()
 	ctx = context.Background()
 	ctx, _ = tracer.Start(ctx, "TestSpanContext")
-	
+
 	// Verify the context now contains a valid span
 	retrievedSpan := SpanFromContext(ctx)
 	if !retrievedSpan.SpanContext().IsValid() {
@@ -135,7 +135,7 @@ func TestTracer(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error from TraceCall, got: %v", err)
 	}
-	
+
 	// Verify TraceCall created a span
 	spans = spanRecorder.Ended()
 	if len(spans) == 0 {
@@ -152,7 +152,7 @@ func TestTracer(t *testing.T) {
 	if err != testError {
 		t.Errorf("Expected TraceCall to return the original error")
 	}
-	
+
 	// Verify TraceCall created a span with error
 	spans = spanRecorder.Ended()
 	if len(spans) == 0 {

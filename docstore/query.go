@@ -218,13 +218,13 @@ func (q *Query) get(ctx context.Context, withTracing bool, fps ...FieldPath) *Do
 	var err error
 	var startTime time.Time
 	var span trace.Span
-	
+
 	if withTracing {
 		startTime = time.Now()
 		ctx, span = q.coll.tracer.Start(ctx, "Query.Get")
-		defer func() { 
+		defer func() {
 			q.coll.tracer.End(span, err)
-			
+
 			// Record metrics
 			if completedCallsCounter != nil {
 				attr := []attribute.KeyValue{
@@ -233,7 +233,7 @@ func (q *Query) get(ctx context.Context, withTracing bool, fps ...FieldPath) *Do
 				}
 				completedCallsCounter.Add(context.Background(), 1, metric.WithAttributes(attr...))
 			}
-			
+
 			if latencyHistogram != nil {
 				attr := []attribute.KeyValue{
 					gcdkotel.MethodKey.String("Query.Get"),

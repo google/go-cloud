@@ -94,14 +94,14 @@ func FormatSpans(spans []sdktrace.ReadOnlySpan) string {
 		fmt.Fprintf(&b, "  TraceID: %s\n", span.SpanContext().TraceID())
 		fmt.Fprintf(&b, "  SpanID: %s\n", span.SpanContext().SpanID())
 		fmt.Fprintf(&b, "  Status: %s\n", span.Status().Code)
-		
+
 		if len(span.Attributes()) > 0 {
 			fmt.Fprintf(&b, "  Attributes:\n")
 			for _, attr := range span.Attributes() {
 				fmt.Fprintf(&b, "    %s: %s\n", attr.Key, attr.Value.AsString())
 			}
 		}
-		
+
 		if len(span.Events()) > 0 {
 			fmt.Fprintf(&b, "  Events:\n")
 			for _, event := range span.Events() {

@@ -40,7 +40,7 @@ type MetricSet struct {
 // NewMetricSet creates a standard set of metrics for a Go CDK package.
 func NewMetricSet(ctx context.Context, pkg string) (*MetricSet, error) {
 	meter := otel.GetMeterProvider().Meter(pkg)
-	
+
 	latency, err := meter.Float64Histogram(
 		pkg+".latency",
 		metric.WithDescription("Latency of method call in milliseconds"),
@@ -49,7 +49,7 @@ func NewMetricSet(ctx context.Context, pkg string) (*MetricSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create latency metric: %w", err)
 	}
-	
+
 	completedCalls, err := meter.Int64Counter(
 		pkg+".completed_calls",
 		metric.WithDescription("Count of method calls"),
@@ -58,7 +58,7 @@ func NewMetricSet(ctx context.Context, pkg string) (*MetricSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create completed_calls metric: %w", err)
 	}
-	
+
 	bytesRead, err := meter.Int64Counter(
 		pkg+".bytes_read",
 		metric.WithDescription("Number of bytes read"),
@@ -67,7 +67,7 @@ func NewMetricSet(ctx context.Context, pkg string) (*MetricSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bytes_read metric: %w", err)
 	}
-	
+
 	bytesWritten, err := meter.Int64Counter(
 		pkg+".bytes_written",
 		metric.WithDescription("Number of bytes written"),
@@ -76,7 +76,7 @@ func NewMetricSet(ctx context.Context, pkg string) (*MetricSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bytes_written metric: %w", err)
 	}
-	
+
 	return &MetricSet{
 		Latency:        latency,
 		CompletedCalls: completedCalls,
@@ -127,19 +127,19 @@ func RecordLatency(ctx context.Context, latencyMeter metric.Float64Histogram, me
 	if latencyMeter == nil {
 		return
 	}
-	
+
 	attrs := []attribute.KeyValue{
 		MethodKey.String(method),
 	}
-	
+
 	if provider != "" {
 		attrs = append(attrs, ProviderKey.String(provider))
 	}
-	
+
 	if status != "" {
 		attrs = append(attrs, StatusKey.String(status))
 	}
-	
+
 	latencyMeter.Record(ctx, float64(duration.Nanoseconds())/1e6, metric.WithAttributes(attrs...))
 }
 
@@ -148,19 +148,19 @@ func RecordCount(ctx context.Context, counter metric.Int64Counter, method, provi
 	if counter == nil {
 		return
 	}
-	
+
 	attrs := []attribute.KeyValue{
 		MethodKey.String(method),
 	}
-	
+
 	if provider != "" {
 		attrs = append(attrs, ProviderKey.String(provider))
 	}
-	
+
 	if status != "" {
 		attrs = append(attrs, StatusKey.String(status))
 	}
-	
+
 	counter.Add(ctx, count, metric.WithAttributes(attrs...))
 }
 
@@ -169,12 +169,12 @@ func RecordBytesRead(ctx context.Context, counter metric.Int64Counter, provider 
 	if counter == nil || n <= 0 {
 		return
 	}
-	
+
 	var attrs []attribute.KeyValue
 	if provider != "" {
 		attrs = append(attrs, ProviderKey.String(provider))
 	}
-	
+
 	counter.Add(ctx, n, metric.WithAttributes(attrs...))
 }
 
@@ -183,11 +183,11 @@ func RecordBytesWritten(ctx context.Context, counter metric.Int64Counter, provid
 	if counter == nil || n <= 0 {
 		return
 	}
-	
+
 	var attrs []attribute.KeyValue
 	if provider != "" {
 		attrs = append(attrs, ProviderKey.String(provider))
 	}
-	
+
 	counter.Add(ctx, n, metric.WithAttributes(attrs...))
 }

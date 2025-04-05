@@ -76,5 +76,3 @@ func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtim
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
-
-

@@ -108,10 +108,6 @@ func GetTracer(name string) trace.Tracer {
 	return otel.Tracer(name)
 }
 
-
-
-
-
 // These utility functions are now in trace.go
 
 // EndSpan ends a span with the given error.
