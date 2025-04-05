@@ -62,6 +62,12 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 func createKafkaTopic(topicName string, partitions int32) (func(), error) {
 	// Create the topic.
 	config := MinimalConfig()
+	config.Consumer.Fetch.Min = 1 * 1024
+	config.Consumer.Fetch.Default = 5 * 1024
+	config.Consumer.Retry.Backoff = 100 * time.Millisecond
+	config.Consumer.MaxWaitTime = 1000 * time.Millisecond
+	config.Consumer.MaxProcessingTime = 130 * time.Millisecond
+	config.Consumer.Group.Session.Timeout = 20 * time.Second
 	admin, err := sarama.NewClusterAdmin(localBrokerAddrs, config)
 	if err != nil {
 		return func() {}, err
@@ -453,6 +459,61 @@ func BenchmarkKafka(b *testing.B) {
 	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)
+}
+
+func TestGoroutines(t *testing.T) {
+	ctx := context.Background()
+	uniqueID := rand.Int()
+
+	// Create the topic.
+	topicName := fmt.Sprintf("%s-topic-%d", t.Name(), uniqueID)
+	cleanup, err := createKafkaTopic(topicName, 1)
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	topic, err := OpenTopic(localBrokerAddrs, MinimalConfig(), topicName, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
+
+	groupID := fmt.Sprintf("%s-subscription-%d", t.Name(), uniqueID)
+	sub, err := OpenSubscription(localBrokerAddrs, MinimalConfig(), groupID, []string{topicName}, subscriptionOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Shutdown(ctx)
+
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			topic.Send(ctx, &pubsub.Message{})
+		}
+	}()
+
+	consumer := func() {
+			for {
+				select {
+				case <-ctx.Done():
+					fmt.Println("ctx done, exiting")
+					return
+				default:
+					fmt.Println("Calling Receive...")
+					msg, err := sub.Receive(ctx)
+					if err != nil {
+						fmt.Printf("received err: %v\n", err)
+						continue
+					}
+					fmt.Println("received message")
+					msg.Ack()
+				}
+			}
+	}
+	for i := 0; i <100 ; i++ {
+		go consumer()
+	}
+	consumer()
 }
 
 func fakeConnectionStringInEnv() func() {
