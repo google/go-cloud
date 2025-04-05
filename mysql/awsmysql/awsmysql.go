@@ -34,9 +34,11 @@ import (
 	"fmt"
 	"net/url"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/wire"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/aws/rds"
 	gcmysql "gocloud.dev/mysql"
 )
@@ -54,8 +56,6 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
 	CertSource rds.CertPoolProvider
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
 }
 
 // Scheme is the URL scheme awsmysql registers its URLOpener under on
@@ -66,7 +66,7 @@ func init() {
 	gcmysql.DefaultURLMux().RegisterMySQL(Scheme, &URLOpener{})
 }
 
-// OpenMySQLURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
+// OpenMySQLURL opens a new RDS database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
 	source := uo.CertSource
 	if source == nil {
@@ -80,22 +80,34 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	if err != nil {
 		return nil, err
 	}
-	c := &connector{
-		dsn: cfg.FormatDSN(),
-		// Make a copy of TraceOpts to avoid caller modifying.
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
-		provider:  source,
 
-		sem:   make(chan struct{}, 1),
-		ready: make(chan struct{}),
+	// Create a connector that will handle certificate retrieval and setup
+	conn := &mysqlConnector{
+		dsn:      cfg.FormatDSN(),
+		provider: source,
+		sem:      make(chan struct{}, 1),
+		ready:    make(chan struct{}),
 	}
-	c.sem <- struct{}{}
-	return sql.OpenDB(c), nil
+	conn.sem <- struct{}{}
+
+	// Extract database name from the DSN for attributes
+	dbName := ""
+	if parsedCfg, err := mysql.ParseDSN(cfg.FormatDSN()); err == nil {
+		dbName = parsedCfg.DBName
+	}
+
+	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
+	db := otelsql.OpenDB(conn,
+		otelsql.WithAttributes(
+			semconv.DBSystemKey.String("mysql"),
+			semconv.DBNameKey.String(dbName),
+			attribute.String("service.name", "go-cloud-awsmysql"),
+			attribute.String("cloud.provider", "aws"),
+		))
+	return db, nil
 }
 
-type connector struct {
-	traceOpts []ocsql.TraceOption
-
+type mysqlConnector struct {
 	sem      chan struct{} // receive to acquire, send to release
 	provider CertPoolProvider
 
@@ -103,7 +115,7 @@ type connector struct {
 	dsn   string
 }
 
-func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
+func (c *mysqlConnector) Connect(ctx context.Context) (driver.Conn, error) {
 	select {
 	case <-c.sem:
 		certPool, err := c.provider.RDSCertPool(ctx)
@@ -130,8 +142,9 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	return c.Driver().Open(c.dsn)
 }
 
-func (c *connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+func (c *mysqlConnector) Driver() driver.Driver {
+	// Return the standard MySQL driver, XSAM/otelsql will handle instrumentation
+	return &mysql.MySQLDriver{}
 }
 
 // A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.

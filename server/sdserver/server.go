@@ -17,53 +17,96 @@
 package sdserver // import "gocloud.dev/server/sdserver"
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/oauth"
 	"os"
 
 	"github.com/google/wire"
-	"gocloud.dev/gcp"
-	"gocloud.dev/internal/useragent"
+	"go.opentelemetry.io/contrib/detectors/gcp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"gocloud.dev/server"
 	"gocloud.dev/server/requestlog"
-
-	"contrib.go.opencensus.io/exporter/stackdriver"
-	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
-	"go.opencensus.io/trace"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/option"
+	"google.golang.org/grpc/credentials"
 )
 
 // Set is a Wire provider set that provides the diagnostic hooks for
 // *server.Server given a GCP token source and a GCP project ID.
 var Set = wire.NewSet(
+	NewGcpTraceProvider,
 	server.Set,
-	NewExporter,
-	monitoredresource.Autodetect,
-	wire.Bind(new(trace.Exporter), new(*stackdriver.Exporter)),
 	NewRequestLogger,
 	wire.Bind(new(requestlog.Logger), new(*requestlog.StackdriverLogger)),
 )
 
-// NewExporter returns a new OpenCensus Stackdriver exporter.
+// ProjectID is the Google Cloud Platform project ID.
+type ProjectID string
+
+// TokenSource is a source of OAuth2 tokens for use with Google Cloud Platform.
+type TokenSource oauth2.TokenSource
+
+// NewGcpTraceProvider returns an OpenTelemetry provider configured for Google Cloud Trace.
 //
-// The second return value is a Wire cleanup function that calls Flush
-// on the exporter.
-func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, func(), error) {
-	opts := []option.ClientOption{
-		option.WithTokenSource(oauth2.TokenSource(ts)),
-		useragent.ClientOption("server"),
-	}
-	exp, err := stackdriver.NewExporter(stackdriver.Options{
-		ProjectID:               string(id),
-		MonitoringClientOptions: opts,
-		TraceClientOptions:      opts,
-		MonitoredResource:       mr,
-	})
-	if err != nil {
-		return nil, nil, err
+// The second return value is a Wire cleanup function that shuts down the tracer provider.
+func NewGcpTraceProvider(id ProjectID, ts TokenSource, res *resource.Resource, sampler trace.Sampler) (*trace.TracerProvider, error) {
+	ctx := context.Background()
+
+	serviceName := "gocloud-server"
+
+	if res == nil {
+		var err error
+		// Create a resource with GCP detection
+		detector := gcp.NewDetector()
+		res, err = resource.New(ctx,
+			resource.WithDetectors(detector),
+			resource.WithTelemetrySDK(),
+			resource.WithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+				semconv.ServiceVersionKey.String("1.0.0"),
+				semconv.CloudAccountIDKey.String(string(id)),
+			),
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to create resource: %w", err)
+		}
 	}
 
-	return exp, func() { exp.Flush() }, err
+	if sampler == nil {
+		sampler = trace.AlwaysSample()
+	}
+	tokenSource := oauth.TokenSource{TokenSource: ts}
+
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint("cloudtrace.googleapis.com:443"),
+		otlptracegrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{})),
+		otlptracegrpc.WithHeaders(map[string]string{"User-Agent": serviceName}),
+		otlptracegrpc.WithDialOption(grpc.WithPerRPCCredentials(tokenSource)),
+	)
+	exporter, err := otlptrace.New(ctx, client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+	}
+
+	// Create and register a TracerProvider
+	tp := trace.NewTracerProvider(
+		trace.WithBatcher(exporter),
+		trace.WithResource(res),
+		trace.WithSampler(sampler),
+	)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	return tp, nil
 }
 
 // NewRequestLogger returns a request logger that sends entries to stdout.
