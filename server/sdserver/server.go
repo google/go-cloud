@@ -57,26 +57,33 @@ type TokenSource oauth2.TokenSource
 // NewGcpTraceProvider returns an OpenTelemetry provider configured for Google Cloud Trace.
 //
 // The second return value is a Wire cleanup function that shuts down the tracer provider.
-func NewGcpTraceProvider(id ProjectID, ts TokenSource) (*trace.TracerProvider, error) {
+func NewGcpTraceProvider(id ProjectID, ts TokenSource, res *resource.Resource, sampler trace.Sampler) (*trace.TracerProvider, error) {
 	ctx := context.Background()
 
 	serviceName := "gocloud-server"
 
-	// Create a resource with GCP detection
-	detector := gcp.NewDetector()
-	res, err := resource.New(ctx,
-		resource.WithDetectors(detector),
-		resource.WithTelemetrySDK(),
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String(serviceName),
-			semconv.ServiceVersionKey.String("1.0.0"),
-			semconv.CloudAccountIDKey.String(string(id)),
-		),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
+	if res == nil {
+		var err error
+		// Create a resource with GCP detection
+		detector := gcp.NewDetector()
+		res, err = resource.New(ctx,
+			resource.WithDetectors(detector),
+			resource.WithTelemetrySDK(),
+			resource.WithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+				semconv.ServiceVersionKey.String("1.0.0"),
+				semconv.CloudAccountIDKey.String(string(id)),
+			),
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to create resource: %w", err)
+		}
 	}
 
+	if sampler == nil {
+		sampler = trace.AlwaysSample()
+	}
 	tokenSource := oauth.TokenSource{TokenSource: ts}
 
 	client := otlptracegrpc.NewClient(
@@ -94,7 +101,7 @@ func NewGcpTraceProvider(id ProjectID, ts TokenSource) (*trace.TracerProvider, e
 	tp := trace.NewTracerProvider(
 		trace.WithBatcher(exporter),
 		trace.WithResource(res),
-		trace.WithSampler(trace.AlwaysSample()),
+		trace.WithSampler(sampler),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
