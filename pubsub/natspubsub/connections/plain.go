@@ -211,14 +211,14 @@ func decodeV1Message(msg *nats.Msg) (*driver.Message, error) {
 	}
 
 	dm.Metadata = metadata
-	
+
 	// Now decode the body
 	var body []byte
 	if err := dec.Decode(&body); err != nil {
 		return nil, err
 	}
 	dm.Body = body
-	
+
 	return &dm, nil
 }
 

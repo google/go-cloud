@@ -14,7 +14,9 @@
 
 module gocloud.dev/samples
 
-go 1.24
+go 1.24.0
+
+toolchain go1.24.2
 
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.14
@@ -143,7 +145,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
-	github.com/nats-io/nats.go v1.40.1 // indirect
+	github.com/nats-io/nats.go v1.41.0 // indirect
 	github.com/nats-io/nkeys v0.4.10 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
