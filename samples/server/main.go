@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 	"gocloud.dev/gcp"
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
@@ -89,21 +88,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var traceProvider trace.TracerProvider = nooptrace.NewTracerProvider()
+	var traceProvider *trace.TracerProvider = trace.NewTracerProvider(trace.WithSampler(trace.NeverSample()))
 	if *doTrace {
 		fmt.Println("Exporting traces to Google Cloud Trace")
-		mr := GlobalMonitoredResource{projectID: string(projectID)}
-		exporter, _, err := sdserver.NewOTelExporter(sdserver.ProjectID(projectID), sdserver.TokenSource(tokenSource), mr)
+		exporter, _, err := sdserver.NewTraceExporter(sdserver.ProjectID(projectID), sdserver.TokenSource(tokenSource))
 		if err != nil {
 			log.Fatal(err)
 		}
-		
+
 		// Create resource with project information
 		res := resource.NewWithAttributes(
-			resource.SchemaURL,
+			"testing",
 			// Add relevant resource attributes here
 		)
-		
+
 		// Create and register tracer provider
 		tp := trace.NewTracerProvider(
 			trace.WithBatcher(exporter),
@@ -129,8 +127,8 @@ func main() {
 	})
 
 	options := &server.Options{
-		RequestLogger: sdserver.NewRequestLogger(),
-		HealthChecks:  []health.Checker{healthCheck},
+		RequestLogger:  sdserver.NewRequestLogger(),
+		HealthChecks:   []health.Checker{healthCheck},
 		TracerProvider: traceProvider,
 
 		// Note: Sampling is now configured at the TracerProvider level above

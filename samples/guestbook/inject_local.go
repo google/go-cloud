@@ -20,6 +20,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"os"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/wire"
@@ -42,7 +44,8 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(
-		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
+		provideLocalRequestLogger,
+		wire.Bind(new(requestlog.Logger), new(*requestlog.NCSALogger)),
 		server.Set,
 		applicationSet,
 		dialLocalSQL,
@@ -82,6 +85,11 @@ func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
 		return nil, nil, err
 	}
 	return v, func() { v.Close() }, nil
+}
+
+// provideLocalRequestLogger provides a request logger for local development.
+func provideLocalRequestLogger() *requestlog.NCSALogger {
+	return requestlog.NewNCSALogger(os.Stdout, func(e error) { fmt.Println(e) })
 }
 
 

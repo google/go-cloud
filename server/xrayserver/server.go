@@ -21,9 +21,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/xray"
-	"github.com/aws/aws-sdk-go/service/xray/xrayiface"
 	"github.com/google/wire"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -39,28 +36,19 @@ import (
 // Set is a Wire provider set that provides the diagnostic hooks for
 // *server.Server. This set includes ServiceSet.
 var Set = wire.NewSet(
+	NewAwsTraceExporter,
 	server.Set,
-	ServiceSet,
-	NewTraceExporter,
-	wire.Bind(new(trace.SpanExporter), new(*otlptrace.Exporter)),
 	NewRequestLogger,
 	wire.Bind(new(requestlog.Logger), new(*requestlog.NCSALogger)),
 )
 
-// ServiceSet is a Wire provider set that provides the AWS X-Ray service
-// client given an AWS session.
-var ServiceSet = wire.NewSet(
-	NewXRayClient,
-	wire.Bind(new(xrayiface.XRayAPI), new(*xray.XRay)),
-)
-
-// NewTraceExporter returns a new OpenTelemetry exporter configured for AWS X-Ray.
+// NewAwsTraceExporter returns a new OpenTelemetry exporter configured for AWS X-Ray.
 //
 // The second return value is a Wire cleanup function that calls Shutdown
 // on the exporter, ignoring the error.
-func NewTraceExporter(api xrayiface.XRayAPI) (*otlptrace.Exporter, func(), error) {
+func NewAwsTraceExporter(option ...otlptracegrpc.Option) (*trace.TracerProvider, error) {
 	ctx := context.Background()
-	
+
 	// Create a resource with basic information
 	res, err := resource.New(ctx,
 		resource.WithOS(),
@@ -71,39 +59,32 @@ func NewTraceExporter(api xrayiface.XRayAPI) (*otlptrace.Exporter, func(), error
 		),
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create resource: %w", err)
+		return nil, fmt.Errorf("failed to create resource: %w", err)
 	}
-	
+
 	// Create OTLP exporter configured for AWS X-Ray
 	// AWS X-Ray typically uses the OpenTelemetry Collector with the AWS X-Ray exporter
 	client := otlptracegrpc.NewClient(
 		otlptracegrpc.WithEndpoint("0.0.0.0:4317"), // Default OTLP gRPC endpoint where collector should be running
-		otlptracegrpc.WithInsecure(), // For production, consider using TLS
+		otlptracegrpc.WithInsecure(),               // For production, consider using TLS
 	)
 	exporter, err := otlptrace.New(ctx, client)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create trace exporter: %w", err)
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
 	}
-	
+
 	// Create a tracer provider with the exporter
 	tp := trace.NewTracerProvider(
 		trace.WithBatcher(exporter),
 		trace.WithResource(res),
 		trace.WithSampler(trace.AlwaysSample()),
 	)
-	
+
 	// Set the global tracer provider
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-	
-	// AWS instrumentation is now handled by the OTLP exporter configuration
-	
-	return exporter, func() { tp.Shutdown(context.Background()) }, nil
-}
 
-// NewXRayClient returns a new AWS X-Ray client.
-func NewXRayClient(p client.ConfigProvider) *xray.XRay {
-	return xray.New(p)
+	return tp, nil
 }
 
 // NewRequestLogger returns a request logger that sends entries to stdout.

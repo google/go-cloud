@@ -10,19 +10,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/http"
-	"net/url"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
-	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/go-sql-driver/mysql"
-	"golang.org/x/oauth2"
-	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
-	
-	sdktrace "go.opentelemetry.io/otel/sdk/trace" // Use this for sdktrace package
-	
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
@@ -30,6 +21,7 @@ import (
 	"gocloud.dev/blob/fileblob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/mysql/awsmysql"
 	"gocloud.dev/mysql/gcpmysql"
@@ -42,6 +34,10 @@ import (
 	"gocloud.dev/server/requestlog"
 	"gocloud.dev/server/sdserver"
 	"gocloud.dev/server/xrayserver"
+	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"net/http"
+	"net/url"
+	"os"
 )
 
 // Injectors from inject_aws.go:
@@ -64,13 +60,13 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		cleanup()
 		return nil, nil, err
 	}
-	s3Client := s3.NewFromConfig(config)
+	s3Client := s3blob.Dial(config)
 	bucket, cleanup2, err := awsBucket(ctx, s3Client, flags)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	ssmClient := ssm.NewFromConfig(config)
+	ssmClient := awsparamstore.Dial(config)
 	variable, err := awsMOTDVar(ctx, ssmClient, flags)
 	if err != nil {
 		cleanup2()
@@ -81,33 +77,16 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	router := newRouter(mainApplication)
 	ncsaLogger := xrayserver.NewRequestLogger()
 	v, cleanup3 := appHealthChecks(db)
-	session, err := aws.NewDefaultSession()
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	xRay := xrayserver.NewXRayClient(session)
-	exporter, cleanup4, err := xrayserver.NewExporter(xRay)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	sampler := sdktrace.AlwaysSample()
+	tracerProvider := provideTracerProvider()
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:         ncsaLogger,
-		HealthChecks:          v,
-		TraceExporter:         exporter,
-		DefaultSamplingPolicy: sampler,
-		Driver:                defaultDriver,
+		RequestLogger:  ncsaLogger,
+		HealthChecks:   v,
+		TracerProvider: tracerProvider,
+		Driver:         defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
-		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -151,11 +130,13 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	router := newRouter(mainApplication)
 	logger := _wireLoggerValue
 	v, cleanup2 := appHealthChecks(db)
+	tracerProvider := provideTracerProvider()
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:         logger,
-		HealthChecks:          v,
-		Driver:                defaultDriver,
+		RequestLogger:  logger,
+		HealthChecks:   v,
+		TracerProvider: tracerProvider,
+		Driver:         defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
@@ -172,21 +153,24 @@ var (
 
 // setupGCP is a Wire injector function that sets up the application using GCP.
 func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
-	// Use the standard HTTP client for both SQL and cloud storage access
-	httpClient := http.DefaultClient
-	
-	// Create a new certificate source for Cloud SQL using the default HTTP client
-	// We need to adapt the standard client to gcp.HTTPClient for compatibility
-	httpGCPClient := &http.Client{Transport: http.DefaultTransport}
-	remoteCertSource := cloudsql.NewCertSource(httpGCPClient)
-	
-	// Create a URL opener for MySQL
+	roundTripper := gcp.DefaultTransport()
+	credentials, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	tokenSource := gcp.CredentialsTokenSource(credentials)
+	httpClient, err := gcp.NewHTTPClient(roundTripper, tokenSource)
+	if err != nil {
+		return nil, nil, err
+	}
+	remoteCertSource := cloudsql.NewCertSource(httpClient)
 	urlOpener := &gcpmysql.URLOpener{
 		CertSource: remoteCertSource,
 	}
-	
-	// Use the dbHost as the project ID
-	projectID := flags.dbHost
+	projectID, err := gcp.DefaultProjectID(credentials)
+	if err != nil {
+		return nil, nil, err
+	}
 	db, cleanup, err := openGCPDatabase(ctx, urlOpener, projectID, flags)
 	if err != nil {
 		return nil, nil, err
@@ -213,23 +197,16 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	router := newRouter(mainApplication)
 	stackdriverLogger := sdserver.NewRequestLogger()
 	v, cleanup5 := appHealthChecks(db)
-	// Use OpenTelemetry GCP resource detection
-	_ = gcp.NewDetector()
-	
-	// For GCP, use the OpenTelemetry exporter
-	// In a real application, we would use a proper exporter here
-	// but for now we'll use our no-op exporter for testing
-	_ = provideSpanExporter() // We use this but don't need to assign it to a variable
-	cleanup6 := func() {}
+	tracerProvider := provideTracerProvider()
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:         stackdriverLogger,
-		HealthChecks:          v,
-		Driver:                defaultDriver,
+		RequestLogger:  stackdriverLogger,
+		HealthChecks:   v,
+		TracerProvider: tracerProvider,
+		Driver:         defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
-		cleanup6()
 		cleanup5()
 		cleanup4()
 		cleanup3()
@@ -257,13 +234,15 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	}
 	mainApplication := newApplication(db, bucket, variable)
 	router := newRouter(mainApplication)
-	logger := _wireRequestlogLoggerValue
+	ncsaLogger := provideLocalRequestLogger()
 	v, cleanup2 := appHealthChecks(db)
+	tracerProvider := provideTracerProvider()
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:         logger,
-		HealthChecks:          v,
-		Driver:                defaultDriver,
+		RequestLogger:  ncsaLogger,
+		HealthChecks:   v,
+		TracerProvider: tracerProvider,
+		Driver:         defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
@@ -271,10 +250,6 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 		cleanup()
 	}, nil
 }
-
-var (
-	_wireRequestlogLoggerValue = requestlog.Logger(nil)
-)
 
 // inject_aws.go:
 
@@ -339,12 +314,8 @@ func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtim
 
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
-// gcpBucket returns a GCS bucket using the provided HTTP client.
-// Updated to work with the standard http.Client.
-func gcpBucket(ctx context.Context, flags *cliFlags, client *http.Client) (*blob.Bucket, func(), error) {
-	// Create a new bucket for GCS compatibility
-	// Use the standard HTTP client
-	b, err := gcsblob.OpenBucket(ctx, client, flags.bucket, &gcsblob.Options{})
+func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, func(), error) {
+	b, err := gcsblob.OpenBucket(ctx, client, flags.bucket, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -353,11 +324,11 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client *http.Client) (*blob
 
 // openGCPDatabase is a Wire provider function that connects to a GCP Cloud SQL
 // MySQL database based on the command-line flags.
-func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id string, flags *cliFlags) (*sql.DB, func(), error) {
+func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id gcp.ProjectID, flags *cliFlags) (*sql.DB, func(), error) {
 	db, err := opener.OpenMySQLURL(ctx, &url.URL{
 		Scheme: "gcpmysql",
 		User:   url.UserPassword(flags.dbUser, flags.dbPassword),
-		Host:   id,
+		Host:   string(id),
 		Path:   fmt.Sprintf("/%s/%s/%s", flags.cloudSQLRegion, flags.dbHost, flags.dbName),
 	})
 	if err != nil {
@@ -368,9 +339,8 @@ func openGCPDatabase(ctx context.Context, opener *gcpmysql.URLOpener, id string,
 
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from Runtime Configurator.
-func gcpMOTDVar(ctx context.Context, client runtimeconfig.RuntimeConfigManagerClient, project string, flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	// Create a variable key from project string - convert to the required format
-	variableKey := gcpruntimeconfig.VariableKey(gcpruntimeconfig.ProjectID(project), flags.runtimeConfigName, flags.motdVar)
+func gcpMOTDVar(ctx context.Context, client runtimeconfig.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
+	variableKey := gcpruntimeconfig.VariableKey(project, flags.runtimeConfigName, flags.motdVar)
 	v, err := gcpruntimeconfig.OpenVariable(client, variableKey, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
@@ -412,4 +382,9 @@ func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
 		return nil, nil, err
 	}
 	return v, func() { v.Close() }, nil
+}
+
+// provideLocalRequestLogger provides a request logger for local development.
+func provideLocalRequestLogger() *requestlog.NCSALogger {
+	return requestlog.NewNCSALogger(os.Stdout, func(e error) { fmt.Println(e) })
 }

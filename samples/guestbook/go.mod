@@ -2,6 +2,8 @@ module gocloud.dev/samples/guestbook
 
 go 1.24.2
 
+replace gocloud.dev v0.41.0 => ./../../
+
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.1
