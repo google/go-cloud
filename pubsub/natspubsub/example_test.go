@@ -16,55 +16,45 @@ package natspubsub_test
 
 import (
 	"context"
+	"github.com/nats-io/nats.go/jetstream"
+	"gocloud.dev/pubsub/natspubsub"
+	"gocloud.dev/pubsub/natspubsub/connections"
 	"log"
 
 	"github.com/nats-io/nats.go"
 
 	"gocloud.dev/pubsub"
-	"gocloud.dev/pubsub/natspubsub"
 )
-
-func ExampleOpenTopic() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
-	ctx := context.Background()
-
-	natsConn, err := nats.Connect("nats://nats.example.com")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer natsConn.Close()
-
-	topic, err := natspubsub.OpenTopic(natsConn, "example.mysubject", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer topic.Shutdown(ctx)
-}
 
 func ExampleOpenSubscription() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
-
 	natsConn, err := nats.Connect("nats://nats.example.com")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer natsConn.Close()
 
-	subscription, err := natspubsub.OpenSubscription(
-		natsConn,
-		"example.mysubject",
-		nil)
+	conn, err := connections.NewPlain(natsConn)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+
+	subscription, err := natspubsub.OpenSubscription(
+		ctx, conn, &connections.SubscriptionOptions{Subjects: []string{"example.mysubject"}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(subscription *pubsub.Subscription, ctx context.Context) {
+		_ = subscription.Shutdown(ctx)
+	}(subscription, ctx)
 }
 
-func ExampleOpenSubscription_queue() {
+func ExampleOpenTopic() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
@@ -74,14 +64,20 @@ func ExampleOpenSubscription_queue() {
 	}
 	defer natsConn.Close()
 
-	subscription, err := natspubsub.OpenSubscription(
-		natsConn,
-		"example.mysubject",
-		&natspubsub.SubscriptionOptions{Queue: "queue1"})
+	js, err := jetstream.New(natsConn)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+
+	conn := connections.NewJetstream(js)
+
+	topic, err := natspubsub.OpenTopic(ctx, conn, &connections.TopicOptions{Subject: "example.mysubject"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(topic *pubsub.Topic, ctx context.Context) {
+		_ = topic.Shutdown(ctx)
+	}(topic, ctx)
 }
 
 func Example_openTopicFromURL() {
@@ -90,14 +86,18 @@ func Example_openTopicFromURL() {
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	ctx := context.Background()
 
-	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
+	// pubsub.OpenTopic creates a *pubsub.Connection from a URL.
 	// This URL will Dial the NATS server at the URL in the environment variable
 	// NATS_SERVER_URL and send messages with subject "example.mysubject".
-	topic, err := pubsub.OpenTopic(ctx, "nats://example.mysubject")
+	// This URL will be parsed and the natsv2 attribute will be used to
+	// use NATS v2.2.0+ native message headers as the message metadata.
+	topic, err := pubsub.OpenTopic(ctx, "nats://nats.example.com/example.mysubject")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func(topic *pubsub.Topic, ctx context.Context) {
+		_ = topic.Shutdown(ctx)
+	}(topic, ctx)
 }
 
 func Example_openSubscriptionFromURL() {
@@ -109,102 +109,13 @@ func Example_openSubscriptionFromURL() {
 	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will Dial the NATS server at the URL in the environment variable
 	// NATS_SERVER_URL and receive messages with subject "example.mysubject".
-	subscription, err := pubsub.OpenSubscription(ctx, "nats://example.mysubject")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer subscription.Shutdown(ctx)
-}
-
-func Example_openQueueSubscriptionFromURL() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
-	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
-	ctx := context.Background()
-
-	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
-	// This URL will Dial the NATS server at the URL in the environment variable
-	// NATS_SERVER_URL and receive messages with subject "example.mysubject"
-	// This URL will be parsed and the queue attribute will be used as the Queue parameter when creating the NATS Subscription.
-	subscription, err := pubsub.OpenSubscription(ctx, "nats://example.mysubject?queue=myqueue")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer subscription.Shutdown(ctx)
-}
-
-func ExampleOpenSubscriptionV2() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
-	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
-	ctx := context.Background()
-	natsConn, err := nats.Connect("nats://nats.example.com")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer natsConn.Close()
-
-	subscription, err := natspubsub.OpenSubscriptionV2(
-		natsConn,
-		"example.mysubject",
-		nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer subscription.Shutdown(ctx)
-}
-
-func ExampleOpenTopicV2() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
-	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
-	ctx := context.Background()
-
-	natsConn, err := nats.Connect("nats://nats.example.com")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer natsConn.Close()
-
-	topic, err := natspubsub.OpenTopicV2(natsConn, "example.mysubject", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer topic.Shutdown(ctx)
-}
-
-func Example_openTopicV2FromURL() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
-	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
-	ctx := context.Background()
-
-	// pubsub.OpenTopic creates a *pubsub.Topic from a URL.
-	// This URL will Dial the NATS server at the URL in the environment variable
-	// NATS_SERVER_URL and send messages with subject "example.mysubject".
 	// This URL will be parsed and the natsv2 attribute will be used to
 	// use NATS v2.2.0+ native message headers as the message metadata.
-	topic, err := pubsub.OpenTopic(ctx, "nats://example.mysubject?natsv2")
+	subscription, err := pubsub.OpenSubscription(ctx, "nats://nats.example.com/example.mysubject?jetstream=true")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
-}
-
-func Example_openSubscriptionV2FromURL() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
-	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/pubsub/natspubsub"
-	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
-	ctx := context.Background()
-
-	// pubsub.OpenSubscription creates a *pubsub.Subscription from a URL.
-	// This URL will Dial the NATS server at the URL in the environment variable
-	// NATS_SERVER_URL and receive messages with subject "example.mysubject".
-	// This URL will be parsed and the natsv2 attribute will be used to
-	// use NATS v2.2.0+ native message headers as the message metadata.
-	subscription, err := pubsub.OpenSubscription(ctx, "nats://example.mysubject?natsv2")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer subscription.Shutdown(ctx)
+	defer func(subscription *pubsub.Subscription, ctx context.Context) {
+		_ = subscription.Shutdown(ctx)
+	}(subscription, ctx)
 }

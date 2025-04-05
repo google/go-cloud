@@ -18,7 +18,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
+	"github.com/google/uuid"
+	"github.com/nats-io/nats.go/jetstream"
+	"gocloud.dev/pubsub/batcher"
+	"net/url"
+	"strings"
 	"testing"
 
 	"gocloud.dev/gcerrors"
@@ -26,48 +30,82 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/nats-io/nats-server/v2/server"
 	gnatsd "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
 const (
-	testPort  = 11222
-	benchPort = 9222
+	testServerUrlFmt = "nats://127.0.0.1:%d"
+	testPort         = 11222
+	benchPort        = 9222
 )
 
+func newPlainHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	opts := gnatsd.DefaultTestOptions
+	opts.Port = testPort
+	s := gnatsd.RunServer(&opts)
+	nc, err := nats.Connect(fmt.Sprintf(testServerUrlFmt, testPort))
+	if err != nil {
+		return nil, err
+	}
+
+	plainConn, err := connections.NewPlain(nc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse server version %q: %v", nc.ConnectedServerVersion(), err)
+	}
+
+	return &harness{s: s, conn: plainConn}, nil
+}
+
+func newPlainV1Harness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	opts := gnatsd.DefaultTestOptions
+	opts.Port = testPort
+	s := gnatsd.RunServer(&opts)
+	nc, err := nats.Connect(fmt.Sprintf(testServerUrlFmt, testPort))
+	if err != nil {
+		return nil, err
+	}
+
+	plainConn, err := connections.NewPlainWithEncodingV1(nc, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse server version %q: %v", nc.ConnectedServerVersion(), err)
+	}
+
+	return &harness{s: s, conn: plainConn}, nil
+}
+
+func newJetstreamHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	opts := gnatsd.DefaultTestOptions
+	opts.Port = testPort
+	opts.JetStream = true
+	s := gnatsd.RunServer(&opts)
+	nc, err := nats.Connect(fmt.Sprintf(testServerUrlFmt, testPort))
+	if err != nil {
+		return nil, err
+	}
+
+	js, err := jetstream.New(nc)
+	if err != nil {
+		return nil, err
+	}
+
+	jsConn := connections.NewJetstream(js)
+
+	return &harness{s: s, conn: jsConn}, nil
+}
+
 type harness struct {
-	s     *server.Server
-	nc    *nats.Conn
-	useV2 bool
-}
-
-func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	opts := gnatsd.DefaultTestOptions
-	opts.Port = testPort
-	s := gnatsd.RunServer(&opts)
-	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", testPort))
-	if err != nil {
-		return nil, err
-	}
-	return &harness{s: s, nc: nc, useV2: false}, nil
-}
-
-func newHarnessV2(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	opts := gnatsd.DefaultTestOptions
-	opts.Port = testPort
-	s := gnatsd.RunServer(&opts)
-	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", testPort))
-	if err != nil {
-		return nil, err
-	}
-	return &harness{s: s, nc: nc, useV2: true}, nil
+	s    *server.Server
+	conn connections.Connection
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (driver.Topic, func(), error) {
 	cleanup := func() {}
-	dt, err := openTopic(h.nc, testName, h.useV2)
+
+	pOpts := &connections.TopicOptions{Subject: testName}
+
+	dt, err := openTopic(ctx, h.conn, pOpts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -79,29 +117,56 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return (*topic)(nil), nil
 }
 
+func defaultSubOptions(subject, testName string) *connections.SubscriptionOptions {
+
+	streamName := strings.ReplaceAll(testName, "/", "_")
+	// If the consumers are durable, ensure that each subscription has a unique consumer name.
+	uniqueConsumerName := streamName + "-" + uuid.New().String()
+	opts := &connections.SubscriptionOptions{
+		StreamName: streamName,
+		Subjects:   []string{subject},
+		Durable:    uniqueConsumerName,
+
+		ConsumerName:             uniqueConsumerName,
+		ConsumerRequestTimeoutMs: 30000,
+	}
+	return opts
+}
+
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := openSubscription(h.nc, testName, nil, h.useV2)
+
+	var tp connections.Topic
+	dt.As(&tp)
+
+	opts := defaultSubOptions(tp.Subject(), testName)
+	ds, err := openSubscription(ctx, h.conn, opts)
 	if err != nil {
 		return nil, nil, err
 	}
 	cleanup := func() {
-		var sub *nats.Subscription
-		if ds.As(&sub) {
-			sub.Unsubscribe()
-		}
+		_ = h.conn.DeleteSubscription(ctx, opts)
 	}
 	return ds, cleanup, nil
 }
 
 func (h *harness) CreateQueueSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := openSubscription(h.nc, testName, &SubscriptionOptions{Queue: testName}, h.useV2)
+
+	var tp connections.Topic
+	dt.As(&tp)
+
+	opts := defaultSubOptions(tp.Subject(), testName)
+
+	ds, err := openSubscription(ctx, h.conn, opts)
 	if err != nil {
 		return nil, nil, err
 	}
 	cleanup := func() {
-		var sub *nats.Subscription
+		var sub connections.Queue
 		if ds.As(&sub) {
-			sub.Unsubscribe()
+			err0 := sub.Unsubscribe()
+			if err0 != nil {
+				return
+			}
 		}
 	}
 	return ds, cleanup, nil
@@ -112,7 +177,6 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 }
 
 func (h *harness) Close() {
-	h.nc.Close()
 	h.s.Shutdown()
 }
 
@@ -120,39 +184,38 @@ func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
 
 func (*harness) SupportsMultipleSubscriptions() bool { return true }
 
-type natsAsTest struct {
-	useV2 bool
+type plainNatsAsTest struct {
 }
 
-func (natsAsTest) Name() string {
+func (plainNatsAsTest) Name() string {
 	return "nats test"
 }
 
-func (natsAsTest) TopicCheck(topic *pubsub.Topic) error {
-	var c2 nats.Conn
-	if topic.As(&c2) {
+func (plainNatsAsTest) TopicCheck(topic *pubsub.Topic) error {
+	var c2 connections.Topic
+	if topic.As(c2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
-	var c3 *nats.Conn
+	var c3 connections.Topic
 	if !topic.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
 	}
 	return nil
 }
 
-func (natsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
-	var c2 nats.Subscription
-	if sub.As(&c2) {
+func (plainNatsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+	var c2 connections.Queue
+	if sub.As(c2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
-	var c3 *nats.Subscription
+	var c3 connections.Queue
 	if !sub.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
 	}
 	return nil
 }
 
-func (natsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
+func (plainNatsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var dummy string
 	if t.ErrorAs(err, &dummy) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &dummy)
@@ -160,7 +223,7 @@ func (natsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	return nil
 }
 
-func (natsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+func (plainNatsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
 	var dummy string
 	if s.ErrorAs(err, &dummy) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &dummy)
@@ -168,9 +231,9 @@ func (natsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) erro
 	return nil
 }
 
-func (natsAsTest) MessageCheck(m *pubsub.Message) error {
-	var pm nats.Msg
-	if m.As(&pm) {
+func (plainNatsAsTest) MessageCheck(m *pubsub.Message) error {
+	var pm *nats.Msg
+	if m.As(pm) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
 	}
 	var ppm *nats.Msg
@@ -180,12 +243,9 @@ func (natsAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func (n natsAsTest) BeforeSend(as func(any) bool) error {
-	if !n.useV2 {
-		return nil
-	}
-	var pm nats.Msg
-	if as(&pm) {
+func (n plainNatsAsTest) BeforeSend(as func(interface{}) bool) error {
+	var pm *nats.Msg
+	if as(pm) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
 	}
 
@@ -196,103 +256,113 @@ func (n natsAsTest) BeforeSend(as func(any) bool) error {
 	return nil
 }
 
-func (natsAsTest) AfterSend(as func(any) bool) error {
+func (plainNatsAsTest) AfterSend(as func(interface{}) bool) error {
 	return nil
 }
 
-func TestConformance(t *testing.T) {
-	asTests := []drivertest.AsTest{natsAsTest{}}
-	drivertest.RunConformanceTests(t, newHarness, asTests)
+type jetstreamAsTest struct {
+	plainNatsAsTest
 }
 
-func TestConformanceV2(t *testing.T) {
-	asTests := []drivertest.AsTest{natsAsTest{useV2: true}}
-	drivertest.RunConformanceTests(t, newHarnessV2, asTests)
+func (jetstreamAsTest) TopicCheck(topic *pubsub.Topic) error {
+	var c2 connections.Topic
+	if topic.As(c2) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
+	}
+	var c3 connections.Topic
+	if !topic.As(&c3) {
+		return fmt.Errorf("cast failed for %T", &c3)
+	}
+	return nil
+}
+
+func (jetstreamAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+	var c2 connections.Queue
+	if sub.As(c2) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
+	}
+	var c3 connections.Queue
+	if !sub.As(&c3) {
+		return fmt.Errorf("cast failed for %T", &c3)
+	}
+	return nil
+}
+
+func (jetstreamAsTest) MessageCheck(m *pubsub.Message) error {
+	var pm jetstream.Msg
+	if m.As(pm) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
+	}
+	var ppm jetstream.Msg
+	if !m.As(&ppm) {
+		return fmt.Errorf("cast failed for %T", ppm)
+	}
+	return nil
+}
+
+func (n jetstreamAsTest) BeforeSend(as func(interface{}) bool) error {
+	var pm nats.Msg
+	if as(pm) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
+	}
+
+	var ppm *nats.Msg
+	if !as(&ppm) {
+		return fmt.Errorf("cast failed for %T", &ppm)
+	}
+	return nil
+}
+
+func TestConformanceJetstream(t *testing.T) {
+	asTests := []drivertest.AsTest{jetstreamAsTest{}}
+	drivertest.RunConformanceTests(t, newJetstreamHarness, asTests)
+}
+
+func TestConformancePlain(t *testing.T) {
+	asTests := []drivertest.AsTest{plainNatsAsTest{}}
+	drivertest.RunConformanceTests(t, newPlainHarness, asTests)
+}
+
+func TestConformancePlainV1(t *testing.T) {
+	asTests := []drivertest.AsTest{plainNatsAsTest{}}
+	drivertest.RunConformanceTests(t, newPlainV1Harness, asTests)
 }
 
 // These are natspubsub specific to increase coverage.
-
 // If we only send a body we should be able to get that from a direct NATS subscriber.
-func TestInteropWithDirectNATS(t *testing.T) {
+func TestPlainInteropWithDirectNATS(t *testing.T) {
 	ctx := context.Background()
-	dh, err := newHarness(ctx, t)
+	dh, err := newPlainHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer dh.Close()
-	conn := dh.(*harness).nc
+	conn := dh.(*harness).conn
 
 	const topic = "foo"
-	body := []byte("hello")
-
-	// Send a message using Go CDK and receive it using NATS directly.
-	pt, err := OpenTopic(conn, topic, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pt.Shutdown(ctx)
-	nsub, _ := conn.SubscribeSync(topic)
-	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
-		t.Fatal(err)
-	}
-	m, err := nsub.NextMsgWithContext(ctx)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	if !bytes.Equal(m.Data, body) {
-		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
-	}
-
-	// Send a message using NATS directly and receive it using Go CDK.
-	ps, err := OpenSubscription(conn, topic, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer ps.Shutdown(ctx)
-	if err := conn.Publish(topic, body); err != nil {
-		t.Fatal(err)
-	}
-	msg, err := ps.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer msg.Ack()
-	if !bytes.Equal(msg.Body, body) {
-		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
-	}
-}
-
-// These are natspubsub specific to increase coverage.
-
-// If we only send a body we should be able to get that from a direct NATS subscriber.
-func TestInteropWithDirectNATSV2(t *testing.T) {
-	ctx := context.Background()
-	dh, err := newHarnessV2(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer dh.Close()
-	conn := dh.(*harness).nc
-
-	const topic = "foo"
-	// In version V2 we can use metadata which will be natively used in the nats message.
 	md := map[string]string{"a": "1", "b": "2", "c": "3"}
 	body := []byte("hello")
 
 	// Send a message using Go CDK and receive it using NATS directly.
-	pt, err := OpenTopicV2(conn, topic, nil)
+	pt, err := OpenTopic(ctx, conn, &connections.TopicOptions{Subject: topic})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pt.Shutdown(ctx)
-	nsub, _ := conn.SubscribeSync(topic)
+	defer func(pt *pubsub.Topic, ctx context.Context) {
+		_ = pt.Shutdown(ctx)
+	}(pt, ctx)
+
+	natsConn := conn.Raw().(*nats.Conn)
+
+	nsub, _ := natsConn.SubscribeSync(topic)
 	if err = pt.Send(ctx, &pubsub.Message{Body: body, Metadata: md}); err != nil {
 		t.Fatal(err)
 	}
 	m, err := nsub.NextMsgWithContext(ctx)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatalf(" could not get next message with context %v", err)
 	}
+
 	if !bytes.Equal(m.Data, body) {
 		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
 	}
@@ -303,12 +373,16 @@ func TestInteropWithDirectNATSV2(t *testing.T) {
 	}
 
 	// Send a message using NATS directly and receive it using Go CDK.
-	ps, err := OpenSubscriptionV2(conn, topic, nil)
+	opts := defaultSubOptions(topic, t.Name())
+
+	ps, err := OpenSubscription(ctx, conn, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ps.Shutdown(ctx)
-	if err := conn.Publish(topic, body); err != nil {
+	defer func(ps *pubsub.Subscription, ctx context.Context) {
+		_ = ps.Shutdown(ctx)
+	}(ps, ctx)
+	if err = natsConn.Publish(topic, body); err != nil {
 		t.Fatal(err)
 	}
 	msg, err := ps.Receive(ctx)
@@ -321,9 +395,103 @@ func TestInteropWithDirectNATSV2(t *testing.T) {
 	}
 }
 
+func TestJetstreamInteropWithDirectNATS(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newJetstreamHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+	conn := dh.(*harness).conn
+
+	const topic = "foo"
+	const topic2 = "flow"
+	md := map[string]string{"a": "1", "b": "2", "c": "3"}
+	body := []byte("hello")
+
+	// Send a message using Go CDK and receive it using NATS directly.
+	pt, err := OpenTopic(ctx, conn, &connections.TopicOptions{Subject: topic})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(pt *pubsub.Topic, ctx context.Context) {
+		_ = pt.Shutdown(ctx)
+	}(pt, ctx)
+
+	js := conn.Raw().(jetstream.JetStream)
+
+	stream, err := js.Stream(ctx, topic)
+	if err != nil && !strings.Contains(err.Error(), "404") {
+		t.Fatal(err)
+	}
+
+	if stream == nil {
+
+		streamConfig := jetstream.StreamConfig{
+			Name:     topic,
+			Subjects: []string{topic},
+		}
+
+		stream, err = js.CreateStream(ctx, streamConfig)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+	}
+
+	// Create durable consumer
+	c, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
+		Durable:   topic,
+		AckPolicy: jetstream.AckExplicitPolicy,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = pt.Send(ctx, &pubsub.Message{Body: body, Metadata: md}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := c.Next()
+	if err != nil {
+		t.Fatalf("could not consume message %v", err.Error())
+	}
+	if !bytes.Equal(m.Data(), body) {
+		t.Fatalf("Data did not match. %q vs %q\n", m.Data(), body)
+	}
+	for k, v := range md {
+		if m.Headers().Get(k) != v {
+			t.Fatalf("Metadata %q did not match. %q vs %q\n", k, m.Headers().Get(k), v)
+		}
+	}
+
+	// Send a message using NATS directly and receive it using Go CDK.
+	opts := defaultSubOptions(topic2, fmt.Sprintf("2_%s", t.Name()))
+
+	ps, err := OpenSubscription(ctx, conn, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(ps *pubsub.Subscription, ctx context.Context) {
+		_ = ps.Shutdown(ctx)
+	}(ps, ctx)
+
+	if _, err = js.Publish(ctx, topic2, body); err != nil {
+		t.Fatal(err)
+	}
+	msg, err := ps.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer msg.Ack()
+	if !bytes.Equal(msg.Body, body) {
+		t.Fatalf("Data did not match. %q vs %q\n", m.Data(), body)
+	}
+}
+
 func TestErrorCode(t *testing.T) {
 	ctx := context.Background()
-	dh, err := newHarness(ctx, t)
+	dh, err := newJetstreamHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -331,7 +499,7 @@ func TestErrorCode(t *testing.T) {
 	h := dh.(*harness)
 
 	// Topics
-	dt, err := openTopic(h.nc, "bar", false)
+	dt, err := openTopic(ctx, h.conn, &connections.TopicOptions{Subject: "bar"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +524,9 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds, err := openSubscription(h.nc, "bar", nil, false)
+	opts := defaultSubOptions("bar", t.Name())
+
+	ds, err := openSubscription(ctx, h.conn, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +559,9 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Queue Subscription
-	qs, err := openSubscription(h.nc, "bar", &SubscriptionOptions{Queue: t.Name()}, false)
+	opts = defaultSubOptions("bar", t.Name())
+
+	qs, err := openSubscription(ctx, h.conn, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,6 +594,98 @@ func TestErrorCode(t *testing.T) {
 	}
 }
 
+func isValidSubject(subject string) bool {
+	for _, char := range subject {
+		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9') ||
+			char == '.' || char == '*' || char == '>' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func TestCleanSubjectFromUrl(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputURL    string
+		expected    string
+		expectError bool
+	}{
+		{
+			name:        "Subject query present",
+			inputURL:    "http://example.com/path?subject=testSubject",
+			expected:    "testSubject.path",
+			expectError: false,
+		},
+		{
+			name:        "No subject query, path present",
+			inputURL:    "http://example.com/testPath",
+			expected:    "testPath",
+			expectError: false,
+		},
+		{
+			name:        "Both subject query and path present",
+			inputURL:    "http://example.com/testPath?subject=testSubject",
+			expected:    "testSubject.testPath",
+			expectError: false,
+		},
+		{
+			name:        "Empty subject query and path",
+			inputURL:    "http://example.com/",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "Subject query present, empty path",
+			inputURL:    "http://example.com/?subject=testSubject",
+			expected:    "testSubject",
+			expectError: false,
+		},
+		{
+			name:        "No subject query, empty path",
+			inputURL:    "http://example.com/",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "Subject with allowed special characters",
+			inputURL:    "http://example.com/testPath?subject=test.Subject.*.>",
+			expected:    "test.Subject.*.>.testPath",
+			expectError: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			u, err := url.Parse(test.inputURL)
+			if err != nil {
+				t.Fatalf("Failed to parse URL: %v", err)
+			}
+
+			result, err := cleanSubjectFromUrl(u)
+			if test.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			}
+
+			if result != test.expected {
+				t.Errorf("Expected %v, got %v", test.expected, result)
+			}
+
+			if !isValidSubject(result) {
+				t.Errorf("Subject contains invalid characters: %v", result)
+			}
+		})
+	}
+}
+
 func BenchmarkNatsQueuePubSub(b *testing.B) {
 	ctx := context.Background()
 
@@ -430,40 +694,48 @@ func BenchmarkNatsQueuePubSub(b *testing.B) {
 	s := gnatsd.RunServer(&opts)
 	defer s.Shutdown()
 
-	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", benchPort))
+	nc, err := nats.Connect(fmt.Sprintf(testServerUrlFmt, benchPort))
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer nc.Close()
 
-	for _, tc := range []struct {
-		name string
-		h    *harness
-	}{
-		{name: "V1", h: &harness{s: s, nc: nc, useV2: false}},
-		{name: "V2", h: &harness{s: s, nc: nc, useV2: true}},
-	} {
-		b.Run(tc.name, func(b *testing.B) {
-			dt, cleanup, err := tc.h.CreateTopic(ctx, b.Name())
-			if err != nil {
-				b.Fatal(err)
-			}
-			defer cleanup()
-
-			qs, cleanup, err := tc.h.CreateQueueSubscription(ctx, dt, b.Name())
-			if err != nil {
-				b.Fatal(err)
-			}
-			defer cleanup()
-
-			topic := pubsub.NewTopic(dt, nil)
-			defer topic.Shutdown(ctx)
-			queueSub := pubsub.NewSubscription(qs, recvBatcherOpts, nil)
-			defer queueSub.Shutdown(ctx)
-
-			drivertest.RunBenchmarks(b, topic, queueSub)
-		})
+	conn, err := connections.NewPlain(nc)
+	if err != nil {
+		b.Fatal(err)
 	}
+
+	h := &harness{s: s, conn: conn}
+
+	b.Run("PlainNats", func(b *testing.B) {
+		dt, cleanup, err1 := h.CreateTopic(ctx, b.Name())
+		if err1 != nil {
+			b.Fatal(err1)
+		}
+		defer cleanup()
+
+		qs, cleanupSub, err1 := h.CreateQueueSubscription(ctx, dt, b.Name())
+		if err1 != nil {
+			b.Fatal(err1)
+		}
+		defer cleanupSub()
+
+		topic := pubsub.NewTopic(dt, nil)
+		defer func(topic *pubsub.Topic, ctx context.Context) {
+			_ = topic.Shutdown(ctx)
+		}(topic, ctx)
+
+		queueSub := pubsub.NewSubscription(qs, &batcher.Options{
+			MaxBatchSize: 100,
+			MaxHandlers:  10, // max concurrency for receives
+		}, nil)
+		defer func(queueSub *pubsub.Subscription, ctx context.Context) {
+			_ = queueSub.Shutdown(ctx)
+		}(queueSub, ctx)
+
+		drivertest.RunBenchmarks(b, topic, queueSub)
+	})
+
 }
 
 func BenchmarkNatsPubSub(b *testing.B) {
@@ -471,71 +743,68 @@ func BenchmarkNatsPubSub(b *testing.B) {
 
 	opts := gnatsd.DefaultTestOptions
 	opts.Port = benchPort
+	opts.JetStream = true
 	s := gnatsd.RunServer(&opts)
 	defer s.Shutdown()
 
-	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", benchPort))
+	nc, err := nats.Connect(fmt.Sprintf(testServerUrlFmt, benchPort))
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer nc.Close()
 
-	for _, tc := range []struct {
-		name string
-		h    *harness
-	}{
-		{name: "V1", h: &harness{s: s, nc: nc, useV2: false}},
-		{name: "V2", h: &harness{s: s, nc: nc, useV2: true}},
-	} {
-		b.Run(tc.name, func(b *testing.B) {
-			dt, cleanup, err := tc.h.CreateTopic(ctx, b.Name())
-			if err != nil {
-				b.Fatal(err)
-			}
-			defer cleanup()
-			ds, cleanup, err := tc.h.CreateSubscription(ctx, dt, b.Name())
-			if err != nil {
-				b.Fatal(err)
-			}
-			defer cleanup()
-
-			topic := pubsub.NewTopic(dt, nil)
-			defer topic.Shutdown(ctx)
-			sub := pubsub.NewSubscription(ds, recvBatcherOpts, nil)
-			defer sub.Shutdown(ctx)
-
-			drivertest.RunBenchmarks(b, topic, sub)
-		})
+	js, err := jetstream.New(nc)
+	if err != nil {
+		b.Fatal(err)
 	}
-}
 
-func fakeConnectionStringInEnv() func() {
-	oldEnvVal := os.Getenv("NATS_SERVER_URL")
-	os.Setenv("NATS_SERVER_URL", fmt.Sprintf("nats://localhost:%d", testPort))
-	return func() {
-		os.Setenv("NATS_SERVER_URL", oldEnvVal)
-	}
+	conn := connections.NewJetstream(js)
+
+	h := &harness{s: s, conn: conn}
+	b.Run("Jetstream", func(b *testing.B) {
+		dt, cleanup, err := h.CreateTopic(ctx, b.Name())
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer cleanup()
+		ds, cleanup, err := h.CreateSubscription(ctx, dt, b.Name())
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer cleanup()
+
+		topic := pubsub.NewTopic(dt, nil)
+		defer func(topic *pubsub.Topic, ctx context.Context) {
+			_ = topic.Shutdown(ctx)
+		}(topic, ctx)
+		sub := pubsub.NewSubscription(ds, &batcher.Options{
+			MaxBatchSize: 100,
+			MaxHandlers:  10, // max concurrency for receives
+		}, nil)
+		defer func(sub *pubsub.Subscription, ctx context.Context) {
+			_ = sub.Shutdown(ctx)
+		}(sub, ctx)
+
+		drivertest.RunBenchmarks(b, topic, sub)
+	})
 }
 
 func TestOpenTopicFromURL(t *testing.T) {
 	ctx := context.Background()
-	dh, err := newHarness(ctx, t)
+	dh, err := newJetstreamHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer dh.Close()
-
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
 
 	tests := []struct {
 		URL     string
 		WantErr bool
 	}{
 		// OK.
-		{"nats://mytopic", false},
+		{"nats://localhost:11222/mytopic", false},
 		// Invalid parameter.
-		{"nats://mytopic?param=value", true},
+		{"nats://localhost:11222/mytopic?param=value", true},
 	}
 
 	for _, test := range tests {
@@ -544,41 +813,31 @@ func TestOpenTopicFromURL(t *testing.T) {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 		if topic != nil {
-			topic.Shutdown(ctx)
+			_ = topic.Shutdown(ctx)
 		}
 	}
 }
 
 func TestOpenSubscriptionFromURL(t *testing.T) {
 	ctx := context.Background()
-	dh, err := newHarness(ctx, t)
+	dh, err := newJetstreamHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer dh.Close()
-
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
 
 	tests := []struct {
 		URL     string
 		WantErr bool
 	}{
 		// OK.
-		{"nats://mytopic", false},
+		{"nats://localhost:11222/mytopic", false},
 		// Invalid parameter.
-		{"nats://mytopic?param=value", true},
+		{"nats://localhost:11222/mytopic?param=value", true},
 		// Queue URL Parameter for QueueSubscription.
-		{"nats://mytopic?queue=queue1", false},
+		{"nats://localhost:11222/mytopic?consumer_durable=queue1", false},
 		// Multiple values for Queue URL Parameter for QueueSubscription.
-		{"nats://mytopic?queue=queue1&queue=queue2", true},
-		// NATSV2 URL should be acceptable without values.
-		{"nats://mytopic?natsv2", false},
-		// NATSV2 URL should be acceptable with boolean parsable values.
-		{"nats://mytopic?natsv2=true", false},
-		{"nats://mytopic?natsv2=false", false},
-		// NATSV2 URL should throw error with non-boolean parsable values.
-		{"nats://mytopic?natsv2=foo", true},
+		{"nats://localhost:11222/mytopic?subject=queue1&subject=queue2", true},
 	}
 
 	for _, test := range tests {
@@ -587,55 +846,7 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 		if sub != nil {
-			sub.Shutdown(ctx)
+			_ = sub.Shutdown(ctx)
 		}
-	}
-}
-
-func TestCodec(t *testing.T) {
-	const sub = "foo"
-	for _, dm := range []*driver.Message{
-		{Metadata: nil, Body: nil},
-		{Metadata: map[string]string{"a": "1"}, Body: nil},
-		{Metadata: nil, Body: []byte("hello")},
-		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello")},
-		{
-			Metadata: map[string]string{"a": "1"}, Body: []byte("hello"),
-			AckID: "foo", AsFunc: func(any) bool { return true },
-		},
-	} {
-		t.Run("V1", func(t *testing.T) {
-			bytes, err := encodeMessage(dm)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var got driver.Message
-			if err := decodeMessage(bytes, &got); err != nil {
-				t.Fatal(err)
-			}
-			want := *dm
-			want.AckID = nil
-			want.AsFunc = nil
-			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf("%+v:\n%s", want, diff)
-			}
-		})
-		t.Run("V2", func(t *testing.T) {
-			nm := encodeMessageV2(dm, sub)
-			got, err := decodeMessageV2(nm)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			want := *dm
-			want.AckID = nil
-			want.AsFunc = nil
-			// AsFunc needs to be cleared as it cannot be comparable using Diff.
-			got.AsFunc = nil
-			if diff := cmp.Diff(*got, want); diff != "" {
-				t.Errorf("%+v:\n%s", want, diff)
-			}
-		})
-
 	}
 }
