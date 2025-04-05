@@ -16,11 +16,9 @@ package docstore_test
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"gocloud.dev/docstore/memdocstore"
 	"gocloud.dev/internal/testing/oteltest"
+	"testing"
 )
 
 func TestOpenTelemetry(t *testing.T) {
@@ -45,10 +43,6 @@ func TestOpenTelemetry(t *testing.T) {
 	// Test Query.Get
 	iter := coll.Query().Get(ctx)
 	iter.Stop()
-
-	// Force flush metrics and wait for collection
-	_ = te.ForceFlush(ctx)
-	time.Sleep(100 * time.Millisecond)
 
 	// Check for spans
 	spanStubs := te.SpanStubs()

@@ -133,7 +133,7 @@ func NewTestExporter() *TestExporter {
 
 	// Create and register tracer provider
 	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(spanExporter),
+		sdktrace.WithSyncer(spanExporter),
 		sdktrace.WithResource(res),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)

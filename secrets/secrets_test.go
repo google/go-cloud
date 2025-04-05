@@ -105,10 +105,6 @@ func TestOpenTelemetry(t *testing.T) {
 
 	_, _ = k.Decrypt(ctx, nil)
 
-	// Force flush to ensure spans are exported
-	_ = te.ForceFlush(ctx)
-	time.Sleep(5 * time.Second)
-
 	// Check collected spans
 	spanStubs := te.SpanStubs()
 	diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/secrets", "", []oteltest.Call{

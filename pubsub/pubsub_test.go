@@ -580,11 +580,7 @@ func TestOpenTelemetry(t *testing.T) {
 	// Set up the test exporter for OpenTelemetry
 	te := oteltest.NewTestExporter()
 	defer func() {
-		err := te.ForceFlush(ctx2)
-		if err != nil {
-			t.Logf("Error flushing traces: %v", err)
-		}
-		err = te.Shutdown(ctx2)
+		err := te.Shutdown(ctx2)
 		if err != nil {
 			t.Logf("Error shutting down test exporter: %v", err)
 		}

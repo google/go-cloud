@@ -71,12 +71,6 @@ func TestOpenTelemetry(t *testing.T) {
 		t.Fatal("got nil, want error")
 	}
 
-	// Force flush to ensure spans are exported
-	t.Log("Flushing telemetry data...")
-	if err := te.ForceFlush(ctx); err != nil {
-		t.Logf("Warning: error flushing telemetry data: %v", err)
-	}
-
 	// Get spans and verify we have some data
 	spans := te.SpanStubs()
 	t.Logf("Collected %d spans", len(spans))
