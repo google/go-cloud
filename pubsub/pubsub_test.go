@@ -610,20 +610,11 @@ func TestOpenTelemetry(t *testing.T) {
 	}
 	_, _ = sub.Receive(ctx)
 
-	validateCalls(t, te, []string{
-		"driver.Topic.SendBatch",
-		"Topic.Send",
-		"Topic.Shutdown",
-		"driver.Subscription.ReceiveBatch",
-		"Subscription.Receive",
-		"driver.Subscription.SendAcks",
-		"Subscription.Shutdown",
-		"Subscription.Receive",
-	})
+	validateCalls(t, te)
 }
 
 // validateCalls validates that the spans recorded by the test exporter match the expected operation names.
-func validateCalls(t *testing.T, te *oteltest.TestExporter, expectedNames []string) {
+func validateCalls(t *testing.T, te *oteltest.TestExporter) {
 	t.Helper()
 
 	// In environments where spans are collected asynchronously, we need to give
@@ -632,42 +623,21 @@ func validateCalls(t *testing.T, te *oteltest.TestExporter, expectedNames []stri
 
 	spans := te.SpanStubs()
 
-	// If no spans were collected at all, it may be because tracing is disabled
-	// or configured differently in the test environment
-	if len(spans) == 0 {
-		t.Skip("No spans were collected, skipping test")
-		return
+	diff := oteltest.Diff(spans.Snapshots(), pkgName, "", []oteltest.Call{
+		{Method: "driver.Topic.SendBatch"},
+		{Method: "Topic.Send"},
+		{Method: "Topic.Shutdown"},
+		{Method: "driver.Subscription.ReceiveBatch"},
+		{Method: "Subscription.Receive"},
+		{Method: "driver.Subscription.SendAcks"},
+		{Method: "Subscription.Shutdown"},
+		{Method: "Subscription.Receive"},
+	})
+	if diff != "" {
+		t.Error(diff)
 	}
 
-	gotNames := make([]string, 0, len(spans))
-	for _, span := range spans {
-		gotNames = append(gotNames, span.Name)
-	}
-
-	// Check if we have the same number of operations
-	if len(gotNames) != len(expectedNames) {
-		t.Errorf("Got %d operations, want %d", len(gotNames), len(expectedNames))
-		t.Errorf("Got: %v", gotNames)
-		t.Errorf("Want: %v", expectedNames)
-		return
-	}
-
-	// Check if the operation names match
-	for i, exp := range expectedNames {
-		if i >= len(gotNames) {
-			t.Errorf("Missing operation at position %d: %q", i, exp)
-			continue
-		}
-		if gotNames[i] != exp {
-			t.Errorf("Operation at position %d: got %q, want %q", i, gotNames[i], exp)
-		}
-	}
 }
-
-var (
-	testOpenOnce sync.Once
-	testOpenGot  *url.URL
-)
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
