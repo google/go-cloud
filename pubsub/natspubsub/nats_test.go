@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go/jetstream"
 	"gocloud.dev/pubsub/batcher"
+	"gocloud.dev/pubsub/natspubsub/connections"
 	"net/url"
 	"strings"
 	"testing"
