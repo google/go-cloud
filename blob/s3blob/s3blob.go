@@ -405,6 +405,8 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	switch {
 	case code == "NoSuchBucket" || code == "NoSuchKey" || code == "NotFound" || code == "ObjectNotInActiveTierError":
 		return gcerrors.NotFound
+	case code == "PreconditionFailed":
+		return gcerrors.FailedPrecondition
 	default:
 		return gcerrors.Unknown
 	}
