@@ -260,9 +260,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestSignedURL", func(t *testing.T) {
 		testSignedURL(t, newHarness)
 	})
-	//t.Run("TestIfNotExist", func(t *testing.T) {
-	//	testIfNotExist(t, newHarness)
-	//})
+	t.Run("TestIfNotExist", func(t *testing.T) {
+		testIfNotExist(t, newHarness)
+	})
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("TestAs", func(t *testing.T) {
 		for _, st := range asTests {
@@ -2761,41 +2761,32 @@ func testIfNotExist(t *testing.T, newHarness HarnessMaker) {
 		IfNotExist:  true,
 	}
 
-	// Create one file for the key
+	// Create the new blob; expected to work since it doesn't exist.
 	w1, err := b.NewWriter(ctx, key, &opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	defer func() {
 		_ = b.Delete(ctx, key)
 	}()
-
-	// Write to the file
 	if _, err := w1.Write([]byte(contents)); err != nil {
 		t.Fatal(err)
 	}
-
-	// Closing the file (ie: thus writing the content to the file)
-	// should not return an error
 	if err := w1.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	// Create a new writer for the same key
+	// Attempt a second write to the same key; expected to fail in
+	// either Write or Close, with FailedPrecondition.
 	w2, err := b.NewWriter(ctx, key, &opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// Write to the file
-	// We expect an error either from `Write` or `Close`
 	if _, err = w2.Write([]byte(contents)); err == nil {
 		err = w2.Close()
 	} else {
 		_ = w2.Close()
 	}
-
 	if err == nil {
 		t.Error("expected error rewriting key with IfNotExist, got nil")
 	}

@@ -359,8 +359,8 @@ func (w *writer) Close() error {
 	defer w.b.mu.Unlock()
 	if prev := w.b.blobs[w.key]; prev != nil {
 		if w.ifNotExist {
-			err := errors.New("file already exist")
-			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "a blob already exist for key")
+			err := fmt.Errorf("a blob already exists for key %q", w.key)
+			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "IfNotExist precondition failed")
 		}
 		entry.Attributes.CreateTime = prev.Attributes.CreateTime
 	}
