@@ -253,12 +253,12 @@
 // the returned error. See the specific driver's package doc for the supported
 // types.
 //
-// # OpenCensus Integration
+// # OpenTelemetry Integration
 //
-// OpenCensus supports tracing and metric collection for multiple languages and
-// backend providers. See https://opencensus.io.
+// OpenTelemetry supports tracing, metrics, and logs collection for multiple languages and
+// backend providers. See https://opentelemetry.io.
 //
-// This API collects OpenCensus traces and metrics for the following methods:
+// This API collects OpenTelemetry traces and metrics for the following methods:
 //   - ActionList.Do
 //   - Query.Get (for the first query only; drivers may make additional calls while iterating over results)
 //
@@ -270,10 +270,10 @@
 // by driver and method.
 // For example, "gocloud.dev/docstore/latency".
 //
-// To enable trace collection in your application, see "Configure Exporter" at
-// https://opencensus.io/quickstart/go/tracing.
-// To enable metric collection in your application, see "Exporting stats" at
-// https://opencensus.io/quickstart/go/metrics.
+// To enable trace collection in your application, see the documentation at
+// https://opentelemetry.io/docs/instrumentation/go/getting-started/.
+// To enable metric collection in your application, see the documentation at
+// https://opentelemetry.io/docs/instrumentation/go/manual/.
 //
 // # GORM-like Code Generation
 //

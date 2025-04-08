@@ -16,6 +16,7 @@
 package awscloud // import "gocloud.dev/aws/awscloud"
 
 import (
+	"gocloud.dev/server"
 	"net/http"
 
 	"github.com/google/wire"
@@ -26,7 +27,6 @@ import (
 	"gocloud.dev/pubsub/awssnssqs"
 	"gocloud.dev/runtimevar/awsparamstore"
 	"gocloud.dev/secrets/awskms"
-	"gocloud.dev/server/xrayserver"
 )
 
 // AWS is a Wire provider set that includes all Amazon Web Services interface
@@ -49,5 +49,5 @@ var Services = wire.NewSet(
 	awskms.Set,
 	rds.CertFetcherSet,
 	awsdynamodb.Set,
-	xrayserver.Set,
+	server.Set,
 )

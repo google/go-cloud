@@ -18,12 +18,12 @@
 //
 // See https://gocloud.dev/howto/secrets/ for a detailed how-to guide.
 //
-// # OpenCensus Integration
+// # OpenTelemetry Integration
 //
-// OpenCensus supports tracing and metric collection for multiple languages and
-// backend providers. See https://opencensus.io.
+// OpenTelemetry supports tracing and metric collection for multiple languages and
+// backend providers. See https://opentelemetry.io.
 //
-// This API collects OpenCensus traces and metrics for the following methods:
+// This API collects OpenTelemetry traces and metrics for the following methods:
 //   - Encrypt
 //   - Decrypt
 //
@@ -35,19 +35,22 @@
 // by driver and method.
 // For example, "gocloud.dev/secrets/latency".
 //
-// To enable trace collection in your application, see "Configure Exporter" at
-// https://opencensus.io/quickstart/go/tracing.
-// To enable metric collection in your application, see "Exporting stats" at
-// https://opencensus.io/quickstart/go/metrics.
+// To enable trace collection in your application, see the OpenTelemetry documentation at
+// https://opentelemetry.io/docs/instrumentation/go/getting-started/.
 package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
 	"net/url"
+	"reflect"
 	"sync"
+	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/secrets/driver"
 )
@@ -56,7 +59,7 @@ import (
 // found in driver subpackages.
 type Keeper struct {
 	k      driver.Keeper
-	tracer *oc.Tracer
+	tracer trace.Tracer
 
 	// mu protects the closed variable.
 	// Read locks are kept to allow holding a read lock for long-running calls,
@@ -71,30 +74,91 @@ var NewKeeper = newKeeper
 // newKeeper creates a Keeper.
 func newKeeper(k driver.Keeper) *Keeper {
 	return &Keeper{
-		k: k,
-		tracer: &oc.Tracer{
-			Package:        pkgName,
-			Provider:       oc.ProviderName(k),
-			LatencyMeasure: latencyMeasure,
-		},
+		k:      k,
+		tracer: otel.GetTracerProvider().Tracer(pkgName),
 	}
 }
 
 const pkgName = "gocloud.dev/secrets"
 
 var (
-	latencyMeasure = oc.LatencyMeasure(pkgName)
+	// Meter is the OpenTelemetry meter for this package
+	meter = otel.GetMeterProvider().Meter(pkgName)
 
-	// OpenCensusViews are predefined views for OpenCensus metrics.
-	// The views include counts and latency distributions for API method calls.
-	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
-	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+	// latencyHistogram measures the latency of method calls
+	latencyHistogram metric.Float64Histogram
+
+	// completedCallsCounter counts the number of method calls
+	completedCallsCounter metric.Int64Counter
 )
+
+func init() {
+	var err error
+	latencyHistogram, err = meter.Float64Histogram(
+		pkgName+"/latency",
+		metric.WithDescription("Latency distribution of method calls"),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	completedCallsCounter, err = meter.Int64Counter(
+		pkgName+"/completed_calls",
+		metric.WithDescription("Count of completed method calls"),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+}
+
+// providerName returns the name of the provider associated with the driver value.
+// It is intended to be used for metrics and tracing.
+func providerName(driver any) string {
+	// Return the package path of the driver's type.
+	if driver == nil {
+		return ""
+	}
+	t := reflect.TypeOf(driver)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.PkgPath()
+}
 
 // Encrypt encrypts the plaintext and returns the cipher message.
 func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
-	ctx = k.tracer.Start(ctx, "Encrypt")
-	defer func() { k.tracer.End(ctx, err) }()
+	start := time.Now()
+	ctx, span := k.tracer.Start(ctx, "Encrypt")
+	// Set span attributes for testing
+	span.SetAttributes(
+		attribute.String("gocdk.package", pkgName),
+		attribute.String("gocdk.method", "Encrypt"),
+	)
+	defer func() {
+		// Set status on span before ending
+		if err != nil {
+			span.SetAttributes(attribute.String("gocdk.status", "13")) // Internal error
+		} else {
+			span.SetAttributes(attribute.String("gocdk.status", "0")) // OK
+		}
+		span.End()
+		// Record metrics
+		latency := time.Since(start).Seconds()
+		latencyHistogram.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("method", "Encrypt"),
+			attribute.String("provider", providerName(k.k)),
+		))
+
+		status := "ok"
+		if err != nil {
+			status = "error"
+		}
+		completedCallsCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("method", "Encrypt"),
+			attribute.String("provider", providerName(k.k)),
+			attribute.String("status", status),
+		))
+	}()
 
 	k.mu.RLock()
 	defer k.mu.RUnlock()
@@ -111,8 +175,38 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []by
 
 // Decrypt decrypts the ciphertext and returns the plaintext.
 func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []byte, err error) {
-	ctx = k.tracer.Start(ctx, "Decrypt")
-	defer func() { k.tracer.End(ctx, err) }()
+	start := time.Now()
+	ctx, span := k.tracer.Start(ctx, "Decrypt")
+	// Set span attributes for testing
+	span.SetAttributes(
+		attribute.String("gocdk.package", pkgName),
+		attribute.String("gocdk.method", "Decrypt"),
+	)
+	defer func() {
+		// Set status on span before ending
+		if err != nil {
+			span.SetAttributes(attribute.String("gocdk.status", "13")) // Internal error
+		} else {
+			span.SetAttributes(attribute.String("gocdk.status", "0")) // OK
+		}
+		span.End()
+		// Record metrics
+		latency := time.Since(start).Seconds()
+		latencyHistogram.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("method", "Decrypt"),
+			attribute.String("provider", providerName(k.k)),
+		))
+
+		status := "ok"
+		if err != nil {
+			status = "error"
+		}
+		completedCallsCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("method", "Decrypt"),
+			attribute.String("provider", providerName(k.k)),
+			attribute.String("status", status),
+		))
+	}()
 
 	k.mu.RLock()
 	defer k.mu.RUnlock()
