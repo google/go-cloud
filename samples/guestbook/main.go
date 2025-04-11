@@ -30,10 +30,12 @@ import (
 
 	"github.com/google/wire"
 	"github.com/gorilla/mux"
-	"go.opencensus.io/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
+
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/health/sqlhealth"
@@ -116,10 +118,52 @@ func main() {
 var applicationSet = wire.NewSet(
 	newApplication,
 	appHealthChecks,
-	trace.AlwaysSample,
+	wire.Value(trace.SpanKindServer),
+	provideTracer,
+	provideTracerProvider,
+	provideSpanExporter,
+	provideSampler,
 	newRouter,
 	wire.Bind(new(http.Handler), new(*mux.Router)),
 )
+
+// provideTracer provides a tracer for the application.
+func provideTracer() trace.Tracer {
+	// Use the global TracerProvider to create a named tracer for the application
+	return trace.NewNoopTracerProvider().Tracer("guestbook")
+}
+
+// provideTracerProvider provides a TracerProvider for the application.
+func provideTracerProvider() trace.TracerProvider {
+	// For local development, use a no-op tracer provider
+	// In production, this would be configured to use a proper exporter
+	return trace.NewNoopTracerProvider()
+}
+
+// provideSpanExporter provides a SpanExporter for the application.
+func provideSpanExporter() sdktrace.SpanExporter {
+	// Custom no-op exporter implementation
+	return &noopExporter{}
+}
+
+// noopExporter is a no-op implementation of sdktrace.SpanExporter
+type noopExporter struct{}
+
+// ExportSpans implements the SpanExporter interface
+func (e *noopExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	return nil
+}
+
+// Shutdown implements the SpanExporter interface
+func (e *noopExporter) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+// provideSampler provides a default sampler for the application.
+func provideSampler() sdktrace.Sampler {
+	// Always sample spans for this example application
+	return sdktrace.AlwaysSample()
+}
 
 func newRouter(app *application) *mux.Router {
 	r := mux.NewRouter()

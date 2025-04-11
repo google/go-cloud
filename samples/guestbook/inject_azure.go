@@ -22,7 +22,6 @@ import (
 
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/google/wire"
-	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
 	"gocloud.dev/runtimevar"
@@ -43,7 +42,6 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	// wire.Build.
 	wire.Build(
 		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
-		wire.InterfaceValue(new(trace.Exporter), trace.Exporter(nil)),
 		azureblob.NewDefaultServiceURLOptions,
 		azureblob.NewDefaultClient,
 		azureblob.NewServiceURL,

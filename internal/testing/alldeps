@@ -11,9 +11,6 @@ cloud.google.com/go/monitoring
 cloud.google.com/go/pubsub
 cloud.google.com/go/secretmanager
 cloud.google.com/go/storage
-cloud.google.com/go/trace
-contrib.go.opencensus.io/exporter/aws
-contrib.go.opencensus.io/exporter/stackdriver
 contrib.go.opencensus.io/integrations/ocsql
 filippo.io/edwards25519
 github.com/Azure/azure-amqp-common-go/v3
@@ -58,7 +55,6 @@ github.com/aws/aws-sdk-go-v2/service/ssooidc
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/smithy-go
 github.com/cenkalti/backoff/v4
-github.com/census-instrumentation/opencensus-proto
 github.com/cespare/xxhash/v2
 github.com/cncf/xds/go
 github.com/coreos/go-semver
@@ -119,7 +115,6 @@ github.com/nats-io/nkeys
 github.com/nats-io/nuid
 github.com/pierrec/lz4/v4
 github.com/pkg/browser
-github.com/prometheus/prometheus
 github.com/rabbitmq/amqp091-go
 github.com/rcrowley/go-metrics
 github.com/ryanuber/go-glob
@@ -139,6 +134,8 @@ go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
+go.opentelemetry.io/otel/exporters/otlp/otlptrace
+go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
 go.opentelemetry.io/otel/metric
 go.opentelemetry.io/otel/sdk
 go.opentelemetry.io/otel/sdk/metric
@@ -171,4 +168,3 @@ google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/rpc
 google.golang.org/grpc
 google.golang.org/protobuf
-gopkg.in/pipe.v2
