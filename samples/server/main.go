@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command server runs a simple HTTP server with integrated Stackdriver tracing
+// Command server runs a simple HTTP server with integrated Cloud Trace (OpenTelemetry)
 // and health checks.
 package main
 
@@ -26,7 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
@@ -80,20 +82,35 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tokenSource := gcp.CredentialsTokenSource(credentials)
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var exporter trace.Exporter
+	traceProvider := trace.NewTracerProvider(trace.WithSampler(trace.NeverSample()))
+
 	if *doTrace {
-		fmt.Println("Exporting traces to Stackdriver")
-		mr := GlobalMonitoredResource{projectID: string(projectID)}
-		exporter, _, err = sdserver.NewExporter(projectID, tokenSource, mr)
+		fmt.Println("Exporting traces to Google Cloud Trace")
+
+		// Create resource with project information
+		res := resource.NewWithAttributes(
+			"testing",
+			// Add relevant resource attributes here
+		)
+
+		traceProvider, err = sdserver.NewGcpTraceProvider(ctx, sdserver.ProjectID(projectID), res, trace.AlwaysSample())
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		otel.SetTracerProvider(traceProvider)
+
+		metricsProvider, err0 := sdserver.NewGcpMetricsProvider(ctx, sdserver.ProjectID(projectID), res)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+
+		otel.SetMeterProvider(metricsProvider)
 	}
 
 	mux := http.NewServeMux()
@@ -111,15 +128,14 @@ func main() {
 	})
 
 	options := &server.Options{
-		RequestLogger: sdserver.NewRequestLogger(),
-		HealthChecks:  []health.Checker{healthCheck},
-		TraceExporter: exporter,
+		RequestLogger:  sdserver.NewRequestLogger(),
+		HealthChecks:   []health.Checker{healthCheck},
+		TracerProvider: traceProvider,
 
-		// In production you will likely want to use trace.ProbabilitySampler
-		// instead, since AlwaysSample will start and export a trace for every
-		// request - this may be prohibitively slow with significant traffic.
-		DefaultSamplingPolicy: trace.AlwaysSample(),
-		Driver:                &server.DefaultDriver{},
+		// Note: Sampling is now configured at the TracerProvider level above
+		// In production you will likely want to use a probabilistic sampler
+		// instead of AlwaysSample to avoid generating too much data
+		Driver: &server.DefaultDriver{},
 	}
 
 	s := server.New(mux, options)
