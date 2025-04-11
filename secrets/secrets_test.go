@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Development Kit Authors
+// Copyright 2019-2025 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@ package secrets
 import (
 	"context"
 	"errors"
+	"gocloud.dev/internal/testing/oteltest"
 	"net/url"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/secrets/driver"
 )
 
@@ -92,22 +93,36 @@ func TestKeeperIsClosed(t *testing.T) {
 	}
 }
 
-func TestOpenCensus(t *testing.T) {
+func TestOpenTelemetry(t *testing.T) {
+
 	ctx := context.Background()
-	te := octest.NewTestExporter(OpenCensusViews)
-	defer te.Unregister()
+
+	te := oteltest.NewTestExporter()
 
 	k := NewKeeper(&erroringKeeper{})
 	defer k.Close()
-	k.Encrypt(ctx, nil)
-	k.Decrypt(ctx, nil)
-	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/secrets", "gocloud.dev/secrets", []octest.Call{
-		{Method: "Encrypt", Code: gcerrors.Internal},
-		{Method: "Decrypt", Code: gcerrors.Internal},
+	_, _ = k.Encrypt(ctx, nil)
+
+	_, _ = k.Decrypt(ctx, nil)
+
+	// Check collected spans
+	spanStubs := te.SpanStubs()
+	diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/secrets", "", []oteltest.Call{
+		{Method: "Encrypt", Status: "13"}, // 13 is the code for Internal
+		{Method: "Decrypt", Status: "13"}, // 13 is the code for Internal
 	})
 	if diff != "" {
 		t.Error(diff)
 	}
+
+	// Safe shutdown with very short timeout to avoid hanging
+	sctx, scancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer scancel()
+	if err := te.Shutdown(sctx); err != nil {
+		// Just log and continue - not failing the test on shutdown errors
+		t.Logf("OpenTelemetry shutdown error (non-fatal): %v", err)
+	}
+
 }
 
 var (
