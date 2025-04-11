@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/codes"
 	"net/url"
 	"strings"
 	"sync"
@@ -605,9 +606,11 @@ func TestOpenTelemetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg.Ack()
-	if err := sub.Shutdown(ctx); err != nil {
+	err = sub.Shutdown(ctx)
+	if err != nil {
 		t.Fatal(err)
 	}
+
 	_, _ = sub.Receive(ctx)
 
 	validateCalls(t, te)
@@ -631,7 +634,7 @@ func validateCalls(t *testing.T, te *oteltest.TestExporter) {
 		{Method: "Subscription.Receive"},
 		{Method: "driver.Subscription.SendAcks"},
 		{Method: "Subscription.Shutdown"},
-		{Method: "Subscription.Receive"},
+		{Method: "Subscription.Receive", Status: codes.FailedPrecondition.String()},
 	})
 	if diff != "" {
 		t.Error(diff)
