@@ -18,16 +18,16 @@
 //
 // See https://gocloud.dev/howto/runtimevar/ for a detailed how-to guide.
 //
-// # OpenCensus Integration
+// # OpenTelemetry Integration
 //
-// OpenCensus supports tracing and metric collection for multiple languages and
-// backend providers. See https://opencensus.io.
+// OpenTelemetry supports tracing and metric collection for multiple languages and
+// backend providers. See https://opentelemetry.io.
 //
-// This API collects an OpenCensus metric "gocloud.dev/runtimevar/value_changes",
+// This API collects an OpenTelemetry metric "gocloud.dev/runtimevar/value_changes",
 // a count of the number of times all variables have changed values, by driver.
 //
-// To enable metric collection in your application, see "Exporting stats" at
-// https://opencensus.io/quickstart/go/metrics.
+// To enable metric collection in your application, see the OpenTelemetry documentation at
+// https://opentelemetry.io/docs/instrumentation/go/getting-started/
 package runtimevar // import "gocloud.dev/runtimevar"
 
 import (
@@ -44,11 +44,10 @@ import (
 	"sync"
 	"time"
 
-	"go.opencensus.io/stats"
-	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/secrets"
@@ -81,19 +80,23 @@ func (s *Snapshot) As(i any) bool {
 const pkgName = "gocloud.dev/runtimevar"
 
 var (
-	changeMeasure = stats.Int64(pkgName+"/value_changes", "Count of variable value changes",
-		stats.UnitDimensionless)
-	// OpenCensusViews are predefined views for OpenCensus metrics.
-	OpenCensusViews = []*view.View{
-		{
-			Name:        pkgName + "/value_changes",
-			Measure:     changeMeasure,
-			Description: "Count of variable value changes by driver.",
-			TagKeys:     []tag.Key{oc.ProviderKey},
-			Aggregation: view.Count(),
-		},
-	}
+	// Meter is the OpenTelemetry meter for this package
+	meter = otel.GetMeterProvider().Meter(pkgName)
+	// valueChangesCounter counts the number of variable value changes
+	valueChangesCounter metric.Int64Counter
 )
+
+func init() {
+	var err error
+	valueChangesCounter, err = meter.Int64Counter(
+		pkgName+"/value_changes",
+		metric.WithDescription("Count of variable value changes by driver"),
+	)
+	if err != nil {
+		// Handle initialization error appropriately
+		otel.Handle(err)
+	}
+}
 
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in driver subpackages.
@@ -122,13 +125,27 @@ type Variable struct {
 // New is intended for use by drivers only. Do not use in application code.
 var New = newVar
 
+// providerName returns the name of the provider associated with the driver value.
+// It is intended to be used for metrics and tracing.
+func providerName(driver any) string {
+	// Return the package path of the driver's type.
+	if driver == nil {
+		return ""
+	}
+	t := reflect.TypeOf(driver)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.PkgPath()
+}
+
 // newVar creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
 	ctx, cancel := context.WithCancel(context.Background())
 	changed := make(chan struct{})
 	v := &Variable{
 		dw:               w,
-		provider:         oc.ProviderName(w),
+		provider:         providerName(w),
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
 		haveGoodCh:       make(chan struct{}),
@@ -203,7 +220,7 @@ func (c *Variable) background(ctx context.Context) {
 
 		// There's something new to return!
 		prevState = curState
-		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
+		valueChangesCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("provider", c.provider)))
 		// Error from RecordWithTags is not possible.
 
 		// Updates under the lock.
