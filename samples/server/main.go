@@ -82,13 +82,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tokenSource := gcp.CredentialsTokenSource(credentials)
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	traceProvider := trace.NewTracerProvider(trace.WithSampler(trace.NeverSample()))
+
 	if *doTrace {
 		fmt.Println("Exporting traces to Google Cloud Trace")
 
@@ -98,12 +98,19 @@ func main() {
 			// Add relevant resource attributes here
 		)
 
-		traceProvider, err = sdserver.NewGcpTraceProvider(sdserver.ProjectID(projectID), sdserver.TokenSource(tokenSource), res, trace.AlwaysSample())
+		traceProvider, err = sdserver.NewGcpTraceProvider(ctx, sdserver.ProjectID(projectID), res, trace.AlwaysSample())
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		otel.SetTracerProvider(traceProvider)
+
+		metricsProvider, err0 := sdserver.NewGcpMetricsProvider(ctx, sdserver.ProjectID(projectID), res)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+
+		otel.SetMeterProvider(metricsProvider)
 	}
 
 	mux := http.NewServeMux()
