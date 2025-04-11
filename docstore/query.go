@@ -20,8 +20,12 @@ import (
 	"reflect"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/internal/gcerr"
+	gcdkotel "gocloud.dev/internal/otel"
 )
 
 // Query represents a query over a collection.
@@ -204,17 +208,44 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	return q.get(ctx, true, fps...)
 }
 
-// get implements Get, with optional OpenCensus tracing so it can be used internally.
-func (q *Query) get(ctx context.Context, oc bool, fps ...FieldPath) *DocumentIterator {
+// get implements Get, with optional OpenTelemetry tracing so it can be used internally.
+func (q *Query) get(ctx context.Context, withTracing bool, fps ...FieldPath) *DocumentIterator {
 	dcoll := q.coll.driver
 	if err := q.initGet(fps); err != nil {
 		return &DocumentIterator{err: wrapError(dcoll, err)}
 	}
 
 	var err error
-	if oc {
-		ctx = q.coll.tracer.Start(ctx, "Query.Get")
-		defer func() { q.coll.tracer.End(ctx, err) }()
+	var startTime time.Time
+	var span trace.Span
+
+	if withTracing {
+		startTime = time.Now()
+		ctx, span = q.coll.tracer.Start(ctx, "Query.Get")
+		defer func() {
+			q.coll.tracer.End(span, err)
+
+			// Record metrics
+			if completedCallsCounter != nil {
+				attr := []attribute.KeyValue{
+					gcdkotel.MethodKey.String("Query.Get"),
+					gcdkotel.ProviderKey.String(q.coll.tracer.Provider),
+				}
+				completedCallsCounter.Add(context.Background(), 1, metric.WithAttributes(attr...))
+			}
+
+			if latencyHistogram != nil {
+				attr := []attribute.KeyValue{
+					gcdkotel.MethodKey.String("Query.Get"),
+					gcdkotel.ProviderKey.String(q.coll.tracer.Provider),
+				}
+				latencyHistogram.Record(
+					context.Background(),
+					float64(time.Since(startTime).Milliseconds()),
+					metric.WithAttributes(attr...),
+				)
+			}
+		}()
 	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, coll: q.coll, err: wrapError(dcoll, err)}
