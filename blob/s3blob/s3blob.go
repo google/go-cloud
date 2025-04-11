@@ -405,8 +405,6 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	switch {
 	case code == "NoSuchBucket" || code == "NoSuchKey" || code == "NotFound" || code == "ObjectNotInActiveTierError":
 		return gcerrors.NotFound
-	case code == "PreconditionFailed":
-		return gcerrors.FailedPrecondition
 	default:
 		return gcerrors.Unknown
 	}
@@ -749,11 +747,6 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 		Metadata:    md,
-	}
-
-	if opts.IfNotExist {
-		// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html
-		req.IfNoneMatch = aws.String("*")
 	}
 	if opts.CacheControl != "" {
 		req.CacheControl = aws.String(opts.CacheControl)
