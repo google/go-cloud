@@ -34,6 +34,8 @@ require (
 	github.com/Azure/go-amqp v1.4.0
 	github.com/Azure/go-autorest/autorest/to v0.4.1
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.37.6
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.27.0
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator v0.51.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.12
