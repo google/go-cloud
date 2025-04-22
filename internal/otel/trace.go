@@ -121,8 +121,7 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 	t.LatencyMeasure.Record(ctx,
 		float64(elapsed.Nanoseconds())/1e6, // milliseconds
 		metric.WithAttributes(
-			StatusKey.String(fmt.Sprint(code),
-			)),
+			StatusKey.String(fmt.Sprint(code))),
 	)
 }
 
