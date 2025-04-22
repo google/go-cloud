@@ -97,7 +97,7 @@ func TestOpenTelemetry(t *testing.T) {
 
 	ctx := context.Background()
 
-	te := oteltest.NewTestExporter()
+	te := oteltest.NewTestExporter(t)
 
 	k := NewKeeper(&erroringKeeper{})
 	defer k.Close()
