@@ -126,30 +126,6 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 	)
 }
 
-// StartSpan is a convenience function that creates a span using the global tracer.
-func StartSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
-	return otel.Tracer("").Start(ctx, name, trace.WithAttributes(attrs...))
-}
-
-// TraceCall is a helper that traces the execution of a function.
-func TraceCall(ctx context.Context, name string, fn func(context.Context) error) error {
-	ctx, span := StartSpan(ctx, name)
-	defer span.End()
-
-	err := fn(ctx)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	}
-
-	return err
-}
-
-// SpanFromContext retrieves the current span from the context.
-func SpanFromContext(ctx context.Context) trace.Span {
-	return trace.SpanFromContext(ctx)
-}
-
 // TracingEnabled returns whether tracing is currently enabled.
 func TracingEnabled() bool {
 	return otel.GetTracerProvider() != noop.NewTracerProvider()
