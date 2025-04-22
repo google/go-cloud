@@ -41,25 +41,20 @@ package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
-	"net/url"
-	"reflect"
-	"sync"
-	"time"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/secrets/driver"
+	"net/url"
+	"sync"
+
+	iotel "gocloud.dev/internal/otel"
 )
 
 // Keeper does encryption and decryption. To create a Keeper, use constructors
 // found in driver subpackages.
 type Keeper struct {
 	k      driver.Keeper
-	tracer trace.Tracer
+	tracer *iotel.Tracer
 
 	// mu protects the closed variable.
 	// Read locks are kept to allow holding a read lock for long-running calls,
@@ -75,90 +70,16 @@ var NewKeeper = newKeeper
 func newKeeper(k driver.Keeper) *Keeper {
 	return &Keeper{
 		k:      k,
-		tracer: otel.GetTracerProvider().Tracer(pkgName),
+		tracer: iotel.NewTracer(pkgName, iotel.ProviderName(k)),
 	}
 }
 
 const pkgName = "gocloud.dev/secrets"
 
-var (
-	// Meter is the OpenTelemetry meter for this package
-	meter = otel.GetMeterProvider().Meter(pkgName)
-
-	// latencyHistogram measures the latency of method calls
-	latencyHistogram metric.Float64Histogram
-
-	// completedCallsCounter counts the number of method calls
-	completedCallsCounter metric.Int64Counter
-)
-
-func init() {
-	var err error
-	latencyHistogram, err = meter.Float64Histogram(
-		pkgName+"/latency",
-		metric.WithDescription("Latency distribution of method calls"),
-	)
-	if err != nil {
-		otel.Handle(err)
-	}
-
-	completedCallsCounter, err = meter.Int64Counter(
-		pkgName+"/completed_calls",
-		metric.WithDescription("Count of completed method calls"),
-	)
-	if err != nil {
-		otel.Handle(err)
-	}
-}
-
-// providerName returns the name of the provider associated with the driver value.
-// It is intended to be used for metrics and tracing.
-func providerName(driver any) string {
-	// Return the package path of the driver's type.
-	if driver == nil {
-		return ""
-	}
-	t := reflect.TypeOf(driver)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	return t.PkgPath()
-}
-
 // Encrypt encrypts the plaintext and returns the cipher message.
 func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
-	start := time.Now()
 	ctx, span := k.tracer.Start(ctx, "Encrypt")
-	// Set span attributes for testing
-	span.SetAttributes(
-		attribute.String("gocdk.package", pkgName),
-		attribute.String("gocdk.method", "Encrypt"),
-	)
-	defer func() {
-		// Set status on span before ending
-		if err != nil {
-			span.SetAttributes(attribute.String("gocdk.status", "13")) // Internal error
-		} else {
-			span.SetAttributes(attribute.String("gocdk.status", "0")) // OK
-		}
-		span.End()
-		// Record metrics
-		latency := time.Since(start).Seconds()
-		latencyHistogram.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("method", "Encrypt"),
-			attribute.String("provider", providerName(k.k)),
-		))
-
-		status := "ok"
-		if err != nil {
-			status = "error"
-		}
-		completedCallsCounter.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("method", "Encrypt"),
-			attribute.String("provider", providerName(k.k)),
-			attribute.String("status", status),
-		))
-	}()
+	defer k.tracer.End(ctx, span, err)
 
 	k.mu.RLock()
 	defer k.mu.RUnlock()
@@ -175,38 +96,8 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []by
 
 // Decrypt decrypts the ciphertext and returns the plaintext.
 func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []byte, err error) {
-	start := time.Now()
 	ctx, span := k.tracer.Start(ctx, "Decrypt")
-	// Set span attributes for testing
-	span.SetAttributes(
-		attribute.String("gocdk.package", pkgName),
-		attribute.String("gocdk.method", "Decrypt"),
-	)
-	defer func() {
-		// Set status on span before ending
-		if err != nil {
-			span.SetAttributes(attribute.String("gocdk.status", "13")) // Internal error
-		} else {
-			span.SetAttributes(attribute.String("gocdk.status", "0")) // OK
-		}
-		span.End()
-		// Record metrics
-		latency := time.Since(start).Seconds()
-		latencyHistogram.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("method", "Decrypt"),
-			attribute.String("provider", providerName(k.k)),
-		))
-
-		status := "ok"
-		if err != nil {
-			status = "error"
-		}
-		completedCallsCounter.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("method", "Decrypt"),
-			attribute.String("provider", providerName(k.k)),
-			attribute.String("status", status),
-		))
-	}()
+	defer k.tracer.End(ctx, span, err)
 
 	k.mu.RLock()
 	defer k.mu.RUnlock()

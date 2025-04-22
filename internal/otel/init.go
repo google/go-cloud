@@ -85,6 +85,7 @@ func ConfigureMeterProvider(ctx context.Context, exporter sdkmetric.Exporter, se
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithResource(res),
+		sdkmetric.WithView(Views()...),
 	)
 
 	// Set the global meter provider
