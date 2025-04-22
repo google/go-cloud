@@ -17,6 +17,7 @@ package oteltest
 
 import (
 	"context"
+	iotel "gocloud.dev/internal/otel"
 	"sync"
 	"time"
 
@@ -221,12 +222,12 @@ func SpanToCall(span sdktrace.ReadOnlySpan) Call {
 		attrs = append(attrs, attr)
 
 		// Extract method if available
-		if attr.Key == attribute.Key("gocdk.method") {
+		if attr.Key == iotel.MethodKey {
 			method = attr.Value.AsString()
 		}
 
 		// Extract status if available
-		if attr.Key == attribute.Key("gocdk.status") {
+		if attr.Key == iotel.StatusKey {
 			status = attr.Value.AsString()
 		}
 	}

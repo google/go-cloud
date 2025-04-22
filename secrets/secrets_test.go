@@ -107,9 +107,9 @@ func TestOpenTelemetry(t *testing.T) {
 
 	// Check collected spans
 	spanStubs := te.SpanStubs()
-	diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/secrets", "", []oteltest.Call{
-		{Method: "Encrypt", Status: "13"}, // 13 is the code for Internal
-		{Method: "Decrypt", Status: "13"}, // 13 is the code for Internal
+	diff := oteltest.Diff(spanStubs.Snapshots(), pkgName, "", []oteltest.Call{
+		{Method: "Encrypt", Status: gcerrors.Internal.String()},
+		{Method: "Decrypt", Status: gcerrors.Internal.String()},
 	})
 	if diff != "" {
 		t.Error(diff)

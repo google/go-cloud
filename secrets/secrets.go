@@ -79,7 +79,7 @@ const pkgName = "gocloud.dev/secrets"
 // Encrypt encrypts the plaintext and returns the cipher message.
 func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
 	ctx, span := k.tracer.Start(ctx, "Encrypt")
-	defer k.tracer.End(ctx, span, err)
+	defer func() { k.tracer.End(ctx, span, err) }()
 
 	k.mu.RLock()
 	defer k.mu.RUnlock()
@@ -97,7 +97,7 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []by
 // Decrypt decrypts the ciphertext and returns the plaintext.
 func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []byte, err error) {
 	ctx, span := k.tracer.Start(ctx, "Decrypt")
-	defer k.tracer.End(ctx, span, err)
+	defer func() { k.tracer.End(ctx, span, err) }()
 
 	k.mu.RLock()
 	defer k.mu.RUnlock()
