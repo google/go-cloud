@@ -12,8 +12,6 @@ cloud.google.com/go/pubsub
 cloud.google.com/go/secretmanager
 cloud.google.com/go/storage
 cloud.google.com/go/trace
-contrib.go.opencensus.io/exporter/aws
-contrib.go.opencensus.io/exporter/stackdriver
 contrib.go.opencensus.io/integrations/ocsql
 filippo.io/edwards25519
 github.com/Azure/azure-amqp-common-go/v3
@@ -30,7 +28,9 @@ github.com/AzureAD/microsoft-authentication-library-for-go
 github.com/GoogleCloudPlatform/cloudsql-proxy
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric
+github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping
+github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator
 github.com/IBM/sarama
 github.com/aws/aws-sdk-go
 github.com/aws/aws-sdk-go-v2
@@ -58,7 +58,6 @@ github.com/aws/aws-sdk-go-v2/service/ssooidc
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/smithy-go
 github.com/cenkalti/backoff/v4
-github.com/census-instrumentation/opencensus-proto
 github.com/cespare/xxhash/v2
 github.com/cncf/xds/go
 github.com/coreos/go-semver
@@ -91,7 +90,6 @@ github.com/google/wire
 github.com/googleapis/enterprise-certificate-proxy
 github.com/googleapis/gax-go/v2
 github.com/gorilla/mux
-github.com/grpc-ecosystem/grpc-gateway/v2
 github.com/hashicorp/errwrap
 github.com/hashicorp/go-cleanhttp
 github.com/hashicorp/go-multierror
@@ -119,7 +117,6 @@ github.com/nats-io/nkeys
 github.com/nats-io/nuid
 github.com/pierrec/lz4/v4
 github.com/pkg/browser
-github.com/prometheus/prometheus
 github.com/rabbitmq/amqp091-go
 github.com/rcrowley/go-metrics
 github.com/ryanuber/go-glob
@@ -138,12 +135,10 @@ go.opentelemetry.io/contrib/detectors/gcp
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 go.opentelemetry.io/otel
-go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
 go.opentelemetry.io/otel/metric
 go.opentelemetry.io/otel/sdk
 go.opentelemetry.io/otel/sdk/metric
 go.opentelemetry.io/otel/trace
-go.opentelemetry.io/proto/otlp
 go.uber.org/multierr
 go.uber.org/zap
 gocloud.dev
@@ -171,4 +166,3 @@ google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/rpc
 google.golang.org/grpc
 google.golang.org/protobuf
-gopkg.in/pipe.v2
