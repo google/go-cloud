@@ -31,7 +31,7 @@ func TestOpenTelemetry(t *testing.T) {
 	defer cancel()
 
 	// Create a test exporter but do the shutdown early to prevent deadlocks
-	te := oteltest.NewTestExporter()
+	te := oteltest.NewTestExporter(t)
 	// Don't use defer for shutdown as it can lead to deadlocks
 	// We'll manually shut down at the end of the test
 

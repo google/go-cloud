@@ -362,8 +362,8 @@ type Writer struct {
 	b            driver.Bucket
 	w            driver.Writer
 	key          string
-	end          func(error) // called at Close to finish trace and metric collection
-	cancel       func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
+	end          func(err error) // called at Close to finish trace and metric collection
+	cancel       func()          // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5   []byte
 	md5hash      hash.Hash
 	provider     string // Provider name for metrics
@@ -438,7 +438,7 @@ func (w *Writer) Close() (err error) {
 		// Record bytes written metric with OpenTelemetry
 		if bytesWrittenCounter != nil && w.bytesWritten > 0 {
 			bytesWrittenCounter.Add(
-				context.Background(),
+				w.ctx,
 				int64(w.bytesWritten),
 				metric.WithAttributes(gcdkotel.ProviderKey.String(w.provider)))
 		}
@@ -977,7 +977,7 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	dopts := &driver.ReaderOptions{
 		BeforeRead: opts.BeforeRead,
 	}
-	_, span := b.tracer.Start(ctx, "NewRangeReader")
+	ctx, span := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
 		// If err == nil, we handed the end closure off to the returned *Reader; it
 		// will be called when the Reader is Closed.
@@ -1119,7 +1119,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		return nil, errClosed
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	_, span := b.tracer.Start(ctx, "NewWriter")
+	ctx, span := b.tracer.Start(ctx, "NewWriter")
 	end := func(err error) { b.tracer.End(ctx, span, err) }
 	defer func() {
 		if err != nil {
@@ -1135,6 +1135,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		contentMD5: opts.ContentMD5,
 		md5hash:    md5.New(),
 		provider:   b.tracer.Provider,
+		ctx:        ctx,
 	}
 	if opts.ContentType != "" || opts.DisableContentTypeDetection {
 		var ct string
@@ -1155,7 +1156,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	} else {
 		// Save the fields needed to called NewTypedWriter later, once we've gotten
 		// sniffLen bytes; see the comment on Writer.
-		w.ctx = ctx
+
 		w.opts = dopts
 		w.buf = bytes.NewBuffer([]byte{})
 	}
