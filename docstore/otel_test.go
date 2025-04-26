@@ -25,7 +25,7 @@ func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
 
 	// Setup the test exporter for both trace and metrics
-	te := oteltest.NewTestExporter()
+	te := oteltest.NewTestExporter(t)
 	defer te.Shutdown(ctx)
 
 	// Open a collection for testing
@@ -46,54 +46,13 @@ func TestOpenTelemetry(t *testing.T) {
 
 	// Check for spans
 	spanStubs := te.SpanStubs()
-	providerFound := false
 	const driver = "gocloud.dev/docstore/memdocstore"
 
-	// Look for spans with the expected provider attribute
-	for _, span := range spanStubs {
-		for _, attr := range span.Attributes {
-			if attr.Key == "gocdk.provider" && attr.Value.AsString() == driver {
-				providerFound = true
-				break
-			}
-		}
-		if providerFound {
-			break
-		}
+	diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/docstore", driver, []oteltest.Call{
+		{Method: "ActionList.Do"},
+		{Method: "Query.Get"},
+	})
+	if diff != "" {
+		t.Error(diff)
 	}
-
-	// Skip span check as span attributes might have changed during migration
-	// if !providerFound {
-	// 	t.Errorf("did not see span with provider=%s", driver)
-	// }
-
-	// Check metrics - during migration, we may need to look for different metric names
-	metrics := te.Metrics()
-	metricsFound := false
-	possibleMetricNames := []string{
-		"gocloud.dev/docstore/completed_calls",
-		"gocloud.dev/docstore/latency",
-	}
-
-	for _, scopeMetric := range metrics {
-		for _, metric := range scopeMetric.Metrics {
-			for _, name := range possibleMetricNames {
-				if metric.Name == name {
-					metricsFound = true
-					break
-				}
-			}
-			if metricsFound {
-				break
-			}
-		}
-		if metricsFound {
-			break
-		}
-	}
-
-	// During migration, skip this check if metrics collection needs more time to be set up
-	// if !metricsFound {
-	// 	t.Errorf("did not see any expected metrics for docstore")
-	// }
 }
