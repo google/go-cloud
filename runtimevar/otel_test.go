@@ -41,9 +41,9 @@ func TestOpenTelemetry(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 	// Check metrics - during migration, we may need to look for different metric names
-	metrics := te.Metrics()
+	metrics := te.Metrics(ctx)
 	metricsFound := false
-	metricName := "gocloud.dev/runtimevar/value_changes"
+	const metricName = "gocloud.dev/runtimevar/value_changes"
 
 	for _, scopeMetric := range metrics {
 
