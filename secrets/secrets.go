@@ -47,14 +47,14 @@ import (
 	"net/url"
 	"sync"
 
-	iotel "gocloud.dev/internal/otel"
+	gcdkotel "gocloud.dev/internal/otel"
 )
 
 // Keeper does encryption and decryption. To create a Keeper, use constructors
 // found in driver subpackages.
 type Keeper struct {
 	k      driver.Keeper
-	tracer *iotel.Tracer
+	tracer *gcdkotel.Tracer
 
 	// mu protects the closed variable.
 	// Read locks are kept to allow holding a read lock for long-running calls,
@@ -70,7 +70,7 @@ var NewKeeper = newKeeper
 func newKeeper(k driver.Keeper) *Keeper {
 	return &Keeper{
 		k:      k,
-		tracer: iotel.NewTracer(pkgName, iotel.ProviderName(k)),
+		tracer: gcdkotel.NewTracer(pkgName, gcdkotel.ProviderName(k)),
 	}
 }
 
