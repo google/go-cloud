@@ -151,3 +151,15 @@ func BytesMeasure(pkg string, meterName string, description string) metric.Int64
 	}
 	return m
 }
+
+func DimensionlessMeasure(pkg string, meterName string, description string) metric.Int64Counter {
+	pkgMeter := MeterForPackage(pkg)
+	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitDimensionless))
+
+	if err != nil {
+		// The only possible errors are from invalid key or value names, and those are programming
+		// errors that will be found during testing.
+		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
+	}
+	return m
+}
