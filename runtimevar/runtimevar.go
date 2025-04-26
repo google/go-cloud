@@ -112,10 +112,13 @@ var New = newVar
 func newVar(w driver.Watcher) *Variable {
 	ctx, cancel := context.WithCancel(context.Background())
 	changed := make(chan struct{})
+
+	providerName := gcdkotel.ProviderName(w)
+
 	v := &Variable{
 		dw:               w,
-		provider:         gcdkotel.ProviderName(w),
-		changeMeasure:    gcdkotel.DimensionlessMeasure(pkgName, "/value_changes", "Count of variable value changes by driver"),
+		provider:         providerName,
+		changeMeasure:    gcdkotel.DimensionlessMeasure(pkgName, providerName, "/value_changes", "Count of variable value changes by driver"),
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
 		haveGoodCh:       make(chan struct{}),
