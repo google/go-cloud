@@ -1156,7 +1156,6 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	} else {
 		// Save the fields needed to called NewTypedWriter later, once we've gotten
 		// sniffLen bytes; see the comment on Writer.
-
 		w.opts = dopts
 		w.buf = bytes.NewBuffer([]byte{})
 	}
