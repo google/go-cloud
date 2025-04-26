@@ -106,7 +106,6 @@ type Reader struct {
 	savedOffset    int64                 // Last relativeOffset for r, saved after relativeOffset is changed in Seek, or -1 if no Seek.
 	end            func(error)           // Called at Close to finish trace and metric collection.
 	// for metric collection;
-	provider         string
 	bytesReadCounter metric.Int64Counter
 	bytesRead        int
 	closed           bool
@@ -203,8 +202,7 @@ func (r *Reader) Close() error {
 	if r.bytesReadCounter != nil && r.bytesRead > 0 {
 		r.bytesReadCounter.Add(
 			r.ctx,
-			int64(r.bytesRead),
-			metric.WithAttributes(gcdkotel.ProviderKey.String(r.provider)))
+			int64(r.bytesRead))
 	}
 	return err
 }
@@ -368,7 +366,7 @@ type Writer struct {
 	contentMD5 []byte
 	md5hash    hash.Hash
 
-	provider            string
+	// Metric collection fields
 	bytesWrittenCounter metric.Int64Counter
 	bytesWritten        int
 	closed              bool
@@ -993,7 +991,6 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 		baseLength:       length,
 		savedOffset:      -1,
 		end:              end,
-		provider:         b.tracer.Provider,
 		bytesReadCounter: b.bytesReadCounter,
 	}
 	_, file, lineno, ok := runtime.Caller(2)
@@ -1127,7 +1124,6 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		key:                 key,
 		contentMD5:          opts.ContentMD5,
 		md5hash:             md5.New(),
-		provider:            b.tracer.Provider,
 		bytesWrittenCounter: b.bytesWrittenCounter,
 		ctx:                 ctx,
 	}
