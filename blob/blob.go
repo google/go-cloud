@@ -671,28 +671,11 @@ var (
 
 // Initialize the metrics
 func init() {
-	var err error
-
-	meter := gcdkotel.MeterForPackage(pkgName)
 	// Create the bytes read counter
-	bytesReadCounter, err = meter.Int64Counter(
-		pkgName+"/bytes_read",
-		metric.WithDescription("Total bytes read from blob storage"),
-		metric.WithUnit("By"),
-	)
-	if err != nil {
-		log.Printf("Failed to create bytes_read counter: %v", err)
-	}
+	bytesReadCounter = gcdkotel.BytesMeasure(pkgName, "/bytes_read", "Total bytes read from blob storage")
 
 	// Create the bytes written counter
-	bytesWrittenCounter, err = meter.Int64Counter(
-		pkgName+"/bytes_written",
-		metric.WithDescription("Total bytes written to blob storage"),
-		metric.WithUnit("By"),
-	)
-	if err != nil {
-		log.Printf("Failed to create bytes_written counter: %v", err)
-	}
+	bytesWrittenCounter = gcdkotel.BytesMeasure(pkgName, "/bytes_written", "Total bytes written to blob storage")
 }
 
 // NewBucket is intended for use by drivers only. Do not use in application code.
