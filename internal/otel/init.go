@@ -126,6 +126,6 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 }
 
 // MeterForPackage returns a meter for the given package using the global provider.
-func MeterForPackage(pkg string) metric.Meter {
-	return otel.Meter(pkg)
+func MeterForPackage(pkg string, provider string) metric.Meter {
+	return otel.Meter(pkg, metric.WithInstrumentationAttributes(ProviderKey.String(provider)))
 }

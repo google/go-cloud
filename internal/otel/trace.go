@@ -73,7 +73,7 @@ func NewTracer(pkg string, provider ...string) *Tracer {
 	return &Tracer{
 		Package:        pkg,
 		Provider:       providerName,
-		LatencyMeasure: LatencyMeasure(pkg),
+		LatencyMeasure: LatencyMeasure(pkg, providerName),
 	}
 }
 
