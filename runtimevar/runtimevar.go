@@ -82,8 +82,8 @@ const pkgName = "gocloud.dev/runtimevar"
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in driver subpackages.
 type Variable struct {
-	dw       driver.Watcher
-	provider string // for metric collection; refers to driver package name
+	dw            driver.Watcher
+	changeMeasure metric.Int64Counter // for metric collection; refers to driver package name
 
 	// For cancelling the background goroutine, and noticing when it has exited.
 	backgroundCancel context.CancelFunc
@@ -101,8 +101,6 @@ type Variable struct {
 	last     Snapshot
 	lastErr  error
 	lastGood Snapshot
-
-	changeMeasure metric.Int64Counter
 }
 
 // New is intended for use by drivers only. Do not use in application code.
@@ -117,7 +115,6 @@ func newVar(w driver.Watcher) *Variable {
 
 	v := &Variable{
 		dw:               w,
-		provider:         providerName,
 		changeMeasure:    gcdkotel.DimensionlessMeasure(pkgName, providerName, "/value_changes", "Count of variable value changes by driver"),
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
@@ -193,7 +190,7 @@ func (c *Variable) background(ctx context.Context) {
 
 		// There's something new to return!
 		prevState = curState
-		c.changeMeasure.Add(ctx, 1, metric.WithAttributes(gcdkotel.ProviderKey.String(c.provider)))
+		c.changeMeasure.Add(ctx, 1)
 		// Error from RecordWithTags is not possible.
 
 		// Updates under the lock.
