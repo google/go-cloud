@@ -16,6 +16,7 @@ package oteltest
 
 import (
 	"fmt"
+	iotel "gocloud.dev/internal/otel"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -34,11 +35,11 @@ func Diff(spans []sdktrace.ReadOnlySpan, pkg, provider string, want []Call) stri
 	for _, span := range spans {
 		call := SpanToCall(span)
 		// Check if the span belongs to the expected package
-		if !hasAttributeWithValue(call.Attrs, attribute.Key("gocdk.package"), pkg) {
+		if !hasAttributeWithValue(call.Attrs, iotel.PackageKey, pkg) {
 			continue
 		}
 		// Check if the span belongs to the expected provider
-		if provider != "" && !hasAttributeWithValue(call.Attrs, attribute.Key("gocdk.provider"), provider) {
+		if provider != "" && !hasAttributeWithValue(call.Attrs, iotel.ProviderKey, provider) {
 			continue
 		}
 		got = append(got, call)
