@@ -23,6 +23,15 @@ import (
 	"strings"
 )
 
+// Units are encoded according to the case-sensitive abbreviations from the
+// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html
+const (
+	UnitDimensionless = "1"
+	UnitBytes         = "By"
+	UnitMilliseconds  = "ms"
+	UnitSeconds       = "s"
+)
+
 var (
 	DefaultMillisecondsBoundaries = []float64{
 		0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
@@ -34,8 +43,6 @@ var (
 	}
 )
 
-const UnitMilliseconds = "ms"
-
 func Views() []sdkmetric.View {
 
 	return []sdkmetric.View{
@@ -43,32 +50,71 @@ func Views() []sdkmetric.View {
 		// View for latency histogram
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				return sdkmetric.Stream{
-					Name:        inst.Name,
-					Description: "Distribution of method latency, by provider and method.",
-					Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
-						Boundaries: DefaultMillisecondsBoundaries,
-					},
-					AttributeFilter: func(kv attribute.KeyValue) bool {
-						return kv.Key == ProviderKey || kv.Key == PackageKey || kv.Key == MethodKey
-					},
-				}, true
+				if strings.HasSuffix(inst.Name, "/latency") {
+					return sdkmetric.Stream{
+						Name:        inst.Name,
+						Description: "Distribution of method latency, by provider and method.",
+						Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
+							Boundaries: DefaultMillisecondsBoundaries,
+						},
+						AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == PackageKey || kv.Key == MethodKey
+						},
+					}, true
+				}
 			}
+
 			return sdkmetric.Stream{}, false
 		},
 
 		// View for completed_calls count
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				return sdkmetric.Stream{
-					Name:        strings.Replace(inst.Name, "/latency", "/completed_calls", 1),
-					Description: "Count of method calls by provider, method and status.",
-					Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
-					AttributeFilter: func(kv attribute.KeyValue) bool {
-						return kv.Key == ProviderKey || kv.Key == MethodKey || kv.Key == StatusKey
-					},
-				}, true
+				if strings.HasSuffix(inst.Name, "/latency") {
+					return sdkmetric.Stream{
+						Name:        strings.Replace(inst.Name, "/latency", "/completed_calls", 1),
+						Description: "Count of method calls by provider, method and status.",
+						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
+						AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == MethodKey || kv.Key == StatusKey
+						},
+					}, true
+				}
 			}
+			return sdkmetric.Stream{}, false
+		},
+
+		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+			if inst.Kind == sdkmetric.InstrumentKindCounter {
+				if strings.HasSuffix(inst.Name, "/bytes_read") {
+					return sdkmetric.Stream{
+						Name:        inst.Name,
+						Description: "Sum of bytes read from the service.",
+						Aggregation: sdkmetric.AggregationSum{},
+						AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == PackageKey || kv.Key == MethodKey
+						},
+					}, true
+				}
+			}
+
+			return sdkmetric.Stream{}, false
+		},
+
+		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+			if inst.Kind == sdkmetric.InstrumentKindCounter {
+				if strings.HasSuffix(inst.Name, "/bytes_written") {
+					return sdkmetric.Stream{
+						Name:        inst.Name,
+						Description: "Sum of bytes written to the service.",
+						Aggregation: sdkmetric.AggregationSum{},
+						AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == PackageKey || kv.Key == MethodKey
+						},
+					}, true
+				}
+			}
+
 			return sdkmetric.Stream{}, false
 		},
 	}
@@ -91,5 +137,17 @@ func LatencyMeasure(pkg string) metric.Float64Histogram {
 		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
 	}
 
+	return m
+}
+
+func BytesMeasure(pkg string, meterName string, description string) metric.Int64Counter {
+	pkgMeter := MeterForPackage(pkg)
+	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitBytes))
+
+	if err != nil {
+		// The only possible errors are from invalid key or value names, and those are programming
+		// errors that will be found during testing.
+		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
+	}
 	return m
 }
