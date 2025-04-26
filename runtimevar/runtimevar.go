@@ -44,13 +44,13 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/secrets"
+
+	gcdkotel "gocloud.dev/internal/otel"
 )
 
 // Snapshot contains a snapshot of a variable's value and metadata about it.
@@ -79,25 +79,6 @@ func (s *Snapshot) As(i any) bool {
 
 const pkgName = "gocloud.dev/runtimevar"
 
-var (
-	// Meter is the OpenTelemetry meter for this package
-	meter = otel.GetMeterProvider().Meter(pkgName)
-	// valueChangesCounter counts the number of variable value changes
-	valueChangesCounter metric.Int64Counter
-)
-
-func init() {
-	var err error
-	valueChangesCounter, err = meter.Int64Counter(
-		pkgName+"/value_changes",
-		metric.WithDescription("Count of variable value changes by driver"),
-	)
-	if err != nil {
-		// Handle initialization error appropriately
-		otel.Handle(err)
-	}
-}
-
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in driver subpackages.
 type Variable struct {
@@ -120,6 +101,8 @@ type Variable struct {
 	last     Snapshot
 	lastErr  error
 	lastGood Snapshot
+
+	changeMeasure metric.Int64Counter
 }
 
 // New is intended for use by drivers only. Do not use in application code.
@@ -132,6 +115,7 @@ func newVar(w driver.Watcher) *Variable {
 	v := &Variable{
 		dw:               w,
 		provider:         gcdkotel.ProviderName(w),
+		changeMeasure:    gcdkotel.DimensionlessMeasure(pkgName, "/value_changes", "Count of variable value changes by driver"),
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
 		haveGoodCh:       make(chan struct{}),
@@ -206,7 +190,7 @@ func (c *Variable) background(ctx context.Context) {
 
 		// There's something new to return!
 		prevState = curState
-		valueChangesCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("provider", c.provider)))
+		c.changeMeasure.Add(ctx, 1, metric.WithAttributes(gcdkotel.ProviderKey.String(c.provider)))
 		// Error from RecordWithTags is not possible.
 
 		// Updates under the lock.

@@ -16,16 +16,15 @@ package runtimevar_test
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"gocloud.dev/internal/testing/oteltest"
 	"gocloud.dev/runtimevar/constantvar"
+	"testing"
+	"time"
 )
 
 func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
-	te := oteltest.NewTestExporter()
+	te := oteltest.NewTestExporter(t)
 	defer te.Shutdown(ctx)
 
 	v := constantvar.New(1)
@@ -37,47 +36,27 @@ func TestOpenTelemetry(t *testing.T) {
 	cancel()
 	_, _ = v.Watch(cctx)
 
-	// Force flush metrics and wait for collection
-	_ = te.ForceFlush(ctx)
-	time.Sleep(100 * time.Millisecond)
-
 	// Check for spans
-	spanStubs := te.SpanStubs()
-	providerFound := false
 	const driver = "gocloud.dev/runtimevar/constantvar"
 
-	// Look for spans with the expected provider attribute
-	for _, span := range spanStubs {
-		for _, attr := range span.Attributes {
-			if attr.Key == "gocdk.provider" && attr.Value.AsString() == driver {
-				providerFound = true
-				break
-			}
-		}
-		if providerFound {
-			break
-		}
-	}
-
-	// Skip span check as span attributes might have changed during migration
-	// if !providerFound {
-	// 	t.Errorf("did not see span with provider=%s", driver)
-	// }
-
+	time.Sleep(2 * time.Second)
 	// Check metrics - during migration, we may need to look for different metric names
 	metrics := te.Metrics()
 	metricsFound := false
-	possibleMetricNames := []string{
-		"gocloud.dev/runtimevar/value_changes",
-		"gocloud.dev/runtimevar/completed_calls",
-		"gocloud.dev/runtimevar/watch_calls",
-	}
+	metricName := "gocloud.dev/runtimevar/value_changes"
 
 	for _, scopeMetric := range metrics {
-		for _, metric := range scopeMetric.Metrics {
-			for _, name := range possibleMetricNames {
-				if metric.Name == name {
-					metricsFound = true
+
+		for _, attr := range scopeMetric.Scope.Attributes.ToSlice() {
+
+			if attr.Value.AsString() == driver {
+				for _, metric := range scopeMetric.Metrics {
+					if metric.Name == metricName {
+						metricsFound = true
+						break
+					}
+				}
+				if metricsFound {
 					break
 				}
 			}
@@ -85,13 +64,9 @@ func TestOpenTelemetry(t *testing.T) {
 				break
 			}
 		}
-		if metricsFound {
-			break
-		}
 	}
 
-	// During migration, skip this check if metrics collection needs more time to be set up
-	// if !metricsFound {
-	// 	t.Errorf("did not see any expected metrics for runtimevar")
-	// }
+	if !metricsFound {
+		t.Errorf("did not see any expected metrics for runtimevar")
+	}
 }
