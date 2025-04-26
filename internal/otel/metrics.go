@@ -122,14 +122,15 @@ func Views() []sdkmetric.View {
 
 // LatencyMeasure returns the measure for method call latency used
 // by Go CDK APIs.
-func LatencyMeasure(pkg string) metric.Float64Histogram {
+func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 
-	pkgMeter := MeterForPackage(pkg)
+	pkgMeter := MeterForPackage(pkg, provider)
 
 	m, err := pkgMeter.Float64Histogram(
 		pkg+"/latency",
 		metric.WithDescription("Latency distribution of method calls"),
-		metric.WithUnit(UnitMilliseconds))
+		metric.WithUnit(UnitMilliseconds),
+	)
 
 	if err != nil {
 		// The only possible errors are from invalid key or value names, and those are programming
@@ -140,8 +141,8 @@ func LatencyMeasure(pkg string) metric.Float64Histogram {
 	return m
 }
 
-func BytesMeasure(pkg string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg)
+func BytesMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
+	pkgMeter := MeterForPackage(pkg, provider)
 	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitBytes))
 
 	if err != nil {
@@ -152,8 +153,8 @@ func BytesMeasure(pkg string, meterName string, description string) metric.Int64
 	return m
 }
 
-func DimensionlessMeasure(pkg string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg)
+func DimensionlessMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
+	pkgMeter := MeterForPackage(pkg, provider)
 	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitDimensionless))
 
 	if err != nil {
