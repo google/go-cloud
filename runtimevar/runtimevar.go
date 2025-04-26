@@ -125,27 +125,13 @@ type Variable struct {
 // New is intended for use by drivers only. Do not use in application code.
 var New = newVar
 
-// providerName returns the name of the provider associated with the driver value.
-// It is intended to be used for metrics and tracing.
-func providerName(driver any) string {
-	// Return the package path of the driver's type.
-	if driver == nil {
-		return ""
-	}
-	t := reflect.TypeOf(driver)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	return t.PkgPath()
-}
-
 // newVar creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
 	ctx, cancel := context.WithCancel(context.Background())
 	changed := make(chan struct{})
 	v := &Variable{
 		dw:               w,
-		provider:         providerName(w),
+		provider:         gcdkotel.ProviderName(w),
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
 		haveGoodCh:       make(chan struct{}),
