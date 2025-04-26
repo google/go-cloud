@@ -579,7 +579,7 @@ func TestOpenTelemetry(t *testing.T) {
 	defer cancel()
 
 	// Set up the test exporter for OpenTelemetry
-	te := oteltest.NewTestExporter()
+	te := oteltest.NewTestExporter(t)
 	defer func() {
 		err := te.Shutdown(ctx2)
 		if err != nil {
