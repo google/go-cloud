@@ -201,7 +201,7 @@ func (r *Reader) Close() error {
 	// Record bytes read metric with OpenTelemetry
 	if bytesReadCounter != nil && r.bytesRead > 0 {
 		bytesReadCounter.Add(
-			context.Background(),
+			r.ctx,
 			int64(r.bytesRead),
 			metric.WithAttributes(gcdkotel.ProviderKey.String(r.provider)))
 	}
