@@ -33,6 +33,7 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"gocloud.dev/internal/gcerr"
 	"hash"
 	"io"
 	"net/url"
@@ -299,6 +300,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		metadata:    md,
 		opts:        opts,
 		md5hash:     md5.New(),
+		ifNotExist:  opts.IfNotExist,
 	}, nil
 }
 
@@ -312,7 +314,8 @@ type writer struct {
 	buf         bytes.Buffer
 	// We compute the MD5 hash so that we can store it with the file attributes,
 	// not for verification.
-	md5hash hash.Hash
+	md5hash    hash.Hash
+	ifNotExist bool
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
@@ -355,6 +358,10 @@ func (w *writer) Close() error {
 	w.b.mu.Lock()
 	defer w.b.mu.Unlock()
 	if prev := w.b.blobs[w.key]; prev != nil {
+		if w.ifNotExist {
+			err := fmt.Errorf("a blob already exists for key %q", w.key)
+			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "IfNotExist precondition failed")
+		}
 		entry.Attributes.CreateTime = prev.Attributes.CreateTime
 	}
 	w.b.blobs[w.key] = entry

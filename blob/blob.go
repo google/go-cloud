@@ -80,7 +80,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
@@ -664,21 +663,17 @@ type Bucket struct {
 const pkgName = "gocloud.dev/blob"
 
 var (
-	// Initialize OpenTelemetry meter
-	meter = otel.GetMeterProvider().Meter(pkgName)
 
 	// Define counter instruments for bytes read/written
 	bytesReadCounter    metric.Int64Counter
 	bytesWrittenCounter metric.Int64Counter
-
-	// Tracer for creating spans
-	tracer = otel.GetTracerProvider().Tracer(pkgName)
 )
 
 // Initialize the metrics
 func init() {
 	var err error
 
+	meter := gcdkotel.MeterForPackage(pkgName)
 	// Create the bytes read counter
 	bytesReadCounter, err = meter.Int64Counter(
 		pkgName+"/bytes_read",
@@ -840,7 +835,7 @@ func (b *Bucket) ListPage(ctx context.Context, pageToken []byte, pageSize int, o
 	}
 
 	ctx, span := b.tracer.Start(ctx, "ListPage")
-	defer func() { b.tracer.End(span, err) }()
+	defer func() { b.tracer.End(ctx, span, err) }()
 
 	dopts := &driver.ListOptions{
 		Prefix:     opts.Prefix,
@@ -924,7 +919,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 		return nil, errClosed
 	}
 	ctx, span := b.tracer.Start(ctx, "Attributes")
-	defer func() { b.tracer.End(span, err) }()
+	defer func() { b.tracer.End(ctx, span, err) }()
 
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
@@ -1004,7 +999,7 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 		// If err == nil, we handed the end closure off to the returned *Reader; it
 		// will be called when the Reader is Closed.
 		if err != nil {
-			b.tracer.End(span, err)
+			b.tracer.End(ctx, span, err)
 		}
 	}()
 	var dr driver.Reader
@@ -1012,7 +1007,7 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, wrapError(b.b, err, key)
 	}
-	end := func(err error) { b.tracer.End(span, err) }
+	end := func(err error) { b.tracer.End(ctx, span, err) }
 	r := &Reader{
 		b:           b.b,
 		r:           dr,
@@ -1110,6 +1105,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		MaxConcurrency:              opts.MaxConcurrency,
 		BeforeWrite:                 opts.BeforeWrite,
 		DisableContentTypeDetection: opts.DisableContentTypeDetection,
+		IfNotExist:                  opts.IfNotExist,
 	}
 	if len(opts.Metadata) > 0 {
 		// Services are inconsistent, but at least some treat keys
@@ -1141,7 +1137,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	_, span := b.tracer.Start(ctx, "NewWriter")
-	end := func(err error) { b.tracer.End(span, err) }
+	end := func(err error) { b.tracer.End(ctx, span, err) }
 	defer func() {
 		if err != nil {
 			end(err)
@@ -1219,7 +1215,7 @@ func (b *Bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOpti
 		return errClosed
 	}
 	ctx, span := b.tracer.Start(ctx, "Copy")
-	defer func() { b.tracer.End(span, err) }()
+	defer func() { b.tracer.End(ctx, span, err) }()
 	return wrapError(b.b, b.b.Copy(ctx, dstKey, srcKey, dopts), fmt.Sprintf("%s -> %s", srcKey, dstKey))
 }
 
@@ -1237,7 +1233,7 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 		return errClosed
 	}
 	ctx, span := b.tracer.Start(ctx, "Delete")
-	defer func() { b.tracer.End(span, err) }()
+	defer func() { b.tracer.End(ctx, span, err) }()
 	return wrapError(b.b, b.b.Delete(ctx, key), key)
 }
 
@@ -1434,6 +1430,13 @@ type WriterOptions struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeWrite func(asFunc func(any) bool) error
+
+	// IfNotExist is used for conditional writes. When set to 'true',
+	// if a blob exists for the same key in the bucket, the write
+	// operation won't succeed and the current blob for the key will
+	// be left untouched. An error for which gcerrors.Code will return
+	// gcerrors.PreconditionFailed will be returned by Write or Close.
+	IfNotExist bool
 }
 
 // CopyOptions sets options for Copy.
