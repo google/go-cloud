@@ -610,7 +610,6 @@ func TestOpenTelemetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	_, _ = sub.Receive(ctx)
 
 	validateCalls(t, te)

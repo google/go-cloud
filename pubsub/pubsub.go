@@ -337,7 +337,7 @@ func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Topic{
 		driver: d,
-		tracer: newTracer(d),
+		tracer: gcdkotel.NewTracer(pkgName, gcdkotel.ProviderName(d)),
 		cancel: cancel,
 	}
 	t.batcher = newSendBatcher(ctx, t, d, opts)
@@ -345,13 +345,6 @@ func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 }
 
 const pkgName = "gocloud.dev/pubsub"
-
-func newTracer(driver any) *gcdkotel.Tracer {
-	return &gcdkotel.Tracer{
-		Package:  pkgName,
-		Provider: gcdkotel.ProviderName(driver),
-	}
-}
 
 // Subscription receives published messages.
 type Subscription struct {
@@ -747,7 +740,7 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver:           ds,
-		tracer:           newTracer(ds),
+		tracer:           gcdkotel.NewTracer(pkgName, gcdkotel.ProviderName(ds)),
 		cancel:           cancel,
 		backgroundCtx:    ctx,
 		recvBatchOpts:    recvBatchOpts,
