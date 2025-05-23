@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2018 The Go Cloud Development Kit Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@
 // # OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
-// backend providers. See https://opencensus.io.
+// backend providers. See https://opencensus.io to get more information.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
 //   - Attributes
