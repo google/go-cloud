@@ -762,14 +762,16 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		md[k] = url.PathEscape(v)
 	}
 
-	encodedTags := encodeTags(opts.Tags)
-
 	req := &s3.PutObjectInput{
 		Bucket:      aws.String(b.name),
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 		Metadata:    md,
-		Tagging:     aws.String(encodedTags),
+	}
+
+	if len(opts.Tags) > 0 {
+		encodedTags := encodeTags(opts.Tags)
+		req.Tagging = aws.String(encodedTags)
 	}
 
 	if opts.IfNotExist {
