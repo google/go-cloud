@@ -723,6 +723,23 @@ func unescapeKey(key string) string {
 	return escape.HexUnescape(key)
 }
 
+// encodeTags encodes a map of S3 object tags into a URL-encoded query string.
+// Each key-value pair in the map becomes a "Key=Value" query parameter.
+// This format is suitable for S3 APIs that expect tag sets in query string form,
+// such as in PUT or GET Object tagging operations.
+//
+// For example:
+//
+//	Input: map[string]string{"Key1": "Value1", "Key2": "Value2"}
+//	Output: "Key1=Value1&Key2=Value2" (URL-encoded as needed)
+func encodeTags(tags map[string]string) string {
+	values := url.Values{}
+	for k, v := range tags {
+		values.Set(k, v)
+	}
+	return values.Encode()
+}
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key)
@@ -744,11 +761,15 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		})
 		md[k] = url.PathEscape(v)
 	}
+
+	encodedTags := encodeTags(opts.Tags)
+
 	req := &s3.PutObjectInput{
 		Bucket:      aws.String(b.name),
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 		Metadata:    md,
+		Tagging:     aws.String(encodedTags),
 	}
 
 	if opts.IfNotExist {

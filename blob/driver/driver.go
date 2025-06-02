@@ -115,6 +115,10 @@ type WriterOptions struct {
 	// When set to true, if a blob exists for the same key in the bucket, the write operation
 	// won't take place.
 	IfNotExist bool
+
+	// Tags holds key/value tags to be associated with the blob, or nil.
+	// Keys and values must be not empty if specified.
+	Tags map[string]string
 }
 
 // CopyOptions controls options for Copy.
