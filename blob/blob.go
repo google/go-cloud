@@ -1123,6 +1123,21 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		}
 		dopts.Metadata = md
 	}
+
+	if len(opts.Tags) > 0 {
+		tags := make(map[string]string, len(opts.Tags))
+		for k, v := range opts.Tags {
+			if k == "" {
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Tags keys may not be empty strings")
+			}
+			if v == "" {
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Tags values may not be empty strings")
+			}
+			tags[k] = v
+		}
+		dopts.Tags = tags
+	}
+
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
@@ -1430,6 +1445,10 @@ type WriterOptions struct {
 	// be left untouched. An error for which gcerrors.Code will return
 	// gcerrors.PreconditionFailed will be returned by Write or Close.
 	IfNotExist bool
+
+	// Tags holds key/value tags to be associated with the blob, or nil.
+	// Keys and values must be not empty if specified.
+	Tags map[string]string
 }
 
 // CopyOptions sets options for Copy.

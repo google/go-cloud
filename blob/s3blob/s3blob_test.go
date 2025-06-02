@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -380,5 +381,50 @@ func TestToServerSideEncryptionType(t *testing.T) {
 		if sseType != test.sseType {
 			t.Errorf("%s: got type %v, want type %v", test.value, sseType, test.sseType)
 		}
+	}
+}
+
+func TestEncodeTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]string
+		expected url.Values // We compare as parsed query values for robustness
+	}{
+		{
+			name:     "basic tags",
+			input:    map[string]string{"Key1": "Value1", "Key2": "Value2"},
+			expected: url.Values{"Key1": {"Value1"}, "Key2": {"Value2"}},
+		},
+		{
+			name:     "special characters",
+			input:    map[string]string{"Key With Space": "Val+1&2"},
+			expected: url.Values{"Key With Space": {"Val+1&2"}},
+		},
+		{
+			name:     "empty map",
+			input:    map[string]string{},
+			expected: url.Values{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encoded := encodeTags(tt.input)
+
+			got, err := url.ParseQuery(encoded)
+			if err != nil {
+				t.Fatalf("failed to parse encoded string: %v", err)
+			}
+
+			if len(got) != len(tt.expected) {
+				t.Fatalf("expected %d keys, got %d", len(tt.expected), len(got))
+			}
+
+			for k, v := range tt.expected {
+				if gv, ok := got[k]; !ok || gv[0] != v[0] {
+					t.Errorf("expected %q=%q, got %q", k, v[0], gv)
+				}
+			}
+		})
 	}
 }

@@ -485,6 +485,58 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap("Close", err)
 }
 
+func TestChecksAndSetsTags(t *testing.T) {
+	ctx := context.Background()
+	buf := bytes.Repeat([]byte{'A'}, sniffLen)
+	b := NewBucket(&erroringBucket{})
+
+	assertError := func(t *testing.T, err error, message string) {
+		if err == nil {
+			t.Errorf("expected an error, but got nil")
+		}
+
+		if err.Error() != message {
+			t.Errorf("unexpected error: got %s, want %s", err, message)
+		}
+	}
+
+	// Empty tag key here
+	_, err := b.NewWriter(ctx, "", &WriterOptions{
+		ContentType: "foo",
+		Tags: map[string]string{
+			"": "empty",
+		},
+	})
+	assertError(t, err, "blob: WriterOptions.Tags keys may not be empty strings (code=InvalidArgument)")
+
+	// Empty tag value here
+	_, err = b.NewWriter(ctx, "", &WriterOptions{
+		ContentType: "foo",
+		Tags: map[string]string{
+			"empty": "",
+		},
+	})
+	assertError(t, err, "blob: WriterOptions.Tags values may not be empty strings (code=InvalidArgument)")
+
+	// Should get fake bucket error
+	err = b.WriteAll(ctx, "", buf, &WriterOptions{
+		ContentType: "foo",
+		Tags: map[string]string{
+			"foo": "bar",
+		},
+	})
+	assertError(t, err, "blob (code=Unknown): fake")
+
+	// Should get fake bucket error
+	_, err = b.NewWriter(ctx, "", &WriterOptions{
+		ContentType: "foo",
+		Tags: map[string]string{
+			"foo": "bar",
+		},
+	})
+	assertError(t, err, "blob (code=Unknown): fake")
+}
+
 var (
 	testOpenOnce sync.Once
 	testOpenGot  *url.URL
