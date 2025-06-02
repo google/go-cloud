@@ -751,27 +751,31 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 			u.Concurrency = opts.MaxConcurrency
 		}
 	})
-	md := make(map[string]string, len(opts.Metadata))
-	for k, v := range opts.Metadata {
-		// See the package comments for more details on escaping of metadata
-		// keys & values.
-		k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
-			c := runes[i]
-			return c == '@' || c == ':' || c == '='
-		})
-		md[k] = url.PathEscape(v)
-	}
 
 	req := &s3.PutObjectInput{
 		Bucket:      aws.String(b.name),
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
-		Metadata:    md,
 	}
 
 	if len(opts.Tags) > 0 {
 		encodedTags := encodeTags(opts.Tags)
 		req.Tagging = aws.String(encodedTags)
+	}
+
+	if len(opts.Metadata) > 0 {
+		md := make(map[string]string, len(opts.Metadata))
+		for k, v := range opts.Metadata {
+			// See the package comments for more details on escaping of metadata
+			// keys & values.
+			k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
+				c := runes[i]
+				return c == '@' || c == ':' || c == '='
+			})
+			md[k] = url.PathEscape(v)
+		}
+
+		req.Metadata = md
 	}
 
 	if opts.IfNotExist {
