@@ -127,6 +127,10 @@ type CopyOptions struct {
 	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	BeforeCopy func(asFunc func(any) bool) error
+
+	// Tags holds key/value tags to be associated with the blob, or nil.
+	// Keys and values must be not empty if specified.
+	Tags map[string]string
 }
 
 // ReaderAttributes contains a subset of attributes about a blob that are

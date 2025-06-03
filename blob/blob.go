@@ -1216,6 +1216,7 @@ func (b *Bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOpti
 	}
 	dopts := &driver.CopyOptions{
 		BeforeCopy: opts.BeforeCopy,
+		Tags:       opts.Tags,
 	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -1459,6 +1460,10 @@ type CopyOptions struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeCopy func(asFunc func(any) bool) error
+
+	// Tags holds key/value tags to be associated with the blob, or nil.
+	// Keys and values must be not empty if specified.
+	Tags map[string]string
 }
 
 // BucketURLOpener represents types that can open buckets based on a URL.
