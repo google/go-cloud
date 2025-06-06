@@ -89,7 +89,7 @@ func filterMatches(f driver.Filter, doc storedDoc, nested bool) bool {
 	if err != nil {
 		return false
 	}
-	c, ok := compare(docval, f.Value)
+	c, ok := compare(docval, f.Value, f.Op)
 	if !ok {
 		return false
 	}
@@ -120,19 +120,22 @@ func applyComparison(op string, c int) bool {
 	}
 }
 
-func compare(x1, x2 interface{}) (int, bool) {
+func compare(x1, x2 any, op string) (int, bool) {
 	v1 := reflect.ValueOf(x1)
 	v2 := reflect.ValueOf(x2)
-	// this is for in/not-in queries.
+	// for in/not-in queries. otherwise this should only be reached with AllowNestedSliceQueries set
 	// return 0 if x1 is in slice x2, -1 if not.
 	if v2.Kind() == reflect.Slice {
-		for i := 0; i < v2.Len(); i++ {
-			if c, ok := compare(x1, v2.Index(i).Interface()); ok {
+		for i := range v2.Len() {
+			if c, ok := compare(x1, v2.Index(i).Interface(), op); ok {
 				if !ok {
 					return 0, false
 				}
 				if c == 0 {
 					return 0, true
+				}
+				if op != "in" && op != "not-in" {
+					return c, true
 				}
 			}
 		}
@@ -140,17 +143,28 @@ func compare(x1, x2 interface{}) (int, bool) {
 	}
 	// for AllowNestedSliceQueries
 	// when querying for x2 in the document and x1 is a list of values we only need one value to match
+	// the comparison value depends on the operator
 	if v1.Kind() == reflect.Slice {
-		for i := 0; i < v1.Len(); i++ {
-			if c, ok := compare(x2, v1.Index(i).Interface()); ok {
+		v2Greater := false
+		v2Less := false
+		for i := range v1.Len() {
+			if c, ok := compare(x2, v1.Index(i).Interface(), op); ok {
 				if !ok {
 					return 0, false
 				}
 				if c == 0 {
 					return 0, true
 				}
+				v2Greater = v2Greater || c > 0
+				v2Less = v2Less || c < 0
 			}
 		}
+		if op[0] == '>' && v2Less {
+			return 1, true
+		} else if op[0] == '<' && v2Greater {
+			return -1, true
+		}
+		return 0, false
 	}
 	if v1.Kind() == reflect.String && v2.Kind() == reflect.String {
 		return strings.Compare(v1.String(), v2.String()), true
@@ -174,7 +188,7 @@ func compare(x1, x2 interface{}) (int, bool) {
 
 func sortDocs(docs []storedDoc, field string, asc bool) {
 	sort.Slice(docs, func(i, j int) bool {
-		c, ok := compare(docs[i][field], docs[j][field])
+		c, ok := compare(docs[i][field], docs[j][field], ">")
 		if !ok {
 			return false
 		}

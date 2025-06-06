@@ -162,6 +162,7 @@ func TestQueryNested(t *testing.T) {
 		"listOfMaps":       []any{docmap{"id": "1"}, docmap{"id": "2"}, docmap{"id": "3"}},
 		"mapOfLists":       docmap{"ids": []any{"1", "2", "3"}},
 		"deep":             []any{docmap{"nesting": []any{docmap{"of": docmap{"elements": "yes"}}}}},
+		"listOfLists":      []any{docmap{"items": []any{docmap{"price": 10}}}},
 		dc.RevisionField(): nil,
 	}
 	if err := coll.Put(ctx, doc); err != nil {
@@ -180,13 +181,9 @@ func TestQueryNested(t *testing.T) {
 	if got != 1 {
 		t.Errorf("got %v docs when filtering by map.b, want 1", got)
 	}
-	got = count(coll.Query().Where("listOfMaps.id", "=", "1").Get(ctx))
+	got = count(coll.Query().Where("listOfMaps.id", "=", "2").Get(ctx))
 	if got != 1 {
 		t.Errorf("got %v docs when filtering by listOfMaps.id, want 1", got)
-	}
-	got = count(coll.Query().Where("listOfMaps.id", "=", "123").Get(ctx))
-	if got != 0 {
-		t.Errorf("got %v docs when filtering by listOfMaps.id, want 0", got)
 	}
 	got = count(coll.Query().Where("mapOfLists.ids", "=", "1").Get(ctx))
 	if got != 1 {
@@ -195,6 +192,71 @@ func TestQueryNested(t *testing.T) {
 	got = count(coll.Query().Where("deep.nesting.of.elements", "=", "yes").Get(ctx))
 	if got != 1 {
 		t.Errorf("got %v docs when filtering by deep.nesting.of.elements, want 1", got)
+	}
+	got = count(coll.Query().Where("listOfLists.items.price", "=", 10).Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by listOfLists.items.price, want 1", got)
+	}
+	got = count(coll.Query().Where("listOfLists.items.price", "<=", 20).Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by listOfLists.items.price, want 1", got)
+	}
+
+	// GreaterOrEqual
+	// this is not extracted as the setup and count functions also would be needed to be duplicated
+	doc = docmap{drivertest.KeyField: "CheapItems",
+		"items":            []any{docmap{"price": 10}, docmap{"price": 1}},
+		dc.RevisionField(): nil,
+	}
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	doc = docmap{drivertest.KeyField: "ExpensivItems",
+		"items":            []any{docmap{"price": 50}, docmap{"price": 100}},
+		dc.RevisionField(): nil,
+	}
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+
+	got = count(coll.Query().Where("items.price", "=", 1).Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by items.price = 12, want 1", got)
+	}
+	got = count(coll.Query().Where("items.price", "=", 5).Get(ctx))
+	if got != 0 {
+		t.Errorf("got %v docs when filtering by items.price = 5, want 0", got)
+	}
+
+	got = count(coll.Query().Where("items.price", ">=", 1).Get(ctx))
+	if got != 2 {
+		t.Errorf("got %v docs when filtering by items.price >= 1, want 2", got)
+	}
+	got = count(coll.Query().Where("items.price", ">=", 5).Get(ctx))
+	if got != 2 {
+		t.Errorf("got %v docs when filtering by items.price >= 5, want 2", got)
+	}
+	got = count(coll.Query().Where("items.price", ">=", 10).Get(ctx))
+	if got != 2 {
+		t.Errorf("got %v docs when filtering by items.price >= 10, want 2", got)
+	}
+
+	got = count(coll.Query().Where("items.price", "<=", 50).Get(ctx))
+	if got != 2 {
+		t.Errorf("got %v docs when filtering by items.price <= 50, want 2", got)
+	}
+
+	doc = docmap{drivertest.KeyField: "CheapItems",
+		"items":            []any{docmap{"price": 10}, docmap{"price": 1}},
+		dc.RevisionField(): nil,
+	}
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+
+	got = count(coll.Query().Where("items.price", "<=", 50).Get(ctx))
+	if got != 2 {
+		t.Errorf("got %v docs when filtering by items.price <= 50, want 2", got)
 	}
 }
 
