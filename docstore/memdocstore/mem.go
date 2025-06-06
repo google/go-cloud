@@ -417,7 +417,15 @@ func getAtFieldPath(m map[string]any, fp []string, nested bool) (result any, err
 			}
 			var result []any
 			for _, e := range concrete {
-				result = append(result, get(e, name))
+				next := get(e, name)
+				// if we have slices within slices the compare function does not see the nested slices
+				// changing the compare function to be recursive also is more effort than flattening the slices here
+				sliced, ok := next.([]any)
+				if ok {
+					result = append(result, sliced...)
+				} else {
+					result = append(result, next)
+				}
 			}
 			return result
 		}

@@ -162,7 +162,7 @@ func TestQueryNested(t *testing.T) {
 		"listOfMaps":       []any{docmap{"id": "1"}, docmap{"id": "2"}, docmap{"id": "3"}},
 		"mapOfLists":       docmap{"ids": []any{"1", "2", "3"}},
 		"deep":             []any{docmap{"nesting": []any{docmap{"of": docmap{"elements": "yes"}}}}},
-		"listOfLists":      []any{docmap{"items": []any{docmap{"price": 10}}}},
+		"listOfLists":      []any{docmap{"items": []any{docmap{"price": 10}, docmap{"price": 20}}}},
 		dc.RevisionField(): nil,
 	}
 	if err := coll.Put(ctx, doc); err != nil {
@@ -200,6 +200,14 @@ func TestQueryNested(t *testing.T) {
 	got = count(coll.Query().Where("listOfLists.items.price", "<=", 20).Get(ctx))
 	if got != 1 {
 		t.Errorf("got %v docs when filtering by listOfLists.items.price, want 1", got)
+	}
+	got = count(coll.Query().Where("listOfLists.items.price", "=", 10).Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by listOfLists.items.price = 10, want 1", got)
+	}
+	got = count(coll.Query().Where("listOfLists.items.price", "=", 20).Get(ctx))
+	if got != 1 {
+		t.Errorf("got %v docs when filtering by listOfLists.items.price = 20, want 1", got)
 	}
 
 	// GreaterOrEqual
