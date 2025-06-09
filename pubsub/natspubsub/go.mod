@@ -18,7 +18,7 @@ go 1.24
 
 require (
 	github.com/google/go-cmp v0.7.0
-	github.com/nats-io/nats-server/v2 v2.9.23
+	github.com/nats-io/nats-server/v2 v2.10.27
 	github.com/nats-io/nats.go v1.41.0
 	gocloud.dev v0.41.0
 )
@@ -29,8 +29,8 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/minio/highwayhash v1.0.2 // indirect
-	github.com/nats-io/jwt/v2 v2.5.0 // indirect
+	github.com/minio/highwayhash v1.0.3 // indirect
+	github.com/nats-io/jwt/v2 v2.7.3 // indirect
 	github.com/nats-io/nkeys v0.4.10 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
