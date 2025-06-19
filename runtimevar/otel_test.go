@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Development Kit Authors
+// Copyright 2019-2025 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,19 +16,16 @@ package runtimevar_test
 
 import (
 	"context"
-	"testing"
-
-	"go.opencensus.io/stats/view"
-	"gocloud.dev/internal/oc"
-	"gocloud.dev/internal/testing/octest"
-	"gocloud.dev/runtimevar"
+	"gocloud.dev/internal/testing/oteltest"
 	"gocloud.dev/runtimevar/constantvar"
+	"testing"
+	"time"
 )
 
-func TestOpenCensus(t *testing.T) {
+func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
-	te := octest.NewTestExporter(runtimevar.OpenCensusViews)
-	defer te.Unregister()
+	te := oteltest.NewTestExporter(t)
+	defer te.Shutdown(ctx)
 
 	v := constantvar.New(1)
 	defer v.Close()
@@ -39,18 +36,37 @@ func TestOpenCensus(t *testing.T) {
 	cancel()
 	_, _ = v.Watch(cctx)
 
-	seen := false
+	// Check for spans
 	const driver = "gocloud.dev/runtimevar/constantvar"
-	for _, row := range te.Counts() {
-		if _, ok := row.Data.(*view.CountData); !ok {
-			continue
-		}
-		if row.Tags[0].Key == oc.ProviderKey && row.Tags[0].Value == driver {
-			seen = true
-			break
+
+	time.Sleep(2 * time.Second)
+	// Check metrics - during migration, we may need to look for different metric names
+	metrics := te.Metrics(ctx)
+	metricsFound := false
+	const metricName = "gocloud.dev/runtimevar/value_changes"
+
+	for _, scopeMetric := range metrics {
+
+		for _, attr := range scopeMetric.Scope.Attributes.ToSlice() {
+
+			if attr.Value.AsString() == driver {
+				for _, metric := range scopeMetric.Metrics {
+					if metric.Name == metricName {
+						metricsFound = true
+						break
+					}
+				}
+				if metricsFound {
+					break
+				}
+			}
+			if metricsFound {
+				break
+			}
 		}
 	}
-	if !seen {
-		t.Errorf("did not see count row with provider=%s", driver)
+
+	if !metricsFound {
+		t.Errorf("did not see any expected metrics for runtimevar")
 	}
 }
