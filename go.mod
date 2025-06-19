@@ -24,7 +24,6 @@ require (
 	cloud.google.com/go/pubsub v1.48.0
 	cloud.google.com/go/secretmanager v1.14.6
 	cloud.google.com/go/storage v1.51.0
-	contrib.go.opencensus.io/integrations/ocsql v0.1.7
 	github.com/Azure/azure-amqp-common-go/v3 v3.2.3
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
@@ -37,6 +36,7 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.51.0
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.27.0
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator v0.51.0
+	github.com/XSAM/otelsql v0.38.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.12

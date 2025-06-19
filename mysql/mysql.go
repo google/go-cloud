@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mysql provides functions to open MySQL databases with OpenCensus instrumentation.
+// Package mysql provides functions to open MySQL databases with OpenTelemetry instrumentation.
 package mysql
 
 import (
@@ -24,10 +24,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/internal/openurl"
-
-	"contrib.go.opencensus.io/integrations/ocsql"
 )
 
 // Scheme is the URL scheme this package registers its URLOpener under on
@@ -41,19 +42,24 @@ func init() {
 // URLOpener opens URLs like "mysql://" by using the underlying MySQL driver.
 // like "mysql://user:password@localhost:3306/mydb".
 type URLOpener struct {
-	TraceOpts []ocsql.TraceOption
+	// No specific trace options needed for OpenTelemetry
 }
 
-// OpenMySQLURL opens a new database connection wrapped with OpenCensus instrumentation.
+// OpenMySQLURL opens a new database connection with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
 	cfg, err := ConfigFromURL(u)
 	if err != nil {
 		return nil, err
 	}
-	return sql.OpenDB(connector{
-		dsn:       cfg.FormatDSN(),
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
-	}), nil
+
+	// Use OpenTelemetry-instrumented SQL connection directly
+	return otelsql.Open("mysql", cfg.FormatDSN(),
+		otelsql.WithAttributes(
+			semconv.DBSystemKey.String("mysql"),
+			semconv.DBNameKey.String(cfg.DBName),
+			attribute.String("service.name", "go-cloud-mysql"),
+		),
+	)
 }
 
 var netAddrRE = regexp.MustCompile(`^(.+)\((.+)\)$`)
@@ -85,8 +91,7 @@ func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 }
 
 type connector struct {
-	dsn       string
-	traceOpts []ocsql.TraceOption
+	dsn string
 }
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
@@ -94,7 +99,8 @@ func (c connector) Connect(context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+	// Direct OpenTelemetry driver registration happens in otelsql.Open
+	return mysql.MySQLDriver{}
 }
 
 // MySQLURLOpener implements MySQLURLOpener and can open connections based on a URL.
