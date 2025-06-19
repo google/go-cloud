@@ -177,7 +177,8 @@ func (te *TestExporter) SpanStubs() tracetest.SpanStubs {
 }
 
 // Metrics returns the collected metrics.
-func (te *TestExporter) Metrics() []metricdata.ScopeMetrics {
+func (te *TestExporter) Metrics(ctx context.Context) []metricdata.ScopeMetrics {
+	_ = te.metricExporter.Shutdown(ctx)
 	return te.metricExporter.GetMetrics()
 }
 

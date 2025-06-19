@@ -26,7 +26,6 @@ require (
 	cloud.google.com/go/storage v1.51.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20230502192102-15967c811cec
 	contrib.go.opencensus.io/exporter/stackdriver v0.13.14
-	contrib.go.opencensus.io/integrations/ocsql v0.1.7
 	github.com/Azure/azure-amqp-common-go/v3 v3.2.3
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
@@ -36,6 +35,7 @@ require (
 	github.com/Azure/go-amqp v1.4.0
 	github.com/Azure/go-autorest/autorest/to v0.4.1
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.37.6
+	github.com/XSAM/otelsql v0.38.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.12
