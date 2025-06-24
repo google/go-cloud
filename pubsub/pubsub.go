@@ -319,7 +319,7 @@ func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batche
 		dms := items.([]*driver.Message)
 		err := retry.Call(ctx, gax.Backoff{}, dt.IsRetryable, func() (err error) {
 			ctx2, span := t.tracer.Start(ctx, "driver.Topic.SendBatch")
-			defer func() { t.tracer.End(ctx, span, err) }()
+			defer func() { t.tracer.End(ctx2, span, err) }()
 			return dt.SendBatch(ctx2, dms)
 		})
 		if err != nil {
@@ -648,7 +648,7 @@ func (s *Subscription) getNextBatch(nMessages int) chan msgsOrError {
 			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 				var err error
 				ctx2, span := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
-				defer func() { s.tracer.End(ctx, span, err) }()
+				defer func() { s.tracer.End(ctx2, span, err) }()
 				msgs, err = s.driver.ReceiveBatch(ctx2, curMaxMessagesInBatch)
 				return err
 			})
