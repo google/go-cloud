@@ -38,12 +38,12 @@
 //   - For some drivers, Nack is not supported and will panic; you can call
 //     Message.Nackable to see.
 //
-// # OpenTelemetry Integration
+// # OpenCensus Integration
 //
-// OpenTelemetry supports tracing and metric collection for multiple languages and
-// backend providers. See https://opentelemetry.io.
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
 //
-// This API collects OpenTelemetry traces and metrics for the following methods:
+// This API collects OpenCensus traces and metrics for the following methods:
 //   - Topic.Send
 //   - Topic.Shutdown
 //   - Subscription.Receive
@@ -58,10 +58,10 @@
 // by driver and method.
 // For example, "gocloud.dev/pubsub/latency".
 //
-// To enable trace collection in your application, see "Configure an Exporter" at
-// https://opentelemetry.io/docs/languages/go/getting-started/.
-// To enable metric collection in your application, see "Metrics" at
-// https://opentelemetry.io/docs/languages/go/metrics/.
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package pubsub // import "gocloud.dev/pubsub"
 
 import (
@@ -80,8 +80,8 @@ import (
 	"github.com/googleapis/gax-go/v2"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
-	gcdkotel "gocloud.dev/internal/otel"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
@@ -218,7 +218,7 @@ func (m *Message) As(i any) bool {
 type Topic struct {
 	driver  driver.Topic
 	batcher *batcher.Batcher
-	tracer  *gcdkotel.Tracer
+	tracer  *oc.Tracer
 	mu      sync.Mutex
 	err     error
 
@@ -230,8 +230,8 @@ type Topic struct {
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
-	ctx, span := t.tracer.Start(ctx, "Topic.Send")
-	defer func() { t.tracer.End(ctx, span, err) }()
+	ctx = t.tracer.Start(ctx, "Topic.Send")
+	defer func() { t.tracer.End(ctx, err) }()
 
 	// Check for doneness before we do any work.
 	if err := ctx.Err(); err != nil {
@@ -268,8 +268,8 @@ var errTopicShutdown = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic 
 // Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
 func (t *Topic) Shutdown(ctx context.Context) (err error) {
-	ctx, span := t.tracer.Start(ctx, "Topic.Shutdown")
-	defer func() { t.tracer.End(ctx, span, err) }()
+	ctx = t.tracer.Start(ctx, "Topic.Shutdown")
+	defer func() { t.tracer.End(ctx, err) }()
 
 	t.mu.Lock()
 	if errors.Is(t.err, errTopicShutdown) {
@@ -318,8 +318,8 @@ func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batche
 	handler := func(items any) error {
 		dms := items.([]*driver.Message)
 		err := retry.Call(ctx, gax.Backoff{}, dt.IsRetryable, func() (err error) {
-			ctx2, span := t.tracer.Start(ctx, "driver.Topic.SendBatch")
-			defer func() { t.tracer.End(ctx, span, err) }()
+			ctx2 := t.tracer.Start(ctx, "driver.Topic.SendBatch")
+			defer func() { t.tracer.End(ctx2, err) }()
 			return dt.SendBatch(ctx2, dms)
 		})
 		if err != nil {
@@ -337,7 +337,7 @@ func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Topic{
 		driver: d,
-		tracer: gcdkotel.NewTracer(pkgName, gcdkotel.ProviderName(d)),
+		tracer: newTracer(d),
 		cancel: cancel,
 	}
 	t.batcher = newSendBatcher(ctx, t, d, opts)
@@ -346,10 +346,27 @@ func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 
 const pkgName = "gocloud.dev/pubsub"
 
+var (
+	latencyMeasure = oc.LatencyMeasure(pkgName)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
+	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+)
+
+func newTracer(driver any) *oc.Tracer {
+	return &oc.Tracer{
+		Package:        pkgName,
+		Provider:       oc.ProviderName(driver),
+		LatencyMeasure: latencyMeasure,
+	}
+}
+
 // Subscription receives published messages.
 type Subscription struct {
 	driver driver.Subscription
-	tracer *gcdkotel.Tracer
+	tracer *oc.Tracer
 	// ackBatcher makes batches of acks and nacks and sends them to the server.
 	ackBatcher    *batcher.Batcher
 	canNack       bool            // true iff the driver supports Nack
@@ -508,8 +525,8 @@ func (s *Subscription) updateBatchSize() int {
 // The Ack method of the returned Message must be called once the message has
 // been processed, to prevent it from being received again.
 func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
-	ctx, span := s.tracer.Start(ctx, "Subscription.Receive")
-	defer func() { s.tracer.End(ctx, span, err) }()
+	ctx = s.tracer.Start(ctx, "Subscription.Receive")
+	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -647,8 +664,8 @@ func (s *Subscription) getNextBatch(nMessages int) chan msgsOrError {
 			var msgs []*driver.Message
 			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 				var err error
-				ctx2, span := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
-				defer func() { s.tracer.End(ctx, span, err) }()
+				ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+				defer func() { s.tracer.End(ctx2, err) }()
 				msgs, err = s.driver.ReceiveBatch(ctx2, curMaxMessagesInBatch)
 				return err
 			})
@@ -673,8 +690,8 @@ var errSubscriptionShutdown = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub:
 
 // Shutdown flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Shutdown(ctx context.Context) (err error) {
-	ctx, span := s.tracer.Start(ctx, "Subscription.Shutdown")
-	defer func() { s.tracer.End(ctx, span, err) }()
+	ctx = s.tracer.Start(ctx, "Subscription.Shutdown")
+	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
 	if errors.Is(s.err, errSubscriptionShutdown) {
@@ -740,7 +757,7 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver:           ds,
-		tracer:           gcdkotel.NewTracer(pkgName, gcdkotel.ProviderName(ds)),
+		tracer:           newTracer(ds),
 		cancel:           cancel,
 		backgroundCtx:    ctx,
 		recvBatchOpts:    recvBatchOpts,
@@ -751,7 +768,7 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 	return s
 }
 
-func newAckBatcher(ctx0 context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
+func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
 	handler := func(items any) error {
 		var acks, nacks []driver.AckID
 		for _, a := range items.([]*driver.AckInfo) {
@@ -761,12 +778,12 @@ func newAckBatcher(ctx0 context.Context, s *Subscription, ds driver.Subscription
 				nacks = append(nacks, a.AckID)
 			}
 		}
-		g, ctx := errgroup.WithContext(ctx0)
+		g, ctx := errgroup.WithContext(ctx)
 		if len(acks) > 0 {
 			g.Go(func() error {
 				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-					ctx2, span := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
-					defer func() { s.tracer.End(ctx2, span, err) }()
+					ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
+					defer func() { s.tracer.End(ctx2, err) }()
 					return ds.SendAcks(ctx2, acks)
 				})
 			})
@@ -774,8 +791,8 @@ func newAckBatcher(ctx0 context.Context, s *Subscription, ds driver.Subscription
 		if len(nacks) > 0 {
 			g.Go(func() error {
 				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-					ctx2, span := s.tracer.Start(ctx, "driver.Subscription.SendNacks")
-					defer func() { s.tracer.End(ctx2, span, err) }()
+					ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendNacks")
+					defer func() { s.tracer.End(ctx2, err) }()
 					return ds.SendNacks(ctx2, nacks)
 				})
 			})
