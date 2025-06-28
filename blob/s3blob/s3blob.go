@@ -750,6 +750,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		Key:         aws.String(key),
 		Metadata:    md,
 	}
+	if opts.IfNotExist {
+		// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html
+		req.IfNoneMatch = aws.String("*")
+	}
 	if opts.CacheControl != "" {
 		req.CacheControl = aws.String(opts.CacheControl)
 	}
