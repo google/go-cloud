@@ -17,19 +17,19 @@ package oteltest
 
 import (
 	"context"
-	iotel "gocloud.dev/internal/otel"
 	"sync"
-	"testing"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 )
 
@@ -39,6 +39,8 @@ type TestExporter struct {
 	mu             sync.Mutex
 	spanExporter   *tracetest.InMemoryExporter
 	metricExporter *MetricExporter
+	meterProvider  metric.MeterProvider
+	tracerProvider trace.TracerProvider
 	shutdown       func(context.Context) error
 }
 
@@ -122,26 +124,25 @@ func (e *MetricExporter) Shutdown(ctx context.Context) error {
 }
 
 // NewTestExporter creates a TestExporter and registers it with OpenTelemetry.
-func NewTestExporter(t *testing.T) *TestExporter {
+func NewTestExporter() *TestExporter {
 	// Create span exporter
 	spanExporter := tracetest.NewInMemoryExporter()
 
 	// Create resource
 	res := resource.NewSchemaless()
 
-	traceShutdown, err := iotel.ConfigureTraceProvider("test", spanExporter, sdktrace.AlwaysSample(), res, true)
-	if err != nil {
-		t.Fatalf("Failed to configure trace provider: %v", err)
-	}
+	// Create and register tracer provider
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSyncer(spanExporter),
+		sdktrace.WithResource(res),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+	)
+	otel.SetTracerProvider(tracerProvider)
+
 	// Create metric exporter
 	metricExporter := NewMetricExporter()
 
 	// Create and register meter provider
-	_, metricsShutdown, err := iotel.ConfigureMeterProvider("test", metricExporter, res)
-	if err != nil {
-		t.Fatalf("Failed to configure meter provider: %v", err)
-	}
-
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(metricExporter.reader),
 		sdkmetric.WithResource(res),
@@ -149,8 +150,8 @@ func NewTestExporter(t *testing.T) *TestExporter {
 	otel.SetMeterProvider(meterProvider)
 
 	shutdown := func(ctx context.Context) error {
-		err1 := traceShutdown(ctx)
-		err2 := metricsShutdown(ctx)
+		err1 := tracerProvider.Shutdown(ctx)
+		err2 := meterProvider.Shutdown(ctx)
 		if err1 != nil {
 			return err1
 		}
@@ -160,6 +161,8 @@ func NewTestExporter(t *testing.T) *TestExporter {
 	return &TestExporter{
 		spanExporter:   spanExporter,
 		metricExporter: metricExporter,
+		meterProvider:  meterProvider,
+		tracerProvider: tracerProvider,
 		shutdown:       shutdown,
 	}
 }
@@ -218,12 +221,12 @@ func SpanToCall(span sdktrace.ReadOnlySpan) Call {
 		attrs = append(attrs, attr)
 
 		// Extract method if available
-		if attr.Key == iotel.MethodKey {
+		if attr.Key == attribute.Key("gocdk.method") {
 			method = attr.Value.AsString()
 		}
 
 		// Extract status if available
-		if attr.Key == iotel.StatusKey {
+		if attr.Key == attribute.Key("gocdk.status") {
 			status = attr.Value.AsString()
 		}
 	}

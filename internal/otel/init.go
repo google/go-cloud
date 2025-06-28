@@ -30,14 +30,9 @@ import (
 
 // ConfigureTraceProvider sets up the global trace provider with the given exporter.
 // It returns a function to shut down the exporter.
-func ConfigureTraceProvider(serviceName string, exporter sdktrace.SpanExporter, sampler sdktrace.Sampler, res *resource.Resource, asyncExport bool) (func(context.Context) error, error) {
-	var err error
-	if res == nil {
-		res = resource.Default()
-	}
-
-	res, err = resource.Merge(
-		res,
+func ConfigureTraceProvider(ctx context.Context, exporter sdktrace.SpanExporter, serviceName string) (func(context.Context) error, error) {
+	res, err := resource.Merge(
+		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceName(serviceName),
@@ -47,22 +42,10 @@ func ConfigureTraceProvider(serviceName string, exporter sdktrace.SpanExporter, 
 		return nil, err
 	}
 
-	if sampler == nil {
-		sampler = sdktrace.AlwaysSample()
-	}
-
-	var exporterOpt sdktrace.TracerProviderOption
-	if asyncExport {
-		exporterOpt = sdktrace.WithSyncer(exporter)
-	} else {
-		exporterOpt = sdktrace.WithBatcher(exporter)
-
-	}
-
 	tp := sdktrace.NewTracerProvider(
-		exporterOpt,
+		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sampler),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 
 	// Set the global trace provider
@@ -81,14 +64,9 @@ func TracerForPackage(pkg string) trace.Tracer {
 
 // ConfigureMeterProvider sets up the given meter provider with the given exporter.
 // It returns a function to collect and export metrics on demand, and a shutdown function.
-func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res *resource.Resource) (func(context.Context) error, func(context.Context) error, error) {
-	var err error
-	if res == nil {
-		res = resource.Default()
-	}
-
-	res, err = resource.Merge(
-		res,
+func ConfigureMeterProvider(ctx context.Context, exporter sdkmetric.Exporter, serviceName string) (func(context.Context) error, func(context.Context) error, error) {
+	res, err := resource.Merge(
+		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceName(serviceName),
@@ -107,7 +85,6 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithResource(res),
-		sdkmetric.WithView(Views()...),
 	)
 
 	// Set the global meter provider
@@ -119,13 +96,10 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 		return reader.ForceFlush(ctx)
 	}
 
-	return forceCollect, func(ctx context.Context) error {
-		_ = forceCollect(ctx)
-		return mp.Shutdown(ctx)
-	}, nil
+	return forceCollect, mp.Shutdown, nil
 }
 
 // MeterForPackage returns a meter for the given package using the global provider.
-func MeterForPackage(pkg string, provider string) metric.Meter {
-	return otel.Meter(pkg, metric.WithInstrumentationAttributes(ProviderKey.String(provider)))
+func MeterForPackage(pkg string) metric.Meter {
+	return otel.Meter(pkg)
 }
