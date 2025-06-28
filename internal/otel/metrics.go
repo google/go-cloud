@@ -16,151 +16,178 @@
 package otel
 
 import (
+	"context"
 	"fmt"
+	"time"
+
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"strings"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
-// Units are encoded according to the case-sensitive abbreviations from the
-// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html
-const (
-	UnitDimensionless = "1"
-	UnitBytes         = "By"
-	UnitMilliseconds  = "ms"
-	UnitSeconds       = "s"
-)
-
-var (
-	DefaultMillisecondsBoundaries = []float64{
-		0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
-		2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0,
-		13.0, 16.0, 20.0, 25.0, 30.0, 40.0,
-		50.0, 65.0, 80.0, 100.0, 130.0, 160.0,
-		200.0, 250.0, 300.0, 400.0, 500.0,
-		650.0, 800.0, 1000.0, 2000.0, 5000.0, 10000.0,
-	}
-)
-
-func Views() []sdkmetric.View {
-
-	return []sdkmetric.View{
-
-		// View for latency histogram
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				if strings.HasSuffix(inst.Name, "/latency") {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: "Distribution of method latency, by provider and method.",
-						Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
-							Boundaries: DefaultMillisecondsBoundaries,
-						},
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
-						},
-					}, true
-				}
-			}
-
-			return sdkmetric.Stream{}, false
-		},
-
-		// View for completed_calls count
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				if strings.HasSuffix(inst.Name, "/latency") {
-					return sdkmetric.Stream{
-						Name:        strings.Replace(inst.Name, "/latency", "/completed_calls", 1),
-						Description: "Count of method calls by provider, method and status.",
-						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == MethodKey || kv.Key == StatusKey
-						},
-					}, true
-				}
-			}
-			return sdkmetric.Stream{}, false
-		},
-
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindCounter {
-				if strings.HasSuffix(inst.Name, "/bytes_read") {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: "Sum of bytes read from the service.",
-						Aggregation: sdkmetric.AggregationSum{},
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
-						},
-					}, true
-				}
-			}
-
-			return sdkmetric.Stream{}, false
-		},
-
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindCounter {
-				if strings.HasSuffix(inst.Name, "/bytes_written") {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: "Sum of bytes written to the service.",
-						Aggregation: sdkmetric.AggregationSum{},
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
-						},
-					}, true
-				}
-			}
-
-			return sdkmetric.Stream{}, false
-		},
-	}
+// MetricSet contains the standard metrics used by Go CDK APIs.
+type MetricSet struct {
+	Latency        metric.Float64Histogram
+	CompletedCalls metric.Int64Counter
+	BytesRead      metric.Int64Counter
+	BytesWritten   metric.Int64Counter
 }
 
-// LatencyMeasure returns the measure for method call latency used
-// by Go CDK APIs.
-func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
+// NewMetricSet creates a standard set of metrics for a Go CDK package.
+func NewMetricSet(ctx context.Context, pkg string) (*MetricSet, error) {
+	meter := otel.GetMeterProvider().Meter(pkg)
 
-	pkgMeter := MeterForPackage(pkg, provider)
+	latency, err := meter.Float64Histogram(
+		pkg+".latency",
+		metric.WithDescription("Latency of method call in milliseconds"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create latency metric: %w", err)
+	}
 
-	m, err := pkgMeter.Float64Histogram(
-		pkg+"/latency",
-		metric.WithDescription("Latency distribution of method calls"),
-		metric.WithUnit(UnitMilliseconds),
+	completedCalls, err := meter.Int64Counter(
+		pkg+".completed_calls",
+		metric.WithDescription("Count of method calls"),
+		metric.WithUnit("{call}"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create completed_calls metric: %w", err)
+	}
+
+	bytesRead, err := meter.Int64Counter(
+		pkg+".bytes_read",
+		metric.WithDescription("Number of bytes read"),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bytes_read metric: %w", err)
+	}
+
+	bytesWritten, err := meter.Int64Counter(
+		pkg+".bytes_written",
+		metric.WithDescription("Number of bytes written"),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bytes_written metric: %w", err)
+	}
+
+	return &MetricSet{
+		Latency:        latency,
+		CompletedCalls: completedCalls,
+		BytesRead:      bytesRead,
+		BytesWritten:   bytesWritten,
+	}, nil
+}
+
+// InitMetrics initializes metrics with an OTLP exporter.
+func InitMetrics(ctx context.Context, serviceName string) (func(context.Context) error, error) {
+	// Create a resource with service information
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(serviceName),
+		),
+		resource.WithTelemetrySDK(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource: %w", err)
+	}
+
+	// Create the OTLP exporter
+	exporter, err := otlpmetricgrpc.New(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
+	}
+
+	// Create reader for the exporter
+	reader := sdkmetric.NewPeriodicReader(exporter)
+
+	// Create meter provider
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithResource(res),
 	)
 
-	if err != nil {
-		// The only possible errors are from invalid key or value names, and those are programming
-		// errors that will be found during testing.
-		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
-	}
+	// Set the global meter provider
+	otel.SetMeterProvider(meterProvider)
 
-	return m
+	// Return shutdown function
+	return func(ctx context.Context) error {
+		return meterProvider.Shutdown(ctx)
+	}, nil
 }
 
-func BytesMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg, provider)
-	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitBytes))
-
-	if err != nil {
-		// The only possible errors are from invalid key or value names, and those are programming
-		// errors that will be found during testing.
-		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
+// RecordLatency records a latency measurement with standard attributes.
+func RecordLatency(ctx context.Context, latencyMeter metric.Float64Histogram, method, provider, status string, duration time.Duration) {
+	if latencyMeter == nil {
+		return
 	}
-	return m
+
+	attrs := []attribute.KeyValue{
+		MethodKey.String(method),
+	}
+
+	if provider != "" {
+		attrs = append(attrs, ProviderKey.String(provider))
+	}
+
+	if status != "" {
+		attrs = append(attrs, StatusKey.String(status))
+	}
+
+	latencyMeter.Record(ctx, float64(duration.Nanoseconds())/1e6, metric.WithAttributes(attrs...))
 }
 
-func DimensionlessMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg, provider)
-	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitDimensionless))
-
-	if err != nil {
-		// The only possible errors are from invalid key or value names, and those are programming
-		// errors that will be found during testing.
-		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
+// RecordCount records a count with standard attributes.
+func RecordCount(ctx context.Context, counter metric.Int64Counter, method, provider, status string, count int64) {
+	if counter == nil {
+		return
 	}
-	return m
+
+	attrs := []attribute.KeyValue{
+		MethodKey.String(method),
+	}
+
+	if provider != "" {
+		attrs = append(attrs, ProviderKey.String(provider))
+	}
+
+	if status != "" {
+		attrs = append(attrs, StatusKey.String(status))
+	}
+
+	counter.Add(ctx, count, metric.WithAttributes(attrs...))
+}
+
+// RecordBytesRead records bytes read with provider attribute.
+func RecordBytesRead(ctx context.Context, counter metric.Int64Counter, provider string, n int64) {
+	if counter == nil || n <= 0 {
+		return
+	}
+
+	var attrs []attribute.KeyValue
+	if provider != "" {
+		attrs = append(attrs, ProviderKey.String(provider))
+	}
+
+	counter.Add(ctx, n, metric.WithAttributes(attrs...))
+}
+
+// RecordBytesWritten records bytes written with provider attribute.
+func RecordBytesWritten(ctx context.Context, counter metric.Int64Counter, provider string, n int64) {
+	if counter == nil || n <= 0 {
+		return
+	}
+
+	var attrs []attribute.KeyValue
+	if provider != "" {
+		attrs = append(attrs, ProviderKey.String(provider))
+	}
+
+	counter.Add(ctx, n, metric.WithAttributes(attrs...))
 }

@@ -17,35 +17,28 @@ package otel
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 	"gocloud.dev/gcerrors"
-	"reflect"
-	"time"
 )
 
 // Common attribute keys used across the Go CDK
 var (
-	MethodKey   = attribute.Key("gocdk_method")
-	PackageKey  = attribute.Key("gocdk_package")
-	ProviderKey = attribute.Key("gocdk_provider")
-	StatusKey   = attribute.Key("gocdk_status")
-	ErrorKey    = attribute.Key("gocdk_error")
+	MethodKey   = attribute.Key("gocdk.method")
+	PackageKey  = attribute.Key("gocdk.package")
+	ProviderKey = attribute.Key("gocdk.provider")
+	StatusKey   = attribute.Key("gocdk.status")
+	ErrorKey    = attribute.Key("gocdk.error")
 )
-
-type traceContextKey string
-
-const startTimeContextKey traceContextKey = "spanStartTime"
 
 // Tracer provides OpenTelemetry tracing for Go CDK packages.
 type Tracer struct {
-	Package        string
-	Provider       string
-	LatencyMeasure metric.Float64Histogram
+	Package  string
+	Provider string
 }
 
 // ProviderName returns the name of the provider associated with the driver value.
@@ -71,9 +64,8 @@ func NewTracer(pkg string, provider ...string) *Tracer {
 	}
 
 	return &Tracer{
-		Package:        pkg,
-		Provider:       providerName,
-		LatencyMeasure: LatencyMeasure(pkg, providerName),
+		Package:  pkg,
+		Provider: providerName,
 	}
 }
 
@@ -91,21 +83,14 @@ func (t *Tracer) Start(ctx context.Context, methodName string) (context.Context,
 		attrs = append(attrs, ProviderKey.String(t.Provider))
 	}
 
-	tracer := TracerForPackage(t.Package)
-	sCtx, span := tracer.Start(ctx, fullName, trace.WithAttributes(attrs...))
-	return context.WithValue(sCtx, startTimeContextKey, time.Now()), span
+	// Use the global tracer provider
+	return otel.Tracer(t.Package).Start(ctx, fullName, trace.WithAttributes(attrs...))
 }
 
 // End completes a span with error information if applicable.
-func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
-
-	startTime := ctx.Value(startTimeContextKey).(time.Time)
-	elapsed := time.Since(startTime)
-
-	code := gcerrors.OK
-
+func (t *Tracer) End(span trace.Span, err error) {
 	if err != nil {
-		code = gcerrors.Code(err)
+		code := gcerrors.Code(err)
 		span.SetAttributes(
 			ErrorKey.String(err.Error()),
 			StatusKey.String(fmt.Sprint(code)),
@@ -117,15 +102,33 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 	}
 
 	span.End()
+}
 
-	t.LatencyMeasure.Record(ctx,
-		float64(elapsed.Nanoseconds())/1e6, // milliseconds
-		metric.WithAttributes(
-			StatusKey.String(fmt.Sprint(code))),
-	)
+// StartSpan is a convenience function that creates a span using the global tracer.
+func StartSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
+	return otel.Tracer("").Start(ctx, name, trace.WithAttributes(attrs...))
+}
+
+// TraceCall is a helper that traces the execution of a function.
+func TraceCall(ctx context.Context, name string, fn func(context.Context) error) error {
+	ctx, span := StartSpan(ctx, name)
+	defer span.End()
+
+	err := fn(ctx)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	}
+
+	return err
+}
+
+// SpanFromContext retrieves the current span from the context.
+func SpanFromContext(ctx context.Context) trace.Span {
+	return trace.SpanFromContext(ctx)
 }
 
 // TracingEnabled returns whether tracing is currently enabled.
 func TracingEnabled() bool {
-	return otel.GetTracerProvider() != noop.NewTracerProvider()
+	return otel.GetTracerProvider() != trace.NewNoopTracerProvider()
 }
