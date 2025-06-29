@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc/codes"
 	"net/url"
 	"strings"
 	"sync"
@@ -28,7 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/testing/oteltest"
+	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 )
@@ -572,20 +571,10 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verify(err)
 }
 
-// TestOpenTelemetry tests that OpenTelemetry tracing is working correctly.
-func TestOpenTelemetry(t *testing.T) {
+func TestOpenCensus(t *testing.T) {
 	ctx := context.Background()
-	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	// Set up the test exporter for OpenTelemetry
-	te := oteltest.NewTestExporter(t)
-	defer func() {
-		err := te.Shutdown(ctx2)
-		if err != nil {
-			t.Logf("Error shutting down test exporter: %v", err)
-		}
-	}()
+	te := octest.NewTestExporter(OpenCensusViews)
+	defer te.Unregister()
 
 	ds := NewDriverSub()
 	dt := &driverTopic{
@@ -606,40 +595,30 @@ func TestOpenTelemetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg.Ack()
-	err = sub.Shutdown(ctx)
-	if err != nil {
+	if err := sub.Shutdown(ctx); err != nil {
 		t.Fatal(err)
 	}
 	_, _ = sub.Receive(ctx)
 
-	validateCalls(t, te)
-}
-
-// validateCalls validates that the spans recorded by the test exporter match the expected operation names.
-func validateCalls(t *testing.T, te *oteltest.TestExporter) {
-	t.Helper()
-
-	// In environments where spans are collected asynchronously, we need to give
-	// the exporter time to collect the spans
-	time.Sleep(100 * time.Millisecond)
-
-	spans := te.SpanStubs()
-
-	diff := oteltest.Diff(spans.Snapshots(), pkgName, "", []oteltest.Call{
-		{Method: "driver.Topic.SendBatch"},
-		{Method: "Topic.Send"},
-		{Method: "Topic.Shutdown"},
-		{Method: "driver.Subscription.ReceiveBatch"},
-		{Method: "Subscription.Receive"},
-		{Method: "driver.Subscription.SendAcks"},
-		{Method: "Subscription.Shutdown"},
-		{Method: "Subscription.Receive", Status: codes.FailedPrecondition.String()},
+	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/pubsub", "gocloud.dev/pubsub", []octest.Call{
+		{Method: "driver.Topic.SendBatch", Code: gcerrors.OK},
+		{Method: "Topic.Send", Code: gcerrors.OK},
+		{Method: "Topic.Shutdown", Code: gcerrors.OK},
+		{Method: "driver.Subscription.ReceiveBatch", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.OK},
+		{Method: "driver.Subscription.SendAcks", Code: gcerrors.OK},
+		{Method: "Subscription.Shutdown", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.FailedPrecondition},
 	})
 	if diff != "" {
 		t.Error(diff)
 	}
-
 }
+
+var (
+	testOpenOnce sync.Once
+	testOpenGot  *url.URL
+)
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
