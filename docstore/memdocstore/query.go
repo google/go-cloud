@@ -128,9 +128,6 @@ func compare(x1, x2 any, op string) (int, bool) {
 	if v2.Kind() == reflect.Slice {
 		for i := range v2.Len() {
 			if c, ok := compare(x1, v2.Index(i).Interface(), op); ok {
-				if !ok {
-					return 0, false
-				}
 				if c == 0 {
 					return 0, true
 				}
@@ -141,7 +138,7 @@ func compare(x1, x2 any, op string) (int, bool) {
 		}
 		return -1, true
 	}
-	// for AllowNestedSliceQueries
+	// See Options.AllowNestedSliceQueries
 	// when querying for x2 in the document and x1 is a list of values we only need one value to match
 	// the comparison value depends on the operator
 	if v1.Kind() == reflect.Slice {
@@ -149,9 +146,6 @@ func compare(x1, x2 any, op string) (int, bool) {
 		v2Less := false
 		for i := range v1.Len() {
 			if c, ok := compare(x2, v1.Index(i).Interface(), op); ok {
-				if !ok {
-					return 0, false
-				}
 				if c == 0 {
 					return 0, true
 				}

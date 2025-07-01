@@ -68,10 +68,11 @@ type Options struct {
 	// When the collection is closed, its contents are saved to the file.
 	Filename string
 
-	// AllowNestedSliceQueries allows querying with nested slices.
+	// AllowNestedSliceQueries allows querying into nested slices.
+	// If true queries for a field path which points to a slice will return
+	// true if any element of the slice has a value that validates with the operator.
 	// This makes the memdocstore more compatible with MongoDB,
 	// but other providers may not support this feature.
-	// See https://github.com/google/go-cloud/pull/3511 for more details.
 	AllowNestedSliceQueries bool
 
 	// Call this function when the collection is closed.
@@ -404,6 +405,7 @@ func (c *collection) checkRevision(arg driver.Document, current storedDoc) error
 }
 
 // getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
+// if nested is true compare against all elements of a slice, see AllowNestedSliceQueries
 // (see getParentMap).
 func getAtFieldPath(m map[string]any, fp []string, nested bool) (result any, err error) {
 	var get func(m any, name string) any
@@ -419,7 +421,7 @@ func getAtFieldPath(m map[string]any, fp []string, nested bool) (result any, err
 			for _, e := range concrete {
 				next := get(e, name)
 				// if we have slices within slices the compare function does not see the nested slices
-				// changing the compare function to be recursive also is more effort than flattening the slices here
+				// changing the compare function to be recursive would be more effort than flattening the slices here
 				sliced, ok := next.([]any)
 				if ok {
 					result = append(result, sliced...)
