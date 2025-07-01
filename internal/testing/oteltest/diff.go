@@ -30,15 +30,15 @@ func Diff(spans []sdktrace.ReadOnlySpan, pkg, provider string, want []Call) stri
 		return fmt.Sprintf("got %d spans, want %d", len(spans), len(want))
 	}
 
-	// Convert spans to calls for easier comparison
+	// Convert spans to calls for easier comparison.
 	var got []Call
 	for _, span := range spans {
 		call := SpanToCall(span)
-		// Check if the span belongs to the expected package
+		// Check if the span belongs to the expected package.
 		if !hasAttributeWithValue(call.Attrs, iotel.PackageKey, pkg) {
 			continue
 		}
-		// Check if the span belongs to the expected provider
+		// Check if the span belongs to the expected provider.
 		if provider != "" && !hasAttributeWithValue(call.Attrs, iotel.ProviderKey, provider) {
 			continue
 		}
@@ -49,7 +49,7 @@ func Diff(spans []sdktrace.ReadOnlySpan, pkg, provider string, want []Call) stri
 		return fmt.Sprintf("got %d matching spans, want %d", len(got), len(want))
 	}
 
-	// Verify each span matches the expected call
+	// Verify each span matches the expected call.
 	for i, g := range got {
 		w := want[i]
 		if g.Method != w.Method {

@@ -24,7 +24,7 @@ import (
 )
 
 // Units are encoded according to the case-sensitive abbreviations from the
-// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html
+// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html.
 const (
 	UnitDimensionless = "1"
 	UnitBytes         = "By"
@@ -47,7 +47,7 @@ func Views() []sdkmetric.View {
 
 	return []sdkmetric.View{
 
-		// View for latency histogram
+		// View for latency histogram.
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
 				if strings.HasSuffix(inst.Name, "/latency") {
@@ -67,7 +67,7 @@ func Views() []sdkmetric.View {
 			return sdkmetric.Stream{}, false
 		},
 
-		// View for completed_calls count
+		// View for completed_calls count.
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
 				if strings.HasSuffix(inst.Name, "/latency") {

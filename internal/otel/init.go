@@ -65,10 +65,10 @@ func ConfigureTraceProvider(serviceName string, exporter sdktrace.SpanExporter, 
 		sdktrace.WithSampler(sampler),
 	)
 
-	// Set the global trace provider
+	// Set the global trace provider.
 	otel.SetTracerProvider(tp)
 
-	// Set the global propagator to tracecontext (the default is no-op)
+	// Set the global propagator to tracecontext (the default is no-op).
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return tp.Shutdown, nil
@@ -98,7 +98,7 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 		return nil, nil, err
 	}
 
-	// Create a periodic reader with the exporter
+	// Create a periodic reader with the exporter.
 	reader := sdkmetric.NewPeriodicReader(
 		exporter,
 		sdkmetric.WithInterval(60*time.Second),
@@ -110,10 +110,10 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 		sdkmetric.WithView(Views()...),
 	)
 
-	// Set the global meter provider
+	// Set the global meter provider.
 	otel.SetMeterProvider(mp)
 
-	// Function to force collection and export of metrics
+	// Function to force collection and export of metrics.
 	forceCollect := func(ctx context.Context) error {
 		// Periodic readers have ForceFlush method we can use
 		return reader.ForceFlush(ctx)

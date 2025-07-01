@@ -17,17 +17,14 @@ package secrets
 import (
 	"context"
 	"errors"
-	"gocloud.dev/internal/testing/oteltest"
-	"net/url"
-	"strings"
-	"sync"
-	"testing"
-	"time"
-
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/testing/oteltest"
 	"gocloud.dev/secrets/driver"
+	"net/url"
+	"strings"
+	"testing"
 )
 
 var errFake = errors.New("fake")
@@ -105,7 +102,7 @@ func TestOpenTelemetry(t *testing.T) {
 
 	_, _ = k.Decrypt(ctx, nil)
 
-	// Check collected spans
+	// Check collected spans.
 	spanStubs := te.SpanStubs()
 	diff := oteltest.Diff(spanStubs.Snapshots(), pkgName, "", []oteltest.Call{
 		{Method: "Encrypt", Status: gcerrors.Internal.String()},
@@ -115,20 +112,12 @@ func TestOpenTelemetry(t *testing.T) {
 		t.Error(diff)
 	}
 
-	// Safe shutdown with very short timeout to avoid hanging
-	sctx, scancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-	defer scancel()
-	if err := te.Shutdown(sctx); err != nil {
-		// Just log and continue - not failing the test on shutdown errors
+	if err := te.Shutdown(ctx); err != nil {
+		// Just log and continue - not failing the test on shutdown errors.
 		t.Logf("OpenTelemetry shutdown error (non-fatal): %v", err)
 	}
 
 }
-
-var (
-	testOpenOnce sync.Once
-	testOpenGot  *url.URL
-)
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
@@ -236,7 +225,7 @@ func TestURLMux(t *testing.T) {
 }
 
 type fakeOpener struct {
-	u *url.URL // last url passed to OpenKeeperURL
+	u *url.URL // last url passed to OpenKeeperURL.
 }
 
 func (o *fakeOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error) {

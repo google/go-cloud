@@ -50,7 +50,7 @@ type MetricExporter struct {
 	reader   *sdkmetric.PeriodicReader
 }
 
-// NewMetricExporter creates a new metric exporter for testing
+// NewMetricExporter creates a new metric exporter for testing.
 func NewMetricExporter() *MetricExporter {
 	exporter := &MetricExporter{
 		metricCh: make(chan metricdata.ScopeMetrics, 10),
@@ -58,7 +58,7 @@ func NewMetricExporter() *MetricExporter {
 
 	exporter.reader = sdkmetric.NewPeriodicReader(
 		exporter,
-		// Use a short export interval for tests
+		// Use a short export interval for tests.
 		sdkmetric.WithInterval(100*time.Millisecond),
 	)
 
@@ -94,19 +94,19 @@ func (e *MetricExporter) Export(ctx context.Context, data *metricdata.ResourceMe
 	return nil
 }
 
-// ForceFlush forces a flush of metrics
+// ForceFlush forces a flush of metrics.
 func (e *MetricExporter) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-// GetMetrics returns all collected metrics
+// GetMetrics returns all collected metrics.
 func (e *MetricExporter) GetMetrics() []metricdata.ScopeMetrics {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.metrics
 }
 
-// WaitForMetrics waits for metrics to be collected
+// WaitForMetrics waits for metrics to be collected.
 func (e *MetricExporter) WaitForMetrics(timeout time.Duration) (metricdata.ScopeMetrics, bool) {
 	select {
 	case sm := <-e.metricCh:
@@ -181,7 +181,7 @@ func (te *TestExporter) Metrics() []metricdata.ScopeMetrics {
 	return te.metricExporter.GetMetrics()
 }
 
-// WaitForMetrics waits for metrics to be collected and returns the first scope
+// WaitForMetrics waits for metrics to be collected and returns the first scope.
 func (te *TestExporter) WaitForMetrics(timeout time.Duration) (metricdata.ScopeMetrics, bool) {
 	return te.metricExporter.WaitForMetrics(timeout)
 }
@@ -199,30 +199,30 @@ func (te *TestExporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// Call represents a method call/span with its result code
+// Call represents a method call/span with its result code.
 type Call struct {
 	Method string
 	Status string
 	Attrs  []attribute.KeyValue
 }
 
-// SpanToCall converts a span to a Call
+// SpanToCall converts a span to a Call.
 func SpanToCall(span sdktrace.ReadOnlySpan) Call {
 	var method, status string
 	var attrs []attribute.KeyValue
 
-	// Copy attributes
+	// Copy attributes.
 	spanAttrs := span.Attributes()
 	attrs = make([]attribute.KeyValue, 0, len(spanAttrs))
 	for _, attr := range spanAttrs {
 		attrs = append(attrs, attr)
 
-		// Extract method if available
+		// Extract method if available.
 		if attr.Key == iotel.MethodKey {
 			method = attr.Value.AsString()
 		}
 
-		// Extract status if available
+		// Extract status if available.
 		if attr.Key == iotel.StatusKey {
 			status = attr.Value.AsString()
 		}
