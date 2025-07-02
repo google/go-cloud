@@ -43,18 +43,18 @@ type TestExporter struct {
 }
 
 // MetricExporter is a simple metrics exporter for testing.
+// It implements the sdkmetric.Exporter interface
 type MetricExporter struct {
-	mu       sync.Mutex
-	metrics  []metricdata.ScopeMetrics
-	metricCh chan metricdata.ScopeMetrics
-	reader   *sdkmetric.PeriodicReader
+	mu      sync.Mutex
+	metrics []metricdata.ScopeMetrics
+	reader  *sdkmetric.PeriodicReader
 }
+
+var _ sdkmetric.Exporter = (*MetricExporter)(nil)
 
 // NewMetricExporter creates a new metric exporter for testing.
 func NewMetricExporter() *MetricExporter {
-	exporter := &MetricExporter{
-		metricCh: make(chan metricdata.ScopeMetrics, 10),
-	}
+	exporter := &MetricExporter{}
 
 	exporter.reader = sdkmetric.NewPeriodicReader(
 		exporter,
@@ -83,12 +83,6 @@ func (e *MetricExporter) Export(ctx context.Context, data *metricdata.ResourceMe
 	// Store metrics for each scope
 	for _, sm := range data.ScopeMetrics {
 		e.metrics = append(e.metrics, sm)
-
-		// Also send via channel
-		select {
-		case e.metricCh <- sm:
-		default:
-		}
 	}
 
 	return nil
@@ -99,26 +93,20 @@ func (e *MetricExporter) ForceFlush(ctx context.Context) error {
 	return nil
 }
 
-// GetMetrics returns all collected metrics.
-func (e *MetricExporter) GetMetrics() []metricdata.ScopeMetrics {
+// Reset the current in-memory storage.
+func (e *MetricExporter) Reset() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return e.metrics
-}
-
-// WaitForMetrics waits for metrics to be collected.
-func (e *MetricExporter) WaitForMetrics(timeout time.Duration) (metricdata.ScopeMetrics, bool) {
-	select {
-	case sm := <-e.metricCh:
-		return sm, true
-	case <-time.After(timeout):
-		return metricdata.ScopeMetrics{}, false
-	}
+	e.metrics = nil
 }
 
 // Shutdown shuts down the exporter.
 func (e *MetricExporter) Shutdown(ctx context.Context) error {
-	return e.reader.Shutdown(ctx)
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.Reset()
+
+	return nil
 }
 
 // NewTestExporter creates a TestExporter and registers it with OpenTelemetry.
@@ -163,26 +151,9 @@ func NewTestExporter(t *testing.T, views []sdkmetric.View) *TestExporter {
 	}
 }
 
-// Spans returns the collected spans.
-func (te *TestExporter) Spans() []sdktrace.ReadOnlySpan {
-	// Return an empty slice for now - the actual spans can be retrieved using SpanStubs()
-	// This is a compatibility layer as the tracetest package is still evolving
-	return []sdktrace.ReadOnlySpan{}
-}
-
 // SpanStubs returns the collected span stubs.
 func (te *TestExporter) SpanStubs() tracetest.SpanStubs {
 	return te.spanExporter.GetSpans()
-}
-
-// Metrics returns the collected metrics.
-func (te *TestExporter) Metrics() []metricdata.ScopeMetrics {
-	return te.metricExporter.GetMetrics()
-}
-
-// WaitForMetrics waits for metrics to be collected and returns the first scope.
-func (te *TestExporter) WaitForMetrics(timeout time.Duration) (metricdata.ScopeMetrics, bool) {
-	return te.metricExporter.WaitForMetrics(timeout)
 }
 
 // ForceFlush forces the export of all metrics.
