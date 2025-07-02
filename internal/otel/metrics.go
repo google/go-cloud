@@ -94,7 +94,7 @@ func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 		PackageKey.String(pkg),
 		ProviderKey.String(provider),
 	}
-	
+
 	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
 
 	m, err := pkgMeter.Float64Histogram(
