@@ -36,9 +36,7 @@ var (
 	ErrorKey    = attribute.Key("gocdk_error")
 )
 
-type traceContextKey string
-
-const startTimeContextKey traceContextKey = "spanStartTime"
+const startTimeContextKey = "spanStartTime"
 
 // Tracer provides OpenTelemetry tracing for Go CDK packages.
 type Tracer struct {
