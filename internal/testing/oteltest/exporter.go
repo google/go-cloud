@@ -116,28 +116,27 @@ func (e *MetricExporter) WaitForMetrics(timeout time.Duration) (metricdata.Scope
 	}
 }
 
-// Shutdown shuts down the exporter
+// Shutdown shuts down the exporter.
 func (e *MetricExporter) Shutdown(ctx context.Context) error {
 	return e.reader.Shutdown(ctx)
 }
 
 // NewTestExporter creates a TestExporter and registers it with OpenTelemetry.
-func NewTestExporter(t *testing.T) *TestExporter {
+func NewTestExporter(t *testing.T, views []sdkmetric.View) *TestExporter {
 	// Create span exporter
 	spanExporter := tracetest.NewInMemoryExporter()
 
-	// Create resource
 	res := resource.NewSchemaless()
 
-	traceShutdown, err := iotel.ConfigureTraceProvider("test", spanExporter, sdktrace.AlwaysSample(), res, true)
+	traceShutdown, err := ConfigureTraceProvider("test", spanExporter, sdktrace.AlwaysSample(), res, true)
 	if err != nil {
 		t.Fatalf("Failed to configure trace provider: %v", err)
 	}
 	// Create metric exporter
 	metricExporter := NewMetricExporter()
 
-	// Create and register meter provider
-	_, metricsShutdown, err := iotel.ConfigureMeterProvider("test", metricExporter, res)
+	// Create and register meter provider.
+	_, metricsShutdown, err := ConfigureMeterProvider("test", metricExporter, res, views)
 	if err != nil {
 		t.Fatalf("Failed to configure meter provider: %v", err)
 	}

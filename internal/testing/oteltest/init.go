@@ -12,20 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otel
+package oteltest
 
 import (
 	"context"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // ConfigureTraceProvider sets up the global trace provider with the given exporter.
@@ -74,14 +72,9 @@ func ConfigureTraceProvider(serviceName string, exporter sdktrace.SpanExporter, 
 	return tp.Shutdown, nil
 }
 
-// TracerForPackage returns a tracer for the given package using the global provider.
-func TracerForPackage(pkg string) trace.Tracer {
-	return otel.Tracer(pkg)
-}
-
 // ConfigureMeterProvider sets up the given meter provider with the given exporter.
 // It returns a function to collect and export metrics on demand, and a shutdown function.
-func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res *resource.Resource) (func(context.Context) error, func(context.Context) error, error) {
+func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res *resource.Resource, views []sdkmetric.View) (func(context.Context) error, func(context.Context) error, error) {
 	var err error
 	if res == nil {
 		res = resource.Default()
@@ -107,7 +100,7 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithResource(res),
-		sdkmetric.WithView(Views()...),
+		sdkmetric.WithView(views...),
 	)
 
 	// Set the global meter provider.
@@ -123,9 +116,4 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 		_ = forceCollect(ctx)
 		return mp.Shutdown(ctx)
 	}, nil
-}
-
-// MeterForPackage returns a meter for the given package using the global provider.
-func MeterForPackage(pkg string, provider string) metric.Meter {
-	return otel.Meter(pkg, metric.WithInstrumentationAttributes(ProviderKey.String(provider)))
 }

@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 	"gocloud.dev/gcerrors"
 	"reflect"
 	"time"
@@ -91,7 +90,7 @@ func (t *Tracer) Start(ctx context.Context, methodName string) (context.Context,
 		attrs = append(attrs, ProviderKey.String(t.Provider))
 	}
 
-	tracer := TracerForPackage(t.Package)
+	tracer := tracerForPackage(t.Package)
 	sCtx, span := tracer.Start(ctx, fullName, trace.WithAttributes(attrs...))
 	return context.WithValue(sCtx, startTimeContextKey, time.Now()), span
 }
@@ -119,13 +118,13 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 	span.End()
 
 	t.LatencyMeasure.Record(ctx,
-		float64(elapsed.Nanoseconds())/1e6, // milliseconds
+		float64(elapsed.Milliseconds()),
 		metric.WithAttributes(
 			StatusKey.String(fmt.Sprint(code))),
 	)
 }
 
-// TracingEnabled returns whether tracing is currently enabled.
-func TracingEnabled() bool {
-	return otel.GetTracerProvider() != noop.NewTracerProvider()
+// tracerForPackage returns a tracer for the given package using the global provider.
+func tracerForPackage(pkg string) trace.Tracer {
+	return otel.Tracer(pkg)
 }

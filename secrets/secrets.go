@@ -76,6 +76,14 @@ func newKeeper(k driver.Keeper) *Keeper {
 
 const pkgName = "gocloud.dev/secrets"
 
+var (
+
+	// OpenTelemetryViews are predefined views for OpenTelemetry metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the explanations at https://opentelemetry.io/docs/specs/otel/metrics/data-model/ for usage.
+	OpenTelemetryViews = gcdkotel.Views(pkgName)
+)
+
 // Encrypt encrypts the plaintext and returns the cipher message.
 func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
 	ctx, span := k.tracer.Start(ctx, "Encrypt")

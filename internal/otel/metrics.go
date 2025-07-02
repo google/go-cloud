@@ -17,6 +17,7 @@ package otel
 
 import (
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -43,14 +44,14 @@ var (
 	}
 )
 
-func Views() []sdkmetric.View {
+func Views(pkg string) []sdkmetric.View {
 
 	return []sdkmetric.View{
 
 		// View for latency histogram.
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				if strings.HasSuffix(inst.Name, "/latency") {
+				if inst.Name == pkg+"/latency" {
 					return sdkmetric.Stream{
 						Name:        inst.Name,
 						Description: "Distribution of method latency, by provider and method.",
@@ -70,7 +71,7 @@ func Views() []sdkmetric.View {
 		// View for completed_calls count.
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				if strings.HasSuffix(inst.Name, "/latency") {
+				if inst.Name == pkg+"/latency" {
 					return sdkmetric.Stream{
 						Name:        strings.Replace(inst.Name, "/latency", "/completed_calls", 1),
 						Description: "Count of method calls by provider, method and status.",
@@ -83,48 +84,13 @@ func Views() []sdkmetric.View {
 			}
 			return sdkmetric.Stream{}, false
 		},
-
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindCounter {
-				if strings.HasSuffix(inst.Name, "/bytes_read") {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: "Sum of bytes read from the service.",
-						Aggregation: sdkmetric.AggregationSum{},
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
-						},
-					}, true
-				}
-			}
-
-			return sdkmetric.Stream{}, false
-		},
-
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindCounter {
-				if strings.HasSuffix(inst.Name, "/bytes_written") {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: "Sum of bytes written to the service.",
-						Aggregation: sdkmetric.AggregationSum{},
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
-						},
-					}, true
-				}
-			}
-
-			return sdkmetric.Stream{}, false
-		},
 	}
 }
 
-// LatencyMeasure returns the measure for method call latency used
-// by Go CDK APIs.
+// LatencyMeasure returns the measure for method call latency used by Go CDK APIs.
 func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 
-	pkgMeter := MeterForPackage(pkg, provider)
+	pkgMeter := meterForPackage(pkg, provider)
 
 	m, err := pkgMeter.Float64Histogram(
 		pkg+"/latency",
@@ -141,26 +107,7 @@ func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 	return m
 }
 
-func BytesMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg, provider)
-	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitBytes))
-
-	if err != nil {
-		// The only possible errors are from invalid key or value names, and those are programming
-		// errors that will be found during testing.
-		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
-	}
-	return m
-}
-
-func DimensionlessMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg, provider)
-	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitDimensionless))
-
-	if err != nil {
-		// The only possible errors are from invalid key or value names, and those are programming
-		// errors that will be found during testing.
-		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
-	}
-	return m
+// meterForPackage returns a meter for the given package using the global provider.
+func meterForPackage(pkg string, provider string) metric.Meter {
+	return otel.Meter(pkg, metric.WithInstrumentationAttributes(ProviderKey.String(provider)))
 }
