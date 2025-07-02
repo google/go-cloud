@@ -104,7 +104,7 @@ func TestOpenTelemetry(t *testing.T) {
 
 	// Check collected spans.
 	spanStubs := te.SpanStubs()
-	diff := oteltest.Diff(spanStubs.Snapshots(), pkgName, "", []oteltest.Call{
+	diff := oteltest.Diff(spanStubs.Snapshots(), []oteltest.Call{
 		{Method: "Encrypt", Status: gcerrors.Internal.String()},
 		{Method: "Decrypt", Status: gcerrors.Internal.String()},
 	})

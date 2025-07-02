@@ -16,16 +16,12 @@ package oteltest
 
 import (
 	"fmt"
-	iotel "gocloud.dev/internal/otel"
-	"strings"
-
-	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // Diff compares OpenTelemetry trace spans and metrics to expected values.
 // It returns a non-empty string if there are any discrepancies.
-func Diff(spans []sdktrace.ReadOnlySpan, pkg, provider string, want []Call) string {
+func Diff(spans []sdktrace.ReadOnlySpan, want []Call) string {
 	if len(spans) != len(want) {
 		return fmt.Sprintf("got %d spans, want %d", len(spans), len(want))
 	}
@@ -34,14 +30,7 @@ func Diff(spans []sdktrace.ReadOnlySpan, pkg, provider string, want []Call) stri
 	var got []Call
 	for _, span := range spans {
 		call := SpanToCall(span)
-		// Check if the span belongs to the expected package.
-		if !hasAttributeWithValue(call.Attrs, iotel.PackageKey, pkg) {
-			continue
-		}
-		// Check if the span belongs to the expected provider.
-		if provider != "" && !hasAttributeWithValue(call.Attrs, iotel.ProviderKey, provider) {
-			continue
-		}
+
 		got = append(got, call)
 	}
 
@@ -61,57 +50,4 @@ func Diff(spans []sdktrace.ReadOnlySpan, pkg, provider string, want []Call) stri
 	}
 
 	return ""
-}
-
-// DiffSpanAttr verifies that a span has an attribute with the expected value.
-// It's useful for more detailed assertions on span attributes.
-func DiffSpanAttr(span sdktrace.ReadOnlySpan, key attribute.Key, wantValue string) string {
-	for _, attr := range span.Attributes() {
-		if attr.Key == key {
-			if attr.Value.AsString() == wantValue {
-				return ""
-			}
-			return fmt.Sprintf("for key %s: got %q, want %q", key, attr.Value.AsString(), wantValue)
-		}
-	}
-	return fmt.Sprintf("key %s not found", key)
-}
-
-// hasAttributeWithValue checks if the attribute set contains a key with the expected value.
-func hasAttributeWithValue(attrs []attribute.KeyValue, key attribute.Key, value string) bool {
-	for _, attr := range attrs {
-		if attr.Key == key && attr.Value.AsString() == value {
-			return true
-		}
-	}
-	return false
-}
-
-// FormatSpans returns a formatted string of span data for debugging.
-func FormatSpans(spans []sdktrace.ReadOnlySpan) string {
-	var b strings.Builder
-	for i, span := range spans {
-		fmt.Fprintf(&b, "#%d: %s\n", i, span.Name())
-		fmt.Fprintf(&b, "  TraceID: %s\n", span.SpanContext().TraceID())
-		fmt.Fprintf(&b, "  SpanID: %s\n", span.SpanContext().SpanID())
-		fmt.Fprintf(&b, "  Status: %s\n", span.Status().Code)
-
-		if len(span.Attributes()) > 0 {
-			fmt.Fprintf(&b, "  Attributes:\n")
-			for _, attr := range span.Attributes() {
-				fmt.Fprintf(&b, "    %s: %s\n", attr.Key, attr.Value.AsString())
-			}
-		}
-
-		if len(span.Events()) > 0 {
-			fmt.Fprintf(&b, "  Events:\n")
-			for _, event := range span.Events() {
-				fmt.Fprintf(&b, "    %s\n", event.Name)
-				for _, attr := range event.Attributes {
-					fmt.Fprintf(&b, "      %s: %s\n", attr.Key, attr.Value.AsString())
-				}
-			}
-		}
-	}
-	return b.String()
 }

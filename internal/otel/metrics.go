@@ -90,7 +90,12 @@ func Views(pkg string) []sdkmetric.View {
 // LatencyMeasure returns the measure for method call latency used by Go CDK APIs.
 func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 
-	pkgMeter := meterForPackage(pkg, provider)
+	attrs := []attribute.KeyValue{
+		PackageKey.String(pkg),
+		ProviderKey.String(provider),
+	}
+	
+	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
 
 	m, err := pkgMeter.Float64Histogram(
 		pkg+"/latency",
@@ -105,9 +110,4 @@ func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 	}
 
 	return m
-}
-
-// meterForPackage returns a meter for the given package using the global provider.
-func meterForPackage(pkg string, provider string) metric.Meter {
-	return otel.Meter(pkg, metric.WithInstrumentationAttributes(ProviderKey.String(provider)))
 }

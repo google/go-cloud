@@ -42,13 +42,14 @@ const startTimeContextKey traceContextKey = "spanStartTime"
 
 // Tracer provides OpenTelemetry tracing for Go CDK packages.
 type Tracer struct {
-	Package        string
-	Provider       string
-	LatencyMeasure metric.Float64Histogram
+	pkg            string
+	provider       string
+	tracer         trace.Tracer
+	latencyMeasure metric.Float64Histogram
 }
 
 // ProviderName returns the name of the provider associated with the driver value.
-// It is intended to be used to set Tracer.Provider.
+// It is intended to be used as the provider argument to NewTracer.
 // It actually returns the package path of the driver's type.
 func ProviderName(driver any) string {
 	// Return the last component of the package path.
@@ -62,36 +63,29 @@ func ProviderName(driver any) string {
 	return t.PkgPath()
 }
 
-// NewTracer creates a new Tracer for a package and optional provider.
-func NewTracer(pkg string, provider ...string) *Tracer {
-	providerName := ""
-	if len(provider) > 0 && provider[0] != "" {
-		providerName = provider[0]
+// NewTracer creates a new Tracer for a package and provider.
+func NewTracer(pkg string, provider string) *Tracer {
+
+	attrs := []attribute.KeyValue{
+		PackageKey.String(pkg),
+		ProviderKey.String(provider),
 	}
 
+	tracer := otel.Tracer(pkg, trace.WithInstrumentationAttributes(attrs...))
+
 	return &Tracer{
-		Package:        pkg,
-		Provider:       providerName,
-		LatencyMeasure: LatencyMeasure(pkg, providerName),
+		pkg:            pkg,
+		provider:       provider,
+		tracer:         tracer,
+		latencyMeasure: LatencyMeasure(pkg, provider),
 	}
 }
 
 // Start creates and starts a new span and returns the updated context and span.
 func (t *Tracer) Start(ctx context.Context, methodName string) (context.Context, trace.Span) {
-	fullName := t.Package + "." + methodName
+	fullName := t.pkg + "." + methodName
 
-	// Build attributes list
-	attrs := []attribute.KeyValue{
-		PackageKey.String(t.Package),
-		MethodKey.String(methodName),
-	}
-
-	if t.Provider != "" {
-		attrs = append(attrs, ProviderKey.String(t.Provider))
-	}
-
-	tracer := tracerForPackage(t.Package)
-	sCtx, span := tracer.Start(ctx, fullName, trace.WithAttributes(attrs...))
+	sCtx, span := t.tracer.Start(ctx, fullName, trace.WithAttributes(MethodKey.String(methodName)))
 	return context.WithValue(sCtx, startTimeContextKey, time.Now()), span
 }
 
@@ -117,14 +111,9 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 
 	span.End()
 
-	t.LatencyMeasure.Record(ctx,
+	t.latencyMeasure.Record(ctx,
 		float64(elapsed.Milliseconds()),
 		metric.WithAttributes(
 			StatusKey.String(fmt.Sprint(code))),
 	)
-}
-
-// tracerForPackage returns a tracer for the given package using the global provider.
-func tracerForPackage(pkg string) trace.Tracer {
-	return otel.Tracer(pkg)
 }

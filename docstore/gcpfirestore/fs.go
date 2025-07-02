@@ -668,7 +668,7 @@ func (c *collection) commit(ctx context.Context, ws []*pb.Write, opts *driver.Ru
 	return res.WriteResults, nil
 }
 
-///////////////
+// /////////////
 // From memdocstore/mem.go.
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
@@ -704,7 +704,7 @@ func getParentMap(m map[string]*pb.Value, fp []string, create bool) (map[string]
 	return m, nil
 }
 
-////////////////
+// //////////////
 // From fieldpath.go in cloud.google.com/go/firestore.
 
 // Convert a docstore field path, which is a []string, into the kind of field path
