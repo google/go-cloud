@@ -102,12 +102,14 @@ func TestOpenTelemetry(t *testing.T) {
 	_, _ = k.Encrypt(ctx, nil)
 
 	_, _ = k.Decrypt(ctx, nil)
+	_, _ = k.Decrypt(ctx, nil)
 
 	// Check collected spans.
 	spanStubs := te.GetSpans()
 	metrics := te.GetMetrics(ctx)
 	diff := oteltest.Diff(spanStubs.Snapshots(), metrics, pkgName, "gocloud.dev/secrets", []oteltest.Call{
 		{Method: "Encrypt", Code: gcerrors.Internal},
+		{Method: "Decrypt", Code: gcerrors.Internal},
 		{Method: "Decrypt", Code: gcerrors.Internal},
 	})
 	if diff != "" {
