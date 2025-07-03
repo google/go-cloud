@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	DefaultMillisecondsBoundaries = []float64{
+	defaultMillisecondsBoundaries = []float64{
 		0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
 		2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0,
 		13.0, 16.0, 20.0, 25.0, 30.0, 40.0,
@@ -53,10 +53,10 @@ func Views(pkg string) []sdkmetric.View {
 						Name:        inst.Name,
 						Description: "Distribution of method latency, by provider and method.",
 						Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
-							Boundaries: DefaultMillisecondsBoundaries,
+							Boundaries: defaultMillisecondsBoundaries,
 						},
 						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
+							return kv.Key == packageKey || kv.Key == methodKey
 						},
 					}, true
 				}
@@ -74,7 +74,7 @@ func Views(pkg string) []sdkmetric.View {
 						Description: "Count of method calls by provider, method and status.",
 						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
 						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == MethodKey || kv.Key == StatusKey
+							return kv.Key == methodKey || kv.Key == statusKey
 						},
 					}, true
 				}
@@ -88,8 +88,8 @@ func Views(pkg string) []sdkmetric.View {
 func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 
 	attrs := []attribute.KeyValue{
-		PackageKey.String(pkg),
-		ProviderKey.String(provider),
+		packageKey.String(pkg),
+		providerKey.String(provider),
 	}
 
 	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))

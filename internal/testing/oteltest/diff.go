@@ -17,7 +17,6 @@ package oteltest
 import (
 	"fmt"
 	"go.opentelemetry.io/otel/codes"
-	gcdkotel "gocloud.dev/internal/otel"
 	"sort"
 	"strings"
 
@@ -25,6 +24,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/gcerrors"
+)
+
+var (
+	methodKey   = attribute.Key("gocdk_method")
+	providerKey = attribute.Key("gocdk_provider")
+	statusKey   = attribute.Key("gocdk_status")
 )
 
 // Call represents a method call/span with its result code.
@@ -141,21 +146,21 @@ func diffCounts(got []metricdata.ScopeMetrics, prefix, provider string, wantCall
 	// Iterate through all collected metrics to find relevant data points
 	for _, sm := range got {
 
-		providerVal, providerOK := sm.Scope.Attributes.Value(gcdkotel.ProviderKey)
+		providerVal, providerOK := sm.Scope.Attributes.Value(providerKey)
 
 		for _, m := range sm.Metrics {
 			// gocloud usually records counts. Check for Sum metrics.
 			if sum, ok := m.Data.(metricdata.Sum[float64]); ok {
 				for _, dp := range sum.DataPoints {
-					methodVal, methodOK := dp.Attributes.Value(gcdkotel.MethodKey)
-					statusVal, statusOK := dp.Attributes.Value(gcdkotel.StatusKey)
+					methodVal, methodOK := dp.Attributes.Value(methodKey)
+					statusVal, statusOK := dp.Attributes.Value(statusKey)
 
 					if providerOK && methodOK && statusOK {
 
 						attrSet := attribute.NewSet(
-							gcdkotel.ProviderKey.String(providerVal.AsString()),
-							gcdkotel.MethodKey.String(methodVal.AsString()),
-							gcdkotel.StatusKey.String(statusVal.AsString()),
+							providerKey.String(providerVal.AsString()),
+							methodKey.String(methodVal.AsString()),
+							statusKey.String(statusVal.AsString()),
 						)
 
 						gotTags[attrSetToCanonicalString(attrSet)] = true
@@ -169,10 +174,10 @@ func diffCounts(got []metricdata.ScopeMetrics, prefix, provider string, wantCall
 	for _, wc := range wantCalls {
 		// Construct the expected set of attributes for the wanted call
 		expectedAttributes := attribute.NewSet(
-			gcdkotel.MethodKey.String(prefix+"."+wc.Method),
-			gcdkotel.ProviderKey.String(provider),
+			methodKey.String(prefix+"."+wc.Method),
+			providerKey.String(provider),
 			// gcerrors code is usually formatted as a string status in the attribute
-			gcdkotel.StatusKey.String(fmt.Sprint(wc.Code)),
+			statusKey.String(fmt.Sprint(wc.Code)),
 		)
 
 		// Canonicalize the expected attributes to check against the collected ones

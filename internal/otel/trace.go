@@ -29,11 +29,11 @@ import (
 
 // Common attribute keys used across the Go CDK.
 var (
-	MethodKey   = attribute.Key("gocdk_method")
-	PackageKey  = attribute.Key("gocdk_package")
-	ProviderKey = attribute.Key("gocdk_provider")
-	StatusKey   = attribute.Key("gocdk_status")
-	ErrorKey    = attribute.Key("gocdk_error")
+	methodKey   = attribute.Key("gocdk_method")
+	packageKey  = attribute.Key("gocdk_package")
+	providerKey = attribute.Key("gocdk_provider")
+	statusKey   = attribute.Key("gocdk_status")
+	errorKey    = attribute.Key("gocdk_error")
 )
 
 const (
@@ -68,8 +68,8 @@ func ProviderName(driver any) string {
 func NewTracer(pkg string, provider string) *Tracer {
 
 	attrs := []attribute.KeyValue{
-		PackageKey.String(pkg),
-		ProviderKey.String(provider),
+		packageKey.String(pkg),
+		providerKey.String(provider),
 	}
 
 	tracer := otel.Tracer(pkg, trace.WithInstrumentationAttributes(attrs...))
@@ -86,7 +86,7 @@ func NewTracer(pkg string, provider string) *Tracer {
 func (t *Tracer) Start(ctx context.Context, methodName string) (context.Context, trace.Span) {
 	fullName := t.pkg + "." + methodName
 
-	sCtx, span := t.tracer.Start(ctx, fullName, trace.WithAttributes(MethodKey.String(methodName)))
+	sCtx, span := t.tracer.Start(ctx, fullName, trace.WithAttributes(methodKey.String(methodName)))
 	sCtx = context.WithValue(sCtx, startTimeContextKey, time.Now())
 	return context.WithValue(sCtx, methodNameContextKey, fullName), span
 }
@@ -101,8 +101,8 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 	if err != nil {
 		code = gcerrors.Code(err)
 		span.SetAttributes(
-			ErrorKey.String(err.Error()),
-			StatusKey.String(fmt.Sprint(code)),
+			errorKey.String(err.Error()),
+			statusKey.String(fmt.Sprint(code)),
 		)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -118,7 +118,7 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 		float64(elapsed.Milliseconds()),
 
 		metric.WithAttributes(
-			StatusKey.String(fmt.Sprint(code)),
-			MethodKey.String(methodName)),
+			statusKey.String(fmt.Sprint(code)),
+			methodKey.String(methodName)),
 	)
 }
