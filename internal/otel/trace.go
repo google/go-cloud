@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-// Common attribute keys used across the Go CDK
+// Common attribute keys used across the Go CDK.
 var (
 	MethodKey   = attribute.Key("gocdk_method")
 	PackageKey  = attribute.Key("gocdk_package")
@@ -36,7 +36,10 @@ var (
 	ErrorKey    = attribute.Key("gocdk_error")
 )
 
-const startTimeContextKey = "spanStartTime"
+const (
+	startTimeContextKey  = "spanStartTimeCtxKey"
+	methodNameContextKey = "methodNameCtxKey"
+)
 
 // Tracer provides OpenTelemetry tracing for Go CDK packages.
 type Tracer struct {
@@ -84,12 +87,12 @@ func (t *Tracer) Start(ctx context.Context, methodName string) (context.Context,
 	fullName := t.pkg + "." + methodName
 
 	sCtx, span := t.tracer.Start(ctx, fullName, trace.WithAttributes(MethodKey.String(methodName)))
-	return context.WithValue(sCtx, startTimeContextKey, time.Now()), span
+	sCtx = context.WithValue(sCtx, startTimeContextKey, time.Now())
+	return context.WithValue(sCtx, methodNameContextKey, fullName), span
 }
 
 // End completes a span with error information if applicable.
 func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
-
 	startTime := ctx.Value(startTimeContextKey).(time.Time)
 	elapsed := time.Since(startTime)
 
@@ -109,9 +112,13 @@ func (t *Tracer) End(ctx context.Context, span trace.Span, err error) {
 
 	span.End()
 
+	methodName := ctx.Value(methodNameContextKey).(string)
+
 	t.latencyMeasure.Record(ctx,
 		float64(elapsed.Milliseconds()),
+
 		metric.WithAttributes(
-			StatusKey.String(fmt.Sprint(code))),
+			StatusKey.String(fmt.Sprint(code)),
+			MethodKey.String(methodName)),
 	)
 }

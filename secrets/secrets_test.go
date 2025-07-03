@@ -17,14 +17,15 @@ package secrets
 import (
 	"context"
 	"errors"
+	"net/url"
+	"strings"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/oteltest"
 	"gocloud.dev/secrets/driver"
-	"net/url"
-	"strings"
-	"testing"
 )
 
 var errFake = errors.New("fake")
@@ -103,10 +104,11 @@ func TestOpenTelemetry(t *testing.T) {
 	_, _ = k.Decrypt(ctx, nil)
 
 	// Check collected spans.
-	spanStubs := te.SpanStubs()
-	diff := oteltest.Diff(spanStubs.Snapshots(), []oteltest.Call{
-		{Method: "Encrypt", Status: gcerrors.Internal.String()},
-		{Method: "Decrypt", Status: gcerrors.Internal.String()},
+	spanStubs := te.GetSpans()
+	metrics := te.GetMetrics(ctx)
+	diff := oteltest.Diff(spanStubs.Snapshots(), metrics, pkgName, "gocloud.dev/secrets", []oteltest.Call{
+		{Method: "Encrypt", Code: gcerrors.Internal},
+		{Method: "Decrypt", Code: gcerrors.Internal},
 	})
 	if diff != "" {
 		t.Error(diff)

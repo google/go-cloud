@@ -16,8 +16,6 @@ package oteltest
 
 import (
 	"context"
-	"time"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -26,9 +24,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
-// ConfigureTraceProvider sets up the global trace provider with the given exporter.
+// configureTraceProvider sets up the global trace provider with the given exporter.
 // It returns a function to shut down the exporter.
-func ConfigureTraceProvider(serviceName string, exporter sdktrace.SpanExporter, sampler sdktrace.Sampler, res *resource.Resource, asyncExport bool) (func(context.Context) error, error) {
+func configureTraceProvider(serviceName string, exporter sdktrace.SpanExporter, sampler sdktrace.Sampler, res *resource.Resource, asyncExport bool) (func(context.Context) error, error) {
 	var err error
 	if res == nil {
 		res = resource.Default()
@@ -72,9 +70,9 @@ func ConfigureTraceProvider(serviceName string, exporter sdktrace.SpanExporter, 
 	return tp.Shutdown, nil
 }
 
-// ConfigureMeterProvider sets up the given meter provider with the given exporter.
+// configureMeterProvider sets up the given meter provider with the given exporter.
 // It returns a function to collect and export metrics on demand, and a shutdown function.
-func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res *resource.Resource, views []sdkmetric.View) (func(context.Context) error, func(context.Context) error, error) {
+func configureMeterProvider(serviceName string, reader sdkmetric.Reader, res *resource.Resource, views []sdkmetric.View) (func(context.Context) error, error) {
 	var err error
 	if res == nil {
 		res = resource.Default()
@@ -88,14 +86,8 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 		),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	// Create a periodic reader with the exporter.
-	reader := sdkmetric.NewPeriodicReader(
-		exporter,
-		sdkmetric.WithInterval(60*time.Second),
-	)
 
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader),
@@ -106,14 +98,7 @@ func ConfigureMeterProvider(serviceName string, exporter sdkmetric.Exporter, res
 	// Set the global meter provider.
 	otel.SetMeterProvider(mp)
 
-	// Function to force collection and export of metrics.
-	forceCollect := func(ctx context.Context) error {
-		// Periodic readers have ForceFlush method we can use
-		return reader.ForceFlush(ctx)
-	}
-
-	return forceCollect, func(ctx context.Context) error {
-		_ = forceCollect(ctx)
+	return func(ctx context.Context) error {
 		return mp.Shutdown(ctx)
 	}, nil
 }

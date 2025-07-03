@@ -27,10 +27,7 @@ import (
 // Units are encoded according to the case-sensitive abbreviations from the
 // Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html.
 const (
-	UnitDimensionless = "1"
-	UnitBytes         = "By"
-	UnitMilliseconds  = "ms"
-	UnitSeconds       = "s"
+	unitMilliseconds = "ms"
 )
 
 var (
@@ -100,7 +97,7 @@ func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 	m, err := pkgMeter.Float64Histogram(
 		pkg+"/latency",
 		metric.WithDescription("Latency distribution of method calls"),
-		metric.WithUnit(UnitMilliseconds),
+		metric.WithUnit(unitMilliseconds),
 	)
 
 	if err != nil {

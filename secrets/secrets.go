@@ -41,13 +41,13 @@ package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
-	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/openurl"
-	"gocloud.dev/secrets/driver"
 	"net/url"
 	"sync"
 
+	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/openurl"
 	gcdkotel "gocloud.dev/internal/otel"
+	"gocloud.dev/secrets/driver"
 )
 
 // Keeper does encryption and decryption. To create a Keeper, use constructors
