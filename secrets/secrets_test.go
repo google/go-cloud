@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Development Kit Authors
+// Copyright 2019-2025 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,13 +19,12 @@ import (
 	"errors"
 	"net/url"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/testing/octest"
+	"gocloud.dev/internal/testing/oteltest"
 	"gocloud.dev/secrets/driver"
 )
 
@@ -92,28 +91,37 @@ func TestKeeperIsClosed(t *testing.T) {
 	}
 }
 
-func TestOpenCensus(t *testing.T) {
+func TestOpenTelemetry(t *testing.T) {
+
 	ctx := context.Background()
-	te := octest.NewTestExporter(OpenCensusViews)
-	defer te.Unregister()
+
+	te := oteltest.NewTestExporter(t, OpenTelemetryViews)
 
 	k := NewKeeper(&erroringKeeper{})
 	defer k.Close()
-	k.Encrypt(ctx, nil)
-	k.Decrypt(ctx, nil)
-	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/secrets", "gocloud.dev/secrets", []octest.Call{
+	_, _ = k.Encrypt(ctx, nil)
+
+	_, _ = k.Decrypt(ctx, nil)
+	_, _ = k.Decrypt(ctx, nil)
+
+	// Check collected spans.
+	spanStubs := te.GetSpans()
+	metrics := te.GetMetrics(ctx)
+	diff := oteltest.Diff(spanStubs.Snapshots(), metrics, pkgName, "gocloud.dev/secrets", []oteltest.Call{
 		{Method: "Encrypt", Code: gcerrors.Internal},
+		{Method: "Decrypt", Code: gcerrors.Internal},
 		{Method: "Decrypt", Code: gcerrors.Internal},
 	})
 	if diff != "" {
 		t.Error(diff)
 	}
-}
 
-var (
-	testOpenOnce sync.Once
-	testOpenGot  *url.URL
-)
+	if err := te.Shutdown(ctx); err != nil {
+		// Just log and continue - not failing the test on shutdown errors.
+		t.Logf("OpenTelemetry shutdown error (non-fatal): %v", err)
+	}
+
+}
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
@@ -221,7 +229,7 @@ func TestURLMux(t *testing.T) {
 }
 
 type fakeOpener struct {
-	u *url.URL // last url passed to OpenKeeperURL
+	u *url.URL // last url passed to OpenKeeperURL.
 }
 
 func (o *fakeOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error) {
