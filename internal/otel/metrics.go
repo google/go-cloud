@@ -17,6 +17,7 @@ package otel
 
 import (
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -24,16 +25,13 @@ import (
 )
 
 // Units are encoded according to the case-sensitive abbreviations from the
-// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html
+// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html.
 const (
-	UnitDimensionless = "1"
-	UnitBytes         = "By"
-	UnitMilliseconds  = "ms"
-	UnitSeconds       = "s"
+	unitMilliseconds = "ms"
 )
 
 var (
-	DefaultMillisecondsBoundaries = []float64{
+	defaultMillisecondsBoundaries = []float64{
 		0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
 		2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0,
 		13.0, 16.0, 20.0, 25.0, 30.0, 40.0,
@@ -43,22 +41,22 @@ var (
 	}
 )
 
-func Views() []sdkmetric.View {
+func Views(pkg string) []sdkmetric.View {
 
 	return []sdkmetric.View{
 
-		// View for latency histogram
+		// View for latency histogram.
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				if strings.HasSuffix(inst.Name, "/latency") {
+				if inst.Name == pkg+"/latency" {
 					return sdkmetric.Stream{
 						Name:        inst.Name,
 						Description: "Distribution of method latency, by provider and method.",
 						Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
-							Boundaries: DefaultMillisecondsBoundaries,
+							Boundaries: defaultMillisecondsBoundaries,
 						},
 						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
+							return kv.Key == packageKey || kv.Key == methodKey
 						},
 					}, true
 				}
@@ -67,69 +65,39 @@ func Views() []sdkmetric.View {
 			return sdkmetric.Stream{}, false
 		},
 
-		// View for completed_calls count
+		// View for completed_calls count.
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindHistogram {
-				if strings.HasSuffix(inst.Name, "/latency") {
+				if inst.Name == pkg+"/latency" {
 					return sdkmetric.Stream{
 						Name:        strings.Replace(inst.Name, "/latency", "/completed_calls", 1),
 						Description: "Count of method calls by provider, method and status.",
 						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
 						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == MethodKey || kv.Key == StatusKey
+							return kv.Key == methodKey || kv.Key == statusKey
 						},
 					}, true
 				}
 			}
-			return sdkmetric.Stream{}, false
-		},
-
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindCounter {
-				if strings.HasSuffix(inst.Name, "/bytes_read") {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: "Sum of bytes read from the service.",
-						Aggregation: sdkmetric.AggregationSum{},
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
-						},
-					}, true
-				}
-			}
-
-			return sdkmetric.Stream{}, false
-		},
-
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindCounter {
-				if strings.HasSuffix(inst.Name, "/bytes_written") {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: "Sum of bytes written to the service.",
-						Aggregation: sdkmetric.AggregationSum{},
-						AttributeFilter: func(kv attribute.KeyValue) bool {
-							return kv.Key == PackageKey || kv.Key == MethodKey
-						},
-					}, true
-				}
-			}
-
 			return sdkmetric.Stream{}, false
 		},
 	}
 }
 
-// LatencyMeasure returns the measure for method call latency used
-// by Go CDK APIs.
+// LatencyMeasure returns the measure for method call latency used by Go CDK APIs.
 func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 
-	pkgMeter := MeterForPackage(pkg, provider)
+	attrs := []attribute.KeyValue{
+		packageKey.String(pkg),
+		providerKey.String(provider),
+	}
+
+	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
 
 	m, err := pkgMeter.Float64Histogram(
 		pkg+"/latency",
 		metric.WithDescription("Latency distribution of method calls"),
-		metric.WithUnit(UnitMilliseconds),
+		metric.WithUnit(unitMilliseconds),
 	)
 
 	if err != nil {
@@ -138,29 +106,5 @@ func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
 	}
 
-	return m
-}
-
-func BytesMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg, provider)
-	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitBytes))
-
-	if err != nil {
-		// The only possible errors are from invalid key or value names, and those are programming
-		// errors that will be found during testing.
-		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
-	}
-	return m
-}
-
-func DimensionlessMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
-	pkgMeter := MeterForPackage(pkg, provider)
-	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(UnitDimensionless))
-
-	if err != nil {
-		// The only possible errors are from invalid key or value names, and those are programming
-		// errors that will be found during testing.
-		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
-	}
 	return m
 }
