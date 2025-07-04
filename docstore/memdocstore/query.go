@@ -123,8 +123,8 @@ func applyComparison(op string, c int) bool {
 func compare(x1, x2 any, op string) (int, bool) {
 	v1 := reflect.ValueOf(x1)
 	v2 := reflect.ValueOf(x2)
-	// for in/not-in queries. otherwise this should only be reached with AllowNestedSliceQueries set
-	// return 0 if x1 is in slice x2, -1 if not.
+	// For in/not-in queries. Otherwise this should only be reached with AllowNestedSliceQueries set.
+	// Return 0 if x1 is in slice x2, -1 if not.
 	if v2.Kind() == reflect.Slice {
 		for i := range v2.Len() {
 			if c, ok := compare(x1, v2.Index(i).Interface(), op); ok {
@@ -139,8 +139,8 @@ func compare(x1, x2 any, op string) (int, bool) {
 		return -1, true
 	}
 	// See Options.AllowNestedSliceQueries
-	// when querying for x2 in the document and x1 is a list of values we only need one value to match
-	// the comparison value depends on the operator
+	// When querying for x2 in the document and x1 is a list of values we only need one value to match
+	// the comparison value depends on the operator.
 	if v1.Kind() == reflect.Slice {
 		v2Greater := false
 		v2Less := false

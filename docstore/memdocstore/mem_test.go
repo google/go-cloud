@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -258,6 +259,7 @@ func TestQueryNested(t *testing.T) {
 					gotKeys = append(gotKeys, key)
 				}
 			}
+			slices.Sort(gotKeys)
 
 			diff := cmp.Diff(gotKeys, tc.wantKeys)
 			if diff != "" {
