@@ -404,24 +404,24 @@ func (c *collection) checkRevision(arg driver.Document, current storedDoc) error
 	return nil
 }
 
-// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
-// if nested is true compare against all elements of a slice, see AllowNestedSliceQueries
+// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid.
+// If nested is true compare against all elements of a slice, see AllowNestedSliceQueries
 // (see getParentMap).
 func getAtFieldPath(m map[string]any, fp []string, nested bool) (result any, err error) {
 	var get func(m any, name string) any
 	get = func(m any, name string) any {
-		switch concrete := m.(type) {
+		switch m := m.(type) {
 		case map[string]any:
-			return concrete[name]
+			return m[name]
 		case []any:
 			if !nested {
 				return nil
 			}
 			var result []any
-			for _, e := range concrete {
+			for _, e := range m {
 				next := get(e, name)
-				// if we have slices within slices the compare function does not see the nested slices
-				// changing the compare function to be recursive would be more effort than flattening the slices here
+				// If we have slices within slices the compare function does not see the nested slices.
+				// Changing the compare function to be recursive would be more effort than flattening the slices here.
 				sliced, ok := next.([]any)
 				if ok {
 					result = append(result, sliced...)
