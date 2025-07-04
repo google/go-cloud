@@ -166,7 +166,7 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.lastErr == ErrClosed {
+	if errors.Is(c.lastErr, ErrClosed) {
 		return Snapshot{}, ErrClosed
 	} else if ctxErr != nil {
 		return Snapshot{}, ctxErr
@@ -201,7 +201,7 @@ func (c *Variable) background(ctx context.Context) {
 
 		// Updates under the lock.
 		c.mu.Lock()
-		if c.lastErr == ErrClosed {
+		if errors.Is(c.lastErr, ErrClosed) {
 			close(c.backgroundDone)
 			c.mu.Unlock()
 			return
@@ -260,7 +260,7 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if haveGood && c.lastErr != ErrClosed {
+	if haveGood && !errors.Is(c.lastErr, ErrClosed) {
 		return c.lastGood, nil
 	}
 	return Snapshot{}, c.lastErr
@@ -272,7 +272,7 @@ func (c *Variable) CheckHealth() error {
 	haveGood := c.haveGood()
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if haveGood && c.lastErr != ErrClosed {
+	if haveGood && !errors.Is(c.lastErr, ErrClosed) {
 		return nil
 	}
 	return c.lastErr
@@ -282,7 +282,7 @@ func (c *Variable) CheckHealth() error {
 func (c *Variable) Close() error {
 	// Record that we're closing. Subsequent calls to Watch/Latest will return ErrClosed.
 	c.mu.Lock()
-	if c.lastErr == ErrClosed {
+	if errors.Is(c.lastErr, ErrClosed) {
 		c.mu.Unlock()
 		return ErrClosed
 	}

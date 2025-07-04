@@ -131,7 +131,7 @@ func DimensionlessMeasure(pkg string, provider string, meterName string, descrip
 
 func CounterView(pkg string, meterName string, description string) []sdkmetric.View {
 	return []sdkmetric.View{
-		// View for completed_calls count.
+		// View for gauge counts.
 		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 			if inst.Kind == sdkmetric.InstrumentKindCounter {
 				if inst.Name == pkg+meterName {
