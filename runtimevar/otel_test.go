@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Development Kit Authors
+// Copyright 2019-2025 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,19 +16,22 @@ package runtimevar_test
 
 import (
 	"context"
-	"testing"
-
-	"go.opencensus.io/stats/view"
-	"gocloud.dev/internal/oc"
-	"gocloud.dev/internal/testing/octest"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/testing/oteltest"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/constantvar"
+	"testing"
 )
 
-func TestOpenCensus(t *testing.T) {
+const (
+	pkgName = "gocloud.dev/runtimevar"
+	driver  = "gocloud.dev/runtimevar/constantvar"
+)
+
+func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
-	te := octest.NewTestExporter(runtimevar.OpenCensusViews)
-	defer te.Unregister()
+	te := oteltest.NewTestExporter(t, runtimevar.OpenTelemetryViews)
+	defer te.Shutdown(ctx)
 
 	v := constantvar.New(1)
 	defer v.Close()
@@ -39,18 +42,13 @@ func TestOpenCensus(t *testing.T) {
 	cancel()
 	_, _ = v.Watch(cctx)
 
-	seen := false
-	const driver = "gocloud.dev/runtimevar/constantvar"
-	for _, row := range te.Counts() {
-		if _, ok := row.Data.(*view.CountData); !ok {
-			continue
-		}
-		if row.Tags[0].Key == oc.ProviderKey && row.Tags[0].Value == driver {
-			seen = true
-			break
-		}
-	}
-	if !seen {
-		t.Errorf("did not see count row with provider=%s", driver)
+	// Check metrics - during migration, we may need to look for different metric names.
+	metrics := te.GetMetrics(ctx)
+
+	diff := oteltest.DiffMetrics(metrics, pkgName, driver, []oteltest.Call{
+		{Method: "", Code: gcerrors.OK},
+	})
+	if diff != "" {
+		t.Error(diff)
 	}
 }

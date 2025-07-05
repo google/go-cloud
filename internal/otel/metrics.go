@@ -27,7 +27,8 @@ import (
 // Units are encoded according to the case-sensitive abbreviations from the
 // Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html.
 const (
-	unitMilliseconds = "ms"
+	unitDimensionless = "1"
+	unitMilliseconds  = "ms"
 )
 
 var (
@@ -107,4 +108,41 @@ func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 	}
 
 	return m
+}
+
+func DimensionlessMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
+
+	attrs := []attribute.KeyValue{
+		packageKey.String(pkg),
+		providerKey.String(provider),
+	}
+
+	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
+
+	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(unitDimensionless))
+
+	if err != nil {
+		// The only possible errors are from invalid key or value names,
+		// and those are programming errors that will be found during testing.
+		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
+	}
+	return m
+}
+
+func CounterView(pkg string, meterName string, description string) []sdkmetric.View {
+	return []sdkmetric.View{
+		// View for gauge counts.
+		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+			if inst.Kind == sdkmetric.InstrumentKindCounter {
+				if inst.Name == pkg+meterName {
+					return sdkmetric.Stream{
+						Name:        inst.Name,
+						Description: description,
+						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
+					}, true
+				}
+			}
+			return sdkmetric.Stream{}, false
+		},
+	}
 }

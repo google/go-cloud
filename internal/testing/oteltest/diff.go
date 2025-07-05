@@ -68,7 +68,7 @@ func formatCall(c *Call) string {
 // want is the list of expected calls.
 func Diff(gotSpans []sdktrace.ReadOnlySpan, gotMetrics []metricdata.ScopeMetrics, namePrefix, provider string, want []Call) string {
 	ds := diffSpans(gotSpans, namePrefix, want)
-	dc := diffCounts(gotMetrics, namePrefix, provider, want)
+	dc := DiffMetrics(gotMetrics, namePrefix, provider, want)
 	if len(ds) > 0 {
 		ds = "trace: " + ds + "\n"
 	}
@@ -117,7 +117,7 @@ func diffSpans(got []sdktrace.ReadOnlySpan, prefix string, want []Call) string {
 	return strings.Join(diffs, "\n")
 }
 
-func diffCounts(got []metricdata.ScopeMetrics, prefix, provider string, wantCalls []Call) string {
+func DiffMetrics(got []metricdata.ScopeMetrics, prefix, provider string, wantCalls []Call) string {
 	// OTel metric data is structured. We need to iterate through it to find the
 	// relevant metric data points and their attributes.
 	var diffs []string
@@ -125,7 +125,7 @@ func diffCounts(got []metricdata.ScopeMetrics, prefix, provider string, wantCall
 
 	// Helper to convert attribute.Set to a canonical string key
 	attrSetToCanonicalString := func(set attribute.Set) string {
-		// Get key-value pairs, sort them, and format into a stable string
+		// Get key-value pairs, sort them, and format into a stable string.
 		attrs := make([]attribute.KeyValue, 0, set.Len())
 		iter := set.Iter()
 		for iter.Next() {
@@ -143,45 +143,69 @@ func diffCounts(got []metricdata.ScopeMetrics, prefix, provider string, wantCall
 		return strings.Join(parts, ",")
 	}
 
-	// Iterate through all collected metrics to find relevant data points
+	// Helper function to collect relevant attributes for tag comparison.
+	processAtrributes := func(attrSets ...attribute.Set) {
+
+		var requiredAttributes []attribute.KeyValue
+		for _, attrSet := range attrSets {
+			for _, a := range attrSet.ToSlice() {
+				if a.Key == providerKey {
+					requiredAttributes = append(requiredAttributes, a)
+				}
+
+				if a.Key == methodKey {
+					requiredAttributes = append(requiredAttributes, a)
+				}
+
+				if a.Key == statusKey {
+					requiredAttributes = append(requiredAttributes, a)
+				}
+			}
+		}
+
+		if len(requiredAttributes) > 0 {
+			gotTags[attrSetToCanonicalString(attribute.NewSet(requiredAttributes...))] = true
+		}
+
+	}
+
+	// Iterate through all collected metrics to find relevant data points.
 	for _, sm := range got {
 
-		providerVal, providerOK := sm.Scope.Attributes.Value(providerKey)
-
 		for _, m := range sm.Metrics {
-			// gocloud usually records counts. Check for Sum metrics.
-			if sum, ok := m.Data.(metricdata.Sum[float64]); ok {
-				for _, dp := range sum.DataPoints {
-					methodVal, methodOK := dp.Attributes.Value(methodKey)
-					statusVal, statusOK := dp.Attributes.Value(statusKey)
 
-					if providerOK && methodOK && statusOK {
-
-						attrSet := attribute.NewSet(
-							providerKey.String(providerVal.AsString()),
-							methodKey.String(methodVal.AsString()),
-							statusKey.String(statusVal.AsString()),
-						)
-
-						gotTags[attrSetToCanonicalString(attrSet)] = true
-					}
+			// Using a switch will allow us accommodate other types of metrics.
+			switch v := m.Data.(type) {
+			case metricdata.Sum[int64]:
+				// Handle int64 Sum metrics.
+				for _, dp := range v.DataPoints {
+					processAtrributes(sm.Scope.Attributes, dp.Attributes)
 				}
+			case metricdata.Sum[float64]:
+				// gocloud usually records counts. Check for Sum metrics.
+				for _, dp := range v.DataPoints {
+					processAtrributes(sm.Scope.Attributes, dp.Attributes)
+				}
+			default:
+				// Handle any other types of metrics.
+				processAtrributes(sm.Scope.Attributes)
 			}
 		}
 	}
 
-	// Check that each wanted call has a corresponding metric data point with the correct attributes
+	// Check that each wanted call has a corresponding metric data point with the correct attributes.
 	for _, wc := range wantCalls {
-		// Construct the expected set of attributes for the wanted call
-		expectedAttributes := attribute.NewSet(
-			methodKey.String(prefix+"."+wc.Method),
-			providerKey.String(provider),
-			// gcerrors code is usually formatted as a string status in the attribute
-			statusKey.String(fmt.Sprint(wc.Code)),
-		)
+		// Construct the expected set of attributes for the wanted call.
+		expectedAttributes := []attribute.KeyValue{providerKey.String(provider)}
 
-		// Canonicalize the expected attributes to check against the collected ones
-		expectedKey := attrSetToCanonicalString(expectedAttributes)
+		if wc.Method != "" {
+			expectedAttributes = append(expectedAttributes,
+				methodKey.String(prefix+"."+wc.Method),
+				statusKey.String(fmt.Sprint(wc.Code)))
+		}
+
+		// Canonicalize the expected attributes to check against the collected ones.
+		expectedKey := attrSetToCanonicalString(attribute.NewSet(expectedAttributes...))
 
 		if !gotTags[expectedKey] {
 			diffs = append(diffs, fmt.Sprintf("missing metric data point with attributes %q", expectedKey))
