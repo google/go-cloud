@@ -67,7 +67,7 @@ func formatCall(c *Call) string {
 // provider is the name of the provider used (e.g., "aws").
 // want is the list of expected calls.
 func Diff(gotSpans []sdktrace.ReadOnlySpan, gotMetrics []metricdata.ScopeMetrics, namePrefix, provider string, want []Call) string {
-	ds := DiffSpans(gotSpans, namePrefix, want)
+	ds := diffSpans(gotSpans, namePrefix, want)
 	dc := DiffMetrics(gotMetrics, namePrefix, provider, want)
 	if len(ds) > 0 {
 		ds = "trace: " + ds + "\n"
@@ -86,7 +86,7 @@ func mapStatusCode(code gcerrors.ErrorCode) codes.Code {
 	return codes.Error
 }
 
-func DiffSpans(got []sdktrace.ReadOnlySpan, prefix string, want []Call) string {
+func diffSpans(got []sdktrace.ReadOnlySpan, prefix string, want []Call) string {
 	var diffs []string
 	add := func(i int, g sdktrace.ReadOnlySpan, w *Call) {
 		diffs = append(diffs, fmt.Sprintf("#%d: got %s, want %s", i, formatSpanData(g), formatCall(w)))
