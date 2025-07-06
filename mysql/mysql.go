@@ -26,8 +26,6 @@ import (
 
 	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/internal/openurl"
 )
 
@@ -42,24 +40,19 @@ func init() {
 // URLOpener opens URLs like "mysql://" by using the underlying MySQL driver.
 // like "mysql://user:password@localhost:3306/mydb".
 type URLOpener struct {
-	// No specific trace options needed for OpenTelemetry
+	TraceOpts []otelsql.Option
 }
 
-// OpenMySQLURL opens a new database connection with OpenTelemetry instrumentation.
+// OpenMySQLURL opens a new database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
 	cfg, err := ConfigFromURL(u)
 	if err != nil {
 		return nil, err
 	}
-
-	// Use OpenTelemetry-instrumented SQL connection directly
-	return otelsql.Open("mysql", cfg.FormatDSN(),
-		otelsql.WithAttributes(
-			semconv.DBSystemKey.String("mysql"),
-			semconv.DBNameKey.String(cfg.DBName),
-			attribute.String("service.name", "go-cloud-mysql"),
-		),
-	)
+	return sql.OpenDB(connector{
+		dsn:       cfg.FormatDSN(),
+		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
+	}), nil
 }
 
 var netAddrRE = regexp.MustCompile(`^(.+)\((.+)\)$`)
@@ -91,7 +84,8 @@ func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 }
 
 type connector struct {
-	dsn string
+	dsn       string
+	traceOpts []otelsql.Option
 }
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
@@ -99,8 +93,7 @@ func (c connector) Connect(context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	// Direct OpenTelemetry driver registration happens in otelsql.Open
-	return mysql.MySQLDriver{}
+	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
 // MySQLURLOpener implements MySQLURLOpener and can open connections based on a URL.
