@@ -16,15 +16,21 @@ package runtimevar_test
 
 import (
 	"context"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/testing/oteltest"
+	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/constantvar"
 	"testing"
-	"time"
+)
+
+const (
+	pkgName = "gocloud.dev/runtimevar"
+	driver  = "gocloud.dev/runtimevar/constantvar"
 )
 
 func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
-	te := oteltest.NewTestExporter(t)
+	te := oteltest.NewTestExporter(t, runtimevar.OpenTelemetryViews)
 	defer te.Shutdown(ctx)
 
 	v := constantvar.New(1)
@@ -36,37 +42,13 @@ func TestOpenTelemetry(t *testing.T) {
 	cancel()
 	_, _ = v.Watch(cctx)
 
-	// Check for spans
-	const driver = "gocloud.dev/runtimevar/constantvar"
+	// Check metrics - during migration, we may need to look for different metric names.
+	metrics := te.GetMetrics(ctx)
 
-	time.Sleep(2 * time.Second)
-	// Check metrics - during migration, we may need to look for different metric names
-	metrics := te.Metrics(ctx)
-	metricsFound := false
-	const metricName = "gocloud.dev/runtimevar/value_changes"
-
-	for _, scopeMetric := range metrics {
-
-		for _, attr := range scopeMetric.Scope.Attributes.ToSlice() {
-
-			if attr.Value.AsString() == driver {
-				for _, metric := range scopeMetric.Metrics {
-					if metric.Name == metricName {
-						metricsFound = true
-						break
-					}
-				}
-				if metricsFound {
-					break
-				}
-			}
-			if metricsFound {
-				break
-			}
-		}
-	}
-
-	if !metricsFound {
-		t.Errorf("did not see any expected metrics for runtimevar")
+	diff := oteltest.DiffMetrics(metrics, pkgName, driver, []oteltest.Call{
+		{Method: "", Code: gcerrors.OK},
+	})
+	if diff != "" {
+		t.Error(diff)
 	}
 }
