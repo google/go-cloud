@@ -34,7 +34,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/wire"
 	"gocloud.dev/aws/rds"
@@ -55,7 +55,7 @@ type URLOpener struct {
 	// Authority. If nil, it will use the default *rds.CertFetcher.
 	CertSource rds.CertPoolProvider
 	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
+	TraceOpts []otelsql.Option
 }
 
 // Scheme is the URL scheme awsmysql registers its URLOpener under on
@@ -66,7 +66,7 @@ func init() {
 	gcmysql.DefaultURLMux().RegisterMySQL(Scheme, &URLOpener{})
 }
 
-// OpenMySQLURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
+// OpenMySQLURL opens a new RDS database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
 	source := uo.CertSource
 	if source == nil {
@@ -83,7 +83,7 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	c := &connector{
 		dsn: cfg.FormatDSN(),
 		// Make a copy of TraceOpts to avoid caller modifying.
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
+		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
 		provider:  source,
 
 		sem:   make(chan struct{}, 1),
@@ -94,7 +94,7 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 }
 
 type connector struct {
-	traceOpts []ocsql.TraceOption
+	traceOpts []otelsql.Option
 
 	sem      chan struct{} // receive to acquire, send to release
 	provider CertPoolProvider
@@ -131,7 +131,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c *connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
 // A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.
