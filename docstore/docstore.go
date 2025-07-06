@@ -54,6 +54,14 @@ type Collection struct {
 
 const pkgName = "gocloud.dev/docstore"
 
+var (
+
+	// OpenTelemetryViews are predefined views for OpenTelemetry metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the explanations at https://opentelemetry.io/docs/specs/otel/metrics/data-model/ for usage.
+	OpenTelemetryViews = gcdkotel.Views(pkgName)
+)
+
 // NewCollection is intended for use by drivers only. Do not use in application code.
 var NewCollection = newCollection
 

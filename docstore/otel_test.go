@@ -16,7 +16,9 @@ package docstore_test
 
 import (
 	"context"
+	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/memdocstore"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/testing/oteltest"
 	"testing"
 )
@@ -24,33 +26,36 @@ import (
 func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
 
-	// Setup the test exporter for both trace and metrics
-	te := oteltest.NewTestExporter(t)
+	// Setup the test exporter for both trace and metrics.
+	te := oteltest.NewTestExporter(t, docstore.OpenTelemetryViews)
 	defer te.Shutdown(ctx)
 
-	// Open a collection for testing
+	// Open a collection for testing.
 	coll, err := memdocstore.OpenCollection("_id", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer coll.Close()
 
-	// Test ActionList.Do by creating a document
+	// Test ActionList.Do by creating a document.
 	if err := coll.Create(ctx, map[string]interface{}{"_id": "a", "count": 0}); err != nil {
 		t.Fatal(err)
 	}
 
-	// Test Query.Get
+	// Test Query.Get.
 	iter := coll.Query().Get(ctx)
 	iter.Stop()
 
-	// Check for spans
-	spanStubs := te.SpanStubs()
-	const driver = "gocloud.dev/docstore/memdocstore"
+	spanStubs := te.GetSpans()
+	metrics := te.GetMetrics(ctx)
+	const (
+		pkgName = "gocloud.dev/docstore"
+		driver  = "gocloud.dev/docstore/memdocstore"
+	)
 
-	diff := oteltest.Diff(spanStubs.Snapshots(), "gocloud.dev/docstore", driver, []oteltest.Call{
-		{Method: "ActionList.Do"},
-		{Method: "Query.Get"},
+	diff := oteltest.Diff(spanStubs.Snapshots(), metrics, pkgName, driver, []oteltest.Call{
+		{Method: "ActionList.Do", Code: gcerrors.OK},
+		{Method: "Query.Get", Code: gcerrors.OK},
 	})
 	if diff != "" {
 		t.Error(diff)
