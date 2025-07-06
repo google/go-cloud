@@ -42,8 +42,6 @@ import (
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/XSAM/otelsql"
 	"github.com/lib/pq"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/postgres"
@@ -92,6 +90,9 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain authentication information.
 	// CertSource must not be nil.
 	CertSource proxy.CertSource
+
+	// TraceOpts contains options for OpenTelemetry.
+	TraceOpts []otelsql.Option
 }
 
 // OpenPostgresURL opens a new GCP database connection wrapped with OpenTelemetry instrumentation.
@@ -119,22 +120,15 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	u2.Host = "cloudsql"
 	u2.Path = "/" + dbName
 	u2.RawQuery = query.Encode()
-	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
-	connector := &pqConnector{
+	db := sql.OpenDB(connector{
 		client: &proxy.Client{
 			Port:  3307,
 			Certs: uo.CertSource,
 		},
-		instance: instance,
-		pqConn:   u2.String(),
-	}
-	db := otelsql.OpenDB(connector,
-		otelsql.WithAttributes(
-			semconv.DBSystemKey.String("postgresql"),
-			semconv.DBNameKey.String("postgres"),
-			attribute.String("service.name", "go-cloud-gcppostgres"),
-			attribute.String("cloud.provider", "gcp"),
-		))
+		instance:  instance,
+		pqConn:    u2.String(),
+		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
+	})
 	return db, nil
 }
 
@@ -153,8 +147,9 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 }
 
 type pqDriver struct {
-	client   *proxy.Client
-	instance string
+	client    *proxy.Client
+	instance  string
+	traceOpts []otelsql.Option
 }
 
 func (d pqDriver) Open(name string) (driver.Conn, error) {
@@ -163,21 +158,26 @@ func (d pqDriver) Open(name string) (driver.Conn, error) {
 }
 
 func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
-	return &pqConnector{d.client, d.instance, name}, nil
+	return connector{d.client, d.instance, name, d.traceOpts}, nil
 }
 
-type pqConnector struct {
-	client   *proxy.Client
-	instance string
-	pqConn   string
+type connector struct {
+	client    *proxy.Client
+	instance  string
+	pqConn    string
+	traceOpts []otelsql.Option
 }
 
-func (c *pqConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	return pq.DialOpen(dialer{c.client, c.instance}, c.pqConn)
+func (c connector) Connect(context.Context) (driver.Conn, error) {
+	conn, err := pq.DialOpen(dialer{c.client, c.instance}, c.pqConn)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
 }
 
-func (c *pqConnector) Driver() driver.Driver {
-	return pqDriver{c.client, c.instance}
+func (c connector) Driver() driver.Driver {
+	return otelsql.WrapDriver(pqDriver{c.client, c.instance, c.traceOpts}, c.traceOpts...)
 }
 
 type dialer struct {
