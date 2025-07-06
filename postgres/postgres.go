@@ -21,10 +21,9 @@ import (
 	"database/sql/driver"
 	"net/url"
 
+	"github.com/XSAM/otelsql"
 	"github.com/lib/pq"
 	"gocloud.dev/internal/openurl"
-
-	"contrib.go.opencensus.io/integrations/ocsql"
 )
 
 // Scheme is the URL scheme this package registers its URLOpener under on
@@ -37,18 +36,21 @@ func init() {
 
 // URLOpener opens URLs like "postgres://" by using the underlying PostgreSQL driver.
 // See https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details.
-type URLOpener struct{}
+type URLOpener struct {
+	TraceOpts []otelsql.Option
+}
 
 // OpenPostgresURL opens a new database connection wrapped with OpenCensus instrumentation.
-func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	u2 := new(url.URL)
 	*u2 = *u
 	u2.Scheme = "postgres"
-	return sql.OpenDB(connector{dsn: u2.String()}), nil
+	return sql.OpenDB(connector{dsn: u2.String(), traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...)}), nil
 }
 
 type connector struct {
-	dsn string
+	dsn       string
+	traceOpts []otelsql.Option
 }
 
 func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -56,7 +58,7 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(&pq.Driver{})
+	return otelsql.WrapDriver(&pq.Driver{}, c.traceOpts...)
 }
 
 // PostgresURLOpener can open Postgres connections based on a URL.
