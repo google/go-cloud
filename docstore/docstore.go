@@ -26,10 +26,11 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/oc"
+	gcdkotel "gocloud.dev/internal/otel"
 )
 
 // A Document is a set of field-value pairs. One or more fields, called the key
@@ -46,7 +47,7 @@ type Document = interface{}
 // To create a Collection, use constructors found in driver subpackages.
 type Collection struct {
 	driver driver.Collection
-	tracer *oc.Tracer
+	tracer *gcdkotel.Tracer
 	mu     sync.Mutex
 	closed bool
 }
@@ -54,12 +55,11 @@ type Collection struct {
 const pkgName = "gocloud.dev/docstore"
 
 var (
-	latencyMeasure = oc.LatencyMeasure(pkgName)
 
-	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// OpenTelemetryViews are predefined views for OpenTelemetry metrics.
 	// The views include counts and latency distributions for API method calls.
-	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
-	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+	// See the explanations at https://opentelemetry.io/docs/specs/otel/metrics/data-model/ for usage.
+	OpenTelemetryViews = gcdkotel.Views(pkgName)
 )
 
 // NewCollection is intended for use by drivers only. Do not use in application code.
@@ -67,13 +67,10 @@ var NewCollection = newCollection
 
 // newCollection makes a Collection.
 func newCollection(d driver.Collection) *Collection {
+	providerName := gcdkotel.ProviderName(d)
 	c := &Collection{
 		driver: d,
-		tracer: &oc.Tracer{
-			Package:        pkgName,
-			Provider:       oc.ProviderName(d),
-			LatencyMeasure: latencyMeasure,
-		},
+		tracer: gcdkotel.NewTracer(pkgName, providerName),
 	}
 	_, file, lineno, ok := runtime.Caller(1)
 	runtime.SetFinalizer(c, func(c *Collection) {
@@ -338,15 +335,16 @@ func (l *ActionList) Do(ctx context.Context) error {
 	return l.do(ctx, true)
 }
 
-// do implements Do with optional OpenCensus tracing, so it can be used internally.
-func (l *ActionList) do(ctx context.Context, oc bool) (err error) {
+// do implements Do with optional OpenTelemetry tracing, so it can be used internally.
+func (l *ActionList) do(ctx context.Context, withTracing bool) (err error) {
 	if err := l.coll.checkClosed(); err != nil {
 		return ActionListError{{-1, errClosed}}
 	}
 
-	if oc {
-		ctx = l.coll.tracer.Start(ctx, "ActionList.Do")
-		defer func() { l.coll.tracer.End(ctx, err) }()
+	if withTracing {
+		var span trace.Span
+		ctx, span = l.coll.tracer.Start(ctx, "ActionList.Do")
+		defer func() { l.coll.tracer.End(ctx, span, err) }()
 	}
 
 	das, err := l.toDriverActions()
