@@ -38,7 +38,7 @@
 //   - For some drivers, Nack is not supported and will panic; you can call
 //     Message.Nackable to see.
 //
-// # OpenTelemetry Integration
+// # OpenTelemetry Integration.
 //
 // OpenTelemetry supports tracing and metric collection for multiple languages and
 // backend providers. See https://opentelemetry.io.
@@ -759,7 +759,7 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 	return s
 }
 
-func newAckBatcher(ctx0 context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
+func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
 	handler := func(items any) error {
 		var acks, nacks []driver.AckID
 		for _, a := range items.([]*driver.AckInfo) {
@@ -769,22 +769,22 @@ func newAckBatcher(ctx0 context.Context, s *Subscription, ds driver.Subscription
 				nacks = append(nacks, a.AckID)
 			}
 		}
-		g, ctx := errgroup.WithContext(ctx0)
+		g, ctx := errgroup.WithContext(ctx)
 		if len(acks) > 0 {
 			g.Go(func() error {
 				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-					ctx2, span := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
-					defer func() { s.tracer.End(ctx2, span, err) }()
-					return ds.SendAcks(ctx2, acks)
+					spcanCtx, span := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
+					defer func() { s.tracer.End(spcanCtx, span, err) }()
+					return ds.SendAcks(spcanCtx, acks)
 				})
 			})
 		}
 		if len(nacks) > 0 {
 			g.Go(func() error {
 				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-					ctx2, span := s.tracer.Start(ctx, "driver.Subscription.SendNacks")
-					defer func() { s.tracer.End(ctx2, span, err) }()
-					return ds.SendNacks(ctx2, nacks)
+					spanCtx, span := s.tracer.Start(ctx, "driver.Subscription.SendNacks")
+					defer func() { s.tracer.End(spanCtx, span, err) }()
+					return ds.SendNacks(spanCtx, nacks)
 				})
 			})
 		}
