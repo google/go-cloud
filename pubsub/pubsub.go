@@ -773,9 +773,9 @@ func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription,
 		if len(acks) > 0 {
 			g.Go(func() error {
 				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-					spcanCtx, span := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
-					defer func() { s.tracer.End(spcanCtx, span, err) }()
-					return ds.SendAcks(spcanCtx, acks)
+					spanCtx, span := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
+					defer func() { s.tracer.End(spanCtx, span, err) }()
+					return ds.SendAcks(spanCtx, acks)
 				})
 			})
 		}
