@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc/codes"
 	"net/url"
 	"strings"
 	"sync"
@@ -579,7 +578,7 @@ func TestOpenTelemetry(t *testing.T) {
 	defer cancel()
 
 	// Set up the test exporter for OpenTelemetry
-	te := oteltest.NewTestExporter(t)
+	te := oteltest.NewTestExporter(t, OpenTelemetryViews)
 	defer func() {
 		err := te.Shutdown(ctx2)
 		if err != nil {
@@ -612,20 +611,21 @@ func TestOpenTelemetry(t *testing.T) {
 	}
 	_, _ = sub.Receive(ctx)
 
-	validateCalls(t, te)
+	validateCalls(ctx, t, te)
 }
 
 // validateCalls validates that the spans recorded by the test exporter match the expected operation names.
-func validateCalls(t *testing.T, te *oteltest.TestExporter) {
+func validateCalls(ctx context.Context, t *testing.T, te *oteltest.TestExporter) {
 	t.Helper()
 
 	// In environments where spans are collected asynchronously, we need to give
 	// the exporter time to collect the spans
 	time.Sleep(100 * time.Millisecond)
 
-	spans := te.SpanStubs()
+	spans := te.GetSpans()
+	metrics := te.GetMetrics(ctx)
 
-	diff := oteltest.Diff(spans.Snapshots(), pkgName, "", []oteltest.Call{
+	diff := oteltest.Diff(spans.Snapshots(), metrics, pkgName, "gocloud.dev/pubsub", []oteltest.Call{
 		{Method: "driver.Topic.SendBatch"},
 		{Method: "Topic.Send"},
 		{Method: "Topic.Shutdown"},
@@ -633,7 +633,7 @@ func validateCalls(t *testing.T, te *oteltest.TestExporter) {
 		{Method: "Subscription.Receive"},
 		{Method: "driver.Subscription.SendAcks"},
 		{Method: "Subscription.Shutdown"},
-		{Method: "Subscription.Receive", Status: codes.FailedPrecondition.String()},
+		{Method: "Subscription.Receive", Code: gcerrors.FailedPrecondition},
 	})
 	if diff != "" {
 		t.Error(diff)

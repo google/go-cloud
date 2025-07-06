@@ -318,9 +318,9 @@ func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batche
 	handler := func(items any) error {
 		dms := items.([]*driver.Message)
 		err := retry.Call(ctx, gax.Backoff{}, dt.IsRetryable, func() (err error) {
-			ctx2, span := t.tracer.Start(ctx, "driver.Topic.SendBatch")
-			defer func() { t.tracer.End(ctx, span, err) }()
-			return dt.SendBatch(ctx2, dms)
+			spanCtx, span := t.tracer.Start(ctx, "driver.Topic.SendBatch")
+			defer func() { t.tracer.End(spanCtx, span, err) }()
+			return dt.SendBatch(spanCtx, dms)
 		})
 		if err != nil {
 			return wrapError(dt, err)
@@ -345,6 +345,14 @@ func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 }
 
 const pkgName = "gocloud.dev/pubsub"
+
+var (
+
+	// OpenTelemetryViews are predefined views for OpenTelemetry metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the explanations at https://opentelemetry.io/docs/specs/otel/metrics/data-model/ for usage.
+	OpenTelemetryViews = gcdkotel.Views(pkgName)
+)
 
 // Subscription receives published messages.
 type Subscription struct {
@@ -647,9 +655,9 @@ func (s *Subscription) getNextBatch(nMessages int) chan msgsOrError {
 			var msgs []*driver.Message
 			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 				var err error
-				ctx2, span := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
-				defer func() { s.tracer.End(ctx, span, err) }()
-				msgs, err = s.driver.ReceiveBatch(ctx2, curMaxMessagesInBatch)
+				spanCtx, span := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+				defer func() { s.tracer.End(spanCtx, span, err) }()
+				msgs, err = s.driver.ReceiveBatch(spanCtx, curMaxMessagesInBatch)
 				return err
 			})
 			if err != nil {
