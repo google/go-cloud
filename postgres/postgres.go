@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package postgres provides functions to open PostgreSQL databases with OpenCensus instrumentation.
+// Package postgres provides functions to open PostgreSQL databases with OpenTelemetry instrumentation.
 package postgres
 
 import (
@@ -40,7 +40,7 @@ type URLOpener struct {
 	TraceOpts []otelsql.Option
 }
 
-// OpenPostgresURL opens a new database connection wrapped with OpenCensus instrumentation.
+// OpenPostgresURL opens a new database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	u2 := new(url.URL)
 	*u2 = *u

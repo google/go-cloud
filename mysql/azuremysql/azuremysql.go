@@ -45,7 +45,7 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain the Azure Certificate
 	// Authority. If nil, it will use the default *azuredb.CertFetcher.
 	CertSource azuredb.CertPoolProvider
-	// TraceOpts contains options for OpenCensus.
+	// TraceOpts contains options for OpenTelemetry.
 	TraceOpts []otelsql.Option
 }
 

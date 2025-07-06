@@ -54,7 +54,7 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
 	CertSource rds.CertPoolProvider
-	// TraceOpts contains options for OpenCensus.
+	// TraceOpts contains options for OpenTelemetry.
 	TraceOpts []otelsql.Option
 }
 

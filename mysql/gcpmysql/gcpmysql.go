@@ -89,7 +89,7 @@ type URLOpener struct {
 	// CertSource must not be nil.
 	CertSource proxy.CertSource
 
-	// TraceOpts contains options for OpenCensus.
+	// TraceOpts contains options for OpenTelemetry.
 	TraceOpts []otelsql.Option
 }
 

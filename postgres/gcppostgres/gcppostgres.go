@@ -91,11 +91,11 @@ type URLOpener struct {
 	// CertSource must not be nil.
 	CertSource proxy.CertSource
 
-	// TraceOpts contains options for OpenCensus.
+	// TraceOpts contains options for OpenTelemetry.
 	TraceOpts []otelsql.Option
 }
 
-// OpenPostgresURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
+// OpenPostgresURL opens a new GCP database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("gcppostgres: URLOpener CertSource is nil")
