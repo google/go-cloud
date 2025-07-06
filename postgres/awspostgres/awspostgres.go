@@ -49,7 +49,7 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
 	CertSource rds.CertPoolProvider
-	// TraceOpts contains options for OpenCensus.
+	// TraceOpts contains options for OpenTelemetry.
 	TraceOpts []otelsql.Option
 }
 
@@ -61,7 +61,7 @@ func init() {
 	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
 }
 
-// OpenPostgresURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
+// OpenPostgresURL opens a new RDS database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	source := uo.CertSource
 	if source == nil {
