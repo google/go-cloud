@@ -8,12 +8,14 @@ package main
 
 import (
 	"context"
+	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"database/sql"
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/go-sql-driver/mysql"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
@@ -197,13 +199,24 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	router := newRouter(mainApplication)
 	stackdriverLogger := sdserver.NewRequestLogger()
 	v, cleanup5 := appHealthChecks(db)
-	tracerProvider := provideTracerProvider()
+	monitoredresourceInterface := monitoredresource.Autodetect()
+	exporter, cleanup6, err := sdserver.NewTraceExporter(projectID, tokenSource, monitoredresourceInterface)
+	if err != nil {
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	sampler := sdktrace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:  stackdriverLogger,
-		HealthChecks:   v,
-		TracerProvider: tracerProvider,
-		Driver:         defaultDriver,
+		RequestLogger:         stackdriverLogger,
+		HealthChecks:          v,
+		TraceExporter:         exporter,
+		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {

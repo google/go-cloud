@@ -81,16 +81,18 @@ func (l *StackdriverLogger) log(ent *Entry) error {
 		TraceID string `json:"logging.googleapis.com/trace"`
 		SpanID  string `json:"logging.googleapis.com/spanId"`
 	}
-	r.HTTPRequest.RequestMethod = ent.RequestMethod
-	r.HTTPRequest.RequestURL = ent.RequestURL
+
+	entReq := ent.Request
+	r.HTTPRequest.RequestMethod = entReq.Method
+	r.HTTPRequest.RequestURL = entReq.RequestURI
 	// TODO(light): determine whether this is the formula LogEntry expects.
-	r.HTTPRequest.RequestSize = ent.RequestHeaderSize + ent.RequestBodySize
+	r.HTTPRequest.RequestSize = headerSize(entReq.Header) + ent.RequestBodySize
 	r.HTTPRequest.Status = ent.Status
 	// TODO(light): determine whether this is the formula LogEntry expects.
 	r.HTTPRequest.ResponseSize = ent.ResponseHeaderSize + ent.ResponseBodySize
-	r.HTTPRequest.UserAgent = ent.UserAgent
-	r.HTTPRequest.RemoteIP = ent.RemoteIP
-	r.HTTPRequest.Referer = ent.Referer
+	r.HTTPRequest.UserAgent = entReq.UserAgent()
+	r.HTTPRequest.RemoteIP = ipFromHostPort(entReq.RemoteAddr)
+	r.HTTPRequest.Referer = entReq.Referer()
 	r.HTTPRequest.Latency = string(appendLatency(nil, ent.Latency))
 
 	t := ent.ReceivedTime.Add(ent.Latency)

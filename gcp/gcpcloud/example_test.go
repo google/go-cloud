@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/google/wire"
-	"go.opentelemetry.io/otel/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/gcp/gcpcloud"
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
@@ -61,8 +61,8 @@ func setup(ctx context.Context) (*server.Server, func(), error) {
 		// The GCP set includes all the default wiring for GCP, including
 		// for *server.Server.
 		gcpcloud.GCP,
-		// Use OpenTelemetry span context for server instrumentation.
-		wire.Value(trace.SpanKindServer),
+		// Providing nil instructs the server to use the default sampling policy.
+		wire.Value(sdktrace.Sampler(nil)),
 		// Health checks can be added to delay your server reporting healthy
 		// to the load balancer before critical dependencies are available.
 		wire.Value([]health.Checker{}),

@@ -56,21 +56,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	span := trace.SpanFromContext(r.Context())
 	sc := span.SpanContext()
 	ent := &Entry{
-		Request:           cloneRequestWithoutBody(r),
-		ReceivedTime:      start,
-		RequestMethod:     r.Method,
-		RequestURL:        r.URL.String(),
-		RequestHeaderSize: headerSize(r.Header),
-		UserAgent:         r.UserAgent(),
-		Referer:           r.Referer(),
-		Proto:             r.Proto,
-		RemoteIP:          ipFromHostPort(r.RemoteAddr),
-		TraceID:           sc.TraceID(),
-		SpanID:            sc.SpanID(),
+		Request:      cloneRequestWithoutBody(r),
+		ReceivedTime: start,
+
+		TraceID: sc.TraceID(),
+		SpanID:  sc.SpanID(),
 	}
-	if addr, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
-		ent.ServerIP = ipFromHostPort(addr.String())
-	}
+
 	r2 := new(http.Request)
 	*r2 = *r
 	rcc := &readCounterCloser{r: r.Body}
@@ -117,24 +109,6 @@ type Entry struct {
 	Latency            time.Duration
 	TraceID            trace.TraceID
 	SpanID             trace.SpanID
-
-	// Deprecated. This value is available by evaluating Request.Referer().
-	Referer string
-	// Deprecated. This value is available directing in Request.Proto.
-	Proto string
-	// Deprecated. This value is available directly in Request.Method.
-	RequestMethod string
-	// Deprecated. This value is available directly in Request.URL.
-	RequestURL string
-	// Deprecated. This value is available by evaluating Request.Header.
-	RequestHeaderSize int64
-	// Deprecated. This value is available by evaluating Request.Header.
-	UserAgent string
-	// Deprecated. This value is available by evaluating Request.RemoteAddr.
-	RemoteIP string
-	// Deprecated. This value is available by evaluating reading the
-	// http.LocalAddrContextKey value from the context returned by Request.Context().
-	ServerIP string
 }
 
 func ipFromHostPort(hp string) string {
@@ -177,7 +151,7 @@ func (wc *writeCounter) Write(p []byte) (n int, err error) {
 
 func headerSize(h http.Header) int64 {
 	var wc writeCounter
-	h.Write(&wc)
+	_ = h.Write(&wc)
 	return int64(wc) + 2 // for CRLF
 }
 
@@ -207,7 +181,7 @@ func (r *responseStats) Write(p []byte) (n int, err error) {
 		r.WriteHeader(http.StatusOK)
 	}
 	n, err = r.w.Write(p)
-	r.wc.Write(p[:n])
+	_, _ = r.wc.Write(p[:n])
 	return
 }
 

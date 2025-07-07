@@ -24,9 +24,6 @@ import (
 
 	"github.com/google/wire"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 
 	"gocloud.dev/server/driver"
 	"gocloud.dev/server/health"
@@ -37,7 +34,7 @@ import (
 // Options.
 var Set = wire.NewSet(
 	New,
-	wire.Struct(new(Options), "RequestLogger", "HealthChecks", "TracerProvider", "Driver"),
+	wire.Struct(new(Options), "RequestLogger", "HealthChecks", "Driver"),
 	wire.Value(&DefaultDriver{}),
 	wire.Bind(new(driver.Server), new(*DefaultDriver)),
 )
@@ -49,7 +46,6 @@ type Server struct {
 	handler        http.Handler
 	wrappedHandler http.Handler
 	healthHandler  health.Handler
-	tracerProvider trace.TracerProvider
 	once           sync.Once
 	driver         driver.Server
 }
@@ -63,10 +59,6 @@ type Options struct {
 	// /healthz/readiness endpoint is requested.
 	HealthChecks []health.Checker
 
-	// TracerProvider is a configured OpenTelemetry TracerProvider.
-	// If set, this is used directly instead of creating one from TraceExporter and DefaultSamplingPolicy.
-	TracerProvider trace.TracerProvider
-
 	// Driver serves HTTP requests.
 	Driver driver.Server
 }
@@ -79,7 +71,6 @@ func New(h http.Handler, opts *Options) *Server {
 		for _, c := range opts.HealthChecks {
 			srv.healthHandler.Add(c)
 		}
-		srv.tracerProvider = opts.TracerProvider
 		srv.driver = opts.Driver
 	}
 	return srv
@@ -87,13 +78,6 @@ func New(h http.Handler, opts *Options) *Server {
 
 func (srv *Server) init() {
 	srv.once.Do(func() {
-		// If a TracerProvider was provided, use it directly
-		if srv.tracerProvider != nil {
-			// Set the global tracer provider if a custom one was provided
-			otel.SetTracerProvider(srv.tracerProvider)
-			otel.SetTextMapPropagator(propagation.TraceContext{})
-		}
-
 		if srv.driver == nil {
 			srv.driver = NewDefaultDriver()
 		}
@@ -113,7 +97,7 @@ func (srv *Server) init() {
 			h = requestlog.NewHandler(srv.reqlog, h)
 		}
 		// Wrap with OpenTelemetry HTTP handler
-		h = otelhttp.NewHandler(h, "go-cloud-server")
+		h = otelhttp.NewHandler(h, "", otelhttp.WithPublicEndpoint())
 		mux.Handle("/", h)
 		srv.wrappedHandler = mux
 	})

@@ -59,27 +59,29 @@ func (l *NCSALogger) log(ent *Entry) error {
 
 func formatEntry(b []byte, ent *Entry) []byte {
 	const ncsaTime = "02/Jan/2006:15:04:05 -0700"
-	if ent.RemoteIP == "" {
+	entReq := ent.Request
+	remoteIP := ipFromHostPort(entReq.RemoteAddr)
+	if remoteIP == "" {
 		b = append(b, '-')
 	} else {
-		b = append(b, ent.RemoteIP...)
+		b = append(b, remoteIP...)
 	}
 	b = append(b, " - - ["...)
 	b = ent.ReceivedTime.AppendFormat(b, ncsaTime)
 	b = append(b, "] \""...)
-	b = append(b, ent.RequestMethod...)
+	b = append(b, entReq.Method...)
 	b = append(b, ' ')
-	b = append(b, ent.RequestURL...)
+	b = append(b, entReq.RequestURI...)
 	b = append(b, ' ')
-	b = append(b, ent.Proto...)
+	b = append(b, entReq.Proto...)
 	b = append(b, "\" "...)
 	b = strconv.AppendInt(b, int64(ent.Status), 10)
 	b = append(b, ' ')
 	b = strconv.AppendInt(b, int64(ent.ResponseBodySize), 10)
 	b = append(b, ' ')
-	b = strconv.AppendQuote(b, ent.Referer)
+	b = strconv.AppendQuote(b, entReq.Referer())
 	b = append(b, ' ')
-	b = strconv.AppendQuote(b, ent.UserAgent)
+	b = strconv.AppendQuote(b, entReq.UserAgent())
 	b = append(b, '\n')
 	return b
 }

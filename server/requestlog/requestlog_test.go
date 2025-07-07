@@ -43,7 +43,7 @@ func TestHandler(t *testing.T) {
 	ent, spanCtx, err := roundTrip(r, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", fmt.Sprint(len(responseMsg)))
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, responseMsg)
+		_, _ = io.WriteString(w, responseMsg)
 	}))
 	if err != nil {
 		t.Fatal("Could not get entry:", err)
@@ -54,26 +54,31 @@ func TestHandler(t *testing.T) {
 	if want := "/foo"; ent.Request.URL.Path != want {
 		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value(testContextKey), want)
 	}
-	if want := "POST"; ent.RequestMethod != want {
-		t.Errorf("RequestMethod = %q; want %q", ent.RequestMethod, want)
+
+	entReq := ent.Request
+
+	if want := "POST"; entReq.Method != want {
+		t.Errorf("RequestMethod = %q; want %q", entReq.Method, want)
 	}
-	if want := "/foo"; ent.RequestURL != want {
-		t.Errorf("RequestURL = %q; want %q", ent.RequestURL, want)
+	if want := "/foo"; entReq.URL.Path != want {
+		t.Errorf("RequestURL = %q; want %q", entReq.URL, want)
 	}
-	if ent.RequestHeaderSize < int64(requestHdrSize) {
-		t.Errorf("RequestHeaderSize = %d; want >=%d", ent.RequestHeaderSize, requestHdrSize)
+
+	entReqHeaderSize := headerSize(entReq.Header)
+	if entReqHeaderSize < int64(requestHdrSize) {
+		t.Errorf("RequestHeaderSize = %d; want >=%d", entReqHeaderSize, requestHdrSize)
 	}
 	if ent.RequestBodySize != int64(len(requestMsg)) {
 		t.Errorf("RequestBodySize = %d; want %d", ent.RequestBodySize, len(requestMsg))
 	}
-	if ent.UserAgent != userAgent {
-		t.Errorf("UserAgent = %q; want %q", ent.UserAgent, userAgent)
+	if entReq.UserAgent() != userAgent {
+		t.Errorf("UserAgent = %q; want %q", entReq.UserAgent(), userAgent)
 	}
-	if ent.Referer != referer {
-		t.Errorf("Referer = %q; want %q", ent.Referer, referer)
+	if entReq.Referer() != referer {
+		t.Errorf("Referer = %q; want %q", entReq.Referer(), referer)
 	}
-	if want := "HTTP/1.1"; ent.Proto != want {
-		t.Errorf("Proto = %q; want %q", ent.Proto, want)
+	if want := "HTTP/1.1"; entReq.Proto != want {
+		t.Errorf("Proto = %q; want %q", entReq.Proto, want)
 	}
 	if ent.Status != http.StatusOK {
 		t.Errorf("Status = %d; want %d", ent.Status, http.StatusOK)
