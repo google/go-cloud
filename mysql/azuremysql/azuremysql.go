@@ -33,7 +33,7 @@ import (
 	"net/url"
 	"strings"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
 	"gocloud.dev/azure/azuredb"
 	cdkmysql "gocloud.dev/mysql"
@@ -45,8 +45,8 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain the Azure Certificate
 	// Authority. If nil, it will use the default *azuredb.CertFetcher.
 	CertSource azuredb.CertPoolProvider
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
+	// TraceOpts contains options for OpenTelemetry.
+	TraceOpts []otelsql.Option
 }
 
 // Scheme is the URL scheme azuremysql registers its URLOpener under on
@@ -73,7 +73,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		password: password,
 		dbName:   strings.TrimPrefix(u.Path, "/"),
 		// Make a copy of TraceOpts to avoid caller modifying.
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
+		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
 		provider:  source,
 
 		sem:   make(chan struct{}, 1),
@@ -88,7 +88,7 @@ type connector struct {
 	user      string
 	password  string
 	dbName    string
-	traceOpts []ocsql.TraceOption
+	traceOpts []otelsql.Option
 
 	sem      chan struct{}    // receive to acquire, send to release
 	provider CertPoolProvider // provides the CA certificate pool
@@ -127,7 +127,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c *connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
 // A CertPoolProvider obtains a certificate pool that contains the Azure CA certificate.

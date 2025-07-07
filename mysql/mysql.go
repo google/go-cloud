@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mysql provides functions to open MySQL databases with OpenCensus instrumentation.
+// Package mysql provides functions to open MySQL databases with OpenTelemetry instrumentation.
 package mysql
 
 import (
@@ -24,10 +24,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
 	"gocloud.dev/internal/openurl"
-
-	"contrib.go.opencensus.io/integrations/ocsql"
 )
 
 // Scheme is the URL scheme this package registers its URLOpener under on
@@ -41,10 +40,10 @@ func init() {
 // URLOpener opens URLs like "mysql://" by using the underlying MySQL driver.
 // like "mysql://user:password@localhost:3306/mydb".
 type URLOpener struct {
-	TraceOpts []ocsql.TraceOption
+	TraceOpts []otelsql.Option
 }
 
-// OpenMySQLURL opens a new database connection wrapped with OpenCensus instrumentation.
+// OpenMySQLURL opens a new database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
 	cfg, err := ConfigFromURL(u)
 	if err != nil {
@@ -52,7 +51,7 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	}
 	return sql.OpenDB(connector{
 		dsn:       cfg.FormatDSN(),
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
+		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
 	}), nil
 }
 
@@ -86,7 +85,7 @@ func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 
 type connector struct {
 	dsn       string
-	traceOpts []ocsql.TraceOption
+	traceOpts []otelsql.Option
 }
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
@@ -94,7 +93,7 @@ func (c connector) Connect(context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
 // MySQLURLOpener implements MySQLURLOpener and can open connections based on a URL.

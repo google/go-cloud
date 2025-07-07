@@ -37,8 +37,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
@@ -89,11 +89,11 @@ type URLOpener struct {
 	// CertSource must not be nil.
 	CertSource proxy.CertSource
 
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
+	// TraceOpts contains options for OpenTelemetry.
+	TraceOpts []otelsql.Option
 }
 
-// OpenMySQLURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
+// OpenMySQLURL opens a new GCP database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("gcpmysql: URLOpener CertSource is nil")
@@ -162,7 +162,7 @@ var dialerCounter uint32
 
 type connector struct {
 	dsn       string
-	traceOpts []ocsql.TraceOption
+	traceOpts []otelsql.Option
 }
 
 func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -170,5 +170,5 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
+	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
 }

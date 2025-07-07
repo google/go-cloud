@@ -27,7 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/testing/octest"
+	"gocloud.dev/internal/testing/oteltest"
 	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 )
@@ -571,10 +571,17 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verify(err)
 }
 
-func TestOpenCensus(t *testing.T) {
+// TestOpenTelemetry tests that OpenTelemetry tracing is working correctly.
+func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
-	te := octest.NewTestExporter(OpenCensusViews)
-	defer te.Unregister()
+
+	te := oteltest.NewTestExporter(t, OpenTelemetryViews)
+	defer func() {
+		err := te.Shutdown(ctx)
+		if err != nil {
+			t.Logf("Error shutting down test exporter: %v", err)
+		}
+	}()
 
 	ds := NewDriverSub()
 	dt := &driverTopic{
@@ -595,12 +602,16 @@ func TestOpenCensus(t *testing.T) {
 		t.Fatal(err)
 	}
 	msg.Ack()
-	if err := sub.Shutdown(ctx); err != nil {
+	err = sub.Shutdown(ctx)
+	if err != nil {
 		t.Fatal(err)
 	}
 	_, _ = sub.Receive(ctx)
 
-	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/pubsub", "gocloud.dev/pubsub", []octest.Call{
+	spans := te.GetSpans()
+	metrics := te.GetMetrics(ctx)
+
+	diff := oteltest.Diff(spans.Snapshots(), metrics, pkgName, "gocloud.dev/pubsub", []oteltest.Call{
 		{Method: "driver.Topic.SendBatch", Code: gcerrors.OK},
 		{Method: "Topic.Send", Code: gcerrors.OK},
 		{Method: "Topic.Shutdown", Code: gcerrors.OK},
@@ -614,11 +625,6 @@ func TestOpenCensus(t *testing.T) {
 		t.Error(diff)
 	}
 }
-
-var (
-	testOpenOnce sync.Once
-	testOpenGot  *url.URL
-)
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
