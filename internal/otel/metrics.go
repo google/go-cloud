@@ -29,6 +29,7 @@ import (
 const (
 	unitDimensionless = "1"
 	unitMilliseconds  = "ms"
+	unitBytes         = "By"
 )
 
 var (
@@ -85,6 +86,24 @@ func Views(pkg string) []sdkmetric.View {
 	}
 }
 
+func CounterView(pkg string, meterName string, description string) []sdkmetric.View {
+	return []sdkmetric.View{
+		// View for gauge counts.
+		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+			if inst.Kind == sdkmetric.InstrumentKindCounter {
+				if inst.Name == pkg+meterName {
+					return sdkmetric.Stream{
+						Name:        inst.Name,
+						Description: description,
+						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
+					}, true
+				}
+			}
+			return sdkmetric.Stream{}, false
+		},
+	}
+}
+
 // LatencyMeasure returns the measure for method call latency used by Go CDK APIs.
 func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 
@@ -129,20 +148,20 @@ func DimensionlessMeasure(pkg string, provider string, meterName string, descrip
 	return m
 }
 
-func CounterView(pkg string, meterName string, description string) []sdkmetric.View {
-	return []sdkmetric.View{
-		// View for gauge counts.
-		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
-			if inst.Kind == sdkmetric.InstrumentKindCounter {
-				if inst.Name == pkg+meterName {
-					return sdkmetric.Stream{
-						Name:        inst.Name,
-						Description: description,
-						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
-					}, true
-				}
-			}
-			return sdkmetric.Stream{}, false
-		},
+func BytesMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
+
+	attrs := []attribute.KeyValue{
+		packageKey.String(pkg),
+		providerKey.String(provider),
 	}
+
+	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
+	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(unitBytes))
+
+	if err != nil {
+		// The only possible errors are from invalid key or value names, and those are programming
+		// errors that will be found during testing.
+		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
+	}
+	return m
 }
