@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otelserver provides the diagnostic hooks for a server using
-// AWS X-Ray.
-package otelserver // import "gocloud.dev/server/otelserver"
+// Package otel provides the diagnostic hooks for enabling otlp for a server.
+package otel // import "gocloud.dev/server/otel"
 
 import (
 	"context"
@@ -37,36 +36,36 @@ import (
 // *server.Server. This set includes ServiceSet.
 var Set = wire.NewSet(
 	server.Set,
-	OtelResourceSet,
-	OtelTraceSet,
-	OtelMetricsSet,
-	OtelLogsSet,
+	ResourceSet,
+	TracesSet,
+	MetricsSet,
+	LogsSet,
 
 	NewRequestLogger,
 	wire.Bind(new(requestlog.Logger), new(*requestlog.NCSALogger)),
 )
 
-// OtelResourceSet is a Wire provider set that provides the open telemetry resource given the service name
-var OtelResourceSet = wire.NewSet(
+// ResourceSet is a Wire provider set that provides the open telemetry resource given the service name
+var ResourceSet = wire.NewSet(
 	NewResource,
 	wire.Bind(new(resource.Resource), new(*resource.Resource)),
 )
 
-// OtelTraceSet is a Wire provider set that provides the open telemetry trace provider given the exporter
-var OtelTraceSet = wire.NewSet(
+// TracesSet is a Wire provider set that provides the open telemetry trace provider given the exporter
+var TracesSet = wire.NewSet(
 	NewTraceProvider,
 	wire.Bind(new(trace.TracerProvider), new(*sdktrace.TracerProvider)),
 
 )
 
-// OtelMetricsSet is a Wire provider set that provides the open telemetry metrics provider given the exporter
-var OtelMetricsSet = wire.NewSet(
+// MetricsSet is a Wire provider set that provides the open telemetry metrics provider given the exporter
+var MetricsSet = wire.NewSet(
 	NewMeterProvider,
 	wire.Bind(new(metric.MeterProvider), new(*sdkmetric.MeterProvider)),
 )
 
-// OtelLogsSet is a Wire provider set that provides the open telemetry logs provider given the exporter
-var OtelLogsSet = wire.NewSet(
+// LogsSet is a Wire provider set that provides the open telemetry logs provider given the exporter
+var LogsSet = wire.NewSet(
 	NewLoggerProvider,
 	wire.Bind(new(otellog.LoggerProvider), new(*sdklog.LoggerProvider)),
 )

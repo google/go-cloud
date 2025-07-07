@@ -21,13 +21,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	serverotel "gocloud.dev/server/otel"
 	"log"
 	"net/http"
 	"sync"
 	"time"
 
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
@@ -66,7 +66,7 @@ func (h *customHealthCheck) CheckHealth() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if !h.healthy {
-		return errors.New("not ready yet!")
+		return errors.New("not ready yet")
 	}
 	return nil
 }
@@ -81,20 +81,33 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tokenSource := gcp.CredentialsTokenSource(credentials)
+
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var exporter sdktrace.SpanExporter
 	if *doTrace {
 		fmt.Println("Exporting traces to Stackdriver")
-		mr := GlobalMonitoredResource{projectID: string(projectID)}
-		exporter, _, err = sdserver.NewTraceExporter(projectID, tokenSource, mr)
-		if err != nil {
-			log.Fatal(err)
+		res, err0 := serverotel.NewResource("server", "v0.1.0")
+		if err0 != nil {
+			log.Fatal(err0)
 		}
+		spanExporter, err0 := sdserver.NewTraceExporter(projectID)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+		tp, cleanup := serverotel.NewTraceProvider(res, spanExporter)
+		defer cleanup()
+		otel.SetTracerProvider(tp)
+
+		metricsExporter, err0 := sdserver.NewMetricsExporter(projectID)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+		mp, cleanup2 := serverotel.NewMeterProvider(res, metricsExporter)
+		defer cleanup2()
+		otel.SetMeterProvider(mp)
 	}
 
 	mux := http.NewServeMux()
@@ -114,13 +127,8 @@ func main() {
 	options := &server.Options{
 		RequestLogger: sdserver.NewRequestLogger(),
 		HealthChecks:  []health.Checker{healthCheck},
-		TraceExporter: exporter,
 
-		// In production you will likely want to use trace.ProbabilitySampler
-		// instead, since AlwaysSample will start and export a trace for every
-		// request - this may be prohibitively slow with significant traffic.
-		DefaultSamplingPolicy: trace.AlwaysSample(),
-		Driver:                &server.DefaultDriver{},
+		Driver: &server.DefaultDriver{},
 	}
 
 	s := server.New(mux, options)

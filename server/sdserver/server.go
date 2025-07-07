@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"go.opencensus.io/trace"
 	"go.opentelemetry.io/otel/metric"
-	"gocloud.dev/server/otelserver"
+	"gocloud.dev/server/otel"
 	"os"
 
 	gcpmetricsexporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
@@ -28,13 +28,14 @@ import (
 	"github.com/google/wire"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"gocloud.dev/gcp"
 	"gocloud.dev/server/requestlog"
 )
 
 // Set is a Wire provider set that provides the diagnostic hooks for
 // *server.Server given a GCP token source and a GCP project ID.
 var Set = wire.NewSet(
-	otelserver.Set,
+	otel.Set,
 	NewTraceExporter,
 	wire.Bind(new(trace.Exporter), new(*sdktrace.SpanExporter)),
 	NewMetricsExporter,
@@ -44,8 +45,8 @@ var Set = wire.NewSet(
 )
 
 // NewTraceExporter returns a new OpenTelemetry gcp trace exporter.
-func NewTraceExporter(projectID string) (sdktrace.SpanExporter, error) {
-	exporter, err := gcptraceexporter.New(gcptraceexporter.WithProjectID(projectID))
+func NewTraceExporter(projectID gcp.ProjectID) (sdktrace.SpanExporter, error) {
+	exporter, err := gcptraceexporter.New(gcptraceexporter.WithProjectID(string(projectID)))
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +55,8 @@ func NewTraceExporter(projectID string) (sdktrace.SpanExporter, error) {
 }
 
 // NewMetricsExporter returns a new OpenTelemetry gcp metrics exporter.
-func NewMetricsExporter(projectID string) (sdkmetric.Exporter, error) {
-	exporter, err := gcpmetricsexporter.New(gcpmetricsexporter.WithProjectID(projectID))
+func NewMetricsExporter(projectID gcp.ProjectID) (sdkmetric.Exporter, error) {
+	exporter, err := gcpmetricsexporter.New(gcpmetricsexporter.WithProjectID(string(projectID)))
 	if err != nil {
 		return nil, err
 	}
