@@ -15,27 +15,25 @@
 package blob_test
 
 import (
-	"context"
-	"testing"
-
-	"github.com/google/go-cmp/cmp"
-	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/memblob"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/oc"
-	"gocloud.dev/internal/testing/octest"
+	"gocloud.dev/internal/testing/oteltest"
+	"testing"
 )
 
-func TestOpenCensus(t *testing.T) {
-	ctx := context.Background()
-	te := octest.NewTestExporter(blob.OpenCensusViews)
-	defer te.Unregister()
+func TestOpenTelemetry(t *testing.T) {
+	ctx := t.Context()
 
-	bytes := []byte("foo")
+	te := oteltest.NewTestExporter(t, blob.OpenTelemetryViews)
+	defer func() { _ = te.Shutdown(ctx) }()
+
+	bytes := []byte("hello world")
 	b := memblob.OpenBucket(nil)
-	defer b.Close()
+	defer func() { _ = b.Close() }()
+
 	if err := b.WriteAll(ctx, "key", bytes, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +55,10 @@ func TestOpenCensus(t *testing.T) {
 
 	const driver = "gocloud.dev/blob/memblob"
 
-	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/blob", driver, []octest.Call{
+	spans := te.GetSpans()
+	metrics := te.GetMetrics(ctx)
+
+	diff := oteltest.Diff(spans.Snapshots(), metrics, "gocloud.dev/blob", driver, []oteltest.Call{
 		{Method: "NewWriter", Code: gcerrors.OK},
 		{Method: "NewRangeReader", Code: gcerrors.OK},
 		{Method: "Attributes", Code: gcerrors.OK},
@@ -71,34 +72,44 @@ func TestOpenCensus(t *testing.T) {
 
 	// Find and verify the bytes read/written metrics.
 	var sawRead, sawWritten bool
-	tags := []tag.Tag{{Key: oc.ProviderKey, Value: driver}}
-	for !sawRead || !sawWritten {
-		data := <-te.Stats
-		switch data.View.Name {
-		case "gocloud.dev/blob/bytes_read":
-			if sawRead {
+	providerAttr := attribute.Key("gocdk_provider")
+
+	for _, sm := range metrics {
+
+		for _, data := range sm.Metrics {
+
+			switch data.Name {
+			case "gocloud.dev/blob/bytes_read":
+				if sawRead {
+					continue
+				}
+				sawRead = true
+			case "gocloud.dev/blob/bytes_written":
+				if sawWritten {
+					continue
+				}
+				sawWritten = true
+			default:
 				continue
 			}
-			sawRead = true
-		case "gocloud.dev/blob/bytes_written":
-			if sawWritten {
+
+			providerVal, ok := sm.Scope.Attributes.Value(providerAttr)
+			if !ok || providerVal.AsString() != driver {
+				t.Errorf("provider tags for %s is : %s instead of :%s", data.Name, providerVal.AsString(), driver)
 				continue
 			}
-			sawWritten = true
-		default:
-			continue
-		}
-		if diff := cmp.Diff(data.Rows[0].Tags, tags, cmp.AllowUnexported(tag.Key{})); diff != "" {
-			t.Errorf("tags for %s: %s", data.View.Name, diff)
-			continue
-		}
-		sd, ok := data.Rows[0].Data.(*view.SumData)
-		if !ok {
-			t.Errorf("%s: data is %T, want SumData", data.View.Name, data.Rows[0].Data)
-			continue
-		}
-		if got := int(sd.Value); got < len(bytes) {
-			t.Errorf("%s: got %d, want at least %d", data.View.Name, got, len(bytes))
+			sd, ok := data.Data.(metricdata.Sum[int64])
+			if !ok {
+				t.Errorf("%s: data is %T, want SumData", data.Name, data.Data)
+				continue
+			}
+			if got := int(sd.DataPoints[0].Value); got < len(bytes) {
+				t.Errorf("%s: got %d, want at least %d", data.Name, got, len(bytes))
+			}
+
+			if sawRead && sawWritten {
+				return
+			}
 		}
 	}
 }
