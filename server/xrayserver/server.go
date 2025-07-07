@@ -12,40 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otel provides the diagnostic hooks for enabling otlp for a server.
-package otel // import "gocloud.dev/server/otel"
+// Package xrayserver provides the diagnostic hooks for a server using
+// ADOT collector.
+package xrayserver // import "gocloud.dev/server/xrayserver"
 
 import (
 	"context"
-	"fmt"
-	"github.com/google/wire"
-	otellog "go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/metric"
-	sdklog "go.opentelemetry.io/otel/sdk/log"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/contrib/detectors/aws/ec2"
 	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	"go.opentelemetry.io/otel/trace"
-	"gocloud.dev/server"
-	"gocloud.dev/server/requestlog"
-	"google.golang.org/grpc"
-	"os"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+
+	"go.opencensus.io/trace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/metric"
+	"gocloud.dev/server/otel"
+
+	"github.com/google/wire"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"gocloud.dev/server/requestlog"
 )
 
 // Set is a Wire provider set that provides the diagnostic hooks for
-// *server.Server. This set includes ServiceSet.
+// *server.Server given a GCP token source and a GCP project ID.
 var Set = wire.NewSet(
-	server.Set,
-	ResourceSet,
-	TracesSet,
-	MetricsSet,
-	LogsSet,
-
+	otel.Set,
+	NewTraceExporter,
+	wire.Bind(new(trace.Exporter), new(*sdktrace.SpanExporter)),
+	NewMetricsExporter,
+	wire.Bind(new(metric.MeterProvider), new(*sdkmetric.MeterProvider)),
 	NewRequestLogger,
-	wire.Bind(new(requestlog.Logger), new(*requestlog.NCSALogger)),
+	wire.Bind(new(requestlog.Logger), new(*requestlog.StackdriverLogger)),
 )
 
 // ResourceSet is a Wire provider set that provides the open telemetry resource given the service name
@@ -71,30 +67,17 @@ var MetricsSet = wire.NewSet(
 	wire.Bind(new(metric.MeterProvider), new(*sdkmetric.MeterProvider)),
 )
 
-// LogsSet is a Wire provider set that provides the open telemetry logs provider given the exporter
-var LogsSet = wire.NewSet(
-	NewLoggerProvider,
-	wire.Bind(new(otellog.LoggerProvider), new(*sdklog.LoggerProvider)),
-)
+func NewResource() (*resource.Resource, error) {
 
-func NewResource(serviceName, serviceVersion string) (*resource.Resource, error) {
+	// Instantiate a new EC2 Resource detector
+	ec2ResourceDetector := ec2.NewResourceDetector()
+	resource, err := ec2ResourceDetector.Detect(context.Background())
+
 	return resource.Merge(resource.Default(),
 		resource.NewWithAttributes(semconv.SchemaURL,
 			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion(serviceVersion),
 		))
-}
-
-// NewTraceExporter returns a new OpenTelemetry gcp trace exporter.
-func NewTraceExporter(collectorEndpoint string) (sdktrace.SpanExporter, error) {
-
-	// Create and start new OTLP trace exporter
-	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint(collectorEndpoint), otlptracegrpc.WithDialOption(grpc.WithBlock()))
-	if err != nil {
-		return nil, err
-	}
-
-	return traceExporter, nil
 }
 
 // NewTraceProvider returns a new trace provider for our service to utilise.
@@ -110,17 +93,6 @@ func NewTraceProvider(res *resource.Resource, exp sdktrace.SpanExporter) (*sdktr
 	return tp, func() { _ = tp.Shutdown(context.TODO()) }
 }
 
-// NewMetricsExporter returns a new OpenTelemetry gcp metrics exporter.
-func NewMetricsExporter(collectorEndpoint string) (sdkmetric.Exporter, error) {
-	// Create and start new OTLP metric exporter
-	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithInsecure(), otlpmetricgrpc.WithEndpoint(collectorEndpoint), otlpmetricgrpc.WithDialOption(grpc.WithBlock()))
-	if err != nil {
-		return nil, err
-	}
-
-	return metricExporter, nil
-}
-
 // NewMeterProvider returns a new metric provider for our service to utilise.
 //
 // The second return value is a Wire cleanup function that calls Close on the provider,
@@ -131,22 +103,4 @@ func NewMeterProvider(res *resource.Resource, exporter sdkmetric.Exporter, reade
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter, readerOpts...)),
 	)
 	return meterProvider, func() { _ = meterProvider.Shutdown(context.TODO()) }
-}
-
-// NewLoggerProvider returns a new logger provider for our service to utilise.
-//
-// The second return value is a Wire cleanup function that calls Close on the provider,
-func NewLoggerProvider(ctx context.Context, res *resource.Resource, exporter sdklog.Exporter) (*sdklog.LoggerProvider, func()) {
-
-	processor := sdklog.NewBatchProcessor(exporter)
-	logProvider := sdklog.NewLoggerProvider(
-		sdklog.WithResource(res),
-		sdklog.WithProcessor(processor),
-	)
-	return logProvider, func() { _ = logProvider.Shutdown(context.TODO()) }
-}
-
-// NewRequestLogger returns a request logger that sends entries to stdout.
-func NewRequestLogger() *requestlog.NCSALogger {
-	return requestlog.NewNCSALogger(os.Stdout, func(e error) { fmt.Fprintln(os.Stderr, e) })
 }

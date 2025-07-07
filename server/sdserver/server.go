@@ -20,11 +20,13 @@ import (
 	"fmt"
 	"go.opencensus.io/trace"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"gocloud.dev/server/otel"
 	"os"
 
-	gcpmetricsexporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
-	gcptraceexporter "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
+	gcpres "github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
+	gcpmex "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
+	gcptex "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
 	"github.com/google/wire"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -44,9 +46,32 @@ var Set = wire.NewSet(
 	wire.Bind(new(requestlog.Logger), new(*requestlog.StackdriverLogger)),
 )
 
+
+// ResourceSet is a Wire provider set that provides the open telemetry resource given the service name
+var ResourceSet = wire.NewSet(
+	NewResource,
+	wire.Bind(new(resource.Resource), new(*resource.Resource)),
+)
+
+
+func NewResource() (*resource.Resource, error) {
+
+	resourceDetector := gcpres.NewDetector()
+	platform := resourceDetector.CloudPlatform()
+	platform.
+
+	return resource.Merge(resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL,
+			semconv.ServiceName(serviceName),
+			semconv.ServiceVersion(serviceVersion),
+		))
+}
+
+
+
 // NewTraceExporter returns a new OpenTelemetry gcp trace exporter.
 func NewTraceExporter(projectID gcp.ProjectID) (sdktrace.SpanExporter, error) {
-	exporter, err := gcptraceexporter.New(gcptraceexporter.WithProjectID(string(projectID)))
+	exporter, err := gcptex.New(gcptex.WithProjectID(string(projectID)))
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +81,7 @@ func NewTraceExporter(projectID gcp.ProjectID) (sdktrace.SpanExporter, error) {
 
 // NewMetricsExporter returns a new OpenTelemetry gcp metrics exporter.
 func NewMetricsExporter(projectID gcp.ProjectID) (sdkmetric.Exporter, error) {
-	exporter, err := gcpmetricsexporter.New(gcpmetricsexporter.WithProjectID(string(projectID)))
+	exporter, err := gcpmex.New(gcpmex.WithProjectID(string(projectID)))
 	if err != nil {
 		return nil, err
 	}
