@@ -1137,7 +1137,6 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		contentMD5:          opts.ContentMD5,
 		md5hash:             md5.New(),
 		bytesWrittenCounter: b.bytesWrittenCounter,
-		ctx:                 ctx,
 	}
 	if opts.ContentType != "" || opts.DisableContentTypeDetection {
 		var ct string
@@ -1158,6 +1157,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	} else {
 		// Save the fields needed to called NewTypedWriter later, once we've gotten
 		// sniffLen bytes; see the comment on Writer.
+		w.ctx = ctx
 		w.opts = dopts
 		w.buf = bytes.NewBuffer([]byte{})
 	}
