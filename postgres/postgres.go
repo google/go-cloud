@@ -23,8 +23,6 @@ import (
 
 	"github.com/XSAM/otelsql"
 	"github.com/lib/pq"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/internal/openurl"
 )
 
@@ -38,26 +36,21 @@ func init() {
 
 // URLOpener opens URLs like "postgres://" by using the underlying PostgreSQL driver.
 // See https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details.
-type URLOpener struct{}
+type URLOpener struct {
+	TraceOpts []otelsql.Option
+}
 
 // OpenPostgresURL opens a new database connection wrapped with OpenTelemetry instrumentation.
-func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	u2 := new(url.URL)
 	*u2 = *u
 	u2.Scheme = "postgres"
-
-	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
-	return otelsql.Open("postgres", u2.String(),
-		otelsql.WithAttributes(
-			semconv.DBSystemKey.String("postgresql"),
-			semconv.DBNameKey.String("postgres"),
-			attribute.String("service.name", "go-cloud-postgres"),
-		),
-	)
+	return sql.OpenDB(connector{dsn: u2.String(), traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...)}), nil
 }
 
 type connector struct {
-	dsn string
+	dsn       string
+	traceOpts []otelsql.Option
 }
 
 func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -65,8 +58,7 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	// Direct OpenTelemetry driver registration happens in otelsql.Open
-	return &pq.Driver{}
+	return otelsql.WrapDriver(&pq.Driver{}, c.traceOpts...)
 }
 
 // PostgresURLOpener can open Postgres connections based on a URL.

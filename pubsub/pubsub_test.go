@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc/codes"
 	"net/url"
 	"strings"
 	"sync"
@@ -575,13 +574,10 @@ func TestErrorsAreWrapped(t *testing.T) {
 // TestOpenTelemetry tests that OpenTelemetry tracing is working correctly.
 func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
-	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
 
-	// Set up the test exporter for OpenTelemetry
-	te := oteltest.NewTestExporter(t)
+	te := oteltest.NewTestExporter(t, OpenTelemetryViews)
 	defer func() {
-		err := te.Shutdown(ctx2)
+		err := te.Shutdown(ctx)
 		if err != nil {
 			t.Logf("Error shutting down test exporter: %v", err)
 		}
@@ -612,33 +608,22 @@ func TestOpenTelemetry(t *testing.T) {
 	}
 	_, _ = sub.Receive(ctx)
 
-	validateCalls(t, te)
-}
+	spans := te.GetSpans()
+	metrics := te.GetMetrics(ctx)
 
-// validateCalls validates that the spans recorded by the test exporter match the expected operation names.
-func validateCalls(t *testing.T, te *oteltest.TestExporter) {
-	t.Helper()
-
-	// In environments where spans are collected asynchronously, we need to give
-	// the exporter time to collect the spans
-	time.Sleep(100 * time.Millisecond)
-
-	spans := te.SpanStubs()
-
-	diff := oteltest.Diff(spans.Snapshots(), pkgName, "", []oteltest.Call{
-		{Method: "driver.Topic.SendBatch"},
-		{Method: "Topic.Send"},
-		{Method: "Topic.Shutdown"},
-		{Method: "driver.Subscription.ReceiveBatch"},
-		{Method: "Subscription.Receive"},
-		{Method: "driver.Subscription.SendAcks"},
-		{Method: "Subscription.Shutdown"},
-		{Method: "Subscription.Receive", Status: codes.FailedPrecondition.String()},
+	diff := oteltest.Diff(spans.Snapshots(), metrics, pkgName, "gocloud.dev/pubsub", []oteltest.Call{
+		{Method: "driver.Topic.SendBatch", Code: gcerrors.OK},
+		{Method: "Topic.Send", Code: gcerrors.OK},
+		{Method: "Topic.Shutdown", Code: gcerrors.OK},
+		{Method: "driver.Subscription.ReceiveBatch", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.OK},
+		{Method: "driver.Subscription.SendAcks", Code: gcerrors.OK},
+		{Method: "Subscription.Shutdown", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.FailedPrecondition},
 	})
 	if diff != "" {
 		t.Error(diff)
 	}
-
 }
 
 func TestURLMux(t *testing.T) {

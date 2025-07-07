@@ -39,8 +39,6 @@ import (
 
 	"github.com/XSAM/otelsql"
 	"github.com/lib/pq"
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/postgres"
 )
@@ -51,6 +49,8 @@ type URLOpener struct {
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
 	CertSource rds.CertPoolProvider
+	// TraceOpts contains options for OpenTelemetry.
+	TraceOpts []otelsql.Option
 }
 
 // Scheme is the URL scheme awspostgres registers its URLOpener under on
@@ -82,20 +82,17 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	*u2 = *u
 	u2.Scheme = "postgres"
 	u2.RawQuery = query.Encode()
-	// Use github.com/XSAM/otelsql directly for OpenTelemetry instrumentation
-	connector := &pqConnector{provider: source, pqConn: u2.String()}
-	db := otelsql.OpenDB(connector,
-		otelsql.WithAttributes(
-			semconv.DBSystemKey.String("postgresql"),
-			semconv.DBNameKey.String("postgres"),
-			attribute.String("service.name", "go-cloud-awspostgres"),
-			attribute.String("cloud.provider", "aws"),
-		))
+	db := sql.OpenDB(connector{
+		provider:  source,
+		pqConn:    u2.String(),
+		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
+	})
 	return db, nil
 }
 
 type pqDriver struct {
-	provider rds.CertPoolProvider
+	provider  rds.CertPoolProvider
+	traceOpts []otelsql.Option
 }
 
 func (d pqDriver) Open(name string) (driver.Conn, error) {
@@ -104,20 +101,25 @@ func (d pqDriver) Open(name string) (driver.Conn, error) {
 }
 
 func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
-	return &pqConnector{d.provider, name + " sslmode=disable"}, nil
+	return connector{d.provider, name + " sslmode=disable", d.traceOpts}, nil
 }
 
-type pqConnector struct {
-	provider rds.CertPoolProvider
-	pqConn   string
+type connector struct {
+	provider  rds.CertPoolProvider
+	pqConn    string
+	traceOpts []otelsql.Option
 }
 
-func (c *pqConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	return pq.DialOpen(dialer{c.provider}, c.pqConn)
+func (c connector) Connect(context.Context) (driver.Conn, error) {
+	conn, err := pq.DialOpen(dialer{c.provider}, c.pqConn)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
 }
 
-func (c *pqConnector) Driver() driver.Driver {
-	return pqDriver{c.provider}
+func (c connector) Driver() driver.Driver {
+	return otelsql.WrapDriver(pqDriver{c.provider, c.traceOpts}, c.traceOpts...)
 }
 
 type dialer struct {
@@ -165,7 +167,8 @@ func (d dialer) dial(ctx context.Context, network, address string) (net.Conn, er
 		RootCAs:       certPool,
 		Renegotiation: tls.RenegotiateFreelyAsClient,
 	})
-	if err := crypt.Handshake(); err != nil {
+	err = crypt.Handshake()
+	if err != nil {
 		return nil, err
 	}
 	return crypt, nil

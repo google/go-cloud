@@ -38,7 +38,7 @@
 //   - For some drivers, Nack is not supported and will panic; you can call
 //     Message.Nackable to see.
 //
-// # OpenTelemetry Integration
+// # OpenTelemetry Integration.
 //
 // OpenTelemetry supports tracing and metric collection for multiple languages and
 // backend providers. See https://opentelemetry.io.
@@ -318,9 +318,9 @@ func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batche
 	handler := func(items any) error {
 		dms := items.([]*driver.Message)
 		err := retry.Call(ctx, gax.Backoff{}, dt.IsRetryable, func() (err error) {
-			ctx2, span := t.tracer.Start(ctx, "driver.Topic.SendBatch")
-			defer func() { t.tracer.End(ctx, span, err) }()
-			return dt.SendBatch(ctx2, dms)
+			spanCtx, span := t.tracer.Start(ctx, "driver.Topic.SendBatch")
+			defer func() { t.tracer.End(spanCtx, span, err) }()
+			return dt.SendBatch(spanCtx, dms)
 		})
 		if err != nil {
 			return wrapError(dt, err)
@@ -345,6 +345,14 @@ func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 }
 
 const pkgName = "gocloud.dev/pubsub"
+
+var (
+
+	// OpenTelemetryViews are predefined views for OpenTelemetry metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the explanations at https://opentelemetry.io/docs/specs/otel/metrics/data-model/ for usage.
+	OpenTelemetryViews = gcdkotel.Views(pkgName)
+)
 
 // Subscription receives published messages.
 type Subscription struct {
@@ -647,9 +655,9 @@ func (s *Subscription) getNextBatch(nMessages int) chan msgsOrError {
 			var msgs []*driver.Message
 			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 				var err error
-				ctx2, span := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
-				defer func() { s.tracer.End(ctx, span, err) }()
-				msgs, err = s.driver.ReceiveBatch(ctx2, curMaxMessagesInBatch)
+				spanCtx, span := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+				defer func() { s.tracer.End(spanCtx, span, err) }()
+				msgs, err = s.driver.ReceiveBatch(spanCtx, curMaxMessagesInBatch)
 				return err
 			})
 			if err != nil {
@@ -751,7 +759,7 @@ func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batc
 	return s
 }
 
-func newAckBatcher(ctx0 context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
+func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
 	handler := func(items any) error {
 		var acks, nacks []driver.AckID
 		for _, a := range items.([]*driver.AckInfo) {
@@ -761,22 +769,22 @@ func newAckBatcher(ctx0 context.Context, s *Subscription, ds driver.Subscription
 				nacks = append(nacks, a.AckID)
 			}
 		}
-		g, ctx := errgroup.WithContext(ctx0)
+		g, ctx := errgroup.WithContext(ctx)
 		if len(acks) > 0 {
 			g.Go(func() error {
 				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-					ctx2, span := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
-					defer func() { s.tracer.End(ctx2, span, err) }()
-					return ds.SendAcks(ctx2, acks)
+					spanCtx, span := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
+					defer func() { s.tracer.End(spanCtx, span, err) }()
+					return ds.SendAcks(spanCtx, acks)
 				})
 			})
 		}
 		if len(nacks) > 0 {
 			g.Go(func() error {
 				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-					ctx2, span := s.tracer.Start(ctx, "driver.Subscription.SendNacks")
-					defer func() { s.tracer.End(ctx2, span, err) }()
-					return ds.SendNacks(ctx2, nacks)
+					spanCtx, span := s.tracer.Start(ctx, "driver.Subscription.SendNacks")
+					defer func() { s.tracer.End(spanCtx, span, err) }()
+					return ds.SendNacks(spanCtx, nacks)
 				})
 			})
 		}
