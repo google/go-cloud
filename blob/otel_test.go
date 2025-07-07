@@ -28,10 +28,8 @@ func TestOpenTelemetry(t *testing.T) {
 	ctx := t.Context()
 
 	te := oteltest.NewTestExporter(t, blob.OpenTelemetryViews)
-	// Don't use defer for shutdown as it can lead to deadlocks
-	// We'll manually shut down at the end of the test
+	defer func() { _ = te.Shutdown(ctx) }()
 
-	// Create a bucket and perform operations to generate spans and metrics
 	bytes := []byte("hello world")
 	b := memblob.OpenBucket(nil)
 	defer func() { _ = b.Close() }()

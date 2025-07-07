@@ -198,7 +198,7 @@ func (r *Reader) Close() error {
 	err := wrapError(r.b, r.r.Close(), r.key)
 	r.end(err)
 	// Emit only on close to avoid an allocation on each call to Read().
-	// Record bytes read metric with OpenTelemetry
+	// Record bytes read metric with OpenTelemetry.
 	if r.bytesReadCounter != nil && r.bytesRead > 0 {
 		r.bytesReadCounter.Add(
 			r.ctx,
@@ -366,7 +366,7 @@ type Writer struct {
 	contentMD5 []byte
 	md5hash    hash.Hash
 
-	// Metric collection fields
+	// Metric collection fields.
 	bytesWrittenCounter metric.Int64Counter
 	bytesWritten        int
 	closed              bool
@@ -436,7 +436,7 @@ func (w *Writer) Close() (err error) {
 	defer func() {
 		w.end(err)
 		// Emit only on close to avoid an allocation on each call to Write().
-		// Record bytes written metric with OpenTelemetry
+		// Record bytes written metric with OpenTelemetry.
 		if w.bytesWrittenCounter != nil && w.bytesWritten > 0 {
 			w.bytesWrittenCounter.Add(
 				w.ctx,
@@ -673,8 +673,8 @@ var (
 	OpenTelemetryViews = append(
 		append(
 			gcdkotel.Views(pkgName),
-			gcdkotel.CounterView(pkgName, "/bytes_read", "Total bytes read from blob storage")...),
-		gcdkotel.CounterView(pkgName, "/bytes_written", "Total bytes written to blob storage")...)
+			gcdkotel.CounterView(pkgName, "/bytes_read", "Sum of bytes read from the service.")...),
+		gcdkotel.CounterView(pkgName, "/bytes_written", "Sum of bytes written to the service.")...)
 )
 
 // NewBucket is intended for use by drivers only. Do not use in application code.

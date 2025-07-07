@@ -86,6 +86,7 @@ func Views(pkg string) []sdkmetric.View {
 	}
 }
 
+// CounterView returns summation views that add up individual measurements the counter takes.
 func CounterView(pkg string, meterName string, description string) []sdkmetric.View {
 	return []sdkmetric.View{
 		// View for gauge counts.
@@ -129,6 +130,7 @@ func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 	return m
 }
 
+// DimensionlessMeasure creates a simple counter specifically for dimensionless measurements.
 func DimensionlessMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
 
 	attrs := []attribute.KeyValue{
@@ -148,6 +150,7 @@ func DimensionlessMeasure(pkg string, provider string, meterName string, descrip
 	return m
 }
 
+// BytesMeasure creates a counter for bytes measurements.
 func BytesMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
 
 	attrs := []attribute.KeyValue{
