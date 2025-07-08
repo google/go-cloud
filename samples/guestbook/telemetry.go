@@ -33,7 +33,6 @@ import (
 var otelTracesProviderSet = wire.NewSet(
 	NewTraceProvider,
 	wire.Bind(new(trace.TracerProvider), new(*sdktrace.TracerProvider)),
-
 )
 
 // otelMetricsProviderSet is a Wire provider set that provides the open telemetry metrics provider

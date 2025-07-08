@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"go.opentelemetry.io/otel"
-	main2 "gocloud.dev/samples/guestbook"
 	"log"
 	"net/http"
 	"sync"

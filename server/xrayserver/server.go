@@ -56,7 +56,6 @@ var TracesSet = wire.NewSet(
 	NewTraceExporter,
 	NewTraceProvider,
 	wire.Bind(new(trace.TracerProvider), new(*sdktrace.TracerProvider)),
-
 )
 
 // MetricsSet is a Wire provider set that provides the open telemetry metrics provider given the exporter.
