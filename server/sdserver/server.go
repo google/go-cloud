@@ -42,6 +42,7 @@ import (
 var Set = wire.NewSet(
 	server.Set,
 	NewTextMapPropagator,
+	NewTraceSampler,
 	NewTraceExporter,
 	NewTraceProvider,
 	wire.Bind(new(trace.TracerProvider), new(*sdktrace.TracerProvider)),
@@ -76,6 +77,11 @@ func NewTextMapPropagator() propagation.TextMapPropagator {
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	)
+}
+
+// NewTraceSampler returns a new OpenTelemetry trace sampler.
+func NewTraceSampler(ctx context.Context) sdktrace.Sampler {
+	return sdktrace.AlwaysSample()
 }
 
 // NewTraceExporter returns a new OpenTelemetry gcp trace exporter.

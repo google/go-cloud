@@ -53,6 +53,7 @@ var Set = wire.NewSet(
 var TracesSet = wire.NewSet(
 	NewTextMapPropagator,
 	wire.Bind(new(propagation.TextMapPropagator), new(*xray.Propagator)),
+	NewTraceSampler,
 	NewTraceExporter,
 	NewTraceProvider,
 	wire.Bind(new(trace.TracerProvider), new(*sdktrace.TracerProvider)),
@@ -84,6 +85,11 @@ func NewResource(ctx context.Context) (*resource.Resource, error) {
 
 func NewTextMapPropagator() *xray.Propagator {
 	return &xray.Propagator{}
+}
+
+// NewTraceSampler returns a new OpenTelemetry trace sampler.
+func NewTraceSampler() sdktrace.Sampler {
+	return sdktrace.AlwaysSample()
 }
 
 func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {

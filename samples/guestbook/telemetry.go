@@ -67,8 +67,8 @@ func newTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 	return traceExporter, nil
 }
 
-// NewTraceSampler returns a new OpenTelemetry trace sampler.
-func NewTraceSampler(ctx context.Context) sdktrace.Sampler {
+// newTraceSampler returns a new OpenTelemetry trace sampler.
+func newTraceSampler(ctx context.Context) sdktrace.Sampler {
 	return sdktrace.AlwaysSample()
 }
 
@@ -87,8 +87,8 @@ func NewTraceProvider(ctx context.Context, exporter sdktrace.SpanExporter, sampl
 	return tp, func() { _ = tp.Shutdown(ctx) }
 }
 
-// NewMetricsReader returns a new OpenTelemetry gcp metrics exporter.
-func NewMetricsReader(ctx context.Context) (sdkmetric.Reader, error) {
+// newMetricsReader returns a new OpenTelemetry gcp metrics exporter.
+func newMetricsReader(ctx context.Context) (sdkmetric.Reader, error) {
 	// Create and start new OTLP metric exporter
 	metricReader, err := autoexport.NewMetricReader(ctx)
 	if err != nil {

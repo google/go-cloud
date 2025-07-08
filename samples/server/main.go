@@ -89,7 +89,7 @@ func main() {
 	if *doTrace {
 		fmt.Println("Exporting traces to Stackdriver")
 
-		traceSampler := main2.NewTraceSampler(ctx)
+		traceSampler := sdserver.NewTraceSampler(ctx)
 
 		spanExporter, err0 := sdserver.NewTraceExporter(projectID)
 		if err0 != nil {

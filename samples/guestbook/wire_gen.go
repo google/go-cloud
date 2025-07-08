@@ -333,7 +333,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	}
 	sampler := trace.AlwaysSample()
 	tracerProvider, cleanup3 := NewTraceProvider(ctx, spanExporter, sampler)
-	reader, err := NewMetricsReader(ctx)
+	reader, err := newMetricsReader(ctx)
 	if err != nil {
 		cleanup3()
 		cleanup2()

@@ -117,7 +117,6 @@ func main() {
 var applicationSet = wire.NewSet(
 	newApplication,
 	appHealthChecks,
-	sdktrace.AlwaysSample,
 	newRouter,
 	wire.Bind(new(http.Handler), new(*mux.Router)),
 )
