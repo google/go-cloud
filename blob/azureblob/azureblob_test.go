@@ -365,6 +365,18 @@ func TestOpenerFromEnv(t *testing.T) {
 			},
 		},
 		{
+			// Connection string provides default protocol and account name.
+			connectionString: "DefaultEndpointsProtocol=https;AccountName=another-account",
+			want: &credInfoT{
+				CredType:         credTypeConnectionString,
+				ConnectionString: "DefaultEndpointsProtocol=https;AccountName=another-account",
+			},
+			wantOpts: &ServiceURLOptions{
+				AccountName: "another-account",
+				Protocol:    "https",
+			},
+		},
+		{
 			// Alternate connection string.
 			accountName:       "myaccount",
 			connectionString2: "a-connection-string",
