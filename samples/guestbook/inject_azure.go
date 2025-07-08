@@ -19,10 +19,12 @@ package main
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/propagation"
 
 	azcontainer "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/google/wire"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
 	"gocloud.dev/runtimevar"
@@ -43,7 +45,6 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	// wire.Build.
 	wire.Build(
 		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
-		wire.InterfaceValue(new(sdktrace.SpanExporter), sdktrace.SpanExporter(nil)),
 		azureblob.NewDefaultServiceURLOptions,
 		azureblob.NewDefaultClient,
 		azureblob.NewServiceURL,
@@ -52,10 +53,9 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 		azureBucket,
 		azureMOTDVar,
 		server.Set,
-		server.NewPropagationTextMap,
-		server.NewMetricsReader,
-		server.OtelTracesProviderSet,
-		server.OtelMetricsProviderSet,
+		wire.InterfaceValue(new(propagation.TextMapPropagator), propagation.TextMapPropagator(nil)),
+		wire.InterfaceValue(new(trace.TracerProvider), trace.TracerProvider(nil)),
+		wire.InterfaceValue(new(metric.MeterProvider), metric.MeterProvider(nil)),
 		dialLocalSQL,
 	)
 	return nil, nil, nil

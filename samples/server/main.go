@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"go.opentelemetry.io/otel"
+	main2 "gocloud.dev/samples/guestbook"
 	"log"
 	"net/http"
 	"sync"
@@ -89,7 +90,7 @@ func main() {
 	if *doTrace {
 		fmt.Println("Exporting traces to Stackdriver")
 
-		traceSampler := server.NewTraceSampler(ctx)
+		traceSampler := main2.NewTraceSampler(ctx)
 
 		spanExporter, err0 := sdserver.NewTraceExporter(projectID)
 		if err0 != nil {

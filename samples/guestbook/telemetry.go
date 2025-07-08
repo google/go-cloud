@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package server
+package main
 
 import (
 	"context"
@@ -29,15 +29,15 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// OtelTracesProviderSet is a Wire provider set that provides the open telemetry trace provider
-var OtelTracesProviderSet = wire.NewSet(
+// otelTracesProviderSet is a Wire provider set that provides the open telemetry trace provider
+var otelTracesProviderSet = wire.NewSet(
 	NewTraceProvider,
 	wire.Bind(new(trace.TracerProvider), new(*sdktrace.TracerProvider)),
 
 )
 
-// OtelMetricsProviderSet is a Wire provider set that provides the open telemetry metrics provider
-var OtelMetricsProviderSet = wire.NewSet(
+// otelMetricsProviderSet is a Wire provider set that provides the open telemetry metrics provider
+var otelMetricsProviderSet = wire.NewSet(
 	NewMeterProvider,
 	wire.Bind(new(metric.MeterProvider), new(*sdkmetric.MeterProvider)),
 )
@@ -53,12 +53,12 @@ func newResource() *resource.Resource {
 	return resource.Default()
 }
 
-func NewPropagationTextMap() propagation.TextMapPropagator {
+func newPropagationTextMap() propagation.TextMapPropagator {
 	return autoprop.NewTextMapPropagator()
 }
 
-// NewTraceExporter returns a new OpenTelemetry gcp trace exporter.
-func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
+// newTraceExporter returns a new OpenTelemetry gcp trace exporter.
+func newTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 
 	traceExporter, err := autoexport.NewSpanExporter(ctx)
 	if err != nil {

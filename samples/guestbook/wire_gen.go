@@ -14,7 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/go-sql-driver/mysql"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
+	trace2 "go.opentelemetry.io/otel/trace"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
@@ -165,18 +168,9 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	router := newRouter(mainApplication)
 	logger := _wireLoggerValue
 	v, cleanup2 := appHealthChecks(db)
-	textMapPropagator := server.NewPropagationTextMap()
-	spanExporter := _wireSpanExporterValue
-	sampler := trace.AlwaysSample()
-	tracerProvider, cleanup3 := server.NewTraceProvider(ctx, spanExporter, sampler)
-	reader, err := server.NewMetricsReader(ctx)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	meterProvider, cleanup4 := server.NewMeterProvider(ctx, reader)
+	textMapPropagator := _wireTextMapPropagatorValue
+	tracerProvider := _wireTracerProviderValue
+	meterProvider := _wireMeterProviderValue
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:          logger,
@@ -188,16 +182,16 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
-		cleanup4()
-		cleanup3()
 		cleanup2()
 		cleanup()
 	}, nil
 }
 
 var (
-	_wireLoggerValue       = requestlog.Logger(nil)
-	_wireSpanExporterValue = trace.SpanExporter(nil)
+	_wireLoggerValue            = requestlog.Logger(nil)
+	_wireTextMapPropagatorValue = propagation.TextMapPropagator(nil)
+	_wireTracerProviderValue    = trace2.TracerProvider(nil)
+	_wireMeterProviderValue     = metric.MeterProvider(nil)
 )
 
 // Injectors from inject_gcp.go:
@@ -330,18 +324,23 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	router := newRouter(mainApplication)
 	logger := _wireRequestlogLoggerValue
 	v, cleanup2 := appHealthChecks(db)
-	textMapPropagator := server.NewPropagationTextMap()
-	spanExporter := _wireTraceSpanExporterValue
+	textMapPropagator := newPropagationTextMap()
+	spanExporter, err := newTraceExporter(ctx)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	sampler := trace.AlwaysSample()
-	tracerProvider, cleanup3 := server.NewTraceProvider(ctx, spanExporter, sampler)
-	reader, err := server.NewMetricsReader(ctx)
+	tracerProvider, cleanup3 := NewTraceProvider(ctx, spanExporter, sampler)
+	reader, err := NewMetricsReader(ctx)
 	if err != nil {
 		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	meterProvider, cleanup4 := server.NewMeterProvider(ctx, reader)
+	meterProvider, cleanup4 := NewMeterProvider(ctx, reader)
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:          logger,
@@ -361,8 +360,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 }
 
 var (
-	_wireRequestlogLoggerValue  = requestlog.Logger(nil)
-	_wireTraceSpanExporterValue = trace.SpanExporter(nil)
+	_wireRequestlogLoggerValue = requestlog.Logger(nil)
 )
 
 // inject_aws.go:

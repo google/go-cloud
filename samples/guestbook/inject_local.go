@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/wire"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
 	"gocloud.dev/runtimevar"
@@ -44,12 +43,12 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	// wire.Build.
 	wire.Build(
 		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
-		wire.InterfaceValue(new(sdktrace.SpanExporter), sdktrace.SpanExporter(nil)),
 		server.Set,
-		server.NewPropagationTextMap,
-		server.OtelTracesProviderSet,
-		server.OtelMetricsProviderSet,
-		server.NewMetricsReader,
+		newPropagationTextMap,
+		newTraceExporter,
+		otelTracesProviderSet,
+		otelMetricsProviderSet,
+		NewMetricsReader,
 		applicationSet,
 		dialLocalSQL,
 		localBucket,
