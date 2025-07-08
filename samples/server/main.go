@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"go.opentelemetry.io/otel"
-	serverotel "gocloud.dev/server/otel"
 	"log"
 	"net/http"
 	"sync"
@@ -89,23 +88,28 @@ func main() {
 
 	if *doTrace {
 		fmt.Println("Exporting traces to Stackdriver")
-		res, err0 := serverotel.NewResource("server", "v0.1.0")
-		if err0 != nil {
-			log.Fatal(err0)
-		}
+
+		traceSampler := server.NewTraceSampler(ctx)
+
 		spanExporter, err0 := sdserver.NewTraceExporter(projectID)
 		if err0 != nil {
 			log.Fatal(err0)
 		}
-		tp, cleanup := serverotel.NewTraceProvider(res, spanExporter)
-		defer cleanup()
-		otel.SetTracerProvider(tp)
-
-		metricsExporter, err0 := sdserver.NewMetricsExporter(projectID)
+		tp, cleanup, err0 := sdserver.NewTraceProvider(ctx, spanExporter, traceSampler)
 		if err0 != nil {
 			log.Fatal(err0)
 		}
-		mp, cleanup2 := serverotel.NewMeterProvider(res, metricsExporter)
+		defer cleanup()
+		otel.SetTracerProvider(tp)
+
+		metricsReader, err0 := sdserver.NewMetricsReader(projectID)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+		mp, cleanup2, err0 := sdserver.NewMeterProvider(ctx, metricsReader)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
 		defer cleanup2()
 		otel.SetMeterProvider(mp)
 	}

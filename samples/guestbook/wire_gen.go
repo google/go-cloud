@@ -8,14 +8,13 @@ package main
 
 import (
 	"context"
-	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"database/sql"
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/go-sql-driver/mysql"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
@@ -39,7 +38,6 @@ import (
 	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"net/http"
 	"net/url"
-	"os"
 )
 
 // Injectors from inject_aws.go:
@@ -79,16 +77,51 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	router := newRouter(mainApplication)
 	ncsaLogger := xrayserver.NewRequestLogger()
 	v, cleanup3 := appHealthChecks(db)
-	tracerProvider := provideTracerProvider()
+	propagator := xrayserver.NewTextMapPropagator()
+	spanExporter, err := xrayserver.NewTraceExporter(ctx)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	sampler := trace.AlwaysSample()
+	tracerProvider, cleanup4, err := xrayserver.NewTraceProvider(ctx, spanExporter, sampler)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	reader, err := xrayserver.NewMetricsReader(ctx)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	meterProvider, cleanup5, err := xrayserver.NewMeterProvider(ctx, reader)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:  ncsaLogger,
-		HealthChecks:   v,
-		TracerProvider: tracerProvider,
-		Driver:         defaultDriver,
+		RequestLogger:          ncsaLogger,
+		HealthChecks:           v,
+		TraceTextMapPropagator: propagator,
+		TraceProvider:          tracerProvider,
+		MetricsProvider:        meterProvider,
+		Driver:                 defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
+		cleanup5()
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -132,23 +165,39 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	router := newRouter(mainApplication)
 	logger := _wireLoggerValue
 	v, cleanup2 := appHealthChecks(db)
-	tracerProvider := provideTracerProvider()
+	textMapPropagator := server.NewPropagationTextMap()
+	spanExporter := _wireSpanExporterValue
+	sampler := trace.AlwaysSample()
+	tracerProvider, cleanup3 := server.NewTraceProvider(ctx, spanExporter, sampler)
+	reader, err := server.NewMetricsReader(ctx)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	meterProvider, cleanup4 := server.NewMeterProvider(ctx, reader)
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:  logger,
-		HealthChecks:   v,
-		TracerProvider: tracerProvider,
-		Driver:         defaultDriver,
+		RequestLogger:          logger,
+		HealthChecks:           v,
+		TraceTextMapPropagator: textMapPropagator,
+		TraceProvider:          tracerProvider,
+		MetricsProvider:        meterProvider,
+		Driver:                 defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
+		cleanup4()
+		cleanup3()
 		cleanup2()
 		cleanup()
 	}, nil
 }
 
 var (
-	_wireLoggerValue = requestlog.Logger(nil)
+	_wireLoggerValue       = requestlog.Logger(nil)
+	_wireSpanExporterValue = trace.SpanExporter(nil)
 )
 
 // Injectors from inject_gcp.go:
@@ -199,8 +248,8 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	router := newRouter(mainApplication)
 	stackdriverLogger := sdserver.NewRequestLogger()
 	v, cleanup5 := appHealthChecks(db)
-	monitoredresourceInterface := monitoredresource.Autodetect()
-	exporter, cleanup6, err := sdserver.NewTraceExporter(projectID, tokenSource, monitoredresourceInterface)
+	textMapPropagator := sdserver.NewTextMapPropagator()
+	spanExporter, err := sdserver.NewTraceExporter(projectID)
 	if err != nil {
 		cleanup5()
 		cleanup4()
@@ -209,17 +258,49 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		cleanup()
 		return nil, nil, err
 	}
-	sampler := sdktrace.AlwaysSample()
+	sampler := trace.AlwaysSample()
+	tracerProvider, cleanup6, err := sdserver.NewTraceProvider(ctx, spanExporter, sampler)
+	if err != nil {
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	reader, err := sdserver.NewMetricsReader(projectID)
+	if err != nil {
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	meterProvider, cleanup7, err := sdserver.NewMeterProvider(ctx, reader)
+	if err != nil {
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:         stackdriverLogger,
-		HealthChecks:          v,
-		TraceExporter:         exporter,
-		DefaultSamplingPolicy: sampler,
-		Driver:                defaultDriver,
+		RequestLogger:          stackdriverLogger,
+		HealthChecks:           v,
+		TraceTextMapPropagator: textMapPropagator,
+		TraceProvider:          tracerProvider,
+		MetricsProvider:        meterProvider,
+		Driver:                 defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
+		cleanup7()
+		cleanup6()
 		cleanup5()
 		cleanup4()
 		cleanup3()
@@ -247,22 +328,42 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 	}
 	mainApplication := newApplication(db, bucket, variable)
 	router := newRouter(mainApplication)
-	ncsaLogger := provideLocalRequestLogger()
+	logger := _wireRequestlogLoggerValue
 	v, cleanup2 := appHealthChecks(db)
-	tracerProvider := provideTracerProvider()
+	textMapPropagator := server.NewPropagationTextMap()
+	spanExporter := _wireTraceSpanExporterValue
+	sampler := trace.AlwaysSample()
+	tracerProvider, cleanup3 := server.NewTraceProvider(ctx, spanExporter, sampler)
+	reader, err := server.NewMetricsReader(ctx)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	meterProvider, cleanup4 := server.NewMeterProvider(ctx, reader)
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
-		RequestLogger:  ncsaLogger,
-		HealthChecks:   v,
-		TracerProvider: tracerProvider,
-		Driver:         defaultDriver,
+		RequestLogger:          logger,
+		HealthChecks:           v,
+		TraceTextMapPropagator: textMapPropagator,
+		TraceProvider:          tracerProvider,
+		MetricsProvider:        meterProvider,
+		Driver:                 defaultDriver,
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
+		cleanup4()
+		cleanup3()
 		cleanup2()
 		cleanup()
 	}, nil
 }
+
+var (
+	_wireRequestlogLoggerValue  = requestlog.Logger(nil)
+	_wireTraceSpanExporterValue = trace.SpanExporter(nil)
+)
 
 // inject_aws.go:
 
@@ -395,9 +496,4 @@ func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
 		return nil, nil, err
 	}
 	return v, func() { v.Close() }, nil
-}
-
-// provideLocalRequestLogger provides a request logger for local development.
-func provideLocalRequestLogger() *requestlog.NCSALogger {
-	return requestlog.NewNCSALogger(os.Stdout, func(e error) { fmt.Println(e) })
 }

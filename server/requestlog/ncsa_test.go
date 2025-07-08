@@ -16,7 +16,6 @@ package requestlog
 
 import (
 	"bytes"
-	"net/http"
 	"testing"
 	"time"
 )
@@ -42,19 +41,16 @@ func TestNCSALog(t *testing.T) {
 		{
 			name: "AllFields",
 			ent: Entry{
-				ReceivedTime: time.Unix(startTime, startTimeNanos).UTC(),
-				Request: &http.Request{
-					Method: "POST",
-					Proto:  "HTTP/1.1",
-					Header: http.Header{
-						"User-Agent": []string{"Chrome proxied through Firefox and Edge"},
-						"Referer":    []string{"http://www.example.com/"},
-					},
-					Host:       "127.0.0.1",
-					RemoteAddr: "12.34.56.78:80",
-					RequestURI: "/foo/bar",
-				},
+				ReceivedTime:       time.Unix(startTime, startTimeNanos).UTC(),
+				RequestMethod:      "POST",
+				RequestURL:         "/foo/bar",
+				RequestHeaderSize:  456,
 				RequestBodySize:    123000,
+				UserAgent:          "Chrome proxied through Firefox and Edge",
+				Referer:            "http://www.example.com/",
+				Proto:              "HTTP/1.1",
+				RemoteIP:           "12.34.56.78",
+				ServerIP:           "127.0.0.1",
 				Status:             404,
 				ResponseHeaderSize: 555,
 				ResponseBodySize:   789000,
@@ -65,45 +61,35 @@ func TestNCSALog(t *testing.T) {
 		{
 			name: "OnlyRequiredFields",
 			ent: Entry{
-				ReceivedTime: time.Unix(startTime, startTimeNanos).UTC(),
-				Request: &http.Request{
-					Method:     "POST",
-					Proto:      "HTTP/1.1",
-					RequestURI: "/foo/bar",
-				},
-				Status: 404,
+				ReceivedTime:  time.Unix(startTime, startTimeNanos).UTC(),
+				RequestMethod: "POST",
+				RequestURL:    "/foo/bar",
+				Proto:         "HTTP/1.1",
+				Status:        404,
 			},
 			want: `- - - [13/Oct/2017:17:00:00 +0000] "POST /foo/bar HTTP/1.1" 404 0 "" ""` + "\n",
 		},
 		{
 			name: "OnlyRequiredFieldsAndUserAgent",
 			ent: Entry{
-				ReceivedTime: time.Unix(startTime, startTimeNanos).UTC(),
-				Request: &http.Request{
-					Method:     "POST",
-					Proto:      "HTTP/1.1",
-					RequestURI: "/foo/bar",
-					Header: http.Header{
-						"User-Agent": []string{"Chrome proxied through Firefox and Edge"},
-					},
-				},
-				Status: 404,
+				ReceivedTime:  time.Unix(startTime, startTimeNanos).UTC(),
+				RequestMethod: "POST",
+				RequestURL:    "/foo/bar",
+				Proto:         "HTTP/1.1",
+				Status:        404,
+				UserAgent:     "Chrome proxied through Firefox and Edge",
 			},
 			want: `- - - [13/Oct/2017:17:00:00 +0000] "POST /foo/bar HTTP/1.1" 404 0 "" "Chrome proxied through Firefox and Edge"` + "\n",
 		},
 		{
 			name: "DoubleQuotesInUserAgent",
 			ent: Entry{
-				ReceivedTime: time.Unix(startTime, startTimeNanos).UTC(),
-				Request: &http.Request{
-					Method:     "POST",
-					Proto:      "HTTP/1.1",
-					RequestURI: "/foo/bar",
-					Header: http.Header{
-						"User-Agent": []string{"Chrome \"proxied\" through Firefox and Edge"},
-					},
-				},
-				Status: 404,
+				ReceivedTime:  time.Unix(startTime, startTimeNanos).UTC(),
+				RequestMethod: "POST",
+				RequestURL:    "/foo/bar",
+				Proto:         "HTTP/1.1",
+				Status:        404,
+				UserAgent:     "Chrome \"proxied\" through Firefox and Edge",
 			},
 			want: `- - - [13/Oct/2017:17:00:00 +0000] "POST /foo/bar HTTP/1.1" 404 0 "" "Chrome \"proxied\" through Firefox and Edge"` + "\n",
 		},

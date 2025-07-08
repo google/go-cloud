@@ -24,6 +24,10 @@ import (
 
 	"github.com/google/wire"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 
 	"gocloud.dev/server/driver"
 	"gocloud.dev/server/health"
@@ -34,7 +38,8 @@ import (
 // Options.
 var Set = wire.NewSet(
 	New,
-	wire.Struct(new(Options), "RequestLogger", "HealthChecks", "Driver"),
+	wire.Struct(new(Options), "RequestLogger", "HealthChecks",
+		"TraceTextMapPropagator", "TraceProvider", "MetricsProvider", "Driver"),
 	wire.Value(&DefaultDriver{}),
 	wire.Bind(new(driver.Server), new(*DefaultDriver)),
 )
@@ -42,12 +47,15 @@ var Set = wire.NewSet(
 // Server is a preconfigured HTTP server with diagnostic hooks.
 // The zero value is a server with the default options.
 type Server struct {
-	reqlog         requestlog.Logger
-	handler        http.Handler
-	wrappedHandler http.Handler
-	healthHandler  health.Handler
-	once           sync.Once
-	driver         driver.Server
+	reqlog            requestlog.Logger
+	handler           http.Handler
+	wrappedHandler    http.Handler
+	healthHandler     health.Handler
+	textMapPropagator propagation.TextMapPropagator
+	traceProvider     trace.TracerProvider
+	meterProvider     metric.MeterProvider
+	once              sync.Once
+	driver            driver.Server
 }
 
 // Options is the set of optional parameters.
@@ -59,6 +67,15 @@ type Options struct {
 	// /healthz/readiness endpoint is requested.
 	HealthChecks []health.Checker
 
+	// TraceTextMapPropagator decides the format of trace text propagated.
+	TraceTextMapPropagator propagation.TextMapPropagator
+
+	// TraceProvider handles sampled trace spans.
+	TraceProvider trace.TracerProvider
+
+	// MetricsProvider handles application metrics.
+	MetricsProvider metric.MeterProvider
+
 	// Driver serves HTTP requests.
 	Driver driver.Server
 }
@@ -68,6 +85,9 @@ func New(h http.Handler, opts *Options) *Server {
 	srv := &Server{handler: h}
 	if opts != nil {
 		srv.reqlog = opts.RequestLogger
+		srv.textMapPropagator = opts.TraceTextMapPropagator
+		srv.traceProvider = opts.TraceProvider
+		srv.meterProvider = opts.MetricsProvider
 		for _, c := range opts.HealthChecks {
 			srv.healthHandler.Add(c)
 		}
@@ -78,6 +98,19 @@ func New(h http.Handler, opts *Options) *Server {
 
 func (srv *Server) init() {
 	srv.once.Do(func() {
+
+		if srv.textMapPropagator != nil {
+			otel.SetTextMapPropagator(srv.textMapPropagator)
+		}
+
+		if srv.traceProvider != nil {
+			otel.SetTracerProvider(srv.traceProvider)
+		}
+
+		if srv.meterProvider != nil {
+			otel.SetMeterProvider(srv.meterProvider)
+		}
+
 		if srv.driver == nil {
 			srv.driver = NewDefaultDriver()
 		}
@@ -96,7 +129,7 @@ func (srv *Server) init() {
 		if srv.reqlog != nil {
 			h = requestlog.NewHandler(srv.reqlog, h)
 		}
-		// Wrap with OpenTelemetry HTTP handler
+		// Wrap with OpenTelemetry HTTP handler.
 		h = otelhttp.NewHandler(h, "", otelhttp.WithPublicEndpoint())
 		mux.Handle("/", h)
 		srv.wrappedHandler = mux

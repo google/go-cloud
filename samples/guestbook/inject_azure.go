@@ -52,6 +52,10 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 		azureBucket,
 		azureMOTDVar,
 		server.Set,
+		server.NewPropagationTextMap,
+		server.NewMetricsReader,
+		server.OtelTracesProviderSet,
+		server.OtelMetricsProviderSet,
 		dialLocalSQL,
 	)
 	return nil, nil, nil

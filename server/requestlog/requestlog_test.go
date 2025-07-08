@@ -17,6 +17,7 @@ package requestlog
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"io"
 	"net"
 	"net/http"
@@ -54,31 +55,26 @@ func TestHandler(t *testing.T) {
 	if want := "/foo"; ent.Request.URL.Path != want {
 		t.Errorf("Request Context Value = %s; want %s", ent.Request.Context().Value(testContextKey), want)
 	}
-
-	entReq := ent.Request
-
-	if want := "POST"; entReq.Method != want {
-		t.Errorf("RequestMethod = %q; want %q", entReq.Method, want)
+	if want := "POST"; ent.RequestMethod != want {
+		t.Errorf("RequestMethod = %q; want %q", ent.RequestMethod, want)
 	}
-	if want := "/foo"; entReq.URL.Path != want {
-		t.Errorf("RequestURL = %q; want %q", entReq.URL, want)
+	if want := "/foo"; ent.RequestURL != want {
+		t.Errorf("RequestURL = %q; want %q", ent.RequestURL, want)
 	}
-
-	entReqHeaderSize := headerSize(entReq.Header)
-	if entReqHeaderSize < int64(requestHdrSize) {
-		t.Errorf("RequestHeaderSize = %d; want >=%d", entReqHeaderSize, requestHdrSize)
+	if ent.RequestHeaderSize < int64(requestHdrSize) {
+		t.Errorf("RequestHeaderSize = %d; want >=%d", ent.RequestHeaderSize, requestHdrSize)
 	}
 	if ent.RequestBodySize != int64(len(requestMsg)) {
 		t.Errorf("RequestBodySize = %d; want %d", ent.RequestBodySize, len(requestMsg))
 	}
-	if entReq.UserAgent() != userAgent {
-		t.Errorf("UserAgent = %q; want %q", entReq.UserAgent(), userAgent)
+	if ent.UserAgent != userAgent {
+		t.Errorf("UserAgent = %q; want %q", ent.UserAgent, userAgent)
 	}
-	if entReq.Referer() != referer {
-		t.Errorf("Referer = %q; want %q", entReq.Referer(), referer)
+	if ent.Referer != referer {
+		t.Errorf("Referer = %q; want %q", ent.Referer, referer)
 	}
-	if want := "HTTP/1.1"; entReq.Proto != want {
-		t.Errorf("Proto = %q; want %q", entReq.Proto, want)
+	if want := "HTTP/1.1"; ent.Proto != want {
+		t.Errorf("Proto = %q; want %q", ent.Proto, want)
 	}
 	if ent.Status != http.StatusOK {
 		t.Errorf("Status = %d; want %d", ent.Status, http.StatusOK)
@@ -99,23 +95,18 @@ func TestHandler(t *testing.T) {
 
 type testSpanHandler struct {
 	h       http.Handler
-	spanCtx trace.SpanContext
+	spanCtx *trace.SpanContext
 }
 
 func (sh *testSpanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Create a SpanContext with fixed TraceID and SpanID for testing
-	// These values match what the test is expecting
-	sh.spanCtx = trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID: trace.TraceID{0x01}, // First byte set to 1, rest zeros
-		SpanID:  trace.SpanID{0x01},  // First byte set to 1, rest zeros
-		Remote:  true,                // Mark as remote to make it valid
-	})
+	tracer := otel.Tracer("test")
+	ctx, span := tracer.Start(r.Context(), "test")
+	defer span.End()
+	sc := trace.SpanContextFromContext(ctx)
 
-	// Create a context containing this SpanContext
-	ctx := trace.ContextWithSpanContext(r.Context(), sh.spanCtx)
+	sh.spanCtx = &sc
 	r = r.WithContext(ctx)
 
-	// Let the handler use our context with the fixed SpanContext
 	sh.h.ServeHTTP(w, r)
 }
 
@@ -123,7 +114,7 @@ type contextKey string
 
 const testContextKey = contextKey("baggage")
 
-func roundTrip(r *http.Request, h http.Handler) (*Entry, trace.SpanContext, error) {
+func roundTrip(r *http.Request, h http.Handler) (*Entry, *trace.SpanContext, error) {
 	capture := new(captureLogger)
 	hh := NewHandler(capture, h)
 	handler := &testSpanHandler{h: hh}
@@ -137,19 +128,9 @@ func roundTrip(r *http.Request, h http.Handler) (*Entry, trace.SpanContext, erro
 	r.URL.Host = s.URL[len("http://"):]
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
-		// Create a valid empty SpanContext for the error case
-		emptySpanContext := trace.NewSpanContext(trace.SpanContextConfig{})
-		return nil, emptySpanContext, err
+		return nil, nil, err
 	}
 	resp.Body.Close()
-	// If no SpanContext was created, make a valid empty one
-	if !handler.spanCtx.IsValid() {
-		handler.spanCtx = trace.NewSpanContext(trace.SpanContextConfig{
-			TraceID: trace.TraceID{0x01}, // Non-zero TraceID
-			SpanID:  trace.SpanID{0x01},  // Non-zero SpanID
-			Remote:  true,                // Mark as remote to make it valid
-		})
-	}
 	return &capture.ent, handler.spanCtx, nil
 }
 

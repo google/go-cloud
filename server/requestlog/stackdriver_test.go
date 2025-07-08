@@ -48,20 +48,17 @@ func TestStackdriverLog(t *testing.T) {
 	buf := new(bytes.Buffer)
 	var logErr error
 	l := NewStackdriverLogger(buf, func(e error) { logErr = e })
-	wantEntry := &Entry{
-		ReceivedTime: time.Unix(startTime, startTimeNanos),
-		Request: &http.Request{
-			Method: "POST",
-			Proto:  "HTTP/1.1",
-			Header: http.Header{
-				"User-Agent": []string{"Chrome proxied through Firefox and Edge"},
-				"Referer":    []string{"http://www.example.com/"},
-			},
-			Host:       "127.0.0.1",
-			RemoteAddr: "12.34.56.78:80",
-			RequestURI: "/foo/bar",
-		},
+	want := &Entry{
+		ReceivedTime:       time.Unix(startTime, startTimeNanos),
+		RequestMethod:      "POST",
+		RequestURL:         "/foo/bar",
+		RequestHeaderSize:  456,
 		RequestBodySize:    123000,
+		UserAgent:          "Chrome proxied through Firefox and Edge",
+		Referer:            "http://www.example.com/",
+		Proto:              "HTTP/1.1",
+		RemoteIP:           "12.34.56.78",
+		ServerIP:           "127.0.0.1",
 		Status:             404,
 		ResponseHeaderSize: 555,
 		ResponseBodySize:   789000,
@@ -69,68 +66,67 @@ func TestStackdriverLog(t *testing.T) {
 		TraceID:            sc.TraceID(),
 		SpanID:             sc.SpanID(),
 	}
-	ent := *wantEntry // copy in case Log accidentally mutates
+	ent := *want // copy in case Log accidentally mutates
 	l.Log(&ent)
 	if logErr != nil {
 		t.Error("Logger called error callback:", logErr)
 	}
 
-	var gotBytes json.RawMessage
-	if err := json.Unmarshal(buf.Bytes(), &gotBytes); err != nil {
+	var got json.RawMessage
+	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
 		t.Fatal("Unmarshal:", err)
 	}
 
 	var r map[string]any
-	if err := json.Unmarshal(gotBytes, &r); err != nil {
+	if err := json.Unmarshal(got, &r); err != nil {
 		t.Error("Unmarshal record:", err)
 	} else {
 		rr, _ := r["httpRequest"].(map[string]any)
 		if rr == nil {
 			t.Error("httpRequest does not exist in record or is not a JSON object")
 		}
-		entReq := ent.Request
-		if got, want := jsonString(rr, "requestMethod"), entReq.Method; got != want {
-			t.Errorf("httpRequest.requestMethod = %q; wantEntry %q", got, want)
+		if got, want := jsonString(rr, "requestMethod"), ent.RequestMethod; got != want {
+			t.Errorf("httpRequest.requestMethod = %q; want %q", got, want)
 		}
-		if got, want := jsonString(rr, "requestUrl"), entReq.RequestURI; got != want {
-			t.Errorf("httpRequest.requestUrl = %q; wantEntry %q", got, want)
+		if got, want := jsonString(rr, "requestUrl"), ent.RequestURL; got != want {
+			t.Errorf("httpRequest.requestUrl = %q; want %q", got, want)
 		}
-		if got, want := jsonString(rr, "requestSize"), "123089"; got != want {
-			t.Errorf("httpRequest.requestSize = %q; wantEntry %q", got, want)
+		if got, want := jsonString(rr, "requestSize"), "123456"; got != want {
+			t.Errorf("httpRequest.requestSize = %q; want %q", got, want)
 		}
 		if got, want := jsonNumber(rr, "status"), float64(ent.Status); got != want {
-			t.Errorf("httpRequest.status = %d; wantEntry %d", int64(got), int64(want))
+			t.Errorf("httpRequest.status = %d; want %d", int64(got), int64(want))
 		}
 		if got, want := jsonString(rr, "responseSize"), "789555"; got != want {
-			t.Errorf("httpRequest.responseSize = %q; wantEntry %q", got, want)
+			t.Errorf("httpRequest.responseSize = %q; want %q", got, want)
 		}
-		if got, want := jsonString(rr, "userAgent"), entReq.UserAgent(); got != want {
-			t.Errorf("httpRequest.userAgent = %q; wantEntry %q", got, want)
+		if got, want := jsonString(rr, "userAgent"), ent.UserAgent; got != want {
+			t.Errorf("httpRequest.userAgent = %q; want %q", got, want)
 		}
-		if got, want := jsonString(rr, "remoteIp"), ipFromHostPort(entReq.RemoteAddr); got != want {
-			t.Errorf("httpRequest.remoteIp = %q; wantEntry %q", got, want)
+		if got, want := jsonString(rr, "remoteIp"), ent.RemoteIP; got != want {
+			t.Errorf("httpRequest.remoteIp = %q; want %q", got, want)
 		}
-		if got, want := jsonString(rr, "referer"), entReq.Referer(); got != want {
-			t.Errorf("httpRequest.referer = %q; wantEntry %q", got, want)
+		if got, want := jsonString(rr, "referer"), ent.Referer; got != want {
+			t.Errorf("httpRequest.referer = %q; want %q", got, want)
 		}
 		if got, want := jsonString(rr, "latency"), "5.123456789"; parseLatency(got) != want {
-			t.Errorf("httpRequest.latency = %q; wantEntry %q", got, want+"s")
+			t.Errorf("httpRequest.latency = %q; want %q", got, want+"s")
 		}
 		ts, _ := r["timestamp"].(map[string]any)
 		if ts == nil {
 			t.Error("timestamp does not exist in record or is not a JSON object")
 		}
 		if got, want := jsonNumber(ts, "seconds"), float64(endTime); got != want {
-			t.Errorf("timestamp.seconds = %g; wantEntry %g", got, want)
+			t.Errorf("timestamp.seconds = %g; want %g", got, want)
 		}
 		if got, want := jsonNumber(ts, "nanos"), float64(endTimeNanos); got != want {
-			t.Errorf("timestamp.nanos = %g; wantEntry %g", got, want)
+			t.Errorf("timestamp.nanos = %g; want %g", got, want)
 		}
 		if got, want := jsonString(r, "logging.googleapis.com/trace"), ent.TraceID.String(); got != want {
-			t.Errorf("traceID = %q; wantEntry %q", got, want)
+			t.Errorf("traceID = %q; want %q", got, want)
 		}
 		if got, want := jsonString(r, "logging.googleapis.com/spanId"), ent.SpanID.String(); got != want {
-			t.Errorf("spanID = %q; wantEntry %q", got, want)
+			t.Errorf("spanID = %q; want %q", got, want)
 		}
 	}
 }
@@ -161,19 +157,16 @@ func jsonNumber(obj map[string]any, k string) float64 {
 
 func BenchmarkStackdriverLog(b *testing.B) {
 	ent := &Entry{
-		ReceivedTime: time.Date(2017, time.October, 13, 17, 0, 0, 512, time.UTC),
-		Request: &http.Request{
-			Method: "POST",
-			Proto:  "HTTP/1.1",
-			Header: http.Header{
-				"User-Agent": []string{"Chrome proxied through Firefox and Edge"},
-				"Referer":    []string{"http://www.example.com/"},
-			},
-			Host:       "127.0.0.1",
-			RemoteAddr: "12.34.56.78",
-			RequestURI: "/foo/bar",
-		},
+		ReceivedTime:       time.Date(2017, time.October, 13, 17, 0, 0, 512, time.UTC),
+		RequestMethod:      "POST",
+		RequestURL:         "/foo/bar",
+		RequestHeaderSize:  456,
 		RequestBodySize:    123000,
+		UserAgent:          "Chrome proxied through Firefox and Edge",
+		Referer:            "http://www.example.com/",
+		Proto:              "HTTP/1.1",
+		RemoteIP:           "12.34.56.78",
+		ServerIP:           "127.0.0.1",
 		Status:             404,
 		ResponseHeaderSize: 555,
 		ResponseBodySize:   789000,
