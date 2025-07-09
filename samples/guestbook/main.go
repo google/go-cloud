@@ -30,7 +30,6 @@ import (
 
 	"github.com/google/wire"
 	"github.com/gorilla/mux"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
