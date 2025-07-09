@@ -16,8 +16,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/trace"
-	trace2 "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
@@ -88,7 +87,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		cleanup()
 		return nil, nil, err
 	}
-	sampler := trace.AlwaysSample()
+	sampler := xrayserver.NewTraceSampler()
 	tracerProvider, cleanup4, err := xrayserver.NewTraceProvider(ctx, spanExporter, sampler)
 	if err != nil {
 		cleanup3()
@@ -190,7 +189,7 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 var (
 	_wireLoggerValue            = requestlog.Logger(nil)
 	_wireTextMapPropagatorValue = propagation.TextMapPropagator(nil)
-	_wireTracerProviderValue    = trace2.TracerProvider(nil)
+	_wireTracerProviderValue    = trace.TracerProvider(nil)
 	_wireMeterProviderValue     = metric.MeterProvider(nil)
 )
 
@@ -252,7 +251,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		cleanup()
 		return nil, nil, err
 	}
-	sampler := trace.AlwaysSample()
+	sampler := sdserver.NewTraceSampler(ctx)
 	tracerProvider, cleanup6, err := sdserver.NewTraceProvider(ctx, spanExporter, sampler)
 	if err != nil {
 		cleanup5()
@@ -331,7 +330,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 		cleanup()
 		return nil, nil, err
 	}
-	sampler := trace.AlwaysSample()
+	sampler := newTraceSampler(ctx)
 	tracerProvider, cleanup3 := NewTraceProvider(ctx, spanExporter, sampler)
 	reader, err := newMetricsReader(ctx)
 	if err != nil {
