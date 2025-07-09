@@ -23,19 +23,23 @@ import (
 	"time"
 
 	"github.com/google/wire"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
+
 	"gocloud.dev/server/driver"
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/requestlog"
-
-	"go.opencensus.io/plugin/ochttp"
-	"go.opencensus.io/trace"
 )
 
 // Set is a Wire provider set that produces a *Server given the fields of
 // Options.
 var Set = wire.NewSet(
 	New,
-	wire.Struct(new(Options), "RequestLogger", "HealthChecks", "TraceExporter", "DefaultSamplingPolicy", "Driver"),
+	wire.Struct(new(Options), "RequestLogger", "HealthChecks",
+		"TraceTextMapPropagator", "TraceProvider", "MetricsProvider", "Driver"),
 	wire.Value(&DefaultDriver{}),
 	wire.Bind(new(driver.Server), new(*DefaultDriver)),
 )
@@ -43,14 +47,15 @@ var Set = wire.NewSet(
 // Server is a preconfigured HTTP server with diagnostic hooks.
 // The zero value is a server with the default options.
 type Server struct {
-	reqlog         requestlog.Logger
-	handler        http.Handler
-	wrappedHandler http.Handler
-	healthHandler  health.Handler
-	te             trace.Exporter
-	sampler        trace.Sampler
-	once           sync.Once
-	driver         driver.Server
+	reqlog            requestlog.Logger
+	handler           http.Handler
+	wrappedHandler    http.Handler
+	healthHandler     health.Handler
+	textMapPropagator propagation.TextMapPropagator
+	traceProvider     trace.TracerProvider
+	meterProvider     metric.MeterProvider
+	once              sync.Once
+	driver            driver.Server
 }
 
 // Options is the set of optional parameters.
@@ -62,13 +67,14 @@ type Options struct {
 	// /healthz/readiness endpoint is requested.
 	HealthChecks []health.Checker
 
-	// TraceExporter exports sampled trace spans.
-	TraceExporter trace.Exporter
+	// TraceTextMapPropagator decides the format of trace text propagated.
+	TraceTextMapPropagator propagation.TextMapPropagator
 
-	// DefaultSamplingPolicy is a function that takes a
-	// trace.SamplingParameters struct and returns a true or false decision about
-	// whether it should be sampled and exported.
-	DefaultSamplingPolicy trace.Sampler
+	// TraceProvider handles sampled trace spans.
+	TraceProvider trace.TracerProvider
+
+	// MetricsProvider handles application metrics.
+	MetricsProvider metric.MeterProvider
 
 	// Driver serves HTTP requests.
 	Driver driver.Server
@@ -79,11 +85,12 @@ func New(h http.Handler, opts *Options) *Server {
 	srv := &Server{handler: h}
 	if opts != nil {
 		srv.reqlog = opts.RequestLogger
-		srv.te = opts.TraceExporter
+		srv.textMapPropagator = opts.TraceTextMapPropagator
+		srv.traceProvider = opts.TraceProvider
+		srv.meterProvider = opts.MetricsProvider
 		for _, c := range opts.HealthChecks {
 			srv.healthHandler.Add(c)
 		}
-		srv.sampler = opts.DefaultSamplingPolicy
 		srv.driver = opts.Driver
 	}
 	return srv
@@ -91,12 +98,19 @@ func New(h http.Handler, opts *Options) *Server {
 
 func (srv *Server) init() {
 	srv.once.Do(func() {
-		if srv.te != nil {
-			trace.RegisterExporter(srv.te)
+
+		if srv.textMapPropagator != nil {
+			otel.SetTextMapPropagator(srv.textMapPropagator)
 		}
-		if srv.sampler != nil {
-			trace.ApplyConfig(trace.Config{DefaultSampler: srv.sampler})
+
+		if srv.traceProvider != nil {
+			otel.SetTracerProvider(srv.traceProvider)
 		}
+
+		if srv.meterProvider != nil {
+			otel.SetMeterProvider(srv.meterProvider)
+		}
+
 		if srv.driver == nil {
 			srv.driver = NewDefaultDriver()
 		}
@@ -115,10 +129,8 @@ func (srv *Server) init() {
 		if srv.reqlog != nil {
 			h = requestlog.NewHandler(srv.reqlog, h)
 		}
-		h = &ochttp.Handler{
-			Handler:          h,
-			IsPublicEndpoint: true,
-		}
+		// Wrap with OpenTelemetry HTTP handler.
+		h = otelhttp.NewHandler(h, "", otelhttp.WithPublicEndpoint())
 		mux.Handle("/", h)
 		srv.wrappedHandler = mux
 	})

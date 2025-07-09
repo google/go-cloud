@@ -17,53 +17,127 @@
 package sdserver // import "gocloud.dev/server/sdserver"
 
 import (
+	"context"
 	"fmt"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
+	"gocloud.dev/server"
 	"os"
 
+	gcpmex "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
+	gcptex "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
+	gcppropagator "github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator"
 	"github.com/google/wire"
+	gcpres "go.opentelemetry.io/contrib/detectors/gcp"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/gcp"
-	"gocloud.dev/internal/useragent"
-	"gocloud.dev/server"
 	"gocloud.dev/server/requestlog"
-
-	"contrib.go.opencensus.io/exporter/stackdriver"
-	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
-	"go.opencensus.io/trace"
-	"golang.org/x/oauth2"
-	"google.golang.org/api/option"
 )
 
 // Set is a Wire provider set that provides the diagnostic hooks for
 // *server.Server given a GCP token source and a GCP project ID.
 var Set = wire.NewSet(
 	server.Set,
-	NewExporter,
-	monitoredresource.Autodetect,
-	wire.Bind(new(trace.Exporter), new(*stackdriver.Exporter)),
+	NewTextMapPropagator,
+	NewTraceSampler,
+	NewTraceExporter,
+	NewTraceProvider,
+	wire.Bind(new(trace.TracerProvider), new(*sdktrace.TracerProvider)),
+	NewMetricsReader,
+	NewMeterProvider,
+	wire.Bind(new(metric.MeterProvider), new(*sdkmetric.MeterProvider)),
+
 	NewRequestLogger,
 	wire.Bind(new(requestlog.Logger), new(*requestlog.StackdriverLogger)),
 )
 
-// NewExporter returns a new OpenCensus Stackdriver exporter.
-//
-// The second return value is a Wire cleanup function that calls Flush
-// on the exporter.
-func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, func(), error) {
-	opts := []option.ClientOption{
-		option.WithTokenSource(oauth2.TokenSource(ts)),
-		useragent.ClientOption("server"),
+func NewResource(ctx context.Context) (*resource.Resource, error) {
+
+	res, err := resource.New(ctx,
+		resource.WithDetectors(gcpres.NewDetector()),
+		resource.WithTelemetrySDK(),
+		resource.WithProcess(),
+		resource.WithOS(),
+		resource.WithContainer(),
+		resource.WithHost(),
+	)
+	if err != nil {
+		return nil, err
 	}
-	exp, err := stackdriver.NewExporter(stackdriver.Options{
-		ProjectID:               string(id),
-		MonitoringClientOptions: opts,
-		TraceClientOptions:      opts,
-		MonitoredResource:       mr,
-	})
+
+	return resource.Merge(resource.Default(), res)
+}
+
+func NewTextMapPropagator() propagation.TextMapPropagator {
+	return propagation.NewCompositeTextMapPropagator(
+		gcppropagator.CloudTraceOneWayPropagator{},
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	)
+}
+
+// NewTraceSampler returns a new OpenTelemetry trace sampler.
+func NewTraceSampler(ctx context.Context) sdktrace.Sampler {
+	return sdktrace.AlwaysSample()
+}
+
+// NewTraceExporter returns a new OpenTelemetry gcp trace exporter.
+func NewTraceExporter(projectID gcp.ProjectID) (sdktrace.SpanExporter, error) {
+	exporter, err := gcptex.New(gcptex.WithProjectID(string(projectID)))
+	if err != nil {
+		return nil, err
+	}
+
+	return exporter, nil
+}
+
+// NewTraceProvider returns a new trace provider for our service to utilise.
+//
+// The second return value is a Wire cleanup function that calls Close on the provider,
+func NewTraceProvider(ctx context.Context, exporter sdktrace.SpanExporter, sampler sdktrace.Sampler) (*sdktrace.TracerProvider, func(), error) {
+
+	res, err := NewResource(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return exp, func() { exp.Flush() }, err
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithSampler(sampler),
+		sdktrace.WithResource(res),
+	)
+
+	return tp, func() { _ = tp.Shutdown(ctx) }, nil
+}
+
+// NewMetricsReader returns a new OpenTelemetry gcp metrics reader and exporter.
+func NewMetricsReader(projectID gcp.ProjectID) (sdkmetric.Reader, error) {
+	metricExporter, err := gcpmex.New(gcpmex.WithProjectID(string(projectID)))
+	if err != nil {
+		return nil, err
+	}
+
+	return sdkmetric.NewPeriodicReader(metricExporter), nil
+}
+
+// NewMeterProvider returns a new metric provider for our service to utilise.
+//
+// The second return value is a Wire cleanup function that calls Close on the provider.
+func NewMeterProvider(ctx context.Context, reader sdkmetric.Reader) (*sdkmetric.MeterProvider, func(), error) {
+
+	res, err := NewResource(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
+		sdkmetric.WithReader(reader),
+	)
+	return meterProvider, func() { _ = meterProvider.Shutdown(ctx) }, nil
 }
 
 // NewRequestLogger returns a request logger that sends entries to stdout.

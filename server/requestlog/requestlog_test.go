@@ -17,6 +17,7 @@ package requestlog
 import (
 	"context"
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"io"
 	"net"
 	"net/http"
@@ -24,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestHandler(t *testing.T) {
@@ -43,7 +44,7 @@ func TestHandler(t *testing.T) {
 	ent, spanCtx, err := roundTrip(r, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", fmt.Sprint(len(responseMsg)))
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, responseMsg)
+		_, _ = io.WriteString(w, responseMsg)
 	}))
 	if err != nil {
 		t.Fatal("Could not get entry:", err)
@@ -84,11 +85,11 @@ func TestHandler(t *testing.T) {
 	if ent.ResponseBodySize != int64(len(responseMsg)) {
 		t.Errorf("ResponseBodySize = %d; want %d", ent.ResponseBodySize, len(responseMsg))
 	}
-	if ent.TraceID != spanCtx.TraceID {
-		t.Errorf("TraceID = %v; want %v", ent.TraceID, spanCtx.TraceID)
+	if ent.TraceID != spanCtx.TraceID() {
+		t.Errorf("TraceID = %v; want %v", ent.TraceID, spanCtx.TraceID())
 	}
-	if ent.SpanID != spanCtx.SpanID {
-		t.Errorf("SpanID = %v; want %v", ent.SpanID, spanCtx.SpanID)
+	if ent.SpanID != spanCtx.SpanID() {
+		t.Errorf("SpanID = %v; want %v", ent.SpanID, spanCtx.SpanID())
 	}
 }
 
@@ -98,11 +99,14 @@ type testSpanHandler struct {
 }
 
 func (sh *testSpanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "test")
+	tracer := otel.Tracer("test")
+	ctx, span := tracer.Start(r.Context(), "test")
 	defer span.End()
-	r = r.WithContext(ctx)
-	sc := trace.FromContext(ctx).SpanContext()
+	sc := trace.SpanContextFromContext(ctx)
+
 	sh.spanCtx = &sc
+	r = r.WithContext(ctx)
+
 	sh.h.ServeHTTP(w, r)
 }
 

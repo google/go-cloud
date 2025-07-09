@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/google/wire"
-	"go.opencensus.io/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"gocloud.dev/aws/awscloud"
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
@@ -62,7 +62,7 @@ func setup(ctx context.Context) (*server.Server, func(), error) {
 		// for *server.Server.
 		awscloud.AWS,
 		// Providing nil instructs the server to use the default sampling policy.
-		wire.Value(trace.Sampler(nil)),
+		wire.Value(sdktrace.Sampler(nil)),
 		// Health checks can be added to delay your server reporting healthy
 		// to the load balancer before critical dependencies are available.
 		wire.Value([]health.Checker(nil)),
