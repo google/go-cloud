@@ -68,6 +68,13 @@ type Options struct {
 	// When the collection is closed, its contents are saved to the file.
 	Filename string
 
+	// AllowNestedSliceQueries allows querying into nested slices.
+	// If true queries for a field path which points to a slice will return
+	// true if any element of the slice has a value that validates with the operator.
+	// This makes the memdocstore more compatible with MongoDB,
+	// but other providers may not support this feature.
+	AllowNestedSliceQueries bool
+
 	// Call this function when the collection is closed.
 	// For internal use only.
 	onClose func()
@@ -397,18 +404,44 @@ func (c *collection) checkRevision(arg driver.Document, current storedDoc) error
 	return nil
 }
 
-// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
+// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid.
+// If nested is true compare against all elements of a slice, see AllowNestedSliceQueries
 // (see getParentMap).
-func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) {
-	m2, err := getParentMap(m, fp, false)
-	if err != nil {
-		return nil, err
+func getAtFieldPath(m map[string]any, fp []string, nested bool) (result any, err error) {
+	var get func(m any, name string) any
+	get = func(m any, name string) any {
+		switch m := m.(type) {
+		case map[string]any:
+			return m[name]
+		case []any:
+			if !nested {
+				return nil
+			}
+			var result []any
+			for _, e := range m {
+				next := get(e, name)
+				// If we have slices within slices the compare function does not see the nested slices.
+				// Changing the compare function to be recursive would be more effort than flattening the slices here.
+				sliced, ok := next.([]any)
+				if ok {
+					result = append(result, sliced...)
+				} else {
+					result = append(result, next)
+				}
+			}
+			return result
+		}
+		return nil
 	}
-	v, ok := m2[fp[len(fp)-1]]
-	if ok {
-		return v, nil
+	result = m
+	for _, k := range fp {
+		next := get(result, k)
+		if next == nil {
+			return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", strings.Join(fp, "."))
+		}
+		result = next
 	}
-	return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", fp)
+	return result, nil
 }
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
@@ -420,14 +453,6 @@ func setAtFieldPath(m map[string]interface{}, fp []string, val interface{}) erro
 	}
 	m2[fp[len(fp)-1]] = val
 	return nil
-}
-
-// Delete the value from m at the given field path, if it exists.
-func deleteAtFieldPath(m map[string]interface{}, fp []string) {
-	m2, _ := getParentMap(m, fp, false) // ignore error
-	if m2 != nil {
-		delete(m2, fp[len(fp)-1])
-	}
 }
 
 // getParentMap returns the map that directly contains the given field path;
