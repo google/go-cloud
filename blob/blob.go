@@ -279,7 +279,7 @@ func (r *Reader) downloadAndClose(w io.Writer) (err error) {
 func readFromWriteTo(r io.Reader, w io.Writer) (int64, int64, error) {
 	// Note: can't use io.Copy because it will try to use r.WriteTo
 	// or w.WriteTo, which is recursive in this context.
-	buf := make([]byte, 1024)
+	buf := make([]byte, 1024*1024)
 	var totalRead, totalWritten int64
 	for {
 		numRead, rerr := r.Read(buf)
