@@ -64,19 +64,29 @@ const Scheme = "mem"
 
 // URLOpener opens URLs like "mem://".
 //
-// No query parameters are supported.
+// The following query parameters are supported:
+//   - nomd5: Sets Options.MD5 to true; no value expected (e.g., "memblob://?nomd5").
 type URLOpener struct{}
 
 // OpenBucketURL opens a blob.Bucket based on u.
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	opts := Options{}
 	for param := range u.Query() {
+		if param == "nomd5" {
+			opts.NoMD5 = true
+			continue
+		}
 		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, param)
 	}
-	return OpenBucket(nil), nil
+	return OpenBucket(&opts), nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by memory.
-type Options struct{}
+type Options struct {
+	// Set to true to disable MD5 hashing. The MD5 Attribute won't be available,
+	// but improves write performance.
+	NoMD5 bool
+}
 
 type blobEntry struct {
 	Content    []byte
@@ -84,14 +94,20 @@ type blobEntry struct {
 }
 
 type bucket struct {
+	options Options
+
 	mu    sync.Mutex
 	blobs map[string]*blobEntry
 }
 
 // openBucket creates a driver.Bucket backed by memory.
-func openBucket(_ *Options) driver.Bucket {
+func openBucket(opts *Options) driver.Bucket {
+	if opts == nil {
+		opts = &Options{}
+	}
 	return &bucket{
-		blobs: map[string]*blobEntry{},
+		options: *opts,
+		blobs:   map[string]*blobEntry{},
 	}
 }
 
@@ -292,6 +308,11 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 	for k, v := range opts.Metadata {
 		md[k] = v
 	}
+
+	var md5hash hash.Hash
+	if !b.options.NoMD5 {
+		md5hash = md5.New()
+	}
 	return &writer{
 		ctx:         ctx,
 		b:           b,
@@ -299,7 +320,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		contentType: contentType,
 		metadata:    md,
 		opts:        opts,
-		md5hash:     md5.New(),
+		md5hash:     md5hash,
 		ifNotExist:  opts.IfNotExist,
 	}, nil
 }
@@ -313,14 +334,16 @@ type writer struct {
 	opts        *driver.WriterOptions
 	buf         bytes.Buffer
 	// We compute the MD5 hash so that we can store it with the file attributes,
-	// not for verification.
+	// not for verification. May be null if disabled via Options.NoMD5.
 	md5hash    hash.Hash
 	ifNotExist bool
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
-	if _, err := w.md5hash.Write(p); err != nil {
-		return 0, err
+	if w.md5hash != nil {
+		if _, err := w.md5hash.Write(p); err != nil {
+			return 0, err
+		}
 	}
 	return w.buf.Write(p)
 }
@@ -336,7 +359,10 @@ func (w *writer) Close() error {
 		return err
 	}
 
-	md5sum := w.md5hash.Sum(nil)
+	var md5sum []byte
+	if w.md5hash != nil {
+		md5sum = w.md5hash.Sum(nil)
+	}
 	content := w.buf.Bytes()
 	now := time.Now()
 	entry := &blobEntry{
