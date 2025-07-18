@@ -88,7 +88,7 @@ func createKey(ctx context.Context, client *kms.Client, keyID string) error {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
 	client := kms.NewFromConfig(cfg)
 
 	// Create the keys we need if they don't exist.

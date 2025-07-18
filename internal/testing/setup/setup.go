@@ -158,7 +158,10 @@ func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *sess
 // which never makes an outgoing HTTP call and uses fake credentials.
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
-func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2.Config, rt http.RoundTripper, cleanup func(), initState int64) {
+//
+// If scrubBody is true, the entire HTTP POST body is cleared for matching,
+// so the tests will rely entirely on ordering and headers.
+func NewAWSv2Config(ctx context.Context, t *testing.T, region string, scrubBody bool) (cfg awsv2.Config, rt http.RoundTripper, cleanup func(), initState int64) {
 	t.Helper()
 
 	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
@@ -172,6 +175,9 @@ func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2
 		// in randomized order, so we can't match against them. Just scrub
 		// them and rely on the ordering.
 		r.ScrubBody("MessageAttributes.*")
+		if scrubBody {
+			r.ScrubBody(".*")
+		}
 	})
 	cfg, err := awsV2Config(ctx, region, client)
 	if err != nil {

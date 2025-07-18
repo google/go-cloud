@@ -95,6 +95,14 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/awsdynamodb\"\n)",
 		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"dynamodb://my-table?partition_key=name\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
+	"gocloud.dev/docstore/awsdynamodb/v2.ExampleOpenCollection": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/dynamodb\"\n\t\"gocloud.dev/docstore/awsdynamodb/v2\"\n)",
+		"code": "cfg, err := config.LoadDefaultConfig(context.Background())\nif err != nil {\n\treturn err\n}\ncoll, err := awsdynamodb.OpenCollection(\n\tdynamodb.NewFromConfig(cfg), \"docstore-test\", \"partitionKeyField\", \"\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+	},
+	"gocloud.dev/docstore/awsdynamodb/v2.Example_openCollectionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/awsdynamodb\"\n)",
+		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"dynamodb://my-table?partition_key=name\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+	},
 	"gocloud.dev/docstore/gcpfirestore.ExampleOpenCollection": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore/gcpfirestore\"\n\t\"gocloud.dev/gcp\"\n)",
 		"code": "creds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\nclient, _, err := gcpfirestore.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\nresourceID := gcpfirestore.CollectionResourceID(\"my-project\", \"my-collection\")\ncoll, err := gcpfirestore.OpenCollection(client, resourceID, \"userID\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
