@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/nats-io/nats-server/v2 v2.9.23
 	github.com/nats-io/nats.go v1.43.0
-	gocloud.dev v0.42.0
+	gocloud.dev v0.43.0
 )
 
 require (
@@ -51,5 +51,3 @@ require (
 	google.golang.org/grpc v1.73.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
-
-replace gocloud.dev => ../../
