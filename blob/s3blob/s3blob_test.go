@@ -58,14 +58,14 @@ type harness struct {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
 	return &harness{client: s3.NewFromConfig(cfg), opts: nil, rt: rt, closer: done}, nil
 }
 
 func newHarnessUsingLegacyList(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
 	return &harness{client: s3.NewFromConfig(cfg), opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }
 
@@ -271,7 +271,7 @@ func TestOpenBucket(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			var client *s3.Client
 			if !test.nilClient {
-				cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
+				cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
 				defer done()
 				client = s3.NewFromConfig(cfg)
 			}

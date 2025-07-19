@@ -70,7 +70,7 @@ type harnessOption func(h *harness)
 func newHarness(ctx context.Context, t *testing.T, topicKind topicKind) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, rt, closer, _ := setup.NewAWSv2Config(context.Background(), t, region)
+	cfg, rt, closer, _ := setup.NewAWSv2Config(context.Background(), t, region, false)
 	return &harness{snsClient: sns.NewFromConfig(cfg), sqsClient: sqs.NewFromConfig(cfg), rt: rt, topicKind: topicKind, closer: closer}, nil
 }
 
