@@ -87,3 +87,5 @@ require (
 	google.golang.org/grpc v1.73.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
+
+replace gocloud.dev => ../../
