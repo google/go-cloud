@@ -58,7 +58,7 @@ import (
 
 // Set holds Wire providers for this package.
 var Set = wire.NewSet(
-	wire.Struct(new(URLOpener), "ConfigProvider"),
+	wire.Struct(new(URLOpener)),
 )
 
 type collection struct {

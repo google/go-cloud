@@ -22,9 +22,10 @@ import (
 	"os"
 
 	"cloud.google.com/go/storage"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/smithy-go"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
+
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
 )
@@ -161,7 +162,7 @@ func Example() {
 
 func ExampleBucket_ErrorAs() {
 	// This example is specific to the s3blob implementation; it demonstrates
-	// access to the underlying awserr.Error type.
+	// access to the underlying smithy.APIError type.
 	// The types exposed for ErrorAs by s3blob are documented in
 	// https://godoc.org/gocloud.dev/blob/s3blob#hdr-As
 
@@ -175,9 +176,9 @@ func ExampleBucket_ErrorAs() {
 
 	_, err = b.ReadAll(ctx, "nosuchfile")
 	if err != nil {
-		var awsErr awserr.Error
+		var awsErr smithy.APIError
 		if b.ErrorAs(err, &awsErr) {
-			fmt.Println(awsErr.Code())
+			fmt.Println(awsErr.ErrorCode())
 		}
 	}
 }

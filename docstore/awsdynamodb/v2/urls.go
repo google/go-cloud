@@ -66,7 +66,7 @@ const Scheme = "dynamodb"
 //   - allow_scans: if "true", allow table scans to be used for queries
 //   - consistent_read: if "true", a strongly consistent read is used whenever possible.
 //
-// See https://godoc.org/gocloud.dev/aws#ConfigFromURLParams for supported query
+// See https://godoc.org/gocloud.dev/aws#V2ConfigFromURLParams for supported query
 // parameters for overriding the aws.Session from the URL.
 type URLOpener struct {
 }
