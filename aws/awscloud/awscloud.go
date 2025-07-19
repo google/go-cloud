@@ -22,7 +22,7 @@ import (
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob/s3blob"
-	"gocloud.dev/docstore/awsdynamodb"
+	"gocloud.dev/docstore/awsdynamodb/v2"
 	"gocloud.dev/pubsub/awssnssqs"
 	"gocloud.dev/runtimevar/awsparamstore"
 	"gocloud.dev/secrets/awskms"
@@ -33,7 +33,6 @@ import (
 // implementations in the Go CDK and authenticates using the default session.
 var AWS = wire.NewSet(
 	Services,
-	aws.DefaultSession,
 	aws.NewDefaultV2Config,
 	wire.Value(http.DefaultClient),
 )
