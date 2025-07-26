@@ -70,6 +70,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"iter"
 	"log"
 	"mime"
 	"net/http"
@@ -609,6 +610,28 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	i.page = p
 	i.nextIdx = 0
 	return i.Next(ctx)
+}
+
+// All iterates over the iterator, returning a *ListObject and a download function for each entry.
+func (i *ListIterator) All(ctx context.Context, err *error) iter.Seq2[*ListObject, func(io.Writer, *ReaderOptions) error] {
+	return func(yield func(*ListObject, func(io.Writer, *ReaderOptions) error) bool) {
+		for {
+			obj, itErr := i.Next(ctx)
+			if itErr == io.EOF {
+				return
+			}
+			if itErr != nil {
+				*err = itErr
+				return
+			}
+			downloadFunc := func(w io.Writer, opts *ReaderOptions) error {
+				return i.b.Download(ctx, obj.Key, w, opts)
+			}
+			if !yield(obj, downloadFunc) {
+				return
+			}
+		}
+	}
 }
 
 // ListObject represents a single blob returned from List.
