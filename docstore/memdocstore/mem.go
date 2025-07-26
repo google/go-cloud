@@ -305,13 +305,10 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 
 	// Execute the action for Get
 	if a.Kind == driver.Get {
-		// Handle Get separately since it doesn't modify the document
+		// Handle Get separately since it doesn't modify the document.
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
-			return err
-		}
-		return nil
+		return decodeDoc(current, a.Doc, a.FieldPaths)
 	}
 
 	return c.executeAction(a, current, exists)
