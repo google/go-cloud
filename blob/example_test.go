@@ -15,6 +15,7 @@
 package blob_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -219,12 +220,29 @@ func ExampleBucket_List() {
 		fmt.Println(obj.Key)
 	}
 
+	// Alternatively, use All to iterate (and optionally download):
+	fmt.Println()
+	fmt.Println("Now, using an iterator:")
+	iter = bucket.List(nil)
+	for obj, download := range iter.All(ctx, &err) {
+		var buf bytes.Buffer
+		_ = download(&buf, nil) // ignore error and use default ReaderOptions
+		fmt.Printf("%s: %s\n", obj.Key, string(buf.Bytes()))
+	}
+
 	// Output:
 	// foo0.txt
 	// foo1.txt
 	// foo2.txt
 	// foo3.txt
 	// foo4.txt
+	//
+	// Now, using an iterator:
+	// foo0.txt: Go Cloud Development Kit
+	// foo1.txt: Go Cloud Development Kit
+	// foo2.txt: Go Cloud Development Kit
+	// foo3.txt: Go Cloud Development Kit
+	// foo4.txt: Go Cloud Development Kit
 }
 
 func ExampleBucket_List_withDelimiter() {
