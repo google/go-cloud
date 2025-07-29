@@ -208,9 +208,9 @@ func ExampleBucket_List() {
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all services.
-	iter := bucket.List(nil)
+	li := bucket.List(nil)
 	for {
-		obj, err := iter.Next(ctx)
+		obj, err := li.Next(ctx)
 		if err == io.EOF {
 			break
 		}
@@ -223,11 +223,17 @@ func ExampleBucket_List() {
 	// Alternatively, use All to iterate (and optionally download):
 	fmt.Println()
 	fmt.Println("Now, using an iterator:")
-	iter = bucket.List(nil)
-	for obj, download := range iter.All(ctx, &err) {
+	li = bucket.List(nil)
+	iter, errFn := li.All(ctx)
+	for obj, download := range iter {
 		var buf bytes.Buffer
-		_ = download(&buf, nil) // ignore error and use default ReaderOptions
+		if err := download(&buf, nil /* default ReaderOptions */); err != nil {
+			log.Fatalf("download of %q failed: %v", obj.Key, err)
+		}
 		fmt.Printf("%s: %s\n", obj.Key, string(buf.Bytes()))
+	}
+	if err := errFn(); err != nil {
+		log.Fatalf("iteration failed: %v", err)
 	}
 
 	// Output:
