@@ -27,17 +27,17 @@ func TestListIterator_All(t *testing.T) {
 	}
 
 	// Iterate over the bucket using iter.All.
-	var err error
 	got := map[string]string{}
-	iter := b.List(nil)
-	for obj, download := range iter.All(ctx, &err) {
+	li := b.List(nil)
+	iter, errFn := li.All(ctx)
+	for obj, download := range iter {
 		var buf bytes.Buffer
 		if dErr := download(&buf, nil); dErr != nil {
 			t.Errorf("failed to download %q: %v", obj.Key, dErr)
 		}
 		got[obj.Key] = string(buf.Bytes())
 	}
-	if err != nil {
+	if err := errFn(); err != nil {
 		t.Fatalf("iteration failed: %v", err)
 	}
 	if diff := cmp.Diff(got, want); diff != "" {
