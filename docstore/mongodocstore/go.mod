@@ -18,7 +18,7 @@ go 1.24
 
 require (
 	github.com/google/go-cmp v0.7.0
-	github.com/google/wire v0.6.0
+	github.com/google/wire v0.7.0
 	go.mongodb.org/mongo-driver v1.17.4
 	gocloud.dev v0.43.0
 )
