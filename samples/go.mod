@@ -25,7 +25,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/subcommands v1.2.0
 	github.com/google/uuid v1.6.0
-	github.com/google/wire v0.6.0
+	github.com/google/wire v0.7.0
 	github.com/gorilla/mux v1.8.1
 	github.com/streadway/amqp v1.0.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.62.0
