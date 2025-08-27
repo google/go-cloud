@@ -143,7 +143,7 @@ func NewAWSv2Config(ctx context.Context, t *testing.T, region string, scrubBody 
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.
-// NewGCPClient creates a new HTTPClient for testing against GCP.
+//
 // If the test is in --record mode, the client will call out to GCP, and the
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
@@ -174,6 +174,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 }
 
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
+//
 // If the test is in --record mode, the client will call out to GCP, and the
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
