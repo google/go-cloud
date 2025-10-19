@@ -227,6 +227,22 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/gcppubsub\"\n)",
 		"code": "topic, err := pubsub.OpenTopic(ctx, \"gcppubsub://projects/myproject/topics/mytopic\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
+	"gocloud.dev/pubsub/gcppubsubv2.ExampleOpenSubscription": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Open a gRPC connection to the GCP Pub/Sub API.\n// Alternatively, skip this and pass nil to Client below to use the default.\nconn, cleanup, err := gcppubsubv2.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// Construct a Client using the connection.\nclient, err := gcppubsubv2.Client(ctx, \"myprojectID\", conn)\nif err != nil {\n\treturn err\n}\ndefer client.Close()\n\n// Construct a *pubsub.Subscription.\nsubscription := gcppubsubv2.OpenSubscription(client, \"example-subscription\", nil)\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/gcppubsubv2.ExampleOpenTopic": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n// Open a gRPC connection to the GCP Pub/Sub API.\n// Alternatively, skip this and pass nil to Client below to use the default.\nconn, cleanup, err := gcppubsubv2.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// Construct a Client using the connection.\nclient, err := gcppubsubv2.Client(ctx, \"myprojectid\", conn)\nif err != nil {\n\treturn err\n}\ndefer client.Close()\n\n// Construct a *pubsub.Topic.\ntopic := gcppubsubv2.OpenTopic(client, \"example-topic\", nil)\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/gcppubsubv2.Example_openSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "subscription, err := pubsub.OpenSubscription(ctx,\n\t\"gcppubsubv2://projects/my-project/subscriptions/my-subscription\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/gcppubsubv2.Example_openTopicFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "topic, err := pubsub.OpenTopic(ctx, \"gcppubsubv2://projects/myproject/topics/mytopic\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+	},
 	"gocloud.dev/pubsub/kafkapubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub/kafkapubsub\"\n)",
 		"code": "// The set of brokers in the Kafka cluster.\naddrs := []string{\"1.2.3.4:9092\"}\n// The Kafka client configuration to use.\nconfig := kafkapubsub.MinimalConfig()\n\n// Construct a *pubsub.Subscription, joining the consumer group \"my-group\"\n// and receiving messages from \"my-topic\".\nsubscription, err := kafkapubsub.OpenSubscription(\n\taddrs, config, \"my-group\", []string{\"my-topic\"}, nil)\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
