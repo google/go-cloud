@@ -48,7 +48,7 @@ for URL usage for each supported service.
 
 Alternatively, if you need fine-grained
 control over the connection settings, you can call the constructor function in
-the driver package directly (like `gcppubsub.OpenTopic`).
+the driver package directly (like `gcppubsubv2.OpenTopic`).
 
 ```go
 import "gocloud.dev/pubsub/<driver>"
@@ -104,18 +104,18 @@ alternatives, including using environment variables.
 [GCP creds]: https://cloud.google.com/docs/authentication/production
 [`gcloud auth application-default login`]: https://cloud.google.com/sdk/gcloud/reference/auth/application-default/login
 
-{{< goexample "gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL" >}}
+{{< goexample "gocloud.dev/pubsub/gcppubsubv2.Example_openTopicFromURL" >}}
 
 #### Google Cloud Pub/Sub Constructor {#gcp-ctor}
 
-The [`gcppubsub.OpenTopic`][] constructor opens a Cloud Pub/Sub topic. You
+The [`gcppubsubv2.OpenTopic`][] constructor opens a Cloud Pub/Sub topic. You
 must first obtain [GCP credentials][GCP creds] and then create a gRPC
 connection to Cloud Pub/Sub. (This gRPC connection can be reused among
 topics.)
 
-{{< goexample "gocloud.dev/pubsub/gcppubsub.ExampleOpenTopic" >}}
+{{< goexample "gocloud.dev/pubsub/gcppubsubv2.ExampleOpenTopic" >}}
 
-[`gcppubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenTopic
+[`gcppubsubv2.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/gcppubsubv2#OpenTopic
 
 ### Amazon Simple Notification Service {#sns}
 
