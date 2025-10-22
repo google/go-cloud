@@ -35,6 +35,10 @@ import (
 	"net/url"
 
 	"github.com/XSAM/otelsql"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/wire"
 	"gocloud.dev/aws/rds"
@@ -50,6 +54,15 @@ var Set = wire.NewSet(
 
 // URLOpener opens RDS MySQL URLs
 // like "awsmysql://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb".
+//
+// To use IAM authentication, omit the password:
+//
+//	awsmysql://iam-user@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb?tls=true
+//
+// To specify an AWS profile or assume a role, add the following query parameters:
+//
+//   - aws_profile: the AWS shared config profile to use
+//   - aws_role_arn: the ARN of the role to assume
 type URLOpener struct {
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
@@ -67,15 +80,41 @@ func init() {
 }
 
 // OpenMySQLURL opens a new RDS database connection wrapped with OpenTelemetry instrumentation.
-func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
+func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	source := uo.CertSource
 	if source == nil {
 		source = new(rds.CertFetcher)
 	}
 	if u.Host == "" {
-		return nil, fmt.Errorf("open RDS: empty endpoint")
+		return nil, fmt.Errorf("open OpenMySQLURL: empty endpoint")
 	}
-
+	// If no password provided, assume it's AWS IAM authentication.
+	// awsmysql://iam-user@host:port/dbname?tls=true
+	if _, ok := u.User.Password(); !ok {
+		var (
+			q       = u.Query()
+			profile = q.Get("aws_profile")
+		)
+		q.Del("aws_profile")
+		cfg, err := config.LoadDefaultConfig(ctx,
+			config.WithSharedConfigProfile(profile)) // Ignored if empty.
+		if err != nil {
+			return nil, fmt.Errorf("open OpenMySQLURL: load AWS config: %v", err)
+		}
+		creds := cfg.Credentials
+		if roleARN := q.Get("aws_role_arn"); roleARN != "" {
+			// If a RoleARN is specified, replace the credentials with AssumeRole provider.
+			creds = stscreds.NewAssumeRoleProvider(sts.NewFromConfig(cfg), roleARN)
+			q.Del("aws_role_arn")
+		}
+		token, err := auth.BuildAuthToken(ctx, u.Host, cfg.Region, u.User.Username(), creds)
+		if err != nil {
+			return nil, fmt.Errorf("open OpenMySQLURL: build auth token: %v", err)
+		}
+		// Set the password to the auth token.
+		u.User = url.UserPassword(u.User.Username(), token)
+		u.RawQuery = q.Encode()
+	}
 	cfg, err := gcmysql.ConfigFromURL(u)
 	if err != nil {
 		return nil, err
@@ -116,9 +155,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect RDS: parse DSN: %v", err)
 		}
-		cfg.TLS = &tls.Config{
-			RootCAs: certPool,
-		}
+		cfg.TLS = &tls.Config{RootCAs: certPool}
 		c.dsn = cfg.FormatDSN()
 		close(c.ready)
 		// Don't release sem: make it block forever, so this case won't be run again.
