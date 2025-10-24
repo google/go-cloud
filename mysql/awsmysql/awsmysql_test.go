@@ -76,9 +76,7 @@ func TestOpenIAM(t *testing.T) {
 		t.Fatalf("Missing one or more required Terraform outputs; got endpoint=%q iam_db_username=%q database=%q", endpoint, username, databaseName)
 	}
 	ctx := context.Background()
-	// You must trust the RDS CA cert (on local machine) for IAM authentication.
-	// or use tls=preferred&allowCleartextPasswords=true
-	urlstr := fmt.Sprintf("awsmysql://%s@%s/%s?tls=true&aws_role_arn=%s",
+	urlstr := fmt.Sprintf("awsmysql://%s@%s/%s?aws_role_arn=%s",
 		username, endpoint, databaseName, roleARN)
 	t.Log("Connecting to:", urlstr)
 	db, err := mysql.Open(ctx, urlstr)
