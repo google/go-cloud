@@ -36,6 +36,7 @@ import (
 	"sync/atomic"
 
 	"github.com/XSAM/otelsql"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
@@ -58,7 +59,7 @@ var Set = wire.NewSet(
 //
 // To use IAM authentication, omit the password:
 //
-//	awsmysql://iam-user@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb?tls=true
+//	awsmysql://iam-user@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306/mydb
 //
 // To specify an AWS profile or assume a role, add the following query parameters:
 //
@@ -90,7 +91,8 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		return nil, fmt.Errorf("open OpenMySQLURL: empty endpoint")
 	}
 	// If no password provided, assume it's AWS IAM authentication.
-	// awsmysql://iam-user@host:port/dbname?tls=true
+	// awsmysql://iam-user@host:port/dbname
+	var iam func(context.Context) (string, error)
 	if _, ok := u.User.Password(); !ok {
 		var (
 			q       = u.Query()
@@ -108,20 +110,23 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 			creds = stscreds.NewAssumeRoleProvider(sts.NewFromConfig(cfg), roleARN)
 			q.Del("aws_role_arn")
 		}
-		token, err := auth.BuildAuthToken(ctx, u.Host, cfg.Region, u.User.Username(), creds)
-		if err != nil {
-			return nil, fmt.Errorf("open OpenMySQLURL: build auth token: %v", err)
-		}
-		// Set the password to the auth token.
-		u.User = url.UserPassword(u.User.Username(), token)
 		u.RawQuery = q.Encode()
+		creds = aws.NewCredentialsCache(creds)
+		iam = func(ctx context.Context) (string, error) {
+			// BuildAuthToken is local-operation
+			// and does not make network calls.
+			// The credentials provider may make network calls,
+			// but we are wrapped it with caching.
+			return auth.BuildAuthToken(ctx, u.Host, cfg.Region, u.User.Username(), creds)
+		}
 	}
 	cfg, err := gcmysql.ConfigFromURL(u)
 	if err != nil {
 		return nil, err
 	}
 	c := &connector{
-		dsn: cfg.FormatDSN(),
+		cfg: cfg,
+		iam: iam,
 		// Make a copy of TraceOpts to avoid caller modifying.
 		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
 		provider:  source,
@@ -140,7 +145,8 @@ type connector struct {
 	provider CertPoolProvider
 
 	ready chan struct{} // closed after resolving dsn
-	dsn   string
+	cfg   *mysql.Config
+	iam   func(context.Context) (string, error)
 }
 
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -161,9 +167,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect RDS: register TLS: %v", err)
 		}
-		cfg, _ := mysql.ParseDSN(c.dsn)
-		cfg.TLSConfig = tlsConfigName
-		c.dsn = cfg.FormatDSN()
+		c.cfg.TLSConfig = tlsConfigName
 		close(c.ready)
 		// Don't release sem: make it block forever, so this case won't be run again.
 	case <-c.ready:
@@ -171,7 +175,14 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	case <-ctx.Done():
 		return nil, fmt.Errorf("connect RDS: waiting for certificates: %v", ctx.Err())
 	}
-	return c.Driver().Open(c.dsn)
+	cfg := c.cfg.Clone()
+	if c.iam != nil {
+		var err error
+		if cfg.Passwd, err = c.iam(ctx); err != nil {
+			return nil, fmt.Errorf("connect RDS: refresh auth token: %v", err)
+		}
+	}
+	return c.Driver().Open(cfg.FormatDSN())
 }
 
 func (c *connector) Driver() driver.Driver {
