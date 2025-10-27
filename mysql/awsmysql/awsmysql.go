@@ -125,22 +125,18 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		return nil, err
 	}
 	c := &connector{
-		cfg: cfg,
-		iam: iam,
-		// Make a copy of TraceOpts to avoid caller modifying.
-		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
-		provider:  source,
+		cfg:      cfg,
+		iam:      iam,
+		provider: source,
 
 		sem:   make(chan struct{}, 1),
 		ready: make(chan struct{}),
 	}
 	c.sem <- struct{}{}
-	return sql.OpenDB(c), nil
+	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }
 
 type connector struct {
-	traceOpts []otelsql.Option
-
 	sem      chan struct{} // receive to acquire, send to release
 	provider CertPoolProvider
 
@@ -182,11 +178,15 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			return nil, fmt.Errorf("connect RDS: refresh auth token: %v", err)
 		}
 	}
-	return c.Driver().Open(cfg.FormatDSN())
+	inner, err := mysql.NewConnector(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("connect RDS: create connector: %v", err)
+	}
+	return inner.Connect(ctx)
 }
 
 func (c *connector) Driver() driver.Driver {
-	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
+	return mysql.MySQLDriver{}
 }
 
 var tlsConfigCounter uint32
