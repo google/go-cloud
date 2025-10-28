@@ -67,7 +67,7 @@ var Set = wire.NewSet(
 //   - aws_profile: the AWS shared config profile to use
 //   - aws_role_arn: the ARN of the role to assume
 type URLOpener struct {
-	// HTTPClient is the HTTP client used to fetch RDS certificates.
+	// HTTPClient is the HTTP client used to fetch RDS certificates,
 	// and IAM authentication tokens.
 	HTTPClient *http.Client
 	// CertSource specifies how the opener will obtain the RDS Certificate
