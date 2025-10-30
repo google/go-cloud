@@ -69,33 +69,28 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	}
 	password, _ := u.User.Password()
 	c := &connector{
-		addr:     u.Host,
-		user:     u.User.Username(),
-		password: password,
-		dbName:   strings.TrimPrefix(u.Path, "/"),
-		// Make a copy of TraceOpts to avoid caller modifying.
-		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
-		provider:  source,
-
-		sem:   make(chan struct{}, 1),
-		ready: make(chan struct{}),
+		cfg: &mysql.Config{
+			Net:                     "tcp",
+			Addr:                    u.Host,
+			User:                    u.User.Username(),
+			Passwd:                  password,
+			AllowCleartextPasswords: true,
+			AllowNativePasswords:    true,
+			DBName:                  strings.TrimPrefix(u.Path, "/"),
+		},
+		provider: source,
+		sem:      make(chan struct{}, 1),
+		ready:    make(chan struct{}),
 	}
 	c.sem <- struct{}{}
-	return sql.OpenDB(c), nil
+	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }
 
 type connector struct {
-	addr      string
-	user      string
-	password  string
-	dbName    string
-	traceOpts []otelsql.Option
-
 	sem      chan struct{}    // receive to acquire, send to release
 	provider CertPoolProvider // provides the CA certificate pool
-
-	ready chan struct{} // closed after writing dsn
-	dsn   string
+	ready    chan struct{}    // closed after fetching certs successfully
+	cfg      *mysql.Config
 }
 
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
@@ -116,17 +111,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect Azure MySql: register TLS: %v", err)
 		}
-		cfg := &mysql.Config{
-			Net:                     "tcp",
-			Addr:                    c.addr,
-			User:                    c.user,
-			Passwd:                  c.password,
-			TLSConfig:               tlsConfigName,
-			AllowCleartextPasswords: true,
-			AllowNativePasswords:    true,
-			DBName:                  c.dbName,
-		}
-		c.dsn = cfg.FormatDSN()
+		c.cfg.TLSConfig = tlsConfigName
 		close(c.ready)
 		// Don't release sem: make it block forever, so this case won't be run again.
 	case <-c.ready:
@@ -134,11 +119,15 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	case <-ctx.Done():
 		return nil, fmt.Errorf("connect Azure MySql: waiting for certificates: %v", ctx.Err())
 	}
-	return c.Driver().Open(c.dsn)
+	inner, err := mysql.NewConnector(c.cfg)
+	if err != nil {
+		return nil, fmt.Errorf("connect Azure MySql: create connector: %v", err)
+	}
+	return inner.Connect(ctx)
 }
 
 func (c *connector) Driver() driver.Driver {
-	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
+	return mysql.MySQLDriver{}
 }
 
 var tlsConfigCounter uint32
