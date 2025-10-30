@@ -18,7 +18,6 @@ package mysql
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -49,10 +48,11 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	if err != nil {
 		return nil, err
 	}
-	return sql.OpenDB(connector{
-		dsn:       cfg.FormatDSN(),
-		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
-	}), nil
+	c, err := mysql.NewConnector(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("mysql: could not create connector: %v", err)
+	}
+	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }
 
 var netAddrRE = regexp.MustCompile(`^(.+)\((.+)\)$`)
@@ -81,19 +81,6 @@ func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 	cfg.AllowCleartextPasswords = true
 	cfg.AllowNativePasswords = true
 	return cfg, nil
-}
-
-type connector struct {
-	dsn       string
-	traceOpts []otelsql.Option
-}
-
-func (c connector) Connect(context.Context) (driver.Conn, error) {
-	return c.Driver().Open(c.dsn)
-}
-
-func (c connector) Driver() driver.Driver {
-	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
 // MySQLURLOpener implements MySQLURLOpener and can open connections based on a URL.
