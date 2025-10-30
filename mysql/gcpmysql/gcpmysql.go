@@ -30,7 +30,6 @@ package gcpmysql // import "gocloud.dev/mysql/gcpmysql"
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"net/url"
 	"strings"
@@ -110,9 +109,11 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		Certs: uo.CertSource,
 	}
 	mysql.RegisterDialContext(dialerName, client.DialContext)
-
-	db := sql.OpenDB(connector{cfg.FormatDSN(), uo.TraceOpts})
-	return db, nil
+	c, err := mysql.NewConnector(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("gcpmysql: open connector %v", err)
+	}
+	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }
 
 func configFromURL(u *url.URL, dialerName string) (*mysql.Config, error) {
@@ -159,16 +160,3 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 }
 
 var dialerCounter uint32
-
-type connector struct {
-	dsn       string
-	traceOpts []otelsql.Option
-}
-
-func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
-	return c.Driver().Open(c.dsn)
-}
-
-func (c connector) Driver() driver.Driver {
-	return otelsql.WrapDriver(mysql.MySQLDriver{}, c.traceOpts...)
-}
