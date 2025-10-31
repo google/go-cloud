@@ -31,10 +31,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/XSAM/otelsql"
@@ -97,18 +97,22 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	if uo.CertSource == nil {
 		return nil, fmt.Errorf("gcpmysql: URLOpener CertSource is nil")
 	}
-	dialerName := fmt.Sprintf("gocloud.dev/mysql/gcpmysql/%d",
-		atomic.AddUint32(&dialerCounter, 1))
-	cfg, err := configFromURL(u, dialerName)
+	var (
+		client   = &proxy.Client{Certs: uo.CertSource, Port: 3307}
+		cfg, err = configFromURL(u)
+	)
 	if err != nil {
 		return nil, fmt.Errorf("gcpmysql: open config %v", err)
 	}
-
-	client := &proxy.Client{
-		Port:  3307,
-		Certs: uo.CertSource,
+	cfg.DialFunc = func(ctx context.Context, _, addr string) (net.Conn, error) {
+		// MySQL driver's addr is in the form "[host]:3306" after normalized.
+		// https://github.com/go-sql-driver/mysql/blob/76c00e35a8d48f8f70f0e7dffe584692bd3fa612/dsn.go#L193-L195
+		instance, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+		return client.DialContext(ctx, instance)
 	}
-	mysql.RegisterDialContext(dialerName, client.DialContext)
 	c, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("gcpmysql: open connector %v", err)
@@ -116,7 +120,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }
 
-func configFromURL(u *url.URL, dialerName string) (*mysql.Config, error) {
+func configFromURL(u *url.URL) (*mysql.Config, error) {
 	instance, dbName, err := instanceFromURL(u)
 	if err != nil {
 		return nil, err
@@ -136,7 +140,7 @@ func configFromURL(u *url.URL, dialerName string) (*mysql.Config, error) {
 	password, _ := u.User.Password()
 
 	cfg.AllowNativePasswords = true
-	cfg.Net = dialerName
+	cfg.Net = "tcp"
 	cfg.Addr = instance
 	cfg.User = u.User.Username()
 	cfg.Passwd = password
@@ -158,5 +162,3 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 	}
 	return parts[0] + ":" + parts[1] + ":" + parts[2], parts[3], nil
 }
-
-var dialerCounter uint32

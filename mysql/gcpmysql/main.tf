@@ -15,16 +15,21 @@
 # Harness for MySQL tests.
 
 terraform {
-  required_version = "~>0.12"
+  required_version = "~>1.13.2"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "7.9.0"
+    }
+    random = {
+      source  = "random"
+      version = "3.7.2"
+    }
+  }
 }
 
 provider "google" {
-  version = "~> 2.5"
   project = var.project
-}
-
-provider "random" {
-  version = "~> 2.1"
 }
 
 variable "project" {
@@ -61,11 +66,11 @@ resource "random_id" "sql_instance" {
 }
 
 resource "google_sql_database_instance" "main" {
-  name             = local.sql_instance
-  database_version = "MYSQL_5_6"
-  region           = var.region
-  project          = var.project
-
+  name                = local.sql_instance
+  database_version    = "MYSQL_5_6"
+  region              = var.region
+  project             = var.project
+  deletion_protection = false
   settings {
     tier      = "db-f1-micro"
     disk_size = 10 # GiB
