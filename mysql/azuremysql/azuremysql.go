@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"sync/atomic"
 
 	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
@@ -101,17 +100,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			c.sem <- struct{}{} // release
 			return nil, fmt.Errorf("connect Azure MySql: %v", err)
 		}
-		// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
-		tlsConfigName := fmt.Sprintf(
-			"gocloud.dev/mysql/azuremysql/%d",
-			atomic.AddUint32(&tlsConfigCounter, 1),
-		)
-		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{RootCAs: certPool})
-		if err != nil {
-			c.sem <- struct{}{} // release
-			return nil, fmt.Errorf("connect Azure MySql: register TLS: %v", err)
-		}
-		c.cfg.TLSConfig = tlsConfigName
+		c.cfg.TLS = &tls.Config{RootCAs: certPool}
 		close(c.ready)
 		// Don't release sem: make it block forever, so this case won't be run again.
 	case <-c.ready:
