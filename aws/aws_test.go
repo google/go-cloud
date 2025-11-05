@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -73,6 +74,54 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			name:  "Rate limit capacity",
 			query: url.Values{"rate_limiter_capacity": {"500"}},
 		},
+		{
+			name:  "Request checksum calculation when_supported",
+			query: url.Values{"request_checksum_calculation": {"when_supported"}},
+		},
+		{
+			name:  "Request checksum calculation when_required",
+			query: url.Values{"request_checksum_calculation": {"when_required"}},
+		},
+		{
+			name:  "Response checksum validation when_supported",
+			query: url.Values{"response_checksum_validation": {"when_supported"}},
+		},
+		{
+			name:  "Response checksum validation when_required",
+			query: url.Values{"response_checksum_validation": {"when_required"}},
+		},
+		{
+			name:  "Both checksum parameters",
+			query: url.Values{"request_checksum_calculation": {"when_required"}, "response_checksum_validation": {"when_supported"}},
+		},
+		{
+			name:    "Invalid request checksum value",
+			query:   url.Values{"request_checksum_calculation": {"invalid"}},
+			wantErr: true,
+		},
+		{
+			name:    "Invalid response checksum value",
+			query:   url.Values{"response_checksum_validation": {"invalid"}},
+			wantErr: true,
+		},
+		{
+			name:    "Empty request checksum value",
+			query:   url.Values{"request_checksum_calculation": {""}},
+			wantErr: true,
+		},
+		{
+			name:    "Empty response checksum value",
+			query:   url.Values{"response_checksum_validation": {""}},
+			wantErr: true,
+		},
+		{
+			name:  "Uppercase request checksum",
+			query: url.Values{"request_checksum_calculation": {"WHEN_SUPPORTED"}},
+		},
+		{
+			name:  "Mixed case response checksum",
+			query: url.Values{"response_checksum_validation": {"When_Required"}},
+		},
 		// Can't test "profile", since AWS validates that the profile exists.
 	}
 
@@ -88,6 +137,35 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			}
 			if test.wantRegion != "" && got.Region != test.wantRegion {
 				t.Errorf("got region %q, want %q", got.Region, test.wantRegion)
+			}
+
+			// Check checksum configuration based on query parameters
+			if test.query.Has("request_checksum_calculation") {
+				expectedValue := test.query.Get("request_checksum_calculation")
+				var expectedChecksum aws.RequestChecksumCalculation
+				switch strings.ToLower(expectedValue) {
+				case "when_supported":
+					expectedChecksum = aws.RequestChecksumCalculationWhenSupported
+				case "when_required":
+					expectedChecksum = aws.RequestChecksumCalculationWhenRequired
+				}
+				if got.RequestChecksumCalculation != expectedChecksum {
+					t.Errorf("got RequestChecksumCalculation %v, want %v", got.RequestChecksumCalculation, expectedChecksum)
+				}
+			}
+
+			if test.query.Has("response_checksum_validation") {
+				expectedValue := test.query.Get("response_checksum_validation")
+				var expectedChecksum aws.ResponseChecksumValidation
+				switch strings.ToLower(expectedValue) {
+				case "when_supported":
+					expectedChecksum = aws.ResponseChecksumValidationWhenSupported
+				case "when_required":
+					expectedChecksum = aws.ResponseChecksumValidationWhenRequired
+				}
+				if got.ResponseChecksumValidation != expectedChecksum {
+					t.Errorf("got ResponseChecksumValidation %v, want %v", got.ResponseChecksumValidation, expectedChecksum)
+				}
 			}
 
 			if test.wantEndpoint != nil {

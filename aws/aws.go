@@ -20,12 +20,44 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/ratelimit"
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/config"
 )
+
+const (
+	requestChecksumCalculationParamKey = "request_checksum_calculation"
+	responseChecksumValidationParamKey = "response_checksum_validation"
+)
+
+// parseRequestChecksumCalculation parses request checksum calculation mode values.
+// Supports AWS SDK documented values: "when_supported", "when_required".
+func parseRequestChecksumCalculation(value string) (aws.RequestChecksumCalculation, error) {
+	switch strings.ToLower(value) {
+	case "when_supported":
+		return aws.RequestChecksumCalculationWhenSupported, nil
+	case "when_required":
+		return aws.RequestChecksumCalculationWhenRequired, nil
+	default:
+		return aws.RequestChecksumCalculationWhenSupported, fmt.Errorf("invalid value for %q: %q. Valid values are: when_supported, when_required", requestChecksumCalculationParamKey, value)
+	}
+}
+
+// parseResponseChecksumValidation parses response checksum validation mode values.
+// Supports AWS SDK documented values: "when_supported", "when_required".
+func parseResponseChecksumValidation(value string) (aws.ResponseChecksumValidation, error) {
+	switch strings.ToLower(value) {
+	case "when_supported":
+		return aws.ResponseChecksumValidationWhenSupported, nil
+	case "when_required":
+		return aws.ResponseChecksumValidationWhenRequired, nil
+	default:
+		return aws.ResponseChecksumValidationWhenSupported, fmt.Errorf("invalid value for %q: %q. Valid values are: when_supported, when_required", responseChecksumValidationParamKey, value)
+	}
+}
 
 // NewDefaultV2Config returns a aws.Config for AWS SDK v2, using the default options.
 func NewDefaultV2Config(ctx context.Context) (aws.Config, error) {
@@ -53,6 +85,8 @@ func NewDefaultV2Config(ctx context.Context) (aws.Config, error) {
 //   - rate_limiter_capacity: A integer value configures the capacity of a token bucket used
 //     in client-side rate limits. If no value is set, the client-side rate limiting is disabled.
 //     See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/retries-timeouts/#client-side-rate-limiting.
+//   - request_checksum_calculation: Request checksum calculation mode (when_supported, when_required)
+//   - response_checksum_validation: Response checksum validation mode (when_supported, when_required)
 func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error) {
 	var endpoint string
 	var hostnameImmutable bool
@@ -103,6 +137,20 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error
 			if anon {
 				opts = append(opts, config.WithCredentialsProvider(aws.AnonymousCredentials{}))
 			}
+		case requestChecksumCalculationParamKey:
+			value, err := parseRequestChecksumCalculation(value)
+			if err != nil {
+				return aws.Config{}, err
+			}
+
+			opts = append(opts, config.WithRequestChecksumCalculation(value))
+		case responseChecksumValidationParamKey:
+			value, err := parseResponseChecksumValidation(value)
+			if err != nil {
+				return aws.Config{}, err
+			}
+
+			opts = append(opts, config.WithResponseChecksumValidation(value))
 		case "awssdk":
 			// ignore, should be handled before this
 		default:
