@@ -665,6 +665,9 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 		if code == bloberror.AuthenticationFailed {
 			return gcerrors.PermissionDenied
 		}
+		if code == bloberror.BlobAlreadyExists {
+			return gcerrors.FailedPrecondition
+		}
 	}
 	if strings.Contains(err.Error(), "no such host") {
 		// This happens with an invalid storage account name; the host
