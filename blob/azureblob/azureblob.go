@@ -655,11 +655,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 		switch bloberror.Code(rErr.ErrorCode) {
 		case bloberror.AuthenticationFailed:
 			return gcerrors.PermissionDenied
-		case bloberror.BlobAlreadyExists,
-			bloberror.ConditionNotMet,
-			bloberror.TargetConditionNotMet,
-			bloberror.SourceConditionNotMet:
-			// the documented error code is a variation of "ConditionNotMet", but "BlobAlreadyExists" has also been observed
+		case bloberror.BlobAlreadyExists:
 			return gcerrors.FailedPrecondition
 		case bloberror.BlobNotFound:
 			return gcerrors.NotFound
