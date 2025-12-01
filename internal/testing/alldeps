@@ -57,6 +57,7 @@ github.com/aws/aws-sdk-go-v2/service/internal/s3shared
 github.com/aws/aws-sdk-go-v2/service/kms
 github.com/aws/aws-sdk-go-v2/service/s3
 github.com/aws/aws-sdk-go-v2/service/secretsmanager
+github.com/aws/aws-sdk-go-v2/service/signin
 github.com/aws/aws-sdk-go-v2/service/sns
 github.com/aws/aws-sdk-go-v2/service/sqs
 github.com/aws/aws-sdk-go-v2/service/ssm
@@ -130,16 +131,15 @@ github.com/pkg/browser
 github.com/prometheus/client_golang
 github.com/prometheus/client_model
 github.com/prometheus/common
+github.com/prometheus/otlptranslator
 github.com/prometheus/procfs
 github.com/rabbitmq/amqp091-go
 github.com/rcrowley/go-metrics
 github.com/ryanuber/go-glob
 github.com/spiffe/go-spiffe/v2
-github.com/xdg-go/pbkdf2
 github.com/xdg-go/scram
 github.com/xdg-go/stringprep
 github.com/youmark/pkcs8
-github.com/zeebo/errs
 go.etcd.io/etcd
 go.etcd.io/etcd/api/v3
 go.etcd.io/etcd/client/pkg/v3
@@ -179,6 +179,7 @@ go.opentelemetry.io/otel/trace
 go.opentelemetry.io/proto/otlp
 go.uber.org/multierr
 go.uber.org/zap
+go.yaml.in/yaml/v2
 gocloud.dev
 gocloud.dev/docstore/mongodocstore
 gocloud.dev/internal/website
