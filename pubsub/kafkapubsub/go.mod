@@ -21,7 +21,7 @@ toolchain go1.24.7
 require (
 	github.com/IBM/sarama v1.45.2
 	github.com/google/go-cmp v0.7.0
-	gocloud.dev v0.43.0
+	gocloud.dev v0.44.0
 )
 
 require (
@@ -87,5 +87,3 @@ require (
 	google.golang.org/grpc v1.74.2 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 )
-
-replace gocloud.dev => ../../
