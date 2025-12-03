@@ -12,22 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mysql provides functions to open MySQL databases with OpenCensus instrumentation.
+// Package mysql provides functions to open MySQL databases with OpenTelemetry instrumentation.
 package mysql
 
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 
+	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
 	"gocloud.dev/internal/openurl"
-
-	"contrib.go.opencensus.io/integrations/ocsql"
 )
 
 // Scheme is the URL scheme this package registers its URLOpener under on
@@ -41,19 +39,20 @@ func init() {
 // URLOpener opens URLs like "mysql://" by using the underlying MySQL driver.
 // like "mysql://user:password@localhost:3306/mydb".
 type URLOpener struct {
-	TraceOpts []ocsql.TraceOption
+	TraceOpts []otelsql.Option
 }
 
-// OpenMySQLURL opens a new database connection wrapped with OpenCensus instrumentation.
+// OpenMySQLURL opens a new database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error) {
 	cfg, err := ConfigFromURL(u)
 	if err != nil {
 		return nil, err
 	}
-	return sql.OpenDB(connector{
-		dsn:       cfg.FormatDSN(),
-		traceOpts: append([]ocsql.TraceOption(nil), uo.TraceOpts...),
-	}), nil
+	c, err := mysql.NewConnector(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("mysql: could not create connector: %v", err)
+	}
+	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }
 
 var netAddrRE = regexp.MustCompile(`^(.+)\((.+)\)$`)
@@ -82,19 +81,6 @@ func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 	cfg.AllowCleartextPasswords = true
 	cfg.AllowNativePasswords = true
 	return cfg, nil
-}
-
-type connector struct {
-	dsn       string
-	traceOpts []ocsql.TraceOption
-}
-
-func (c connector) Connect(context.Context) (driver.Conn, error) {
-	return c.Driver().Open(c.dsn)
-}
-
-func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, c.traceOpts...)
 }
 
 // MySQLURLOpener implements MySQLURLOpener and can open connections based on a URL.

@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/aws/smithy-go"
@@ -50,12 +51,63 @@ func (h *harness) Close() {
 	h.close()
 }
 
+// Lists all existing aliases in the account, to see if we need to create one.
+func listExistingAliases(ctx context.Context, client *kms.Client) (map[string]bool, error) {
+	existing := map[string]bool{}
+	var nextMarker *string
+	for {
+		resp, err := client.ListAliases(ctx, &kms.ListAliasesInput{Marker: nextMarker})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list aliases: %w", err)
+		}
+		for _, alias := range resp.Aliases {
+			existing[*alias.AliasName] = true
+		}
+		if !resp.Truncated {
+			break
+		}
+		nextMarker = resp.NextMarker
+	}
+	return existing, nil
+}
+
+func createKey(ctx context.Context, client *kms.Client, keyID string) error {
+	createKeyResult, err := client.CreateKey(ctx, &kms.CreateKeyInput{})
+	if err != nil {
+		return fmt.Errorf("failed to create key %q: %w", keyID, err)
+	}
+	if _, err := client.CreateAlias(ctx, &kms.CreateAliasInput{
+		AliasName:   aws.String(keyID),
+		TargetKeyId: createKeyResult.KeyMetadata.KeyId,
+	}); err != nil {
+		return fmt.Errorf("failed to create alias for key %q: %w", keyID, err)
+	}
+	return nil
+}
+
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
+	client := kms.NewFromConfig(cfg)
+
+	// Create the keys we need if they don't exist.
+	existing, err := listExistingAliases(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+	if !existing[keyID1] {
+		if err := createKey(ctx, client, keyID1); err != nil {
+			return nil, err
+		}
+	}
+	if !existing[keyID2] {
+		if err := createKey(ctx, client, keyID2); err != nil {
+			return nil, err
+		}
+	}
 	return &harness{
-		client: kms.NewFromConfig(cfg),
+		client: client,
 		close:  done,
 	}, nil
 }

@@ -23,6 +23,9 @@
 // Action lists are executed concurrently. Each action in an action list is executed
 // in a separate goroutine.
 //
+// memdocstore supports atomic writes. When using AtomicWrites(), all write actions
+// in the action list are executed atomically - either all succeed or all fail together.
+//
 // memdocstore calls the BeforeDo function of an ActionList once before executing the
 // actions. Its As function never returns true.
 //
@@ -67,6 +70,13 @@ type Options struct {
 	// is loaded from the file if it exists. Otherwise, an empty collection is created.
 	// When the collection is closed, its contents are saved to the file.
 	Filename string
+
+	// AllowNestedSliceQueries allows querying into nested slices.
+	// If true queries for a field path which points to a slice will return
+	// true if any element of the slice has a value that validates with the operator.
+	// This makes the memdocstore more compatible with MongoDB,
+	// but other providers may not support this feature.
+	AllowNestedSliceQueries bool
 
 	// Call this function when the collection is closed.
 	// For internal use only.
@@ -191,12 +201,77 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 		}
 	}
 
-	beforeGets, gets, writes, _, afterGets := driver.GroupActions(actions)
+	beforeGets, gets, writes, writesTx, afterGets := driver.GroupActions(actions)
 	run(beforeGets)
 	run(gets)
 	run(writes)
+
+	// Handle atomic writes separately to ensure they are truly atomic
+	if len(writesTx) > 0 {
+		c.runAtomicWrites(ctx, writesTx, errs)
+	}
+
 	run(afterGets)
 	return driver.NewActionListError(errs)
+}
+
+// runAtomicWrites executes multiple write actions atomically.
+// All writes either succeed or all fail together.
+func (c *collection) runAtomicWrites(ctx context.Context, actions []*driver.Action, errs []error) {
+	// Stop if the context is done.
+	if ctx.Err() != nil {
+		for _, a := range actions {
+			errs[a.Index] = ctx.Err()
+		}
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// First, validate all actions and collect current documents
+	type actionInfo struct {
+		action  *driver.Action
+		current storedDoc
+		exists  bool
+	}
+
+	actionInfos := make([]actionInfo, len(actions))
+	for i, a := range actions {
+		info := &actionInfos[i]
+		info.action = a
+
+		if a.Key != nil {
+			info.current, info.exists = c.docs[a.Key]
+		}
+
+		// Check for NotFound errors
+		if !info.exists && (a.Kind == driver.Replace || a.Kind == driver.Update || a.Kind == driver.Get) {
+			for _, a2 := range actions {
+				errs[a2.Index] = gcerr.Newf(gcerr.NotFound, nil, "document with key %v does not exist", a.Key)
+			}
+			return
+		}
+
+		// Check revision conflicts
+		if err := c.checkRevision(a.Doc, info.current); err != nil {
+			for _, a2 := range actions {
+				errs[a2.Index] = err
+			}
+			return
+		}
+	}
+
+	// Now execute all actions atomically
+	for _, info := range actionInfos {
+		if err := c.executeAction(info.action, info.current, info.exists); err != nil {
+			// If any action fails, mark all actions as failed
+			for _, a2 := range actions {
+				errs[a2.Index] = err
+			}
+			return
+		}
+	}
 }
 
 // runAction executes a single action.
@@ -220,6 +295,28 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 	if !exists && (a.Kind == driver.Replace || a.Kind == driver.Update || a.Kind == driver.Get) {
 		return gcerr.Newf(gcerr.NotFound, nil, "document with key %v does not exist", a.Key)
 	}
+
+	// Check revision conflicts
+	if a.Kind != driver.Get && a.Kind != driver.Create {
+		if err := c.checkRevision(a.Doc, current); err != nil {
+			return err
+		}
+	}
+
+	// Execute the action for Get
+	if a.Kind == driver.Get {
+		// Handle Get separately since it doesn't modify the document.
+		// We've already retrieved the document into current, above.
+		// Now we copy its fields into the user-provided document.
+		return decodeDoc(current, a.Doc, a.FieldPaths)
+	}
+
+	return c.executeAction(a, current, exists)
+}
+
+// executeAction executes a single action. Must be called with the lock held.
+// This method is shared between runAction and runAtomicWrites to eliminate code duplication.
+func (c *collection) executeAction(a *driver.Action, current storedDoc, exists bool) error {
 	switch a.Kind {
 	case driver.Create:
 		// It is an error to attempt to create an existing document.
@@ -237,9 +334,6 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		fallthrough
 
 	case driver.Replace, driver.Put:
-		if err := c.checkRevision(a.Doc, current); err != nil {
-			return err
-		}
 		doc, err := encodeDoc(a.Doc)
 		if err != nil {
 			return err
@@ -253,15 +347,9 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		c.docs[a.Key] = doc
 
 	case driver.Delete:
-		if err := c.checkRevision(a.Doc, current); err != nil {
-			return err
-		}
 		delete(c.docs, a.Key)
 
 	case driver.Update:
-		if err := c.checkRevision(a.Doc, current); err != nil {
-			return err
-		}
 		if err := c.update(current, a.Mods); err != nil {
 			return err
 		}
@@ -272,12 +360,6 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 			}
 		}
 
-	case driver.Get:
-		// We've already retrieved the document into current, above.
-		// Now we copy its fields into the user-provided document.
-		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
-			return err
-		}
 	default:
 		return gcerr.Newf(gcerr.Internal, nil, "unknown kind %v", a.Kind)
 	}
@@ -397,18 +479,44 @@ func (c *collection) checkRevision(arg driver.Document, current storedDoc) error
 	return nil
 }
 
-// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
+// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid.
+// If nested is true compare against all elements of a slice, see AllowNestedSliceQueries
 // (see getParentMap).
-func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) {
-	m2, err := getParentMap(m, fp, false)
-	if err != nil {
-		return nil, err
+func getAtFieldPath(m map[string]any, fp []string, nested bool) (result any, err error) {
+	var get func(m any, name string) any
+	get = func(m any, name string) any {
+		switch m := m.(type) {
+		case map[string]any:
+			return m[name]
+		case []any:
+			if !nested {
+				return nil
+			}
+			var result []any
+			for _, e := range m {
+				next := get(e, name)
+				// If we have slices within slices the compare function does not see the nested slices.
+				// Changing the compare function to be recursive would be more effort than flattening the slices here.
+				sliced, ok := next.([]any)
+				if ok {
+					result = append(result, sliced...)
+				} else {
+					result = append(result, next)
+				}
+			}
+			return result
+		}
+		return nil
 	}
-	v, ok := m2[fp[len(fp)-1]]
-	if ok {
-		return v, nil
+	result = m
+	for _, k := range fp {
+		next := get(result, k)
+		if next == nil {
+			return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", strings.Join(fp, "."))
+		}
+		result = next
 	}
-	return nil, gcerr.Newf(gcerr.NotFound, nil, "field %s not found", fp)
+	return result, nil
 }
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
@@ -420,14 +528,6 @@ func setAtFieldPath(m map[string]interface{}, fp []string, val interface{}) erro
 	}
 	m2[fp[len(fp)-1]] = val
 	return nil
-}
-
-// Delete the value from m at the given field path, if it exists.
-func deleteAtFieldPath(m map[string]interface{}, fp []string) {
-	m2, _ := getParentMap(m, fp, false) // ignore error
-	if m2 != nil {
-		delete(m2, fp[len(fp)-1])
-	}
 }
 
 // getParentMap returns the map that directly contains the given field path;

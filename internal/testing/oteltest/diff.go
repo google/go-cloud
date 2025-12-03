@@ -16,101 +16,200 @@ package oteltest
 
 import (
 	"fmt"
+	"go.opentelemetry.io/otel/codes"
+	"sort"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"gocloud.dev/gcerrors"
 )
 
-// Diff compares OpenTelemetry trace spans and metrics to expected values.
-// It returns a non-empty string if there are any discrepancies.
-func Diff(spans []sdktrace.ReadOnlySpan, pkg, provider string, want []Call) string {
-	if len(spans) != len(want) {
-		return fmt.Sprintf("got %d spans, want %d", len(spans), len(want))
-	}
+var (
+	methodKey   = attribute.Key("gocdk_method")
+	providerKey = attribute.Key("gocdk_provider")
+	statusKey   = attribute.Key("gocdk_status")
+)
 
-	// Convert spans to calls for easier comparison
-	var got []Call
-	for _, span := range spans {
-		call := SpanToCall(span)
-		// Check if the span belongs to the expected package
-		if !hasAttributeWithValue(call.Attrs, attribute.Key("gocdk.package"), pkg) {
-			continue
-		}
-		// Check if the span belongs to the expected provider
-		if provider != "" && !hasAttributeWithValue(call.Attrs, attribute.Key("gocdk.provider"), provider) {
-			continue
-		}
-		got = append(got, call)
-	}
-
-	if len(got) != len(want) {
-		return fmt.Sprintf("got %d matching spans, want %d", len(got), len(want))
-	}
-
-	// Verify each span matches the expected call
-	for i, g := range got {
-		w := want[i]
-		if g.Method != w.Method {
-			return fmt.Sprintf("#%d: got method %q, want %q", i, g.Method, w.Method)
-		}
-		if g.Status != w.Status {
-			return fmt.Sprintf("#%d: got status %q, want %q", i, g.Status, w.Status)
-		}
-	}
-
-	return ""
+// Call represents a method call/span with its result code.
+type Call struct {
+	Method string
+	Code   gcerrors.ErrorCode
+	Attrs  []attribute.KeyValue
 }
 
-// DiffSpanAttr verifies that a span has an attribute with the expected value.
-// It's useful for more detailed assertions on span attributes.
-func DiffSpanAttr(span sdktrace.ReadOnlySpan, key attribute.Key, wantValue string) string {
-	for _, attr := range span.Attributes() {
-		if attr.Key == key {
-			if attr.Value.AsString() == wantValue {
-				return ""
+func formatSpanData(s sdktrace.ReadOnlySpan) string {
+	if s == nil {
+		return "missing"
+	}
+	// OTel uses codes.Code for status.
+	return fmt.Sprintf("<Name: %q, Code: %s>", s.Name(), s.Status().Code.String())
+}
+
+func formatCall(c *Call) string {
+	if c == nil {
+		return "nothing"
+	}
+	// gcerrors.ErrorCode is an int, just print it.
+	return fmt.Sprintf("<Name: %q, Code: %d>", c.Method, c.Code)
+}
+
+// Diff compares the list of spans and metric data obtained from OpenTelemetry
+// instrumentation (using a test exporter like `sdktrace/tracetest.NewExporter`
+// and `sdkmetric/metrictest.NewExporter`) with an expected list of calls.
+// The span/metric name and status code/status attribute are compared.
+// Order matters for traces (though not for metrics).
+//
+// gotSpans should be the result from a test trace exporter (e.g., exporter.GetSpans()).
+// gotMetrics should be the result from a test metric exporter (e.g., exporter.GetMetrics()).
+// namePrefix is the prefix prepended to method names in spans/metrics mostly its the package name.
+// provider is the name of the provider used (e.g., "aws").
+// want is the list of expected calls.
+func Diff(gotSpans []sdktrace.ReadOnlySpan, gotMetrics []metricdata.ScopeMetrics, namePrefix, provider string, want []Call) string {
+	ds := diffSpans(gotSpans, namePrefix, want)
+	dc := DiffMetrics(gotMetrics, namePrefix, provider, want)
+	if len(ds) > 0 {
+		ds = "trace: " + ds + "\n"
+	}
+	if len(dc) > 0 {
+		dc = "metrics: " + dc
+	}
+	return ds + dc
+}
+
+func mapStatusCode(code gcerrors.ErrorCode) codes.Code {
+	// For gcerrors used by gocloud, OK -> Ok, everything else -> Error is common.
+	if code == gcerrors.OK {
+		return codes.Ok
+	}
+	return codes.Error
+}
+
+func diffSpans(got []sdktrace.ReadOnlySpan, prefix string, want []Call) string {
+	var diffs []string
+	add := func(i int, g sdktrace.ReadOnlySpan, w *Call) {
+		diffs = append(diffs, fmt.Sprintf("#%d: got %s, want %s", i, formatSpanData(g), formatCall(w)))
+	}
+
+	for i := 0; i < len(got) || i < len(want); i++ {
+		var gotSpan sdktrace.ReadOnlySpan
+		if i < len(got) {
+			gotSpan = got[i]
+		}
+
+		switch {
+		case i >= len(got):
+			add(i, nil, &want[i])
+		case i >= len(want):
+			add(i, gotSpan, nil)
+		default:
+			expectedName := prefix + "." + want[i].Method
+			expectedCode := mapStatusCode(want[i].Code) // Map wanted gcerrors code to OTel code.
+
+			if gotSpan == nil || gotSpan.Name() != expectedName || gotSpan.Status().Code != expectedCode {
+				w := want[i]
+				w.Method = prefix + "." + w.Method
+				add(i, gotSpan, &w)
 			}
-			return fmt.Sprintf("for key %s: got %q, want %q", key, attr.Value.AsString(), wantValue)
 		}
 	}
-	return fmt.Sprintf("key %s not found", key)
+	return strings.Join(diffs, "\n")
 }
 
-// hasAttributeWithValue checks if the attribute set contains a key with the expected value.
-func hasAttributeWithValue(attrs []attribute.KeyValue, key attribute.Key, value string) bool {
-	for _, attr := range attrs {
-		if attr.Key == key && attr.Value.AsString() == value {
-			return true
+func DiffMetrics(got []metricdata.ScopeMetrics, prefix, provider string, wantCalls []Call) string {
+	// OTel metric data is structured. We need to iterate through it to find the
+	// relevant metric data points and their attributes.
+	var diffs []string
+	gotTags := map[string]bool{} // map of canonicalized data point attributes
+
+	// Helper to convert attribute.Set to a canonical string key
+	attrSetToCanonicalString := func(set attribute.Set) string {
+		// Get key-value pairs, sort them, and format into a stable string.
+		attrs := make([]attribute.KeyValue, 0, set.Len())
+		iter := set.Iter()
+		for iter.Next() {
+			attrs = append(attrs, iter.Attribute())
 		}
+		sort.Slice(attrs, func(i, j int) bool {
+			return string(attrs[i].Key) < string(attrs[j].Key)
+		})
+		parts := make([]string, len(attrs))
+		for i, attr := range attrs {
+			// Format value based on type - attribute.Value doesn't have a simple String()
+			// that's guaranteed to be consistent for comparison. Using fmt.Sprint is safer.
+			parts[i] = fmt.Sprintf("%s:%s", attr.Key, fmt.Sprint(attr.Value.AsInterface()))
+		}
+		return strings.Join(parts, ",")
 	}
-	return false
-}
 
-// FormatSpans returns a formatted string of span data for debugging.
-func FormatSpans(spans []sdktrace.ReadOnlySpan) string {
-	var b strings.Builder
-	for i, span := range spans {
-		fmt.Fprintf(&b, "#%d: %s\n", i, span.Name())
-		fmt.Fprintf(&b, "  TraceID: %s\n", span.SpanContext().TraceID())
-		fmt.Fprintf(&b, "  SpanID: %s\n", span.SpanContext().SpanID())
-		fmt.Fprintf(&b, "  Status: %s\n", span.Status().Code)
+	// Helper function to collect relevant attributes for tag comparison.
+	processAtrributes := func(attrSets ...attribute.Set) {
 
-		if len(span.Attributes()) > 0 {
-			fmt.Fprintf(&b, "  Attributes:\n")
-			for _, attr := range span.Attributes() {
-				fmt.Fprintf(&b, "    %s: %s\n", attr.Key, attr.Value.AsString())
-			}
-		}
+		var requiredAttributes []attribute.KeyValue
+		for _, attrSet := range attrSets {
+			for _, a := range attrSet.ToSlice() {
+				if a.Key == providerKey {
+					requiredAttributes = append(requiredAttributes, a)
+				}
 
-		if len(span.Events()) > 0 {
-			fmt.Fprintf(&b, "  Events:\n")
-			for _, event := range span.Events() {
-				fmt.Fprintf(&b, "    %s\n", event.Name)
-				for _, attr := range event.Attributes {
-					fmt.Fprintf(&b, "      %s: %s\n", attr.Key, attr.Value.AsString())
+				if a.Key == methodKey {
+					requiredAttributes = append(requiredAttributes, a)
+				}
+
+				if a.Key == statusKey {
+					requiredAttributes = append(requiredAttributes, a)
 				}
 			}
 		}
+
+		if len(requiredAttributes) > 0 {
+			gotTags[attrSetToCanonicalString(attribute.NewSet(requiredAttributes...))] = true
+		}
+
 	}
-	return b.String()
+
+	// Iterate through all collected metrics to find relevant data points.
+	for _, sm := range got {
+
+		for _, m := range sm.Metrics {
+
+			// Using a switch will allow us accommodate other types of metrics.
+			switch v := m.Data.(type) {
+			case metricdata.Sum[int64]:
+				// Handle int64 Sum metrics.
+				for _, dp := range v.DataPoints {
+					processAtrributes(sm.Scope.Attributes, dp.Attributes)
+				}
+			case metricdata.Sum[float64]:
+				// gocloud usually records counts. Check for Sum metrics.
+				for _, dp := range v.DataPoints {
+					processAtrributes(sm.Scope.Attributes, dp.Attributes)
+				}
+			default:
+				// Handle any other types of metrics.
+				processAtrributes(sm.Scope.Attributes)
+			}
+		}
+	}
+
+	// Check that each wanted call has a corresponding metric data point with the correct attributes.
+	for _, wc := range wantCalls {
+		// Construct the expected set of attributes for the wanted call.
+		expectedAttributes := []attribute.KeyValue{providerKey.String(provider)}
+
+		if wc.Method != "" {
+			expectedAttributes = append(expectedAttributes,
+				methodKey.String(prefix+"."+wc.Method),
+				statusKey.String(fmt.Sprint(wc.Code)))
+		}
+
+		// Canonicalize the expected attributes to check against the collected ones.
+		expectedKey := attrSetToCanonicalString(attribute.NewSet(expectedAttributes...))
+
+		if !gotTags[expectedKey] {
+			diffs = append(diffs, fmt.Sprintf("missing metric data point with attributes %q", expectedKey))
+		}
+	}
+	return strings.Join(diffs, "\n")
 }

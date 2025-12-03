@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Logger wraps the Log method.  Log must be safe to call from multiple
@@ -53,7 +53,8 @@ func NewHandler(log Logger, h http.Handler) *Handler {
 // Log after the handler returns.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	sc := trace.FromContext(r.Context()).SpanContext()
+	span := trace.SpanFromContext(r.Context())
+	sc := span.SpanContext()
 	ent := &Entry{
 		Request:           cloneRequestWithoutBody(r),
 		ReceivedTime:      start,
@@ -64,8 +65,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Referer:           r.Referer(),
 		Proto:             r.Proto,
 		RemoteIP:          ipFromHostPort(r.RemoteAddr),
-		TraceID:           sc.TraceID,
-		SpanID:            sc.SpanID,
+		TraceID:           sc.TraceID(),
+		SpanID:            sc.SpanID(),
 	}
 	if addr, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
 		ent.ServerIP = ipFromHostPort(addr.String())
@@ -176,7 +177,7 @@ func (wc *writeCounter) Write(p []byte) (n int, err error) {
 
 func headerSize(h http.Header) int64 {
 	var wc writeCounter
-	h.Write(&wc)
+	_ = h.Write(&wc)
 	return int64(wc) + 2 // for CRLF
 }
 
@@ -206,7 +207,7 @@ func (r *responseStats) Write(p []byte) (n int, err error) {
 		r.WriteHeader(http.StatusOK)
 	}
 	n, err = r.w.Write(p)
-	r.wc.Write(p[:n])
+	_, _ = r.wc.Write(p[:n])
 	return
 }
 

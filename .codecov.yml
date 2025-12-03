@@ -1,6 +1,11 @@
 codecov:
-  token: 47dfd1fc-dc72-4d25-b608-eca6508efd05
-
+  # Removed hardcoded token for security reasons.
+  # The token should be set via CI/CD secrets instead.
+  # Example for GitHub Actions:
+  #   - name: Upload coverage to Codecov
+  #     run: codecov -t ${{ secrets.CODECOV_TOKEN }}
+  #
+  # See: https://docs.codecov.com/docs/adding-the-codecov-token
 coverage:
   status:
     project:

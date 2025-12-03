@@ -104,7 +104,7 @@ func decodeDoc(m storedDoc, ddoc driver.Document, fps [][]string) error {
 		// (We don't need the key field because ddoc must already have it.)
 		m2 = map[string]interface{}{}
 		for _, fp := range fps {
-			val, err := getAtFieldPath(m, fp)
+			val, err := getAtFieldPath(m, fp, false)
 			if err != nil {
 				if gcerrors.Code(err) == gcerrors.NotFound {
 					continue

@@ -18,18 +18,15 @@ package oteltest
 import (
 	"context"
 	"sync"
-	"time"
+	"testing"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 )
 
@@ -38,120 +35,107 @@ import (
 type TestExporter struct {
 	mu             sync.Mutex
 	spanExporter   *tracetest.InMemoryExporter
-	metricExporter *MetricExporter
-	meterProvider  metric.MeterProvider
-	tracerProvider trace.TracerProvider
+	metricExporter *metricExporter
 	shutdown       func(context.Context) error
 }
 
-// MetricExporter is a simple metrics exporter for testing.
-type MetricExporter struct {
-	mu       sync.Mutex
-	metrics  []metricdata.ScopeMetrics
-	metricCh chan metricdata.ScopeMetrics
-	reader   *sdkmetric.PeriodicReader
+// metricExporter is a simple metrics exporter for testing.
+// It implements the sdkmetric.Exporter interface.
+type metricExporter struct {
+	mu                  sync.Mutex
+	reader              sdkmetric.Reader
+	temporalitySelector sdkmetric.TemporalitySelector
+	aggregationSelector sdkmetric.AggregationSelector
+	rm                  *metricdata.ResourceMetrics
 }
 
-// NewMetricExporter creates a new metric exporter for testing
-func NewMetricExporter() *MetricExporter {
-	exporter := &MetricExporter{
-		metricCh: make(chan metricdata.ScopeMetrics, 10),
+var _ sdkmetric.Exporter = (*metricExporter)(nil)
+
+// newMetricExporter creates a new metric exporter for testing.
+func newMetricExporter() *metricExporter {
+
+	reader := sdkmetric.NewManualReader()
+
+	return &metricExporter{
+		reader:              reader,
+		temporalitySelector: sdkmetric.DefaultTemporalitySelector,
+		aggregationSelector: sdkmetric.DefaultAggregationSelector,
+		rm:                  &metricdata.ResourceMetrics{},
 	}
-
-	exporter.reader = sdkmetric.NewPeriodicReader(
-		exporter,
-		// Use a short export interval for tests
-		sdkmetric.WithInterval(100*time.Millisecond),
-	)
-
-	return exporter
 }
 
 // Temporality returns the aggregation temporality for the given instrument kind.
-func (e *MetricExporter) Temporality(kind sdkmetric.InstrumentKind) metricdata.Temporality {
-	return metricdata.CumulativeTemporality
+func (e *metricExporter) Temporality(kind sdkmetric.InstrumentKind) metricdata.Temporality {
+	return e.temporalitySelector(kind)
 }
 
 // Aggregation returns the aggregation for the given instrument kind.
-func (e *MetricExporter) Aggregation(kind sdkmetric.InstrumentKind) sdkmetric.Aggregation {
-	return nil // Use default aggregation
+func (e *metricExporter) Aggregation(kind sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+	return e.aggregationSelector(kind)
 }
 
 // Export exports metric data.
-func (e *MetricExporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	// Store metrics for each scope
-	for _, sm := range data.ScopeMetrics {
-		e.metrics = append(e.metrics, sm)
-
-		// Also send via channel
-		select {
-		case e.metricCh <- sm:
-		default:
-		}
-	}
+func (e *metricExporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
 
 	return nil
 }
 
-// ForceFlush forces a flush of metrics
-func (e *MetricExporter) ForceFlush(ctx context.Context) error {
-	return nil
-}
-
-// GetMetrics returns all collected metrics
-func (e *MetricExporter) GetMetrics() []metricdata.ScopeMetrics {
+// GetMetrics returns all collected metrics.
+func (e *metricExporter) GetMetrics() []metricdata.ScopeMetrics {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return e.metrics
+	return e.rm.ScopeMetrics
 }
 
-// WaitForMetrics waits for metrics to be collected
-func (e *MetricExporter) WaitForMetrics(timeout time.Duration) (metricdata.ScopeMetrics, bool) {
-	select {
-	case sm := <-e.metricCh:
-		return sm, true
-	case <-time.After(timeout):
-		return metricdata.ScopeMetrics{}, false
+// ForceFlush forces a flush of metrics.
+func (e *metricExporter) ForceFlush(ctx context.Context) error {
+
+	err := e.reader.Collect(ctx, e.rm)
+	if err == nil {
+		return err
 	}
+	return e.Export(ctx, e.rm)
 }
 
-// Shutdown shuts down the exporter
-func (e *MetricExporter) Shutdown(ctx context.Context) error {
-	return e.reader.Shutdown(ctx)
+// Reset the current in-memory storage.
+func (e *metricExporter) Reset() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.rm = &metricdata.ResourceMetrics{}
+}
+
+// Shutdown shuts down the exporter.
+func (e *metricExporter) Shutdown(ctx context.Context) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.Reset()
+
+	return nil
 }
 
 // NewTestExporter creates a TestExporter and registers it with OpenTelemetry.
-func NewTestExporter() *TestExporter {
+func NewTestExporter(t *testing.T, views []sdkmetric.View) *TestExporter {
 	// Create span exporter
-	spanExporter := tracetest.NewInMemoryExporter()
+	se := tracetest.NewInMemoryExporter()
 
-	// Create resource
 	res := resource.NewSchemaless()
 
-	// Create and register tracer provider
-	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithSyncer(spanExporter),
-		sdktrace.WithResource(res),
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-	)
-	otel.SetTracerProvider(tracerProvider)
-
+	traceShutdown, err := configureTraceProvider("test", se, sdktrace.AlwaysSample(), res, true)
+	if err != nil {
+		t.Fatalf("Failed to configure trace provider: %v", err)
+	}
 	// Create metric exporter
-	metricExporter := NewMetricExporter()
+	me := newMetricExporter()
 
-	// Create and register meter provider
-	meterProvider := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(metricExporter.reader),
-		sdkmetric.WithResource(res),
-	)
-	otel.SetMeterProvider(meterProvider)
+	// Create and register meter provider.
+	metricsShutdown, err := configureMeterProvider("test", me.reader, res, views)
+	if err != nil {
+		t.Fatalf("Failed to configure meter provider: %v", err)
+	}
 
 	shutdown := func(ctx context.Context) error {
-		err1 := tracerProvider.Shutdown(ctx)
-		err2 := meterProvider.Shutdown(ctx)
+		err1 := traceShutdown(ctx)
+		err2 := metricsShutdown(ctx)
 		if err1 != nil {
 			return err1
 		}
@@ -159,34 +143,23 @@ func NewTestExporter() *TestExporter {
 	}
 
 	return &TestExporter{
-		spanExporter:   spanExporter,
-		metricExporter: metricExporter,
-		meterProvider:  meterProvider,
-		tracerProvider: tracerProvider,
+		spanExporter:   se,
+		metricExporter: me,
 		shutdown:       shutdown,
 	}
 }
 
-// Spans returns the collected spans.
-func (te *TestExporter) Spans() []sdktrace.ReadOnlySpan {
-	// Return an empty slice for now - the actual spans can be retrieved using SpanStubs()
-	// This is a compatibility layer as the tracetest package is still evolving
-	return []sdktrace.ReadOnlySpan{}
-}
-
-// SpanStubs returns the collected span stubs.
-func (te *TestExporter) SpanStubs() tracetest.SpanStubs {
+// GetSpans returns the collected span stubs.
+func (te *TestExporter) GetSpans() tracetest.SpanStubs {
 	return te.spanExporter.GetSpans()
 }
 
-// Metrics returns the collected metrics.
-func (te *TestExporter) Metrics() []metricdata.ScopeMetrics {
-	return te.metricExporter.GetMetrics()
-}
+// GetMetrics returns the collected metrics.
+func (te *TestExporter) GetMetrics(ctx context.Context) []metricdata.ScopeMetrics {
 
-// WaitForMetrics waits for metrics to be collected and returns the first scope
-func (te *TestExporter) WaitForMetrics(timeout time.Duration) (metricdata.ScopeMetrics, bool) {
-	return te.metricExporter.WaitForMetrics(timeout)
+	_ = te.metricExporter.ForceFlush(ctx)
+
+	return te.metricExporter.GetMetrics()
 }
 
 // ForceFlush forces the export of all metrics.
@@ -196,44 +169,15 @@ func (te *TestExporter) ForceFlush(ctx context.Context) error {
 
 // Shutdown unregisters and shuts down the exporter.
 func (te *TestExporter) Shutdown(ctx context.Context) error {
+
+	if te.shutdown != nil {
+		err := te.shutdown(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	// Reset global providers
 	otel.SetTracerProvider(nooptrace.NewTracerProvider())
 	otel.SetMeterProvider(noopmetric.NewMeterProvider())
 	return nil
-}
-
-// Call represents a method call/span with its result code
-type Call struct {
-	Method string
-	Status string
-	Attrs  []attribute.KeyValue
-}
-
-// SpanToCall converts a span to a Call
-func SpanToCall(span sdktrace.ReadOnlySpan) Call {
-	var method, status string
-	var attrs []attribute.KeyValue
-
-	// Copy attributes
-	spanAttrs := span.Attributes()
-	attrs = make([]attribute.KeyValue, 0, len(spanAttrs))
-	for _, attr := range spanAttrs {
-		attrs = append(attrs, attr)
-
-		// Extract method if available
-		if attr.Key == attribute.Key("gocdk.method") {
-			method = attr.Value.AsString()
-		}
-
-		// Extract status if available
-		if attr.Key == attribute.Key("gocdk.status") {
-			status = attr.Value.AsString()
-		}
-	}
-
-	return Call{
-		Method: method,
-		Status: status,
-		Attrs:  attrs,
-	}
 }

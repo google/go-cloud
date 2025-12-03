@@ -242,7 +242,7 @@ parameters like so:
 ```go
 bucket, err := blob.OpenBucket("s3://mybucket?" +
     "endpoint=my.minio.local:8080&" +
-    "disableSSL=true&" +
+    "disable_https=true&" +
     "s3ForcePathStyle=true")
 ```
 

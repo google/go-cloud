@@ -18,146 +18,13 @@ import (
 	"context"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
-	awsv2retry "github.com/aws/aws-sdk-go-v2/aws/retry"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/google/go-cmp/cmp"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	gcaws "gocloud.dev/aws"
 )
-
-func TestConfigFromURLParams(t *testing.T) {
-	tests := []struct {
-		name    string
-		query   url.Values
-		wantCfg *aws.Config
-		wantErr bool
-	}{
-		{
-			name:    "No overrides",
-			query:   url.Values{},
-			wantCfg: &aws.Config{},
-		},
-		{
-			name:    "Invalid query parameter",
-			query:   url.Values{"foo": {"bar"}},
-			wantErr: true,
-		},
-		{
-			name:    "Region",
-			query:   url.Values{"region": {"my_region"}},
-			wantCfg: &aws.Config{Region: aws.String("my_region")},
-		},
-		{
-			name:    "Endpoint",
-			query:   url.Values{"endpoint": {"foo"}},
-			wantCfg: &aws.Config{Endpoint: aws.String("foo")},
-		},
-		{
-			name:    "disable_ssl true",
-			query:   url.Values{"disable_ssl": {"true"}},
-			wantCfg: &aws.Config{DisableSSL: aws.Bool(true)},
-		},
-		{
-			name:    "DisableSSL true",
-			query:   url.Values{"disableSSL": {"true"}},
-			wantCfg: &aws.Config{DisableSSL: aws.Bool(true)},
-		},
-		{
-			name:    "DisableSSL false",
-			query:   url.Values{"disableSSL": {"false"}},
-			wantCfg: &aws.Config{DisableSSL: aws.Bool(false)},
-		},
-		{
-			name:    "DisableSSL false",
-			query:   url.Values{"disableSSL": {"invalid"}},
-			wantErr: true,
-		},
-		{
-			name:    "s3_force_path_style true",
-			query:   url.Values{"s3_force_path_style": {"true"}},
-			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(true)},
-		},
-		{
-			name:    "S3ForcePathStyle true",
-			query:   url.Values{"s3ForcePathStyle": {"true"}},
-			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(true)},
-		},
-		{
-			name:    "S3ForcePathStyle false",
-			query:   url.Values{"s3ForcePathStyle": {"false"}},
-			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(false)},
-		},
-		{
-			name:    "S3ForcePathStyle false",
-			query:   url.Values{"s3ForcePathStyle": {"invalid"}},
-			wantErr: true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := gcaws.ConfigFromURLParams(test.query)
-			if (err != nil) != test.wantErr {
-				t.Errorf("got err %v want error %v", err, test.wantErr)
-			}
-			if err != nil {
-				return
-			}
-			if diff := cmp.Diff(got, test.wantCfg); diff != "" {
-				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestUseV2(t *testing.T) {
-	tests := []struct {
-		name  string
-		query url.Values
-		want  bool
-	}{
-		{
-			name:  "No overrides",
-			query: url.Values{},
-			want:  true,
-		},
-		{
-			name:  "unused param",
-			query: url.Values{"foo": {"bar"}},
-			want:  true,
-		},
-		{
-			name:  "force v1",
-			query: url.Values{"awssdk": {"v1"}},
-			want:  false,
-		},
-		{
-			name:  "force v1 cap",
-			query: url.Values{"awssdk": {"V1"}},
-		},
-		{
-			name:  "force v2",
-			query: url.Values{"awssdk": {"v2"}},
-			want:  true,
-		},
-		{
-			name:  "force v2 cap",
-			query: url.Values{"awssdk": {"V2"}},
-			want:  true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := gcaws.UseV2(test.query)
-			if test.want != got {
-				t.Errorf("got %v, want %v", got, test.want)
-			}
-		})
-	}
-}
 
 func TestV2ConfigFromURLParams(t *testing.T) {
 	const service = "s3"
@@ -169,7 +36,7 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 		query        url.Values
 		wantRegion   string
 		wantErr      bool
-		wantEndpoint *awsv2.Endpoint
+		wantEndpoint *aws.Endpoint
 	}{
 		{
 			name:  "No overrides",
@@ -188,7 +55,7 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 		{
 			name:  "Endpoint and hostname immutable",
 			query: url.Values{"endpoint": {"foo"}, "hostname_immutable": {"true"}},
-			wantEndpoint: &awsv2.Endpoint{
+			wantEndpoint: &aws.Endpoint{
 				PartitionID:       partitionID,
 				SigningRegion:     region,
 				URL:               "foo",
@@ -207,6 +74,54 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			name:  "Rate limit capacity",
 			query: url.Values{"rate_limiter_capacity": {"500"}},
 		},
+		{
+			name:  "Request checksum calculation when_supported",
+			query: url.Values{"request_checksum_calculation": {"when_supported"}},
+		},
+		{
+			name:  "Request checksum calculation when_required",
+			query: url.Values{"request_checksum_calculation": {"when_required"}},
+		},
+		{
+			name:  "Response checksum validation when_supported",
+			query: url.Values{"response_checksum_validation": {"when_supported"}},
+		},
+		{
+			name:  "Response checksum validation when_required",
+			query: url.Values{"response_checksum_validation": {"when_required"}},
+		},
+		{
+			name:  "Both checksum parameters",
+			query: url.Values{"request_checksum_calculation": {"when_required"}, "response_checksum_validation": {"when_supported"}},
+		},
+		{
+			name:    "Invalid request checksum value",
+			query:   url.Values{"request_checksum_calculation": {"invalid"}},
+			wantErr: true,
+		},
+		{
+			name:    "Invalid response checksum value",
+			query:   url.Values{"response_checksum_validation": {"invalid"}},
+			wantErr: true,
+		},
+		{
+			name:    "Empty request checksum value",
+			query:   url.Values{"request_checksum_calculation": {""}},
+			wantErr: true,
+		},
+		{
+			name:    "Empty response checksum value",
+			query:   url.Values{"response_checksum_validation": {""}},
+			wantErr: true,
+		},
+		{
+			name:  "Uppercase request checksum",
+			query: url.Values{"request_checksum_calculation": {"WHEN_SUPPORTED"}},
+		},
+		{
+			name:  "Mixed case response checksum",
+			query: url.Values{"response_checksum_validation": {"When_Required"}},
+		},
 		// Can't test "profile", since AWS validates that the profile exists.
 	}
 
@@ -224,6 +139,35 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 				t.Errorf("got region %q, want %q", got.Region, test.wantRegion)
 			}
 
+			// Check checksum configuration based on query parameters
+			if test.query.Has("request_checksum_calculation") {
+				expectedValue := test.query.Get("request_checksum_calculation")
+				var expectedChecksum aws.RequestChecksumCalculation
+				switch strings.ToLower(expectedValue) {
+				case "when_supported":
+					expectedChecksum = aws.RequestChecksumCalculationWhenSupported
+				case "when_required":
+					expectedChecksum = aws.RequestChecksumCalculationWhenRequired
+				}
+				if got.RequestChecksumCalculation != expectedChecksum {
+					t.Errorf("got RequestChecksumCalculation %v, want %v", got.RequestChecksumCalculation, expectedChecksum)
+				}
+			}
+
+			if test.query.Has("response_checksum_validation") {
+				expectedValue := test.query.Get("response_checksum_validation")
+				var expectedChecksum aws.ResponseChecksumValidation
+				switch strings.ToLower(expectedValue) {
+				case "when_supported":
+					expectedChecksum = aws.ResponseChecksumValidationWhenSupported
+				case "when_required":
+					expectedChecksum = aws.ResponseChecksumValidationWhenRequired
+				}
+				if got.ResponseChecksumValidation != expectedChecksum {
+					t.Errorf("got ResponseChecksumValidation %v, want %v", got.ResponseChecksumValidation, expectedChecksum)
+				}
+			}
+
 			if test.wantEndpoint != nil {
 				if got.EndpointResolverWithOptions == nil {
 					t.Fatalf("expected an EndpointResolverWithOptions, got nil")
@@ -238,9 +182,9 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			}
 
 			// Unfortunately, we can't look at the options set for the rate limiter.
-			r, ok := got.Retryer().(*awsv2retry.Standard)
+			r, ok := got.Retryer().(*retry.Standard)
 			if !ok {
-				t.Errorf("expected a standard retryer, got %v, expected awsv2retry.Standard", r)
+				t.Errorf("expected a standard retryer, got %v, expected retry.Standard", r)
 			}
 		})
 	}

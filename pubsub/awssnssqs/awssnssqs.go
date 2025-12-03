@@ -206,9 +206,6 @@ const SQSScheme = "awssqs"
 //   - nacklazy (for "awssqs" Subscriptions only): sets SubscriberOptions.NackLazy. The
 //     value must be parseable by `strconv.ParseBool`.
 //   - waittime: sets SubscriberOptions.WaitTime, in time.ParseDuration formats.
-//
-// See gocloud.dev/aws/ConfigFromURLParams for other query parameters
-// that affect the default AWS session.
 type URLOpener struct {
 	// TopicOptions specifies the options to pass to OpenTopic.
 	TopicOptions TopicOptions

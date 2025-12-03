@@ -26,7 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestStackdriverLog(t *testing.T) {
@@ -40,9 +41,10 @@ func TestStackdriverLog(t *testing.T) {
 		endTime      = startTime + latencySec
 		endTimeNanos = startTimeNanos + latencyNanos
 	)
-	ctx, span := trace.StartSpan(context.Background(), "test")
+	tracer := otel.Tracer("test")
+	ctx, span := tracer.Start(context.Background(), "test")
 	defer span.End()
-	sc := trace.FromContext(ctx).SpanContext()
+	sc := trace.SpanContextFromContext(ctx)
 	buf := new(bytes.Buffer)
 	var logErr error
 	l := NewStackdriverLogger(buf, func(e error) { logErr = e })
@@ -61,8 +63,8 @@ func TestStackdriverLog(t *testing.T) {
 		ResponseHeaderSize: 555,
 		ResponseBodySize:   789000,
 		Latency:            latencySec*time.Second + latencyNanos*time.Nanosecond,
-		TraceID:            sc.TraceID,
-		SpanID:             sc.SpanID,
+		TraceID:            sc.TraceID(),
+		SpanID:             sc.SpanID(),
 	}
 	ent := *want // copy in case Log accidentally mutates
 	l.Log(&ent)
@@ -196,8 +198,8 @@ func BenchmarkE2E(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
 		}
 	}
 	b.Run("Baseline", func(b *testing.B) {
@@ -212,5 +214,5 @@ func BenchmarkE2E(b *testing.B) {
 func benchHandler(w http.ResponseWriter, r *http.Request) {
 	const msg = "Hello, World!"
 	w.Header().Set("Content-Length", fmt.Sprint(len(msg)))
-	io.WriteString(w, msg)
+	_, _ = io.WriteString(w, msg)
 }

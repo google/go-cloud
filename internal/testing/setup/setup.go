@@ -23,10 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	awsv2config "github.com/aws/aws-sdk-go-v2/config"
 	awsv2creds "github.com/aws/aws-sdk-go-v2/credentials"
@@ -50,20 +46,6 @@ var Record = flag.Bool("record", false, "whether to run tests against cloud reso
 // FakeGCPCredentials gets fake GCP credentials.
 func FakeGCPCredentials(ctx context.Context) (*google.Credentials, error) {
 	return google.CredentialsFromJSON(ctx, []byte(`{"type": "service_account", "project_id": "my-project-id"}`))
-}
-
-func awsSession(region string, client *http.Client) (*session.Session, error) {
-	// Provide fake creds if running in replay mode.
-	var creds *awscreds.Credentials
-	if !*Record {
-		creds = awscreds.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
-	}
-	return session.NewSession(&aws.Config{
-		HTTPClient:  client,
-		Region:      aws.String(region),
-		Credentials: creds,
-		MaxRetries:  aws.Int(0),
-	})
 }
 
 func awsV2Config(ctx context.Context, region string, client *http.Client) (awsv2.Config, error) {
@@ -125,32 +107,6 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 	return rep.Client(), func() { rep.Close() }, recState.UnixNano()
 }
 
-// NewAWSSession creates a new session for testing against AWS.
-// If the test is in --record mode, the test will call out to AWS, and the
-// results are recorded in a replay file.
-// Otherwise, the session reads a replay file and runs the test as a replay,
-// which never makes an outgoing HTTP call and uses fake credentials.
-// An initState is returned for tests that need a state to have deterministic
-// results, for example, a seed to generate random sequences.
-func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *session.Session,
-	rt http.RoundTripper, cleanup func(), initState int64,
-) {
-	t.Helper()
-
-	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
-		r.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature", "X-Amz-Security-Token")
-		r.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
-		r.ClearHeaders("X-Amz-Date")
-		r.ClearQueryParams("X-Amz-Date")
-		r.ClearHeaders("User-Agent") // AWS includes the Go version
-	})
-	sess, err := awsSession(region, client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return sess, client.Transport, cleanup, state
-}
-
 // NewAWSv2Config creates a new aws.Config for testing against AWS.
 // If the test is in --record mode, the test will call out to AWS, and the
 // results are recorded in a replay file.
@@ -158,7 +114,10 @@ func NewAWSSession(ctx context.Context, t *testing.T, region string) (sess *sess
 // which never makes an outgoing HTTP call and uses fake credentials.
 // An initState is returned for tests that need a state to have deterministic
 // results, for example, a seed to generate random sequences.
-func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2.Config, rt http.RoundTripper, cleanup func(), initState int64) {
+//
+// If scrubBody is true, the entire HTTP POST body is cleared for matching,
+// so the tests will rely entirely on ordering and headers.
+func NewAWSv2Config(ctx context.Context, t *testing.T, region string, scrubBody bool) (cfg awsv2.Config, rt http.RoundTripper, cleanup func(), initState int64) {
 	t.Helper()
 
 	client, cleanup, state := NewRecordReplayClient(ctx, t, func(r *httpreplay.Recorder) {
@@ -172,6 +131,9 @@ func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2
 		// in randomized order, so we can't match against them. Just scrub
 		// them and rely on the ordering.
 		r.ScrubBody("MessageAttributes.*")
+		if scrubBody {
+			r.ScrubBody(".*")
+		}
 	})
 	cfg, err := awsV2Config(ctx, region, client)
 	if err != nil {
@@ -181,7 +143,7 @@ func NewAWSv2Config(ctx context.Context, t *testing.T, region string) (cfg awsv2
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.
-// NewGCPClient creates a new HTTPClient for testing against GCP.
+//
 // If the test is in --record mode, the client will call out to GCP, and the
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
@@ -212,6 +174,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 }
 
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
+//
 // If the test is in --record mode, the client will call out to GCP, and the
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,

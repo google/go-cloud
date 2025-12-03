@@ -15,6 +15,7 @@
 package blob_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -22,9 +23,10 @@ import (
 	"os"
 
 	"cloud.google.com/go/storage"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/smithy-go"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
+
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
 )
@@ -161,7 +163,7 @@ func Example() {
 
 func ExampleBucket_ErrorAs() {
 	// This example is specific to the s3blob implementation; it demonstrates
-	// access to the underlying awserr.Error type.
+	// access to the underlying smithy.APIError type.
 	// The types exposed for ErrorAs by s3blob are documented in
 	// https://godoc.org/gocloud.dev/blob/s3blob#hdr-As
 
@@ -175,9 +177,9 @@ func ExampleBucket_ErrorAs() {
 
 	_, err = b.ReadAll(ctx, "nosuchfile")
 	if err != nil {
-		var awsErr awserr.Error
+		var awsErr smithy.APIError
 		if b.ErrorAs(err, &awsErr) {
-			fmt.Println(awsErr.Code())
+			fmt.Println(awsErr.ErrorCode())
 		}
 	}
 }
@@ -206,9 +208,9 @@ func ExampleBucket_List() {
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all services.
-	iter := bucket.List(nil)
+	li := bucket.List(nil)
 	for {
-		obj, err := iter.Next(ctx)
+		obj, err := li.Next(ctx)
 		if err == io.EOF {
 			break
 		}
@@ -218,12 +220,35 @@ func ExampleBucket_List() {
 		fmt.Println(obj.Key)
 	}
 
+	// Alternatively, use All to iterate (and optionally download):
+	fmt.Println()
+	fmt.Println("Now, using an iterator:")
+	li = bucket.List(nil)
+	iter, errFn := li.All(ctx)
+	for obj, download := range iter {
+		var buf bytes.Buffer
+		if err := download(&buf, nil /* default ReaderOptions */); err != nil {
+			log.Fatalf("download of %q failed: %v", obj.Key, err)
+		}
+		fmt.Printf("%s: %s\n", obj.Key, string(buf.Bytes()))
+	}
+	if err := errFn(); err != nil {
+		log.Fatalf("iteration failed: %v", err)
+	}
+
 	// Output:
 	// foo0.txt
 	// foo1.txt
 	// foo2.txt
 	// foo3.txt
 	// foo4.txt
+	//
+	// Now, using an iterator:
+	// foo0.txt: Go Cloud Development Kit
+	// foo1.txt: Go Cloud Development Kit
+	// foo2.txt: Go Cloud Development Kit
+	// foo3.txt: Go Cloud Development Kit
+	// foo4.txt: Go Cloud Development Kit
 }
 
 func ExampleBucket_List_withDelimiter() {

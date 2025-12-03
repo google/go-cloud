@@ -87,11 +87,11 @@
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"time\"\n\n\t\"gocloud.dev/docstore/memdocstore\"\n\t\"gocloud.dev/gcerrors\"\n)",
 		"code": "coll, err := memdocstore.OpenCollection(\"Name\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()\n\n// Create a player.\npat := \u0026Player{Name: \"Pat\", Score: 7}\nif err := coll.Create(ctx, pat); err != nil {\n\treturn err\n}\nfmt.Println(pat) // memdocstore revisions are deterministic, so we can check the output.\n\n// Double a player's score. We cannot use Update to multiply, so we use optimistic\n// locking instead.\n\n// We may have to retry a few times; put a time limit on that.\nctx, cancel := context.WithTimeout(ctx, 30*time.Second)\ndefer cancel()\nfor {\n\t// Get the document.\n\tplayer := \u0026Player{Name: \"Pat\"}\n\tif err := coll.Get(ctx, player); err != nil {\n\t\treturn err\n\t}\n\t// player.DocstoreRevision is set to the document's revision.\n\n\t// Modify the document locally.\n\tplayer.Score *= 2\n\n\t// Replace the document. player.DocstoreRevision will be checked against\n\t// the stored document's revision.\n\terr := coll.Replace(ctx, player)\n\tif err != nil {\n\t\tcode := gcerrors.Code(err)\n\t\t// On FailedPrecondition or NotFound, try again.\n\t\tif code == gcerrors.FailedPrecondition || code == gcerrors.NotFound {\n\t\t\tcontinue\n\t\t}\n\t\treturn err\n\t}\n\tfmt.Println(player)\n\tbreak\n}\n\n// Output:\n// \u0026{Pat 7 1}\n// \u0026{Pat 14 2}"
 	},
-	"gocloud.dev/docstore/awsdynamodb.ExampleOpenCollection": {
-		"imports": "import (\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"github.com/aws/aws-sdk-go/service/dynamodb\"\n\t\"gocloud.dev/docstore/awsdynamodb\"\n)",
-		"code": "sess, err := session.NewSession()\nif err != nil {\n\treturn err\n}\ncoll, err := awsdynamodb.OpenCollection(\n\tdynamodb.New(sess), \"docstore-test\", \"partitionKeyField\", \"\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
+	"gocloud.dev/docstore/awsdynamodb/v2.ExampleOpenCollection": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/dynamodb\"\n\t\"gocloud.dev/docstore/awsdynamodb/v2\"\n)",
+		"code": "cfg, err := config.LoadDefaultConfig(context.Background())\nif err != nil {\n\treturn err\n}\ncoll, err := awsdynamodb.OpenCollection(\n\tdynamodb.NewFromConfig(cfg), \"docstore-test\", \"partitionKeyField\", \"\", nil)\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
-	"gocloud.dev/docstore/awsdynamodb.Example_openCollectionFromURL": {
+	"gocloud.dev/docstore/awsdynamodb/v2.Example_openCollectionFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/docstore\"\n\t_ \"gocloud.dev/docstore/awsdynamodb\"\n)",
 		"code": "// docstore.OpenCollection creates a *docstore.Collection from a URL.\ncoll, err := docstore.OpenCollection(ctx, \"dynamodb://my-table?partition_key=name\")\nif err != nil {\n\treturn err\n}\ndefer coll.Close()"
 	},
@@ -226,6 +226,22 @@
 	"gocloud.dev/pubsub/gcppubsub.Example_openTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/gcppubsub\"\n)",
 		"code": "topic, err := pubsub.OpenTopic(ctx, \"gcppubsub://projects/myproject/topics/mytopic\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/gcppubsubv2.ExampleOpenSubscription": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Open a gRPC connection to the GCP Pub/Sub API.\n// Alternatively, skip this and pass nil to Client below to use the default.\nconn, cleanup, err := gcppubsubv2.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// Construct a Client using the connection.\nclient, err := gcppubsubv2.Client(ctx, \"myprojectID\", conn)\nif err != nil {\n\treturn err\n}\ndefer client.Close()\n\n// Construct a *pubsub.Subscription.\nsubscription := gcppubsubv2.OpenSubscription(client, \"example-subscription\", nil)\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/gcppubsubv2.ExampleOpenTopic": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/gcp\"\n\t\"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n// Open a gRPC connection to the GCP Pub/Sub API.\n// Alternatively, skip this and pass nil to Client below to use the default.\nconn, cleanup, err := gcppubsubv2.Dial(ctx, creds.TokenSource)\nif err != nil {\n\treturn err\n}\ndefer cleanup()\n\n// Construct a Client using the connection.\nclient, err := gcppubsubv2.Client(ctx, \"myprojectid\", conn)\nif err != nil {\n\treturn err\n}\ndefer client.Close()\n\n// Construct a *pubsub.Topic.\ntopic := gcppubsubv2.OpenTopic(client, \"example-topic\", nil)\ndefer topic.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/gcppubsubv2.Example_openSubscriptionFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "subscription, err := pubsub.OpenSubscription(ctx,\n\t\"gcppubsubv2://projects/my-project/subscriptions/my-subscription\")\nif err != nil {\n\treturn err\n}\ndefer subscription.Shutdown(ctx)"
+	},
+	"gocloud.dev/pubsub/gcppubsubv2.Example_openTopicFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/gcppubsubv2\"\n)",
+		"code": "topic, err := pubsub.OpenTopic(ctx, \"gcppubsubv2://projects/myproject/topics/mytopic\")\nif err != nil {\n\treturn err\n}\ndefer topic.Shutdown(ctx)"
 	},
 	"gocloud.dev/pubsub/kafkapubsub.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub/kafkapubsub\"\n)",

@@ -30,10 +30,10 @@ import (
 
 	"github.com/google/wire"
 	"github.com/gorilla/mux"
-	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
+
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
 	"gocloud.dev/server/health/sqlhealth"
@@ -116,7 +116,6 @@ func main() {
 var applicationSet = wire.NewSet(
 	newApplication,
 	appHealthChecks,
-	trace.AlwaysSample,
 	newRouter,
 	wire.Bind(new(http.Handler), new(*mux.Router)),
 )

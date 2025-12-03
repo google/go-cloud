@@ -18,16 +18,16 @@
 //
 // See https://gocloud.dev/howto/runtimevar/ for a detailed how-to guide.
 //
-// # OpenCensus Integration
+// # OpenTelemetry Integration
 //
-// OpenCensus supports tracing and metric collection for multiple languages and
-// backend providers. See https://opencensus.io.
+// OpenTelemetry supports tracing and metric collection for multiple languages and
+// backend providers. See https://opentelemetry.io.
 //
-// This API collects an OpenCensus metric "gocloud.dev/runtimevar/value_changes",
+// This API collects an OpenTelemetry metric "gocloud.dev/runtimevar/value_changes",
 // a count of the number of times all variables have changed values, by driver.
 //
-// To enable metric collection in your application, see "Exporting stats" at
-// https://opencensus.io/quickstart/go/metrics.
+// To enable metric collection in your application, see the OpenTelemetry documentation at
+// https://opentelemetry.io/docs/instrumentation/go/getting-started/
 package runtimevar // import "gocloud.dev/runtimevar"
 
 import (
@@ -44,14 +44,13 @@ import (
 	"sync"
 	"time"
 
-	"go.opencensus.io/stats"
-	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
+	"go.opentelemetry.io/otel/metric"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/secrets"
+
+	gcdkotel "gocloud.dev/internal/otel"
 )
 
 // Snapshot contains a snapshot of a variable's value and metadata about it.
@@ -81,25 +80,15 @@ func (s *Snapshot) As(i any) bool {
 const pkgName = "gocloud.dev/runtimevar"
 
 var (
-	changeMeasure = stats.Int64(pkgName+"/value_changes", "Count of variable value changes",
-		stats.UnitDimensionless)
-	// OpenCensusViews are predefined views for OpenCensus metrics.
-	OpenCensusViews = []*view.View{
-		{
-			Name:        pkgName + "/value_changes",
-			Measure:     changeMeasure,
-			Description: "Count of variable value changes by driver.",
-			TagKeys:     []tag.Key{oc.ProviderKey},
-			Aggregation: view.Count(),
-		},
-	}
+	OpenTelemetryViews = gcdkotel.CounterView(pkgName, "/value_changes",
+		"Count of variable value changes by driver.")
 )
 
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in driver subpackages.
 type Variable struct {
-	dw       driver.Watcher
-	provider string // for metric collection; refers to driver package name
+	dw            driver.Watcher
+	changeMeasure metric.Int64Counter
 
 	// For cancelling the background goroutine, and noticing when it has exited.
 	backgroundCancel context.CancelFunc
@@ -126,9 +115,13 @@ var New = newVar
 func newVar(w driver.Watcher) *Variable {
 	ctx, cancel := context.WithCancel(context.Background())
 	changed := make(chan struct{})
+
+	providerName := gcdkotel.ProviderName(w)
+
 	v := &Variable{
-		dw:               w,
-		provider:         oc.ProviderName(w),
+		dw: w,
+		changeMeasure: gcdkotel.DimensionlessMeasure(pkgName, providerName, "/value_changes",
+			"Count of variable value changes by driver"),
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
 		haveGoodCh:       make(chan struct{}),
@@ -173,7 +166,7 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.lastErr == ErrClosed {
+	if errors.Is(c.lastErr, ErrClosed) {
 		return Snapshot{}, ErrClosed
 	} else if ctxErr != nil {
 		return Snapshot{}, ctxErr
@@ -203,12 +196,12 @@ func (c *Variable) background(ctx context.Context) {
 
 		// There's something new to return!
 		prevState = curState
-		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
+		c.changeMeasure.Add(ctx, 1)
 		// Error from RecordWithTags is not possible.
 
 		// Updates under the lock.
 		c.mu.Lock()
-		if c.lastErr == ErrClosed {
+		if errors.Is(c.lastErr, ErrClosed) {
 			close(c.backgroundDone)
 			c.mu.Unlock()
 			return
@@ -267,7 +260,7 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if haveGood && c.lastErr != ErrClosed {
+	if haveGood && !errors.Is(c.lastErr, ErrClosed) {
 		return c.lastGood, nil
 	}
 	return Snapshot{}, c.lastErr
@@ -279,7 +272,7 @@ func (c *Variable) CheckHealth() error {
 	haveGood := c.haveGood()
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if haveGood && c.lastErr != ErrClosed {
+	if haveGood && !errors.Is(c.lastErr, ErrClosed) {
 		return nil
 	}
 	return c.lastErr
@@ -289,7 +282,7 @@ func (c *Variable) CheckHealth() error {
 func (c *Variable) Close() error {
 	// Record that we're closing. Subsequent calls to Watch/Latest will return ErrClosed.
 	c.mu.Lock()
-	if c.lastErr == ErrClosed {
+	if errors.Is(c.lastErr, ErrClosed) {
 		c.mu.Unlock()
 		return ErrClosed
 	}

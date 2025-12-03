@@ -96,7 +96,7 @@ func generateClientRequestToken(name string, data []byte) string {
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region)
+	cfg, _, done, _ := setup.NewAWSv2Config(context.Background(), t, region, false)
 	return &harness{
 		client: secretsmanager.NewFromConfig(cfg),
 		closer: done,

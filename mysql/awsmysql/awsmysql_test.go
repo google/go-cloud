@@ -56,3 +56,37 @@ func TestOpen(t *testing.T) {
 		t.Error("Close:", err)
 	}
 }
+
+func TestOpenIAM(t *testing.T) {
+	// This test will be skipped unless the project is set up with Terraform.
+	// Before running go test, run in this directory:
+	//
+	// terraform init
+	// terraform apply
+
+	tfOut, err := terraform.ReadOutput(".")
+	if err != nil || len(tfOut) == 0 {
+		t.Skipf("Could not obtain harness info: %v", err)
+	}
+	endpoint, _ := tfOut["endpoint"].Value.(string)
+	username, _ := tfOut["iam_db_username"].Value.(string)
+	roleARN, _ := tfOut["iam_role_arn"].Value.(string)
+	databaseName, _ := tfOut["database"].Value.(string)
+	if endpoint == "" || username == "" || databaseName == "" {
+		t.Fatalf("Missing one or more required Terraform outputs; got endpoint=%q iam_db_username=%q database=%q", endpoint, username, databaseName)
+	}
+	ctx := context.Background()
+	urlstr := fmt.Sprintf("awsmysql://%s@%s/%s?aws_role_arn=%s",
+		username, endpoint, databaseName, roleARN)
+	t.Log("Connecting to:", urlstr)
+	db, err := mysql.Open(ctx, urlstr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Ping(); err != nil {
+		t.Error("Ping:", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Error("Close:", err)
+	}
+}

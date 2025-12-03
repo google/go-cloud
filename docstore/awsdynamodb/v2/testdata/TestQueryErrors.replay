@@ -1,0 +1,170 @@
+{
+  "Initial": "AQAAAA7gv/X7L6K5iQAA",
+  "Version": "0.2",
+  "Converter": {
+    "ScrubBody": [
+      "MessageAttributes.*",
+      ".*"
+    ],
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^Amz-Sdk-Invocation-Id$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Amz-Date$"
+    ],
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$",
+      "^X-Amz-Security-Token$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "55fc5ccfba6501cd",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://dynamodb.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "Content-Length": [
+            "31"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ],
+          "X-Amz-Target": [
+            "DynamoDB_20120810.DescribeTable"
+          ]
+        },
+        "MediaType": "application/x-amz-json-1.0",
+        "BodyParts": [
+          "Q0xFQVJFRA=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "1609"
+          ],
+          "Content-Type": [
+            "application/x-amz-json-1.0"
+          ],
+          "Date": [
+            "Mon, 01 Dec 2025 20:47:57 GMT"
+          ],
+          "Server": [
+            "Server"
+          ],
+          "X-Amz-Crc32": [
+            "298093499"
+          ],
+          "X-Amzn-Requestid": [
+            "H158P5Q9KLIF25TJS9DHGBBHP7VV4KQNSO5AEMVJF66Q9ASUAAJG"
+          ]
+        },
+        "Body": "eyJUYWJsZSI6eyJBdHRyaWJ1dGVEZWZpbml0aW9ucyI6W3siQXR0cmlidXRlTmFtZSI6IkdhbWUiLCJBdHRyaWJ1dGVUeXBlIjoiUyJ9LHsiQXR0cmlidXRlTmFtZSI6IlBsYXllciIsIkF0dHJpYnV0ZVR5cGUiOiJTIn0seyJBdHRyaWJ1dGVOYW1lIjoiU2NvcmUiLCJBdHRyaWJ1dGVUeXBlIjoiTiJ9LHsiQXR0cmlidXRlTmFtZSI6IlRpbWUiLCJBdHRyaWJ1dGVUeXBlIjoiUyJ9XSwiQ3JlYXRpb25EYXRlVGltZSI6MS43MjMwNzYwODA2OTVFOSwiRGVsZXRpb25Qcm90ZWN0aW9uRW5hYmxlZCI6ZmFsc2UsIkdsb2JhbFNlY29uZGFyeUluZGV4ZXMiOlt7IkluZGV4QXJuIjoiYXJuOmF3czpkeW5hbW9kYjp1cy1lYXN0LTI6NDU2NzUyNjY1NTc2OnRhYmxlL2RvY3N0b3JlLXRlc3QtMi9pbmRleC9nbG9iYWwiLCJJbmRleE5hbWUiOiJnbG9iYWwiLCJJbmRleFNpemVCeXRlcyI6MTE4LCJJbmRleFN0YXR1cyI6IkFDVElWRSIsIkl0ZW1Db3VudCI6MSwiS2V5U2NoZW1hIjpbeyJBdHRyaWJ1dGVOYW1lIjoiUGxheWVyIiwiS2V5VHlwZSI6IkhBU0gifSx7IkF0dHJpYnV0ZU5hbWUiOiJUaW1lIiwiS2V5VHlwZSI6IlJBTkdFIn1dLCJQcm9qZWN0aW9uIjp7IlByb2plY3Rpb25UeXBlIjoiQUxMIn0sIlByb3Zpc2lvbmVkVGhyb3VnaHB1dCI6eyJOdW1iZXJPZkRlY3JlYXNlc1RvZGF5IjowLCJSZWFkQ2FwYWNpdHlVbml0cyI6NSwiV3JpdGVDYXBhY2l0eVVuaXRzIjo1fSwiV2FybVRocm91Z2hwdXQiOnsiUmVhZFVuaXRzUGVyU2Vjb25kIjo1LCJTdGF0dXMiOiJBQ1RJVkUiLCJXcml0ZVVuaXRzUGVyU2Vjb25kIjo1fX1dLCJJdGVtQ291bnQiOjEsIktleVNjaGVtYSI6W3siQXR0cmlidXRlTmFtZSI6IkdhbWUiLCJLZXlUeXBlIjoiSEFTSCJ9LHsiQXR0cmlidXRlTmFtZSI6IlBsYXllciIsIktleVR5cGUiOiJSQU5HRSJ9XSwiTG9jYWxTZWNvbmRhcnlJbmRleGVzIjpbeyJJbmRleEFybiI6ImFybjphd3M6ZHluYW1vZGI6dXMtZWFzdC0yOjQ1Njc1MjY2NTU3Njp0YWJsZS9kb2NzdG9yZS10ZXN0LTIvaW5kZXgvbG9jYWwiLCJJbmRleE5hbWUiOiJsb2NhbCIsIkluZGV4U2l6ZUJ5dGVzIjoxMTgsIkl0ZW1Db3VudCI6MSwiS2V5U2NoZW1hIjpbeyJBdHRyaWJ1dGVOYW1lIjoiR2FtZSIsIktleVR5cGUiOiJIQVNIIn0seyJBdHRyaWJ1dGVOYW1lIjoiU2NvcmUiLCJLZXlUeXBlIjoiUkFOR0UifV0sIlByb2plY3Rpb24iOnsiUHJvamVjdGlvblR5cGUiOiJBTEwifX1dLCJQcm92aXNpb25lZFRocm91Z2hwdXQiOnsiTnVtYmVyT2ZEZWNyZWFzZXNUb2RheSI6MCwiUmVhZENhcGFjaXR5VW5pdHMiOjUsIldyaXRlQ2FwYWNpdHlVbml0cyI6NX0sIlRhYmxlQXJuIjoiYXJuOmF3czpkeW5hbW9kYjp1cy1lYXN0LTI6NDU2NzUyNjY1NTc2OnRhYmxlL2RvY3N0b3JlLXRlc3QtMiIsIlRhYmxlSWQiOiIwZDRmOTk4My1kOGE5LTRhZjEtYTY0NC05YmE3M2NlMGYyMjciLCJUYWJsZU5hbWUiOiJkb2NzdG9yZS10ZXN0LTIiLCJUYWJsZVNpemVCeXRlcyI6MTE4LCJUYWJsZVN0YXR1cyI6IkFDVElWRSIsIldhcm1UaHJvdWdocHV0Ijp7IlJlYWRVbml0c1BlclNlY29uZCI6NSwiU3RhdHVzIjoiQUNUSVZFIiwiV3JpdGVVbml0c1BlclNlY29uZCI6NX19fQ=="
+      }
+    },
+    {
+      "ID": "eb5bf1d6cd04627b",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://dynamodb.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Amz-Sdk-Invocation-Id": [
+            "CLEARED"
+          ],
+          "Amz-Sdk-Request": [
+            "attempt=1; max=1"
+          ],
+          "Content-Length": [
+            "175"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ],
+          "X-Amz-Target": [
+            "DynamoDB_20120810.Query"
+          ]
+        },
+        "MediaType": "application/x-amz-json-1.0",
+        "BodyParts": [
+          "Q0xFQVJFRA=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 400,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "165"
+          ],
+          "Content-Type": [
+            "application/x-amz-json-1.0"
+          ],
+          "Date": [
+            "Mon, 01 Dec 2025 20:47:57 GMT"
+          ],
+          "Server": [
+            "Server"
+          ],
+          "X-Amz-Crc32": [
+            "1880536678"
+          ],
+          "X-Amzn-Requestid": [
+            "AVEGKRU9CJOR5KBKIQRTHTJS87VV4KQNSO5AEMVJF66Q9ASUAAJG"
+          ]
+        },
+        "Body": "eyJfX3R5cGUiOiJjb20uYW1hem9uLmNvcmFsLnZhbGlkYXRlI1ZhbGlkYXRpb25FeGNlcHRpb24iLCJtZXNzYWdlIjoiT25lIG9yIG1vcmUgcGFyYW1ldGVyIHZhbHVlcyB3ZXJlIGludmFsaWQ6IENvbmRpdGlvbiBwYXJhbWV0ZXIgdHlwZSBkb2VzIG5vdCBtYXRjaCBzY2hlbWEgdHlwZSJ9"
+      }
+    }
+  ]
+}

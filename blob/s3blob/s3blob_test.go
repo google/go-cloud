@@ -28,6 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
@@ -59,14 +60,14 @@ type harness struct {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
 	return &harness{client: s3.NewFromConfig(cfg), opts: nil, rt: rt, closer: done}, nil
 }
 
 func newHarnessUsingLegacyList(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	t.Helper()
 
-	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region)
+	cfg, rt, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
 	return &harness{client: s3.NewFromConfig(cfg), opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }
 
@@ -272,7 +273,7 @@ func TestOpenBucket(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			var client *s3.Client
 			if !test.nilClient {
-				cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region)
+				cfg, _, done, _ := setup.NewAWSv2Config(ctx, t, region, false)
 				defer done()
 				client = s3.NewFromConfig(cfg)
 			}
@@ -325,6 +326,26 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?fips=true", false},
 		// OK, use anonymous.
 		{"s3://mybucket?anonymous=true", false},
+		// OK, use request checksum calculation when_supported
+		{"s3://mybucket?request_checksum_calculation=when_supported", false},
+		// OK, use request checksum calculation when_required
+		{"s3://mybucket?request_checksum_calculation=when_required", false},
+		// OK, use response checksum validation when_supported
+		{"s3://mybucket?response_checksum_validation=when_supported", false},
+		// OK, use response checksum validation when_required
+		{"s3://mybucket?response_checksum_validation=when_required", false},
+		// OK, use both checksum parameters
+		{"s3://mybucket?request_checksum_calculation=when_required&response_checksum_validation=when_supported", false},
+		// OK, case insensitive checksum parameters
+		{"s3://mybucket?request_checksum_calculation=WHEN_SUPPORTED&response_checksum_validation=When_Required", false},
+		// Invalid request checksum value
+		{"s3://mybucket?request_checksum_calculation=invalid", true},
+		// Invalid response checksum value
+		{"s3://mybucket?response_checksum_validation=invalid", true},
+		// Empty request checksum value
+		{"s3://mybucket?request_checksum_calculation=", true},
+		// Empty response checksum value
+		{"s3://mybucket?response_checksum_validation=", true},
 		// Invalid accelerate
 		{"s3://mybucket?accelerate=bogus", true},
 		// Invalid FIPS
@@ -352,6 +373,81 @@ func TestOpenBucketFromURL(t *testing.T) {
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+func TestChecksumConfigurationPassthrough(t *testing.T) {
+	// Test that checksum configuration from URL parameters is properly passed through
+	// to the S3 bucket options
+	tests := []struct {
+		name                           string
+		url                            string
+		wantRequestChecksumCalculation aws.RequestChecksumCalculation
+		wantErr                        bool
+	}{
+		{
+			name:                           "request checksum when_supported",
+			url:                            "s3://mybucket?request_checksum_calculation=when_supported",
+			wantRequestChecksumCalculation: aws.RequestChecksumCalculationWhenSupported,
+		},
+		{
+			name:                           "request checksum when_required",
+			url:                            "s3://mybucket?request_checksum_calculation=when_required",
+			wantRequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		},
+		{
+			name:                           "case insensitive",
+			url:                            "s3://mybucket?request_checksum_calculation=WHEN_SUPPORTED",
+			wantRequestChecksumCalculation: aws.RequestChecksumCalculationWhenSupported,
+		},
+		{
+			name:    "invalid value",
+			url:     "s3://mybucket?request_checksum_calculation=invalid",
+			wantErr: true,
+		},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// Parse the URL to extract the bucket name and query parameters
+			u, err := url.Parse(test.url)
+			if err != nil {
+				t.Fatalf("failed to parse URL: %v", err)
+			}
+
+			// Create a mock AWS config with the query parameters
+			cfg, err := awscfg.LoadDefaultConfig(ctx)
+			if err != nil {
+				t.Fatalf("failed to load AWS config: %v", err)
+			}
+
+			// Apply URL parameters to the config
+			cfg, err = gcaws.V2ConfigFromURLParams(ctx, u.Query())
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+
+			// Create URLOpener to test the integration
+			opener := &URLOpener{}
+			bucket, err := opener.OpenBucketURL(ctx, u)
+			if err != nil {
+				t.Fatalf("failed to open bucket: %v", err)
+			}
+			defer bucket.Close()
+
+			// Verify that the checksum configuration was applied
+			// We can't directly access the internal bucket struct, but we can verify
+			// that the configuration was applied to the AWS config
+			if cfg.RequestChecksumCalculation != test.wantRequestChecksumCalculation {
+				t.Errorf("got RequestChecksumCalculation %v, want %v",
+					cfg.RequestChecksumCalculation, test.wantRequestChecksumCalculation)
+			}
+		})
 	}
 }
 

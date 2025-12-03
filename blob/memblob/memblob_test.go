@@ -83,6 +83,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"mem://", false},
+		// NoMD5.
+		{"mem://?nomd5", false},
 		// With prefix.
 		{"mem://?prefix=foo/bar", false},
 		// Invalid parameter.

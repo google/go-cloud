@@ -188,11 +188,31 @@ type ServiceURLOptions struct {
 func NewDefaultServiceURLOptions() *ServiceURLOptions {
 	isCDN, _ := strconv.ParseBool(os.Getenv("AZURE_STORAGE_IS_CDN"))
 	isLocalEmulator, _ := strconv.ParseBool(os.Getenv("AZURE_STORAGE_IS_LOCAL_EMULATOR"))
+	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	protocol := os.Getenv("AZURE_STORAGE_PROTOCOL")
+	connectionString := os.Getenv("AZURE_STORAGE_CONNECTION_STRING")
+	if connectionString == "" {
+		connectionString = os.Getenv("AZURE_STORAGEBLOB_CONNECTIONSTRING")
+	}
+	if connectionString != "" {
+		// Parse the connection string to get a default account name and protocol.
+		// Format: DefaultEndpointsProtocol=https;AccountName=some-account;AccountKey=very-secure;EndpointSuffix=core.windows.net
+		for _, part := range strings.Split(connectionString, ";") {
+			keyval := strings.Split(part, "=")
+			if len(keyval) == 2 {
+				if accountName == "" && keyval[0] == "AccountName" {
+					accountName = keyval[1]
+				} else if protocol == "" && keyval[0] == "DefaultEndpointsProtocol" {
+					protocol = keyval[1]
+				}
+			}
+		}
+	}
 	return &ServiceURLOptions{
-		AccountName:     os.Getenv("AZURE_STORAGE_ACCOUNT"),
+		AccountName:     accountName,
 		SASToken:        os.Getenv("AZURE_STORAGE_SAS_TOKEN"),
 		StorageDomain:   os.Getenv("AZURE_STORAGE_DOMAIN"),
-		Protocol:        os.Getenv("AZURE_STORAGE_PROTOCOL"),
+		Protocol:        protocol,
 		IsCDN:           isCDN,
 		IsLocalEmulator: isLocalEmulator,
 	}
@@ -630,22 +650,26 @@ func (b *bucket) ErrorAs(err error, i any) bool {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
-	if bloberror.HasCode(err, bloberror.BlobNotFound) {
-		return gcerrors.NotFound
-	}
-	if bloberror.HasCode(err, bloberror.AuthenticationFailed) {
-		return gcerrors.PermissionDenied
-	}
 	var rErr *azcore.ResponseError
 	if errors.As(err, &rErr) {
-		code := bloberror.Code(rErr.ErrorCode)
-		if code == bloberror.BlobNotFound || rErr.StatusCode == 404 {
+		switch bloberror.Code(rErr.ErrorCode) {
+		case bloberror.AuthenticationFailed:
+			return gcerrors.PermissionDenied
+		case bloberror.BlobAlreadyExists,
+			bloberror.ConditionNotMet,
+			bloberror.TargetConditionNotMet,
+			bloberror.SourceConditionNotMet:
+			// the documented error code is a variation of "ConditionNotMet", but "BlobAlreadyExists" has also been observed
+			return gcerrors.FailedPrecondition
+		case bloberror.BlobNotFound:
 			return gcerrors.NotFound
 		}
-		if code == bloberror.AuthenticationFailed {
-			return gcerrors.PermissionDenied
+
+		if rErr.StatusCode == http.StatusNotFound {
+			return gcerrors.NotFound
 		}
 	}
+
 	if strings.Contains(err.Error(), "no such host") {
 		// This happens with an invalid storage account name; the host
 		// is something like invalidstorageaccount.blob.core.windows.net.

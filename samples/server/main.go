@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command server runs a simple HTTP server with integrated Stackdriver tracing
+// Command server runs a simple HTTP server with integrated Cloud Trace (OpenTelemetry)
 // and health checks.
 package main
 
@@ -21,12 +21,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go.opentelemetry.io/otel"
 	"log"
 	"net/http"
 	"sync"
 	"time"
 
-	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/server"
 	"gocloud.dev/server/health"
@@ -65,7 +65,7 @@ func (h *customHealthCheck) CheckHealth() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if !h.healthy {
-		return errors.New("not ready yet!")
+		return errors.New("not ready yet")
 	}
 	return nil
 }
@@ -80,20 +80,38 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tokenSource := gcp.CredentialsTokenSource(credentials)
+
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var exporter trace.Exporter
 	if *doTrace {
 		fmt.Println("Exporting traces to Stackdriver")
-		mr := GlobalMonitoredResource{projectID: string(projectID)}
-		exporter, _, err = sdserver.NewExporter(projectID, tokenSource, mr)
-		if err != nil {
-			log.Fatal(err)
+
+		traceSampler := sdserver.NewTraceSampler(ctx)
+
+		spanExporter, err0 := sdserver.NewTraceExporter(projectID)
+		if err0 != nil {
+			log.Fatal(err0)
 		}
+		tp, cleanup, err0 := sdserver.NewTraceProvider(ctx, spanExporter, traceSampler)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+		defer cleanup()
+		otel.SetTracerProvider(tp)
+
+		metricsReader, err0 := sdserver.NewMetricsReader(projectID)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+		mp, cleanup2, err0 := sdserver.NewMeterProvider(ctx, metricsReader)
+		if err0 != nil {
+			log.Fatal(err0)
+		}
+		defer cleanup2()
+		otel.SetMeterProvider(mp)
 	}
 
 	mux := http.NewServeMux()
@@ -113,13 +131,8 @@ func main() {
 	options := &server.Options{
 		RequestLogger: sdserver.NewRequestLogger(),
 		HealthChecks:  []health.Checker{healthCheck},
-		TraceExporter: exporter,
 
-		// In production you will likely want to use trace.ProbabilitySampler
-		// instead, since AlwaysSample will start and export a trace for every
-		// request - this may be prohibitively slow with significant traffic.
-		DefaultSamplingPolicy: trace.AlwaysSample(),
-		Driver:                &server.DefaultDriver{},
+		Driver: &server.DefaultDriver{},
 	}
 
 	s := server.New(mux, options)

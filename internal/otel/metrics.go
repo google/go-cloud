@@ -16,178 +16,155 @@
 package otel
 
 import (
-	"context"
 	"fmt"
-	"time"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"strings"
 )
 
-// MetricSet contains the standard metrics used by Go CDK APIs.
-type MetricSet struct {
-	Latency        metric.Float64Histogram
-	CompletedCalls metric.Int64Counter
-	BytesRead      metric.Int64Counter
-	BytesWritten   metric.Int64Counter
+// Units are encoded according to the case-sensitive abbreviations from the
+// Unified Code for Units of Measure: http://unitsofmeasure.org/ucum.html.
+const (
+	unitDimensionless = "1"
+	unitMilliseconds  = "ms"
+	unitBytes         = "By"
+)
+
+var (
+	defaultMillisecondsBoundaries = []float64{
+		0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
+		2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0,
+		13.0, 16.0, 20.0, 25.0, 30.0, 40.0,
+		50.0, 65.0, 80.0, 100.0, 130.0, 160.0,
+		200.0, 250.0, 300.0, 400.0, 500.0,
+		650.0, 800.0, 1000.0, 2000.0, 5000.0, 10000.0,
+	}
+)
+
+func Views(pkg string) []sdkmetric.View {
+
+	return []sdkmetric.View{
+
+		// View for latency histogram.
+		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+			if inst.Kind == sdkmetric.InstrumentKindHistogram {
+				if inst.Name == pkg+"/latency" {
+					return sdkmetric.Stream{
+						Name:        inst.Name,
+						Description: "Distribution of method latency, by provider and method.",
+						Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
+							Boundaries: defaultMillisecondsBoundaries,
+						},
+						AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == packageKey || kv.Key == methodKey
+						},
+					}, true
+				}
+			}
+
+			return sdkmetric.Stream{}, false
+		},
+
+		// View for completed_calls count.
+		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+			if inst.Kind == sdkmetric.InstrumentKindHistogram {
+				if inst.Name == pkg+"/latency" {
+					return sdkmetric.Stream{
+						Name:        strings.Replace(inst.Name, "/latency", "/completed_calls", 1),
+						Description: "Count of method calls by provider, method and status.",
+						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
+						AttributeFilter: func(kv attribute.KeyValue) bool {
+							return kv.Key == methodKey || kv.Key == statusKey
+						},
+					}, true
+				}
+			}
+			return sdkmetric.Stream{}, false
+		},
+	}
 }
 
-// NewMetricSet creates a standard set of metrics for a Go CDK package.
-func NewMetricSet(ctx context.Context, pkg string) (*MetricSet, error) {
-	meter := otel.GetMeterProvider().Meter(pkg)
-
-	latency, err := meter.Float64Histogram(
-		pkg+".latency",
-		metric.WithDescription("Latency of method call in milliseconds"),
-		metric.WithUnit("ms"),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create latency metric: %w", err)
+// CounterView returns summation views that add up individual measurements the counter takes.
+func CounterView(pkg string, meterName string, description string) []sdkmetric.View {
+	return []sdkmetric.View{
+		// View for gauge counts.
+		func(inst sdkmetric.Instrument) (sdkmetric.Stream, bool) {
+			if inst.Kind == sdkmetric.InstrumentKindCounter {
+				if inst.Name == pkg+meterName {
+					return sdkmetric.Stream{
+						Name:        inst.Name,
+						Description: description,
+						Aggregation: sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindCounter),
+					}, true
+				}
+			}
+			return sdkmetric.Stream{}, false
+		},
 	}
-
-	completedCalls, err := meter.Int64Counter(
-		pkg+".completed_calls",
-		metric.WithDescription("Count of method calls"),
-		metric.WithUnit("{call}"),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create completed_calls metric: %w", err)
-	}
-
-	bytesRead, err := meter.Int64Counter(
-		pkg+".bytes_read",
-		metric.WithDescription("Number of bytes read"),
-		metric.WithUnit("By"),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create bytes_read metric: %w", err)
-	}
-
-	bytesWritten, err := meter.Int64Counter(
-		pkg+".bytes_written",
-		metric.WithDescription("Number of bytes written"),
-		metric.WithUnit("By"),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create bytes_written metric: %w", err)
-	}
-
-	return &MetricSet{
-		Latency:        latency,
-		CompletedCalls: completedCalls,
-		BytesRead:      bytesRead,
-		BytesWritten:   bytesWritten,
-	}, nil
 }
 
-// InitMetrics initializes metrics with an OTLP exporter.
-func InitMetrics(ctx context.Context, serviceName string) (func(context.Context) error, error) {
-	// Create a resource with service information
-	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceNameKey.String(serviceName),
-		),
-		resource.WithTelemetrySDK(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create resource: %w", err)
-	}
-
-	// Create the OTLP exporter
-	exporter, err := otlpmetricgrpc.New(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
-	}
-
-	// Create reader for the exporter
-	reader := sdkmetric.NewPeriodicReader(exporter)
-
-	// Create meter provider
-	meterProvider := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(reader),
-		sdkmetric.WithResource(res),
-	)
-
-	// Set the global meter provider
-	otel.SetMeterProvider(meterProvider)
-
-	// Return shutdown function
-	return func(ctx context.Context) error {
-		return meterProvider.Shutdown(ctx)
-	}, nil
-}
-
-// RecordLatency records a latency measurement with standard attributes.
-func RecordLatency(ctx context.Context, latencyMeter metric.Float64Histogram, method, provider, status string, duration time.Duration) {
-	if latencyMeter == nil {
-		return
-	}
+// LatencyMeasure returns the measure for method call latency used by Go CDK APIs.
+func LatencyMeasure(pkg string, provider string) metric.Float64Histogram {
 
 	attrs := []attribute.KeyValue{
-		MethodKey.String(method),
+		packageKey.String(pkg),
+		providerKey.String(provider),
 	}
 
-	if provider != "" {
-		attrs = append(attrs, ProviderKey.String(provider))
+	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
+
+	m, err := pkgMeter.Float64Histogram(
+		pkg+"/latency",
+		metric.WithDescription("Latency distribution of method calls"),
+		metric.WithUnit(unitMilliseconds),
+	)
+
+	if err != nil {
+		// The only possible errors are from invalid key or value names, and those are programming
+		// errors that will be found during testing.
+		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
 	}
 
-	if status != "" {
-		attrs = append(attrs, StatusKey.String(status))
-	}
-
-	latencyMeter.Record(ctx, float64(duration.Nanoseconds())/1e6, metric.WithAttributes(attrs...))
+	return m
 }
 
-// RecordCount records a count with standard attributes.
-func RecordCount(ctx context.Context, counter metric.Int64Counter, method, provider, status string, count int64) {
-	if counter == nil {
-		return
-	}
+// DimensionlessMeasure creates a simple counter specifically for dimensionless measurements.
+func DimensionlessMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
 
 	attrs := []attribute.KeyValue{
-		MethodKey.String(method),
+		packageKey.String(pkg),
+		providerKey.String(provider),
 	}
 
-	if provider != "" {
-		attrs = append(attrs, ProviderKey.String(provider))
-	}
+	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
 
-	if status != "" {
-		attrs = append(attrs, StatusKey.String(status))
-	}
+	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(unitDimensionless))
 
-	counter.Add(ctx, count, metric.WithAttributes(attrs...))
+	if err != nil {
+		// The only possible errors are from invalid key or value names,
+		// and those are programming errors that will be found during testing.
+		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
+	}
+	return m
 }
 
-// RecordBytesRead records bytes read with provider attribute.
-func RecordBytesRead(ctx context.Context, counter metric.Int64Counter, provider string, n int64) {
-	if counter == nil || n <= 0 {
-		return
+// BytesMeasure creates a counter for bytes measurements.
+func BytesMeasure(pkg string, provider string, meterName string, description string) metric.Int64Counter {
+
+	attrs := []attribute.KeyValue{
+		packageKey.String(pkg),
+		providerKey.String(provider),
 	}
 
-	var attrs []attribute.KeyValue
-	if provider != "" {
-		attrs = append(attrs, ProviderKey.String(provider))
+	pkgMeter := otel.Meter(pkg, metric.WithInstrumentationAttributes(attrs...))
+	m, err := pkgMeter.Int64Counter(pkg+meterName, metric.WithDescription(description), metric.WithUnit(unitBytes))
+
+	if err != nil {
+		// The only possible errors are from invalid key or value names, and those are programming
+		// errors that will be found during testing.
+		panic(fmt.Sprintf("fullName=%q, provider=%q: %v", pkg, pkgMeter, err))
 	}
-
-	counter.Add(ctx, n, metric.WithAttributes(attrs...))
-}
-
-// RecordBytesWritten records bytes written with provider attribute.
-func RecordBytesWritten(ctx context.Context, counter metric.Int64Counter, provider string, n int64) {
-	if counter == nil || n <= 0 {
-		return
-	}
-
-	var attrs []attribute.KeyValue
-	if provider != "" {
-		attrs = append(attrs, ProviderKey.String(provider))
-	}
-
-	counter.Add(ctx, n, metric.WithAttributes(attrs...))
+	return m
 }

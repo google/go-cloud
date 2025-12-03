@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/internal/gcerr"
 )
@@ -204,17 +205,21 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	return q.get(ctx, true, fps...)
 }
 
-// get implements Get, with optional OpenCensus tracing so it can be used internally.
-func (q *Query) get(ctx context.Context, oc bool, fps ...FieldPath) *DocumentIterator {
+// get implements Get, with optional OpenTelemetry tracing so it can be used internally.
+func (q *Query) get(ctx context.Context, withTracing bool, fps ...FieldPath) *DocumentIterator {
 	dcoll := q.coll.driver
 	if err := q.initGet(fps); err != nil {
 		return &DocumentIterator{err: wrapError(dcoll, err)}
 	}
 
 	var err error
-	if oc {
-		ctx = q.coll.tracer.Start(ctx, "Query.Get")
-		defer func() { q.coll.tracer.End(ctx, err) }()
+
+	if withTracing {
+		var span trace.Span
+		ctx, span = q.coll.tracer.Start(ctx, "Query.Get")
+		defer func() {
+			q.coll.tracer.End(ctx, span, err)
+		}()
 	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, coll: q.coll, err: wrapError(dcoll, err)}
