@@ -44,6 +44,7 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.44.0
 	gocloud.dev/pubsub/natspubsub v0.44.0
 	gocloud.dev/pubsub/rabbitpubsub v0.44.0
+	gocloud.dev/runtimevar/hashivault v0.44.0
 	gocloud.dev/secrets/hashivault v0.44.0
 	google.golang.org/genproto v0.0.0-20251124214823-79d6a2a48846
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
@@ -231,5 +232,7 @@ replace gocloud.dev/pubsub/kafkapubsub => ../pubsub/kafkapubsub
 replace gocloud.dev/pubsub/natspubsub => ../pubsub/natspubsub
 
 replace gocloud.dev/pubsub/rabbitpubsub => ../pubsub/rabbitpubsub
+
+replace gocloud.dev/runtimevar/hashivault => ../runtimevar/hashivault
 
 replace gocloud.dev/secrets/hashivault => ../secrets/hashivault

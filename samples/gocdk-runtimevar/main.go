@@ -33,6 +33,7 @@ import (
 	_ "gocloud.dev/runtimevar/constantvar"
 	_ "gocloud.dev/runtimevar/filevar"
 	_ "gocloud.dev/runtimevar/gcpruntimeconfig"
+	_ "gocloud.dev/runtimevar/hashivault"
 	_ "gocloud.dev/runtimevar/httpvar"
 )
 
