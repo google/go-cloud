@@ -250,6 +250,27 @@ and a URL.
 
 [`httpvar.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/httpvar#OpenVariable
 
+### HashiCorp Vault {#hashivault}
+
+`hashivault` supports watching a variable stored in [HashiCorp Vault's KV Secrets Engine][].
+Use `runtimevar.OpenVariable` with a URL starting with `hashivault://`.
+
+The default URL opener will use the environment variables `VAULT_SERVER_URL` (or
+`VAULT_ADDR`) for the server address, and `VAULT_SERVER_TOKEN` (or `VAULT_TOKEN`)
+for authentication.
+
+[HashiCorp Vault's KV Secrets Engine]: https://www.vaultproject.io/docs/secrets/kv
+
+{{< goexample "gocloud.dev/runtimevar/hashivault.Example_openVariableFromURL" >}}
+
+#### HashiCorp Vault Constructor {#hashivault-ctor}
+
+The [`hashivault.OpenVariable`][] constructor opens a variable with a Vault client.
+
+{{< goexample "gocloud.dev/runtimevar/hashivault.ExampleOpenVariable" >}}
+
+[`hashivault.OpenVariable`]: https://godoc.org/gocloud.dev/runtimevar/hashivault#OpenVariable
+
 ### Blob {#blob}
 
 `blobvar` supports watching a variable based on the contents of a

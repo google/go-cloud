@@ -395,6 +395,14 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/gcpsecretmanager\"\n)",
 		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The URL Host+Path are used as the GCP Secret Manager secret key;\n// see https://cloud.google.com/secret-manager\n// for more details.\n\nv, err := runtimevar.OpenVariable(ctx, \"gcpsecretmanager://projects/myproject/secrets/mysecret?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
 	},
+	"gocloud.dev/runtimevar/hashivault.ExampleOpenVariable": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/hashicorp/vault/api\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/hashivault\"\n)",
+		"code": "// Get a client to use with the Vault API.\nclient, err := hashivault.Dial(ctx, \u0026hashivault.Config{\n\tToken: \"CLIENT_TOKEN\",\n\tAPIConfig: api.Config{\n\t\tAddress: \"http://127.0.0.1:8200\",\n\t},\n})\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the secret.\nv, err := hashivault.OpenVariable(client, \"myapp/config\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
+	"gocloud.dev/runtimevar/hashivault.Example_openVariableFromURL": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/hashivault\"\n)",
+		"code": "// runtimevar.OpenVariable creates a *runtimevar.Variable from a URL.\n// The default opener connects to a Vault server based on the environment\n// variables VAULT_SERVER_URL/VAULT_ADDR and VAULT_SERVER_TOKEN/VAULT_TOKEN.\nv, err := runtimevar.OpenVariable(ctx, \"hashivault://myapp/config?decoder=string\")\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
+	},
 	"gocloud.dev/runtimevar/httpvar.ExampleOpenVariable": {
 		"imports": "import (\n\t\"net/http\"\n\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/httpvar\"\n)",
 		"code": "// Create an HTTP.Client\nhttpClient := http.DefaultClient\n\n// Construct a *runtimevar.Variable that watches the page.\nv, err := httpvar.OpenVariable(httpClient, \"http://example.com\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer v.Close()"
