@@ -109,7 +109,9 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
 	path := u.Path
-	if os.PathSeparator != '/' {
+	// Hostname == "." means a relative path, so drop the leading "/".
+	// Also drop the leading "/" on Windows.
+	if u.Host == "." || os.PathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
 	}
 	return OpenVariable(filepath.FromSlash(path), decoder, &opts)
