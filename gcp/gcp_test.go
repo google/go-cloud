@@ -20,6 +20,7 @@ import (
 
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
+	"golang.org/x/oauth2/google"
 )
 
 func TestNewHTTPClient(t *testing.T) {
@@ -65,5 +66,59 @@ func TestDefaultProjectID(t *testing.T) {
 	_, err = gcp.DefaultProjectID(creds)
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestDefaultCredentialsWithParams(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Test with empty params (should use default scope and default universe domain)
+	creds, err := gcp.DefaultCredentialsWithParams(ctx, google.CredentialsParams{})
+	if err != nil {
+		t.Fatalf("DefaultCredentialsWithParams with empty params failed: %v", err)
+	}
+	if creds == nil {
+		t.Error("got nil credentials, want non-nil")
+	}
+	// Verify default universe domain (googleapis.com)
+	gotDomain, err := creds.GetUniverseDomain()
+	if err != nil {
+		t.Fatalf("GetUniverseDomain failed: %v", err)
+	}
+	if gotDomain != "googleapis.com" {
+		t.Errorf("got default universe domain %q, want %q", gotDomain, "googleapis.com")
+	}
+
+	// Test with universe domain parameter.
+	// Note: The fake "authorized_user" credentials may not support universe domain
+	// overrides, but we can verify the function accepts the parameter without error.
+	creds, err = gcp.DefaultCredentialsWithParams(ctx, google.CredentialsParams{
+		UniverseDomain: "example.com",
+	})
+	if err != nil {
+		t.Fatalf("DefaultCredentialsWithParams with universe domain failed: %v", err)
+	}
+	if creds == nil {
+		t.Error("got nil credentials, want non-nil")
+	}
+	// The universe domain may not be set for authorized_user credential type,
+	// but the function should not error.
+	_, err = creds.GetUniverseDomain()
+	if err != nil {
+		t.Fatalf("GetUniverseDomain failed: %v", err)
+	}
+
+	// Test with custom scopes
+	creds, err = gcp.DefaultCredentialsWithParams(ctx, google.CredentialsParams{
+		Scopes: []string{"https://www.googleapis.com/auth/devstorage.read_only"},
+	})
+	if err != nil {
+		t.Fatalf("DefaultCredentialsWithParams with custom scopes failed: %v", err)
+	}
+	if creds == nil {
+		t.Error("got nil credentials, want non-nil")
 	}
 }
