@@ -37,6 +37,7 @@ import (
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -631,6 +632,28 @@ func TestURLOpenerForParams(t *testing.T) {
 			},
 			wantOpts: Options{GoogleAccessID: "bar"},
 		},
+		{
+			name: "UniverseDomain",
+			query: url.Values{
+				"universe_domain": {"example.com"},
+			},
+			wantOpts: Options{ClientOptions: []option.ClientOption{option.WithUniverseDomain("example.com")}},
+		},
+		{
+			name:     "UniverseDomain with existing options",
+			currOpts: Options{GoogleAccessID: "foo"},
+			query: url.Values{
+				"universe_domain": {"example.com"},
+			},
+			wantOpts: Options{GoogleAccessID: "foo", ClientOptions: []option.ClientOption{option.WithUniverseDomain("example.com")}},
+		},
+		{
+			name: "UniverseDomain empty value ignored",
+			query: url.Values{
+				"universe_domain": {""},
+			},
+			wantOpts: Options{},
+		},
 	}
 
 	for _, test := range tests {
@@ -678,6 +701,10 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"gs://mybucket?private_key_path=" + pkFile.Name(), false},
 		// OK, clearing any pre-existing private key.
 		{"gs://mybucket?private_key_path=", false},
+		// OK, setting universe_domain.
+		{"gs://mybucket?universe_domain=example.com", false},
+		// OK, universe_domain with empty value.
+		{"gs://mybucket?universe_domain=", false},
 		// Invalid private_key_path.
 		{"gs://mybucket?private_key_path=invalid-path", true},
 		// Invalid parameter.
