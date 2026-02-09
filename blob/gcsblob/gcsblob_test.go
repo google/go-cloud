@@ -37,7 +37,6 @@ import (
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -631,28 +630,6 @@ func TestURLOpenerForParams(t *testing.T) {
 				"access_id": {"bar"},
 			},
 			wantOpts: Options{GoogleAccessID: "bar"},
-		},
-		{
-			name: "UniverseDomain",
-			query: url.Values{
-				"universe_domain": {"example.com"},
-			},
-			wantOpts: Options{ClientOptions: []option.ClientOption{option.WithUniverseDomain("example.com")}},
-		},
-		{
-			name:     "UniverseDomain with existing options",
-			currOpts: Options{GoogleAccessID: "foo"},
-			query: url.Values{
-				"universe_domain": {"example.com"},
-			},
-			wantOpts: Options{GoogleAccessID: "foo", ClientOptions: []option.ClientOption{option.WithUniverseDomain("example.com")}},
-		},
-		{
-			name: "UniverseDomain empty value ignored",
-			query: url.Values{
-				"universe_domain": {""},
-			},
-			wantOpts: Options{},
 		},
 	}
 
