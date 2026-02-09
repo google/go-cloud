@@ -177,6 +177,13 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 			// Populate default values from credentials files, where available.
 			opts.GoogleAccessID, opts.PrivateKey = readDefaultCredentials(creds.JSON)
 
+			ud, err := creds.GetUniverseDomain()
+			if err != nil {
+				fmt.Printf("Warning: unable to load GCP Universe Domain: %v", err)
+			} else if ud != "" {
+				opts.ClientOptions = append(opts.ClientOptions, option.WithUniverseDomain(ud))
+			}
+
 			// ... else, on GCE, at least get the instance's main service account.
 			if opts.GoogleAccessID == "" && metadata.OnGCE() {
 				mc := metadata.NewClient(nil)
@@ -276,9 +283,6 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp
 		// The private key might have expired, or falling back to SignBytes/MakeSignBytes
 		// is intentional such as for tests or involving a key stored in a HSM/TPM.
 		opts.PrivateKey = nil
-	}
-	if universeDomain := q.Get("universe_domain"); universeDomain != "" {
-		opts.ClientOptions = append(opts.ClientOptions, option.WithUniverseDomain(universeDomain))
 	}
 	return opts, client, nil
 }
