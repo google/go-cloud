@@ -44,7 +44,7 @@ rootdir="$(pwd)"
 # new Go version. Some checks below we only run
 # for the latest Go version.
 latest_go_version=0
-if [[ $(go version) == *go1\.25* ]]; then
+if [[ $(go version) == *go1\.26* ]]; then
   latest_go_version=1
 fi
 
