@@ -16,7 +16,7 @@ module gocloud.dev/secrets/hashivault
 
 go 1.24.0
 
-toolchain go1.24.7
+toolchain go1.25.0
 
 require (
 	github.com/hashicorp/vault/api v1.22.0
