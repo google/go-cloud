@@ -49,10 +49,10 @@ func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKi
 	}
 }
 
-func (*harness) BeforeDoTypes() []interface{}    { return nil }
-func (*harness) BeforeQueryTypes() []interface{} { return nil }
+func (*harness) BeforeDoTypes() []any    { return nil }
+func (*harness) BeforeQueryTypes() []any { return nil }
 
-func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool { return rev1 == rev2 }
+func (*harness) RevisionsEqual(rev1, rev2 any) bool { return rev1 == rev2 }
 
 func (*harness) SupportsAtomicWrites() bool { return true }
 
@@ -63,7 +63,7 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil, nil)
 }
 
-type docmap = map[string]interface{}
+type docmap = map[string]any
 
 // memdocstore-specific tests.
 
@@ -318,7 +318,7 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 
 	// Save some data into the file.
-	docs := map[interface{}]storedDoc{
+	docs := map[any]storedDoc{
 		"k1": {"key": "k1", "a": 1},
 		"k2": {"key": "k2", "b": 2},
 	}

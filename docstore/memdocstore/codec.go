@@ -30,10 +30,10 @@ func encodeDoc(doc driver.Document) (storedDoc, error) {
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
-	return storedDoc(e.val.(map[string]interface{})), nil
+	return storedDoc(e.val.(map[string]any)), nil
 }
 
-func encodeValue(v interface{}) (interface{}, error) {
+func encodeValue(v any) (any, error) {
 	var e encoder
 	if err := driver.Encode(reflect.ValueOf(v), &e); err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func encodeValue(v interface{}) (interface{}, error) {
 }
 
 type encoder struct {
-	val interface{}
+	val any
 }
 
 func (e *encoder) EncodeNil()            { e.val = nil }
@@ -55,7 +55,7 @@ func (e *encoder) EncodeString(x string) { e.val = x }
 func (e *encoder) ListIndex(int)         { panic("impossible") }
 func (e *encoder) MapKey(string)         { panic("impossible") }
 
-var typeOfGoTime = reflect.TypeOf(time.Time{})
+var typeOfGoTime = reflect.TypeFor[time.Time]()
 
 func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
 	if v.Type() == typeOfGoTime {
@@ -67,25 +67,25 @@ func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
 
 func (e *encoder) EncodeList(n int) driver.Encoder {
 	// All slices and arrays are encoded as []interface{}
-	s := make([]interface{}, n)
+	s := make([]any, n)
 	e.val = s
 	return &listEncoder{s: s}
 }
 
 type listEncoder struct {
-	s []interface{}
+	s []any
 	encoder
 }
 
 func (e *listEncoder) ListIndex(i int) { e.s[i] = e.val }
 
 type mapEncoder struct {
-	m map[string]interface{}
+	m map[string]any
 	encoder
 }
 
 func (e *encoder) EncodeMap(n int) driver.Encoder {
-	m := make(map[string]interface{}, n)
+	m := make(map[string]any, n)
 	e.val = m
 	return &mapEncoder{m: m}
 }
@@ -96,13 +96,13 @@ func (e *mapEncoder) MapKey(k string) { e.m[k] = e.val }
 
 // decodeDoc decodes m into ddoc.
 func decodeDoc(m storedDoc, ddoc driver.Document, fps [][]string) error {
-	var m2 map[string]interface{}
+	var m2 map[string]any
 	if len(fps) == 0 {
 		m2 = m
 	} else {
 		// Make a document to decode from that has only the field paths.
 		// (We don't need the key field because ddoc must already have it.)
-		m2 = map[string]interface{}{}
+		m2 = map[string]any{}
 		for _, fp := range fps {
 			val, err := getAtFieldPath(m, fp, false)
 			if err != nil {
@@ -120,7 +120,7 @@ func decodeDoc(m storedDoc, ddoc driver.Document, fps [][]string) error {
 }
 
 type decoder struct {
-	val interface{}
+	val any
 }
 
 func (d decoder) String() string {
@@ -161,19 +161,19 @@ func (d decoder) AsBytes() ([]byte, bool) {
 	return bs, ok
 }
 
-func (d decoder) AsInterface() (interface{}, error) {
+func (d decoder) AsInterface() (any, error) {
 	return d.val, nil
 }
 
 func (d decoder) ListLen() (int, bool) {
-	if s, ok := d.val.([]interface{}); ok {
+	if s, ok := d.val.([]any); ok {
 		return len(s), true
 	}
 	return 0, false
 }
 
 func (d decoder) DecodeList(f func(i int, d2 driver.Decoder) bool) {
-	for i, e := range d.val.([]interface{}) {
+	for i, e := range d.val.([]any) {
 		if !f(i, decoder{e}) {
 			return
 		}
@@ -181,21 +181,21 @@ func (d decoder) DecodeList(f func(i int, d2 driver.Decoder) bool) {
 }
 
 func (d decoder) MapLen() (int, bool) {
-	if m, ok := d.val.(map[string]interface{}); ok {
+	if m, ok := d.val.(map[string]any); ok {
 		return len(m), true
 	}
 	return 0, false
 }
 
 func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder, _ bool) bool) {
-	for k, v := range d.val.(map[string]interface{}) {
+	for k, v := range d.val.(map[string]any) {
 		if !f(k, decoder{v}, true) {
 			return
 		}
 	}
 }
 
-func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+func (d decoder) AsSpecial(v reflect.Value) (bool, any, error) {
 	if v.Type() == typeOfGoTime {
 		return true, d.val, nil
 	}

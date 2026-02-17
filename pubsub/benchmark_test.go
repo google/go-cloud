@@ -278,7 +278,7 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	}()
 
 	var grp errgroup.Group
-	for i := 0; i < numGoRoutines; i++ {
+	for range numGoRoutines {
 		grp.Go(func() error {
 			// Each goroutine loops until ctx is canceled.
 			for {

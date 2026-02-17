@@ -41,12 +41,12 @@ func TestEncodeDoc(t *testing.T) {
 	var b bool = true
 	tm := time.Now()
 	for _, test := range []struct {
-		in   interface{}
+		in   any
 		want storedDoc
 	}{
 		{
-			in: map[string]interface{}{
-				"x": map[int]interface{}{
+			in: map[string]any{
+				"x": map[int]any{
 					1: "a",
 					2: 17,
 					3: []float32{1.0, 2.5},
@@ -54,11 +54,11 @@ func TestEncodeDoc(t *testing.T) {
 				},
 			},
 			want: storedDoc{
-				"x": map[string]interface{}{
+				"x": map[string]any{
 					"1": "a",
 					"2": int64(17),
-					"3": []interface{}{float64(1.0), float64(2.5)},
-					"4": map[string]interface{}{"false": false, "true": true},
+					"3": []any{float64(1.0), float64(2.5)},
+					"4": map[string]any{"false": false, "true": true},
 				},
 			},
 		},
@@ -79,7 +79,7 @@ func TestEncodeDoc(t *testing.T) {
 				"Z": true,
 				"W": int64(33),
 				"T": tm,
-				"L": []interface{}{int64(4), int64(5)},
+				"L": []any{int64(4), int64(5)},
 				"F": 2.5,
 				"B": []byte("abc"),
 			},
@@ -101,25 +101,25 @@ func TestDecodeDoc(t *testing.T) {
 	tm := time.Now()
 	for _, test := range []struct {
 		in   storedDoc
-		val  interface{}
-		want interface{}
+		val  any
+		want any
 	}{
 		{
 			storedDoc{
-				"x": map[string]interface{}{
+				"x": map[string]any{
 					"1": "a",
 					"2": int64(17),
-					"3": []interface{}{float64(1.0), float64(2.5)},
-					"4": map[string]interface{}{"false": false, "true": true},
+					"3": []any{float64(1.0), float64(2.5)},
+					"4": map[string]any{"false": false, "true": true},
 				},
 			},
-			map[string]interface{}{},
-			map[string]interface{}{
-				"x": map[string]interface{}{
+			map[string]any{},
+			map[string]any{
+				"x": map[string]any{
 					"1": "a",
 					"2": int64(17),
-					"3": []interface{}{1.0, 2.5},
-					"4": map[string]interface{}{"false": false, "true": true},
+					"3": []any{1.0, 2.5},
+					"4": map[string]any{"false": false, "true": true},
 				},
 			},
 		},
@@ -130,7 +130,7 @@ func TestDecodeDoc(t *testing.T) {
 				"Z": true,
 				"W": int64(33),
 				"T": tm,
-				"L": []interface{}{int64(4), int64(5)},
+				"L": []any{int64(4), int64(5)},
 				"F": 2.5,
 				"B": []byte("abc"),
 			},

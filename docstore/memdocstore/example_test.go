@@ -43,7 +43,7 @@ func ExampleOpenCollectionWithKeyFunc() {
 	}
 
 	// The name of a document is constructed from the Game and Player fields.
-	nameFromDocument := func(doc docstore.Document) interface{} {
+	nameFromDocument := func(doc docstore.Document) any {
 		hs := doc.(*HighScore)
 		return hs.Game + "|" + hs.Player
 	}

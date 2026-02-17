@@ -818,7 +818,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, err
 	}
 	for _, m := range output.Messages {
-		m := m
 		bodyStr := aws.ToString(m.Body)
 		rawAttrs := map[string]string{}
 		for k, v := range m.MessageAttributes {

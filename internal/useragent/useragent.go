@@ -18,6 +18,7 @@ package useragent // import "gocloud.dev/internal/useragent"
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 
 	"google.golang.org/api/option"
@@ -59,9 +60,7 @@ func (t *userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error
 	// Clone the request to avoid mutating it.
 	newReq := *req
 	newReq.Header = make(http.Header)
-	for k, vv := range req.Header {
-		newReq.Header[k] = vv
-	}
+	maps.Copy(newReq.Header, req.Header)
 	// Append to the User-Agent string to preserve other information.
 	newReq.Header.Set("User-Agent", req.UserAgent()+" "+userAgentString(t.api))
 	return t.base.RoundTrip(&newReq)

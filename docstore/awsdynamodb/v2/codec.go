@@ -69,7 +69,7 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 	return &mapEncoder{m: m}
 }
 
-var typeOfGoTime = reflect.TypeOf(time.Time{})
+var typeOfGoTime = reflect.TypeFor[time.Time]()
 
 // EncodeSpecial encodes time.Time specially.
 func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
@@ -135,7 +135,7 @@ func encodeDocKeyFields(doc driver.Document, pkey, skey string) (*dyn2Types.Attr
 	return &dyn2Types.AttributeValueMemberM{Value: m}, nil
 }
 
-func encodeValue(v interface{}) (dyn2Types.AttributeValue, error) {
+func encodeValue(v any) (dyn2Types.AttributeValue, error) {
 	var e encoder
 	if err := driver.Encode(reflect.ValueOf(v), &e); err != nil {
 		return nil, err
@@ -302,11 +302,11 @@ func (d decoder) DecodeMap(f func(key string, vd driver.Decoder, exactMatch bool
 	}
 }
 
-func (d decoder) AsInterface() (interface{}, error) {
+func (d decoder) AsInterface() (any, error) {
 	return toGoValue(d.av)
 }
 
-func toGoValue(av dyn2Types.AttributeValue) (interface{}, error) {
+func toGoValue(av dyn2Types.AttributeValue) (any, error) {
 	switch v := av.(type) {
 	case *dyn2Types.AttributeValueMemberNULL:
 		return nil, nil
@@ -333,7 +333,7 @@ func toGoValue(av dyn2Types.AttributeValue) (interface{}, error) {
 		return v.Value, nil
 
 	case *dyn2Types.AttributeValueMemberL:
-		s := make([]interface{}, len(v.Value))
+		s := make([]any, len(v.Value))
 		for i, v := range v.Value {
 			x, err := toGoValue(v)
 			if err != nil {
@@ -344,7 +344,7 @@ func toGoValue(av dyn2Types.AttributeValue) (interface{}, error) {
 		return s, nil
 
 	case *dyn2Types.AttributeValueMemberM:
-		m := make(map[string]interface{}, len(v.Value))
+		m := make(map[string]any, len(v.Value))
 		for k, v := range v.Value {
 			x, err := toGoValue(v)
 			if err != nil {
@@ -359,7 +359,7 @@ func toGoValue(av dyn2Types.AttributeValue) (interface{}, error) {
 	}
 }
 
-func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+func (d decoder) AsSpecial(v reflect.Value) (bool, any, error) {
 	unsupportedTypes := `unsupported type, the docstore driver for DynamoDB does
 	not decode DynamoDB set types, such as string set, number set and binary set`
 	switch d.av.(type) {

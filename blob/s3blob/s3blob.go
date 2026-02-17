@@ -454,7 +454,6 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
 		page.Objects = make([]*driver.ListObject, n)
 		for i, obj := range resp.Contents {
-			obj := obj
 			page.Objects[i] = &driver.ListObject{
 				Key:     unescapeKey(aws.ToString(obj.Key)),
 				ModTime: *obj.LastModified,
@@ -471,7 +470,6 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			}
 		}
 		for i, prefix := range resp.CommonPrefixes {
-			prefix := prefix
 			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
 				Key:   unescapeKey(aws.ToString(prefix.Prefix)),
 				IsDir: true,

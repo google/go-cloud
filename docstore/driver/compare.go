@@ -44,7 +44,7 @@ func CompareTimes(t1, t2 time.Time) int {
 // like Go comparisons on those types. If one operand is integer and the other
 // is floating-point, CompareNumbers correctly compares the mathematical values
 // of the numbers, without loss of precision.
-func CompareNumbers(n1, n2 interface{}) (int, error) {
+func CompareNumbers(n1, n2 any) (int, error) {
 	v1, ok := n1.(reflect.Value)
 	if !ok {
 		v1 = reflect.ValueOf(n1)

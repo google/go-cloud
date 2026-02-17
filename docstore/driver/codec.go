@@ -29,11 +29,11 @@ import (
 )
 
 var (
-	binaryMarshalerType   = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
-	binaryUnmarshalerType = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
-	textMarshalerType     = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
-	textUnmarshalerType   = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-	protoMessageType      = reflect.TypeOf((*proto.Message)(nil)).Elem()
+	binaryMarshalerType   = reflect.TypeFor[encoding.BinaryMarshaler]()
+	binaryUnmarshalerType = reflect.TypeFor[encoding.BinaryUnmarshaler]()
+	textMarshalerType     = reflect.TypeFor[encoding.TextMarshaler]()
+	textUnmarshalerType   = reflect.TypeFor[encoding.TextUnmarshaler]()
+	protoMessageType      = reflect.TypeFor[proto.Message]()
 )
 
 // An Encoder encodes Go values in some other form (e.g. JSON, protocol buffers).
@@ -181,7 +181,7 @@ func encode(v reflect.Value, enc Encoder) error {
 		return encodeList(v, enc)
 	case reflect.Map:
 		return encodeMap(v, enc)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if v.IsNil() {
 			enc.EncodeNil()
 			return nil
@@ -216,7 +216,7 @@ func encodeList(v reflect.Value, enc Encoder) error {
 	}
 	n := v.Len()
 	enc2 := enc.EncodeList(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if err := encode(v.Index(i), enc2); err != nil {
 			return err
 		}
@@ -300,7 +300,7 @@ func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) erro
 // From encoding/json/encode.go.
 func fieldByIndex(v reflect.Value, index []int) (reflect.Value, bool) {
 	for _, i := range index {
-		if v.Kind() == reflect.Ptr {
+		if v.Kind() == reflect.Pointer {
 			if v.IsNil() {
 				return reflect.Value{}, false
 			}
@@ -357,12 +357,12 @@ type Decoder interface {
 	DecodeMap(func(string, Decoder, bool) bool)
 
 	// AsInterface should decode the value into the Go value that best represents it.
-	AsInterface() (interface{}, error)
+	AsInterface() (any, error)
 
 	// If the decoder wants to decode a value in a special way it should do so here
 	// and return true, the decoded value, and any error from the decoding.
 	// Otherwise, it should return false.
-	AsSpecial(reflect.Value) (bool, interface{}, error)
+	AsSpecial(reflect.Value) (bool, any, error)
 
 	// String should return a human-readable representation of the Decoder, for error messages.
 	String() string
@@ -386,7 +386,7 @@ func decode(v reflect.Value, d Decoder) error {
 	// ignore it like encoding/json does?
 	if d.AsNull() {
 		switch v.Kind() {
-		case reflect.Interface, reflect.Ptr, reflect.Map, reflect.Slice:
+		case reflect.Interface, reflect.Pointer, reflect.Map, reflect.Slice:
 			v.Set(reflect.Zero(v.Type()))
 			return nil
 		}
@@ -486,7 +486,7 @@ func decode(v reflect.Value, d Decoder) error {
 	case reflect.Map:
 		return decodeMap(v, d)
 
-	case reflect.Ptr:
+	case reflect.Pointer:
 		// If the pointer is nil, set it to a zero value.
 		if v.IsNil() {
 			v.Set(reflect.New(v.Type().Elem()))
@@ -499,7 +499,7 @@ func decode(v reflect.Value, d Decoder) error {
 	case reflect.Interface:
 		if v.NumMethod() == 0 { // empty interface
 			// If v holds a pointer, set the pointer.
-			if !v.IsNil() && v.Elem().Kind() == reflect.Ptr {
+			if !v.IsNil() && v.Elem().Kind() == reflect.Pointer {
 				return decode(v.Elem(), d)
 			}
 			// Otherwise, create a fresh value.
@@ -709,7 +709,7 @@ func decodeStruct(v reflect.Value, d Decoder) error {
 // type along the path denoted by index. (We cannot create such pointers.)
 func fieldByIndexCreate(v reflect.Value, index []int) (reflect.Value, bool) {
 	for _, i := range index {
-		if v.Kind() == reflect.Ptr {
+		if v.Kind() == reflect.Pointer {
 			if v.IsNil() {
 				if !v.CanSet() {
 					return reflect.Value{}, false
@@ -727,7 +727,7 @@ func decodingError(v reflect.Value, d Decoder) error {
 	return gcerr.New(gcerr.InvalidArgument, nil, 2, fmt.Sprintf("cannot set type %s to %v", v.Type(), d))
 }
 
-func overflowError(x interface{}, t reflect.Type) error {
+func overflowError(x any, t reflect.Type) error {
 	return gcerr.New(gcerr.InvalidArgument, nil, 2, fmt.Sprintf("value %v overflows type %s", x, t))
 }
 
@@ -754,7 +754,7 @@ func IsEmptyValue(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		return v.IsNil()
 	}
 	return false
@@ -766,7 +766,7 @@ type tagOptions struct {
 }
 
 // parseTag interprets docstore struct field tags.
-func parseTag(t reflect.StructTag) (name string, keep bool, other interface{}, err error) {
+func parseTag(t reflect.StructTag) (name string, keep bool, other any, err error) {
 	var opts []string
 	name, keep, opts = fields.ParseStandardTag("docstore", t)
 	tagOpts := tagOptions{}

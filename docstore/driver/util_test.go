@@ -166,7 +166,7 @@ func TestAsFunc(t *testing.T) {
 	}
 
 	var z float64
-	for _, arg := range []interface{}{nil, y, &z} {
+	for _, arg := range []any{nil, y, &z} {
 		if as(arg) {
 			t.Errorf("%#v: got true, want false", arg)
 		}

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"slices"
 	"sort"
 	"strconv"
 	"testing"
@@ -346,7 +347,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 	}()
 
 	var ss []*pubsub.Subscription
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		ds, cleanup, err := h.CreateSubscription(ctx, dt, t.Name())
 		if err != nil {
 			t.Fatal(err)
@@ -449,7 +450,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	var got []*pubsub.Message
-	for i := 0; i < nMessages; i++ {
+	for range nMessages {
 		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
@@ -468,7 +469,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	defer cancel()
 
 	got = nil
-	for i := 0; i < nMessages; i++ {
+	for range nMessages {
 		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
@@ -537,7 +538,7 @@ func testBatching(t *testing.T, newHarness HarnessMaker) {
 	// that they appear in the SendBatch is not stable.
 	gr, grctx := errgroup.WithContext(ctx)
 	var want []*pubsub.Message
-	for i := 0; i < nMessages; i++ {
+	for range nMessages {
 		m := &pubsub.Message{Body: []byte("hello world")}
 		want = append(want, m)
 		gr.Go(func() error { return topic.Send(grctx, m) })
@@ -551,7 +552,7 @@ func testBatching(t *testing.T, newHarness HarnessMaker) {
 	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	var got []*pubsub.Message
-	for i := 0; i < nMessages; i++ {
+	for range nMessages {
 		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
@@ -586,7 +587,7 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	defer subCleanup()
 
 	// Publish 3 messages.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		err := dt.SendBatch(ctx, []*driver.Message{{Body: []byte(strconv.Itoa(i))}})
 		if err != nil {
 			t.Fatal(err)
@@ -661,7 +662,7 @@ func publishN(ctx context.Context, t *testing.T, topic *pubsub.Topic, n int) []*
 	t.Helper()
 
 	var ms []*pubsub.Message
-	for i := 0; i < n; i++ {
+	for i := range n {
 		m := &pubsub.Message{
 			Body:     []byte(strconv.Itoa(i)),
 			Metadata: map[string]string{"a": strconv.Itoa(i)},
@@ -682,7 +683,7 @@ func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int
 	ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	var ms []*pubsub.Message
-	for i := 0; i < n; i++ {
+	for range n {
 		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
@@ -820,7 +821,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	for _, v := range escape.WeirdStrings {
 		weirdStrings = append(weirdStrings, v)
 	}
-	sort.Slice(weirdStrings, func(i, j int) bool { return weirdStrings[i] < weirdStrings[j] })
+	slices.Sort(weirdStrings)
 
 	weirdMetaDataGroups := []map[string]string{{}}
 	i := 0
@@ -1119,9 +1120,9 @@ func receiveNConcurrently(sub *pubsub.Subscription, nMessages, nGoroutines int) 
 func runConcurrently(n, g int, f func(context.Context) error) error {
 	gr, ctx := errgroup.WithContext(context.Background())
 	ng := n / g
-	for i := 0; i < g; i++ {
+	for range g {
 		gr.Go(func() error {
-			for j := 0; j < ng; j++ {
+			for range ng {
 				if err := f(ctx); err != nil {
 					return err
 				}

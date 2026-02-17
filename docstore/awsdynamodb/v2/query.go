@@ -307,14 +307,14 @@ type queryRunner struct {
 	c         *collection
 	scanIn    *dyn.ScanInput
 	queryIn   *dyn.QueryInput
-	beforeRun func(asFunc func(i interface{}) bool) error
+	beforeRun func(asFunc func(i any) bool) error
 }
 
-func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, asFunc func(i interface{}) bool, err error) {
+func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, asFunc func(i any) bool, err error) {
 	if qr.scanIn != nil {
 		qr.scanIn.ExclusiveStartKey = startAfter
 		if qr.beforeRun != nil {
-			asFunc := func(i interface{}) bool {
+			asFunc := func(i any) bool {
 				p, ok := i.(**dyn.ScanInput)
 				if !ok {
 					return false
@@ -331,7 +331,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 			return nil, nil, nil, err
 		}
 		return out.Items, out.LastEvaluatedKey,
-			func(i interface{}) bool {
+			func(i any) bool {
 				p, ok := i.(**dyn.ScanOutput)
 				if !ok {
 					return false
@@ -342,7 +342,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 	}
 	qr.queryIn.ExclusiveStartKey = startAfter
 	if qr.beforeRun != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			p, ok := i.(**dyn.QueryInput)
 			if !ok {
 				return false
@@ -359,7 +359,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 		return nil, nil, nil, err
 	}
 	return out.Items, out.LastEvaluatedKey,
-		func(i interface{}) bool {
+		func(i any) bool {
 			p, ok := i.(**dyn.QueryOutput)
 			if !ok {
 				return false
@@ -467,7 +467,7 @@ type documentIterator struct {
 	limit  int                                   // number of items to return
 	count  int                                   // number of items returned
 	last   map[string]dyn2Types.AttributeValue   // lastEvaluatedKey from the last query
-	asFunc func(i interface{}) bool              // for As
+	asFunc func(i any) bool                      // for As
 }
 
 func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error {
@@ -513,7 +513,7 @@ func (it *documentIterator) Stop() {
 	it.last = nil
 }
 
-func (it *documentIterator) As(i interface{}) bool {
+func (it *documentIterator) As(i any) bool {
 	return it.asFunc(i)
 }
 
@@ -544,9 +544,9 @@ func (qr *queryRunner) queryPlan() string {
 // createDocument should create an empty document to be passed to DocumentIterator.Next.
 // The DocumentIterator returned by the FallbackFunc will also expect the same type of document.
 // If nil, then a map[string]interface{} will be used.
-func InMemorySortFallback(createDocument func() interface{}) FallbackFunc {
+func InMemorySortFallback(createDocument func() any) FallbackFunc {
 	if createDocument == nil {
-		createDocument = func() interface{} { return map[string]interface{}{} }
+		createDocument = func() any { return map[string]any{} }
 	}
 	return func(ctx context.Context, q *driver.Query, run RunQueryFunc) (driver.DocumentIterator, error) {
 		if q.OrderByField == "" {
@@ -580,7 +580,7 @@ func InMemorySortFallback(createDocument func() interface{}) FallbackFunc {
 		// OrderByField is a single field, not a field path.
 		// First, put the field values in another slice, so we can
 		// return on error.
-		sortValues := make([]interface{}, len(docs))
+		sortValues := make([]any, len(docs))
 		for i, doc := range docs {
 			v, err := doc.GetField(orderByField)
 			if err != nil {
@@ -595,7 +595,7 @@ func InMemorySortFallback(createDocument func() interface{}) FallbackFunc {
 
 type docsForSorting struct {
 	docs      []driver.Document
-	vals      []interface{}
+	vals      []any
 	ascending bool
 }
 
@@ -618,7 +618,7 @@ func (d docsForSorting) Less(i, j int) bool {
 //
 // Arbitrarily decide that strings < times < []byte < numbers.
 // TODO(jba): find and use the actual sort order that DynamoDB uses.
-func compare(v1, v2 interface{}) int {
+func compare(v1, v2 any) int {
 	switch v1 := v1.(type) {
 	case string:
 		if v2, ok := v2.(string); ok {
@@ -683,5 +683,5 @@ func copyTopLevel(dest, src driver.Document) error {
 	return nil
 }
 
-func (*sliceIterator) Stop()               {}
-func (*sliceIterator) As(interface{}) bool { return false }
+func (*sliceIterator) Stop()       {}
+func (*sliceIterator) As(any) bool { return false }

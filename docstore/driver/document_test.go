@@ -26,18 +26,18 @@ import (
 
 type S struct {
 	I int
-	M map[string]interface{}
+	M map[string]any
 }
 
 func TestNewDocument(t *testing.T) {
 	for _, test := range []struct {
-		in      interface{}
+		in      any
 		wantErr bool
 		wantMap bool
 	}{
 		{in: nil, wantErr: true},
-		{in: map[string]interface{}{}, wantMap: true},
-		{in: map[string]interface{}(nil), wantErr: true},
+		{in: map[string]any{}, wantMap: true},
+		{in: map[string]any(nil), wantErr: true},
 		{in: S{}, wantErr: true},
 		{in: &S{}, wantMap: false},
 		{in: (*S)(nil), wantErr: true},
@@ -64,10 +64,10 @@ func TestNewDocument(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	in := map[string]interface{}{
+	in := map[string]any{
 		"S": &S{
 			I: 2,
-			M: map[string]interface{}{
+			M: map[string]any{
 				"J": 3,
 				"T": &S{I: 4},
 			},
@@ -80,7 +80,7 @@ func TestGet(t *testing.T) {
 
 	for _, test := range []struct {
 		fp   string
-		want interface{}
+		want any
 	}{
 		{"S.I", 2},
 		{"S.i", 2},
@@ -101,10 +101,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	in := map[string]interface{}{
+	in := map[string]any{
 		"S": &S{
 			I: 2,
-			M: map[string]interface{}{
+			M: map[string]any{
 				"J": 3,
 				"T": &S{I: 4},
 			},
@@ -116,7 +116,7 @@ func TestSet(t *testing.T) {
 	}
 	for _, test := range []struct {
 		fp  string
-		val interface{}
+		val any
 	}{
 		{"S.I", -1},
 		{"S.i", -2},
@@ -142,13 +142,13 @@ func TestSet(t *testing.T) {
 
 func TestGetField(t *testing.T) {
 	type S struct {
-		A int         `docstore:"a"`
-		B interface{} `docstore:"b"`
+		A int `docstore:"a"`
+		B any `docstore:"b"`
 	}
 
 	want := 1
-	for _, in := range []interface{}{
-		map[string]interface{}{"a": want, "b": nil},
+	for _, in := range []any{
+		map[string]any{"a": want, "b": nil},
 		&S{A: want, B: nil},
 	} {
 		t.Run(fmt.Sprint(in), func(t *testing.T) {
@@ -191,11 +191,11 @@ func TestFieldNames(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		in   interface{}
+		in   any
 		want []string
 	}{
 		{
-			map[string]interface{}{"a": 1, "b": map[string]interface{}{"c": 2}},
+			map[string]any{"a": 1, "b": map[string]any{"c": 2}},
 			[]string{"a", "b"},
 		},
 		{
@@ -217,14 +217,14 @@ func TestFieldNames(t *testing.T) {
 
 func TestHasField(t *testing.T) {
 	type withRev struct {
-		Rev interface{}
+		Rev any
 	}
 	type withoutRev struct {
 		W withRev
 	}
 
 	for _, tc := range []struct {
-		in   interface{}
+		in   any
 		want bool
 	}{
 		{
@@ -236,11 +236,11 @@ func TestHasField(t *testing.T) {
 			want: false,
 		},
 		{
-			in:   map[string]interface{}{"Rev": nil},
+			in:   map[string]any{"Rev": nil},
 			want: true,
 		},
 		{
-			in:   map[string]interface{}{},
+			in:   map[string]any{},
 			want: false,
 		},
 	} {
@@ -257,14 +257,14 @@ func TestHasField(t *testing.T) {
 
 func TestHasFieldFold(t *testing.T) {
 	type withRev struct {
-		Rev interface{}
+		Rev any
 	}
 	type withoutRev struct {
 		W withRev
 	}
 
 	for _, tc := range []struct {
-		in   interface{}
+		in   any
 		want bool
 	}{
 		{

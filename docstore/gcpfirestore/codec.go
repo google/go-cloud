@@ -47,7 +47,7 @@ func encodeDoc(doc driver.Document, nameField string) (*pb.Document, error) {
 // encodeValue encodes a Go value as a Firestore Value.
 // The Firestore proto definition for Value is a oneof of various types,
 // including basic types like string as well as lists and maps.
-func encodeValue(x interface{}) (*pb.Value, error) {
+func encodeValue(x any) (*pb.Value, error) {
 	var e encoder
 	if err := driver.Encode(reflect.ValueOf(x), &e); err != nil {
 		return nil, err
@@ -86,9 +86,9 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 }
 
 var (
-	typeOfGoTime         = reflect.TypeOf(time.Time{})
-	typeOfProtoTimestamp = reflect.TypeOf((*tspb.Timestamp)(nil))
-	typeOfLatLng         = reflect.TypeOf((*latlng.LatLng)(nil))
+	typeOfGoTime         = reflect.TypeFor[time.Time]()
+	typeOfProtoTimestamp = reflect.TypeFor[*tspb.Timestamp]()
+	typeOfLatLng         = reflect.TypeFor[*latlng.LatLng]()
 )
 
 // Encode time.Time, latlng.LatLng, and ts.Timestamp specially, because the Go Firestore
@@ -211,11 +211,11 @@ func (d decoder) AsBytes() ([]byte, bool) {
 }
 
 // AsInterface decodes the value in d into the most appropriate Go type.
-func (d decoder) AsInterface() (interface{}, error) {
+func (d decoder) AsInterface() (any, error) {
 	return decodeValue(d.pv)
 }
 
-func decodeValue(v *pb.Value) (interface{}, error) {
+func decodeValue(v *pb.Value) (any, error) {
 	switch v := v.ValueType.(type) {
 	case *pb.Value_NullValue:
 		return nil, nil
@@ -239,7 +239,7 @@ func decodeValue(v *pb.Value) (interface{}, error) {
 		// Return GeoPointValue as *latlng.LatLng.
 		return v.GeoPointValue, nil
 	case *pb.Value_ArrayValue:
-		s := make([]interface{}, len(v.ArrayValue.Values))
+		s := make([]any, len(v.ArrayValue.Values))
 		for i, pv := range v.ArrayValue.Values {
 			e, err := decodeValue(pv)
 			if err != nil {
@@ -249,7 +249,7 @@ func decodeValue(v *pb.Value) (interface{}, error) {
 		}
 		return s, nil
 	case *pb.Value_MapValue:
-		m := make(map[string]interface{}, len(v.MapValue.Fields))
+		m := make(map[string]any, len(v.MapValue.Fields))
 		for k, pv := range v.MapValue.Fields {
 			e, err := decodeValue(pv)
 			if err != nil {
@@ -294,7 +294,7 @@ func (d decoder) DecodeMap(f func(string, driver.Decoder, bool) bool) {
 	}
 }
 
-func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+func (d decoder) AsSpecial(v reflect.Value) (bool, any, error) {
 	switch v.Type() {
 	case typeOfGoTime:
 		if ts, ok := d.pv.ValueType.(*pb.Value_TimestampValue); ok {

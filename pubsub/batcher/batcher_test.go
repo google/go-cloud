@@ -72,11 +72,11 @@ func TestSequential(t *testing.T) {
 	ctx := context.Background()
 	var got []int
 	e := errors.New("e")
-	b := batcher.New(reflect.TypeOf(int(0)), nil, func(items any) error {
+	b := batcher.New(reflect.TypeFor[int](), nil, func(items any) error {
 		got = items.([]int)
 		return e
 	})
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		err := b.Add(ctx, i)
 		if err != e {
 			t.Errorf("got %v, want %v", err, e)
@@ -98,7 +98,7 @@ func (i *sizableItem) ByteSize() int {
 
 func TestPreventsAddingItemsLargerThanBatchMaxByteSize(t *testing.T) {
 	ctx := context.Background()
-	itemType := reflect.TypeOf(&sizableItem{})
+	itemType := reflect.TypeFor[*sizableItem]()
 	b := batcher.New(itemType, &batcher.Options{MaxBatchByteSize: 1}, func(items any) error {
 		return nil
 	})
@@ -117,7 +117,7 @@ func TestPreventsAddingItemsLargerThanBatchMaxByteSize(t *testing.T) {
 
 func TestBatchingConsidersMaxSizeAndMaxByteSize(t *testing.T) {
 	ctx := context.Background()
-	itemType := reflect.TypeOf(&sizableItem{})
+	itemType := reflect.TypeFor[*sizableItem]()
 	tests := []struct {
 		itemCount      int
 		itemSize       int
@@ -157,11 +157,11 @@ func TestBatchingConsidersMaxSizeAndMaxByteSize(t *testing.T) {
 func TestMinBatchSize(t *testing.T) {
 	// Verify the MinBatchSize option works.
 	var got [][]int
-	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MinBatchSize: 3}, func(items any) error {
+	b := batcher.New(reflect.TypeFor[int](), &batcher.Options{MinBatchSize: 3}, func(items any) error {
 		got = append(got, items.([]int))
 		return nil
 	})
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		b.AddNoWait(i)
 	}
 	b.Shutdown()
@@ -184,7 +184,7 @@ func TestSaturation(t *testing.T) {
 		maxBatch         int             // size of largest batch
 		count            = map[int]int{} // how many of each item the handlers observe
 	)
-	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MaxHandlers: maxHandlers, MaxBatchSize: maxBatchSize}, func(x any) error {
+	b := batcher.New(reflect.TypeFor[int](), &batcher.Options{MaxHandlers: maxHandlers, MaxBatchSize: maxBatchSize}, func(x any) error {
 		items := x.([]int)
 		mu.Lock()
 		outstanding++
@@ -205,8 +205,7 @@ func TestSaturation(t *testing.T) {
 	})
 	var wg sync.WaitGroup
 	const nItems = 1000
-	for i := 0; i < nItems; i++ {
-		i := i
+	for i := range nItems {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -228,7 +227,7 @@ func TestSaturation(t *testing.T) {
 	}
 	// Check that handlers saw every item exactly once.
 	want := map[int]int{}
-	for i := 0; i < nItems; i++ {
+	for i := range nItems {
 		want[i] = 1
 	}
 	if diff := cmp.Diff(count, want); diff != "" {
@@ -240,7 +239,7 @@ func TestShutdown(t *testing.T) {
 	ctx := context.Background()
 	var nHandlers int64 // atomic
 	c := make(chan int, 10)
-	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MaxHandlers: cap(c)}, func(x any) error {
+	b := batcher.New(reflect.TypeFor[int](), &batcher.Options{MaxHandlers: cap(c)}, func(x any) error {
 		for range x.([]int) {
 			c <- 0
 		}
@@ -277,7 +276,7 @@ func TestMinBatchSizeFlushesOnShutdown(t *testing.T) {
 	var got [][]int
 
 	batchSize := 3
-	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MinBatchSize: batchSize}, func(items interface{}) error {
+	b := batcher.New(reflect.TypeFor[int](), &batcher.Options{MinBatchSize: batchSize}, func(items any) error {
 		got = append(got, items.([]int))
 		return nil
 	})
@@ -299,7 +298,7 @@ func TestMinBatchSizeFlushesOnShutdown(t *testing.T) {
 }
 
 func TestItemCanBeInterface(t *testing.T) {
-	readerType := reflect.TypeOf([]io.Reader{}).Elem()
+	readerType := reflect.TypeFor[[]io.Reader]().Elem()
 	called := false
 	b := batcher.New(readerType, nil, func(items any) error {
 		called = true

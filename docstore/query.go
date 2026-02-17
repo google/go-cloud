@@ -40,7 +40,7 @@ func (c *Collection) Query() *Query {
 // Where expresses a condition on the query.
 // Valid ops are: "=", ">", "<", ">=", "<=, "in", "not-in".
 // Valid values are strings, integers, floating-point numbers, time.Time and boolean (only for "=", "in" and "not-in") values.
-func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
+func (q *Query) Where(fp FieldPath, op string, value any) *Query {
 	if q.err != nil {
 		return q
 	}
@@ -64,7 +64,7 @@ func (q *Query) Where(fp FieldPath, op string, value interface{}) *Query {
 	return q
 }
 
-type valueValidator func(interface{}) bool
+type valueValidator func(any) bool
 
 var validOp = map[string]valueValidator{
 	"=":      validEqualValue,
@@ -76,7 +76,7 @@ var validOp = map[string]valueValidator{
 	"not-in": validFilterSlice,
 }
 
-func validEqualValue(v interface{}) bool {
+func validEqualValue(v any) bool {
 	if v == nil {
 		return false
 	}
@@ -86,7 +86,7 @@ func validEqualValue(v interface{}) bool {
 	return validFilterValue(v)
 }
 
-func validFilterValue(v interface{}) bool {
+func validFilterValue(v any) bool {
 	if v == nil {
 		return false
 	}
@@ -107,7 +107,7 @@ func validFilterValue(v interface{}) bool {
 	}
 }
 
-func validFilterSlice(v interface{}) bool {
+func validFilterSlice(v any) bool {
 	if v == nil || reflect.TypeOf(v).Kind() != reflect.Slice {
 		return false
 	}
@@ -192,7 +192,7 @@ func (q *Query) OrderBy(field, direction string) *Query {
 // executed to the underlying service's query functionality. The callback takes
 // a parameter, asFunc, that converts its argument to driver-specific types.
 // See https://gocloud.dev/concepts/as/ for background information.
-func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query {
+func (q *Query) BeforeQuery(f func(asFunc func(any) bool) error) *Query {
 	q.dq.BeforeQuery = f
 	return q
 }
@@ -253,7 +253,7 @@ func (q *Query) initGet(fps []FieldPath) error {
 	return nil
 }
 
-func (q *Query) invalidf(format string, args ...interface{}) *Query {
+func (q *Query) invalidf(format string, args ...any) *Query {
 	q.err = gcerr.Newf(gcerr.InvalidArgument, nil, format, args...)
 	return q
 }
@@ -301,7 +301,7 @@ func (it *DocumentIterator) Stop() {
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (it *DocumentIterator) As(i interface{}) bool {
+func (it *DocumentIterator) As(i any) bool {
 	if i == nil || it.iter == nil {
 		return false
 	}

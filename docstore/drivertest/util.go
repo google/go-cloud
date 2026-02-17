@@ -43,7 +43,7 @@ func (r *randReader) Read(buf []byte) (int, error) {
 }
 
 // MustDocument is like driver.NewDocument, but panics on error.
-func MustDocument(doc interface{}) driver.Document {
+func MustDocument(doc any) driver.Document {
 	dd, err := driver.NewDocument(doc)
 	if err != nil {
 		panic(err)

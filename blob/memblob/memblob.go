@@ -36,6 +36,7 @@ import (
 	"gocloud.dev/internal/gcerr"
 	"hash"
 	"io"
+	"maps"
 	"net/url"
 	"sort"
 	"strings"
@@ -305,9 +306,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		}
 	}
 	md := map[string]string{}
-	for k, v := range opts.Metadata {
-		md[k] = v
-	}
+	maps.Copy(md, opts.Metadata)
 
 	var md5hash hash.Hash
 	if !b.options.NoMD5 {

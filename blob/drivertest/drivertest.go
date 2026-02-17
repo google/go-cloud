@@ -434,7 +434,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		b := blob.NewBucket(drv)
 		iter := b.List(&blob.ListOptions{Prefix: keyPrefix})
 		found := iterToSetOfKeys(ctx, t, iter)
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			key := keyForIndex(i)
 			if !found[key] {
 				if err := b.WriteAll(ctx, key, content, nil); err != nil {
@@ -2159,9 +2159,9 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	const numKeys = 20
 	const dataSize = 4 * 1024
 	keyData := make(map[int][]byte)
-	for k := 0; k < numKeys; k++ {
+	for k := range numKeys {
 		data := make([]byte, dataSize)
-		for i := 0; i < dataSize; i++ {
+		for i := range dataSize {
 			data[i] = byte(k)
 		}
 		keyData[k] = data
@@ -2176,7 +2176,7 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	errs := make(chan error, numKeys)
 
 	// Write all blobs concurrently.
-	for k := 0; k < numKeys; k++ {
+	for k := range numKeys {
 		wg.Add(1)
 		go func(key int) {
 			if err := b.WriteAll(ctx, blobName(key), keyData[key], nil); err != nil {
@@ -2197,7 +2197,7 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	errs = make(chan error, numKeys)
 
 	// Read all blobs concurrently and verify that they contain the expected data.
-	for k := 0; k < numKeys; k++ {
+	for k := range numKeys {
 		wg.Add(1)
 		go func(key int) {
 			buf, err := b.ReadAll(ctx, blobName(key))

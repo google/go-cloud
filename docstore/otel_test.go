@@ -38,7 +38,7 @@ func TestOpenTelemetry(t *testing.T) {
 	defer coll.Close()
 
 	// Test ActionList.Do by creating a document.
-	if err := coll.Create(ctx, map[string]interface{}{"_id": "a", "count": 0}); err != nil {
+	if err := coll.Create(ctx, map[string]any{"_id": "a", "count": 0}); err != nil {
 		t.Fatal(err)
 	}
 

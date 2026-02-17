@@ -129,7 +129,7 @@ func readDefaultCredentials(credFileAsJSON []byte) (AccessID string, PrivateKey 
 	}
 	if err := json.Unmarshal(credFileAsJSON, &contentVariantB); err == nil {
 		nextFieldIsAccessID := false
-		for _, s := range strings.Split(contentVariantB.Name, "/") {
+		for s := range strings.SplitSeq(contentVariantB.Name, "/") {
 			if nextFieldIsAccessID {
 				AccessID = s
 				break

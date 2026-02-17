@@ -55,7 +55,7 @@ func benchmarkSingleActionPut(b *testing.B, n int, coll *docstore.Collection) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			for i := 0; i < n; i++ {
+			for range n {
 				key := fmt.Sprintf("%s%d", baseKey, atomic.AddUint32(&nextID, 1))
 				doc := docmap{KeyField: key, "S": key}
 				if err := coll.Put(ctx, doc); err != nil {
@@ -73,7 +73,7 @@ func benchmarkSingleActionGet(b *testing.B, n int, coll *docstore.Collection) {
 	const baseKey = "benchmarksingleaction-get-"
 	docs := make([]docmap, n)
 	puts := coll.Actions()
-	for i := 0; i < n; i++ {
+	for i := range n {
 		docs[i] = docmap{KeyField: baseKey + strconv.Itoa(i), "n": i}
 		puts.Put(docs[i])
 	}
@@ -105,7 +105,7 @@ func benchmarkActionListPut(b *testing.B, n int, coll *docstore.Collection) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			actions := coll.Actions()
-			for i := 0; i < n; i++ {
+			for range n {
 				key := fmt.Sprintf("%s%d", baseKey, atomic.AddUint32(&nextID, 1))
 				doc := docmap{KeyField: key, "S": key}
 				actions.Put(doc)
@@ -124,7 +124,7 @@ func benchmarkActionListGet(b *testing.B, n int, coll *docstore.Collection) {
 	const baseKey = "benchmarkactionlist-get-"
 	docs := make([]docmap, n)
 	puts := coll.Actions()
-	for i := 0; i < n; i++ {
+	for i := range n {
 		docs[i] = docmap{KeyField: baseKey + strconv.Itoa(i), "n": i}
 		puts.Put(docs[i])
 	}

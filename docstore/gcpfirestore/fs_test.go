@@ -78,15 +78,15 @@ func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKi
 	}
 }
 
-func (*harness) BeforeDoTypes() []interface{} {
-	return []interface{}{&pb.BatchGetDocumentsRequest{}, &pb.CommitRequest{}}
+func (*harness) BeforeDoTypes() []any {
+	return []any{&pb.BatchGetDocumentsRequest{}, &pb.CommitRequest{}}
 }
 
-func (*harness) BeforeQueryTypes() []interface{} {
-	return []interface{}{&pb.RunQueryRequest{}}
+func (*harness) BeforeQueryTypes() []any {
+	return []any{&pb.RunQueryRequest{}}
 }
 
-func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool {
+func (*harness) RevisionsEqual(rev1, rev2 any) bool {
 	return proto.Equal(rev1.(*tspb.Timestamp), rev2.(*tspb.Timestamp))
 }
 
@@ -104,15 +104,15 @@ func (*codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
 	return []drivertest.UnsupportedType{drivertest.Uint, drivertest.Arrays}
 }
 
-func (c *codecTester) NativeEncode(x interface{}) (interface{}, error) {
+func (c *codecTester) NativeEncode(x any) (any, error) {
 	return c.nc.Encode(x)
 }
 
-func (c *codecTester) NativeDecode(value, dest interface{}) error {
+func (c *codecTester) NativeDecode(value, dest any) error {
 	return c.nc.Decode(value.(*pb.Document), dest)
 }
 
-func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
+func (c *codecTester) DocstoreEncode(x any) (any, error) {
 	var e encoder
 	if err := drivertest.MustDocument(x).Encode(&e); err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
 	}, nil
 }
 
-func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
+func (c *codecTester) DocstoreDecode(value, dest any) error {
 	mv := &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{
 		Fields: value.(*pb.Document).Fields,
 	}}}

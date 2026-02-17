@@ -154,7 +154,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Start 10 goroutines to receive from it.
 	var mu sync.Mutex
 	receivedMsgs := make(map[string]bool)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		go func() {
 			for {
 				m, err := s.Receive(ctx)
@@ -181,7 +181,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Send messages. Each message has a unique body used as a key to receivedMsgs.
 	topic := NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
-	for i := 0; i < howManyToSend; i++ {
+	for i := range howManyToSend {
 		key := fmt.Sprintf("message #%d", i)
 		m := &Message{Body: []byte(key)}
 		if err := topic.Send(ctx, m); err != nil {
@@ -195,7 +195,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	defer cancel()
 
 	// Check that all the messages were received.
-	for i := 0; i < howManyToSend; i++ {
+	for i := range howManyToSend {
 		key := fmt.Sprintf("message #%d", i)
 		if !receivedMsgs[key] {
 			t.Errorf("message %q was not received", key)
@@ -293,7 +293,7 @@ func (s *secondReceiveBlockedDriverSub) ReceiveBatch(ctx context.Context, _ int)
 	if n := s.receiveCounter.Add(1); n > 1 {
 		<-ctx.Done()
 	}
-	msg := &driver.Message{Body: []byte(fmt.Sprintf("message #%d", s.receiveCounter.Load()))}
+	msg := &driver.Message{Body: fmt.Appendf(nil, "message #%d", s.receiveCounter.Load())}
 	return []*driver.Message{msg}, nil
 }
 func (*secondReceiveBlockedDriverSub) CanNack() bool                                      { return false }
@@ -401,7 +401,7 @@ func TestBatchSizeDecays(t *testing.T) {
 	}
 
 	// Do some receives to allow the number of batches to increase past 1.
-	for n := 0; n < 100; n++ {
+	for range 100 {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatalf("Receive: got %v, want nil", err)
@@ -454,7 +454,7 @@ func TestRetryReceiveInBatchesDoesntRace(t *testing.T) {
 	defer sub.Shutdown(ctx)
 
 	// Do some receives to allow the number of batches to increase past 1.
-	for n := 0; n < 100; n++ {
+	for range 100 {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatalf("Receive: got %v, want nil", err)
@@ -468,7 +468,7 @@ func TestRetryReceiveInBatchesDoesntRace(t *testing.T) {
 
 	// This call to Receive should result in nRetryCalls+1 calls to ReceiveBatch for
 	// each batch. In the issue noted above, this would cause a race.
-	for n := 0; n < 100; n++ {
+	for range 100 {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatalf("Receive: got %v, want nil", err)
