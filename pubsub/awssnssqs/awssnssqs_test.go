@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -630,9 +631,7 @@ func testFIFOTopic(t *testing.T, kind topicKind) {
 
 			// Set the FIFO attributes.
 			attributes := make(map[string]string)
-			for k, v := range tt.harness.attributes {
-				attributes[k] = v
-			}
+			maps.Copy(attributes, tt.harness.attributes)
 			switch kind {
 			case topicKindSNS:
 				attributes[attributeKeyFifoTopic] = "true"

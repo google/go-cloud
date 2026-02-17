@@ -51,10 +51,7 @@ func Split(n int, opts *Options) []int {
 	// to [9, 1]; it could be [5, 5].
 	var batches []int
 	for n >= o.MinBatchSize && len(batches) < o.MaxHandlers {
-		b := o.MaxBatchSize
-		if b > n {
-			b = n
-		}
+		b := min(o.MaxBatchSize, n)
 		batches = append(batches, b)
 		n -= b
 	}

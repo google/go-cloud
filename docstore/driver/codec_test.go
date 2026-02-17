@@ -96,7 +96,7 @@ func TestEncode(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, test := range []struct {
-		in, want interface{}
+		in, want any
 	}{
 		{nil, nil},
 		{0, int64(0)},
@@ -109,43 +109,43 @@ func TestEncode(t *testing.T) {
 		{seven, int64(seven)},
 		{&seven, int64(seven)},
 		{[]byte{1, 2}, []byte{1, 2}},
-		{[2]byte{3, 4}, []interface{}{uint64(3), uint64(4)}},
+		{[2]byte{3, 4}, []any{uint64(3), uint64(4)}},
 		{[]int(nil), nil},
-		{[]int{}, []interface{}{}},
-		{[]int{1, 2}, []interface{}{int64(1), int64(2)}},
+		{[]int{}, []any{}},
+		{[]int{1, 2}, []any{int64(1), int64(2)}},
 		{
 			[][]string{{"a", "b"}, {"c", "d"}},
-			[]interface{}{
-				[]interface{}{"a", "b"},
-				[]interface{}{"c", "d"},
+			[]any{
+				[]any{"a", "b"},
+				[]any{"c", "d"},
 			},
 		},
-		{[...]int{1, 2}, []interface{}{int64(1), int64(2)}},
-		{[]interface{}{nil, false}, []interface{}{nil, false}},
+		{[...]int{1, 2}, []any{int64(1), int64(2)}},
+		{[]any{nil, false}, []any{nil, false}},
 		{map[string]int(nil), nil},
-		{map[string]int{}, map[string]interface{}{}},
+		{map[string]int{}, map[string]any{}},
 		{
 			map[string]int{"a": 1, "b": 2},
-			map[string]interface{}{"a": int64(1), "b": int64(2)},
+			map[string]any{"a": int64(1), "b": int64(2)},
 		},
 		{tm, tmb},
 		{ts, tsb},
 		{te{'A'}, "A"},
 		{special(17), 17},
 		{myString("x"), "x"},
-		{[]myString{"x"}, []interface{}{"x"}},
-		{map[myString]myString{"a": "x"}, map[string]interface{}{"a": "x"}},
+		{[]myString{"x"}, []any{"x"}},
+		{map[myString]myString{"a": "x"}, map[string]any{"a": "x"}},
 		{
 			map[int]bool{17: true},
-			map[string]interface{}{"17": true},
+			map[string]any{"17": true},
 		},
 		{
 			map[uint]bool{18: true},
-			map[string]interface{}{"18": true},
+			map[string]any{"18": true},
 		},
 		{
 			map[te]bool{{'B'}: true},
-			map[string]interface{}{"B": true},
+			map[string]any{"B": true},
 		},
 		{
 			MyStruct{
@@ -162,11 +162,11 @@ func TestEncode(t *testing.T) {
 				OmitEmpty: 4,
 				Rename:    5,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"A":         int64(1),
 				"B":         true,
-				"C":         []interface{}{"T"},
-				"D":         []interface{}{tmb},
+				"C":         []any{"T"},
+				"D":         []any{tmb},
 				"T":         tsb,
 				"E1":        "E1",
 				"E2":        "E2",
@@ -178,7 +178,7 @@ func TestEncode(t *testing.T) {
 		},
 		{
 			MyStruct{},
-			map[string]interface{}{
+			map[string]any{
 				"A":      int64(0),
 				"B":      nil,
 				"C":      nil,
@@ -214,13 +214,13 @@ func (*badTextMarshaler) UnmarshalText([]byte) error  { return errors.New("bad")
 func TestEncodeErrors(t *testing.T) {
 	for _, test := range []struct {
 		desc string
-		val  interface{}
+		val  any
 	}{
 		{"MarshalBinary fails", badBinaryMarshaler{}},
 		{"MarshalText fails", badTextMarshaler{}},
 		{"bad type", make(chan int)},
-		{"bad type in list", []interface{}{func() {}}},
-		{"bad type in map", map[string]interface{}{"a": func() {}}},
+		{"bad type in list", []any{func() {}}},
+		{"bad type in map", map[string]any{"a": func() {}}},
 		{"bad type in struct", &struct{ C chan int }{}},
 		{"bad map key type", map[float32]int{1: 1}},
 		{"MarshalText for map key fails", map[badTextMarshaler]int{{}: 1}},
@@ -235,7 +235,7 @@ func TestEncodeErrors(t *testing.T) {
 }
 
 type testEncoder struct {
-	val interface{}
+	val any
 }
 
 func (e *testEncoder) EncodeNil()            { e.val = nil }
@@ -247,8 +247,8 @@ func (e *testEncoder) EncodeFloat(x float64) { e.val = x }
 func (e *testEncoder) EncodeBytes(x []byte)  { e.val = x }
 
 var (
-	typeOfSpecial    = reflect.TypeOf(special(0))
-	typeOfBadSpecial = reflect.TypeOf(badSpecial(0))
+	typeOfSpecial    = reflect.TypeFor[special]()
+	typeOfBadSpecial = reflect.TypeFor[badSpecial]()
 )
 
 func (e *testEncoder) EncodeSpecial(v reflect.Value) (bool, error) {
@@ -265,26 +265,26 @@ func (e *testEncoder) ListIndex(int) { panic("impossible") }
 func (e *testEncoder) MapKey(string) { panic("impossible") }
 
 func (e *testEncoder) EncodeList(n int) Encoder {
-	s := make([]interface{}, n)
+	s := make([]any, n)
 	e.val = s
 	return &listEncoder{s: s}
 }
 
 func (e *testEncoder) EncodeMap(n int) Encoder {
-	m := make(map[string]interface{}, n)
+	m := make(map[string]any, n)
 	e.val = m
 	return &mapEncoder{m: m}
 }
 
 type listEncoder struct {
-	s []interface{}
+	s []any
 	testEncoder
 }
 
 func (e *listEncoder) ListIndex(i int) { e.s[i] = e.val }
 
 type mapEncoder struct {
-	m map[string]interface{}
+	m map[string]any
 	testEncoder
 }
 
@@ -308,12 +308,12 @@ func TestDecode(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		in         interface{} // pointer that will be set
-		val        interface{} // value to set it to
-		want       interface{}
+		in         any // pointer that will be set
+		val        any // value to set it to
+		want       any
 		exactMatch bool
 	}{
-		{new(interface{}), nil, nil, true},
+		{new(any), nil, nil, true},
 		{new(int), int64(7), int(7), true},
 		{new(uint8), uint64(250), uint8(250), true},
 		{new(bool), true, true, true},
@@ -322,47 +322,47 @@ func TestDecode(t *testing.T) {
 		{new(*int), int64(2), &two, true},
 		{new(*int), nil, (*int)(nil), true},
 		{new([]byte), []byte("foo"), []byte("foo"), true},
-		{new([]string), []interface{}{"a", "b"}, []string{"a", "b"}, true},
-		{new([]**bool), []interface{}{true, false}, []**bool{&ptru, &pfa}, true},
-		{&[1]int{1}, []interface{}{2}, [1]int{2}, true},
-		{&[2]int{1, 2}, []interface{}{3}, [2]int{3, 0}, true}, // zero extra elements
-		{&[]int{1, 2}, []interface{}{3}, []int{3}, true},      // truncate slice
+		{new([]string), []any{"a", "b"}, []string{"a", "b"}, true},
+		{new([]**bool), []any{true, false}, []**bool{&ptru, &pfa}, true},
+		{&[1]int{1}, []any{2}, [1]int{2}, true},
+		{&[2]int{1, 2}, []any{3}, [2]int{3, 0}, true}, // zero extra elements
+		{&[]int{1, 2}, []any{3}, []int{3}, true},      // truncate slice
 		{
 			// extend slice
 			func() *[]int { s := make([]int, 1, 2); return &s }(),
-			[]interface{}{5, 6},
+			[]any{5, 6},
 			[]int{5, 6},
 			true,
 		},
 		{
 			new(map[string]string),
-			map[string]interface{}{"a": "b"},
+			map[string]any{"a": "b"},
 			map[string]string{"a": "b"},
 			true,
 		},
 		{
 			new(map[int]bool),
-			map[string]interface{}{"17": true},
+			map[string]any{"17": true},
 			map[int]bool{17: true},
 			true,
 		},
 		{
 			new(map[te]bool),
-			map[string]interface{}{"B": true},
+			map[string]any{"B": true},
 			map[te]bool{{'B'}: true},
 			true,
 		},
 		{
-			new(map[interface{}]bool),
-			map[string]interface{}{"B": true},
-			map[interface{}]bool{"B": true},
+			new(map[any]bool),
+			map[string]any{"B": true},
+			map[any]bool{"B": true},
 			true,
 		},
 		{
 			new(map[string][]bool),
-			map[string]interface{}{
-				"a": []interface{}{true, false},
-				"b": []interface{}{false, true},
+			map[string]any{
+				"a": []any{true, false},
+				"b": []any{false, true},
 			},
 			map[string][]bool{
 				"a": {true, false},
@@ -372,27 +372,27 @@ func TestDecode(t *testing.T) {
 		},
 		{new(special), 17, special(17), true},
 		{new(myString), "x", myString("x"), true},
-		{new([]myString), []interface{}{"x"}, []myString{"x"}, true},
+		{new([]myString), []any{"x"}, []myString{"x"}, true},
 		{new(time.Time), tmb, tm, true},
 		{new(*time.Time), tmb, &tm, true},
 		{new(*tspb.Timestamp), tsb, ts, true},
-		{new([]time.Time), []interface{}{tmb}, []time.Time{tm}, true},
-		{new([]*time.Time), []interface{}{tmb}, []*time.Time{&tm}, true},
+		{new([]time.Time), []any{tmb}, []time.Time{tm}, true},
+		{new([]*time.Time), []any{tmb}, []*time.Time{&tm}, true},
 		{
 			new(map[myString]myString),
-			map[string]interface{}{"a": "x"},
+			map[string]any{"a": "x"},
 			map[myString]myString{"a": "x"},
 			true,
 		},
 		{
 			new(map[string]time.Time),
-			map[string]interface{}{"t": tmb},
+			map[string]any{"t": tmb},
 			map[string]time.Time{"t": tm},
 			true,
 		},
 		{
 			new(map[string]*time.Time),
-			map[string]interface{}{"t": tmb},
+			map[string]any{"t": tmb},
 			map[string]*time.Time{"t": &tm},
 			true,
 		},
@@ -401,11 +401,11 @@ func TestDecode(t *testing.T) {
 
 		{
 			&MyStruct{embed4: &embed4{}},
-			map[string]interface{}{
+			map[string]any{
 				"A":  int64(1),
 				"B":  true,
-				"C":  []interface{}{"T"},
-				"D":  []interface{}{tmb},
+				"C":  []any{"T"},
+				"D":  []any{tmb},
 				"T":  tsb,
 				"E1": "E1",
 				"E2": "E2",
@@ -423,11 +423,11 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			&MyStruct{embed4: &embed4{}},
-			map[string]interface{}{
+			map[string]any{
 				"a":  int64(1),
 				"b":  true,
-				"c":  []interface{}{"T"},
-				"d":  []interface{}{tmb},
+				"c":  []any{"T"},
+				"d":  []any{tmb},
 				"t":  tsb,
 				"e1": "E1",
 				"e2": "E2",
@@ -459,7 +459,7 @@ func TestDecode(t *testing.T) {
 func TestDecodeErrors(t *testing.T) {
 	for _, test := range []struct {
 		desc    string
-		in, val interface{}
+		in, val any
 	}{
 		{
 			"bad type",
@@ -469,27 +469,27 @@ func TestDecodeErrors(t *testing.T) {
 		{
 			"bad type in list",
 			new([]int),
-			[]interface{}{1, "foo"},
+			[]any{1, "foo"},
 		},
 		{
 			"array too short",
 			new([1]bool),
-			[]interface{}{true, false},
+			[]any{true, false},
 		},
 		{
 			"bad map key type",
-			new(map[float64]interface{}),
-			map[string]interface{}{"a": 1},
+			new(map[float64]any),
+			map[string]any{"a": 1},
 		},
 		{
 			"unknown struct field",
 			new(MyStruct),
-			map[string]interface{}{"bad": 1},
+			map[string]any{"bad": 1},
 		},
 		{
 			"nil embedded, unexported pointer to struct",
 			new(MyStruct),
-			map[string]interface{}{"E4": "E4"},
+			map[string]any{"E4": "E4"},
 		},
 		{
 			"int overflow",
@@ -539,32 +539,32 @@ func TestDecodeErrors(t *testing.T) {
 		{
 			"bad text unmarshal in map key",
 			new(map[badTextMarshaler]int),
-			map[string]interface{}{"a": 1},
+			map[string]any{"a": 1},
 		},
 		{
 			"bad int map key",
 			new(map[int]int),
-			map[string]interface{}{"a": 1},
+			map[string]any{"a": 1},
 		},
 		{
 			"overflow in int map key",
 			new(map[int8]int),
-			map[string]interface{}{"256": 1},
+			map[string]any{"256": 1},
 		},
 		{
 			"bad uint map key",
 			new(map[uint]int),
-			map[string]interface{}{"a": 1},
+			map[string]any{"a": 1},
 		},
 		{
 			"overflow in uint map key",
 			new(map[uint8]int),
-			map[string]interface{}{"256": 1},
+			map[string]any{"256": 1},
 		},
 		{
 			"case mismatch when decoding with exact match",
 			&MyStruct{embed4: &embed4{}},
-			map[string]interface{}{
+			map[string]any{
 				"a":  int64(1),
 				"b":  true,
 				"e1": "E1",
@@ -582,9 +582,9 @@ func TestDecodeErrors(t *testing.T) {
 
 func TestDecodeFail(t *testing.T) {
 	// Verify that failure to decode a value results in an error.
-	for _, in := range []interface{}{
-		new(interface{}), new(bool), new(string), new(int), new(uint), new(float32),
-		new([]byte), new([]int), new(map[string]interface{}),
+	for _, in := range []any{
+		new(any), new(bool), new(string), new(int), new(uint), new(float32),
+		new([]byte), new([]int), new(map[string]any),
 	} {
 		dec := &failDecoder{}
 		err := Decode(reflect.ValueOf(in).Elem(), dec)
@@ -595,7 +595,7 @@ func TestDecodeFail(t *testing.T) {
 }
 
 type testDecoder struct {
-	val        interface{} // assume encoded by testEncoder.
+	val        any // assume encoded by testEncoder.
 	exactMatch bool
 }
 
@@ -636,7 +636,7 @@ func (d testDecoder) AsFloat() (float64, bool) { x, ok := d.val.(float64); retur
 func (d testDecoder) AsBytes() ([]byte, bool)  { x, ok := d.val.([]byte); return x, ok }
 
 func (d testDecoder) ListLen() (int, bool) {
-	l, ok := d.val.([]interface{})
+	l, ok := d.val.([]any)
 	if !ok {
 		return 0, false
 	}
@@ -644,7 +644,7 @@ func (d testDecoder) ListLen() (int, bool) {
 }
 
 func (d testDecoder) DecodeList(f func(i int, vd Decoder) bool) {
-	for i, v := range d.val.([]interface{}) {
+	for i, v := range d.val.([]any) {
 		if !f(i, testDecoder{v, d.exactMatch}) {
 			break
 		}
@@ -652,25 +652,25 @@ func (d testDecoder) DecodeList(f func(i int, vd Decoder) bool) {
 }
 
 func (d testDecoder) MapLen() (int, bool) {
-	if m, ok := d.val.(map[string]interface{}); ok {
+	if m, ok := d.val.(map[string]any); ok {
 		return len(m), true
 	}
 	return 0, false
 }
 
 func (d testDecoder) DecodeMap(f func(key string, vd Decoder, exactMatch bool) bool) {
-	for k, v := range d.val.(map[string]interface{}) {
+	for k, v := range d.val.(map[string]any) {
 		if !f(k, testDecoder{v, d.exactMatch}, d.exactMatch) {
 			break
 		}
 	}
 }
 
-func (d testDecoder) AsInterface() (interface{}, error) {
+func (d testDecoder) AsInterface() (any, error) {
 	return d.val, nil
 }
 
-func (d testDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+func (d testDecoder) AsSpecial(v reflect.Value) (bool, any, error) {
 	switch v.Type() {
 	case typeOfSpecial:
 		return true, special(d.val.(int)), nil
@@ -684,17 +684,17 @@ func (d testDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 // All of failDecoder's methods return failure.
 type failDecoder struct{}
 
-func (failDecoder) String() string                                       { return "failDecoder" }
-func (failDecoder) AsNull() bool                                         { return false }
-func (failDecoder) AsBool() (bool, bool)                                 { return false, false }
-func (failDecoder) AsString() (string, bool)                             { return "", false }
-func (failDecoder) AsInt() (int64, bool)                                 { return 0, false }
-func (failDecoder) AsUint() (uint64, bool)                               { return 0, false }
-func (failDecoder) AsFloat() (float64, bool)                             { return 0, false }
-func (failDecoder) AsBytes() ([]byte, bool)                              { return nil, false }
-func (failDecoder) ListLen() (int, bool)                                 { return 0, false }
-func (failDecoder) DecodeList(func(i int, vd Decoder) bool)              { panic("impossible") }
-func (failDecoder) MapLen() (int, bool)                                  { return 0, false }
-func (failDecoder) DecodeMap(func(string, Decoder, bool) bool)           { panic("impossible") }
-func (failDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) { return false, nil, nil }
-func (failDecoder) AsInterface() (interface{}, error)                    { return nil, errors.New("fail") }
+func (failDecoder) String() string                               { return "failDecoder" }
+func (failDecoder) AsNull() bool                                 { return false }
+func (failDecoder) AsBool() (bool, bool)                         { return false, false }
+func (failDecoder) AsString() (string, bool)                     { return "", false }
+func (failDecoder) AsInt() (int64, bool)                         { return 0, false }
+func (failDecoder) AsUint() (uint64, bool)                       { return 0, false }
+func (failDecoder) AsFloat() (float64, bool)                     { return 0, false }
+func (failDecoder) AsBytes() ([]byte, bool)                      { return nil, false }
+func (failDecoder) ListLen() (int, bool)                         { return 0, false }
+func (failDecoder) DecodeList(func(i int, vd Decoder) bool)      { panic("impossible") }
+func (failDecoder) MapLen() (int, bool)                          { return 0, false }
+func (failDecoder) DecodeMap(func(string, Decoder, bool) bool)   { panic("impossible") }
+func (failDecoder) AsSpecial(v reflect.Value) (bool, any, error) { return false, nil, nil }
+func (failDecoder) AsInterface() (any, error)                    { return nil, errors.New("fail") }

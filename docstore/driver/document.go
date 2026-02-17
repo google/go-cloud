@@ -25,19 +25,19 @@ import (
 // A Document is a lightweight wrapper around either a map[string]interface{} or a
 // struct pointer. It provides operations to get and set fields and field paths.
 type Document struct {
-	Origin interface{}            // the argument to NewDocument
-	m      map[string]interface{} // nil if it's a *struct
-	s      reflect.Value          // the struct reflected
-	fields fields.List            // for structs
+	Origin any            // the argument to NewDocument
+	m      map[string]any // nil if it's a *struct
+	s      reflect.Value  // the struct reflected
+	fields fields.List    // for structs
 }
 
 // NewDocument creates a new document from doc, which must be a non-nil
 // map[string]interface{} or struct pointer.
-func NewDocument(doc interface{}) (Document, error) {
+func NewDocument(doc any) (Document, error) {
 	if doc == nil {
 		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "document cannot be nil")
 	}
-	if m, ok := doc.(map[string]interface{}); ok {
+	if m, ok := doc.(map[string]any); ok {
 		if m == nil {
 			return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "document map cannot be nil")
 		}
@@ -45,7 +45,7 @@ func NewDocument(doc interface{}) (Document, error) {
 	}
 	v := reflect.ValueOf(doc)
 	t := v.Type()
-	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Struct {
+	if t.Kind() != reflect.Pointer || t.Elem().Kind() != reflect.Struct {
 		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "expecting *struct or map[string]interface{}, got %s", t)
 	}
 	t = t.Elem()
@@ -60,7 +60,7 @@ func NewDocument(doc interface{}) (Document, error) {
 }
 
 // GetField returns the value of the named document field.
-func (d Document) GetField(field string) (interface{}, error) {
+func (d Document) GetField(field string) (any, error) {
 	if d.m != nil {
 		x, ok := d.m[field]
 		if !ok {
@@ -85,7 +85,7 @@ func (d Document) getDocument(fp []string, create bool) (Document, error) {
 	if err != nil {
 		if create && gcerrors.Code(err) == gcerrors.NotFound {
 			// TODO(jba): create the right type for the struct field.
-			x = map[string]interface{}{}
+			x = map[string]any{}
 			if err := d.SetField(fp[0], x); err != nil {
 				return Document{}, err
 			}
@@ -101,7 +101,7 @@ func (d Document) getDocument(fp []string, create bool) (Document, error) {
 }
 
 // Get returns the value of the given field path in the document.
-func (d Document) Get(fp []string) (interface{}, error) {
+func (d Document) Get(fp []string) (any, error) {
 	d2, err := d.getDocument(fp[:len(fp)-1], false)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (d Document) structField(name string) (reflect.Value, error) {
 
 // Set sets the value of the field path in the document.
 // This creates sub-maps as necessary, if possible.
-func (d Document) Set(fp []string, val interface{}) error {
+func (d Document) Set(fp []string, val any) error {
 	d2, err := d.getDocument(fp[:len(fp)-1], true)
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (d Document) Set(fp []string, val interface{}) error {
 }
 
 // SetField sets the field to value in the document.
-func (d Document) SetField(field string, value interface{}) error {
+func (d Document) SetField(field string, value any) error {
 	if d.m != nil {
 		d.m[field] = value
 		return nil

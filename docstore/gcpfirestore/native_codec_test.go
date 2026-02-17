@@ -73,7 +73,7 @@ func newNativeCodec() (*nativeCodec, error) {
 // Intercept all unary (non-streaming) RPCs. The only one we should ever get is a Commit, for
 // the Create call in Encode.
 // If this completes successfully, the encoded *pb.Document will be in c.doc.
-func (c *nativeCodec) interceptUnary(_ context.Context, method string, req, res interface{}, _ *grpc.ClientConn, _ grpc.UnaryInvoker, _ ...grpc.CallOption) error {
+func (c *nativeCodec) interceptUnary(_ context.Context, method string, req, res any, _ *grpc.ClientConn, _ grpc.UnaryInvoker, _ ...grpc.CallOption) error {
 	c.doc = req.(*pb.CommitRequest).Writes[0].GetUpdate()
 	res.(*pb.CommitResponse).WriteResults = []*pb.WriteResult{{}}
 	return nil
@@ -92,7 +92,7 @@ type clientStream struct {
 	doc *pb.Document
 }
 
-func (cs *clientStream) RecvMsg(m interface{}) error {
+func (cs *clientStream) RecvMsg(m any) error {
 	if cs.doc != nil {
 		cs.doc.CreateTime = &tspb.Timestamp{}
 		cs.doc.UpdateTime = &tspb.Timestamp{}
@@ -104,13 +104,13 @@ func (cs *clientStream) RecvMsg(m interface{}) error {
 }
 
 func (cs *clientStream) Context() context.Context     { return cs.ctx }
-func (cs *clientStream) SendMsg(m interface{}) error  { return nil }
+func (cs *clientStream) SendMsg(m any) error          { return nil }
 func (cs *clientStream) Header() (metadata.MD, error) { return nil, nil }
 func (cs *clientStream) Trailer() metadata.MD         { return nil }
 func (cs *clientStream) CloseSend() error             { return nil }
 
 // Encode a Go value into a Firestore proto document.
-func (c *nativeCodec) Encode(x interface{}) (*pb.Document, error) {
+func (c *nativeCodec) Encode(x any) (*pb.Document, error) {
 	_, err := c.client.Collection("C").Doc("D").Create(context.Background(), x)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (c *nativeCodec) Encode(x interface{}) (*pb.Document, error) {
 }
 
 // Decode value, which must be a *pb.Document, into dest.
-func (c *nativeCodec) Decode(value *pb.Document, dest interface{}) error {
+func (c *nativeCodec) Decode(value *pb.Document, dest any) error {
 	c.doc = value
 	docsnap, err := c.client.Collection("C").Doc("D").Get(context.Background())
 	if err != nil {

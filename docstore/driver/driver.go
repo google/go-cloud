@@ -37,7 +37,7 @@ type Collection interface {
 	//
 	// The returned key should not be encoded with the driver's codec; it should
 	// be the user-supplied Go value.
-	Key(Document) (interface{}, error)
+	Key(Document) (any, error)
 
 	// RevisionField returns the name of the field used to hold revisions.
 	// If the empty string is returned, docstore.DefaultRevisionField will be used.
@@ -71,20 +71,20 @@ type Collection interface {
 	QueryPlan(*Query) (string, error)
 
 	// RevisionToBytes converts a revision to a byte slice.
-	RevisionToBytes(interface{}) ([]byte, error)
+	RevisionToBytes(any) ([]byte, error)
 
 	// BytesToRevision converts a []byte to a revision.
-	BytesToRevision([]byte) (interface{}, error)
+	BytesToRevision([]byte) (any, error)
 
 	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	As(i interface{}) bool
+	As(i any) bool
 
 	// ErrorAs allows drivers to expose driver-specific types for returned
 	// errors.
 	//
 	// See https://gocloud.dev/concepts/as/ for background information.
-	ErrorAs(err error, i interface{}) bool
+	ErrorAs(err error, i any) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
@@ -126,13 +126,13 @@ const (
 //go:generate stringer -type=ActionKind
 
 type Action struct {
-	Kind          ActionKind  // the kind of action
-	Doc           Document    // the document on which to perform the action
-	Key           interface{} // the document key returned by Collection.Key, to avoid recomputing it
-	FieldPaths    [][]string  // field paths to retrieve, for Get only
-	Mods          []Mod       // modifications to make, for Update only
-	Index         int         // the index of the action in the original action list
-	InAtomicWrite bool        // if this action is a part of transaction
+	Kind          ActionKind // the kind of action
+	Doc           Document   // the document on which to perform the action
+	Key           any        // the document key returned by Collection.Key, to avoid recomputing it
+	FieldPaths    [][]string // field paths to retrieve, for Get only
+	Mods          []Mod      // modifications to make, for Update only
+	Index         int        // the index of the action in the original action list
+	InAtomicWrite bool       // if this action is a part of transaction
 }
 
 // A Mod is a modification to a field path in a document.
@@ -141,12 +141,12 @@ type Action struct {
 // - delete the field path (when Value is nil)
 type Mod struct {
 	FieldPath []string
-	Value     interface{}
+	Value     any
 }
 
 // IncOp is a value representing an increment modification.
 type IncOp struct {
-	Amount interface{}
+	Amount any
 }
 
 // An ActionListError contains all the errors encountered from a call to RunActions,
@@ -177,7 +177,7 @@ type RunActionsOptions struct {
 	// BeforeDo is a callback that must be called once, sequentially, before each one
 	// or group of the underlying service's actions is executed. asFunc allows
 	// drivers to expose driver-specific types.
-	BeforeDo func(asFunc func(interface{}) bool) error
+	BeforeDo func(asFunc func(any) bool) error
 }
 
 // A Query defines a query operation to find documents within a collection based
@@ -210,7 +210,7 @@ type Query struct {
 	// BeforeQuery is a callback that must be called exactly once before the
 	// underlying service's query is executed. asFunc allows drivers to expose
 	// driver-specific types.
-	BeforeQuery func(asFunc func(interface{}) bool) error
+	BeforeQuery func(asFunc func(any) bool) error
 }
 
 // A Filter defines a filter expression used to filter the query result.
@@ -218,9 +218,9 @@ type Query struct {
 // If the value is a string type, the filter uses UTF-8 string comparison.
 // TODO(#1762): support comparison of other types.
 type Filter struct {
-	FieldPath []string    // the field path to filter
-	Op        string      // the operation, supports `=`, `>`, `>=`, `<`, `<=`, `in`, `not-in`
-	Value     interface{} // the value to compare using the operation
+	FieldPath []string // the field path to filter
+	Op        string   // the operation, supports `=`, `>`, `>=`, `<`, `<=`, `in`, `not-in`
+	Value     any      // the value to compare using the operation
 }
 
 // A DocumentIterator iterates through the results (for Get action).
@@ -237,7 +237,7 @@ type DocumentIterator interface {
 
 	// As converts i to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
-	As(i interface{}) bool
+	As(i any) bool
 }
 
 // EqualOp is the name of the equality operator.

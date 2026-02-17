@@ -56,7 +56,7 @@ func TestPlanQuery(t *testing.T) {
 		}
 		one := &dyn2Types.AttributeValueMemberN{Value: "1"}
 		m := map[string]dyn2Types.AttributeValue{}
-		for i := 0; i < n; i++ {
+		for i := range n {
 			m[fmt.Sprintf(":%d", i)] = one
 		}
 		return m
@@ -81,7 +81,7 @@ func TestPlanQuery(t *testing.T) {
 		globalIndexSortKey      string   // if non-empty, the global index  has this sort key
 		globalIndexFields       []string // the fields projected into the global index
 		query                   *driver.Query
-		want                    interface{} // either a ScanInput or a QueryInput
+		want                    any // either a ScanInput or a QueryInput
 		wantPlan                string
 	}{
 		{
@@ -355,7 +355,7 @@ func TestPlanQuery(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var got interface{}
+			var got any
 			switch tw := test.want.(type) {
 			case *dyn.ScanInput:
 				got = gotRunner.scanIn
@@ -433,7 +433,6 @@ func indexProjection(fields []string) *dyn2Types.Projection {
 	}
 	proj := &dyn2Types.Projection{ProjectionType: ptype}
 	for _, f := range fields {
-		f := f
 		proj.NonKeyAttributes = append(proj.NonKeyAttributes, f)
 	}
 	return proj
@@ -511,7 +510,7 @@ func TestGlobalFieldsIncluded(t *testing.T) {
 func TestCompare(t *testing.T) {
 	tm := time.Now()
 	for _, test := range []struct {
-		a, b interface{}
+		a, b any
 		want int
 	}{
 		{1, 1, 0},
@@ -546,13 +545,13 @@ func TestCopyTopLevel(t *testing.T) {
 	}
 
 	s := &S{A: 1, B: 2, E: E{C: 3}}
-	m := map[string]interface{}{"A": 1, "B": 2, "C": 3}
+	m := map[string]any{"A": 1, "B": 2, "C": 3}
 	for _, test := range []struct {
-		dest, src interface{}
-		want      interface{}
+		dest, src any
+		want      any
 	}{
 		{
-			dest: map[string]interface{}{},
+			dest: map[string]any{},
 			src:  m,
 			want: m,
 		},
@@ -562,7 +561,7 @@ func TestCopyTopLevel(t *testing.T) {
 			want: s,
 		},
 		{
-			dest: map[string]interface{}{},
+			dest: map[string]any{},
 			src:  s,
 			want: m,
 		},
@@ -592,7 +591,7 @@ func Test_documentIterator_Next(t *testing.T) {
 		limit  int
 		count  int
 		last   map[string]dyn2Types.AttributeValue
-		asFunc func(i interface{}) bool
+		asFunc func(i any) bool
 	}
 	type args struct {
 		ctx context.Context
@@ -619,7 +618,7 @@ func Test_documentIterator_Next(t *testing.T) {
 			},
 			args: args{
 				ctx: context.Background(),
-				doc: drivertest.MustDocument(map[string]interface{}{}),
+				doc: drivertest.MustDocument(map[string]any{}),
 			},
 			wantErr: false,
 		},
@@ -638,7 +637,7 @@ func Test_documentIterator_Next(t *testing.T) {
 			},
 			args: args{
 				ctx: context.Background(),
-				doc: drivertest.MustDocument(map[string]interface{}{}),
+				doc: drivertest.MustDocument(map[string]any{}),
 			},
 			wantErr: true,
 		},
@@ -648,7 +647,7 @@ func Test_documentIterator_Next(t *testing.T) {
 				qr: &queryRunner{
 					scanIn: &dyn.ScanInput{},
 					// hack to return error from run
-					beforeRun: func(asFunc func(i interface{}) bool) error { return errors.New("invalid") },
+					beforeRun: func(asFunc func(i any) bool) error { return errors.New("invalid") },
 				},
 				items:  []map[string]dyn2Types.AttributeValue{{"key": &dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{"key": &dyn2Types.AttributeValueMemberS{Value: "value"}}}}},
 				curr:   1,
@@ -659,7 +658,7 @@ func Test_documentIterator_Next(t *testing.T) {
 			},
 			args: args{
 				ctx: context.Background(),
-				doc: drivertest.MustDocument(map[string]interface{}{}),
+				doc: drivertest.MustDocument(map[string]any{}),
 			},
 			wantErr: true,
 		},

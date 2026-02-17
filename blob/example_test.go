@@ -199,7 +199,7 @@ func ExampleBucket_List() {
 
 	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud Development Kit"), nil); err != nil {
 			log.Fatal(err)
 		}
@@ -328,7 +328,7 @@ func ExampleBucket_ListPage() {
 
 	// Create some blob objects for listing: "foo[0..7].txt".
 	ctx := context.Background()
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud Development Kit"), nil); err != nil {
 			log.Fatal(err)
 		}

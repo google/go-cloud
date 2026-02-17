@@ -108,7 +108,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		wg.Add(1)
 		go func() {
 			mr, err := sub.Receive(ctx)
@@ -141,7 +141,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	// of this.
 	n := 1000
 	var ms []*driver.Message
-	for i := 0; i < n; i++ {
+	for i := range n {
 		ms = append(ms, &driver.Message{AckID: i})
 	}
 	ds := &ackingDriverSub{
@@ -150,7 +150,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 			mu.Lock()
 			defer mu.Unlock()
 			sentAckBatches = append(sentAckBatches, ackIDs)
-			for i := 0; i < len(ackIDs); i++ {
+			for range ackIDs {
 				wg.Done()
 			}
 			return nil
@@ -169,7 +169,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 		mr.Ack()
 	}
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for range n {
 		go recv()
 	}
 	wg.Wait()
@@ -256,7 +256,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 	var mu sync.Mutex
 	panics := 0
 	var wg sync.WaitGroup
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

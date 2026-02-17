@@ -218,7 +218,7 @@ func TestVariable_Latest(t *testing.T) {
 	// Call Latest concurrently. There's still no value.
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
 			cancel()
@@ -248,7 +248,7 @@ func TestVariable_Latest(t *testing.T) {
 	// Call Latest concurrently, only exiting each goroutine when they
 	// see the content1 value.
 	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			for {
 				val, err := v.Latest(ctx)
@@ -280,7 +280,7 @@ func TestVariable_Latest(t *testing.T) {
 	// Call Latest concurrently, only exiting each goroutine when they
 	// see the content2 value.
 	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			for {
 				val, err := v.Latest(ctx)
@@ -308,7 +308,7 @@ func TestVariable_Latest(t *testing.T) {
 	// Call Latest concurrently. The test will be flaky if some of them
 	// start getting errors.
 	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
+	for range numGoroutines {
 		go func() {
 			val, err := v.Latest(ctx)
 			if err != nil {

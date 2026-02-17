@@ -57,11 +57,11 @@ func SplitActions(actions []*Action, split func(a, b *Action) bool) [][]*Action 
 // gets that must happen after the writes, and gets that can happen concurrently with the writes.
 func GroupActions(actions []*Action) (beforeGets, getList, writeList, writesTxList, afterGets []*Action) {
 	// maps from key to action
-	bgets := map[interface{}]*Action{}
-	agets := map[interface{}]*Action{}
-	cgets := map[interface{}]*Action{}
-	writes := map[interface{}]*Action{}
-	writesTx := map[interface{}]*Action{}
+	bgets := map[any]*Action{}
+	agets := map[any]*Action{}
+	cgets := map[any]*Action{}
+	writes := map[any]*Action{}
+	writesTx := map[any]*Action{}
 	var nilkeys []*Action
 	for _, a := range actions {
 		if a.Key == nil {
@@ -92,7 +92,7 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, writesTxLi
 		}
 	}
 
-	vals := func(m map[interface{}]*Action) []*Action {
+	vals := func(m map[any]*Action) []*Action {
 		var as []*Action
 		for _, v := range m {
 			as = append(as, v)
@@ -108,10 +108,10 @@ func GroupActions(actions []*Action) (beforeGets, getList, writeList, writesTxLi
 // AsFunc creates and returns an "as function" that behaves as follows:
 // If its argument is a pointer to the same type as val, the argument is set to val
 // and the function returns true. Otherwise, the function returns false.
-func AsFunc(val interface{}) func(interface{}) bool {
+func AsFunc(val any) func(any) bool {
 	rval := reflect.ValueOf(val)
 	wantType := reflect.PtrTo(rval.Type())
-	return func(i interface{}) bool {
+	return func(i any) bool {
 		if i == nil {
 			return false
 		}

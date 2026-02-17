@@ -76,18 +76,18 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{sess: sess, closer: done}, nil
 }
 
-func (*harness) BeforeDoTypes() []interface{} {
-	return []interface{}{
+func (*harness) BeforeDoTypes() []any {
+	return []any{
 		&dyn.BatchGetItemInput{}, &dyn.TransactWriteItemsInput{},
 		&dyn.PutItemInput{}, &dyn.DeleteItemInput{}, &dyn.UpdateItemInput{},
 	}
 }
 
-func (*harness) BeforeQueryTypes() []interface{} {
-	return []interface{}{&dyn.QueryInput{}, &dyn.ScanInput{}}
+func (*harness) BeforeQueryTypes() []any {
+	return []any{&dyn.QueryInput{}, &dyn.ScanInput{}}
 }
 
-func (*harness) RevisionsEqual(rev1, rev2 interface{}) bool {
+func (*harness) RevisionsEqual(rev1, rev2 any) bool {
 	return rev1 == rev2
 }
 
@@ -107,7 +107,7 @@ func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKi
 		// running on global secondary index and it doesn't support ConsistentRead.
 		return newCollection(dyn.NewFromConfig(h.sess), collectionName2, "Game", "Player", &Options{
 			AllowScans:       true,
-			RunQueryFallback: InMemorySortFallback(func() interface{} { return new(drivertest.HighScore) }),
+			RunQueryFallback: InMemorySortFallback(func() any { return new(drivertest.HighScore) }),
 		})
 	case drivertest.AltRev:
 		return newCollection(dyn.NewFromConfig(h.sess), collectionName1, drivertest.KeyField, "",
@@ -156,8 +156,8 @@ func (it *highScoreSliceIterator) Next(ctx context.Context, doc driver.Document)
 	return nil
 }
 
-func (*highScoreSliceIterator) Stop()               {}
-func (*highScoreSliceIterator) As(interface{}) bool { return false }
+func (*highScoreSliceIterator) Stop()       {}
+func (*highScoreSliceIterator) As(any) bool { return false }
 
 type verifyAs struct{}
 

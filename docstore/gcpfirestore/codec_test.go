@@ -64,12 +64,12 @@ func TestCodecSpecial(t *testing.T) {
 	}
 
 	// Test type-blind decoding.
-	gotmap := map[string]interface{}{}
+	gotmap := map[string]any{}
 	gotmapdoc := drivertest.MustDocument(gotmap)
 	if err := decodeDoc(enc, gotmapdoc, nameField, docstore.DefaultRevisionField); err != nil {
 		t.Fatal(err)
 	}
-	wantmap := map[string]interface{}{
+	wantmap := map[string]any{
 		"Name": "name",
 		"T":    in.T,
 		"TS":   in.T, // timestamps always decode as time.Time

@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 
@@ -155,10 +156,8 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 	if len(parts) < 4 {
 		return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
 	}
-	for _, part := range parts {
-		if part == "" {
-			return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
-		}
+	if slices.Contains(parts, "") {
+		return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
 	}
 	return parts[0] + ":" + parts[1] + ":" + parts[2], parts[3], nil
 }

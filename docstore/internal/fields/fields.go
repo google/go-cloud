@@ -77,7 +77,7 @@ type Field struct {
 	NameFromTag bool         // did Name come from a tag?
 	Type        reflect.Type // field type
 	Index       []int        // index sequence, for reflect.Value.FieldByIndex
-	ParsedTag   interface{}  // third return value of the parseTag function
+	ParsedTag   any          // third return value of the parseTag function
 
 	nameBytes []byte
 	equalFold func(s, t []byte) bool
@@ -86,7 +86,7 @@ type Field struct {
 // ParseTagFunc is a function that accepts a struct tag and returns four values: an alternative name for the field
 // extracted from the tag, a boolean saying whether to keep the field or ignore  it, additional data that is stored
 // with the field information to avoid having to parse the tag again, and an error.
-type ParseTagFunc func(reflect.StructTag) (name string, keep bool, other interface{}, err error)
+type ParseTagFunc func(reflect.StructTag) (name string, keep bool, other any, err error)
 
 // ValidateFunc is a function that accepts a reflect.Type and returns an error if the struct type is invalid in any
 // way.
@@ -120,7 +120,7 @@ type Cache struct {
 // are of an appropriate type.
 func NewCache(parseTag ParseTagFunc, validate ValidateFunc, leafTypes LeafTypesFunc) *Cache {
 	if parseTag == nil {
-		parseTag = func(reflect.StructTag) (string, bool, interface{}, error) {
+		parseTag = func(reflect.StructTag) (string, bool, any, error) {
 			return "", true, nil, nil
 		}
 	}
@@ -350,7 +350,7 @@ func (c *Cache) listFields(t reflect.Type) ([]Field, error) {
 				if f.Anonymous {
 					// Anonymous field of type T or *T.
 					ntyp = f.Type
-					if ntyp.Kind() == reflect.Ptr {
+					if ntyp.Kind() == reflect.Pointer {
 						ntyp = ntyp.Elem()
 					}
 				}
@@ -393,7 +393,7 @@ func (c *Cache) listFields(t reflect.Type) ([]Field, error) {
 	return fields, nil
 }
 
-func newField(f reflect.StructField, tagName string, other interface{}, index []int, i int) Field {
+func newField(f reflect.StructField, tagName string, other any, index []int, i int) Field {
 	name := tagName
 	if name == "" {
 		name = f.Name

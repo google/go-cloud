@@ -39,7 +39,7 @@ func TestCompareTimes(t *testing.T) {
 }
 
 func TestCompareNumbers(t *testing.T) {
-	check := func(n1, n2 interface{}, want int) {
+	check := func(n1, n2 any, want int) {
 		t.Helper()
 		got, err := CompareNumbers(n1, n2)
 		if err != nil {
@@ -51,7 +51,7 @@ func TestCompareNumbers(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		in1, in2 interface{}
+		in1, in2 any
 		want     int
 	}{
 		// simple cases

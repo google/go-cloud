@@ -552,7 +552,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 	ms := make([]*driver.Message, 0, len(resp.ReceivedMessages))
 	for _, rm := range resp.ReceivedMessages {
-		rm := rm
 		rmm := rm.Message
 		m := &driver.Message{
 			LoggableID: rmm.MessageId,

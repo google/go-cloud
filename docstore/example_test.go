@@ -33,7 +33,7 @@ import (
 type Player struct {
 	Name             string
 	Score            int
-	DocstoreRevision interface{}
+	DocstoreRevision any
 }
 
 func ExampleCollection_Actions_bulkWrite() {
@@ -155,7 +155,7 @@ func ExampleCollection_ErrorAs() {
 	}
 	defer coll.Close()
 
-	doc := map[string]interface{}{"_id": "a"}
+	doc := map[string]any{"_id": "a"}
 	if err := coll.Create(ctx, doc); err != nil {
 		var aerr smithy.APIError
 		if coll.ErrorAs(err, &aerr) {

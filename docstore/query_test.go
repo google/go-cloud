@@ -38,7 +38,7 @@ func TestQueryValidFilter(t *testing.T) {
 			t.Errorf("op %s: got %s, want InvalidArgument", op, got)
 		}
 	}
-	for _, v := range []interface{}{nil, 5 + 2i, []byte("x"), func() {}, []int{}, map[string]bool{}} {
+	for _, v := range []any{nil, 5 + 2i, []byte("x"), func() {}, []int{}, map[string]bool{}} {
 		q := Query{dq: &driver.Query{}}
 		q.Where("a", "=", v)
 		if got := gcerrors.Code(q.err); got != gcerrors.InvalidArgument {

@@ -114,8 +114,8 @@ func AssetDir(name string) ([]string, error) {
 	node := _bintree
 	if len(name) != 0 {
 		cannonicalName := strings.Replace(name, "\\", "/", -1)
-		pathList := strings.Split(cannonicalName, "/")
-		for _, p := range pathList {
+		pathList := strings.SplitSeq(cannonicalName, "/")
+		for p := range pathList {
 			node = node.Children[p]
 			if node == nil {
 				return nil, fmt.Errorf("Asset %s not found", name)

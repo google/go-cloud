@@ -148,12 +148,12 @@ func newCollection(db *dyn.Client, tableName, partitionKey, sortKey string, opts
 }
 
 // Key returns a two-element array with the partition key and sort key, if any.
-func (c *collection) Key(doc driver.Document) (interface{}, error) {
+func (c *collection) Key(doc driver.Document) (any, error) {
 	pkey, err := doc.GetField(c.partitionKey)
 	if err != nil || pkey == nil || driver.IsEmptyValue(reflect.ValueOf(pkey)) {
 		return nil, nil // missing key is not an error
 	}
-	keys := [2]interface{}{pkey}
+	keys := [2]any{pkey}
 	if c.sortKey != "" {
 		keys[1], _ = doc.GetField(c.sortKey) // ignore error since keys[1] is nil in that case
 	}
@@ -182,8 +182,7 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs
 	t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
 	for _, group := range driver.GroupByFieldPath(actions) {
 		n := len(group) / batchSize
-		for i := 0; i < n; i++ {
-			i := i
+		for i := range n {
 			t.Acquire()
 			go func(group []*driver.Action) {
 				defer t.Release()
@@ -268,7 +267,7 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 	am := mapActionIndices(gets, start, end)
 	for _, item := range out.Responses[c.table] {
 		if item != nil {
-			key := map[string]interface{}{c.partitionKey: nil}
+			key := map[string]any{c.partitionKey: nil}
 			if c.sortKey != "" {
 				key[c.sortKey] = nil
 			}
@@ -296,8 +295,8 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 	}
 }
 
-func mapActionIndices(actions []*driver.Action, start, end int) map[interface{}]int {
-	m := make(map[interface{}]int)
+func mapActionIndices(actions []*driver.Action, start, end int) map[any]int {
+	m := make(map[any]int)
 	for i := start; i <= end; i++ {
 		m[actions[i].Key] = i
 	}
@@ -318,7 +317,6 @@ func (c *collection) runWrites(ctx context.Context, writes []*driver.Action, err
 
 	t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
 	for _, op := range ops {
-		op := op
 		t.Acquire()
 		go func() {
 			defer t.Release()
@@ -669,7 +667,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 	}
 
 	if opts.BeforeDo != nil {
-		asFunc := func(i interface{}) bool {
+		asFunc := func(i any) bool {
 			p, ok := i.(**dyn.TransactWriteItemsInput)
 			if !ok {
 				return false
@@ -692,7 +690,7 @@ func (c *collection) transactWrite(ctx context.Context, actions []*driver.Action
 }
 
 // RevisionToBytes implements driver.RevisionToBytes.
-func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
+func (c *collection) RevisionToBytes(rev any) ([]byte, error) {
 	s, ok := rev.(string)
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a string", rev)
@@ -701,11 +699,11 @@ func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 }
 
 // BytesToRevision implements driver.BytesToRevision.
-func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
+func (c *collection) BytesToRevision(b []byte) (any, error) {
 	return string(b), nil
 }
 
-func (c *collection) As(i interface{}) bool {
+func (c *collection) As(i any) bool {
 	p, ok := i.(**dyn.Client)
 	if !ok {
 		return false
@@ -715,7 +713,7 @@ func (c *collection) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Collection.ErrorAs.
-func (c *collection) ErrorAs(err error, i interface{}) bool {
+func (c *collection) ErrorAs(err error, i any) bool {
 	e, ok := err.(*smithy.OperationError)
 	if !ok {
 		return false

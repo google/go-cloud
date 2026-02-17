@@ -327,7 +327,7 @@ func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batche
 		}
 		return nil
 	}
-	return batcher.New(reflect.TypeOf(&driver.Message{}), opts, handler)
+	return batcher.New(reflect.TypeFor[*driver.Message](), opts, handler)
 }
 
 // newTopic makes a pubsub.Topic from a driver.Topic.
@@ -457,11 +457,9 @@ func (s *Subscription) updateBatchSize() int {
 		// Update s.runningBatchSize based on throughput since our last time here,
 		// as measured by the ratio of the number of messages returned to elapsed
 		// time.
-		elapsed := now.Sub(s.throughputStart)
-		if elapsed < 100*time.Millisecond {
+		elapsed := max(now.Sub(s.throughputStart),
 			// Avoid divide-by-zero and huge numbers.
-			elapsed = 100 * time.Millisecond
-		}
+			100*time.Millisecond)
 		msgsPerSec := float64(s.throughputCount) / elapsed.Seconds()
 
 		// The "ideal" batch size is how many messages we'd need in the queue to
@@ -800,7 +798,7 @@ func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription,
 		}
 		return err
 	}
-	return batcher.New(reflect.TypeOf([]*driver.AckInfo{}).Elem(), opts, handler)
+	return batcher.New(reflect.TypeFor[[]*driver.AckInfo]().Elem(), opts, handler)
 }
 
 type errorCoder interface {

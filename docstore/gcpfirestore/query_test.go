@@ -143,7 +143,7 @@ func TestSplitFilters(t *testing.T) {
 }
 
 func TestEvaluateFilter(t *testing.T) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"i":  32,
 		"f":  5.5,
 		"f2": 5.0,
@@ -155,7 +155,7 @@ func TestEvaluateFilter(t *testing.T) {
 	doc := drivertest.MustDocument(m)
 	for _, test := range []struct {
 		field, op string
-		value     interface{}
+		value     any
 		want      bool
 	}{
 		// Firestore compares numbers to each other ignoring type (int vs. float).

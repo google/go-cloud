@@ -231,7 +231,7 @@ func newCollection(client *vkit.Client, collResourceID, nameField string, nameFu
 
 // Key returns the document key, if present. This is either the value of the field
 // called c.nameField, or the result of calling c.nameFunc.
-func (c *collection) Key(doc driver.Document) (interface{}, error) {
+func (c *collection) Key(doc driver.Document) (any, error) {
 	if c.nameField != "" {
 		name, err := doc.GetField(c.nameField)
 		vn := reflect.ValueOf(name)
@@ -272,7 +272,6 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, o
 	c.runGets(ctx, beforeGets, errs, opts)
 	t := driver.NewThrottle(c.opts.MaxOutstandingActionRPCs)
 	for _, call := range calls {
-		call := call
 		t.Acquire()
 		go func() {
 			defer t.Release()
@@ -794,7 +793,7 @@ func withResourceHeader(ctx context.Context, resource string) context.Context {
 }
 
 // RevisionToBytes implements driver.RevisionToBytes.
-func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
+func (c *collection) RevisionToBytes(rev any) ([]byte, error) {
 	r, ok := rev.(*tspb.Timestamp)
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "revision %v of type %[1]T is not a proto Timestamp", rev)
@@ -803,7 +802,7 @@ func (c *collection) RevisionToBytes(rev interface{}) ([]byte, error) {
 }
 
 // BytesToRevision implements driver.BytesToRevision.
-func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
+func (c *collection) BytesToRevision(b []byte) (any, error) {
 	var ts tspb.Timestamp
 	if err := proto.Unmarshal(b, &ts); err != nil {
 		return nil, err
@@ -811,7 +810,7 @@ func (c *collection) BytesToRevision(b []byte) (interface{}, error) {
 	return &ts, nil
 }
 
-func (c *collection) As(i interface{}) bool {
+func (c *collection) As(i any) bool {
 	p, ok := i.(**vkit.Client)
 	if !ok {
 		return false
@@ -821,7 +820,7 @@ func (c *collection) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Collection.ErrorAs.
-func (c *collection) ErrorAs(err error, i interface{}) bool {
+func (c *collection) ErrorAs(err error, i any) bool {
 	s, ok := status.FromError(err)
 	if !ok {
 		return false

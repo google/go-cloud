@@ -49,7 +49,7 @@ func TestEncodeValue(t *testing.T) {
 	var nullptr *int
 
 	for _, test := range []struct {
-		in   interface{}
+		in   any
 		want dyn2Types.AttributeValue
 	}{
 		// null
@@ -74,7 +74,7 @@ func TestEncodeValue(t *testing.T) {
 		{[]int{}, &dyn2Types.AttributeValueMemberL{Value: []dyn2Types.AttributeValue{}}},
 		{[]int{1, 2}, avl(avn("1"), avn("2"))},
 		{[...]int{1, 2}, avl(avn("1"), avn("2"))},
-		{[]interface{}{nil, false}, avl(nullValue, &dyn2Types.AttributeValueMemberBOOL{Value: false})},
+		{[]any{nil, false}, avl(nullValue, &dyn2Types.AttributeValueMemberBOOL{Value: false})},
 		// map
 		{map[string]int(nil), nullValue},
 		{map[string]int{}, &dyn2Types.AttributeValueMemberM{Value: map[string]dyn2Types.AttributeValue{}}},
@@ -105,7 +105,7 @@ func TestDecodeValue(t *testing.T) {
 
 	for _, test := range []struct {
 		in   dyn2Types.AttributeValue
-		want interface{}
+		want any
 	}{
 		// null
 		// {nullValue, nil}, // cant reflect new, how best to test?
@@ -160,7 +160,7 @@ func TestDecodeValue(t *testing.T) {
 func TestDecodeErrorOnUnsupported(t *testing.T) {
 	for _, tc := range []struct {
 		in  dyn2Types.AttributeValue
-		out interface{}
+		out any
 	}{
 		{&dyn2Types.AttributeValueMemberSS{Value: []string{"foo", "bar"}}, []string{}},
 		{&dyn2Types.AttributeValueMemberNS{Value: []string{"1.1", "-2.2", "3.3"}}, []float64{}},
@@ -179,18 +179,18 @@ func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
 	return []drivertest.UnsupportedType{drivertest.BinarySet}
 }
 
-func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
+func (ct *codecTester) NativeEncode(obj any) (any, error) {
 	return dynattr.Marshal(obj)
 }
 
-func (ct *codecTester) NativeDecode(value, dest interface{}) error {
+func (ct *codecTester) NativeDecode(value, dest any) error {
 	return dynattr.Unmarshal(value.(dyn2Types.AttributeValue), dest)
 }
 
-func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
+func (ct *codecTester) DocstoreEncode(obj any) (any, error) {
 	return encodeDoc(drivertest.MustDocument(obj))
 }
 
-func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
+func (ct *codecTester) DocstoreDecode(value, dest any) error {
 	return decodeDoc(value.(dyn2Types.AttributeValue), drivertest.MustDocument(dest))
 }

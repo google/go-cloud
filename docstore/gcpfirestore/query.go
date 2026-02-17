@@ -112,7 +112,7 @@ func (it *docIterator) evaluateLocalFilters(pdoc *pb.Document) (bool, error) {
 		return true, nil
 	}
 	// TODO(jba): optimization: evaluate the filter directly on the proto document, without decoding.
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	doc, err := driver.NewDocument(m)
 	if err != nil {
 		return false, err
@@ -189,7 +189,7 @@ func applyComparison(op string, c int) bool {
 
 func (it *docIterator) Stop() { it.cancel() }
 
-func (it *docIterator) As(i interface{}) bool {
+func (it *docIterator) As(i any) bool {
 	p, ok := i.(*pb.Firestore_RunQueryClient)
 	if !ok {
 		return false
@@ -323,7 +323,7 @@ func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter,
 	return newFieldFilter(f.FieldPath, f.Op, pv)
 }
 
-func unaryOpFor(value interface{}) (pb.StructuredQuery_UnaryFilter_Operator, bool) {
+func unaryOpFor(value any) (pb.StructuredQuery_UnaryFilter_Operator, bool) {
 	switch {
 	case value == nil:
 		return pb.StructuredQuery_UnaryFilter_IS_NULL, true
@@ -334,7 +334,7 @@ func unaryOpFor(value interface{}) (pb.StructuredQuery_UnaryFilter_Operator, boo
 	}
 }
 
-func isNaN(x interface{}) bool {
+func isNaN(x any) bool {
 	switch x := x.(type) {
 	case float32:
 		return math.IsNaN(float64(x))

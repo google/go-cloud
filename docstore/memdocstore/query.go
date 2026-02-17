@@ -27,7 +27,7 @@ import (
 
 func (c *collection) RunGetQuery(_ context.Context, q *driver.Query) (driver.DocumentIterator, error) {
 	if q.BeforeQuery != nil {
-		if err := q.BeforeQuery(func(interface{}) bool { return false }); err != nil {
+		if err := q.BeforeQuery(func(any) bool { return false }); err != nil {
 			return nil, err
 		}
 	}
@@ -218,7 +218,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 
 func (it *docIterator) Stop() { it.err = io.EOF }
 
-func (it *docIterator) As(i interface{}) bool { return false }
+func (it *docIterator) As(i any) bool { return false }
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "", nil

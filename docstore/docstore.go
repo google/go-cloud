@@ -21,6 +21,7 @@ import (
 	"log"
 	"reflect"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -40,7 +41,7 @@ import (
 //
 // A Document can be represented as a map[string]int or a pointer to a struct. For
 // structs, the exported fields are the document fields.
-type Document = interface{}
+type Document = any
 
 // A Collection represents a set of documents. It provides an easy and portable
 // way to interact with document stores.
@@ -135,7 +136,7 @@ type ActionList struct {
 	coll               *Collection
 	actions            []*Action
 	enableAtomicWrites bool
-	beforeDo           func(asFunc func(interface{}) bool) error
+	beforeDo           func(asFunc func(any) bool) error
 }
 
 // An Action is a read or write on a single document.
@@ -265,7 +266,7 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 //   - any other value, to set the field to that value
 //
 // See ActionList.Update.
-type Mods map[FieldPath]interface{}
+type Mods map[FieldPath]any
 
 // Increment returns a modification that results in a field being incremented. It
 // should only be used as a value in a Mods map, like so:
@@ -273,7 +274,7 @@ type Mods map[FieldPath]interface{}
 //	docstore.Mods{"count": docstore.Increment(1)}
 //
 // The amount must be an integer or floating-point value.
-func Increment(amount interface{}) interface{} {
+func Increment(amount any) any {
 	return driver.IncOp{amount}
 }
 
@@ -316,7 +317,7 @@ func (e ActionListError) Unwrap() error {
 // The callback takes a parameter, asFunc, that converts its argument to
 // driver-specific types. See https://gocloud.dev/concepts/as for background
 // information.
-func (l *ActionList) BeforeDo(f func(asFunc func(interface{}) bool) error) *ActionList {
+func (l *ActionList) BeforeDo(f func(asFunc func(any) bool) error) *ActionList {
 	l.beforeDo = f
 	return l
 }
@@ -368,7 +369,7 @@ func (l *ActionList) toDriverActions() ([]*driver.Action, error) {
 	// Create a set of (document key, is Get action) pairs for detecting duplicates:
 	// an action list can have at most one get and at most one write for each key.
 	type keyAndKind struct {
-		key   interface{}
+		key   any
 		isGet bool
 	}
 	seen := map[keyAndKind]bool{}
@@ -419,7 +420,7 @@ func (c *Collection) toDriverAction(a *Action) (*driver.Action, error) {
 		// empty.
 		key = nil
 	}
-	if reflect.ValueOf(key).Kind() == reflect.Ptr {
+	if reflect.ValueOf(key).Kind() == reflect.Pointer {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "keys cannot be pointers")
 	}
 	rev, _ := ddoc.GetField(c.revisionField())
@@ -514,7 +515,7 @@ func fpHasPrefix(fp, prefix []string) bool {
 	return true
 }
 
-func isIncNumber(x interface{}) bool {
+func isIncNumber(x any) bool {
 	switch reflect.TypeOf(x).Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return true
@@ -616,10 +617,8 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "invalid UTF-8 field path %q", fp)
 	}
 	parts := strings.Split(string(fp), ".")
-	for _, p := range parts {
-		if p == "" {
-			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "empty component in field path %q", fp)
-		}
+	if slices.Contains(parts, "") {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "empty component in field path %q", fp)
 	}
 	return parts, nil
 }
@@ -629,7 +628,7 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 // form that can be passed around (e.g., as a hidden field on a web form)
 // and then turned back into a revision using StringToRevision. The string is safe
 // for use in URLs and HTTP forms.
-func (c *Collection) RevisionToString(rev interface{}) (string, error) {
+func (c *Collection) RevisionToString(rev any) (string, error) {
 	if rev == nil {
 		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "RevisionToString: nil revision")
 	}
@@ -642,7 +641,7 @@ func (c *Collection) RevisionToString(rev interface{}) (string, error) {
 
 // StringToRevision converts a string obtained with RevisionToString
 // to a revision.
-func (c *Collection) StringToRevision(s string) (interface{}, error) {
+func (c *Collection) StringToRevision(s string) (any, error) {
 	if s == "" {
 		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "StringToRevision: empty string")
 	}
@@ -661,7 +660,7 @@ func (c *Collection) StringToRevision(s string) (interface{}, error) {
 // See https://gocloud.dev/concepts/as/ for background information, the "As"
 // examples in this package for examples, and the driver package
 // documentation for the specific types supported for that driver.
-func (c *Collection) As(i interface{}) bool {
+func (c *Collection) As(i any) bool {
 	if i == nil {
 		return false
 	}
@@ -714,6 +713,6 @@ func wrapError(c driver.Collection, err error) error {
 //
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-func (c *Collection) ErrorAs(err error, i interface{}) bool {
+func (c *Collection) ErrorAs(err error, i any) bool {
 	return gcerr.ErrorAs(err, i, c.driver.ErrorAs)
 }

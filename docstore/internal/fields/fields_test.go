@@ -68,9 +68,9 @@ type Time struct {
 	time.Time
 }
 
-var intType = reflect.TypeOf(int(0))
+var intType = reflect.TypeFor[int]()
 
-func field(name string, tval interface{}, index ...int) *Field {
+func field(name string, tval any, index ...int) *Field {
 	return &Field{
 		Name:      name,
 		Type:      reflect.TypeOf(tval),
@@ -79,7 +79,7 @@ func field(name string, tval interface{}, index ...int) *Field {
 	}
 }
 
-func tfield(name string, tval interface{}, index ...int) *Field {
+func tfield(name string, tval any, index ...int) *Field {
 	return &Field{
 		Name:        name,
 		Type:        reflect.TypeOf(tval),
@@ -91,7 +91,7 @@ func tfield(name string, tval interface{}, index ...int) *Field {
 
 func TestFieldsNoTags(t *testing.T) {
 	c := NewCache(nil, nil, nil)
-	got, err := c.Fields(reflect.TypeOf(S1{}))
+	got, err := c.Fields(reflect.TypeFor[S1]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestAgainstJSONEncodingNoTags(t *testing.T) {
 	jsonRoundTrip(t, s1, &want)
 	var got S1
 	got.embed2 = &embed2{}
-	fields, err := NewCache(nil, nil, nil).Fields(reflect.TypeOf(got))
+	fields, err := NewCache(nil, nil, nil).Fields(reflect.TypeFor[S1]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestAgainstJSONEncodingNoTags(t *testing.T) {
 // Tests use of LeafTypes parameter to NewCache
 func TestAgainstJSONEncodingEmbeddedTime(t *testing.T) {
 	timeLeafFn := func(t reflect.Type) bool {
-		return t == reflect.TypeOf(time.Time{})
+		return t == reflect.TypeFor[time.Time]()
 	}
 	// Demonstrates that this package can produce the same set of
 	// fields as encoding/json for a struct with an embedded time.Time.
@@ -169,7 +169,7 @@ func TestAgainstJSONEncodingEmbeddedTime(t *testing.T) {
 	var want Time
 	jsonRoundTrip(t, myt, &want)
 	var got Time
-	fields, err := NewCache(nil, nil, timeLeafFn).Fields(reflect.TypeOf(got))
+	fields, err := NewCache(nil, nil, timeLeafFn).Fields(reflect.TypeFor[Time]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ type tEmbed2 struct {
 	Z int `json:"Dup2"` // same name as tEmbed1.X and both tagged, so ignored
 }
 
-func jsonTagParser(t reflect.StructTag) (name string, keep bool, other interface{}, err error) {
+func jsonTagParser(t reflect.StructTag) (name string, keep bool, other any, err error) {
 	n, k, o := ParseStandardTag("json", t)
 	return n, k, o, nil
 }
@@ -226,7 +226,7 @@ func validateFunc(t reflect.Type) (err error) {
 }
 
 func TestFieldsWithTags(t *testing.T) {
-	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S2{}))
+	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S2]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestAgainstJSONEncodingWithTags(t *testing.T) {
 	var want S2
 	jsonRoundTrip(t, s2, &want)
 	var got S2
-	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(got))
+	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S2]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestUnexportedAnonymousNonStruct(t *testing.T) {
 		}
 	)
 
-	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S{}))
+	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +308,7 @@ func TestUnexportedAnonymousStruct(t *testing.T) {
 			s1 `json:"Y"`
 		}
 	)
-	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S2{}))
+	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S2]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,7 +351,7 @@ func TestIgnore(t *testing.T) {
 		X int `json:"-"`
 		Y int `json:"-,"` // field with name "-"
 	}
-	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S{}))
+	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,7 +364,7 @@ func TestParsedTag(t *testing.T) {
 	type S struct {
 		X int `json:"name,omitempty"`
 	}
-	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S{}))
+	got, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +385,7 @@ func TestValidateFunc(t *testing.T) {
 		B []int
 	}
 
-	_, err := NewCache(nil, validateFunc, nil).Fields(reflect.TypeOf(MyInvalidStruct{}))
+	_, err := NewCache(nil, validateFunc, nil).Fields(reflect.TypeFor[MyInvalidStruct]())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -394,7 +394,7 @@ func TestValidateFunc(t *testing.T) {
 		A string
 		B int
 	}
-	_, err = NewCache(nil, validateFunc, nil).Fields(reflect.TypeOf(MyValidStruct{}))
+	_, err = NewCache(nil, validateFunc, nil).Fields(reflect.TypeFor[MyValidStruct]())
 	if err != nil {
 		t.Fatalf("expected nil, got error: %s\n", err)
 	}
@@ -427,7 +427,7 @@ func fieldsEqual(f1, f2 *Field) bool {
 // Set the fields of dst from those of src.
 // dst must be a pointer to a struct value.
 // src must be a struct value.
-func setFields(fields []Field, dst, src interface{}) {
+func setFields(fields []Field, dst, src any) {
 	vsrc := reflect.ValueOf(src)
 	vdst := reflect.ValueOf(dst).Elem()
 	for _, f := range fields {
@@ -437,7 +437,7 @@ func setFields(fields []Field, dst, src interface{}) {
 	}
 }
 
-func jsonRoundTrip(t *testing.T, in, out interface{}) {
+func jsonRoundTrip(t *testing.T, in, out any) {
 	t.Helper()
 
 	bytes, err := json.Marshal(in)
@@ -464,7 +464,7 @@ type S4 struct {
 }
 
 func TestMatchExact(t *testing.T) {
-	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S3{}))
+	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S3]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +492,7 @@ func TestMatchExact(t *testing.T) {
 }
 
 func TestMatchFold(t *testing.T) {
-	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S3{}))
+	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S3]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -534,7 +534,7 @@ func TestAgainstJSONMatchingField(t *testing.T) {
 	var want S3
 	jsonRoundTrip(t, s3, &want)
 	v := reflect.ValueOf(want)
-	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeOf(S3{}))
+	fields, err := NewCache(jsonTagParser, nil, nil).Fields(reflect.TypeFor[S3]())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -561,7 +561,7 @@ func TestAgainstJSONMatchingField(t *testing.T) {
 
 func TestTagErrors(t *testing.T) {
 	called := false
-	c := NewCache(func(t reflect.StructTag) (string, bool, interface{}, error) {
+	c := NewCache(func(t reflect.StructTag) (string, bool, any, error) {
 		called = true
 		s := t.Get("f")
 		if s == "bad" {
@@ -575,7 +575,7 @@ func TestTagErrors(t *testing.T) {
 		Y int `f:"bad"`
 	}
 
-	_, err := c.Fields(reflect.TypeOf(T{}))
+	_, err := c.Fields(reflect.TypeFor[T]())
 	if !called {
 		t.Fatal("tag parser not called")
 	}
@@ -584,7 +584,7 @@ func TestTagErrors(t *testing.T) {
 	}
 	// Second time, we should cache the error.
 	called = false
-	_, err = c.Fields(reflect.TypeOf(T{}))
+	_, err = c.Fields(reflect.TypeFor[T]())
 	if called {
 		t.Fatal("tag parser called on second time")
 	}
