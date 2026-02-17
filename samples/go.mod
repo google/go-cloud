@@ -16,7 +16,7 @@ module gocloud.dev/samples
 
 go 1.24.0
 
-toolchain go1.24.7
+toolchain go1.25.0
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.3

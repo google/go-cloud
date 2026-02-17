@@ -141,7 +141,7 @@ func gather(pkgs []*packages.Package) (map[string]example, error) {
 			for _, decl := range file.Decls {
 				// Determine whether this declaration is an example function.
 				fn, ok := decl.(*ast.FuncDecl)
-				if !ok || !strings.HasPrefix(fn.Name.Name, "Example") || len(fn.Type.Params.List) > 0 || len(fn.Type.Params.List) > 0 {
+				if !ok || !strings.HasPrefix(fn.Name.Name, "Example") || len(fn.Type.Params.List) > 0 {
 					continue
 				}
 
