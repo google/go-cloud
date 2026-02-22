@@ -33,6 +33,7 @@ package gcpkms // import "gocloud.dev/secrets/gcpkms"
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"path"
@@ -108,7 +109,10 @@ const Scheme = "gcpkms"
 // The URL host+path are used as the key resource ID; see
 // https://cloud.google.com/kms/docs/object-hierarchy#key for more details.
 //
-// No query parameters are supported.
+// The following query parameters are supported:
+//
+//   - additional_authenticated_data: a base64 URL encoded string of AAD provided to encrypt and
+//     decrypt calls.
 type URLOpener struct {
 	// Client must be non-nil and be authenticated with "cloudkms" scope or equivalent.
 	Client *cloudkms.KeyManagementClient
@@ -117,12 +121,24 @@ type URLOpener struct {
 	Options KeeperOptions
 }
 
-// OpenKeeperURL opens the GCP KMS URLs.
+// OpenKeeperURL opens GCP KMS URLs.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
-	for param := range u.Query() {
-		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
+	q := u.Query()
+	for param := range q {
+		if param != "additional_authenticated_data" {
+			return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
+		}
 	}
-	return OpenKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
+	opts := o.Options
+	if aad := q.Get("additional_authenticated_data"); aad != "" {
+		dec, err := base64.URLEncoding.DecodeString(aad)
+		if err != nil {
+			return nil, fmt.Errorf("failed to base64-decode \"additional_authenticated_data\": %w", err)
+		}
+
+		opts.AdditionalAuthenticatedData = dec
+	}
+	return OpenKeeper(o.Client, path.Join(u.Host, u.Path), &opts), nil
 }
 
 // OpenKeeper returns a *secrets.Keeper that uses Google Cloud KMS.
@@ -131,9 +147,13 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 // See https://cloud.google.com/kms/docs/object-hierarchy#key for more details.
 // See the package documentation for an example.
 func OpenKeeper(client *cloudkms.KeyManagementClient, keyResourceID string, opts *KeeperOptions) *secrets.Keeper {
+	if opts == nil {
+		opts = &KeeperOptions{}
+	}
 	return secrets.NewKeeper(&keeper{
 		keyResourceID: keyResourceID,
 		client:        client,
+		opts:          *opts,
 	})
 }
 
@@ -148,13 +168,15 @@ func KeyResourceID(projectID, location, keyRing, key string) string {
 type keeper struct {
 	keyResourceID string
 	client        *cloudkms.KeyManagementClient
+	opts          KeeperOptions
 }
 
 // Decrypt decrypts the ciphertext using the key constructed from ki.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
-		Name:       k.keyResourceID,
-		Ciphertext: ciphertext,
+		Name:                        k.keyResourceID,
+		Ciphertext:                  ciphertext,
+		AdditionalAuthenticatedData: k.opts.AdditionalAuthenticatedData,
 	}
 	resp, err := k.client.Decrypt(ctx, req)
 	if err != nil {
@@ -166,8 +188,9 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
-		Name:      k.keyResourceID,
-		Plaintext: plaintext,
+		Name:                        k.keyResourceID,
+		Plaintext:                   plaintext,
+		AdditionalAuthenticatedData: k.opts.AdditionalAuthenticatedData,
 	}
 	resp, err := k.client.Encrypt(ctx, req)
 	if err != nil {
@@ -199,5 +222,10 @@ func (k *keeper) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 // KeeperOptions controls Keeper behaviors.
-// It is provided for future extensibility.
-type KeeperOptions struct{}
+type KeeperOptions struct {
+	// AdditionalAuthenticatedData is non-secret data used as an optional integrity check which must
+	// match between encrypt and decrypt operations. This prevents confused deputy attacks by
+	// binding context to encrypted data without being stored in the ciphertext.
+	// See here for more info: https://docs.cloud.google.com/kms/docs/additional-authenticated-data.
+	AdditionalAuthenticatedData []byte
+}
