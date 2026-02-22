@@ -48,8 +48,8 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	return &keeper{KeyResourceID(project, location, keyRing, keyID1), h.client},
-		&keeper{KeyResourceID(project, location, keyRing, keyID2), h.client}, nil
+	return &keeper{KeyResourceID(project, location, keyRing, keyID1), h.client, KeeperOptions{}},
+		&keeper{KeyResourceID(project, location, keyRing, keyID2), h.client, KeeperOptions{}}, nil
 }
 
 func (h *harness) Close() {
@@ -111,6 +111,44 @@ func TestNoConnectionError(t *testing.T) {
 	}
 }
 
+func TestAdditionalAuthenticatedData(t *testing.T) {
+	ctx := context.Background()
+	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "secrets")
+	defer done()
+	client, err := cloudkms.NewKeyManagementClient(ctx, option.WithGRPCConn(conn))
+	if err != nil {
+		t.Fatalf("failed to connect: %v", err)
+	}
+
+	opts := KeeperOptions{
+		AdditionalAuthenticatedData: []byte("sample AAD"),
+	}
+	k1a := OpenKeeper(client, KeyResourceID(project, location, keyRing, keyID1), &opts)
+	defer k1a.Close()
+	k1b := OpenKeeper(client, KeyResourceID(project, location, keyRing, keyID1), &opts)
+	defer k1b.Close()
+	opts.AdditionalAuthenticatedData = []byte("different AAD")
+	k2 := OpenKeeper(client, KeyResourceID(project, location, keyRing, keyID1), &opts)
+	defer k2.Close()
+
+	// Encrypt/Decrypt with an AAD should work.
+	secret := []byte("a secret")
+	encryptedSecret, err := k1a.Encrypt(ctx, secret)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %v", err)
+	}
+	if got, err := k1b.Decrypt(ctx, encryptedSecret); err != nil {
+		t.Fatalf("failed to decrypt: %v", err)
+	} else if string(got) != string(secret) {
+		t.Errorf("unexpected decrypt result: %v", string(got))
+	}
+
+	// Decrypting with a different AAD should fail.
+	if _, err := k2.Decrypt(ctx, encryptedSecret); err == nil {
+		t.Errorf("expected Decrypt with a different AAD to fail, but it did not")
+	}
+}
+
 func TestOpenKeeper(t *testing.T) {
 	cleanup := setup.FakeGCPDefaultCredentials(t)
 	defer cleanup()
@@ -121,6 +159,10 @@ func TestOpenKeeper(t *testing.T) {
 	}{
 		// OK.
 		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY", false},
+		// Invalid additional_authenticated_data.
+		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY?additional_authenticated_data=22", true},
+		// OK, with valid additional_authenticated_data.
+		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY?additional_authenticated_data=SGVsbG8sIOS4lueVjA==", false},
 		// Invalid query parameter.
 		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY?param=val", true},
 	}
