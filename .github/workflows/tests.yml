@@ -32,11 +32,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2  # required for codecov
       - name: Run Tests
