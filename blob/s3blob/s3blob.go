@@ -419,6 +419,8 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.NotFound
 	case code == "PreconditionFailed":
 		return gcerrors.FailedPrecondition
+	case code == "AccessDenied" || code == "Forbidden":
+		return gcerrors.PermissionDenied
 	default:
 		return gcerrors.Unknown
 	}
