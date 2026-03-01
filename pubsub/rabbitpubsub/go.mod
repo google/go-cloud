@@ -20,7 +20,7 @@ toolchain go1.25.0
 
 require (
 	github.com/rabbitmq/amqp091-go v1.10.0
-	gocloud.dev v0.44.0
+	gocloud.dev v0.45.0
 )
 
 require (
@@ -74,5 +74,3 @@ require (
 	google.golang.org/grpc v1.77.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
-
-replace gocloud.dev => ../../
