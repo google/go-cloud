@@ -243,6 +243,8 @@ func TestOpenVariableURL(t *testing.T) {
 		{"file://" + txtPath + "?decoder=string&wait=1m", false, false, "hello world!"},
 		// Invalid wait.
 		{"file://" + txtPath + "?decoder=string&wait=xx", true, false, nil},
+		// Relative path using host="."; bucket is created but error at read time.
+		{"file://./../.." + nonexistentPath, false, true, nil},
 	}
 
 	for _, test := range tests {
