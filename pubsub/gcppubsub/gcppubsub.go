@@ -73,6 +73,7 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/credentials/oauth"
@@ -368,6 +369,16 @@ func openTopic(client *raw.PublisherClient, topicPath string) driver.Topic {
 	return &topic{topicPath, client}
 }
 
+// isRequestTooLarge reports whether err is a gRPC InvalidArgument error
+// indicating the publish request exceeded the maximum allowed size.
+func isRequestTooLarge(err error) bool {
+	s, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+	return s.Code() == codes.InvalidArgument && strings.Contains(s.Message(), "request_size")
+}
+
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	var ms []*pb.PubsubMessage
@@ -387,6 +398,26 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		}
 		ms = append(ms, psm)
 	}
+	err := t.sendBatch(ctx, dms, ms)
+	if err != nil && isRequestTooLarge(err) && len(ms) > 1 {
+		// we *estimate* the batch size, and cap batches at approx 9mb before sending.  however,
+		// estimates can be off, and some production use cases can have ~30KB data over the 10MB limit
+		// when sending batches.
+		//
+		// in this case, if we ever get "message too large" errors, split the batch in half and send
+		// both batches.  this assumes the approximation is not off by a factor of over 2.
+		mid := len(ms) / 2
+		if err := t.sendBatch(ctx, dms[:mid], ms[:mid]); err != nil {
+			return err
+		}
+		return t.sendBatch(ctx, dms[mid:], ms[mid:])
+	}
+	return err
+}
+
+// sendBatch publishes ms and runs AfterSend callbacks for the
+// corresponding driver messages.
+func (t *topic) sendBatch(ctx context.Context, dms []*driver.Message, ms []*pb.PubsubMessage) error {
 	req := &pb.PublishRequest{Topic: t.path, Messages: ms}
 	pr, err := t.client.Publish(ctx, req)
 	if err != nil {
