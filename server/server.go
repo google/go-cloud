@@ -130,7 +130,7 @@ func (srv *Server) init() {
 			h = requestlog.NewHandler(srv.reqlog, h)
 		}
 		// Wrap with OpenTelemetry HTTP handler.
-		h = otelhttp.NewHandler(h, "", otelhttp.WithPublicEndpoint())
+		h = otelhttp.NewHandler(h, "", otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }))
 		mux.Handle("/", h)
 		srv.wrappedHandler = mux
 	})

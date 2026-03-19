@@ -2296,12 +2296,12 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 		t.Run(description, func(t *testing.T) {
 			h, err := newHarness(ctx, t)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to create harness: %v", err)
 			}
 			defer h.Close()
 			drv, err := h.MakeDriver(ctx)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to make driver: %v", err)
 			}
 			b := blob.NewBucket(drv)
 			defer b.Close()
@@ -2309,36 +2309,36 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			// Write the blob.
 			key = keyPrefix + key
 			if err := b.WriteAll(ctx, key, content, nil); err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to write blob at key %q: %v", key, err)
 			}
 
 			defer func() {
 				err := b.Delete(ctx, key)
 				if err != nil {
-					t.Error(err)
+					t.Errorf("Failed to delete blob at key %q: %v", key, err)
 				}
 			}()
 
 			// Verify read works.
 			got, err := b.ReadAll(ctx, key)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Failed to read blob at key %q: %v", key, err)
 			}
 			if !cmp.Equal(got, content) {
-				t.Errorf("got %q want %q", string(got), string(content))
+				t.Errorf("When reading blob, got %q want %q", string(got), string(content))
 			}
 
 			// Verify Attributes works.
 			_, err = b.Attributes(ctx, key)
 			if err != nil {
-				t.Error(err)
+				t.Errorf("Failed to get attributes for key %q: %v", key, err)
 			}
 
 			// Verify SignedURL works.
 			url, err := b.SignedURL(ctx, key, nil)
 			if gcerrors.Code(err) != gcerrors.Unimplemented {
 				if err != nil {
-					t.Error(err)
+					t.Errorf("Failed to get SignedURL for key %q: %v", key, err)
 				}
 				client := h.HTTPClient()
 				if client == nil {
@@ -2346,41 +2346,38 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 				}
 				resp, err := client.Get(url)
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("GET using SignedURL for key %q failed: %v", key, err)
 				}
 				defer resp.Body.Close()
 				if resp.StatusCode != 200 {
-					t.Errorf("got status code %d, want 200", resp.StatusCode)
+					t.Fatalf("GET using SignedURL for key %q got status code %d, want 200", key, resp.StatusCode)
 				}
 				got, err := io.ReadAll(resp.Body)
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("GET using SignedURL for key %q got 200, but failed to ready body: %v", key, err)
 				}
 				if !bytes.Equal(got, content) {
-					t.Errorf("got body %q, want %q", string(got), string(content))
+					t.Errorf("GET using SignedURL for key %q got body %q, want %q", key, string(got), string(content))
 				}
 			}
 
 			// Copy the blob.
-			// TODO: s3blob's Copy fails on repeatedfwdslashes.
-			if description != "repeatedfwdslashes" {
-				copyToKey := key + "-copy"
-				if err := b.Copy(ctx, copyToKey, key, nil); err != nil {
-					t.Fatal(err)
-				}
-				defer func() {
-					err := b.Delete(ctx, copyToKey)
-					if err != nil {
-						t.Error(err)
-					}
-				}()
-				got, err = b.ReadAll(ctx, copyToKey)
+			copyToKey := key + "-copy"
+			if err := b.Copy(ctx, copyToKey, key, nil); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				err := b.Delete(ctx, copyToKey)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
 				}
-				if !cmp.Equal(got, content) {
-					t.Errorf("copied got %q want %q", string(got), string(content))
-				}
+			}()
+			got, err = b.ReadAll(ctx, copyToKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, content) {
+				t.Errorf("copied got %q want %q", string(got), string(content))
 			}
 		})
 	}
