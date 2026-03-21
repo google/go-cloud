@@ -93,15 +93,6 @@ done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
 # The above filters out comments and empty lines from allmodules and only takes
 # the first (whitespace-separated) field from each line.
 
-# Upload cumulative coverage data if we generated it.
-if [ -f coverage.out ] && [ $result -eq 0 ]; then
-  # Filter out test packages.
-  grep -v test coverage.out > coverage2.out
-  mv coverage2.out coverage.out
-  bash <(curl -s https://codecov.io/bash)
-  rm coverage.out
-fi
-
 # The rest of these checks are not OS-specific, so we only run them for the
 # Linux build, or when running locally.
 if [[ "${RUNNER_OS:-linux}" != "Linux" ]]; then
