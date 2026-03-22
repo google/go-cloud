@@ -443,3 +443,24 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		}
 	}
 }
+
+func TestIsRequestTooLarge(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"nil", nil, false},
+		{"unrelated", fmt.Errorf("something"), false},
+		{"wrong code", status.Errorf(codes.NotFound, "request_size too large"), false},
+		{"wrong message", status.Errorf(codes.InvalidArgument, "bad field"), false},
+		{"match", status.Errorf(codes.InvalidArgument, "The value for request_size is too large. You passed 10036929 in the request, but the maximum value is 10000000."), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isRequestTooLarge(tt.err); got != tt.want {
+				t.Errorf("isRequestTooLarge() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
