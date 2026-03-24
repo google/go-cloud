@@ -60,8 +60,8 @@ type harness struct {
 	closer func()
 }
 
-func (h *harness) SupportsAtomicWrites() bool {
-	return true
+func (h *harness) AtomicWritesKind() drivertest.AtomicWritesSupportKind {
+	return drivertest.MultiplePartitions
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {

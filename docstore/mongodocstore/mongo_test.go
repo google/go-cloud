@@ -45,8 +45,8 @@ const (
 )
 
 type harness struct {
-	db                  *mongo.Database
-	supportAtomicWrites bool
+	db               *mongo.Database
+	atomicWritesKind drivertest.AtomicWritesSupportKind
 }
 
 func (h *harness) MakeCollection(ctx context.Context, kind drivertest.CollectionKind) (driver.Collection, error) {
@@ -79,7 +79,9 @@ func (h *harness) MakeCollection(ctx context.Context, kind drivertest.Collection
 	return coll, nil
 }
 
-func (h *harness) SupportsAtomicWrites() bool { return h.supportAtomicWrites }
+func (h *harness) AtomicWritesKind() drivertest.AtomicWritesSupportKind {
+	return h.atomicWritesKind
+}
 
 func (*harness) BeforeDoTypes() []interface{} {
 	return []interface{}{
@@ -165,16 +167,16 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 
 func TestConformance(t *testing.T) {
 	// mongo 3 doesn't support atomic writes
-	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV3, false) })
-	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV4, true) })
+	t.Run("V3", func(t *testing.T) { testConformance(t, serverURIV3, drivertest.NoSupport) })
+	t.Run("V4", func(t *testing.T) { testConformance(t, serverURIV4, drivertest.MultiplePartitions) })
 }
 
-func testConformance(t *testing.T, serverURI string, supportsAtomicWrites bool) {
+func testConformance(t *testing.T, serverURI string, atomicWritesKind drivertest.AtomicWritesSupportKind) {
 	client := newTestClient(t, serverURI)
 	defer client.Disconnect(context.Background())
 
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
-		return &harness{client.Database(dbName), supportsAtomicWrites}, nil
+		return &harness{client.Database(dbName), atomicWritesKind}, nil
 	}
 	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
