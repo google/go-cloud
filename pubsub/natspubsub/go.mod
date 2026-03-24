@@ -18,13 +18,13 @@ go 1.25.0
 
 require (
 	github.com/google/go-cmp v0.7.0
-	github.com/nats-io/nats-server/v2 v2.11.12
+	github.com/nats-io/nats-server/v2 v2.11.15
 	github.com/nats-io/nats.go v1.49.0
 	gocloud.dev v0.45.0
 )
 
 require (
-	github.com/antithesishq/antithesis-sdk-go v0.5.0-default-no-op // indirect
+	github.com/antithesishq/antithesis-sdk-go v0.6.0-default-no-op // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -33,7 +33,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.19.0 // indirect
 	github.com/klauspost/compress v1.18.4 // indirect
 	github.com/minio/highwayhash v1.0.4-0.20251030100505-070ab1a87a76 // indirect
-	github.com/nats-io/jwt/v2 v2.8.0 // indirect
+	github.com/nats-io/jwt/v2 v2.8.1 // indirect
 	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
