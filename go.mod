@@ -14,7 +14,7 @@
 
 module gocloud.dev
 
-go 1.25.7
+go 1.25.0
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.20.2
