@@ -54,7 +54,9 @@ func (*harness) BeforeQueryTypes() []any { return nil }
 
 func (*harness) RevisionsEqual(rev1, rev2 any) bool { return rev1 == rev2 }
 
-func (*harness) SupportsAtomicWrites() bool { return true }
+func (*harness) AtomicWritesKind() drivertest.AtomicWritesSupportKind {
+	return drivertest.MultiplePartitions
+}
 
 func (*harness) Close() {}
 
