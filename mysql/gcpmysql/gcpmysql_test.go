@@ -25,10 +25,10 @@ import (
 
 	"cloud.google.com/go/cloudsqlconn"
 	drvr "github.com/go-sql-driver/mysql"
-	"golang.org/x/oauth2"
 	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/internal/testing/terraform"
 	"gocloud.dev/mysql"
+	"golang.org/x/oauth2"
 )
 
 func TestOpen(t *testing.T) {
@@ -95,7 +95,7 @@ func TestParseIPType(t *testing.T) {
 		{"public", cloudsql.IPTypePublic, false},
 		{"private", cloudsql.IPTypePrivate, false},
 		{"psc", cloudsql.IPTypePSC, false},
-		{"", cloudsql.IPTypeAuto, false},        // empty string defaults to auto
+		{"", cloudsql.IPTypeAuto, false},         // empty string defaults to auto
 		{"PUBLIC", cloudsql.IPTypePublic, false}, // case-insensitive
 		{"invalid", 0, true},
 		{"public ", 0, true}, // whitespace is not trimmed
