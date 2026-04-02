@@ -108,6 +108,8 @@ const Scheme = "sftp"
 //
 //   - private_key_path: path to read for the SSH private key (PEM encoded) used
 //     for authentication. If provided, this overrides password authentication.
+//     If omitted, you can alternatively provide the raw PEM encoded private key
+//     content directly via the SFTP_PRIVATE_KEY environment variable.
 //   - create_dir: (any non-empty value) the directory is created (using MkdirAll)
 //     if it does not already exist.
 //   - insecure_skip_verify: if set to any non-empty value, disables SSH host key
@@ -215,14 +217,24 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		_ = closers.Close()
 	}()
 
+	var keyBytes []byte
+	var errKey error
+
 	if keyPath := q.Get("private_key_path"); keyPath != "" {
-		keyBytes, err := os.ReadFile(keyPath)
-		if err != nil {
-			return nil, fmt.Errorf("sftpblob: failed to read private key %q: %v", keyPath, err)
+		keyBytes, errKey = os.ReadFile(keyPath)
+		if errKey != nil {
+			return nil, fmt.Errorf("sftpblob: failed to read private key from path %q: %v", keyPath, errKey)
 		}
+	} else if keyData := os.Getenv("SFTP_PRIVATE_KEY"); keyData != "" {
+		// Replace escaped newlines if they were injected via CLI string formats
+		keyData = strings.ReplaceAll(keyData, "\\n", "\n")
+		keyBytes = []byte(keyData)
+	}
+
+	if len(keyBytes) > 0 {
 		signer, err := ssh.ParsePrivateKey(keyBytes)
 		if err != nil {
-			return nil, fmt.Errorf("sftpblob: failed to parse private key %q: %v", keyPath, err)
+			return nil, fmt.Errorf("sftpblob: failed to parse private key: %v", err)
 		}
 		config.Auth = append(config.Auth, ssh.PublicKeys(signer))
 	} else if pass, hasPass := u.User.Password(); hasPass {
