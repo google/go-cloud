@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmdtest"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"gocloud.dev/internal/testing/setup"
 )
 

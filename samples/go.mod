@@ -27,7 +27,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.7.0
 	github.com/gorilla/mux v1.8.1
-	github.com/streadway/amqp v1.0.0
+	github.com/rabbitmq/amqp091-go v1.10.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.67.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.67.0
 	go.opentelemetry.io/otel v1.42.0
@@ -169,7 +169,6 @@ require (
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
-	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
