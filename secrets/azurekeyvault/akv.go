@@ -43,7 +43,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -113,7 +113,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	q := u.Query()
 	algorithm := q.Get("algorithm")
 	if algorithm != "" {
-		o.Options.Algorithm = azkeys.JSONWebKeyEncryptionAlgorithm(algorithm)
+		o.Options.Algorithm = azkeys.EncryptionAlgorithm(algorithm)
 		q.Del("algorithm")
 	}
 	for param := range q {
@@ -137,7 +137,7 @@ type KeeperOptions struct {
 	// Defaults to "RSA-OAEP-256".
 	// See https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
 	// for more details.
-	Algorithm azkeys.JSONWebKeyEncryptionAlgorithm
+	Algorithm azkeys.EncryptionAlgorithm
 
 	// EncryptOptions are passed through to Encrypt.
 	EncryptOptions *azkeys.EncryptOptions
@@ -189,7 +189,7 @@ func openKeeper(clientMaker ClientMakerT, keyID string, opts *KeeperOptions) (*k
 		opts = &KeeperOptions{}
 	}
 	if opts.Algorithm == "" {
-		opts.Algorithm = azkeys.JSONWebKeyEncryptionAlgorithmRSAOAEP256
+		opts.Algorithm = azkeys.EncryptionAlgorithmRSAOAEP256
 	}
 	matches := keyIDRE.FindStringSubmatch(keyID)
 	if len(matches) != 3 {
@@ -218,7 +218,7 @@ func openKeeper(clientMaker ClientMakerT, keyID string, opts *KeeperOptions) (*k
 
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
-	keyOpsResult, err := k.client.Encrypt(ctx, k.keyName, k.keyVersion, azkeys.KeyOperationsParameters{
+	keyOpsResult, err := k.client.Encrypt(ctx, k.keyName, k.keyVersion, azkeys.KeyOperationParameters{
 		Algorithm: &k.options.Algorithm,
 		Value:     plaintext,
 	}, k.options.EncryptOptions)
@@ -230,7 +230,7 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 
 // Decrypt decrypts the ciphertext into a plaintext.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
-	keyOpsResult, err := k.client.Decrypt(ctx, k.keyName, k.keyVersion, azkeys.KeyOperationsParameters{
+	keyOpsResult, err := k.client.Decrypt(ctx, k.keyName, k.keyVersion, azkeys.KeyOperationParameters{
 		Algorithm: &k.options.Algorithm,
 		Value:     ciphertext,
 	}, k.options.DecryptOptions)
