@@ -642,11 +642,13 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			*p = f
 			return true
 		}); err != nil {
+			f.Close()
 			return nil, err
 		}
 	}
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
+			f.Close()
 			return nil, err
 		}
 	}
