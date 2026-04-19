@@ -158,7 +158,7 @@ func (verifyAs) ErrorCheck(c *docstore.Collection, err error) error {
 	var bwexc mongo.BulkWriteException
 	if !c.ErrorAs(err, &cmderr) && !c.ErrorAs(err, &bwerr) && !c.ErrorAs(err, &bwexc) {
 		if e, ok := err.(*gcerr.Error); ok {
-			err = e.Unwrap()
+			err = e.Unwrap()[0]
 		}
 		return fmt.Errorf("Collection.ErrorAs failed, got %T", err)
 	}

@@ -18,6 +18,17 @@
 //
 // See https://gocloud.dev/howto/secrets/ for a detailed how-to guide.
 //
+// # Errors
+//
+// The errors returned from this package can be inspected in several ways:
+//
+// The Code function from gocloud.dev/gcerrors will return an error code, also
+// defined in that package, when invoked on an error. Alternatively, errors.Is
+// can be used with the code-specific errors from the same package (e.g., ErrInternal).
+//
+// The Keeper.ErrorAs method can retrieve the driver error underlying the returned
+// error. Alternatively, errors.As can be used in the same way.
+//
 // # OpenTelemetry Integration
 //
 // OpenTelemetry supports tracing and metric collection for multiple languages and

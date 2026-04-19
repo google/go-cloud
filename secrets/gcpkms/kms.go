@@ -28,7 +28,7 @@
 // # As
 //
 // gcpkms exposes the following type for As:
-//   - Error: *google.golang.org/grpc/status.Status
+//   - Error: *google.golang.org/grpc/status.Status (note: does not work with errors.As, because it's not an error)
 package gcpkms // import "gocloud.dev/secrets/gcpkms"
 
 import (

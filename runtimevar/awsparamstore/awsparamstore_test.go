@@ -99,6 +99,9 @@ func (va verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	if !v.ErrorAs(err, &e) {
 		return errors.New("Keeper.ErrorAs failed")
 	}
+	if !errors.As(err, &e) {
+		return errors.New("errors.As failed")
+	}
 	return nil
 }
 

@@ -88,6 +88,7 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 	if !k.ErrorAs(err, &s) {
 		return errors.New("Keeper.ErrorAs failed")
 	}
+	// Note: errors.As doesn't work, because status.Status isn't an error.
 	return nil
 }
 

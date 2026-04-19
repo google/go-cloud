@@ -134,6 +134,9 @@ func (v verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	if !b.ErrorAs(err, &e) {
 		return errors.New("blob.ErrorAs failed")
 	}
+	if !errors.As(err, &e) {
+		return errors.New("error.As failed")
+	}
 	return nil
 }
 

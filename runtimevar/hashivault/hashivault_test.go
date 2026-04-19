@@ -123,6 +123,9 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	if !v.ErrorAs(err, &secErr) {
 		return errors.New("ErrorAs expected to succeed with *SecretError")
 	}
+	if !errors.As(err, &secErr) {
+		return errors.New("errors.As succeed with *SecretError")
+	}
 	if secErr.Code != 404 {
 		return fmt.Errorf("expected SecretError code 404, got %d", secErr.Code)
 	}

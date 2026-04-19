@@ -38,6 +38,17 @@
 //   - For some drivers, Nack is not supported and will panic; you can call
 //     Message.Nackable to see.
 //
+// # Errors
+//
+// The errors returned from this package can be inspected in several ways:
+//
+// The Code function from gocloud.dev/gcerrors will return an error code, also
+// defined in that package, when invoked on an error. Alternatively, errors.Is
+// can be used with the code-specific errors from the same package (e.g., ErrInternal).
+//
+// The Topic/Subscription.ErrorAs methods can retrieve the driver error underlying the returned
+// error. Alternatively, errors.As can be used in the same way.
+//
 // # OpenTelemetry Integration.
 //
 // OpenTelemetry supports tracing and metric collection for multiple languages and
@@ -502,7 +513,6 @@ func (s *Subscription) updateBatchSize() int {
 //	or exit.
 //
 // 2. The provided ctx is Done. Error() on the returned error will include both
-//
 //	the ctx error and the underlying driver error, and ErrorAs on it
 //	can access the underlying driver error type if needed. Receive may
 //	be called again with a fresh ctx.

@@ -29,7 +29,7 @@
 //
 // httpvar exposes the following types for As:
 //   - Snapshot: *http.Response
-//   - Error: httpvar.RequestError, url.Error
+//   - Error: httpvar.RequestError, url.Error (use pointers to those for errors.As)
 package httpvar // import "gocloud.dev/runtimevar/httpvar"
 
 import (

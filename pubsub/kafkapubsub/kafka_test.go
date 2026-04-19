@@ -154,6 +154,9 @@ func (asTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	if !t.ErrorAs(err, &pe) {
 		return fmt.Errorf("failed to convert %v (%T)", err, err)
 	}
+	if !errors.As(err, &pe) {
+		return fmt.Errorf("failed to use errors.As to convert %v (%T)", err, err)
+	}
 	return nil
 }
 
@@ -161,6 +164,9 @@ func (asTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
 	var ke sarama.KError
 	if !s.ErrorAs(err, &ke) {
 		return fmt.Errorf("failed to convert %v (%T)", err, err)
+	}
+	if !errors.As(err, &ke) {
+		return fmt.Errorf("failed to use errors.As to convert %v (%T)", err, err)
 	}
 	return nil
 }

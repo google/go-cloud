@@ -46,7 +46,7 @@
 //   - Message.BeforeSend: *pb.PubsubMessage
 //   - Message.AfterSend: *string for the pb.PublishResponse.MessageIds entry corresponding to the message.
 //   - Message: *pb.PubsubMessage, *pb.ReceivedMessage
-//   - Error: *google.golang.org/grpc/status.Status
+//   - Error: *google.golang.org/grpc/status.Status (note: does not work with errors.As, because it's not an error)
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
 import (

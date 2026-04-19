@@ -45,7 +45,7 @@ const (
 	// AlreadyExists means that the resource exists, but it should not.
 	AlreadyExists ErrorCode = 3
 
-	// InvalidArguments means that a value given to a Go CDK API is incorrect.
+	// InvalidArgument means that a value given to a Go CDK API is incorrect.
 	InvalidArgument ErrorCode = 4
 
 	// Internal means that something unexpected happened. Internal errors always indicate
@@ -72,11 +72,54 @@ const (
 	DeadlineExceeded ErrorCode = 11
 )
 
+type codedErr struct{ code ErrorCode }
+
+func (e codedErr) Error() string { return e.code.String() }
+
+var (
+	// ErrUnknown means that the error could not be categorized.
+	ErrUnknown = codedErr{Unknown}
+
+	// ErrNotFound means that the resource was not found.
+	ErrNotFound = codedErr{NotFound}
+
+	// ErrAlreadyExists means that the resource exists, but it should not.
+	ErrAlreadyExists = codedErr{AlreadyExists}
+
+	// ErrInvalidArgument means that a value given to a Go CDK API is incorrect.
+	ErrInvalidArgument = codedErr{InvalidArgument}
+
+	// ErrInternal means that something unexpected happened. Internal errors always indicate
+	// bugs in the Go CDK (or possibly the underlying service).
+	ErrInternal = codedErr{Internal}
+
+	// ErrUnimplemented means that the feature is not implemented.
+	ErrUnimplemented = codedErr{Unimplemented}
+
+	// ErrFailedPrecondition means that the system was in the wrong state.
+	ErrFailedPrecondition = codedErr{FailedPrecondition}
+
+	// ErrPermissionDenied means that the caller does not have permission to execute the specified operation.
+	ErrPermissionDenied = codedErr{PermissionDenied}
+
+	// ErrResourceExhausted means that some resource has been exhausted, typically because a service resource limit
+	// has been reached.
+	ErrResourceExhausted = codedErr{ResourceExhausted}
+
+	// ErrCanceled means that the operation was canceled.
+	ErrCanceled = codedErr{Canceled}
+
+	// ErrDeadlineExceeded means that The operation timed out.
+	ErrDeadlineExceeded = codedErr{DeadlineExceeded}
+)
+
 // When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
 
-// Do not change the numbers assigned to codes: past values may be stored in metric databases.
-
-// Call "go generate" whenever you change the above list of error codes.
+// * Do not change the numbers assigned to codes: past values may be stored in metric databases.
+// * Add a typed error struct to match (e.g., ErrInternal).
+// * Add aliases for the error code and typed error to the public gcerrors package.
+// * Call "go generate" whenever you change the above list of error codes.
+//
 // To get stringer:
 //   go get golang.org/x/tools/cmd/stringer
 //   Make sure $GOPATH/bin or $GOBIN in on your path.
@@ -114,8 +157,37 @@ func (e *Error) FormatError(p xerrors.Printer) (next error) {
 }
 
 // Unwrap returns the error underlying the receiver, which may be nil.
-func (e *Error) Unwrap() error {
-	return e.err
+func (e *Error) Unwrap() []error {
+	errs := []error{e.err}
+	var coded error
+	switch e.Code {
+	case Unknown:
+		coded = ErrUnknown
+	case NotFound:
+		coded = ErrNotFound
+	case AlreadyExists:
+		coded = ErrAlreadyExists
+	case InvalidArgument:
+		coded = ErrInvalidArgument
+	case Internal:
+		coded = ErrInternal
+	case Unimplemented:
+		coded = ErrUnimplemented
+	case FailedPrecondition:
+		coded = ErrFailedPrecondition
+	case PermissionDenied:
+		coded = ErrPermissionDenied
+	case ResourceExhausted:
+		coded = ErrResourceExhausted
+	case Canceled:
+		coded = ErrCanceled
+	case DeadlineExceeded:
+		coded = ErrDeadlineExceeded
+	}
+	if coded != nil {
+		errs = append(errs, coded)
+	}
+	return errs
 }
 
 // New returns a new error with the given code, underlying error and message. Pass 1
@@ -199,7 +271,7 @@ func ErrorAs(err error, target any, errorAs func(error, any) bool) bool {
 		panic("ErrorAs target must be a non-nil pointer")
 	}
 	if e, ok := err.(*Error); ok {
-		err = e.Unwrap()
+		err = e.Unwrap()[0] // return the real error, ignore the possible coded one
 	}
 	return errorAs(err, target)
 }

@@ -15,6 +15,7 @@
 package gcerr
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -114,5 +115,17 @@ func TestError(t *testing.T) {
 		if got != want {
 			t.Errorf("%v: got %q, want %q", err, got, want)
 		}
+	}
+}
+
+func TestIs(t *testing.T) {
+	err := New(NotFound, context.Canceled, 1, "message")
+	// Wrapped error can be checked using errors.Is and error-code-specific typed error.
+	if !errors.Is(err, ErrNotFound) {
+		t.Error("errors.Is failed for NotFound")
+	}
+	// Wrapped error can still be checked using the wrapped error.
+	if !errors.Is(err, context.Canceled) {
+		t.Error("errors.Is failed for context.Canceled")
 	}
 }

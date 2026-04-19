@@ -91,6 +91,9 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	if !v.ErrorAs(err, &perr) {
 		return errors.New("runtimevar.ErrorAs failed with *os.PathError")
 	}
+	if !errors.As(err, &perr) {
+		return errors.New("errors.As failed with *os.PathError")
+	}
 	return nil
 }
 
