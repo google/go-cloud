@@ -31,6 +31,10 @@ import (
 // An ErrorCode describes the error's category.
 type ErrorCode int
 
+func (e ErrorCode) Error() string {
+	return e.String()
+}
+
 const (
 	// OK is returned by the Code function on a nil error. It is not a valid
 	// code for an error.
@@ -70,47 +74,6 @@ const (
 
 	// DeadlineExceeded means that The operation timed out.
 	DeadlineExceeded ErrorCode = 11
-)
-
-type codedErr struct{ code ErrorCode }
-
-func (e codedErr) Error() string { return e.code.String() }
-
-var (
-	// ErrUnknown means that the error could not be categorized.
-	ErrUnknown = codedErr{Unknown}
-
-	// ErrNotFound means that the resource was not found.
-	ErrNotFound = codedErr{NotFound}
-
-	// ErrAlreadyExists means that the resource exists, but it should not.
-	ErrAlreadyExists = codedErr{AlreadyExists}
-
-	// ErrInvalidArgument means that a value given to a Go CDK API is incorrect.
-	ErrInvalidArgument = codedErr{InvalidArgument}
-
-	// ErrInternal means that something unexpected happened. Internal errors always indicate
-	// bugs in the Go CDK (or possibly the underlying service).
-	ErrInternal = codedErr{Internal}
-
-	// ErrUnimplemented means that the feature is not implemented.
-	ErrUnimplemented = codedErr{Unimplemented}
-
-	// ErrFailedPrecondition means that the system was in the wrong state.
-	ErrFailedPrecondition = codedErr{FailedPrecondition}
-
-	// ErrPermissionDenied means that the caller does not have permission to execute the specified operation.
-	ErrPermissionDenied = codedErr{PermissionDenied}
-
-	// ErrResourceExhausted means that some resource has been exhausted, typically because a service resource limit
-	// has been reached.
-	ErrResourceExhausted = codedErr{ResourceExhausted}
-
-	// ErrCanceled means that the operation was canceled.
-	ErrCanceled = codedErr{Canceled}
-
-	// ErrDeadlineExceeded means that The operation timed out.
-	ErrDeadlineExceeded = codedErr{DeadlineExceeded}
 )
 
 // When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
@@ -159,33 +122,8 @@ func (e *Error) FormatError(p xerrors.Printer) (next error) {
 // Unwrap returns the error underlying the receiver, which may be nil.
 func (e *Error) Unwrap() []error {
 	errs := []error{e.err}
-	var coded error
-	switch e.Code {
-	case Unknown:
-		coded = ErrUnknown
-	case NotFound:
-		coded = ErrNotFound
-	case AlreadyExists:
-		coded = ErrAlreadyExists
-	case InvalidArgument:
-		coded = ErrInvalidArgument
-	case Internal:
-		coded = ErrInternal
-	case Unimplemented:
-		coded = ErrUnimplemented
-	case FailedPrecondition:
-		coded = ErrFailedPrecondition
-	case PermissionDenied:
-		coded = ErrPermissionDenied
-	case ResourceExhausted:
-		coded = ErrResourceExhausted
-	case Canceled:
-		coded = ErrCanceled
-	case DeadlineExceeded:
-		coded = ErrDeadlineExceeded
-	}
-	if coded != nil {
-		errs = append(errs, coded)
+	if e.Code > OK {
+		return append(errs, e.Code)
 	}
 	return errs
 }

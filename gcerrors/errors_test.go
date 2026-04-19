@@ -54,25 +54,21 @@ func TestCode(t *testing.T) {
 }
 
 func TestErrorIs(t *testing.T) {
-	for _, test := range []struct {
-		code   ErrorCode
-		wantIs error
-	}{
-		{Unknown, ErrUnknown},
-		{NotFound, ErrNotFound},
-		{AlreadyExists, ErrAlreadyExists},
-		{InvalidArgument, ErrInvalidArgument},
-		{Internal, ErrInternal},
-		{Unimplemented, ErrUnimplemented},
-		{FailedPrecondition, ErrFailedPrecondition},
-		{PermissionDenied, ErrPermissionDenied},
-		{ResourceExhausted, ErrResourceExhausted},
-		{Canceled, ErrCanceled},
-		{DeadlineExceeded, ErrDeadlineExceeded},
+	for _, test := range []gcerr.ErrorCode{
+		NotFound,
+		AlreadyExists,
+		InvalidArgument,
+		Internal,
+		Unimplemented,
+		FailedPrecondition,
+		PermissionDenied,
+		ResourceExhausted,
+		Canceled,
+		DeadlineExceeded,
 	} {
-		err := gcerr.New(test.code, errors.New("fail"), 1, "msg")
-		if !errors.Is(err, test.wantIs) {
-			t.Errorf("%v: wanted Is to return true for %v", test.code, test.wantIs)
+		err := gcerr.New(test, errors.New("fail"), 1, "msg")
+		if !errors.Is(err, test) {
+			t.Errorf("%v: wanted Is to return true for %v", test, test)
 		}
 	}
 }

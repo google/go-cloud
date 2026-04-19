@@ -121,7 +121,7 @@ func TestError(t *testing.T) {
 func TestIs(t *testing.T) {
 	err := New(NotFound, context.Canceled, 1, "message")
 	// Wrapped error can be checked using errors.Is and error-code-specific typed error.
-	if !errors.Is(err, ErrNotFound) {
+	if !errors.Is(err, NotFound) {
 		t.Error("errors.Is failed for NotFound")
 	}
 	// Wrapped error can still be checked using the wrapped error.
