@@ -43,7 +43,7 @@
 //   - ActionList.BeforeDo: *pb.BatchGetDocumentsRequest or *pb.CommitRequest.
 //   - Query.BeforeQuery: *pb.RunQueryRequest
 //   - DocumentIterator: firestore.Firestore_RunQueryClient
-//   - Error: *google.golang.org/grpc/status.Status
+//   - Error: *google.golang.org/grpc/status.Status (note: does not work with errors.As, because it's not an error)
 //
 // # Queries
 //

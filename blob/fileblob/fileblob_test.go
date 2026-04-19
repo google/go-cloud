@@ -342,6 +342,9 @@ func (v verifyAs) ErrorCheck(b *blob.Bucket, err error) error {
 	if !b.ErrorAs(err, &perr) {
 		return errors.New("want ErrorAs to succeed for PathError")
 	}
+	if !errors.As(err, &perr) {
+		return errors.New("want errors.As to succeed for PathError")
+	}
 	wantSuffix := filepath.Join("go-cloud-fileblob", v.prefix, "key-does-not-exist")
 	if got := perr.Path; !strings.HasSuffix(got, wantSuffix) {
 		return fmt.Errorf("got path %q, want suffix %q", got, wantSuffix)

@@ -99,6 +99,9 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	if !v.ErrorAs(rpctypes.ErrUnhealthy, &to) {
 		return errors.New("ErrorAs expected to succeed with real etcd error")
 	}
+	if !errors.As(rpctypes.ErrUnhealthy, &to) {
+		return errors.New("errors.As succeed with real etcd error")
+	}
 	return nil
 }
 

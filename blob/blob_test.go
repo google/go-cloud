@@ -424,6 +424,9 @@ func TestErrorsAreWrapped(t *testing.T) {
 		if _, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
 		}
+		if !errors.Is(err, errFake) {
+			t.Errorf("error.Is failed for errFake on %v", err)
+		}
 		if s := err.Error(); !strings.HasPrefix(s, "blob ") {
 			t.Logf("short form of error: %v", err)
 			t.Logf("with details: %+v", err)

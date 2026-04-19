@@ -46,7 +46,7 @@
 //   - Message.BeforeSend: *raw.Message
 //   - Message.AfterSend: *string for the raw.PublishResult serverID corresponding to the message.
 //   - Message: *raw.Message
-//   - Error: *google.golang.org/grpc/status.Status
+//   - Error: *google.golang.org/grpc/status.Status (note: does not work with errors.As, because it's not an error)
 package gcppubsubv2 // import "gocloud.dev/pubsub/gcppubsubv2"
 
 import (

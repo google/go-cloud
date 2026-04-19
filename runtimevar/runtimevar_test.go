@@ -400,7 +400,7 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap := func(description string, err error) {
 		if unwrapped, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
-		} else if du, ok := unwrapped.Unwrap().(*gcerr.Error); ok {
+		} else if du, ok := unwrapped.Unwrap()[0].(*gcerr.Error); ok {
 			t.Errorf("%s: double wrapped: %v", description, du)
 		}
 	}
