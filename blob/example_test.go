@@ -17,6 +17,7 @@ package blob_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -179,6 +180,10 @@ func ExampleBucket_ErrorAs() {
 	if err != nil {
 		var awsErr smithy.APIError
 		if b.ErrorAs(err, &awsErr) {
+			fmt.Println(awsErr.ErrorCode())
+		}
+		// Alternatively, using the Go built-in errors package:
+		if errors.As(err, &awsErr) {
 			fmt.Println(awsErr.ErrorCode())
 		}
 	}

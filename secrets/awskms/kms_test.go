@@ -128,6 +128,9 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 	if !k.ErrorAs(err, &e) {
 		return errors.New("Keeper.ErrorAs failed")
 	}
+	if !errors.As(err, &e) {
+		return errors.New("errors.As failed")
+	}
 	code := e.ErrorCode()
 	want := (&types.InvalidCiphertextException{}).ErrorCode()
 	if code != want {

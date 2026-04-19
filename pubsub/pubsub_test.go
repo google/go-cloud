@@ -551,8 +551,8 @@ func TestErrorsAreWrapped(t *testing.T) {
 		}
 		if e, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("not wrapped: %v", err)
-		} else if got := e.Unwrap(); got != errDriver {
-			t.Errorf("got %v for wrapped error, not errDriver", got)
+		} else if !errors.Is(e, errDriver) {
+			t.Errorf("got %v for wrapped error, wanted Is(errDriver)", e)
 		}
 		if s := err.Error(); !strings.HasPrefix(s, "pubsub ") {
 			t.Errorf("Error() for wrapped error doesn't start with 'pubsub': prefix: %s", s)

@@ -16,6 +16,8 @@ package gcerrors
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"testing"
 
@@ -26,7 +28,7 @@ type wrappedErr struct {
 	err error
 }
 
-func (w wrappedErr) Error() string { return "wrapped" }
+func (w wrappedErr) Error() string { return fmt.Sprintf("wrapped %v", w.err) }
 
 func (w wrappedErr) Unwrap() error { return w.err }
 
@@ -36,7 +38,7 @@ func TestCode(t *testing.T) {
 		want ErrorCode
 	}{
 		{nil, OK},
-		{gcerr.New(AlreadyExists, nil, 1, ""), AlreadyExists},
+		{gcerr.New(AlreadyExists, nil, 1, "msg"), AlreadyExists},
 		{wrappedErr{gcerr.New(PermissionDenied, nil, 1, "")}, PermissionDenied},
 		{context.Canceled, Canceled},
 		{context.DeadlineExceeded, DeadlineExceeded},
@@ -47,6 +49,30 @@ func TestCode(t *testing.T) {
 		got := Code(test.in)
 		if got != test.want {
 			t.Errorf("%v: got %s, want %s", test.in, got, test.want)
+		}
+	}
+}
+
+func TestErrorIs(t *testing.T) {
+	for _, test := range []struct {
+		code   ErrorCode
+		wantIs error
+	}{
+		{Unknown, ErrUnknown},
+		{NotFound, ErrNotFound},
+		{AlreadyExists, ErrAlreadyExists},
+		{InvalidArgument, ErrInvalidArgument},
+		{Internal, ErrInternal},
+		{Unimplemented, ErrUnimplemented},
+		{FailedPrecondition, ErrFailedPrecondition},
+		{PermissionDenied, ErrPermissionDenied},
+		{ResourceExhausted, ErrResourceExhausted},
+		{Canceled, ErrCanceled},
+		{DeadlineExceeded, ErrDeadlineExceeded},
+	} {
+		err := gcerr.New(test.code, errors.New("fail"), 1, "msg")
+		if !errors.Is(err, test.wantIs) {
+			t.Errorf("%v: wanted Is to return true for %v", test.code, test.wantIs)
 		}
 	}
 }

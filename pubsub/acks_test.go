@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -342,7 +341,7 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 	defer cancel()
 	for {
 		_, err = sub.Receive(ctx)
-		if gcerrors.Code(err) == gcerrors.Internal && err.(*gcerr.Error).Unwrap() == serr {
+		if gcerrors.Code(err) == gcerrors.Internal && errors.Is(err, serr) {
 			break // success
 		}
 		if err != nil {
@@ -440,7 +439,7 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	if got := gcerrors.Code(err); got != gcerrors.Internal {
 		t.Fatalf("error code = %v; want %v", got, gcerrors.Internal)
 	}
-	if got := errors.Unwrap(err); got != serr {
-		t.Errorf("error = %v; want %v", got, serr)
+	if !errors.Is(err, serr) {
+		t.Errorf("error = %v; want errors.Is(%v) to return true", err, serr)
 	}
 }

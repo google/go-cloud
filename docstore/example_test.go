@@ -16,6 +16,7 @@ package docstore_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -163,6 +164,8 @@ func ExampleCollection_ErrorAs() {
 		} else {
 			fmt.Println("could not convert error")
 		}
+		// Alternatively, using errors.As:
+		_ = errors.As(err, &aerr)
 	}
 }
 

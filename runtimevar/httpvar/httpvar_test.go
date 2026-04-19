@@ -102,7 +102,11 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var e RequestError
 	if !v.ErrorAs(err, &e) {
-		return errors.New("ErrorAs expected to succeed with *httpvar.RequestError")
+		return errors.New("ErrorAs expected to succeed with httpvar.RequestError")
+	}
+	var ep *RequestError
+	if !errors.As(err, &ep) {
+		return errors.New("errors.As succeed with *httpvar.RequestError")
 	}
 	if !strings.Contains(e.Error(), strconv.Itoa(e.Response.StatusCode)) {
 		return errors.New("should contain url and status code")
@@ -111,7 +115,11 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var e2 url.Error
 	urlError := &url.Error{URL: "http://example.com", Op: "GET", Err: errors.New("example error")}
 	if !v.ErrorAs(urlError, &e2) {
-		return errors.New("ErrorAs expected to succeed with *url.Error")
+		return errors.New("ErrorAs expected to succeed with url.Error")
+	}
+	var e2p *url.Error
+	if !errors.As(urlError, &e2p) {
+		return errors.New("errors.As succeed with *url.Error")
 	}
 
 	var e3 RequestError
