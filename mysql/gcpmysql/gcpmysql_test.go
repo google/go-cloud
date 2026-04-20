@@ -16,14 +16,19 @@ package gcpmysql
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/url"
 	"reflect"
 	"testing"
 
+	"cloud.google.com/go/cloudsqlconn"
 	drvr "github.com/go-sql-driver/mysql"
+	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/internal/testing/terraform"
 	"gocloud.dev/mysql"
+	"golang.org/x/oauth2"
 )
 
 func TestOpen(t *testing.T) {
@@ -59,6 +64,153 @@ func TestOpen(t *testing.T) {
 	}
 	if err := db.Close(); err != nil {
 		t.Error("Close:", err)
+	}
+}
+
+// mockCertSource is a no-op proxy.CertSource for unit tests.
+type mockCertSource struct{}
+
+func (mockCertSource) Local(instance string) (tls.Certificate, error) {
+	return tls.Certificate{}, nil
+}
+func (mockCertSource) Remote(instance string) (*x509.Certificate, string, string, string, error) {
+	return nil, "", "", "", nil
+}
+
+func mustParseURL(raw string) *url.URL {
+	u, err := url.Parse(raw)
+	if err != nil {
+		panic(err)
+	}
+	return u
+}
+
+func TestParseIPType(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    cloudsql.IPType
+		wantErr bool
+	}{
+		{"auto", cloudsql.IPTypeAuto, false},
+		{"public", cloudsql.IPTypePublic, false},
+		{"private", cloudsql.IPTypePrivate, false},
+		{"psc", cloudsql.IPTypePSC, false},
+		{"", cloudsql.IPTypeAuto, false},         // empty string defaults to auto
+		{"PUBLIC", cloudsql.IPTypePublic, false}, // case-insensitive
+		{"invalid", 0, true},
+		{"public ", 0, true}, // whitespace is not trimmed
+	}
+	for _, tc := range tests {
+		got, err := parseIPType(tc.input)
+		if (err != nil) != tc.wantErr {
+			t.Errorf("parseIPType(%q) error = %v, wantErr %v", tc.input, err, tc.wantErr)
+			continue
+		}
+		if !tc.wantErr && got != tc.want {
+			t.Errorf("parseIPType(%q) = %v, want %v", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestOpenMySQLURL_Errors(t *testing.T) {
+	ctx := context.Background()
+	base := "gcpmysql://user:pass@project/us-central1/instance/db"
+
+	fakeTS := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "fake"})
+	d, err := cloudsqlconn.NewDialer(ctx, cloudsqlconn.WithTokenSource(fakeTS))
+	if err != nil {
+		t.Fatalf("NewDialer: %v", err)
+	}
+	defer d.Close()
+
+	tests := []struct {
+		name string
+		uo   *URLOpener
+		url  string
+	}{
+		{
+			name: "NilDialerAndCertSource",
+			uo:   &URLOpener{},
+			url:  base,
+		},
+		{
+			// ip_type validation only runs on the Dialer path; legacy silently ignores it.
+			name: "InvalidIPType",
+			uo:   &URLOpener{Dialer: d},
+			url:  base + "?ip_type=bogus",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			db, err := tc.uo.OpenMySQLURL(ctx, mustParseURL(tc.url))
+			if err == nil {
+				db.Close()
+				t.Fatal("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestOpenMySQLURL_DialerPath(t *testing.T) {
+	ctx := context.Background()
+	fakeTS := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "fake"})
+	d, err := cloudsqlconn.NewDialer(ctx, cloudsqlconn.WithTokenSource(fakeTS))
+	if err != nil {
+		t.Fatalf("NewDialer: %v", err)
+	}
+	defer d.Close()
+
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"DefaultIPType", "gcpmysql://user:pass@project/us-central1/instance/db"},
+		{"ExplicitAutoIPType", "gcpmysql://user:pass@project/us-central1/instance/db?ip_type=auto"},
+		{"PublicIPType", "gcpmysql://user:pass@project/us-central1/instance/db?ip_type=public"},
+		{"PrivateIPType", "gcpmysql://user:pass@project/us-central1/instance/db?ip_type=private"},
+		{"PSCIPType", "gcpmysql://user:pass@project/us-central1/instance/db?ip_type=psc"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			uo := &URLOpener{Dialer: d}
+			db, err := uo.OpenMySQLURL(ctx, mustParseURL(tc.url))
+			if err != nil {
+				t.Fatalf("OpenMySQLURL(%q): %v", tc.url, err)
+			}
+			db.Close()
+		})
+	}
+}
+
+func TestOpenMySQLURL_LegacyPath(t *testing.T) {
+	ctx := context.Background()
+	uo := &URLOpener{CertSource: mockCertSource{}}
+	db, err := uo.OpenMySQLURL(ctx, mustParseURL("gcpmysql://user:pass@project/us-central1/instance/db"))
+	if err != nil {
+		t.Fatalf("OpenMySQLURL: %v", err)
+	}
+	db.Close()
+}
+
+// TestOpenMySQLURL_DialerTakesPrecedence verifies that when both Dialer and
+// CertSource are set, the Dialer path is taken. The two paths differ in how they
+// handle ip_type: the Dialer path validates and returns an error for unknown values;
+// the legacy CertSource path silently ignores ip_type. Passing ip_type=bogus
+// therefore errors only if the Dialer path ran.
+func TestOpenMySQLURL_DialerTakesPrecedence(t *testing.T) {
+	ctx := context.Background()
+	fakeTS := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "fake"})
+	d, err := cloudsqlconn.NewDialer(ctx, cloudsqlconn.WithTokenSource(fakeTS))
+	if err != nil {
+		t.Fatalf("NewDialer: %v", err)
+	}
+	defer d.Close()
+
+	uo := &URLOpener{Dialer: d, CertSource: mockCertSource{}}
+	db, err := uo.OpenMySQLURL(ctx, mustParseURL("gcpmysql://user:pass@project/us-central1/instance/db?ip_type=bogus"))
+	if err == nil {
+		db.Close()
+		t.Fatal("expected ip_type validation error from Dialer path; CertSource path would have silently ignored ip_type")
 	}
 }
 

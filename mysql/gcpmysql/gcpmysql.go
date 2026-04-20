@@ -24,6 +24,17 @@
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 //
+// # IP Type
+//
+// By default, connections use auto-IP selection (public IP if available,
+// otherwise private IP), matching the behavior of the legacy cloudsql-proxy.
+// To use a specific IP type, set URLOpener.IPType or pass the "ip_type" query
+// parameter in the URL (requires URLOpener.Dialer to be set):
+//
+//	gcpmysql://user:pass@project/region/instance/dbname?ip_type=psc
+//
+// Valid values for ip_type: auto, public, private, psc.
+//
 // See https://gocloud.dev/concepts/urls/ for background information.
 package gcpmysql // import "gocloud.dev/mysql/gcpmysql"
 
@@ -37,6 +48,7 @@ import (
 	"strings"
 	"sync"
 
+	"cloud.google.com/go/cloudsqlconn"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/XSAM/otelsql"
 	"github.com/go-sql-driver/mysql"
@@ -68,13 +80,13 @@ func (o *lazyCredsOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB
 			o.err = err
 			return
 		}
-		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		// Ignore cleanup: the dialer lives for the process lifetime in this global opener.
+		d, _, err := cloudsql.NewDialer(ctx, creds.TokenSource)
 		if err != nil {
 			o.err = err
 			return
 		}
-		certSource := cloudsql.NewCertSource(client)
-		o.opener = &URLOpener{CertSource: certSource}
+		o.opener = &URLOpener{Dialer: d}
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("gcpmysql open %v: %v", u, o.err)
@@ -85,8 +97,15 @@ func (o *lazyCredsOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB
 // URLOpener opens Cloud MySQL URLs like
 // "gcpmysql://user:password@project/region/instance/dbname".
 type URLOpener struct {
+	// Dialer creates Cloud SQL connections using the Cloud SQL Go Connector.
+	// Supports PSC and explicit IP type selection via the "ip_type" URL query
+	// parameter. If both Dialer and CertSource are set, Dialer takes precedence.
+	Dialer *cloudsqlconn.Dialer
+
 	// CertSource specifies how the opener will obtain authentication information.
-	// CertSource must not be nil.
+	//
+	// Deprecated: Use Dialer instead. CertSource does not support PSC or
+	// explicit IP type selection. Ignored if Dialer is also set.
 	CertSource proxy.CertSource
 
 	// TraceOpts contains options for OpenTelemetry.
@@ -95,25 +114,48 @@ type URLOpener struct {
 
 // OpenMySQLURL opens a new GCP database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	if uo.CertSource == nil {
-		return nil, fmt.Errorf("gcpmysql: URLOpener CertSource is nil")
+	if uo.Dialer == nil && uo.CertSource == nil {
+		return nil, fmt.Errorf("gcpmysql: URLOpener Dialer and CertSource are both nil")
 	}
-	var (
-		client   = &proxy.Client{Certs: uo.CertSource, Port: 3307}
-		cfg, err = configFromURL(u)
-	)
+
+	cfg, err := configFromURL(u)
 	if err != nil {
 		return nil, fmt.Errorf("gcpmysql: open config %v", err)
 	}
-	cfg.DialFunc = func(ctx context.Context, _, addr string) (net.Conn, error) {
-		// MySQL driver's addr is in the form "[host]:3306" after normalized.
-		// https://github.com/go-sql-driver/mysql/blob/76c00e35a8d48f8f70f0e7dffe584692bd3fa612/dsn.go#L193-L195
-		instance, _, err := net.SplitHostPort(addr)
-		if err != nil {
-			return nil, err
+
+	if uo.Dialer != nil {
+		// New path: Cloud SQL Go Connector with IP type and PSC support.
+		ipType := cloudsql.IPTypeAuto
+		if s := u.Query().Get("ip_type"); s != "" {
+			parsed, err := parseIPType(s)
+			if err != nil {
+				return nil, fmt.Errorf("gcpmysql: open: %v", err)
+			}
+			ipType = parsed
 		}
-		return client.DialContext(ctx, instance)
+		dialOpts := ipType.DialOptions()
+		d := uo.Dialer
+		cfg.DialFunc = func(ctx context.Context, _, addr string) (net.Conn, error) {
+			// MySQL driver's addr is in the form "[host]:3306" after normalized.
+			// https://github.com/go-sql-driver/mysql/blob/76c00e35a8d48f8f70f0e7dffe584692bd3fa612/dsn.go#L193-L195
+			instance, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			return d.Dial(ctx, instance, dialOpts...)
+		}
+	} else {
+		// Legacy path: cloudsql-proxy v1 (no PSC or IP type selection).
+		client := &proxy.Client{Certs: uo.CertSource, Port: 3307}
+		cfg.DialFunc = func(ctx context.Context, _, addr string) (net.Conn, error) {
+			instance, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			return client.DialContext(ctx, instance)
+		}
 	}
+
 	c, err := mysql.NewConnector(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("gcpmysql: open connector %v", err)
@@ -127,10 +169,14 @@ func configFromURL(u *url.URL) (*mysql.Config, error) {
 		return nil, err
 	}
 
+	// Strip ip_type from query before passing to MySQL DSN parser.
+	query := u.Query()
+	query.Del("ip_type")
+
 	var cfg *mysql.Config
 	switch {
-	case len(u.RawQuery) > 0:
-		optDsn := fmt.Sprintf("/%s?%s", dbName, u.RawQuery)
+	case len(query) > 0:
+		optDsn := fmt.Sprintf("/%s?%s", dbName, query.Encode())
 		if cfg, err = mysql.ParseDSN(optDsn); err != nil {
 			return nil, err
 		}
@@ -160,4 +206,19 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 		return "", "", fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
 	}
 	return parts[0] + ":" + parts[1] + ":" + parts[2], parts[3], nil
+}
+
+func parseIPType(s string) (cloudsql.IPType, error) {
+	switch strings.ToLower(s) {
+	case "auto", "":
+		return cloudsql.IPTypeAuto, nil
+	case "public":
+		return cloudsql.IPTypePublic, nil
+	case "private":
+		return cloudsql.IPTypePrivate, nil
+	case "psc":
+		return cloudsql.IPTypePSC, nil
+	default:
+		return 0, fmt.Errorf("unknown ip_type %q (valid: auto, public, private, psc)", s)
+	}
 }
