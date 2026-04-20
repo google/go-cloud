@@ -296,9 +296,7 @@ func (e ActionListError) Error() string {
 	return strings.Join(s, "; ")
 }
 
-// Unwrap returns the error in e, if there is exactly one. If there is more than one
-// error, Unwrap returns nil, since there is no way to determine which should be
-// returned.
+// Unwrap returns all underlying errors from e.
 func (e ActionListError) Unwrap() []error {
 	errs := []error{}
 	for _, err := range e {
@@ -679,9 +677,9 @@ func wrapError(c driver.Collection, err error) error {
 		return err
 	}
 	if _, ok := err.(*gcerr.Error); ok {
-		return gcerrors.Wrap(err)
+		return err
 	}
-	return gcerrors.Wrap(gcerr.New(c.ErrorCode(err), err, 2, "docstore"))
+	return gcerr.New(c.ErrorCode(err), err, 2, "docstore")
 }
 
 // ErrorAs converts i to driver-specific types. See

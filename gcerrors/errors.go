@@ -68,33 +68,6 @@ const (
 	DeadlineExceeded ErrorCode = gcerr.DeadlineExceeded
 )
 
-// TODO: just as an example, hypothetically this would be implemented for all errors
-type AlreadyExistsError struct {
-	err error
-}
-
-func (a *AlreadyExistsError) Error() string {
-	return a.err.Error()
-}
-
-func (a *AlreadyExistsError) Unwrap() error {
-	return a.err
-}
-
-// Wrap returns the Error struct that corresponds to the ErrorCode of the underlying error.
-// If err is not a go-cloud error it just returns the error.
-func Wrap(err error) error {
-	var e *gcerr.Error
-	if !errors.As(err, &e) {
-		return err
-	}
-	switch e.Code {
-	case gcerr.AlreadyExists:
-		return &AlreadyExistsError{err: err}
-	}
-	return err
-}
-
 // Code returns the ErrorCode of err if it, or some error it wraps, is an *Error.
 // If err is context.Canceled or context.DeadlineExceeded, or wraps one of those errors,
 // it returns the Canceled or DeadlineExceeded codes, respectively.
