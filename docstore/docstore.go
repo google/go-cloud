@@ -296,16 +296,13 @@ func (e ActionListError) Error() string {
 	return strings.Join(s, "; ")
 }
 
-// Unwrap returns the error in e, if there is exactly one. If there is more than one
-// error, Unwrap returns nil, since there is no way to determine which should be
-// returned.
-func (e ActionListError) Unwrap() error {
-	if len(e) == 1 {
-		return e[0].Err
+// Unwrap returns all underlying errors from e.
+func (e ActionListError) Unwrap() []error {
+	errs := []error{}
+	for _, err := range e {
+		errs = append(errs, err.Err)
 	}
-	// Return nil when e is nil, or has more than one error.
-	// When there are multiple errors, it doesn't make sense to return any of them.
-	return nil
+	return errs
 }
 
 // BeforeDo takes a callback function that will be called before the ActionList is
@@ -558,55 +555,37 @@ func (a *Action) String() string {
 // Create is a convenience for building and running a single-element action list.
 // See ActionList.Create.
 func (c *Collection) Create(ctx context.Context, doc Document) error {
-	if err := c.Actions().Create(doc).Do(ctx); err != nil {
-		return err.(ActionListError).Unwrap()
-	}
-	return nil
+	return c.Actions().Create(doc).Do(ctx)
 }
 
 // Replace is a convenience for building and running a single-element action list.
 // See ActionList.Replace.
 func (c *Collection) Replace(ctx context.Context, doc Document) error {
-	if err := c.Actions().Replace(doc).Do(ctx); err != nil {
-		return err.(ActionListError).Unwrap()
-	}
-	return nil
+	return c.Actions().Replace(doc).Do(ctx)
 }
 
 // Put is a convenience for building and running a single-element action list.
 // See ActionList.Put.
 func (c *Collection) Put(ctx context.Context, doc Document) error {
-	if err := c.Actions().Put(doc).Do(ctx); err != nil {
-		return err.(ActionListError).Unwrap()
-	}
-	return nil
+	return c.Actions().Put(doc).Do(ctx)
 }
 
 // Delete is a convenience for building and running a single-element action list.
 // See ActionList.Delete.
 func (c *Collection) Delete(ctx context.Context, doc Document) error {
-	if err := c.Actions().Delete(doc).Do(ctx); err != nil {
-		return err.(ActionListError).Unwrap()
-	}
-	return nil
+	return c.Actions().Delete(doc).Do(ctx)
 }
 
 // Get is a convenience for building and running a single-element action list.
 // See ActionList.Get.
 func (c *Collection) Get(ctx context.Context, doc Document, fps ...FieldPath) error {
-	if err := c.Actions().Get(doc, fps...).Do(ctx); err != nil {
-		return err.(ActionListError).Unwrap()
-	}
-	return nil
+	return c.Actions().Get(doc, fps...).Do(ctx)
 }
 
 // Update is a convenience for building and running a single-element action list.
 // See ActionList.Update.
 func (c *Collection) Update(ctx context.Context, doc Document, mods Mods) error {
-	if err := c.Actions().Update(doc, mods).Do(ctx); err != nil {
-		return err.(ActionListError).Unwrap()
-	}
-	return nil
+	return c.Actions().Update(doc, mods).Do(ctx)
 }
 
 func parseFieldPath(fp FieldPath) ([]string, error) {

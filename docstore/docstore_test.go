@@ -16,6 +16,7 @@ package docstore
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -118,10 +119,7 @@ func TestClosedErrors(t *testing.T) {
 
 	check := func(err error) {
 		t.Helper()
-		if alerr, ok := err.(ActionListError); ok {
-			err = alerr.Unwrap()
-		}
-		if err != errClosed {
+		if !errors.Is(err, errClosed) {
 			t.Errorf("got %v, want errClosed", err)
 		}
 	}
