@@ -31,14 +31,18 @@ package localsecrets // import "gocloud.dev/secrets/localsecrets"
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"net/url"
+	"sort"
+	"strings"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/secrets"
+	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
@@ -59,12 +63,31 @@ const (
 // Note that base64.URLEncoding should be used to avoid URL-unsafe character in the hostname.
 // If the URL host is empty (e.g., "base64key://"), a new random key is generated.
 //
-// No query parameters are supported.
-type URLOpener struct{}
+// EncryptionContext key/value pairs can be provided by providing URL parameters prefixed
+// with "context_"; e.g., "...&context_abc=foo&context_def=bar" would result in
+// an EncryptionContext of {abc=foo, def=bar}.
+//
+// A "salt" query parameter can be provided for HKDF domain separation when using
+// EncryptionContext; e.g., "...&salt=myapp". If not set, the default salt
+// "gocloud.dev/secrets/localsecrets" is used.
+type URLOpener struct {
+	// Options specifies the options to pass to OpenKeeper.
+	// EncryptionContext parameters from the URL are merged in.
+	Options KeeperOptions
+}
 
 // OpenKeeperURL opens Keeper URLs.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
-	for param := range u.Query() {
+	queryParams := u.Query()
+	opts := o.Options
+	if err := addEncryptionContextFromURLParams(&opts, queryParams); err != nil {
+		return nil, err
+	}
+	if s := queryParams.Get("salt"); s != "" {
+		opts.Salt = []byte(s)
+		queryParams.Del("salt")
+	}
+	for param := range queryParams {
 		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
 	var sk [32]byte
@@ -77,21 +100,97 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if err != nil {
 		return nil, fmt.Errorf("open keeper %v: failed to get key: %v", u, err)
 	}
-	return NewKeeper(sk), nil
+	return OpenKeeper(sk, &opts), nil
+}
+
+// addEncryptionContextFromURLParams merges any EncryptionContext URL parameters from
+// u into opts.EncryptionContext.
+// It removes the processed URL parameters from u.
+func addEncryptionContextFromURLParams(opts *KeeperOptions, u url.Values) error {
+	for k, vs := range u {
+		if strings.HasPrefix(k, "context_") {
+			if len(vs) != 1 {
+				return fmt.Errorf("open keeper: EncryptionContext URL parameters %q must have exactly 1 value", k)
+			}
+			u.Del(k)
+			if opts.EncryptionContext == nil {
+				opts.EncryptionContext = map[string]string{}
+			}
+			opts.EncryptionContext[k[8:]] = vs[0]
+		}
+	}
+	return nil
 }
 
 // keeper holds a secret for use in symmetric encryption,
 // and implements driver.Keeper.
 type keeper struct {
 	secretKey [32]byte // secretbox key size
+	opts      KeeperOptions
+}
+
+// OpenKeeper returns a *secrets.Keeper that uses the given symmetric
+// key with the given options.
+func OpenKeeper(sk [32]byte, opts *KeeperOptions) *secrets.Keeper {
+	if opts == nil {
+		opts = &KeeperOptions{}
+	}
+	return secrets.NewKeeper(&keeper{secretKey: sk, opts: *opts})
 }
 
 // NewKeeper returns a *secrets.Keeper that uses the given symmetric
 // key. See the package documentation for an example.
 func NewKeeper(sk [32]byte) *secrets.Keeper {
-	return secrets.NewKeeper(
-		&keeper{secretKey: sk},
-	)
+	return OpenKeeper(sk, nil)
+}
+
+// KeeperOptions controls Keeper behaviors.
+type KeeperOptions struct {
+	// EncryptionContext is a set of key/value pairs that are used during
+	// encryption and decryption. The same EncryptionContext must be provided
+	// for both operations; decryption will fail if the context does not match.
+	// See https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context.
+	EncryptionContext map[string]string
+	// Salt is used as the HKDF salt for key derivation when EncryptionContext
+	// is set. It provides domain separation so that different applications using
+	// the same key and context derive different subkeys.
+	// If nil, defaults to "gocloud.dev/secrets/localsecrets".
+	Salt []byte
+}
+
+var defaultSalt = []byte("gocloud.dev/secrets/localsecrets")
+
+// deriveKey derives a [32]byte key from the base secret key and the encryption context
+// using HKDF (RFC 5869). If no encryption context is set, the base key is returned unchanged.
+func deriveKey(sk [32]byte, opts KeeperOptions) [32]byte {
+	if len(opts.EncryptionContext) == 0 {
+		return sk
+	}
+	// Build deterministic info from sorted context key/value pairs
+	// with null byte separators to prevent ambiguity.
+	keys := make([]string, 0, len(opts.EncryptionContext))
+	for k := range opts.EncryptionContext {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var info []byte
+	for _, k := range keys {
+		info = append(info, k...)
+		info = append(info, 0)
+		info = append(info, opts.EncryptionContext[k]...)
+		info = append(info, 0)
+	}
+	salt := opts.Salt
+	if salt == nil {
+		salt = defaultSalt
+	}
+	r := hkdf.New(sha256.New, sk[:], salt, info)
+	var derived [32]byte
+	if _, err := io.ReadFull(r, derived[:]); err != nil {
+		// sha256-based HKDF will never fail to produce 32 bytes.
+		panic(err)
+	}
+	return derived
 }
 
 // Base64KeyStd takes a secret key as a base64 string and converts it
@@ -146,7 +245,8 @@ func (k *keeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	// secretbox.Seal appends the encrypted message to its first argument and returns
 	// the result; using a slice on top of the nonce array for this "out" arg allows reading
 	// the nonce out of the first nonceSize bytes when the message is decrypted.
-	return secretbox.Seal(nonce[:], message, &nonce, &k.secretKey), nil
+	key := deriveKey(k.secretKey, k.opts)
+	return secretbox.Seal(nonce[:], message, &nonce, &key), nil
 }
 
 // Decrypt decrypts a message using a nonce that is read out of the first nonceSize bytes
@@ -158,7 +258,8 @@ func (k *keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [nonceSize]byte
 	copy(decryptNonce[:], message[:nonceSize])
 
-	decrypted, ok := secretbox.Open(nil, message[nonceSize:], &decryptNonce, &k.secretKey)
+	key := deriveKey(k.secretKey, k.opts)
+	decrypted, ok := secretbox.Open(nil, message[nonceSize:], &decryptNonce, &key)
 	if !ok {
 		return nil, errors.New("localsecrets: Decrypt failed")
 	}

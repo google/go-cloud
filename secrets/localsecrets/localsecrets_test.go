@@ -136,6 +136,12 @@ func TestOpenKeeper(t *testing.T) {
 		{"base64Key://UKcmEoZW7nKl0uPHr8yV__KJm0ANhiFz8PzDN-gYWq8=", false},
 		// Invalid parameter.
 		{"base64key://?param=value", true},
+		// OK with encryption context.
+		{"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=?context_abc=foo&context_def=bar", false},
+		// OK with encryption context and empty host (random key).
+		{"base64key://?context_tenant=123", false},
+		// Encryption context with multiple values for same key is an error.
+		{"base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=?context_abc=foo&context_abc=bar", true},
 	}
 
 	ctx := context.Background()
@@ -149,5 +155,162 @@ func TestOpenKeeper(t *testing.T) {
 				t.Errorf("%s: got error during close: %v", test.URL, err)
 			}
 		}
+	}
+}
+
+func TestEncryptionContext(t *testing.T) {
+	key, err := NewRandomKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	const plaintext = "hello world"
+
+	// Encrypt with encryption context.
+	keeperWithCtx := OpenKeeper(key, &KeeperOptions{
+		EncryptionContext: map[string]string{"tenant": "abc", "env": "prod"},
+	})
+	defer keeperWithCtx.Close()
+
+	ciphertext, err := keeperWithCtx.Encrypt(ctx, []byte(plaintext))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Decrypt with the same encryption context should succeed.
+	got, err := keeperWithCtx.Decrypt(ctx, ciphertext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != plaintext {
+		t.Errorf("got %q, want %q", string(got), plaintext)
+	}
+
+	// Decrypt without encryption context should fail.
+	keeperNoCtx := NewKeeper(key)
+	defer keeperNoCtx.Close()
+
+	_, err = keeperNoCtx.Decrypt(ctx, ciphertext)
+	if err == nil {
+		t.Error("expected Decrypt to fail without encryption context, but it succeeded")
+	}
+
+	// Decrypt with a different encryption context should fail.
+	keeperDiffCtx := OpenKeeper(key, &KeeperOptions{
+		EncryptionContext: map[string]string{"tenant": "xyz"},
+	})
+	defer keeperDiffCtx.Close()
+
+	_, err = keeperDiffCtx.Decrypt(ctx, ciphertext)
+	if err == nil {
+		t.Error("expected Decrypt to fail with different encryption context, but it succeeded")
+	}
+
+	// Encrypt without context, decrypt with context should fail.
+	ciphertext2, err := keeperNoCtx.Encrypt(ctx, []byte(plaintext))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = keeperWithCtx.Decrypt(ctx, ciphertext2)
+	if err == nil {
+		t.Error("expected Decrypt to fail when ciphertext was encrypted without context, but it succeeded")
+	}
+}
+
+func TestEncryptionContextSalt(t *testing.T) {
+	key, err := NewRandomKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	const plaintext = "hello world"
+	ec := map[string]string{"tenant": "abc"}
+
+	// Encrypt with custom salt.
+	keeperSalt1 := OpenKeeper(key, &KeeperOptions{
+		EncryptionContext: ec,
+		Salt:              []byte("salt1"),
+	})
+	defer keeperSalt1.Close()
+
+	ciphertext, err := keeperSalt1.Encrypt(ctx, []byte(plaintext))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Decrypt with the same salt should succeed.
+	got, err := keeperSalt1.Decrypt(ctx, ciphertext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != plaintext {
+		t.Errorf("got %q, want %q", string(got), plaintext)
+	}
+
+	// Decrypt with a different salt should fail.
+	keeperSalt2 := OpenKeeper(key, &KeeperOptions{
+		EncryptionContext: ec,
+		Salt:              []byte("salt2"),
+	})
+	defer keeperSalt2.Close()
+
+	_, err = keeperSalt2.Decrypt(ctx, ciphertext)
+	if err == nil {
+		t.Error("expected Decrypt to fail with different salt, but it succeeded")
+	}
+
+	// Decrypt with default salt (nil) should also fail.
+	keeperDefaultSalt := OpenKeeper(key, &KeeperOptions{
+		EncryptionContext: ec,
+	})
+	defer keeperDefaultSalt.Close()
+
+	_, err = keeperDefaultSalt.Decrypt(ctx, ciphertext)
+	if err == nil {
+		t.Error("expected Decrypt to fail with default salt vs custom salt, but it succeeded")
+	}
+}
+
+func TestOpenKeeperURLWithSalt(t *testing.T) {
+	ctx := context.Background()
+	const plaintext = "hello world"
+
+	// Open two keepers with same key + context but different salts via URL.
+	k1, err := secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=?context_a=1&salt=salt1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer k1.Close()
+
+	ciphertext, err := k1.Encrypt(ctx, []byte(plaintext))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Same key + context + salt via URL should decrypt.
+	k1b, err := secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=?context_a=1&salt=salt1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer k1b.Close()
+
+	got, err := k1b.Decrypt(ctx, ciphertext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != plaintext {
+		t.Errorf("got %q, want %q", string(got), plaintext)
+	}
+
+	// Different salt via URL should fail to decrypt.
+	k2, err := secrets.OpenKeeper(ctx, "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4=?context_a=1&salt=salt2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer k2.Close()
+
+	_, err = k2.Decrypt(ctx, ciphertext)
+	if err == nil {
+		t.Error("expected Decrypt to fail with different salt, but it succeeded")
 	}
 }
