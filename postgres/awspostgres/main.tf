@@ -175,7 +175,7 @@ resource "null_resource" "create_iam_user" {
     command = <<-EOT
       docker run --rm postgres:16 \
         psql "host=${split(":", aws_db_instance.main.endpoint)[0]} port=${split(":", aws_db_instance.main.endpoint)[1]} dbname=testdb user=${aws_db_instance.main.username} password=${random_string.db_password.result} sslmode=require" \
-        -c "CREATE USER ${local.iamUser}; GRANT rds_iam TO ${local.iamUser};"
+        -c "CREATE USER ${local.iamUser}; GRANT rds_iam TO ${local.iamUser}; GRANT ALL ON SCHEMA public TO ${local.iamUser};"
     EOT
   }
 

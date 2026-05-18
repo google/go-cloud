@@ -56,5 +56,14 @@ func Example_iam() {
 	defer db.Close()
 
 	// Use database in your program.
-	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
+	if _, err := db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS foo (bar INT)"); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, "INSERT INTO foo (bar) VALUES ($1)", 42); err != nil {
+		log.Fatal(err)
+	}
+	var val int
+	if err := db.QueryRowContext(ctx, "SELECT bar FROM foo LIMIT 1").Scan(&val); err != nil {
+		log.Fatal(err)
+	}
 }

@@ -111,9 +111,14 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	if _, ok := u.User.Password(); !ok {
 		profile := query.Get("aws_profile")
 		query.Del("aws_profile")
-		cfg, err := config.LoadDefaultConfig(ctx,
-			config.WithHTTPClient(uo.HTTPClient),
-			config.WithSharedConfigProfile(profile))
+		var cfgOpts []func(*config.LoadOptions) error
+		if uo.HTTPClient != nil {
+			cfgOpts = append(cfgOpts, config.WithHTTPClient(uo.HTTPClient))
+		}
+		if profile != "" {
+			cfgOpts = append(cfgOpts, config.WithSharedConfigProfile(profile))
+		}
+		cfg, err := config.LoadDefaultConfig(ctx, cfgOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("awspostgres: open: load AWS config: %v", err)
 		}
