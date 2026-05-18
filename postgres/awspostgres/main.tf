@@ -76,12 +76,12 @@ locals {
 resource "aws_db_instance" "main" {
   identifier_prefix               = "go-cloud-test"
   engine                          = "postgres"
-  engine_version                  = "10.5"
-  instance_class                  = "db.t2.micro"
+  engine_version                  = "16.6"
+  instance_class                  = "db.t3.micro"
   allocated_storage               = 20
   username                        = "root"
   password                        = random_string.db_password.result
-  name                            = "testdb"
+  db_name                         = "testdb"
   publicly_accessible             = true
   vpc_security_group_ids          = [aws_security_group.main.id]
   skip_final_snapshot             = true
@@ -91,7 +91,7 @@ resource "aws_db_instance" "main" {
 
 resource "aws_db_parameter_group" "main" {
   name_prefix = "go-cloud-test"
-  family      = "postgres10"
+  family      = "postgres16"
 
   parameter {
     name  = "rds.force_ssl"
