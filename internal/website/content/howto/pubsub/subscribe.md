@@ -6,7 +6,7 @@ weight: 2
 toc: true
 ---
 
-Subscribing to receive message from a topic with the Go CDK takes three steps:
+Subscribing to receive messages from a topic with the Go CDK takes three steps:
 
 1. [Open a subscription][] to a topic with the Pub/Sub service of your choice (once per
    subscription).
@@ -165,7 +165,7 @@ first create an AWS Config with the same region as your topic:
 
 ### Azure Service Bus {#azure}
 
-The Go CDK can recieve messages from an [Azure Service Bus][] subscription.
+The Go CDK can receive messages from an [Azure Service Bus][] subscription.
 The URL for subscribing is the topic name with the
 subscription name in the `subscription` query parameter.
 `pubsub.OpenSubscription` will use the environment variable
