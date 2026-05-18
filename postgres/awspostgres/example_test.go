@@ -39,3 +39,22 @@ func Example() {
 	// Use database in your program.
 	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
 }
+
+func Example_iam() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, add a blank import: _ "gocloud.dev/postgres/awspostgres"
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	// To use IAM authentication, omit the password from the URL.
+	// The IAM user or role must be granted rds_iam permission in the database.
+	db, err := postgres.Open(ctx,
+		"awspostgres://iamuser@example01.xyzzy.us-west-1.rds.amazonaws.com:5432/testdb")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Use database in your program.
+	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
+}
