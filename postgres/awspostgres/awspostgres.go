@@ -23,6 +23,15 @@
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 //
+// To use IAM authentication, omit the password from the URL:
+//
+//	awspostgres://iam-user@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb
+//
+// To specify an AWS profile or assume a role, add the following query parameters:
+//
+//   - aws_profile: the AWS shared config profile to use
+//   - aws_role_arn: the ARN of the role to assume
+//
 // See https://gocloud.dev/concepts/urls/ for background information.
 package awspostgres // import "gocloud.dev/postgres/awspostgres"
 
@@ -34,10 +43,16 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/XSAM/otelsql"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/lib/pq"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/postgres"
@@ -45,7 +60,19 @@ import (
 
 // URLOpener opens RDS PostgreSQL URLs
 // like "awspostgres://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb".
+//
+// To use IAM authentication, omit the password:
+//
+//	awspostgres://iam-user@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb
+//
+// To specify an AWS profile or assume a role, add the following query parameters:
+//
+//   - aws_profile: the AWS shared config profile to use
+//   - aws_role_arn: the ARN of the role to assume
 type URLOpener struct {
+	// HTTPClient is the HTTP client used to fetch RDS certificates,
+	// and IAM authentication tokens.
+	HTTPClient *http.Client
 	// CertSource specifies how the opener will obtain the RDS Certificate
 	// Authority. If nil, it will use the default *rds.CertFetcher.
 	CertSource rds.CertPoolProvider
@@ -65,7 +92,10 @@ func init() {
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	source := uo.CertSource
 	if source == nil {
-		source = new(rds.CertFetcher)
+		source = &rds.CertFetcher{Client: uo.HTTPClient}
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("awspostgres: open: empty endpoint")
 	}
 
 	query := u.Query()
@@ -75,6 +105,34 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 			return nil, fmt.Errorf("awspostgres: open: parameter %q not allowed; sslmode must be disabled because the underlying dialer is already providing TLS", k)
 		}
 	}
+
+	// If no password provided, assume it's AWS IAM authentication.
+	var iam func(context.Context) (string, error)
+	if _, ok := u.User.Password(); !ok {
+		profile := query.Get("aws_profile")
+		query.Del("aws_profile")
+		var cfgOpts []func(*config.LoadOptions) error
+		if uo.HTTPClient != nil {
+			cfgOpts = append(cfgOpts, config.WithHTTPClient(uo.HTTPClient))
+		}
+		if profile != "" {
+			cfgOpts = append(cfgOpts, config.WithSharedConfigProfile(profile))
+		}
+		cfg, err := config.LoadDefaultConfig(ctx, cfgOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("awspostgres: open: load AWS config: %v", err)
+		}
+		creds := cfg.Credentials
+		if roleARN := query.Get("aws_role_arn"); roleARN != "" {
+			creds = stscreds.NewAssumeRoleProvider(sts.NewFromConfig(cfg), roleARN)
+			query.Del("aws_role_arn")
+		}
+		creds = aws.NewCredentialsCache(creds)
+		iam = func(ctx context.Context) (string, error) {
+			return auth.BuildAuthToken(ctx, u.Host, cfg.Region, u.User.Username(), creds)
+		}
+	}
+
 	// sslmode must be disabled because the underlying dialer is already providing TLS.
 	query.Set("sslmode", "disable")
 
@@ -86,6 +144,7 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 		provider:  source,
 		pqConn:    u2.String(),
 		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
+		iam:       iam,
 	})
 	return db, nil
 }
@@ -101,17 +160,32 @@ func (d pqDriver) Open(name string) (driver.Conn, error) {
 }
 
 func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
-	return connector{d.provider, name + " sslmode=disable", d.traceOpts}, nil
+	return connector{provider: d.provider, pqConn: name + " sslmode=disable", traceOpts: d.traceOpts}, nil
 }
 
 type connector struct {
 	provider  rds.CertPoolProvider
 	pqConn    string
 	traceOpts []otelsql.Option
+	iam       func(context.Context) (string, error)
 }
 
-func (c connector) Connect(context.Context) (driver.Conn, error) {
-	conn, err := pq.DialOpen(dialer{c.provider}, c.pqConn)
+func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
+	connStr := c.pqConn
+	if c.iam != nil {
+		token, err := c.iam(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("awspostgres: refresh auth token: %v", err)
+		}
+		// Parse the connection string URL, set the password to the IAM token.
+		u, err := url.Parse(connStr)
+		if err != nil {
+			return nil, fmt.Errorf("awspostgres: parse connection string: %v", err)
+		}
+		u.User = url.UserPassword(u.User.Username(), token)
+		connStr = u.String()
+	}
+	conn, err := pq.DialOpen(dialer{c.provider}, connStr)
 	if err != nil {
 		return nil, err
 	}
