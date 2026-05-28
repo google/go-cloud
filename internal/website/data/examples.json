@@ -155,6 +155,10 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/awspostgres\"\n)",
 		"code": "// Replace these with your actual settings.\ndb, err := postgres.Open(ctx,\n\t\"awspostgres://myrole:swordfish@example01.xyzzy.us-west-1.rds.amazonaws.com/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.ExecContext(ctx, \"CREATE TABLE foo (bar INT);\")"
 	},
+	"gocloud.dev/postgres/awspostgres.Example_iam": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/awspostgres\"\n)",
+		"code": "// To use IAM authentication, omit the password from the URL.\n// The IAM user or role must be granted rds_iam permission in the database.\ndb, err := postgres.Open(ctx,\n\t\"awspostgres://iamuser@example01.xyzzy.us-west-1.rds.amazonaws.com:5432/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\nif _, err := db.ExecContext(ctx, \"CREATE TABLE IF NOT EXISTS foo (bar INT)\"); err != nil {\n\treturn err\n}\nif _, err := db.ExecContext(ctx, \"INSERT INTO foo (bar) VALUES ($1)\", 42); err != nil {\n\treturn err\n}\nvar val int\nif err := db.QueryRowContext(ctx, \"SELECT bar FROM foo LIMIT 1\").Scan(\u0026val); err != nil {\n\treturn err\n}"
+	},
 	"gocloud.dev/postgres/gcppostgres.Example": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/postgres\"\n\t_ \"gocloud.dev/postgres/gcppostgres\"\n)",
 		"code": "// Replace this with your actual settings.\ndb, err := postgres.Open(ctx,\n\t\"gcppostgres://user:password@example-project/region/my-instance01/testdb\")\nif err != nil {\n\treturn err\n}\ndefer db.Close()\n\n// Use database in your program.\ndb.Exec(\"CREATE TABLE foo (bar INT);\")"

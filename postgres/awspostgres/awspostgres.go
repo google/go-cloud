@@ -109,18 +109,17 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	// If no password provided, assume it's AWS IAM authentication.
 	var iam func(context.Context) (string, error)
 	if _, ok := u.User.Password(); !ok {
-		profile := query.Get("aws_profile")
-		query.Del("aws_profile")
 		var cfgOpts []func(*config.LoadOptions) error
 		if uo.HTTPClient != nil {
 			cfgOpts = append(cfgOpts, config.WithHTTPClient(uo.HTTPClient))
 		}
-		if profile != "" {
+		if profile := query.Get("aws_profile"); profile != "" {
 			cfgOpts = append(cfgOpts, config.WithSharedConfigProfile(profile))
+			query.Del("aws_profile")
 		}
 		cfg, err := config.LoadDefaultConfig(ctx, cfgOpts...)
 		if err != nil {
-			return nil, fmt.Errorf("awspostgres: open: load AWS config: %v", err)
+			return nil, fmt.Errorf("awspostgres: open: load AWS config: %w", err)
 		}
 		creds := cfg.Credentials
 		if roleARN := query.Get("aws_role_arn"); roleARN != "" {
@@ -175,12 +174,12 @@ func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
 	if c.iam != nil {
 		token, err := c.iam(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("awspostgres: refresh auth token: %v", err)
+			return nil, fmt.Errorf("awspostgres: refresh auth token: %w", err)
 		}
 		// Parse the connection string URL, set the password to the IAM token.
 		u, err := url.Parse(connStr)
 		if err != nil {
-			return nil, fmt.Errorf("awspostgres: parse connection string: %v", err)
+			return nil, fmt.Errorf("awspostgres: parse connection string: %w", err)
 		}
 		u.User = url.UserPassword(u.User.Username(), token)
 		connStr = u.String()
@@ -203,7 +202,7 @@ type dialer struct {
 func (d dialer) dial(ctx context.Context, network, address string) (net.Conn, error) {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, fmt.Errorf("awspostgres: parse address: %v", err)
+		return nil, fmt.Errorf("awspostgres: parse address: %w", err)
 	}
 	certPool, err := d.provider.RDSCertPool(ctx)
 	if err != nil {
