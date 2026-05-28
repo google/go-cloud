@@ -83,3 +83,54 @@ func TestURLOpener(t *testing.T) {
 		})
 	}
 }
+
+func TestURLOpenerIAM(t *testing.T) {
+	// This test will be skipped unless the project is set up with Terraform
+	// and IAM authentication is configured.
+	// Before running go test, run in this directory:
+	//
+	// terraform init
+	// terraform apply
+
+	tfOut, err := terraform.ReadOutput(".")
+	if err != nil || len(tfOut) == 0 {
+		t.Skipf("Could not obtain harness info: %v", err)
+	}
+	endpoint, _ := tfOut["endpoint"].Value.(string)
+	iamUsername, _ := tfOut["iam_username"].Value.(string)
+	databaseName, _ := tfOut["database"].Value.(string)
+	roleARN, _ := tfOut["iam_role_arn"].Value.(string)
+	if endpoint == "" || iamUsername == "" || databaseName == "" {
+		t.Skipf("Missing IAM Terraform outputs; got endpoint=%q iam_username=%q database=%q", endpoint, iamUsername, databaseName)
+	}
+
+	ctx := context.Background()
+
+	// Test IAM auth without role assumption.
+	urlstr := fmt.Sprintf("awspostgres://%s@%s/%s", iamUsername, endpoint, databaseName)
+	t.Run(urlstr, func(t *testing.T) {
+		db, err := postgres.Open(ctx, urlstr)
+		if err != nil {
+			t.Fatalf("Open: %v", err)
+		}
+		defer db.Close()
+		if err := db.Ping(); err != nil {
+			t.Errorf("Ping: %v", err)
+		}
+	})
+
+	// Test IAM auth with role assumption.
+	if roleARN != "" {
+		urlstr := fmt.Sprintf("awspostgres://%s@%s/%s?aws_role_arn=%s", iamUsername, endpoint, databaseName, roleARN)
+		t.Run(urlstr, func(t *testing.T) {
+			db, err := postgres.Open(ctx, urlstr)
+			if err != nil {
+				t.Fatalf("Open: %v", err)
+			}
+			defer db.Close()
+			if err := db.Ping(); err != nil {
+				t.Errorf("Ping: %v", err)
+			}
+		})
+	}
+}
