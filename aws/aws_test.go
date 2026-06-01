@@ -122,6 +122,21 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			name:  "Mixed case response checksum",
 			query: url.Values{"response_checksum_validation": {"When_Required"}},
 		},
+		{
+			name:    "Role with invalid ARN",
+			query:   url.Values{"role": {"not-a-valid-arn"}},
+			wantErr: true,
+		},
+		{
+			name:    "Role with empty ARN",
+			query:   url.Values{"role": {""}},
+			wantErr: true,
+		},
+		{
+			name:       "Role with valid ARN and region",
+			query:      url.Values{"role": {"arn:aws:iam::123456789012:role/MyRole"}, "region": {"us-west-2"}},
+			wantRegion: "us-west-2",
+		},
 		// Can't test "profile", since AWS validates that the profile exists.
 	}
 
