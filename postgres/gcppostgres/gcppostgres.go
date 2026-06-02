@@ -24,6 +24,17 @@
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 //
+// # IP Type
+//
+// By default, connections use auto-IP selection (public IP if available,
+// otherwise private IP), matching the behavior of the legacy cloudsql-proxy.
+// To use a specific IP type, set URLOpener.IPType or pass the "ip_type" query
+// parameter in the URL (requires URLOpener.Dialer to be set):
+//
+//	gcppostgres://user:pass@project/region/instance/dbname?ip_type=psc
+//
+// Valid values for ip_type: auto, public, private, psc.
+//
 // See https://gocloud.dev/concepts/urls/ for background information.
 package gcppostgres // import "gocloud.dev/postgres/gcppostgres"
 
@@ -40,6 +51,7 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/cloudsqlconn"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/XSAM/otelsql"
 	"github.com/lib/pq"
@@ -71,13 +83,13 @@ func (o *lazyCredsOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql
 			o.err = err
 			return
 		}
-		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		// Ignore cleanup: the dialer lives for the process lifetime in this global opener.
+		d, _, err := cloudsql.NewDialerWithIAM(ctx, creds.TokenSource)
 		if err != nil {
 			o.err = err
 			return
 		}
-		certSource := cloudsql.NewCertSourceWithIAM(client, creds.TokenSource)
-		o.opener = &URLOpener{CertSource: certSource}
+		o.opener = &URLOpener{Dialer: d}
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("gcppostgres open %v: %v", u, o.err)
@@ -88,8 +100,15 @@ func (o *lazyCredsOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql
 // URLOpener opens GCP PostgreSQL URLs
 // like "gcppostgres://user:password@myproject/us-central1/instanceId/mydb".
 type URLOpener struct {
+	// Dialer creates Cloud SQL connections using the Cloud SQL Go Connector.
+	// Supports PSC and explicit IP type selection via the "ip_type" URL query
+	// parameter. If both Dialer and CertSource are set, Dialer takes precedence.
+	Dialer *cloudsqlconn.Dialer
+
 	// CertSource specifies how the opener will obtain authentication information.
-	// CertSource must not be nil.
+	//
+	// Deprecated: Use Dialer instead. CertSource does not support PSC or
+	// explicit IP type selection. Ignored if Dialer is also set.
 	CertSource proxy.CertSource
 
 	// TraceOpts contains options for OpenTelemetry.
@@ -98,8 +117,8 @@ type URLOpener struct {
 
 // OpenPostgresURL opens a new GCP database connection wrapped with OpenTelemetry instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	if uo.CertSource == nil {
-		return nil, fmt.Errorf("gcppostgres: URLOpener CertSource is nil")
+	if uo.Dialer == nil && uo.CertSource == nil {
+		return nil, fmt.Errorf("gcppostgres: URLOpener Dialer and CertSource are both nil")
 	}
 	instance, dbName, err := instanceFromURL(u)
 	if err != nil {
@@ -120,8 +139,32 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	u2.Scheme = "postgres"
 	u2.Host = "cloudsql"
 	u2.Path = "/" + dbName
+
+	if uo.Dialer != nil {
+		// New path: Cloud SQL Go Connector with IP type and PSC support.
+		ipType := cloudsql.IPTypeAuto
+		if s := query.Get("ip_type"); s != "" {
+			parsed, err := parseIPType(s)
+			if err != nil {
+				return nil, fmt.Errorf("gcppostgres: open: %v", err)
+			}
+			ipType = parsed
+			query.Del("ip_type")
+		}
+		u2.RawQuery = query.Encode()
+		return sql.OpenDB(connector{
+			dialer:    uo.Dialer,
+			instance:  instance,
+			dialOpts:  ipType.DialOptions(),
+			pqConn:    u2.String(),
+			traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
+		}), nil
+	}
+
+	// Legacy path: cloudsql-proxy v1 (no PSC or IP type selection).
+	query.Del("ip_type") // strip even if set, silently ignore for legacy path
 	u2.RawQuery = query.Encode()
-	db := sql.OpenDB(connector{
+	return sql.OpenDB(legacyConnector{
 		client: &proxy.Client{
 			Port:  3307,
 			Certs: uo.CertSource,
@@ -129,8 +172,7 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 		instance:  instance,
 		pqConn:    u2.String(),
 		traceOpts: append([]otelsql.Option(nil), uo.TraceOpts...),
-	})
-	return db, nil
+	}), nil
 }
 
 func instanceFromURL(u *url.URL) (instance, db string, _ error) {
@@ -145,9 +187,27 @@ func instanceFromURL(u *url.URL) (instance, db string, _ error) {
 	return parts[0] + ":" + parts[1] + ":" + parts[2], parts[3], nil
 }
 
+func parseIPType(s string) (cloudsql.IPType, error) {
+	switch strings.ToLower(s) {
+	case "auto", "":
+		return cloudsql.IPTypeAuto, nil
+	case "public":
+		return cloudsql.IPTypePublic, nil
+	case "private":
+		return cloudsql.IPTypePrivate, nil
+	case "psc":
+		return cloudsql.IPTypePSC, nil
+	default:
+		return 0, fmt.Errorf("unknown ip_type %q (valid: auto, public, private, psc)", s)
+	}
+}
+
+// --- New path: Cloud SQL Go Connector ---
+
 type pqDriver struct {
-	client    *proxy.Client
+	dialer    *cloudsqlconn.Dialer
 	instance  string
+	dialOpts  []cloudsqlconn.DialOption
 	traceOpts []otelsql.Option
 }
 
@@ -157,18 +217,19 @@ func (d pqDriver) Open(name string) (driver.Conn, error) {
 }
 
 func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
-	return connector{d.client, d.instance, name, d.traceOpts}, nil
+	return connector{d.dialer, d.instance, d.dialOpts, name, d.traceOpts}, nil
 }
 
 type connector struct {
-	client    *proxy.Client
+	dialer    *cloudsqlconn.Dialer
 	instance  string
+	dialOpts  []cloudsqlconn.DialOption
 	pqConn    string
 	traceOpts []otelsql.Option
 }
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
-	conn, err := pq.DialOpen(dialer{c.client, c.instance}, c.pqConn)
+	conn, err := pq.DialOpen(dialer{c.dialer, c.instance, c.dialOpts}, c.pqConn)
 	if err != nil {
 		return nil, err
 	}
@@ -176,18 +237,68 @@ func (c connector) Connect(context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return otelsql.WrapDriver(pqDriver{c.client, c.instance, c.traceOpts}, c.traceOpts...)
+	return otelsql.WrapDriver(pqDriver{c.dialer, c.instance, c.dialOpts, c.traceOpts}, c.traceOpts...)
 }
 
 type dialer struct {
+	d        *cloudsqlconn.Dialer
+	instance string
+	dialOpts []cloudsqlconn.DialOption
+}
+
+func (d dialer) Dial(network, address string) (net.Conn, error) {
+	return d.d.Dial(context.Background(), d.instance, d.dialOpts...)
+}
+
+func (d dialer) DialTimeout(network, address string, timeout time.Duration) (net.Conn, error) {
+	return nil, errors.New("gcppostgres: DialTimeout not supported")
+}
+
+// --- Legacy path: cloudsql-proxy v1 ---
+
+type legacyPqDriver struct {
+	client    *proxy.Client
+	instance  string
+	traceOpts []otelsql.Option
+}
+
+func (d legacyPqDriver) Open(name string) (driver.Conn, error) {
+	c, _ := d.OpenConnector(name)
+	return c.Connect(context.Background())
+}
+
+func (d legacyPqDriver) OpenConnector(name string) (driver.Connector, error) {
+	return legacyConnector{d.client, d.instance, name, d.traceOpts}, nil
+}
+
+type legacyConnector struct {
+	client    *proxy.Client
+	instance  string
+	pqConn    string
+	traceOpts []otelsql.Option
+}
+
+func (c legacyConnector) Connect(context.Context) (driver.Conn, error) {
+	conn, err := pq.DialOpen(legacyDialer{c.client, c.instance}, c.pqConn)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (c legacyConnector) Driver() driver.Driver {
+	return otelsql.WrapDriver(legacyPqDriver{c.client, c.instance, c.traceOpts}, c.traceOpts...)
+}
+
+type legacyDialer struct {
 	client   *proxy.Client
 	instance string
 }
 
-func (d dialer) Dial(network, address string) (net.Conn, error) {
+func (d legacyDialer) Dial(network, address string) (net.Conn, error) {
 	return d.client.Dial(d.instance)
 }
 
-func (d dialer) DialTimeout(network, address string, timeout time.Duration) (net.Conn, error) {
+func (d legacyDialer) DialTimeout(network, address string, timeout time.Duration) (net.Conn, error) {
 	return nil, errors.New("gcppostgres: DialTimeout not supported")
 }
