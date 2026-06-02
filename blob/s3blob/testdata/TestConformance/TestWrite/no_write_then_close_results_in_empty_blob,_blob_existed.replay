@@ -1,5 +1,5 @@
 {
-  "Initial": "AQAAAA7hTg0CNpkMxgAA",
+  "Initial": "AQAAAA7hsRhTM0uTewAA",
   "Version": "0.2",
   "Converter": {
     "ScrubBody": [
@@ -44,7 +44,7 @@
   },
   "Entries": [
     {
-      "ID": "7133276b55409f6d",
+      "ID": "995cc506269a6dd1",
       "Request": {
         "Method": "PUT",
         "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=PutObject",
@@ -72,6 +72,9 @@
           ],
           "X-Amz-Date": [
             "CLEARED"
+          ],
+          "X-Amz-Sdk-Checksum-Algorithm": [
+            "CRC32"
           ]
         },
         "MediaType": "text/plain",
@@ -89,7 +92,7 @@
             "0"
           ],
           "Date": [
-            "Thu, 19 Mar 2026 15:28:03 GMT"
+            "Tue, 02 Jun 2026 18:30:44 GMT"
           ],
           "Etag": [
             "\"d41d8cd98f00b204e9800998ecf8427e\""
@@ -104,10 +107,10 @@
             "FULL_OBJECT"
           ],
           "X-Amz-Id-2": [
-            "Ficpv/L0H51EM+oMClfRoZbDc3RbtBlPWQ6I6+PCIgYhDU+Qdl69Ufp8ZkhGYzmWBAO4a+obl2E="
+            "CnSZqvE46xXsVTydpkqM1AZztvpdnP9WKqpG03KmXmW9pgBiPE1k4X8Zq9XFU5v2GgJ7K9Lv/VG4bF1gF7TXRQCMfKNC77sW"
           ],
           "X-Amz-Request-Id": [
-            "8D97YTNYRX454FA8"
+            "BVGQ1V4C320RSC28"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -117,7 +120,7 @@
       }
     },
     {
-      "ID": "f9c3a3f5d896ec43",
+      "ID": "534962234f29b865",
       "Request": {
         "Method": "GET",
         "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=GetObject",
@@ -165,13 +168,13 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Thu, 19 Mar 2026 15:28:04 GMT"
+            "Tue, 02 Jun 2026 18:30:44 GMT"
           ],
           "Etag": [
             "\"d41d8cd98f00b204e9800998ecf8427e\""
           ],
           "Last-Modified": [
-            "Thu, 19 Mar 2026 15:28:03 GMT"
+            "Tue, 02 Jun 2026 18:30:44 GMT"
           ],
           "Server": [
             "AmazonS3"
@@ -183,10 +186,10 @@
             "FULL_OBJECT"
           ],
           "X-Amz-Id-2": [
-            "4KtFpkulEIW+nrSdBKVOc7yUEqb7a4eVUMZu7sYgJtF87ZY3RHRB7jmcQiqU1Zv6DodhNay3cNk="
+            "aeBvUYImKCu71NPGx1125+hdMWpeLOk8OgnNSHCpt0lnc3HTviNNuWbQ6ebxA1xFsAYhVbV/WGGwCYuWdPEXBOqbHl0AkZmZ"
           ],
           "X-Amz-Request-Id": [
-            "DMNYZ9CCZBVJY5H6"
+            "BVGPTA39NP6QSMW4"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -196,7 +199,7 @@
       }
     },
     {
-      "ID": "5b7606c8db7a3fcf",
+      "ID": "77f8a50e5a372d23",
       "Request": {
         "Method": "HEAD",
         "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading",
@@ -241,22 +244,22 @@
             "text/plain; charset=utf-8"
           ],
           "Date": [
-            "Thu, 19 Mar 2026 15:28:04 GMT"
+            "Tue, 02 Jun 2026 18:30:44 GMT"
           ],
           "Etag": [
             "\"d41d8cd98f00b204e9800998ecf8427e\""
           ],
           "Last-Modified": [
-            "Thu, 19 Mar 2026 15:28:03 GMT"
+            "Tue, 02 Jun 2026 18:30:44 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "uf31jGsfcZKlVAkglWCcwSZJEvwFGGz+yotAiFLX0IrwnJPUiJDM10HxuFACV6wsJNPzyjKMycI="
+            "ndFHI8mDoOb4I0v4vsWWYTSs5+uRDJ2nRCWpY9h0Ei7sInA+IDvg0iEZu+2ErktyD2GFtiEloigROcEr8o+6F3hSO7koFJ/q"
           ],
           "X-Amz-Request-Id": [
-            "DMNMK29NSHPW7BED"
+            "BVGHZHGPXR9RJ9WT"
           ],
           "X-Amz-Server-Side-Encryption": [
             "AES256"
@@ -266,7 +269,7 @@
       }
     },
     {
-      "ID": "6a7fb6fe2d9869c6",
+      "ID": "ba2ec82d071e431c",
       "Request": {
         "Method": "DELETE",
         "URL": "https://go-cloud-testing-2.s3.us-west-1.amazonaws.com/blob-for-reading?x-id=DeleteObject",
@@ -302,16 +305,16 @@
         "ProtoMinor": 1,
         "Header": {
           "Date": [
-            "Thu, 19 Mar 2026 15:28:04 GMT"
+            "Tue, 02 Jun 2026 18:30:45 GMT"
           ],
           "Server": [
             "AmazonS3"
           ],
           "X-Amz-Id-2": [
-            "u3IaYpQoUQfTiKFyQSvBMsbgfGy798NPzpeSzjlvuzdTc9wpZvVmyXs+G8PPkBpKreVtvzFvG0I="
+            "KyeqB9kGKrGQsD9rz5NO1BiifpOlC61MIE1ZVJmFYVf1ha5zZwnSznnWVpKlGjV4trVbulKCdbpDksP3p+ArnZ5IvkfmZ7l/"
           ],
           "X-Amz-Request-Id": [
-            "DMNS7M80824Z7Q9W"
+            "X8SZ0CTZ0E28M7QH"
           ]
         },
         "Body": ""

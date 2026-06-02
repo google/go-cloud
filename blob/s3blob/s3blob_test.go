@@ -24,7 +24,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
-	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
@@ -153,17 +153,13 @@ func (v verifyContentLanguage) BeforeRead(as func(any) bool) error {
 
 func (v verifyContentLanguage) BeforeWrite(as func(any) bool) error {
 	var (
-		req      *s3.PutObjectInput
-		uploader *s3manager.Uploader
+		req *transfermanager.UploadObjectInput
+		tm  *transfermanager.Client
 	)
-	if !as(&req) || !as(&uploader) {
-		return errors.New("Writer.As failed for PutObjectInput")
+	if !as(&req) || !as(&tm) {
+		return errors.New("Writer.As failed")
 	}
 	req.ContentLanguage = aws.String(language)
-	var u *s3manager.Uploader
-	if !as(&u) {
-		return errors.New("Writer.As failed for Uploader")
-	}
 	return nil
 }
 
