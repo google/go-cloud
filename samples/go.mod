@@ -215,3 +215,17 @@ require (
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace gocloud.dev => ..
+
+replace gocloud.dev/docstore/mongodocstore => ../docstore/mongodocstore
+
+replace gocloud.dev/pubsub/kafkapubsub => ../pubsub/kafkapubsub
+
+replace gocloud.dev/pubsub/natspubsub => ../pubsub/natspubsub
+
+replace gocloud.dev/pubsub/rabbitpubsub => ../pubsub/rabbitpubsub
+
+replace gocloud.dev/runtimevar/hashivault => ../runtimevar/hashivault
+
+replace gocloud.dev/secrets/hashivault => ../secrets/hashivault
