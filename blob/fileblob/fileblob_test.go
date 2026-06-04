@@ -457,6 +457,39 @@ func TestOpenBucketFromURL(t *testing.T) {
 	}
 }
 
+func TestDirFileModeFromURL(t *testing.T) {
+	ctx := context.Background()
+	o := &URLOpener{}
+	tests := []struct {
+		query string
+		want  os.FileMode
+	}{
+		// Octal notation with a leading "0" is the conventional way to write a
+		// file mode, and is what the documented default (0777) looks like.
+		{"dir_file_mode=0777", os.FileMode(0o777)},
+		{"dir_file_mode=0755", os.FileMode(0o755)},
+		{"dir_file_mode=0700", os.FileMode(0o700)},
+		// "0o" prefix is also octal.
+		{"dir_file_mode=0o644", os.FileMode(0o644)},
+		// No prefix is decimal, preserving the previous behavior.
+		{"dir_file_mode=511", os.FileMode(511)},
+	}
+	for _, test := range tests {
+		q, err := url.ParseQuery(test.query)
+		if err != nil {
+			t.Fatalf("%s: %v", test.query, err)
+		}
+		opts, err := o.forParams(ctx, q)
+		if err != nil {
+			t.Errorf("%s: got error %v, want nil", test.query, err)
+			continue
+		}
+		if opts.DirFileMode != test.want {
+			t.Errorf("%s: got DirFileMode %v (%#o), want %v (%#o)", test.query, opts.DirFileMode, opts.DirFileMode, test.want, test.want)
+		}
+	}
+}
+
 func TestEscapeBucketRoot(t *testing.T) {
 	ctx := context.Background()
 	tdir := t.TempDir()
