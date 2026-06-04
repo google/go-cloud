@@ -112,7 +112,9 @@ const Scheme = "file"
 //     if it does not already exist.
 //   - dir_file_mode: any directories that are created (the base directory when create_dir
 //     is true, or subdirectories for keys) are created using this os.FileMode, parsed
-//     using os.Parseuint. Defaults to 0777.
+//     using strconv.ParseUint with base 0. A leading "0" or "0o" is interpreted as
+//     octal (e.g. "0777"), matching the conventional notation for file modes.
+//     Defaults to 0777.
 //   - no_tmp_dir: (any non-empty value) temporary files are created next to the final
 //     path instead of in os.TempDir.
 //   - base_url: the base URL to use to construct signed URLs; see URLSignerHMAC
@@ -203,7 +205,11 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 		opts.CreateDir = true
 	}
 	if fms := q.Get("dir_file_mode"); fms != "" {
-		fm, err := strconv.ParseUint(fms, 10, 32)
+		// Use base 0 so that the value is interpreted according to its prefix:
+		// a leading "0" or "0o" means octal, which is how file modes are
+		// conventionally written (e.g. "0777"). Without this, "0777" would be
+		// parsed as decimal 777, yielding unexpected permission bits.
+		fm, err := strconv.ParseUint(fms, 0, 32)
 		if err != nil {
 			return nil, fmt.Errorf("fileblob.OpenBucket: invalid dir_file_mode %q: %v", fms, err)
 		}
