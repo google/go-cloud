@@ -348,6 +348,9 @@ func (w *writer) Write(p []byte) (n int, err error) {
 }
 
 func (w *writer) Upload(r io.Reader) error {
+	if w.md5hash != nil {
+		r = io.TeeReader(r, w.md5hash)
+	}
 	_, err := w.buf.ReadFrom(r)
 	return err
 }

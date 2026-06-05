@@ -15,7 +15,9 @@
 package memblob
 
 import (
+	"bytes"
 	"context"
+	"crypto/md5"
 	"net/http"
 	"testing"
 
@@ -74,6 +76,35 @@ func TestConformanceWithPrefix(t *testing.T) {
 
 func BenchmarkMemblob(b *testing.B) {
 	drivertest.RunBenchmarks(b, OpenBucket(nil))
+}
+
+// TestUploadMD5 verifies that blobs written via the Upload fast-path store the
+// correct MD5 attribute. Previously, writer.Upload wrote only to the buffer and
+// skipped feeding data through the md5 hasher, so the stored MD5 was always
+// the hash of an empty input rather than the actual content hash.
+func TestUploadMD5(t *testing.T) {
+	ctx := context.Background()
+	b := OpenBucket(nil)
+	defer b.Close()
+
+	content := []byte("hello memblob upload md5")
+
+	// blob.Bucket.Upload uses the driver's Upload method when available.
+	if err := b.Upload(ctx, "testkey", bytes.NewReader(content), &blob.WriterOptions{
+		ContentType: "text/plain",
+	}); err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+
+	attrs, err := b.Attributes(ctx, "testkey")
+	if err != nil {
+		t.Fatalf("Attributes: %v", err)
+	}
+
+	want := md5.Sum(content)
+	if !bytes.Equal(attrs.MD5, want[:]) {
+		t.Errorf("MD5 after Upload = %x, want %x", attrs.MD5, want)
+	}
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
