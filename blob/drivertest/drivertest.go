@@ -1878,12 +1878,13 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	b := blob.NewBucket(drv)
 	defer b.Close()
 
-	// Write the two blobs.
+	// Write the two blobs, one using WriteAll and one using Upload
+	// as those may go through different driver paths.
 	if err := b.WriteAll(ctx, aKey, aContent, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = b.Delete(ctx, aKey) }()
-	if err := b.WriteAll(ctx, bKey, bContent, nil); err != nil {
+	if err := b.Upload(ctx, bKey, bytes.NewReader(bContent), &blob.WriterOptions{ContentType: "text"}); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = b.Delete(ctx, bKey) }()
