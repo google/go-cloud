@@ -97,14 +97,16 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	// awsmysql://iam-user@host:port/dbname
 	var iam func(context.Context) (string, error)
 	if _, ok := u.User.Password(); !ok {
-		var (
-			q       = u.Query()
-			profile = q.Get("aws_profile")
-		)
-		q.Del("aws_profile")
-		cfg, err := config.LoadDefaultConfig(ctx,
-			config.WithHTTPClient(uo.HTTPClient),    // Ignored if nil.
-			config.WithSharedConfigProfile(profile)) // Ignored if empty.
+		q := u.Query()
+		var cfgOpts []func(*config.LoadOptions) error
+		if uo.HTTPClient != nil {
+			cfgOpts = append(cfgOpts, config.WithHTTPClient(uo.HTTPClient))
+		}
+		if profile := q.Get("aws_profile"); profile != "" {
+			cfgOpts = append(cfgOpts, config.WithSharedConfigProfile(profile))
+			q.Del("aws_profile")
+		}
+		cfg, err := config.LoadDefaultConfig(ctx, cfgOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("open OpenMySQLURL: load AWS config: %v", err)
 		}
