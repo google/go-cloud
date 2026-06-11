@@ -260,6 +260,40 @@ func TestNewBucket(t *testing.T) {
 	})
 }
 
+func TestIfNotExistHasNoSideEffects(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	const (
+		key          = "key"
+		origContents = "hello world"
+	)
+
+	b, err := OpenBucket(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	if err := b.WriteAll(ctx, key, []byte(origContents), &blob.WriterOptions{
+		Metadata: map[string]string{"md": "a"}}); err != nil {
+		t.Fatalf("failed to write blob: %v", err)
+	}
+	if err := b.WriteAll(ctx, key, []byte("goodbye world"), &blob.WriterOptions{
+		IfNotExist: true,
+		Metadata:   map[string]string{"md": "b"}}); err == nil || !errors.Is(err, gcerrors.ErrFailedPrecondition) {
+		t.Fatalf("expected FailedPrecondition error, got %v", err)
+	}
+	if got, err := b.ReadAll(ctx, key); err != nil {
+		t.Errorf("failed to read blob: %v", err)
+	} else if string(got) != origContents {
+		t.Errorf("expected to read original contents, got %q", string(got))
+	}
+	if attrs, err := b.Attributes(ctx, key); err != nil {
+		t.Errorf("failed to get attributes for blob: %v", err)
+	} else if attrs.Metadata["md"] != "a" {
+		t.Errorf("expected metadata to be unchanged, got %v", attrs.Metadata)
+	}
+}
+
 func TestSignedURLReturnsUnimplementedWithNoURLSigner(t *testing.T) {
 	dir := t.TempDir()
 

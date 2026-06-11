@@ -840,14 +840,6 @@ func (w *writerWithSidecar) Close() error {
 		return err
 	}
 
-	md5sum := w.md5hash.Sum(nil)
-	w.attrs.MD5 = md5sum
-
-	// Write the attributes file.
-	if err := setAttrs(w.path, w.attrs); err != nil {
-		return err
-	}
-
 	if w.ifNotExist {
 		w.mu.Lock()
 		defer w.mu.Unlock()
@@ -855,6 +847,12 @@ func (w *writerWithSidecar) Close() error {
 		if err == nil {
 			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "File already exist")
 		}
+	}
+	// Write the attributes file.
+	md5sum := w.md5hash.Sum(nil)
+	w.attrs.MD5 = md5sum
+	if err := setAttrs(w.path, w.attrs); err != nil {
+		return err
 	}
 	// Rename the temp file to path.
 	if err := os.Rename(w.f.Name(), w.path); err != nil {
