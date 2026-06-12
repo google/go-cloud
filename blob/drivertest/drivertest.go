@@ -2063,71 +2063,67 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		}
 	})
 
-	// Disabled for now because enabling it requires regenerating the
-	// record/replay files for providers like S3 and GCS.
-	/*
-		t.Run("DoesNotAliasAttributes", func(t *testing.T) {
-			// Verifies that the copy does not share mutable state with the
-			// source: mutating the attributes of one must not change the other.
-			h, err := newHarness(ctx, t)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer h.Close()
-			drv, err := h.MakeDriver(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
-			b := blob.NewBucket(drv)
-			defer b.Close()
+	t.Run("DoesNotAliasAttributes", func(t *testing.T) {
+		// Verifies that the copy does not share mutable state with the
+		// source: mutating the attributes of one must not change the other.
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		defer b.Close()
 
-			// Create the source blob with some metadata.
-			wopts := &blob.WriterOptions{
-				ContentType: contentType,
-				Metadata:    map[string]string{"foo": "bar"},
-			}
-			if err := b.WriteAll(ctx, srcKey, contents, wopts); err != nil {
-				t.Fatal(err)
-			}
+		// Create the source blob with some metadata.
+		wopts := &blob.WriterOptions{
+			ContentType: contentType,
+			Metadata:    map[string]string{"foo": "bar"},
+		}
+		if err := b.WriteAll(ctx, srcKey, contents, wopts); err != nil {
+			t.Fatal(err)
+		}
 
-			// Copy the source to the destination.
-			if err := b.Copy(ctx, dstKey, srcKey, nil); err != nil {
-				t.Fatal(err)
-			}
+		// Copy the source to the destination.
+		if err := b.Copy(ctx, dstKey, srcKey, nil); err != nil {
+			t.Fatal(err)
+		}
 
-			// Read the copy's attributes before mutating the source's.
-			before, err := b.Attributes(ctx, dstKey)
-			if err != nil {
-				t.Fatal(err)
-			}
+		// Read the copy's attributes before mutating the source's.
+		before, err := b.Attributes(ctx, dstKey)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			// Mutate the source's attributes at the driver level. For drivers
-			// that keep attributes in memory (e.g., memblob), this changes the
-			// stored attributes for the source key. The metadata map may be nil
-			// for configurations that don't store metadata (e.g., fileblob with
-			// Options.Metadata set to MetadataDontWrite).
-			srcAttrs, err := drv.Attributes(ctx, srcKey)
-			if err != nil {
-				t.Fatal(err)
-			}
-			srcAttrs.ContentType = "text/mutated"
-			if srcAttrs.Metadata != nil {
-				srcAttrs.Metadata["foo"] = "mutated"
-			}
+		// Mutate the source's attributes at the driver level. For drivers
+		// that keep attributes in memory (e.g., memblob), this changes the
+		// stored attributes for the source key. The metadata map may be nil
+		// for configurations that don't store metadata (e.g., fileblob with
+		// Options.Metadata set to MetadataDontWrite).
+		srcAttrs, err := drv.Attributes(ctx, srcKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		srcAttrs.ContentType = "text/mutated"
+		if srcAttrs.Metadata != nil {
+			srcAttrs.Metadata["foo"] = "mutated"
+		}
 
-			// The copy must not be affected.
-			after, err := b.Attributes(ctx, dstKey)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got, want := after.ContentType, before.ContentType; got != want {
-				t.Errorf("after mutating source attributes, copy's ContentType = %q, want %q", got, want)
-			}
-			if diff := cmp.Diff(after.Metadata, before.Metadata); diff != "" {
-				t.Errorf("after mutating source metadata, copy's metadata changed: %s", diff)
-			}
-		})
-	*/
+		// The copy must not be affected.
+		after, err := b.Attributes(ctx, dstKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := after.ContentType, before.ContentType; got != want {
+			t.Errorf("after mutating source attributes, copy's ContentType = %q, want %q", got, want)
+		}
+		if diff := cmp.Diff(after.Metadata, before.Metadata); diff != "" {
+			t.Errorf("after mutating source metadata, copy's metadata changed: %s", diff)
+		}
+	})
 }
 
 // testDelete tests the functionality of Delete.
