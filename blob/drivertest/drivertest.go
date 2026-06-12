@@ -2016,6 +2016,10 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		if err := b.WriteAll(ctx, dstKeyExists, []byte("clobber me"), nil); err != nil {
 			t.Fatal(err)
 		}
+		dstExistsAttrs, err := b.Attributes(ctx, dstKeyExists)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		// Copy the source to the destination.
 		if err := b.Copy(ctx, dstKey, srcKey, nil); err != nil {
@@ -2056,6 +2060,9 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		gotAttr, err = b.Attributes(ctx, dstKeyExists)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if !dstExistsAttrs.CreateTime.Equal(gotAttr.CreateTime) {
+			t.Errorf("copy didn't preserve creation time, %v vs %v", dstExistsAttrs.CreateTime, gotAttr.CreateTime)
 		}
 		clearUncomparableFields(gotAttr)
 		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
