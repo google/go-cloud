@@ -411,22 +411,14 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 		return errNotFound
 	}
 
-	// Deep-copy the attributes so that src and dst entries are independent.
-	// In particular, the Metadata map must not be shared: a later write to
-	// either key would create a new entry, but until then both entries point
-	// at the same map and a mutation of one would corrupt the other.
+	// Deep-copy the attributes so that the source and destination entries
+	// are independent. In particular, the Metadata map must not be shared:
+	// mutating the attributes of one key must not affect the other.
 	md := make(map[string]string, len(v.Attributes.Metadata))
 	maps.Copy(md, v.Attributes.Metadata)
 
-	dstAttrs := *v.Attributes // shallow copy of the value
+	dstAttrs := *v.Attributes
 	dstAttrs.Metadata = md
-
-	// Preserve the original CreateTime of the destination blob if it already
-	// exists. This matches the behavior of fileblob (which goes through
-	// NewTypedWriter) and real object stores like GCS.
-	if prev := b.blobs[dstKey]; prev != nil {
-		dstAttrs.CreateTime = prev.Attributes.CreateTime
-	}
 
 	b.blobs[dstKey] = &blobEntry{
 		Content:    v.Content,

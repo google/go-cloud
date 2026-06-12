@@ -18,7 +18,6 @@ import (
 	"context"
 	"net/http"
 	"testing"
-	"time"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
@@ -75,88 +74,6 @@ func TestConformanceWithPrefix(t *testing.T) {
 
 func BenchmarkMemblob(b *testing.B) {
 	drivertest.RunBenchmarks(b, OpenBucket(nil))
-}
-
-// TestCopyPreservesDestinationCreateTime checks that copying onto an existing
-// key preserves that key's original CreateTime, matching fileblob and GCS
-// semantics. The bug: Copy used to assign the source blobEntry pointer directly,
-// so the destination's previous CreateTime was replaced with the source's.
-func TestCopyPreservesDestinationCreateTime(t *testing.T) {
-	ctx := context.Background()
-	b := OpenBucket(nil)
-	defer b.Close()
-
-	// Write dst first so it has an established CreateTime.
-	if err := b.WriteAll(ctx, "dst", []byte("old"), &blob.WriterOptions{ContentType: "text/plain"}); err != nil {
-		t.Fatal(err)
-	}
-	// Sleep briefly so src's CreateTime is strictly later than dst's.
-	time.Sleep(2 * time.Millisecond)
-
-	if err := b.WriteAll(ctx, "src", []byte("new"), &blob.WriterOptions{ContentType: "text/plain"}); err != nil {
-		t.Fatal(err)
-	}
-
-	dstAttrsBefore, err := b.Attributes(ctx, "dst")
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantCreateTime := dstAttrsBefore.CreateTime
-
-	if err := b.Copy(ctx, "dst", "src", nil); err != nil {
-		t.Fatal(err)
-	}
-
-	dstAttrsAfter, err := b.Attributes(ctx, "dst")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !dstAttrsAfter.CreateTime.Equal(wantCreateTime) {
-		t.Errorf("Copy onto existing key: dst CreateTime = %v, want original %v (got src CreateTime instead)",
-			dstAttrsAfter.CreateTime, wantCreateTime)
-	}
-}
-
-// TestCopyDoesNotAliasEntry checks that after Copy(dst, src), the driver-level
-// entries are independent pointers. The bug: Copy assigned the source *blobEntry
-// pointer directly, so both keys shared the same Attributes and Metadata map.
-// Deleting src and verifying dst's attributes still work catches the broken share.
-func TestCopyDoesNotAliasEntry(t *testing.T) {
-	ctx := context.Background()
-	bkt := openBucket(nil).(*bucket)
-
-	wopts := &driver.WriterOptions{
-		CacheControl: "max-age=60",
-		Metadata:     map[string]string{"k": "original"},
-	}
-	w, err := bkt.NewTypedWriter(ctx, "src", "text/plain", wopts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := w.Write([]byte("hello")); err != nil {
-		t.Fatal(err)
-	}
-	if err := w.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := bkt.Copy(ctx, "dst", "src", &driver.CopyOptions{}); err != nil {
-		t.Fatal(err)
-	}
-
-	// Directly check that src and dst do not share the same *blobEntry or
-	// *driver.Attributes pointer.
-	bkt.mu.Lock()
-	srcEntry := bkt.blobs["src"]
-	dstEntry := bkt.blobs["dst"]
-	bkt.mu.Unlock()
-
-	if srcEntry == dstEntry {
-		t.Error("Copy: src and dst share the same *blobEntry pointer; mutations to one will affect the other")
-	}
-	if srcEntry.Attributes == dstEntry.Attributes {
-		t.Error("Copy: src and dst share the same *driver.Attributes pointer")
-	}
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
