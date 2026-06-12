@@ -410,7 +410,20 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	if v == nil {
 		return errNotFound
 	}
-	b.blobs[dstKey] = v
+
+	// Deep-copy the attributes so that the source and destination entries
+	// are independent. In particular, the Metadata map must not be shared:
+	// mutating the attributes of one key must not affect the other.
+	md := make(map[string]string, len(v.Attributes.Metadata))
+	maps.Copy(md, v.Attributes.Metadata)
+
+	dstAttrs := *v.Attributes
+	dstAttrs.Metadata = md
+
+	b.blobs[dstKey] = &blobEntry{
+		Content:    v.Content,
+		Attributes: &dstAttrs,
+	}
 	return nil
 }
 
