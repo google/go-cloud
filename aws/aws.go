@@ -94,6 +94,7 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error
 	var endpoint string
 	var hostnameImmutable bool
 	var rateLimitCapacity int64
+	var roleARN string
 	var opts []func(*config.LoadOptions) error
 	for param, values := range q {
 		value := values[0]
@@ -144,18 +145,7 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error
 			if !strings.HasPrefix(value, "arn:") {
 				return aws.Config{}, fmt.Errorf("invalid value for role: must be a valid ARN (starts with 'arn:'): %s", value)
 			}
-			baseConfig, err := config.LoadDefaultConfig(ctx, opts...)
-			if err != nil {
-				return aws.Config{}, fmt.Errorf("failed to load default AWS config: %w", err)
-			}
-			stsClient := sts.NewFromConfig(baseConfig)
-			provider := stscreds.NewAssumeRoleProvider(stsClient, value)
-			opts = []func(*config.LoadOptions) error{
-				config.WithCredentialsProvider(provider),
-			}
-			if baseConfig.Region != "" {
-				opts = append(opts, config.WithRegion(baseConfig.Region))
-			}
+			roleARN = value
 		case requestChecksumCalculationParamKey:
 			value, err := parseRequestChecksumCalculation(value)
 			if err != nil {
@@ -175,6 +165,21 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error
 		default:
 			return aws.Config{}, fmt.Errorf("unknown query parameter %q", param)
 		}
+	}
+	if roleARN != "" {
+		baseConfig, err := config.LoadDefaultConfig(ctx, opts...)
+		if err != nil {
+			return aws.Config{}, fmt.Errorf("failed to load default AWS config: %w", err)
+		}
+		stsClient := sts.NewFromConfig(baseConfig)
+		provider := stscreds.NewAssumeRoleProvider(stsClient, roleARN)
+		opts = []func(*config.LoadOptions) error{
+			config.WithCredentialsProvider(provider),
+		}
+		if baseConfig.Region == "" {
+			return aws.Config{}, fmt.Errorf("STS client created with empty region: all other parameters must be collected before assuming role")
+		}
+		opts = append(opts, config.WithRegion(baseConfig.Region))
 	}
 	if endpoint != "" {
 		customResolver := aws.EndpointResolverWithOptionsFunc(
