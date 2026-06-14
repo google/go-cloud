@@ -551,7 +551,7 @@ func TestEscapeBucketRoot(t *testing.T) {
 	}
 }
 
-func TestListAtRoot(t *testing.T) {
+func TestEscapeBucketRootAtRoot(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("/ as root is a unix concept")
 	}
@@ -565,11 +565,13 @@ func TestListAtRoot(t *testing.T) {
 
 	dir := t.TempDir()
 
-	f, err := os.Create(filepath.Join(dir, "file.txt"))
+	testFileKey := filepath.Join(dir, "file.txt")
+	err = b.WriteAll(ctx, testFileKey, []byte("hello world"), &blob.WriterOptions{
+		ContentType: "text/plain",
+	})
 	if err != nil {
-		t.Fatalf("Got error creating file: %#v", err)
+		t.Fatal(err)
 	}
-	defer f.Close()
 
 	it := b.List(&blob.ListOptions{
 		Prefix: dir[1:],

@@ -376,10 +376,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 func (b *bucket) path(key string) (string, error) {
 	path := filepath.Join(b.dir, escapeKey(key))
 	// Ensure that the key hasn't escaped the bucket root.
-	if !strings.HasPrefix(
-		filepath.Clean(path)+string(os.PathSeparator),
-		// Note: b.dir is already Cleaned via Abs in the constructor.
-		b.dir+string(os.PathSeparator)) {
+	if b.isEscapingPath(path) {
 		return "", fmt.Errorf("fileblob: key %q escapes bucket root", key)
 	}
 	if strings.HasSuffix(path, attrsExt) {
@@ -435,10 +432,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	}
 
 	// Ensure that the Prefix hasn't escaped the bucket root.
-	if b.dir != string(os.PathSeparator) && !strings.HasPrefix(
-		filepath.Clean(root)+string(os.PathSeparator),
-		// Note: b.dir is already Cleaned via Abs in the constructor.
-		b.dir+string(os.PathSeparator)) {
+	if b.isEscapingPath(root) {
 		return nil, fmt.Errorf("fileblob: key %q escapes bucket root", opts.Prefix)
 	}
 
@@ -671,6 +665,13 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			Size:        info.Size(),
 		},
 	}, nil
+}
+
+func (b *bucket) isEscapingPath(path string) bool {
+	return b.dir != string(os.PathSeparator) && !strings.HasPrefix(
+		filepath.Clean(path)+string(os.PathSeparator),
+		// Note: b.dir is already Cleaned via Abs in the constructor.
+		b.dir+string(os.PathSeparator))
 }
 
 type reader struct {
