@@ -294,6 +294,40 @@ func TestIfNotExistHasNoSideEffects(t *testing.T) {
 	}
 }
 
+func TestBeforeWriteErrorRemovesTempFile(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	beforeWriteErr := errors.New("before write failed")
+
+	b, err := OpenBucket(dir, &Options{NoTempDir: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+
+	var tempName string
+	_, gotErr := b.NewWriter(ctx, "key", &blob.WriterOptions{
+		ContentType: "text/plain",
+		BeforeWrite: func(as func(any) bool) error {
+			var f *os.File
+			if !as(&f) {
+				t.Fatal("BeforeWrite.As failed")
+			}
+			tempName = f.Name()
+			return beforeWriteErr
+		},
+	})
+	if !errors.Is(gotErr, beforeWriteErr) {
+		t.Fatalf("got error %v, want %v", gotErr, beforeWriteErr)
+	}
+	if tempName == "" {
+		t.Fatal("BeforeWrite was not called")
+	}
+	if _, err := os.Stat(tempName); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("temp file exists after BeforeWrite error: %v", err)
+	}
+}
+
 func TestSignedURLReturnsUnimplementedWithNoURLSigner(t *testing.T) {
 	dir := t.TempDir()
 

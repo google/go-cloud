@@ -758,6 +758,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 			*p = f
 			return true
 		}); err != nil {
+			name := f.Name()
+			_ = f.Close()
+			_ = os.Remove(name)
 			return nil, err
 		}
 	}
