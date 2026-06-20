@@ -849,7 +849,7 @@ func (w *writerWithSidecar) Close() error {
 		defer w.mu.Unlock()
 		_, err = os.Stat(w.path)
 		if err == nil {
-			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "File already exist")
+			return gcerr.New(gcerrors.FailedPrecondition, fmt.Errorf("blob %q already exists", w.path), 1, "fileblob: IfNotExist precondition failed")
 		}
 	}
 	// Write the attributes file.
@@ -903,7 +903,7 @@ func (w *writer) Close() error {
 		defer w.mu.Unlock()
 		_, err = os.Stat(w.path)
 		if err == nil {
-			return gcerr.New(gcerrors.FailedPrecondition, err, 1, "File already exist")
+			return gcerr.New(gcerrors.FailedPrecondition, fmt.Errorf("blob %q already exists", w.path), 1, "fileblob: IfNotExist precondition failed")
 		}
 	}
 
