@@ -762,6 +762,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		Key:         aws.String(key),
 		Metadata:    md,
 	}
+	if b.requestChecksumCalculation == aws.RequestChecksumCalculationWhenRequired {
+		// This value disables checksumming.
+		req.ChecksumSHA256 = aws.String("UNSIGNED-PAYLOAD")
+	}
 
 	if opts.IfNotExist {
 		// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html
