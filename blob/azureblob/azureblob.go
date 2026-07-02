@@ -48,8 +48,8 @@
 // In addition, the environment variables AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_DOMAIN,
 // AZURE_STORAGE_PROTOCOL, AZURE_STORAGE_IS_CDN, and AZURE_STORAGE_IS_LOCAL_EMULATOR
 // can be used to configure how the default URLOpener generates the Azure
-// Service URL via ServiceURLOptions. These can all be configured via URL
-// parameters as well. See ServiceURLOptions and NewDefaultServiceURL
+// Service URL via ServiceURLOptions. Some of these options can be configured
+// via URL parameters as well. See ServiceURLOptions and NewDefaultServiceURL
 // for more details.
 //
 // To customize the URL opener, or for more details on the URL format,
@@ -229,6 +229,8 @@ func NewDefaultServiceURLOptions() *ServiceURLOptions {
 // See URLOpener for supported overrides.
 func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOptions, error) {
 	retval := *o
+	domainFromURL := false
+	protocolFromURL := false
 	for param, values := range urlValues {
 		if len(values) > 1 {
 			return nil, fmt.Errorf("multiple values of %v not allowed", param)
@@ -236,8 +238,10 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 		value := values[0]
 		switch param {
 		case "domain":
+			domainFromURL = true
 			retval.StorageDomain = value
 		case "protocol":
+			protocolFromURL = true
 			retval.Protocol = value
 		case "cdn":
 			isCDN, err := strconv.ParseBool(value)
@@ -257,7 +261,25 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 			return nil, fmt.Errorf("unknown query parameter %q", param)
 		}
 	}
+	if domainFromURL && !allowedURLStorageDomain(retval.StorageDomain) {
+		return nil, fmt.Errorf("azureblob: domain %q is not allowed in bucket URLs", retval.StorageDomain)
+	}
+	if protocolFromURL && retval.Protocol == "http" {
+		return nil, fmt.Errorf("azureblob: protocol http is not allowed in bucket URLs")
+	}
 	return &retval, nil
+}
+
+func allowedURLStorageDomain(domain string) bool {
+	switch strings.ToLower(domain) {
+	case "blob.core.windows.net",
+		"blob.core.usgovcloudapi.net",
+		"blob.core.chinacloudapi.cn",
+		"blob.core.cloudapi.de":
+		return true
+	default:
+		return false
+	}
 }
 
 // NewServiceURL generates a URL for addressing an Azure Blob service
@@ -409,7 +431,9 @@ const Scheme = "azblob"
 // The URL host is used as the bucket name.
 //
 // The following query options are supported:
-//   - domain: Overrides Options.StorageDomain.
+//   - domain: Overrides Options.StorageDomain for known Azure Blob endpoints.
+//     For local emulators or custom trusted endpoints, configure
+//     ServiceURLOptions.StorageDomain instead.
 //   - protocol: Overrides Options.Protocol.
 //   - cdn: Overrides Options.IsCDN.
 //   - localemu: Overrides Options.IsLocalEmulator.

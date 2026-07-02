@@ -87,13 +87,7 @@ func Example_openBucketFromURL() {
 	}
 	defer bucket.Close()
 
-	// Another example, against a local emulator.
-	// Assuming AZURE_STORAGE_ACCOUNT is set to "myaccount",
-	// the service URL will look like:
-	// "http://localhost:10001/myaccount/my-container".
-	localbucket, err := blob.OpenBucket(ctx, "azblob://my-container?protocol=http&domain=localhost:10001")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer localbucket.Close()
+	// For local emulators or custom endpoints, configure the service endpoint
+	// through trusted environment variables or ServiceURLOptions instead of
+	// bucket URL query parameters.
 }

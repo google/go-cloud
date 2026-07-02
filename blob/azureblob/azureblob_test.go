@@ -525,6 +525,14 @@ func TestNewServiceURL(t *testing.T) {
 			want: "https://myaccount.blob.core.usgovcloudapi.net",
 		},
 		{
+			// Custom trusted domain from ServiceURLOptions.
+			opts: ServiceURLOptions{
+				AccountName:   "myaccount",
+				StorageDomain: "storage.example.com",
+			},
+			want: "https://myaccount.storage.example.com",
+		},
+		{
 			// Setting domain from the URL.
 			opts: ServiceURLOptions{
 				AccountName:   "myaccount",
@@ -536,6 +544,17 @@ func TestNewServiceURL(t *testing.T) {
 			want: "https://myaccount.blob.core.usgovcloudapi.net",
 		},
 		{
+			// URL-controlled domains are rejected unless they are known Azure
+			// Blob endpoints.
+			opts: ServiceURLOptions{
+				AccountName: "myaccount",
+			},
+			query: url.Values{
+				"domain": {"attacker.example.com"},
+			},
+			wantErrOverrides: true,
+		},
+		{
 			// Setting protocol from ServiceURLOptions.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
@@ -544,7 +563,7 @@ func TestNewServiceURL(t *testing.T) {
 			want: "http://myaccount.blob.core.windows.net",
 		},
 		{
-			// Setting protocol from the URL.
+			// HTTP protocol overrides are rejected in bucket URLs.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
 				Protocol:    "https",
@@ -552,7 +571,7 @@ func TestNewServiceURL(t *testing.T) {
 			query: url.Values{
 				"protocol": {"http"},
 			},
-			want: "http://myaccount.blob.core.windows.net",
+			wantErrOverrides: true,
 		},
 		{
 			// Setting IsCDN from ServiceURLOptions.
@@ -582,7 +601,8 @@ func TestNewServiceURL(t *testing.T) {
 			want: "http://localhost:10001/myaccount",
 		},
 		{
-			// Local emulator, implicit from domain through URL parameter.
+			// URL-controlled local emulator domains are rejected; configure
+			// local emulator endpoints through trusted ServiceURLOptions.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
 			},
@@ -590,7 +610,7 @@ func TestNewServiceURL(t *testing.T) {
 				"protocol": {"http"},
 				"domain":   {"127.0.0.1:10001"},
 			},
-			want: "http://127.0.0.1:10001/myaccount",
+			wantErrOverrides: true,
 		},
 		{
 			// Local emulator, explicit through ServiceURLOptions.
@@ -646,8 +666,12 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net", false},
 		// With duplicate storage domain.
 		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net&domain=blob.core.windows.net", true},
+		// With disallowed storage domain.
+		{"azblob://mybucket?domain=attacker.example.com", true},
 		// With protocol.
-		{"azblob://mybucket?protocol=http", false},
+		{"azblob://mybucket?protocol=http", true},
+		// With protocol for local emulator through URL.
+		{"azblob://mybucket?protocol=http&domain=127.0.0.1:10001", true},
 		// With invalid protocol.
 		{"azblob://mybucket?protocol=ftp", true},
 		// With Account.
@@ -673,5 +697,21 @@ func TestOpenBucketFromURL(t *testing.T) {
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+func TestOpenBucketURLRejectsURLControlledDomainWithSASToken(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
+	t.Setenv("AZURE_STORAGE_SAS_TOKEN", "sig=secret")
+
+	b, err := blob.OpenBucket(context.Background(), "azblob://mybucket?domain=attacker.example.com")
+	if b != nil {
+		defer b.Close()
+	}
+	if err == nil {
+		t.Fatal("got nil error, want disallowed domain error")
+	}
+	if !strings.Contains(err.Error(), `domain "attacker.example.com" is not allowed`) {
+		t.Fatalf("got error %q, want disallowed domain error", err)
 	}
 }
