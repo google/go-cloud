@@ -130,6 +130,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	if err != nil {
 		return nil, err
 	}
+	cfg.AllowCleartextPasswords = true
 	c := &connector{
 		cfg:      cfg,
 		iam:      iam,

@@ -78,7 +78,6 @@ func ConfigFromURL(u *url.URL) (cfg *mysql.Config, err error) {
 	cfg.User = u.User.Username()
 	cfg.Passwd, _ = u.User.Password()
 	cfg.DBName = dbName
-	cfg.AllowCleartextPasswords = true
 	cfg.AllowNativePasswords = true
 	return cfg, nil
 }
