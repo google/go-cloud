@@ -101,7 +101,7 @@ func TestConfigFromURLCleartextPasswords(t *testing.T) {
 		{
 			name: "default",
 			url:  "mysql://user:password@localhost/db",
-			want: false,
+			want: true,
 		},
 		{
 			name: "explicit false",
