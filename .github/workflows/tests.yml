@@ -37,17 +37,16 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2  # required for codecov
       - name: Run Tests
         shell: bash
         run: 'internal/testing/runchecks.sh'
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         with:
-          verbose: true # optional (default = false)
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
       - if: matrix.os == 'ubuntu-latest'
         name: Build for dragonfly
         run: |

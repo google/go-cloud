@@ -1,11 +1,6 @@
 codecov:
-  # Removed hardcoded token for security reasons.
-  # The token should be set via CI/CD secrets instead.
-  # Example for GitHub Actions:
-  #   - name: Upload coverage to Codecov
-  #     run: codecov -t ${{ secrets.CODECOV_TOKEN }}
-  #
-  # See: https://docs.codecov.com/docs/adding-the-codecov-token
+  # Set via secrets, see .github/workflows/tests.yml.
+  token: ""
 coverage:
   status:
     project:
