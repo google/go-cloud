@@ -65,7 +65,9 @@ type URLOpener struct{}
 // OpenKeeperURL opens Keeper URLs.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
+		// Note: don't include u in this error, since u.Host holds the raw
+		// key material for this scheme and would leak it into logs/errors.
+		return nil, fmt.Errorf("open keeper %s: invalid query parameter %q", u.Scheme, param)
 	}
 	var sk [32]byte
 	var err error
@@ -75,7 +77,9 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		sk, err = Base64Key(u.Host)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("open keeper %v: failed to get key: %v", u, err)
+		// Note: don't include u in this error, since u.Host holds the raw
+		// key material for this scheme and would leak it into logs/errors.
+		return nil, fmt.Errorf("open keeper %s: failed to get key: %v", u.Scheme, err)
 	}
 	return NewKeeper(sk), nil
 }
