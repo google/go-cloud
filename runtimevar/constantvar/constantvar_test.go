@@ -17,6 +17,7 @@ package constantvar
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -25,6 +26,13 @@ import (
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
 )
+
+func closeWithErrorCheck(t testing.TB, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to Close: %v", err)
+	}
+}
 
 type harness struct {
 	// vars stores the variable value(s) that have been set using CreateVariable.
@@ -100,7 +108,7 @@ func TestNew(t *testing.T) {
 	// Use New with an error value; it should be plumbed through as a Value.
 	errFail := errors.New("fail")
 	v := New(errFail)
-	defer v.Close()
+	defer closeWithErrorCheck(t, v)
 	val, err := v.Watch(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +124,7 @@ func TestNewBytes(t *testing.T) {
 
 	// Decode succeeds.
 	v := NewBytes([]byte(content), runtimevar.StringDecoder)
-	defer v.Close()
+	defer closeWithErrorCheck(t, v)
 	val, err := v.Watch(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +136,7 @@ func TestNewBytes(t *testing.T) {
 	// Decode fails.
 	var jsonData []string
 	v = NewBytes([]byte(content), runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
-	defer v.Close()
+	defer closeWithErrorCheck(t, v)
 	val, err = v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got nil error and %v, want error", val)
@@ -145,7 +153,7 @@ func TestNewFromEnv(t *testing.T) {
 
 	// Decode succeeds.
 	v := NewFromEnv(name, runtimevar.StringDecoder)
-	defer v.Close()
+	defer closeWithErrorCheck(t, v)
 	val, err := v.Watch(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +165,7 @@ func TestNewFromEnv(t *testing.T) {
 	// Decode fails.
 	var jsonData []string
 	v = NewFromEnv(name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
-	defer v.Close()
+	defer closeWithErrorCheck(t, v)
 	val, err = v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got nil error and %v, want error", val)
@@ -168,7 +176,7 @@ func TestNewError(t *testing.T) {
 	ctx := context.Background()
 
 	v := NewError(errors.New("fail"))
-	defer v.Close()
+	defer closeWithErrorCheck(t, v)
 	_, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got nil err want fail err")
@@ -209,7 +217,7 @@ func TestOpenVariable(t *testing.T) {
 			if err != nil {
 				return
 			}
-			defer v.Close()
+			defer closeWithErrorCheck(t, v)
 			snapshot, err := v.Watch(ctx)
 			if (err != nil) != test.WantWatchErr {
 				t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)

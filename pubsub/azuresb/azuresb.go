@@ -198,7 +198,7 @@ func (o *URLOpener) sbClient(kind string, u *url.URL) (*servicebus.Client, error
 	if o.ConnectionString != "" {
 		client, err := NewClientFromConnectionString(o.ConnectionString, o.ServiceBusClientOptions)
 		if err != nil {
-			return nil, fmt.Errorf("open %s %v: invalid connection string %q: %v", kind, u, redactSharedAccessKey(o.ConnectionString), err)
+			return nil, fmt.Errorf("open %s %v: invalid connection string %q: %w", kind, u, redactSharedAccessKey(o.ConnectionString), err)
 		}
 		return client, nil
 	}

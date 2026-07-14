@@ -35,7 +35,7 @@ func ExampleOpenCollection() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer coll.Close()
+	defer func() { _ = coll.Close() }()
 }
 
 func Example_openCollectionFromURL() {
@@ -49,5 +49,5 @@ func Example_openCollectionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer coll.Close()
+	defer func() { _ = coll.Close() }()
 }

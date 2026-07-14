@@ -31,10 +31,15 @@ const (
 func TestOpenTelemetry(t *testing.T) {
 	ctx := context.Background()
 	te := oteltest.NewTestExporter(t, runtimevar.OpenTelemetryViews)
-	defer te.Shutdown(ctx)
-
 	v := constantvar.New(1)
-	defer v.Close()
+	defer func() {
+		if err := te.Shutdown(ctx); err != nil {
+			t.Errorf("failed to Shutdown: %v", err)
+		}
+		if err := v.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 	if _, err := v.Watch(ctx); err != nil {
 		t.Fatal(err)
 	}

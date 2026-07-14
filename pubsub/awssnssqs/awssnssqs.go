@@ -73,7 +73,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -151,11 +150,7 @@ func DialSQS(cfg aws.Config) *sqs.Client {
 
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenXXXURL.
-type lazySessionOpener struct {
-	init   sync.Once
-	opener *URLOpener
-	err    error
-}
+type lazySessionOpener struct{}
 
 func (o *lazySessionOpener) defaultOpener(u *url.URL) (*URLOpener, error) {
 	return &URLOpener{}, nil

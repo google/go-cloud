@@ -28,7 +28,7 @@ func ExampleOpenVariable() {
 	// Create a *blob.Bucket.
 	// Here, we use an in-memory implementation and write a sample value.
 	bucket := memblob.OpenBucket(nil)
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 	ctx := context.Background()
 	err := bucket.WriteAll(ctx, "cfg-variable-name", []byte("hello world"), nil)
 	if err != nil {
@@ -40,7 +40,7 @@ func ExampleOpenVariable() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// We can now read the current value of the variable from v.
 	snapshot, err := v.Latest(ctx)
@@ -68,5 +68,5 @@ func Example_openVariableFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 }

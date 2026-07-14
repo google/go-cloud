@@ -58,7 +58,7 @@ func ExampleOpenBucket() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Now we can use b to read or write files to the container.
 	data, err := b.ReadAll(ctx, "my-key")
@@ -85,7 +85,7 @@ func Example_openBucketFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// Another example, against a local emulator.
 	// Assuming AZURE_STORAGE_ACCOUNT is set to "myaccount",
@@ -95,5 +95,5 @@ func Example_openBucketFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer localbucket.Close()
+	defer func() { _ = localbucket.Close() }()
 }

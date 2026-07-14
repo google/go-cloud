@@ -59,6 +59,13 @@ const (
 
 var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containing private key (required for --record); defaults to ~/Downloads/gcs-private-key.pem")
 
+func closeWithErrorCheck(t *testing.T, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to close: %v", err)
+	}
+}
+
 type harness struct {
 	client *gcp.HTTPClient
 	opts   *Options
@@ -319,7 +326,7 @@ func TestOpenBucket(t *testing.T) {
 			// Create portable type.
 			b, err := OpenBucket(ctx, client, test.bucketName, nil)
 			if b != nil {
-				defer b.Close()
+				defer closeWithErrorCheck(t, b)
 			}
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
@@ -342,7 +349,7 @@ func TestBeforeReadNonExistentKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	bucket := blob.NewBucket(drv)
-	defer bucket.Close()
+	defer closeWithErrorCheck(t, bucket)
 
 	// Try reading a nonexistent key.
 	_, err = bucket.NewReader(ctx, "nonexistent-key", &blob.ReaderOptions{
@@ -383,7 +390,7 @@ func TestPreconditions(t *testing.T) {
 		t.Fatal(err)
 	}
 	bucket := blob.NewBucket(drv)
-	defer bucket.Close()
+	defer closeWithErrorCheck(t, bucket)
 
 	// Try writing with a failing precondition.
 	if err := bucket.WriteAll(ctx, key, []byte(content), &blob.WriterOptions{
@@ -414,7 +421,11 @@ func TestPreconditions(t *testing.T) {
 	}); err != nil {
 		t.Errorf("got error %v, wanted nil", err)
 	}
-	defer bucket.Delete(ctx, key)
+	defer func() {
+		if err := bucket.Delete(ctx, key); err != nil {
+			t.Errorf("failed to Delete: %v", err)
+		}
+	}()
 
 	// Try reading with a failing precondition.
 	_, err = bucket.NewReader(ctx, key, &blob.ReaderOptions{
@@ -457,7 +468,7 @@ func TestPreconditions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer reader.Close()
+	defer closeWithErrorCheck(t, reader)
 	gotBytes, err := io.ReadAll(reader)
 	if err != nil {
 		t.Fatal(err)
@@ -513,7 +524,11 @@ func TestPreconditions(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer bucket.Delete(ctx, key2)
+	defer func() {
+		if err := bucket.Delete(ctx, key2); err != nil {
+			t.Errorf("failed to Delete: %v", err)
+		}
+	}()
 }
 
 func TestURLOpenerForParams(t *testing.T) {
@@ -525,7 +540,7 @@ func TestURLOpenerForParams(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(pkFile.Name())
+	defer func() { _ = os.Remove(pkFile.Name()) }()
 	if _, err := pkFile.Write(privateKey); err != nil {
 		t.Fatal(err)
 	}
@@ -661,7 +676,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(pkFile.Name())
+	defer func() { _ = os.Remove(pkFile.Name()) }()
 	if err := os.WriteFile(pkFile.Name(), []byte("key"), 0o666); err != nil {
 		t.Fatal(err)
 	}
@@ -692,7 +707,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 	for _, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
 		if b != nil {
-			defer b.Close()
+			defer closeWithErrorCheck(t, b)
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)

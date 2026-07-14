@@ -39,7 +39,7 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer k.Close()
+	defer func() { _ = k.Close() }()
 
 	// Now we can use k to encrypt/decrypt.
 	plaintext := []byte("Go CDK Secrets")

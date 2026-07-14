@@ -104,7 +104,7 @@ func NewRecordReplayClient(ctx context.Context, t *testing.T, rf func(r *httprep
 	if err := recState.UnmarshalBinary(rep.Initial()); err != nil {
 		t.Fatal(err)
 	}
-	return rep.Client(), func() { rep.Close() }, recState.UnixNano()
+	return rep.Client(), func() { _ = rep.Close() }, recState.UnixNano()
 }
 
 // NewAWSv2Config creates a new aws.Config for testing against AWS.
@@ -268,7 +268,9 @@ func newGCPRecordDialOptions(t *testing.T, filename string) (opts []grpc.DialOpt
 	t.Helper()
 
 	path := filepath.Join("testdata", filename)
-	os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+		t.Fatalf("failed to MkdirAll %q: %v", filepath.Dir(path), err)
+	}
 	t.Logf("Recording into golden file %s", path)
 	r, err := grpcreplay.NewRecorder(path, nil)
 	if err != nil {

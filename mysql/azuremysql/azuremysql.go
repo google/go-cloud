@@ -119,8 +119,6 @@ func (c *connector) Driver() driver.Driver {
 	return mysql.MySQLDriver{}
 }
 
-var tlsConfigCounter uint32
-
 // A CertPoolProvider obtains a certificate pool that contains the Azure CA certificate.
 type CertPoolProvider = azuredb.CertPoolProvider
 

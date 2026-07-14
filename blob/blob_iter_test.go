@@ -14,7 +14,7 @@ import (
 func TestListIterator_All(t *testing.T) {
 	ctx := context.Background()
 	b := memblob.OpenBucket(nil)
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 
 	// Initialize the bucket with some keys.
 	want := map[string]string{}

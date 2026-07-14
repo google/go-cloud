@@ -48,11 +48,11 @@ func ExampleOpenTopic() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// Construct a *pubsub.Topic.
 	topic := gcppubsubv2.OpenTopic(client, "example-topic", nil)
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func Example_openTopicFromURL() {
@@ -65,7 +65,7 @@ func Example_openTopicFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func ExampleOpenSubscription() {
@@ -94,11 +94,11 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	// Construct a *pubsub.Subscription.
 	subscription := gcppubsubv2.OpenSubscription(client, "example-subscription", nil)
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }
 
 func Example_openSubscriptionFromURL() {
@@ -112,5 +112,5 @@ func Example_openSubscriptionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }

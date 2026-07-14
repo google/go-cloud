@@ -79,7 +79,9 @@ func check(s *httptest.Server) (code int, err error) {
 	if err != nil {
 		return 0, err
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		return 0, err
+	}
 	return resp.StatusCode, nil
 }
 

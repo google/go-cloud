@@ -297,7 +297,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*grpc.ClientConn, func(), er
 	if err != nil {
 		return nil, nil, err
 	}
-	return conn, func() { conn.Close() }, nil
+	return conn, func() { _ = conn.Close() }, nil
 }
 
 // dialEmulator opens a gRPC connection to the GCP Pub Sub API.

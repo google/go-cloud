@@ -51,7 +51,7 @@ func ExampleOpenBucket() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 }
 
 func Example_openBucketFromURL() {
@@ -66,5 +66,5 @@ func Example_openBucketFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 }

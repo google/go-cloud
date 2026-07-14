@@ -95,7 +95,7 @@ func TestPlanQuery(t *testing.T) {
 			desc: "equality filter on table partition field",
 			// A filter that compares the table's partition key for equality is the minimum
 			// requirement for querying the table.
-			query: &driver.Query{Filters: []driver.Filter{{[]string{"tableP"}, "=", 1}}},
+			query: &driver.Query{Filters: []driver.Filter{driver.NewFilter([]string{"tableP"}, "=", 1)}},
 			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("#0 = :0"),
 				ExpressionAttributeNames:  eans("tableP"),
@@ -107,7 +107,7 @@ func TestPlanQuery(t *testing.T) {
 			desc: "equality filter on table partition field (sort key)",
 			// Same as above, but the table has a sort key; shouldn't make a difference.
 			tableSortKey: "tableS",
-			query:        &driver.Query{Filters: []driver.Filter{{[]string{"tableP"}, "=", 1}}},
+			query:        &driver.Query{Filters: []driver.Filter{driver.NewFilter([]string{"tableP"}, "=", 1)}},
 			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("#0 = :0"),
 				ExpressionAttributeNames:  eans("tableP"),
@@ -119,7 +119,7 @@ func TestPlanQuery(t *testing.T) {
 			desc: "equality filter on other field",
 			// This query has an equality filter, but not on the table's partition key.
 			// Since there are no matching indexes, we must scan.
-			query: &driver.Query{Filters: []driver.Filter{{[]string{"other"}, "=", 1}}},
+			query: &driver.Query{Filters: []driver.Filter{driver.NewFilter([]string{"other"}, "=", 1)}},
 			want: &dyn.ScanInput{
 				FilterExpression:          aws.String("#0 = :0"),
 				ExpressionAttributeNames:  eans("other"),
@@ -132,7 +132,7 @@ func TestPlanQuery(t *testing.T) {
 			// If the query doesn't have an equality filter on the partition key, and there
 			// are no indexes, we must scan. The filter becomes a FilterExpression, evaluated
 			// on the backend.
-			query: &driver.Query{Filters: []driver.Filter{{[]string{"tableP"}, ">", 1}}},
+			query: &driver.Query{Filters: []driver.Filter{driver.NewFilter([]string{"tableP"}, ">", 1)}},
 			want: &dyn.ScanInput{
 				FilterExpression:          aws.String("#0 > :0"),
 				ExpressionAttributeNames:  eans("tableP"),
@@ -145,8 +145,8 @@ func TestPlanQuery(t *testing.T) {
 			// The equality filter on the table's partition key lets us query the table.
 			// The other filter is used in the filter expression.
 			query: &driver.Query{Filters: []driver.Filter{
-				{[]string{"tableP"}, "=", 1},
-				{[]string{"other"}, "<=", 1},
+				driver.NewFilter([]string{"tableP"}, "=", 1),
+				driver.NewFilter([]string{"other"}, "<=", 1),
 			}},
 			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("#1 = :1"),
@@ -163,8 +163,8 @@ func TestPlanQuery(t *testing.T) {
 			// table.
 			tableSortKey: "tableS",
 			query: &driver.Query{Filters: []driver.Filter{
-				{[]string{"tableP"}, "=", 1},
-				{[]string{"tableS"}, "<=", 1},
+				driver.NewFilter([]string{"tableP"}, "=", 1),
+				driver.NewFilter([]string{"tableS"}, "<=", 1),
 			}},
 			want: &dyn.QueryInput{
 				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
@@ -180,8 +180,8 @@ func TestPlanQuery(t *testing.T) {
 			// that is mentioned in the query.
 			localIndexSortKey: "localS",
 			query: &driver.Query{Filters: []driver.Filter{
-				{[]string{"tableP"}, "=", 1},
-				{[]string{"localS"}, "<=", 1},
+				driver.NewFilter([]string{"tableP"}, "=", 1),
+				driver.NewFilter([]string{"localS"}, "<=", 1),
 			}},
 			want: &dyn.QueryInput{
 				IndexName:                aws.String("local"),
@@ -199,8 +199,8 @@ func TestPlanQuery(t *testing.T) {
 			localIndexSortKey: "localS",
 			localIndexFields:  []string{}, // keys only
 			query: &driver.Query{Filters: []driver.Filter{
-				{[]string{"tableP"}, "=", 1},
-				{[]string{"localS"}, "<=", 1},
+				driver.NewFilter([]string{"tableP"}, "=", 1),
+				driver.NewFilter([]string{"localS"}, "<=", 1),
 			}},
 			want: &dyn.QueryInput{
 				KeyConditionExpression:   aws.String("#1 = :1"),
@@ -218,8 +218,8 @@ func TestPlanQuery(t *testing.T) {
 			query: &driver.Query{
 				FieldPaths: [][]string{{"tableP"}, {"localS"}},
 				Filters: []driver.Filter{
-					{[]string{"tableP"}, "=", 1},
-					{[]string{"localS"}, "<=", 1},
+					driver.NewFilter([]string{"tableP"}, "=", 1),
+					driver.NewFilter([]string{"localS"}, "<=", 1),
 				},
 			},
 			want: &dyn.QueryInput{
@@ -237,9 +237,9 @@ func TestPlanQuery(t *testing.T) {
 			tableSortKey:      "tableS",
 			localIndexSortKey: "localS",
 			query: &driver.Query{Filters: []driver.Filter{
-				{[]string{"tableP"}, "=", 1},
-				{[]string{"localS"}, "<=", 1},
-				{[]string{"tableS"}, ">", 1},
+				driver.NewFilter([]string{"tableP"}, "=", 1),
+				driver.NewFilter([]string{"localS"}, "<=", 1),
+				driver.NewFilter([]string{"tableS"}, ">", 1),
 			}},
 			want: &dyn.QueryInput{
 				IndexName:                nil,
@@ -254,7 +254,7 @@ func TestPlanQuery(t *testing.T) {
 			// The query is the same as in "equality filter on other field," but now there
 			// is a global index with that field as partition key, so we can query it.
 			globalIndexPartitionKey: "other",
-			query:                   &driver.Query{Filters: []driver.Filter{{[]string{"other"}, "=", 1}}},
+			query:                   &driver.Query{Filters: []driver.Filter{driver.NewFilter([]string{"other"}, "=", 1)}},
 			want: &dyn.QueryInput{
 				IndexName:                aws.String("global"),
 				KeyConditionExpression:   aws.String("#0 = :0"),
@@ -271,8 +271,8 @@ func TestPlanQuery(t *testing.T) {
 			globalIndexPartitionKey: "tableP",
 			globalIndexSortKey:      "globalS",
 			query: &driver.Query{Filters: []driver.Filter{
-				{[]string{"tableP"}, "=", 1},
-				{[]string{"globalS"}, "<=", 1},
+				driver.NewFilter([]string{"tableP"}, "=", 1),
+				driver.NewFilter([]string{"globalS"}, "<=", 1),
 			}},
 			want: &dyn.QueryInput{
 				IndexName:                aws.String("global"),
@@ -292,8 +292,8 @@ func TestPlanQuery(t *testing.T) {
 			globalIndexSortKey:      "globalS",
 			globalIndexFields:       []string{"other"},
 			query: &driver.Query{Filters: []driver.Filter{
-				{[]string{"tableP"}, "=", 1},
-				{[]string{"globalS"}, "<=", 1},
+				driver.NewFilter([]string{"tableP"}, "=", 1),
+				driver.NewFilter([]string{"globalS"}, "<=", 1),
 			}},
 			want: &dyn.QueryInput{
 				IndexName:                nil,
@@ -313,8 +313,8 @@ func TestPlanQuery(t *testing.T) {
 			query: &driver.Query{
 				FieldPaths: [][]string{{"other"}},
 				Filters: []driver.Filter{
-					{[]string{"tableP"}, "=", 1},
-					{[]string{"globalS"}, "<=", 1},
+					driver.NewFilter([]string{"tableP"}, "=", 1),
+					driver.NewFilter([]string{"globalS"}, "<=", 1),
 				},
 			},
 			want: &dyn.QueryInput{
@@ -396,7 +396,7 @@ func TestQueryNoScans(t *testing.T) {
 		wantErr bool
 	}{
 		{&driver.Query{}, false},
-		{&driver.Query{Filters: []driver.Filter{{[]string{"other"}, "=", 1}}}, true},
+		{&driver.Query{Filters: []driver.Filter{driver.NewFilter([]string{"other"}, "=", 1)}}, true},
 	} {
 		qr, err := c.planQuery(test.q)
 		if err != nil {

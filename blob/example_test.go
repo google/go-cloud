@@ -43,7 +43,7 @@ func ExampleBucket_NewReader() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	// Readers also have a limited view of the blob's metadata.
 	fmt.Println("Content-Type:", r.ContentType())
 	fmt.Println()
@@ -64,7 +64,7 @@ func ExampleBucket_NewRangeReader() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	// Copy from the read range to stdout.
 	if _, err := io.Copy(os.Stdout, r); err != nil {
 		log.Fatal(err)
@@ -116,7 +116,7 @@ func ExampleBucket_NewWriter_cancel() {
 		// First cancel the context.
 		cancelWrite()
 		// You must still close the writer to avoid leaking resources.
-		w.Close()
+		_ = w.Close()
 	}
 }
 
@@ -141,7 +141,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// We now have a *blob.Bucket! We can write our application using the
 	// *blob.Bucket type, and have the freedom to change the initialization code
@@ -174,7 +174,7 @@ func ExampleBucket_ErrorAs() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	_, err = b.ReadAll(ctx, "nosuchfile")
 	if err != nil {
@@ -200,7 +200,7 @@ func ExampleBucket_List() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
@@ -267,7 +267,7 @@ func ExampleBucket_List_withDelimiter() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// Create some blob objects in a hierarchy.
 	ctx := context.Background()
@@ -329,7 +329,7 @@ func ExampleBucket_ListPage() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// Create some blob objects for listing: "foo[0..7].txt".
 	ctx := context.Background()
@@ -404,7 +404,7 @@ func ExampleBucket_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Access storage.Client fields via gcsClient here.
 	var gcsClient *storage.Client
@@ -431,7 +431,7 @@ func ExampleWriterOptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	beforeWrite := func(as func(any) bool) error {
 		var sw *storage.Writer
@@ -459,7 +459,7 @@ func ExampleListObject_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	iter := b.List(nil)
 	for {
@@ -490,7 +490,7 @@ func ExampleListOptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	beforeList := func(as func(any) bool) error {
 		// Access storage.Query via q here.
@@ -526,7 +526,7 @@ func ExamplePrefixedBucket() {
 
 	// The original bucket is no longer usable; it has been closed.
 	// The wrapped bucket should be closed when done.
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// Bucket operations on <key> will be translated to "a/subfolder/<key>".
 }
@@ -542,7 +542,7 @@ func ExampleSingleKeyBucket() {
 
 	// The original bucket is no longer usable; it has been closed.
 	// The wrapped bucket should be closed when done.
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// Bucket operations will ignore the passed-in key and always reference foo.txt.
 }
@@ -559,13 +559,13 @@ func ExampleReader_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	r, err := b.NewReader(ctx, "gopher.png", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// Access storage.Reader via sr here.
 	var sr *storage.Reader
@@ -585,7 +585,7 @@ func ExampleAttributes_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	attrs, err := b.Attributes(ctx, "gopher.png")
 	if err != nil {
@@ -603,5 +603,5 @@ func newTempDir() (string, func()) {
 	if err != nil {
 		panic(err)
 	}
-	return dir, func() { os.RemoveAll(dir) }
+	return dir, func() { _ = os.RemoveAll(dir) }
 }

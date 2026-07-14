@@ -30,7 +30,7 @@ func ExampleOpenBucket() {
 
 	// Create an in-memory bucket.
 	bucket := memblob.OpenBucket(nil)
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	// Now we can use bucket to read or write files to the bucket.
 	err := bucket.WriteAll(ctx, "my-key", []byte("hello world"), nil)
@@ -53,7 +53,7 @@ func Example_openBucketFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Now we can use b to read or write files to the container.
 	ctx := context.Background()

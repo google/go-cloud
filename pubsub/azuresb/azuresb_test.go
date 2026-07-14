@@ -97,14 +97,17 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 	}
 
 	sbSender, err := NewSender(h.sbClient, topicName, nil)
+	if err != nil {
+		return nil, nil, err
+	}
 	dt, err = openTopic(ctx, sbSender, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	h.topics[dt] = topicName
 	cleanup = func() {
-		sbSender.Close(ctx)
-		deleteTopic(ctx, topicName, h.adminClient)
+		_ = sbSender.Close(ctx)
+		_ = deleteTopic(ctx, topicName, h.adminClient)
 	}
 	return dt, cleanup, nil
 }
@@ -149,8 +152,8 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	}
 
 	cleanup = func() {
-		sbReceiver.Close(ctx)
-		deleteSubscription(ctx, topicName, subName, h.adminClient)
+		_ = sbReceiver.Close(ctx)
+		_ = deleteSubscription(ctx, topicName, subName, h.adminClient)
 	}
 	return ds, cleanup, nil
 }
@@ -366,18 +369,30 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	if err := createTopic(ctx, benchmarkTopicName, adminClient, nil); err != nil {
 		b.Fatal(err)
 	}
-	defer deleteTopic(ctx, benchmarkTopicName, adminClient)
+	defer func() {
+		if err := deleteTopic(ctx, benchmarkTopicName, adminClient); err != nil {
+			b.Errorf("failed to delete topic: %v", err)
+		}
+	}()
 
 	sbSender, err := NewSender(sbClient, benchmarkTopicName, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer sbSender.Close(ctx)
+	defer func() {
+		if err := sbSender.Close(ctx); err != nil {
+			b.Errorf("failed to Close: %v", err)
+		}
+	}()
 	topic, err := OpenTopic(ctx, sbSender, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() {
+		if err := topic.Shutdown(ctx); err != nil {
+			b.Errorf("failed to Shutdown topic: %v", err)
+		}
+	}()
 
 	// Make subscription.
 	if err := createSubscription(ctx, benchmarkTopicName, benchmarkSubscriptionName, adminClient, nil); err != nil {
@@ -391,16 +406,20 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer sub.Shutdown(ctx)
+	defer func() {
+		if err := sub.Shutdown(ctx); err != nil {
+			b.Errorf("failed to Shutdown subscription: %v", err)
+		}
+	}()
 
 	drivertest.RunBenchmarks(b, topic, sub)
 }
 
 func fakeConnectionStringInEnv() func() {
 	oldEnvVal := os.Getenv("SERVICEBUS_CONNECTION_STRING")
-	os.Setenv("SERVICEBUS_CONNECTION_STRING", "Endpoint=sb://foo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mykey")
+	_ = os.Setenv("SERVICEBUS_CONNECTION_STRING", "Endpoint=sb://foo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mykey")
 	return func() {
-		os.Setenv("SERVICEBUS_CONNECTION_STRING", oldEnvVal)
+		_ = os.Setenv("SERVICEBUS_CONNECTION_STRING", oldEnvVal)
 	}
 }
 
@@ -425,7 +444,9 @@ func TestOpenTopicFromURL(t *testing.T) {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 		if topic != nil {
-			topic.Shutdown(ctx)
+			if err := topic.Shutdown(ctx); err != nil {
+				t.Errorf("failed to Shutdown topic: %v", err)
+			}
 		}
 	}
 }
@@ -457,7 +478,9 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 		if sub != nil {
-			sub.Shutdown(ctx)
+			if err := sub.Shutdown(ctx); err != nil {
+				t.Errorf("failed to Shutdown: %v", err)
+			}
 		}
 	}
 }

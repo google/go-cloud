@@ -63,7 +63,7 @@ func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds, nil, nil)
-	defer sub.Shutdown(ctx)
+	defer shutdownSubscription(ctx, t, sub)
 	m, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func TestSubscriptionCloseIsCalled(t *testing.T) {
 	ctx := context.Background()
 	ds := &scriptedSub{}
 	sub := pubsub.NewSubscription(ds, nil, nil)
-	sub.Shutdown(ctx)
+	shutdownSubscription(ctx, t, sub)
 	if !ds.closed {
 		t.Error("want Subscription.Close to have been called")
 	}

@@ -642,13 +642,13 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			*p = f
 			return true
 		}); err != nil {
-			f.Close()
+			_ = f.Close()
 			return nil, err
 		}
 	}
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
-			f.Close()
+			_ = f.Close()
 			return nil, err
 		}
 	}
@@ -891,7 +891,7 @@ func (w *writer) Close() error {
 	// Always delete the temp file. On success, it will have been renamed so
 	// the Remove will fail.
 	tempname := w.File.Name()
-	defer os.Remove(tempname)
+	defer func() { _ = os.Remove(tempname) }()
 
 	// Check if the write was cancelled.
 	if err := w.ctx.Err(); err != nil {
@@ -915,7 +915,7 @@ func (w *writer) Close() error {
 }
 
 // Copy implements driver.Copy.
-func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) (err error) {
 	// Note: we could use NewRangeReader here, but since we need to copy all of
 	// the metadata (from xa), it's more efficient to do it directly.
 	srcPath, _, xa, err := b.forKey(srcKey)
@@ -926,7 +926,11 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if e := f.Close(); e != nil && err == nil {
+			err = e
+		}
+	}()
 
 	// We'll write the copy using Writer, to avoid re-implementing making of a
 	// temp file, cleaning up after partial failures, etc.
@@ -949,7 +953,7 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	_, err = io.Copy(w, f)
 	if err != nil {
 		cancel() // cancel before Close cancels the write
-		w.Close()
+		_ = w.Close()
 		return err
 	}
 	return w.Close()

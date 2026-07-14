@@ -29,9 +29,6 @@ func TestNCSALog(t *testing.T) {
 
 		latencySec   = 5
 		latencyNanos = 123456789
-
-		endTime      = startTime + latencySec
-		endTimeNanos = startTimeNanos + latencyNanos
 	)
 	tests := []struct {
 		name string

@@ -34,10 +34,10 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Use database in your program.
-	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
+	_, _ = db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
 }
 
 func Example_iam() {
@@ -53,7 +53,7 @@ func Example_iam() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Use database in your program.
 	if _, err := db.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS foo (bar INT)"); err != nil {

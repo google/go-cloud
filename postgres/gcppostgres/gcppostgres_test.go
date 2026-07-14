@@ -77,7 +77,7 @@ func TestURLOpener(t *testing.T) {
 				return
 			}
 			if test.wantErr {
-				db.Close()
+				_ = db.Close()
 				t.Fatal("Open succeeded; want error")
 			}
 			if err := db.Ping(); err != nil {

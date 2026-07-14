@@ -17,8 +17,6 @@ package awsdynamodb
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -121,44 +119,6 @@ func (h *harness) MakeCollection(_ context.Context, kind drivertest.CollectionKi
 	}
 }
 
-func collectHighScores(ctx context.Context, iter driver.DocumentIterator) ([]*drivertest.HighScore, error) {
-	var hs []*drivertest.HighScore
-	for {
-		var h drivertest.HighScore
-		doc := drivertest.MustDocument(&h)
-		err := iter.Next(ctx, doc)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		hs = append(hs, &h)
-	}
-	return hs, nil
-}
-
-type highScoreSliceIterator struct {
-	hs   []*drivertest.HighScore
-	next int
-}
-
-func (it *highScoreSliceIterator) Next(ctx context.Context, doc driver.Document) error {
-	if it.next >= len(it.hs) {
-		return io.EOF
-	}
-	dest, ok := doc.Origin.(*drivertest.HighScore)
-	if !ok {
-		return fmt.Errorf("doc is %T, not HighScore", doc.Origin)
-	}
-	*dest = *it.hs[it.next]
-	it.next++
-	return nil
-}
-
-func (*highScoreSliceIterator) Stop()       {}
-func (*highScoreSliceIterator) As(any) bool { return false }
-
 type verifyAs struct{}
 
 func (verifyAs) Name() string {
@@ -224,7 +184,11 @@ func TestQueryErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	coll := docstore.NewCollection(dc)
-	defer coll.Close()
+	defer func() {
+		if err := coll.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 
 	// Here we are comparing a key field with the wrong type. DynamoDB cares about this
 	// because even though it's a document store and hence schemaless, the key fields

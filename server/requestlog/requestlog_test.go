@@ -130,7 +130,7 @@ func roundTrip(r *http.Request, h http.Handler) (*Entry, *trace.SpanContext, err
 	if err != nil {
 		return nil, nil, err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return &capture.ent, handler.spanCtx, nil
 }
 

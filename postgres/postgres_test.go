@@ -91,7 +91,7 @@ func TestOpen(t *testing.T) {
 			}
 		}
 		// Wait for server to exit, but ignore the expected failure error code.
-		server.Wait()
+		_ = server.Wait()
 		if t.Failed() {
 			t.Log(serverOutput)
 		}
@@ -127,6 +127,8 @@ func TestOpen(t *testing.T) {
 	if err := db.Close(); err != nil {
 		t.Error("Close:", err)
 	}
-	server.Process.Signal(os.Interrupt)
+	if err := server.Process.Signal(os.Interrupt); err != nil {
+		t.Error("Signal:", err)
+	}
 	serverSignaled = true
 }

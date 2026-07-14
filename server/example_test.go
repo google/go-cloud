@@ -39,7 +39,7 @@ func ExampleServer() {
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, World!")
+		_, _ = fmt.Fprintln(w, "Hello, World!")
 	})
 
 	// Start the server. If ListenAndServe returns an error, print it and exit.
@@ -62,7 +62,7 @@ func ExampleServer_withRequestLogger() {
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, World!")
+		_, _ = fmt.Fprintln(w, "Hello, World!")
 	})
 
 	// Start the server. You will see requests logged to STDOUT.
@@ -117,7 +117,7 @@ func ExampleServer_withHealthChecks() {
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, World!")
+		_, _ = fmt.Fprintln(w, "Hello, World!")
 	})
 
 	// Start the server. You will see requests logged to STDOUT.
@@ -149,13 +149,13 @@ func ExampleServer_Shutdown() {
 		// before ListenAndServe starts.
 		for {
 			<-interrupt
-			srv.Shutdown(context.Background())
+			_ = srv.Shutdown(context.Background())
 		}
 	}()
 
 	// Register a route.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, World!")
+		_, _ = fmt.Fprintln(w, "Hello, World!")
 	})
 
 	// Start the server. You will see requests logged to STDOUT.

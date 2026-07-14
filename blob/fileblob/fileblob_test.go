@@ -34,6 +34,13 @@ import (
 	"gocloud.dev/gcerrors"
 )
 
+func closeWithErrorCheck(t testing.TB, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to close: %v", err)
+	}
+}
+
 type harness struct {
 	dir         string
 	prefix      string
@@ -108,7 +115,7 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer bucket.Close()
+	defer func() { _ = bucket.Close() }()
 
 	switch r.Method {
 	case http.MethodGet:
@@ -117,8 +124,11 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		defer reader.Close()
-		io.Copy(w, reader)
+		defer func() { _ = reader.Close() }()
+		if _, err := io.Copy(w, reader); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	case http.MethodPut:
 		writer, err := bucket.NewWriter(r.Context(), objKey, &blob.WriterOptions{
 			ContentType: contentType,
@@ -127,7 +137,10 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		io.Copy(writer, r.Body)
+		if _, err := io.Copy(writer, r.Body); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		if err := writer.Close(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -238,7 +251,7 @@ func TestNewBucket(t *testing.T) {
 		if gotErr != nil {
 			t.Errorf("got error %v", gotErr)
 		}
-		defer b.Close()
+		defer closeWithErrorCheck(t, b)
 
 		// Make sure the subdir has gotten permissions to be used.
 		gotErr = b.WriteAll(context.Background(), "key", []byte("delme"), nil)
@@ -272,7 +285,7 @@ func TestIfNotExistHasNoSideEffects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 	if err := b.WriteAll(ctx, key, []byte(origContents), &blob.WriterOptions{
 		Metadata: map[string]string{"md": "a"}}); err != nil {
 		t.Fatalf("failed to write blob: %v", err)
@@ -303,7 +316,7 @@ func TestBeforeWriteErrorRemovesTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 
 	var tempName string
 	_, gotErr := b.NewWriter(ctx, "key", &blob.WriterOptions{
@@ -335,7 +348,7 @@ func TestSignedURLReturnsUnimplementedWithNoURLSigner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 	_, gotErr := b.SignedURL(context.Background(), "key", nil)
 	if gcerrors.Code(gotErr) != gcerrors.Unimplemented {
 		t.Errorf("want Unimplemented error, got %v", gotErr)
@@ -504,7 +517,7 @@ func TestOpenBucketFromURL(t *testing.T) {
 	for i, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
 		if b != nil {
-			defer b.Close()
+			defer closeWithErrorCheck(t, b)
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("#%d: %s: got error %v, want error %v", i, test.URL, err, test.WantErr)
@@ -540,7 +553,7 @@ func TestDirFileModeFromURL(t *testing.T) {
 		// "0o" prefix is also octal.
 		{"dir_file_mode=0o644", os.FileMode(0o644)},
 		// No prefix is decimal, preserving the previous behavior.
-		{"dir_file_mode=511", os.FileMode(511)},
+		{"dir_file_mode=511", os.FileMode(511)}, // nolint
 	}
 	for _, test := range tests {
 		q, err := url.ParseQuery(test.query)
@@ -569,7 +582,7 @@ func TestEscapeBucketRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 
 	it := b.List(&blob.ListOptions{
 		Prefix: "../",
@@ -595,7 +608,7 @@ func TestEscapeBucketRootAtRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Got error creating bucket; %#v", err)
 	}
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 
 	dir := t.TempDir()
 
@@ -644,7 +657,7 @@ func TestSkipMetadata(t *testing.T) {
 	for _, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
 		if b != nil {
-			defer b.Close()
+			defer closeWithErrorCheck(t, b)
 		}
 		if err != nil {
 			t.Fatal(err)
@@ -662,6 +675,8 @@ func TestSkipMetadata(t *testing.T) {
 			t.Errorf("Metadata sidecar file (extension %s) exists: %v, did we want it: %v",
 				attrsExt, gotSidecar, test.wantSidecar)
 		}
-		b.Delete(ctx, "key")
+		if err := b.Delete(ctx, "key"); err != nil {
+			t.Errorf("failed to delete: %v", err)
+		}
 	}
 }

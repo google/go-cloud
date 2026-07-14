@@ -35,7 +35,7 @@ func Example() {
 		log.Fatal(err)
 	}
 	keeper := localsecrets.NewKeeper(sk)
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 
 	// Now we can use keeper to Encrypt.
 	plaintext := []byte("Go CDK Secrets")
@@ -68,7 +68,7 @@ func Example_errorAs() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 
 	plaintext := []byte("Go CDK secrets")
 	_, err = keeper.Encrypt(ctx, plaintext)

@@ -30,11 +30,11 @@ func ExampleNewSubscription() {
 
 	// Construct a *pubsub.Topic.
 	topic := mempubsub.NewTopic()
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 
 	// Construct a *pubsub.Subscription for the topic.
 	subscription := mempubsub.NewSubscription(topic, 1*time.Minute /* ack deadline */)
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }
 
 func ExampleNewTopic() {
@@ -43,7 +43,7 @@ func ExampleNewTopic() {
 	ctx := context.Background()
 
 	topic := mempubsub.NewTopic()
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func Example_openSubscriptionFromURL() {
@@ -57,14 +57,14 @@ func Example_openSubscriptionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 
 	// Create a subscription connected to that topic.
 	subscription, err := pubsub.OpenSubscription(ctx, "mem://topicA")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }
 
 func Example_openTopicFromURL() {
@@ -77,5 +77,5 @@ func Example_openTopicFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }

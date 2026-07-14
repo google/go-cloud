@@ -29,7 +29,11 @@ func TestReader(t *testing.T) {
 	const myKey = "testkey"
 
 	bucket := memblob.OpenBucket(nil)
-	defer bucket.Close()
+	defer func() {
+		if err := bucket.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 
 	// Get some random data, of a large enough size to require multiple
 	// reads/writes given our buffer size of 1024.
@@ -40,14 +44,18 @@ func TestReader(t *testing.T) {
 
 	// Write the data to a key.
 	ctx := context.Background()
-	bucket.WriteAll(ctx, myKey, data, nil)
+	if err := bucket.WriteAll(ctx, myKey, data, nil); err != nil {
+		t.Errorf("failed to write: %v", err)
+	}
 
 	// Create a blob.Reader.
 	r1, err := bucket.NewReader(ctx, myKey, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	r1.Close()
+	if err := r1.Close(); err != nil {
+		t.Errorf("failed to Close: %v", err)
+	}
 	if err := iotest.TestReader(r1, data); err != nil {
 		t.Error(err)
 	}
@@ -57,7 +65,11 @@ func TestReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r2.Close()
+	defer func() {
+		if err := r2.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 
 	var buffer bytes.Buffer
 	n, err := io.Copy(&buffer, r2)

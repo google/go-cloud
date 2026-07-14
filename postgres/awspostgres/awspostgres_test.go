@@ -17,11 +17,19 @@ package awspostgres
 import (
 	"context"
 	"fmt"
+	"io"
 	"testing"
 
 	"gocloud.dev/internal/testing/terraform"
 	"gocloud.dev/postgres"
 )
+
+func closeWithErrorCheck(t testing.TB, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to Close: %v", err)
+	}
+}
 
 func TestURLOpener(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
@@ -71,11 +79,7 @@ func TestURLOpener(t *testing.T) {
 			if err != nil {
 				return
 			}
-			defer func() {
-				if err := db.Close(); err != nil {
-					t.Error("Close:", err)
-				}
-			}()
+			defer closeWithErrorCheck(t, db)
 			err = db.Ping()
 			if err != nil != test.wantPingErr {
 				t.Errorf("ping got err %v, wanted error? %v", err, test.wantPingErr)
@@ -113,7 +117,7 @@ func TestURLOpenerIAM(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Open: %v", err)
 		}
-		defer db.Close()
+		defer closeWithErrorCheck(t, db)
 		if err := db.Ping(); err != nil {
 			t.Errorf("Ping: %v", err)
 		}
@@ -127,7 +131,7 @@ func TestURLOpenerIAM(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Open: %v", err)
 			}
-			defer db.Close()
+			defer closeWithErrorCheck(t, db)
 			if err := db.Ping(); err != nil {
 				t.Errorf("Ping: %v", err)
 			}

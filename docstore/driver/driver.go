@@ -223,6 +223,14 @@ type Filter struct {
 	Value     any      // the value to compare using the operation
 }
 
+func NewFilter(fieldPath []string, op string, value any) Filter {
+	return Filter{
+		FieldPath: fieldPath,
+		Op:        op,
+		Value:     value,
+	}
+}
+
 // A DocumentIterator iterates through the results (for Get action).
 type DocumentIterator interface {
 	// Next tries to get the next item in the query result and decodes into Document

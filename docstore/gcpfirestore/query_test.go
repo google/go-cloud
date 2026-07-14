@@ -33,17 +33,17 @@ func TestFilterToProto(t *testing.T) {
 		want *pb.StructuredQuery_Filter
 	}{
 		{
-			driver.Filter{[]string{"a"}, ">", 1},
+			driver.NewFilter([]string{"a"}, ">", 1),
 			&pb.StructuredQuery_Filter{FilterType: &pb.StructuredQuery_Filter_FieldFilter{
 				FieldFilter: &pb.StructuredQuery_FieldFilter{
 					Field: &pb.StructuredQuery_FieldReference{FieldPath: "a"},
 					Op:    pb.StructuredQuery_FieldFilter_GREATER_THAN,
-					Value: &pb.Value{ValueType: &pb.Value_IntegerValue{1}},
+					Value: &pb.Value{ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
 				},
 			}},
 		},
 		{
-			driver.Filter{[]string{"a"}, driver.EqualOp, nil},
+			driver.NewFilter([]string{"a"}, driver.EqualOp, nil),
 			&pb.StructuredQuery_Filter{FilterType: &pb.StructuredQuery_Filter_UnaryFilter{
 				UnaryFilter: &pb.StructuredQuery_UnaryFilter{
 					OperandType: &pb.StructuredQuery_UnaryFilter_Field{
@@ -54,7 +54,7 @@ func TestFilterToProto(t *testing.T) {
 			}},
 		},
 		{
-			driver.Filter{[]string{"a"}, driver.EqualOp, math.NaN()},
+			driver.NewFilter([]string{"a"}, driver.EqualOp, math.NaN()),
 			&pb.StructuredQuery_Filter{FilterType: &pb.StructuredQuery_Filter_UnaryFilter{
 				UnaryFilter: &pb.StructuredQuery_UnaryFilter{
 					OperandType: &pb.StructuredQuery_UnaryFilter_Field{
@@ -65,12 +65,12 @@ func TestFilterToProto(t *testing.T) {
 			}},
 		},
 		{
-			driver.Filter{[]string{"name"}, "<", "foo"},
+			driver.NewFilter([]string{"name"}, "<", "foo"),
 			&pb.StructuredQuery_Filter{FilterType: &pb.StructuredQuery_Filter_FieldFilter{
 				FieldFilter: &pb.StructuredQuery_FieldFilter{
 					Field: &pb.StructuredQuery_FieldReference{FieldPath: "__name__"},
 					Op:    pb.StructuredQuery_FieldFilter_LESS_THAN,
-					Value: &pb.Value{ValueType: &pb.Value_ReferenceValue{"collPath/foo"}},
+					Value: &pb.Value{ValueType: &pb.Value_ReferenceValue{ReferenceValue: "collPath/foo"}},
 				},
 			}},
 		},
@@ -86,11 +86,11 @@ func TestFilterToProto(t *testing.T) {
 }
 
 func TestSplitFilters(t *testing.T) {
-	aEqual := driver.Filter{[]string{"a"}, "=", 1}
-	aLess := driver.Filter{[]string{"a"}, "<", 1}
-	aGreater := driver.Filter{[]string{"a"}, ">", 1}
-	bEqual := driver.Filter{[]string{"b"}, "=", 1}
-	bLess := driver.Filter{[]string{"b"}, "<", 1}
+	aEqual := driver.NewFilter([]string{"a"}, "=", 1)
+	aLess := driver.NewFilter([]string{"a"}, "<", 1)
+	aGreater := driver.NewFilter([]string{"a"}, ">", 1)
+	bEqual := driver.NewFilter([]string{"b"}, "=", 1)
+	bLess := driver.NewFilter([]string{"b"}, "<", 1)
 
 	for _, test := range []struct {
 		in                  []driver.Filter

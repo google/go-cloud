@@ -107,6 +107,20 @@ func (*driverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal
 func (*driverSub) CanNack() bool                      { return false }
 func (*driverSub) Close() error                       { return nil }
 
+func shutdownTopic(ctx context.Context, t testing.TB, topic *Topic) {
+	t.Helper()
+	if err := topic.Shutdown(ctx); err != nil {
+		t.Errorf("failed to Shutdown topic: %v", err)
+	}
+}
+
+func shutdownSubscription(ctx context.Context, t testing.TB, sub *Subscription) {
+	t.Helper()
+	if err := sub.Shutdown(ctx); err != nil {
+		t.Errorf("failed to Shutdown subscription: %v", err)
+	}
+}
+
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
 	ds := NewDriverSub()
@@ -114,7 +128,7 @@ func TestSendReceive(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := NewTopic(dt, nil)
-	defer topic.Shutdown(ctx)
+	defer shutdownTopic(ctx, t, topic)
 	m := &Message{LoggableID: "foo", Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err == nil {
 		t.Fatalf("expected a Send with a non-empty LoggableID to fail")
@@ -125,7 +139,7 @@ func TestSendReceive(t *testing.T) {
 	}
 
 	sub := NewSubscription(ds, nil, nil)
-	defer sub.Shutdown(ctx)
+	defer shutdownSubscription(ctx, t, sub)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -149,7 +163,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
 	s := NewSubscription(ds, nil, nil)
-	defer s.Shutdown(ctx)
+	defer shutdownSubscription(context.Background(), t, s)
 
 	// Start 10 goroutines to receive from it.
 	var mu sync.Mutex
@@ -180,7 +194,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Send messages. Each message has a unique body used as a key to receivedMsgs.
 	topic := NewTopic(dt, nil)
-	defer topic.Shutdown(ctx)
+	defer shutdownTopic(context.Background(), t, topic)
 	for i := range howManyToSend {
 		key := fmt.Sprintf("message #%d", i)
 		m := &Message{Body: []byte(key)}
@@ -210,7 +224,7 @@ func TestCancelSend(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := NewTopic(dt, nil)
-	defer topic.Shutdown(ctx)
+	defer shutdownTopic(context.Background(), t, topic)
 	m := &Message{}
 
 	// Intentionally break the driver subscription by acquiring its semaphore.
@@ -227,7 +241,7 @@ func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
 	s := NewSubscription(ds, nil, nil)
-	defer s.Shutdown(ctx)
+	defer shutdownSubscription(context.Background(), t, s)
 	cancel()
 	// Without cancellation, this Receive would hang.
 	if _, err := s.Receive(ctx); err == nil {
@@ -259,7 +273,7 @@ func TestCancelTwoReceives(t *testing.T) {
 	// happen if Receive holds the lock during the call to ReceiveBatch.
 	inReceiveBatch := make(chan struct{})
 	s := NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, nil, nil)
-	defer s.Shutdown(context.Background())
+	defer shutdownSubscription(context.Background(), t, s)
 	go func() {
 		_, err := s.Receive(context.Background())
 		// This should happen at the very end of the test, during Shutdown.
@@ -310,7 +324,7 @@ func TestIndependentBatchReturn(t *testing.T) {
 		nil,
 	)
 	ctx := context.Background()
-	defer s.Shutdown(ctx)
+	defer shutdownSubscription(ctx, t, s)
 
 	// Set the batch size to force 2 batches to be called.
 	s.runningBatchSize = 2
@@ -329,7 +343,7 @@ func TestRetryTopic(t *testing.T) {
 	ctx := context.Background()
 	ft := &failTopic{}
 	topic := NewTopic(ft, nil)
-	defer topic.Shutdown(ctx)
+	defer shutdownTopic(ctx, t, topic)
 	err := topic.Send(ctx, &Message{})
 	if err != nil {
 		t.Errorf("Send: got %v, want nil", err)
@@ -371,7 +385,7 @@ func TestRetryReceive(t *testing.T) {
 	ctx := context.Background()
 	fs := &failSub{fail: true}
 	sub := NewSubscription(fs, nil, nil)
-	defer sub.Shutdown(ctx)
+	defer shutdownSubscription(ctx, t, sub)
 	m, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatalf("Receive: got %v, want nil", err)
@@ -389,7 +403,7 @@ func TestBatchSizeDecays(t *testing.T) {
 	fs := &failSub{}
 	// Allow multiple handlers and cap max batch size to ensure we get concurrency.
 	sub := NewSubscription(fs, &batcher.Options{MaxHandlers: 10, MaxBatchSize: 2}, nil)
-	defer sub.Shutdown(ctx)
+	defer shutdownSubscription(ctx, t, sub)
 
 	// Records the last batch size.
 	var mu sync.Mutex
@@ -451,7 +465,7 @@ func TestRetryReceiveInBatchesDoesntRace(t *testing.T) {
 	fs := &failSub{}
 	// Allow multiple handlers and cap max batch size to ensure we get concurrency.
 	sub := NewSubscription(fs, &batcher.Options{MaxHandlers: 10, MaxBatchSize: 2}, nil)
-	defer sub.Shutdown(ctx)
+	defer shutdownSubscription(ctx, t, sub)
 
 	// Do some receives to allow the number of batches to increase past 1.
 	for range 100 {
@@ -577,8 +591,7 @@ func TestOpenTelemetry(t *testing.T) {
 
 	te := oteltest.NewTestExporter(t, OpenTelemetryViews)
 	defer func() {
-		err := te.Shutdown(ctx)
-		if err != nil {
+		if err := te.Shutdown(ctx); err != nil {
 			t.Logf("Error shutting down test exporter: %v", err)
 		}
 	}()
@@ -588,9 +601,7 @@ func TestOpenTelemetry(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := NewTopic(dt, nil)
-	defer topic.Shutdown(ctx)
 	sub := NewSubscription(ds, nil, nil)
-	defer sub.Shutdown(ctx)
 	if err := topic.Send(ctx, &Message{Body: []byte("x")}); err != nil {
 		t.Fatal(err)
 	}

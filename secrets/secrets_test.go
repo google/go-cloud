@@ -17,6 +17,7 @@ package secrets
 import (
 	"context"
 	"errors"
+	"io"
 	"net/url"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ var errFake = errors.New("fake")
 
 type erroringKeeper struct {
 	driver.Keeper
+	closeErr error
 }
 
 func (k *erroringKeeper) Decrypt(ctx context.Context, b []byte) ([]byte, error) {
@@ -42,12 +44,12 @@ func (k *erroringKeeper) Encrypt(ctx context.Context, b []byte) ([]byte, error) 
 	return nil, errFake
 }
 
-func (k *erroringKeeper) Close() error                       { return errFake }
+func (k *erroringKeeper) Close() error                       { return k.closeErr }
 func (k *erroringKeeper) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	k := NewKeeper(&erroringKeeper{})
+	k := NewKeeper(&erroringKeeper{closeErr: errFake})
 
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
@@ -73,12 +75,19 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap("Close", err)
 }
 
+func closeWithErrorCheck(t testing.TB, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to Close: %v", err)
+	}
+}
+
 // TestKeeperIsClosed tests that Keeper functions return an error when the
 // Keeper is closed.
 func TestKeeperIsClosed(t *testing.T) {
 	ctx := context.Background()
 	k := NewKeeper(&erroringKeeper{})
-	k.Close()
+	closeWithErrorCheck(t, k)
 
 	if _, err := k.Decrypt(ctx, nil); err != errClosed {
 		t.Error(err)
@@ -92,15 +101,12 @@ func TestKeeperIsClosed(t *testing.T) {
 }
 
 func TestOpenTelemetry(t *testing.T) {
-
 	ctx := context.Background()
-
 	te := oteltest.NewTestExporter(t, OpenTelemetryViews)
-
 	k := NewKeeper(&erroringKeeper{})
-	defer k.Close()
-	_, _ = k.Encrypt(ctx, nil)
+	defer closeWithErrorCheck(t, k)
 
+	_, _ = k.Encrypt(ctx, nil)
 	_, _ = k.Decrypt(ctx, nil)
 	_, _ = k.Decrypt(ctx, nil)
 
@@ -207,7 +213,7 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			defer keeper.Close()
+			defer closeWithErrorCheck(t, keeper)
 			if got := fake.u.String(); got != tc.url {
 				t.Errorf("got %q want %q", got, tc.url)
 			}
@@ -220,7 +226,7 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				t.Fatalf("got err %v, want nil", gotErr)
 			}
-			defer keeper.Close()
+			defer closeWithErrorCheck(t, keeper)
 			if got := fake.u.String(); got != tc.url {
 				t.Errorf("got %q want %q", got, tc.url)
 			}

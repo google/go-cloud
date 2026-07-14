@@ -64,9 +64,15 @@ func TestConformance(t *testing.T) {
 func BenchmarkMemPubSub(b *testing.B) {
 	ctx := context.Background()
 	topic := NewTopic()
-	defer topic.Shutdown(ctx)
 	sub := NewSubscription(topic, time.Second)
-	defer sub.Shutdown(ctx)
+	defer func() {
+		if err := topic.Shutdown(ctx); err != nil {
+			b.Errorf("failed to Shutdown topic: %v", err)
+		}
+		if err := sub.Shutdown(ctx); err != nil {
+			b.Errorf("failed to Shutdown subscription: %v", err)
+		}
+	}()
 
 	drivertest.RunBenchmarks(b, topic, sub)
 }

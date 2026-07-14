@@ -45,7 +45,6 @@ jobs:
         run: 'internal/testing/runchecks.sh'
       - uses: codecov/codecov-action@v7
         with:
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
       - if: matrix.os == 'ubuntu-latest'
         name: Build for dragonfly

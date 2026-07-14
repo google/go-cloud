@@ -50,14 +50,14 @@ func ExampleOpenTopic() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer pubClient.Close()
+	defer func() { _ = pubClient.Close() }()
 
 	// Construct a *pubsub.Topic.
 	topic, err := gcppubsub.OpenTopicByPath(pubClient, "projects/myprojectID/topics/example-topic", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func Example_openTopicFromURL() {
@@ -70,7 +70,7 @@ func Example_openTopicFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func ExampleOpenSubscription() {
@@ -98,7 +98,7 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subClient.Close()
+	defer func() { _ = subClient.Close() }()
 
 	// Construct a *pubsub.Subscription.
 	subscription, err := gcppubsub.OpenSubscriptionByPath(
@@ -106,7 +106,7 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }
 
 func Example_extendingAckDeadline() {
@@ -118,7 +118,7 @@ func Example_extendingAckDeadline() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 
 	// Get the underlying SubscriberClient. If you used the constructor to create
 	// the subscription (e.g., gcppubsub.OpenSubscriptionByPath), you may already
@@ -164,5 +164,5 @@ func Example_openSubscriptionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }

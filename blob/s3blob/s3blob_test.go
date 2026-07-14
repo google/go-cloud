@@ -289,7 +289,11 @@ func TestOpenBucket(t *testing.T) {
 			// Create portable type.
 			b, err := OpenBucket(ctx, client, test.bucketName, nil)
 			if b != nil {
-				defer b.Close()
+				defer func(b *blob.Bucket) {
+					if err := b.Close(); err != nil {
+						t.Errorf("failed to Close: %v", err)
+					}
+				}(b)
 			}
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
@@ -367,7 +371,11 @@ func TestOpenBucketFromURL(t *testing.T) {
 	for _, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
 		if b != nil {
-			defer b.Close()
+			defer func(b *blob.Bucket) {
+				if err := b.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
+			}(b)
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
@@ -437,7 +445,11 @@ func TestChecksumConfigurationPassthrough(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to open bucket: %v", err)
 			}
-			defer bucket.Close()
+			defer func() {
+				if err := bucket.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
+			}()
 
 			// Verify that the checksum configuration was applied
 			// We can't directly access the internal bucket struct, but we can verify

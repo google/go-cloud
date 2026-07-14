@@ -1,0 +1,13 @@
+version: "2"
+linters:
+  settings:
+    govet:
+      disable:
+        # cannot inline call to reflect.PtrTo
+        - inline
+    staticcheck:
+      checks:
+        # Using a deprecated function, variable, constant or field.
+        # https://staticcheck.dev/docs/checks/#SA1019
+        - -SA1019
+

@@ -67,7 +67,6 @@ var MetricsSet = wire.NewSet(
 )
 
 func NewResource(ctx context.Context) (*resource.Resource, error) {
-
 	res, err := resource.New(ctx,
 		resource.WithDetectors(ec2res.NewResourceDetector()),
 		resource.WithTelemetrySDK(),

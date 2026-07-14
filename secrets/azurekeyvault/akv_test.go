@@ -137,8 +137,8 @@ func initEnv() {
 		os.Getenv("AZURE_CLIENT_SECRET") == "" {
 		log.Fatal("Missing environment for recording tests, set AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET")
 	}
-	os.Setenv("AZURE_ENVIRONMENT", "AzurePublicCloud")
-	os.Setenv("AZURE_AD_RESOURCE", "https://vault.azure.net")
+	_ = os.Setenv("AZURE_ENVIRONMENT", "AzurePublicCloud")
+	_ = os.Setenv("AZURE_AD_RESOURCE", "https://vault.azure.net")
 }
 
 func TestConformance(t *testing.T) {
@@ -247,7 +247,11 @@ func TestKeyIDRE(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer k.Close()
+			defer func() {
+				if err := k.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
+			}()
 
 			if k.keyVaultURI != testCase.keyVaultURI {
 				t.Errorf("got key vault URI %s, want key vault URI %s", k.keyVaultURI, testCase.keyVaultURI)

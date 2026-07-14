@@ -30,7 +30,11 @@ var _ = health.Checker((*Checker)(nil))
 func TestCheck(t *testing.T) {
 	connector := new(stubConnector)
 	db := sql.OpenDB(connector)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("failed to close: %v", err)
+		}
+	}()
 
 	check := New(db)
 	defer check.Stop()

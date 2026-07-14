@@ -67,7 +67,7 @@ func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 		if parsed, perr := url.Parse(serverURL); perr == nil {
 			return nil, fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %w", parsed.Redacted(), err)
 		}
-		return nil, fmt.Errorf("failed to dial RABBIT_SERVER_URL: %w", err)
+		return nil, fmt.Errorf("failed to parse RABBIT_SERVER_URL: %w", err)
 	}
 	o.conn = conn
 	o.opener = &URLOpener{Connection: conn}

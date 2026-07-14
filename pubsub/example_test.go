@@ -125,7 +125,7 @@ func ExampleMessage_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sub.Shutdown(ctx)
+	defer func() { _ = sub.Shutdown(ctx) }()
 
 	msg, err := sub.Receive(ctx)
 	if err != nil {
@@ -149,7 +149,7 @@ func ExampleSubscription_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sub.Shutdown(ctx)
+	defer func() { _ = sub.Shutdown(ctx) }()
 
 	var sc *pbraw.SubscriberClient
 	if sub.As(&sc) {
@@ -168,7 +168,7 @@ func ExampleSubscription_ErrorAs() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sub.Shutdown(ctx)
+	defer func() { _ = sub.Shutdown(ctx) }()
 
 	msg, err := sub.Receive(ctx)
 	if err != nil {
@@ -192,7 +192,7 @@ func ExampleTopic_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 
 	var pc *pbraw.PublisherClient
 	if topic.As(&pc) {
@@ -211,7 +211,7 @@ func ExampleTopic_ErrorAs() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 
 	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello")})
 	if err != nil {

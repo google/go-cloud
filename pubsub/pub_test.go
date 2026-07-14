@@ -62,7 +62,9 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	go func() {
-		topic.Shutdown(ctx)
+		if err := topic.Shutdown(ctx); err == nil {
+			t.Error("expected cancellation error during Shutdown")
+		}
 		close(done)
 	}()
 
@@ -84,7 +86,9 @@ func TestTopicCloseIsCalled(t *testing.T) {
 	ctx := context.Background()
 	dt := &funcTopic{}
 	topic := pubsub.NewTopic(dt, nil)
-	topic.Shutdown(ctx)
+	if err := topic.Shutdown(ctx); err != nil {
+		t.Errorf("Shutdown failed: %v", err)
+	}
 	if !dt.closed {
 		t.Error("want Topic.Close to have been called")
 	}

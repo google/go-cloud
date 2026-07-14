@@ -43,7 +43,7 @@ func ExampleOpenKeeper() {
 
 	// Construct a *secrets.Keeper.
 	keeper := gcpkms.OpenKeeper(client, keyID, nil)
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 }
 
 func Example_openFromURL() {
@@ -60,5 +60,5 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 }

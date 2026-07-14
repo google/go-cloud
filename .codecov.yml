@@ -1,6 +1,9 @@
 codecov:
   # Set via secrets, see .github/workflows/tests.yml.
   token: ""
+ignore:
+  - "**/drivertest.*"
+  - "samples"
 coverage:
   status:
     project:
