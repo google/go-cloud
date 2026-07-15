@@ -54,7 +54,11 @@ func (o *defaultDialer) OpenCollectionURL(ctx context.Context, u *url.URL) (*doc
 	if currentEnv != o.mongoServerURL {
 		client, err := Dial(ctx, currentEnv)
 		if err != nil {
-			o.err = fmt.Errorf("failed to dial default Mongo server at %q: %v", currentEnv, err)
+			if parsed, perr := url.Parse(currentEnv); perr == nil {
+				o.err = fmt.Errorf("failed to dial default Mongo server at %q: %v", parsed.Redacted(), err)
+			} else {
+				o.err = fmt.Errorf("failed to dial default Mongo server: %v", err)
+			}
 			return nil, fmt.Errorf("open collection %s: %v", u, o.err)
 		}
 		o.mongoServerURL = currentEnv
