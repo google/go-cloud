@@ -173,6 +173,22 @@ type URLOpener struct {
 	SubscriptionOptions SubscriptionOptions
 }
 
+// redactSharedAccessKey returns connString with the value of any
+// "SharedAccessKey=..." segment replaced by "xxxxx", so that it's safe to
+// include in error messages and logs.
+func redactSharedAccessKey(connString string) string {
+	const key = "SharedAccessKey="
+	idx := strings.Index(connString, key)
+	if idx == -1 {
+		return connString
+	}
+	rest := connString[idx+len(key):]
+	if end := strings.IndexByte(rest, ';'); end != -1 {
+		return connString[:idx] + key + "xxxxx" + rest[end:]
+	}
+	return connString[:idx] + key + "xxxxx"
+}
+
 func (o *URLOpener) sbClient(kind string, u *url.URL) (*servicebus.Client, error) {
 	if o.ConnectionString == "" && o.ServiceBusHostname == "" {
 		return nil, fmt.Errorf("open %s %v: one of ConnectionString or ServiceBusHostname is required", kind, u)
@@ -182,7 +198,7 @@ func (o *URLOpener) sbClient(kind string, u *url.URL) (*servicebus.Client, error
 	if o.ConnectionString != "" {
 		client, err := NewClientFromConnectionString(o.ConnectionString, o.ServiceBusClientOptions)
 		if err != nil {
-			return nil, fmt.Errorf("open %s %v: invalid connection string %q: %v", kind, u, o.ConnectionString, err)
+			return nil, fmt.Errorf("open %s %v: invalid connection string %q: %v", kind, u, redactSharedAccessKey(o.ConnectionString), err)
 		}
 		return client, nil
 	}
