@@ -133,7 +133,11 @@ func (o *defaultDialer) defaultConn(ctx context.Context) error {
 		}
 		conn, err := nats.Connect(serverURL)
 		if err != nil {
-			o.err = fmt.Errorf("failed to dial NATS_SERVER_URL %q: %v", serverURL, err)
+			if parsed, perr := url.Parse(serverURL); perr == nil {
+				o.err = fmt.Errorf("failed to dial NATS_SERVER_URL %q: %v", parsed.Redacted(), err)
+			} else {
+				o.err = fmt.Errorf("failed to dial NATS_SERVER_URL: %v", err)
+			}
 			return
 		}
 		o.opener = URLOpener{Connection: conn}
