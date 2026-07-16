@@ -2,7 +2,7 @@ codecov:
   # Set via secrets, see .github/workflows/tests.yml.
   token: ""
 ignore:
-  - "**/drivertest.*"
+  - "**/drivertest/*.go"
   - "samples"
 coverage:
   status:
