@@ -31,13 +31,12 @@ func bindataRead(data []byte, name string) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	_, err = io.Copy(&buf, gz)
-	gz.Close()
-
-	if err != nil {
+	if _, err = io.Copy(&buf, gz); err != nil {
 		return nil, fmt.Errorf("Read %q: %v", name, err)
 	}
-
+	if err := gz.Close(); err != nil {
+		return nil, fmt.Errorf("close after Read %q: %v", name, err)
+	}
 	return buf.Bytes(), nil
 }
 

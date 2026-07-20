@@ -80,7 +80,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 	if err != nil {
 		return nil, nil, err
 	}
-	return pb.NewRuntimeConfigManagerClient(conn), func() { conn.Close() }, nil
+	return pb.NewRuntimeConfigManagerClient(conn), func() { _ = conn.Close() }, nil
 }
 
 func init() {

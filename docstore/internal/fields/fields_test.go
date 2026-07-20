@@ -183,13 +183,13 @@ type S2 struct {
 	NoTag      int
 	XXX        int           `json:"tag"` // tag name takes precedence
 	Anonymous  `json:"anon"` // anonymous non-structs also get their name from the tag
-	unexported int           `json:"tag"`
+	unexported int           `json:"tag"` // nolint
 	Embed      `json:"em"`   // embedded structs with tags become fields
 	Tag        int
 	YYY        int `json:"Tag"` // tag takes precedence over untagged field of the same name
 	Empty      int `json:""`    // empty tag is noop
 	tEmbed1
-	tEmbed2
+	tEmbed2 // nolint
 }
 
 type Embed struct {
@@ -280,12 +280,12 @@ func TestUnexportedAnonymousNonStruct(t *testing.T) {
 	// This is currently a bug in encoding/json.
 	// https://github.com/golang/go/issues/18009
 	type (
-		u int
-		v int
+		u int // nolint
+		v int // nolint
 		S struct {
-			u
-			v `json:"x"`
-			int
+			u              // nolint
+			v   `json:"x"` // nolint
+			int            // nolint
 		}
 	)
 

@@ -59,7 +59,7 @@ func ExampleOpenVariable() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 }
 
 func Example_openVariableFromURL() {
@@ -77,5 +77,5 @@ func Example_openVariableFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 }

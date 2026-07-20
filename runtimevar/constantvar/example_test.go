@@ -28,7 +28,7 @@ import (
 func ExampleNew() {
 	// Construct a *runtimevar.Variable that always returns "hello world".
 	v := constantvar.New("hello world")
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// We can now read the current value of the variable from v.
 	snapshot, err := v.Latest(context.Background())
@@ -44,7 +44,7 @@ func ExampleNew() {
 func ExampleNewBytes() {
 	// Construct a *runtimevar.Variable with a []byte.
 	v := constantvar.NewBytes([]byte(`hello world`), runtimevar.BytesDecoder)
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// We can now read the current value of the variable from v.
 	snapshot, err := v.Latest(context.Background())
@@ -59,9 +59,9 @@ func ExampleNewBytes() {
 
 func ExampleNewFromEnv() {
 	// Construct a *runtimevar.Variable with an environment variable name.
-	os.Setenv("MY_ENVIRONMENT_VARIABLE", "hello world")
+	_ = os.Setenv("MY_ENVIRONMENT_VARIABLE", "hello world")
 	v := constantvar.NewFromEnv("MY_ENVIRONMENT_VARIABLE", runtimevar.BytesDecoder)
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// We can now read the value from v.
 	snapshot, err := v.Latest(context.Background())
@@ -78,7 +78,7 @@ func ExampleNewError() {
 	// Construct a runtimevar.Variable that always returns errFake.
 	errFake := errors.New("my error")
 	v := constantvar.NewError(errFake)
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// We can now use Watch to read the current value of the variable
 	// from v. Note that Latest would block here since it waits for
@@ -105,14 +105,14 @@ func Example_openVariableFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// The constant value is read from an environment variable specified in "envvar".
 	v2, err := runtimevar.OpenVariable(ctx, "constant://?envvar=MY_ENVIRONMENT_VARIABLE&decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v2.Close()
+	defer func() { _ = v2.Close() }()
 	// PRAGMA: On gocloud.dev, hide the rest of the function.
 	snapshot, err := v.Latest(ctx)
 	if err != nil {

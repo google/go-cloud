@@ -371,10 +371,14 @@ func (w *writer) open(r io.Reader, closePipeOnError bool) {
 // Close completes the writer and closes it. Any error occurring during write
 // will be returned. If a writer is closed before any Write is called, Close
 // will create an empty file at the given key.
-func (w *writer) Close() error {
+func (w *writer) Close() (err error) {
 	if !w.upload {
 		if w.pr != nil {
-			defer w.pr.Close()
+			defer func() {
+				if e := w.pr.Close(); e != nil && err == nil {
+					err = e
+				}
+			}()
 		}
 		if w.pw == nil {
 			// We never got any bytes written. We'll write an http.NoBody.
@@ -406,11 +410,11 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	var code string
 	var ae smithy.APIError
 	var oe *smithy.OperationError
-	if errors.As(err, &oe) && strings.Contains(oe.Error(), "301") {
+	if errors.As(err, &ae) {
+		code = ae.ErrorCode()
+	} else if errors.As(err, &oe) && strings.Contains(oe.Error(), "301") {
 		// AWS returns an OperationError with a missing redirect for invalid buckets.
 		code = "NoSuchBucket"
-	} else if errors.As(err, &ae) {
-		code = ae.ErrorCode()
 	} else {
 		return gcerrors.Unknown
 	}

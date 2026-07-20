@@ -49,7 +49,11 @@ func TestOpenTelemetry(t *testing.T) {
 
 	// Setup the test exporter for both trace and metrics.
 	te := oteltest.NewTestExporter(t, nil)
-	defer te.Shutdown(ctx)
+	defer func() {
+		if err := te.Shutdown(ctx); err != nil {
+			t.Errorf("failed to Shutdown: %v", err)
+		}
+	}()
 
 	// Open the database with otelsql.
 	urlstr := fmt.Sprintf("awsmysql://%s@%s/%s?parseTime=true&aws_role_arn=%s",
@@ -59,7 +63,11 @@ func TestOpenTelemetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 
 	query := func() error {
 		rows, err := db.QueryContext(ctx, `SELECT CURRENT_TIMESTAMP`)

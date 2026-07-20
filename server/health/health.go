@@ -35,11 +35,11 @@ func (h *Handler) Add(c Checker) {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for _, c := range h.checkers {
 		if err := c.CheckHealth(); err != nil {
-			writeUnhealthy(w)
+			_ = writeUnhealthy(w)
 			return
 		}
 	}
-	writeHealthy(w)
+	_ = writeHealthy(w)
 }
 
 func writeHeaders(statusLen string, w http.ResponseWriter) {
@@ -48,7 +48,7 @@ func writeHeaders(statusLen string, w http.ResponseWriter) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 
-func writeUnhealthy(w http.ResponseWriter) {
+func writeUnhealthy(w http.ResponseWriter) error {
 	const (
 		status    = "unhealthy"
 		statusLen = "9"
@@ -56,16 +56,17 @@ func writeUnhealthy(w http.ResponseWriter) {
 
 	writeHeaders(statusLen, w)
 	w.WriteHeader(http.StatusInternalServerError)
-	io.WriteString(w, status)
+	_, err := io.WriteString(w, status)
+	return err
 }
 
 // HandleLive is an http.HandlerFunc that handles liveness checks by
 // immediately responding with an HTTP 200 status.
 func HandleLive(w http.ResponseWriter, _ *http.Request) {
-	writeHealthy(w)
+	_ = writeHealthy(w)
 }
 
-func writeHealthy(w http.ResponseWriter) {
+func writeHealthy(w http.ResponseWriter) error {
 	const (
 		status    = "ok"
 		statusLen = "2"
@@ -73,7 +74,8 @@ func writeHealthy(w http.ResponseWriter) {
 
 	writeHeaders(statusLen, w)
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, status)
+	_, err := io.WriteString(w, status)
+	return err
 }
 
 // Checker wraps the CheckHealth method.

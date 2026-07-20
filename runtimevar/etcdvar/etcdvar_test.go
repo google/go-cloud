@@ -136,7 +136,11 @@ func TestNoConnectionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer v.Close()
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 	// Watch will block for quite a while trying to connect,
 	// so use a short timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
@@ -152,7 +156,7 @@ func TestOpenVariable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Setenv("ETCD_SERVER_URL", "http://localhost:2379")
+	_ = os.Setenv("ETCD_SERVER_URL", "http://localhost:2379")
 
 	ctx := context.Background()
 	if err := h.CreateVariable(ctx, "string-var", []byte("hello world")); err != nil {
@@ -191,7 +195,11 @@ func TestOpenVariable(t *testing.T) {
 			if err != nil {
 				return
 			}
-			defer v.Close()
+			defer func(v *runtimevar.Variable) {
+				if err := v.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
+			}(v)
 			snapshot, err := v.Watch(ctx)
 			if (err != nil) != test.WantWatchErr {
 				t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)

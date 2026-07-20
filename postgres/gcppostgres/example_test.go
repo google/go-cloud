@@ -34,8 +34,8 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Use database in your program.
-	db.Exec("CREATE TABLE foo (bar INT);")
+	_, _ = db.Exec("CREATE TABLE foo (bar INT);")
 }

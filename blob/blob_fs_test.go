@@ -68,7 +68,6 @@ func TestIOFS(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Description, func(t *testing.T) {
 			b := initBucket(t, test.Files)
-			defer b.Close()
 			if err := fstest.TestFS(b, test.Files...); err != nil {
 				t.Error(err)
 			}
@@ -80,7 +79,11 @@ func TestIOFS(t *testing.T) {
 // when given a blob.Bucket.
 func TestGlob(t *testing.T) {
 	b := initBucket(t, fsFiles)
-	defer b.Close()
+	defer func() {
+		if err := b.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 
 	tests := []struct {
 		Pattern string
@@ -114,7 +117,11 @@ func TestGlob(t *testing.T) {
 // when given a blob.Bucket.
 func TestWalkDir(t *testing.T) {
 	b := initBucket(t, fsFiles)
-	defer b.Close()
+	defer func() {
+		if err := b.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 
 	var got []string
 	fn := func(path string, _ fs.DirEntry, err error) error {

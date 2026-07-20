@@ -28,14 +28,22 @@ func TestOpenTelemetry(t *testing.T) {
 
 	// Setup the test exporter for both trace and metrics.
 	te := oteltest.NewTestExporter(t, docstore.OpenTelemetryViews)
-	defer te.Shutdown(ctx)
+	defer func() {
+		if err := te.Shutdown(ctx); err != nil {
+			t.Errorf("failed to Shutdown: %v", err)
+		}
+	}()
 
 	// Open a collection for testing.
 	coll, err := memdocstore.OpenCollection("_id", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer coll.Close()
+	defer func() {
+		if err := coll.Close(); err != nil {
+			t.Errorf("failed to close: %v", err)
+		}
+	}()
 
 	// Test ActionList.Do by creating a document.
 	if err := coll.Create(ctx, map[string]any{"_id": "a", "count": 0}); err != nil {

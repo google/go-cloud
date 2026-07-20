@@ -72,5 +72,5 @@ func setup(ctx context.Context) (*server.Server, func(), error) {
 
 // greet is an ordinary http.HandleFunc.
 func greet(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(w, "Hello, World!")
+	_, _ = fmt.Fprintln(w, "Hello, World!")
 }

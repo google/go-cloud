@@ -50,7 +50,7 @@ func Example_jsonDecoder() {
 	// If you're using a URL opener, you can't decode JSON into a struct, but
 	// you can use the query parameter "decoder=jsonmap" to decode into a map.
 	v := constantvar.NewBytes([]byte(jsonConfig), decoder)
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 	// snapshot.Value will be of type Config.
 
 	// PRAGMA: On gocloud.dev, hide the rest of the function.
@@ -69,7 +69,7 @@ func Example_stringDecoder() {
 	// runtimevar subpackages. This example uses constantvar.
 	// The variable value is of type string, so we use StringDecoder.
 	v := constantvar.NewBytes([]byte("hello world"), runtimevar.StringDecoder)
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// Call Latest to retrieve the value.
 	snapshot, err := v.Latest(context.Background())
@@ -149,7 +149,7 @@ func ExampleVariable_Watch() {
 	// runtimevar subpackages. This example uses constantvar.
 	// The variable value is of type string, so we use StringDecoder.
 	v := constantvar.NewBytes([]byte("hello world"), runtimevar.StringDecoder)
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// Call Watch in a loop from a background goroutine to see all changes,
 	// including errors.

@@ -40,7 +40,6 @@ import (
 	"net/url"
 	"path"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -90,11 +89,7 @@ type URLOpener struct {
 
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenVariableURL.
-type lazySessionOpener struct {
-	init   sync.Once
-	opener *URLOpener
-	err    error
-}
+type lazySessionOpener struct{}
 
 func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	opener := &URLOpener{}

@@ -227,7 +227,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		err := newRequestError(resp)

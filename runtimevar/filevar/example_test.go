@@ -39,7 +39,7 @@ func ExampleOpenVariable() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 
 	// We can now read the current value of the variable from v.
 	snapshot, err := v.Latest(context.Background())
@@ -65,5 +65,5 @@ func Example_openVariableFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer v.Close()
+	defer func() { _ = v.Close() }()
 }

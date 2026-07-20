@@ -275,7 +275,7 @@ type Mods map[FieldPath]any
 //
 // The amount must be an integer or floating-point value.
 func Increment(amount any) any {
-	return driver.IncOp{amount}
+	return driver.IncOp{Amount: amount}
 }
 
 // An ActionListError is returned by ActionList.Do. It contains all the errors

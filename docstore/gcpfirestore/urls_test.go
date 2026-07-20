@@ -50,7 +50,11 @@ func TestOpenCollectionFromURL(t *testing.T) {
 	for _, test := range tests {
 		d, err := docstore.OpenCollection(ctx, test.URL)
 		if d != nil {
-			defer d.Close()
+			defer func(d *docstore.Collection) {
+				if err := d.Close(); err != nil {
+					t.Errorf("failed to close: %v", err)
+				}
+			}(d)
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)

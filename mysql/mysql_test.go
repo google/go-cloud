@@ -91,3 +91,41 @@ func TestConfigFromURL(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigFromURLCleartextPasswords(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "default",
+			url:  "mysql://user:password@localhost/db",
+			want: true,
+		},
+		{
+			name: "explicit false",
+			url:  "mysql://user:password@localhost/db?allowCleartextPasswords=false",
+			want: false,
+		},
+		{
+			name: "explicit true",
+			url:  "mysql://user:password@localhost/db?allowCleartextPasswords=true",
+			want: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cfg, err := ConfigFromURL(u)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := cfg.AllowCleartextPasswords; got != tc.want {
+				t.Errorf("AllowCleartextPasswords = %v; want %v", got, tc.want)
+			}
+		})
+	}
+}

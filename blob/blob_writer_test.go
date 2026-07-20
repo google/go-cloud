@@ -27,6 +27,13 @@ import (
 	"gocloud.dev/blob/memblob"
 )
 
+func closeWithErrorCheck(t *testing.T, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to close: %v", err)
+	}
+}
+
 // TestWriteReturnValues verifies that blob.Writer returns the correct n
 // even when it is doing content sniffing.
 func TestWriteReturnValues(t *testing.T) {
@@ -35,7 +42,7 @@ func TestWriteReturnValues(t *testing.T) {
 	for _, withContentType := range []bool{true, false} {
 		t.Run(fmt.Sprintf("withContentType %v", withContentType), func(t *testing.T) {
 			bucket := memblob.OpenBucket(nil)
-			defer bucket.Close()
+			defer closeWithErrorCheck(t, bucket)
 
 			var opts *blob.WriterOptions
 			if withContentType {
@@ -45,11 +52,7 @@ func TestWriteReturnValues(t *testing.T) {
 			if err != nil {
 				t.Fatalf("couldn't create writer with options: %v", err)
 			}
-			defer func() {
-				if err := w.Close(); err != nil {
-					t.Errorf("failed to close writer: %v", err)
-				}
-			}()
+			defer closeWithErrorCheck(t, w)
 			n, err := io.CopyN(w, rand.Reader, 182)
 			if err != nil || n != 182 {
 				t.Fatalf("CopyN(182) got %d, want 182: %v", n, err)
@@ -88,7 +91,7 @@ func TestReadFrom(t *testing.T) {
 	}
 
 	bucket := memblob.OpenBucket(nil)
-	defer bucket.Close()
+	defer closeWithErrorCheck(t, bucket)
 
 	// Create a blob.Writer and write to it using ReadFrom given a buffer
 	// holding the random data.
@@ -126,7 +129,7 @@ func TestWriteTo(t *testing.T) {
 	}
 
 	bucket := memblob.OpenBucket(nil)
-	defer bucket.Close()
+	defer closeWithErrorCheck(t, bucket)
 
 	// Write the data to a key.
 	ctx := context.Background()
@@ -170,10 +173,12 @@ func TestCopyBytes(t *testing.T) {
 	}
 
 	bucket := memblob.OpenBucket(nil)
-	defer bucket.Close()
+	defer closeWithErrorCheck(t, bucket)
 
 	// Write the data to srcKey.
-	bucket.WriteAll(ctx, srcKey, data, nil)
+	if err := bucket.WriteAll(ctx, srcKey, data, nil); err != nil {
+		t.Errorf("failed to WriteAll: %v", err)
+	}
 
 	// Create a reader for srcKey.
 	r, err := bucket.NewReader(ctx, srcKey, nil)
@@ -188,7 +193,9 @@ func TestCopyBytes(t *testing.T) {
 	}
 
 	// Copy the data.
-	io.Copy(w, r)
+	if _, err := io.Copy(w, r); err != nil {
+		t.Fatal(err)
+	}
 	if err := r.Close(); err != nil {
 		t.Fatal(err)
 	}

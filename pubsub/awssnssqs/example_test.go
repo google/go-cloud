@@ -41,7 +41,7 @@ func ExampleOpenSNSTopic() {
 	const topicARN = "arn:aws:sns:us-east-2:123456789012:mytopic"
 	client := sns.NewFromConfig(cfg)
 	topic := awssnssqs.OpenSNSTopic(ctx, client, topicARN, nil)
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func ExampleOpenSQSTopic() {
@@ -60,7 +60,7 @@ func ExampleOpenSQSTopic() {
 	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/myqueue"
 	client := sqs.NewFromConfig(cfg)
 	topic := awssnssqs.OpenSQSTopic(ctx, client, queueURL, nil)
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func Example_openSNSTopicFromURL() {
@@ -76,7 +76,7 @@ func Example_openSNSTopicFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func Example_openSQSTopicFromURL() {
@@ -91,7 +91,7 @@ func Example_openSQSTopicFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func ExampleOpenSubscription() {
@@ -111,7 +111,7 @@ func ExampleOpenSubscription() {
 	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue"
 	client := sqs.NewFromConfig(cfg)
 	subscription := awssnssqs.OpenSubscription(ctx, client, queueURL, nil)
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }
 
 func Example_openSubscriptionFromURL() {
@@ -129,5 +129,5 @@ func Example_openSubscriptionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }

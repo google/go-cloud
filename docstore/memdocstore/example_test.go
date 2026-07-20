@@ -29,7 +29,7 @@ func ExampleOpenCollection() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer coll.Close()
+	defer func() { _ = coll.Close() }()
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	// Output:
 }
@@ -52,7 +52,7 @@ func ExampleOpenCollectionWithKeyFunc() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer coll.Close()
+	defer func() { _ = coll.Close() }()
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	// Output:
 }
@@ -68,7 +68,7 @@ func Example_openCollectionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer coll.Close()
+	defer func() { _ = coll.Close() }()
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
 	// Output:
 }

@@ -38,7 +38,7 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Now we can use b to read or write to blobs in the bucket.
 	if err := b.WriteAll(ctx, "my-key", []byte("hello world"), nil); err != nil {
@@ -66,7 +66,7 @@ func Example_openFromURLWithPrefix() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Bucket operations on <key> will be translated to "a/subfolder/<key>".
 }
@@ -82,7 +82,7 @@ func Example_openFromURLWithSingleKey() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Bucket operations will ignore the passed-in key and always reference foo.txt.
 }

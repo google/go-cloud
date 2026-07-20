@@ -3,7 +3,6 @@
 _Write once, run on any cloud ☁️_
 
 [![Build Status](https://github.com/google/go-cloud/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/google/go-cloud/actions)
-[![Go Report Card](https://goreportcard.com/badge/github.com/google/go-cloud)](https://goreportcard.com/report/github.com/google/go-cloud)
 [![PkgGoDev](https://pkg.go.dev/badge/mod/gocloud.dev)][PkgGoDev]
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/google/go-cloud)

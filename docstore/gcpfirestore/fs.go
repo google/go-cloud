@@ -112,7 +112,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error)
 		opts = append(opts, option.WithTokenSource(ts))
 	}
 	c, err := vkit.NewClient(ctx, opts...)
-	return c, func() { c.Close() }, err
+	return c, func() { _ = c.Close() }, err
 }
 
 // Set holds Wire providers for this package.
@@ -692,7 +692,7 @@ func getParentMap(m map[string]*pb.Value, fp []string, create bool) (map[string]
 			if !create {
 				return nil, nil
 			}
-			m[k] = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: map[string]*pb.Value{}}}}
+			m[k] = &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{}}}}
 		}
 		mv := m[k].GetMapValue()
 		if mv == nil {
@@ -772,7 +772,7 @@ func preconditionFromTimestamp(ts *tspb.Timestamp) *pb.Precondition {
 	if ts == nil || (ts.Seconds == 0 && ts.Nanos == 0) { // ignore a missing or zero revision
 		return nil
 	}
-	return &pb.Precondition{ConditionType: &pb.Precondition_UpdateTime{ts}}
+	return &pb.Precondition{ConditionType: &pb.Precondition_UpdateTime{UpdateTime: ts}}
 }
 
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {

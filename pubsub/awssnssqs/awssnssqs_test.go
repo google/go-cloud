@@ -66,7 +66,19 @@ type harness struct {
 	topicAttributes map[string]string
 }
 
-type harnessOption func(h *harness)
+func shutdownTopic(ctx context.Context, t testing.TB, topic *pubsub.Topic) {
+	t.Helper()
+	if err := topic.Shutdown(ctx); err != nil {
+		t.Errorf("failed to Shutdown topic: %v", err)
+	}
+}
+
+func shutdownSubscription(ctx context.Context, t testing.TB, sub *pubsub.Subscription) {
+	t.Helper()
+	if err := sub.Shutdown(ctx); err != nil {
+		t.Errorf("failed to Shutdown subscription: %v", err)
+	}
+}
 
 func newHarness(ctx context.Context, t *testing.T, topicKind topicKind) (drivertest.Harness, error) {
 	t.Helper()
@@ -83,17 +95,6 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 	return createTopic(ctx, topicName, h.snsClient, h.sqsClient, h.topicKind, h.topicAttributes)
 }
 
-func convertStringToPtrMap(m map[string]string) map[string]*string {
-	if m == nil {
-		return nil
-	}
-	out := make(map[string]*string, len(m))
-	for k, v := range m {
-		out[k] = aws.String(v)
-	}
-	return out
-}
-
 func createTopic(ctx context.Context, topicName string, snsClient *sns.Client, sqsClient *sqs.Client, topicKind topicKind, attributes map[string]string) (dt driver.Topic, cleanup func(), err error) {
 	switch topicKind {
 	case topicKindSNS, topicKindSNSRaw:
@@ -105,7 +106,7 @@ func createTopic(ctx context.Context, topicName string, snsClient *sns.Client, s
 		}
 		dt = openSNSTopic(ctx, snsClient, *out.TopicArn, &TopicOptions{})
 		cleanup = func() {
-			snsClient.DeleteTopic(ctx, &sns.DeleteTopicInput{TopicArn: out.TopicArn})
+			_, _ = snsClient.DeleteTopic(ctx, &sns.DeleteTopicInput{TopicArn: out.TopicArn})
 		}
 		return dt, cleanup, nil
 	case topicKindSQS:
@@ -116,7 +117,7 @@ func createTopic(ctx context.Context, topicName string, snsClient *sns.Client, s
 		}
 		dt = openSQSTopic(ctx, sqsClient, qURL, &TopicOptions{})
 		cleanup = func() {
-			sqsClient.DeleteQueue(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+			_, _ = sqsClient.DeleteQueue(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
 		}
 		return dt, cleanup, nil
 	default:
@@ -168,8 +169,8 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, sn
 			return nil, nil, fmt.Errorf("subscribing: %v", err)
 		}
 		cleanup = func() {
-			snsClient.Unsubscribe(ctx, &sns.UnsubscribeInput{SubscriptionArn: out.SubscriptionArn})
-			sqsClient.DeleteQueue(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
+			_, _ = snsClient.Unsubscribe(ctx, &sns.UnsubscribeInput{SubscriptionArn: out.SubscriptionArn})
+			_, _ = sqsClient.DeleteQueue(ctx, &sqs.DeleteQueueInput{QueueUrl: aws.String(qURL)})
 		}
 		return ds, cleanup, nil
 	case topicKindSQS:
@@ -441,7 +442,7 @@ func benchmark(b *testing.B, topicKind topicKind) {
 		sendBatcherOpts = sendBatcherOptsSQS
 	}
 	topic := pubsub.NewTopic(dt, sendBatcherOpts)
-	defer topic.Shutdown(ctx)
+	defer shutdownTopic(ctx, b, topic)
 	subName := fmt.Sprintf("%s-subscription", b.Name())
 	ds, cleanup2, err := createSubscription(ctx, dt, subName, snsClient, sqsClient, topicKind)
 	if err != nil {
@@ -449,7 +450,7 @@ func benchmark(b *testing.B, topicKind topicKind) {
 	}
 	defer cleanup2()
 	sub := pubsub.NewSubscription(ds, recvBatcherOpts, ackBatcherOpts)
-	defer sub.Shutdown(ctx)
+	defer shutdownSubscription(ctx, b, sub)
 	drivertest.RunBenchmarks(b, topic, sub)
 }
 
@@ -483,7 +484,7 @@ func TestOpenTopicFromURL(t *testing.T) {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 		if topic != nil {
-			topic.Shutdown(ctx)
+			shutdownTopic(ctx, t, topic)
 		}
 	}
 }
@@ -522,7 +523,7 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 		if sub != nil {
-			sub.Shutdown(ctx)
+			shutdownSubscription(ctx, t, sub)
 		}
 	}
 }
@@ -655,7 +656,7 @@ func testFIFOTopic(t *testing.T, kind topicKind) {
 			}
 			defer cleanup()
 			topic := pubsub.NewTopic(dt, sendBatcherOptsSNS)
-			defer topic.Shutdown(ctx)
+			defer shutdownTopic(ctx, t, topic)
 			ds, cleanup, err := h.CreateSubscription(ctx, dt, t.Name())
 			if err != nil {
 				t.Errorf("harness.CreateSubscription() error = %v", err)
@@ -663,7 +664,7 @@ func testFIFOTopic(t *testing.T, kind topicKind) {
 			}
 			defer cleanup()
 			sub := pubsub.NewSubscription(ds, recvBatcherOpts, ackBatcherOpts)
-			defer sub.Shutdown(ctx)
+			defer shutdownSubscription(ctx, t, sub)
 
 			// Send and receive the message.
 			err = topic.Send(ctx, tt.message)

@@ -61,7 +61,9 @@ func newNativeCodec() (*nativeCodec, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn.Close()
+	if err := conn.Close(); err != nil {
+		return nil, err
+	}
 	srv.Stop()
 	nc.client, err = firestore.NewClient(context.Background(), "P", option.WithGRPCConn(conn))
 	if err != nil {

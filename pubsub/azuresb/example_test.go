@@ -46,14 +46,14 @@ func ExampleOpenTopic() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sbSender.Close(ctx)
+	defer func() { _ = sbSender.Close(ctx) }()
 
 	// Construct a *pubsub.Topic.
 	topic, err := azuresb.OpenTopic(ctx, sbSender, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func Example_openTopicFromURL() {
@@ -69,7 +69,7 @@ func Example_openTopicFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer topic.Shutdown(ctx)
+	defer func() { _ = topic.Shutdown(ctx) }()
 }
 
 func ExampleOpenSubscription() {
@@ -91,14 +91,14 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sbReceiver.Close(ctx)
+	defer func() { _ = sbReceiver.Close(ctx) }()
 
 	// Construct a *pubsub.Subscription.
 	subscription, err := azuresb.OpenSubscription(ctx, sbClient, sbReceiver, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }
 
 func Example_openSubscriptionFromURL() {
@@ -116,7 +116,7 @@ func Example_openSubscriptionFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }
 
 func ExampleOpenSubscription_inReceiveAndDeleteMode() {
@@ -142,7 +142,7 @@ func ExampleOpenSubscription_inReceiveAndDeleteMode() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sbReceiver.Close(ctx)
+	defer func() { _ = sbReceiver.Close(ctx) }()
 
 	// Construct a *pubsub.Subscription. Since we configured
 	// the azuresb.Subscription with ReceiveAndDelete mode, we need
@@ -152,5 +152,5 @@ func ExampleOpenSubscription_inReceiveAndDeleteMode() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer subscription.Shutdown(ctx)
+	defer func() { _ = subscription.Shutdown(ctx) }()
 }

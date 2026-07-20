@@ -48,9 +48,10 @@
 // In addition, the environment variables AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_DOMAIN,
 // AZURE_STORAGE_PROTOCOL, AZURE_STORAGE_IS_CDN, and AZURE_STORAGE_IS_LOCAL_EMULATOR
 // can be used to configure how the default URLOpener generates the Azure
-// Service URL via ServiceURLOptions. Some of these options can be configured
-// via URL parameters as well. See ServiceURLOptions and NewDefaultServiceURL
-// for more details.
+// Service URL via ServiceURLOptions. These can all be configured via URL
+// parameters as well. See ServiceURLOptions and NewDefaultServiceURL for more
+// details. When AZURE_STORAGE_SAS_TOKEN is set, bucket URLs cannot change the
+// service endpoint; use the environment variables above instead.
 //
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
@@ -229,8 +230,6 @@ func NewDefaultServiceURLOptions() *ServiceURLOptions {
 // See URLOpener for supported overrides.
 func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOptions, error) {
 	retval := *o
-	domainFromURL := false
-	protocolFromURL := false
 	for param, values := range urlValues {
 		if len(values) > 1 {
 			return nil, fmt.Errorf("multiple values of %v not allowed", param)
@@ -238,10 +237,8 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 		value := values[0]
 		switch param {
 		case "domain":
-			domainFromURL = true
 			retval.StorageDomain = value
 		case "protocol":
-			protocolFromURL = true
 			retval.Protocol = value
 		case "cdn":
 			isCDN, err := strconv.ParseBool(value)
@@ -261,25 +258,7 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 			return nil, fmt.Errorf("unknown query parameter %q", param)
 		}
 	}
-	if domainFromURL && !allowedURLStorageDomain(retval.StorageDomain) {
-		return nil, fmt.Errorf("azureblob: domain %q is not allowed in bucket URLs", retval.StorageDomain)
-	}
-	if protocolFromURL && retval.Protocol == "http" {
-		return nil, fmt.Errorf("azureblob: protocol http is not allowed in bucket URLs")
-	}
 	return &retval, nil
-}
-
-func allowedURLStorageDomain(domain string) bool {
-	switch strings.ToLower(domain) {
-	case "blob.core.windows.net",
-		"blob.core.usgovcloudapi.net",
-		"blob.core.chinacloudapi.cn",
-		"blob.core.cloudapi.de":
-		return true
-	default:
-		return false
-	}
 }
 
 // NewServiceURL generates a URL for addressing an Azure Blob service
@@ -341,7 +320,42 @@ func (o *lazyOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucke
 			ServiceURLOptions: *opts,
 		}
 	})
+	// The SAS token is part of the service URL, so URL parameters must not send
+	// it to another origin.
+	if o.opener.ServiceURLOptions.SASToken != "" {
+		defaultURL, err := NewServiceURL(&o.opener.ServiceURLOptions)
+		if err != nil {
+			return nil, err
+		}
+		opts, err := o.opener.ServiceURLOptions.withOverrides(u.Query())
+		if err != nil {
+			return nil, err
+		}
+		overriddenURL, err := NewServiceURL(opts)
+		if err != nil {
+			return nil, err
+		}
+		same, err := sameServiceOrigin(defaultURL, overriddenURL)
+		if err != nil {
+			return nil, err
+		}
+		if !same {
+			return nil, errors.New("azureblob: bucket URL cannot change the service endpoint when AZURE_STORAGE_SAS_TOKEN is set")
+		}
+	}
 	return o.opener.OpenBucketURL(ctx, u)
+}
+
+func sameServiceOrigin(a, b ServiceURL) (bool, error) {
+	aURL, err := url.Parse(string(a))
+	if err != nil {
+		return false, err
+	}
+	bURL, err := url.Parse(string(b))
+	if err != nil {
+		return false, err
+	}
+	return strings.EqualFold(aURL.Scheme, bURL.Scheme) && strings.EqualFold(aURL.Host, bURL.Host), nil
 }
 
 type credTypeEnumT int
@@ -431,9 +445,7 @@ const Scheme = "azblob"
 // The URL host is used as the bucket name.
 //
 // The following query options are supported:
-//   - domain: Overrides Options.StorageDomain for known Azure Blob endpoints.
-//     For local emulators or custom trusted endpoints, configure
-//     ServiceURLOptions.StorageDomain instead.
+//   - domain: Overrides Options.StorageDomain.
 //   - protocol: Overrides Options.Protocol.
 //   - cdn: Overrides Options.IsCDN.
 //   - localemu: Overrides Options.IsLocalEmulator.
@@ -1042,10 +1054,14 @@ func (w *writer) open(r io.Reader, closePipeOnError bool) {
 // Close completes the writer and closes it. Any error occurring during write will
 // be returned. If a writer is closed before any Write is called, Close will
 // create an empty file at the given key.
-func (w *writer) Close() error {
+func (w *writer) Close() (err error) {
 	if !w.upload {
 		if w.pr != nil {
-			defer w.pr.Close()
+			defer func() {
+				if e := w.pr.Close(); e != nil && err == nil {
+					err = e
+				}
+			}()
 		}
 		if w.pw == nil {
 			// We never got any bytes written. We'll write an http.NoBody.

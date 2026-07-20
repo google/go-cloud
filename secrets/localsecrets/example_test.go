@@ -30,7 +30,7 @@ func ExampleNewKeeper() {
 		log.Fatal(err)
 	}
 	keeper := localsecrets.NewKeeper(secretKey)
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 }
 
 func Example_openFromURL() {
@@ -46,7 +46,7 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer randomKeyKeeper.Close()
+	defer func() { _ = randomKeyKeeper.Close() }()
 
 	// Otherwise, the URL hostname must be a base64-encoded key, of length 32 bytes when decoded.
 	// Note that base64.URLEncode should be used, to avoid URL-unsafe characters.
@@ -54,5 +54,5 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer savedKeyKeeper.Close()
+	defer func() { _ = savedKeyKeeper.Close() }()
 }

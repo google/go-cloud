@@ -180,7 +180,11 @@ func TestNoConnectionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer v.Close()
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}()
 	_, err = v.Watch(context.Background())
 	if err == nil {
 		t.Error("got nil want error")
@@ -227,7 +231,11 @@ func TestOpenVariable(t *testing.T) {
 	for _, test := range tests {
 		v, err := runtimevar.OpenVariable(ctx, test.URL)
 		if v != nil {
-			defer v.Close()
+			defer func() {
+				if err := v.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
+			}()
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)

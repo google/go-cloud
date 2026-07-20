@@ -65,6 +65,12 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil, nil)
 }
 
+func closeWithErrorCheck(t testing.TB, c io.Closer) {
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to close: %v", err)
+	}
+}
+
 type docmap = map[string]any
 
 // memdocstore-specific tests.
@@ -79,7 +85,7 @@ func TestUpdateEncodesValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	coll := docstore.NewCollection(dc)
-	defer coll.Close()
+	defer closeWithErrorCheck(t, coll)
 	doc := docmap{drivertest.KeyField: "testUpdateEncodes", "a": 1, dc.RevisionField(): nil}
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
@@ -110,7 +116,7 @@ func TestUpdateAtomic(t *testing.T) {
 		t.Fatal(err)
 	}
 	coll := docstore.NewCollection(dc)
-	defer coll.Close()
+	defer closeWithErrorCheck(t, coll)
 	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B", dc.RevisionField(): nil}
 
 	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
@@ -143,7 +149,7 @@ func TestQueryNested(t *testing.T) {
 		t.Fatal(err)
 	}
 	coll := docstore.NewCollection(dc)
-	defer coll.Close()
+	defer closeWithErrorCheck(t, coll)
 
 	// Set up test documents
 	testDocs := []docmap{{

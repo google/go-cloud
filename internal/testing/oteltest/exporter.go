@@ -33,7 +33,6 @@ import (
 // TestExporter is an exporter of OpenTelemetry traces and metrics, for testing.
 // It should be created with NewTestExporter.
 type TestExporter struct {
-	mu             sync.Mutex
 	spanExporter   *tracetest.InMemoryExporter
 	metricExporter *metricExporter
 	shutdown       func(context.Context) error

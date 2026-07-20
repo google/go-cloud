@@ -58,7 +58,7 @@ const endPoint = "cloudkms.googleapis.com:443"
 // the client after used.
 func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClient, func(), error) {
 	c, err := cloudkms.NewKeyManagementClient(ctx, option.WithTokenSource(ts), useragent.ClientOption("secrets"))
-	return c, func() { c.Close() }, err
+	return c, func() { _ = c.Close() }, err
 }
 
 func init() {

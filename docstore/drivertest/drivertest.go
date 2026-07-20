@@ -291,7 +291,11 @@ func withColl(t *testing.T, h Harness, kind CollectionKind, f func(*testing.T, H
 		t.Fatal(err)
 	}
 	coll := docstore.NewCollection(dc)
-	defer coll.Close()
+	defer func() {
+		if err := coll.Close(); err != nil {
+			t.Errorf("failed to close: %v", err)
+		}
+	}()
 	ClearCollection(t, coll)
 	f(t, h, coll)
 }
@@ -313,25 +317,6 @@ func newDoc(doc any) any {
 		return &docstruct{Name: v.Name}
 	}
 	return nil
-}
-
-func key(doc any) any {
-	switch d := doc.(type) {
-	case docmap:
-		return d[KeyField]
-	case *docstruct:
-		return d.Name
-	}
-	return nil
-}
-
-func setKey(doc, key any) {
-	switch d := doc.(type) {
-	case docmap:
-		d[KeyField] = key
-	case *docstruct:
-		d.Name = key
-	}
 }
 
 func revision(doc any, revField string) any {

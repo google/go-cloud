@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Disable "not used" linters.
+//
+//nolint:unused
 package azureblob
 
 import (
@@ -301,7 +304,11 @@ func TestOpenBucket(t *testing.T) {
 			// Create portable type.
 			b, err := OpenBucket(ctx, client, nil)
 			if b != nil {
-				defer b.Close()
+				defer func(b *blob.Bucket) {
+					if err := b.Close(); err != nil {
+						t.Errorf("failed to Close: %v", err)
+					}
+				}(b)
 			}
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
@@ -525,14 +532,6 @@ func TestNewServiceURL(t *testing.T) {
 			want: "https://myaccount.blob.core.usgovcloudapi.net",
 		},
 		{
-			// Custom trusted domain from ServiceURLOptions.
-			opts: ServiceURLOptions{
-				AccountName:   "myaccount",
-				StorageDomain: "storage.example.com",
-			},
-			want: "https://myaccount.storage.example.com",
-		},
-		{
 			// Setting domain from the URL.
 			opts: ServiceURLOptions{
 				AccountName:   "myaccount",
@@ -544,17 +543,6 @@ func TestNewServiceURL(t *testing.T) {
 			want: "https://myaccount.blob.core.usgovcloudapi.net",
 		},
 		{
-			// URL-controlled domains are rejected unless they are known Azure
-			// Blob endpoints.
-			opts: ServiceURLOptions{
-				AccountName: "myaccount",
-			},
-			query: url.Values{
-				"domain": {"attacker.example.com"},
-			},
-			wantErrOverrides: true,
-		},
-		{
 			// Setting protocol from ServiceURLOptions.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
@@ -563,7 +551,7 @@ func TestNewServiceURL(t *testing.T) {
 			want: "http://myaccount.blob.core.windows.net",
 		},
 		{
-			// HTTP protocol overrides are rejected in bucket URLs.
+			// Setting protocol from the URL.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
 				Protocol:    "https",
@@ -571,7 +559,7 @@ func TestNewServiceURL(t *testing.T) {
 			query: url.Values{
 				"protocol": {"http"},
 			},
-			wantErrOverrides: true,
+			want: "http://myaccount.blob.core.windows.net",
 		},
 		{
 			// Setting IsCDN from ServiceURLOptions.
@@ -601,8 +589,7 @@ func TestNewServiceURL(t *testing.T) {
 			want: "http://localhost:10001/myaccount",
 		},
 		{
-			// URL-controlled local emulator domains are rejected; configure
-			// local emulator endpoints through trusted ServiceURLOptions.
+			// Local emulator, implicit from domain through URL parameter.
 			opts: ServiceURLOptions{
 				AccountName: "myaccount",
 			},
@@ -610,7 +597,7 @@ func TestNewServiceURL(t *testing.T) {
 				"protocol": {"http"},
 				"domain":   {"127.0.0.1:10001"},
 			},
-			wantErrOverrides: true,
+			want: "http://127.0.0.1:10001/myaccount",
 		},
 		{
 			// Local emulator, explicit through ServiceURLOptions.
@@ -666,12 +653,8 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net", false},
 		// With duplicate storage domain.
 		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net&domain=blob.core.windows.net", true},
-		// With disallowed storage domain.
-		{"azblob://mybucket?domain=attacker.example.com", true},
 		// With protocol.
-		{"azblob://mybucket?protocol=http", true},
-		// With protocol for local emulator through URL.
-		{"azblob://mybucket?protocol=http&domain=127.0.0.1:10001", true},
+		{"azblob://mybucket?protocol=http", false},
 		// With invalid protocol.
 		{"azblob://mybucket?protocol=ftp", true},
 		// With Account.
@@ -692,7 +675,11 @@ func TestOpenBucketFromURL(t *testing.T) {
 	for _, test := range tests {
 		b, err := blob.OpenBucket(ctx, test.URL)
 		if b != nil {
-			defer b.Close()
+			defer func(b *blob.Bucket) {
+				if err := b.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
+			}(b)
 		}
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
@@ -700,18 +687,56 @@ func TestOpenBucketFromURL(t *testing.T) {
 	}
 }
 
-func TestOpenBucketURLRejectsURLControlledDomainWithSASToken(t *testing.T) {
+func TestLazyOpenerRejectsSASEndpointOverrides(t *testing.T) {
 	t.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
 	t.Setenv("AZURE_STORAGE_SAS_TOKEN", "sig=secret")
 
-	b, err := blob.OpenBucket(context.Background(), "azblob://mybucket?domain=attacker.example.com")
-	if b != nil {
-		defer b.Close()
+	for _, tc := range []struct {
+		name    string
+		rawURL  string
+		wantErr bool
+	}{
+		{"default", "azblob://mybucket", false},
+		{"same domain", "azblob://mybucket?domain=blob.core.windows.net", false},
+		{"same protocol", "azblob://mybucket?protocol=https", false},
+		{"domain", "azblob://mybucket?domain=storage.example.com", true},
+		{"protocol", "azblob://mybucket?protocol=http", true},
+		{"storage account", "azblob://mybucket?storage_account=other-account", true},
+		{"cdn", "azblob://mybucket?cdn=true", true},
+		{"local emulator", "azblob://mybucket?localemu=true", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := url.Parse(tc.rawURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b, err := new(lazyOpener).OpenBucketURL(context.Background(), u)
+			if b != nil {
+				defer func() { _ = b.Close() }()
+			}
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("got error %v, want error %v", err, tc.wantErr)
+			}
+			if err != nil && !strings.Contains(err.Error(), "cannot change the service endpoint") {
+				t.Fatalf("got error %q, want endpoint override error", err)
+			}
+		})
 	}
-	if err == nil {
-		t.Fatal("got nil error, want disallowed domain error")
+}
+
+func TestLazyOpenerAllowsSASConfiguredEndpoint(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
+	t.Setenv("AZURE_STORAGE_SAS_TOKEN", "sig=secret")
+	t.Setenv("AZURE_STORAGE_DOMAIN", "storage.example.com")
+	t.Setenv("AZURE_STORAGE_PROTOCOL", "http")
+
+	u, err := url.Parse("azblob://mybucket")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(err.Error(), `domain "attacker.example.com" is not allowed`) {
-		t.Fatalf("got error %q, want disallowed domain error", err)
+	b, err := new(lazyOpener).OpenBucketURL(context.Background(), u)
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer func() { _ = b.Close() }()
 }

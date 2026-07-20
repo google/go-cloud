@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -67,6 +68,13 @@ func (v verifyAsFailsOnNil) ErrorCheck(k *secrets.Keeper, err error) (ret error)
 	return nil
 }
 
+func closeWithErrorCheck(t testing.TB, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to Close: %v", err)
+	}
+}
+
 // RunConformanceTests runs conformance tests for driver implementations of secret management.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Helper()
@@ -112,7 +120,7 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
-	defer keeper.Close()
+	defer closeWithErrorCheck(t, keeper)
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg, err := keeper.Encrypt(ctx, msg)
@@ -148,7 +156,7 @@ func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
-	defer keeper.Close()
+	defer closeWithErrorCheck(t, keeper)
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg1, err := keeper.Encrypt(ctx, msg)
@@ -195,9 +203,9 @@ func testMultipleKeys(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper1 := secrets.NewKeeper(drv1)
-	defer keeper1.Close()
+	defer closeWithErrorCheck(t, keeper1)
 	keeper2 := secrets.NewKeeper(drv2)
-	defer keeper2.Close()
+	defer closeWithErrorCheck(t, keeper2)
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg1, err := keeper1.Encrypt(ctx, msg)
@@ -250,7 +258,7 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
-	defer keeper.Close()
+	defer closeWithErrorCheck(t, keeper)
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg, err := keeper.Encrypt(ctx, msg)
@@ -302,7 +310,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, tc AsTest) {
 		t.Fatal(err)
 	}
 	keeper := secrets.NewKeeper(drv)
-	defer keeper.Close()
+	defer closeWithErrorCheck(t, keeper)
 
 	_, gotErr := keeper.Decrypt(ctx, []byte("malformed cipher message"))
 	if gotErr == nil {

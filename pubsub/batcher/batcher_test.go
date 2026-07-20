@@ -308,7 +308,9 @@ func TestItemCanBeInterface(t *testing.T) {
 		}
 		return nil
 	})
-	b.Add(context.Background(), &bytes.Buffer{})
+	if err := b.Add(context.Background(), &bytes.Buffer{}); err != nil {
+		t.Errorf("failed to Add: %v", err)
+	}
 	if !called {
 		t.Fatal("handler not called")
 	}

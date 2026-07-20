@@ -72,7 +72,11 @@ func TestSmallData(t *testing.T) {
 		t.Fatal(err)
 	}
 	keeper := NewKeeper(key)
-	defer keeper.Close()
+	defer func() {
+		if err := keeper.Close(); err != nil {
+			t.Errorf("failed to close: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 	const plaintext = "hello world"

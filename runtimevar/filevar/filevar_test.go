@@ -62,10 +62,12 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 		return err
 	}
 	if _, err := tmp.Write(val); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
-	tmp.Close()
+	if err := tmp.Close(); err != nil {
+		return err
+	}
 	return os.Rename(tmp.Name(), filepath.Join(h.dir, name))
 }
 
@@ -157,7 +159,9 @@ func TestOpenVariable(t *testing.T) {
 				if drv.path != test.want {
 					t.Errorf("got %q want %q", drv.path, test.want)
 				}
-				drv.Close()
+				if err := drv.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
 			}
 
 			// Create portable type.
@@ -166,7 +170,9 @@ func TestOpenVariable(t *testing.T) {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
 			if w != nil {
-				w.Close()
+				if err := w.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
 			}
 		})
 	}
@@ -256,7 +262,11 @@ func TestOpenVariableURL(t *testing.T) {
 			if err != nil {
 				return
 			}
-			defer v.Close()
+			defer func() {
+				if err := v.Close(); err != nil {
+					t.Errorf("failed to Close: %v", err)
+				}
+			}()
 			snapshot, err := v.Watch(ctx)
 			if (err != nil) != test.WantWatchErr {
 				t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
@@ -275,8 +285,8 @@ func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), err
 	const keeperEnv = "RUNTIMEVAR_KEEPER_URL"
 	const keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
 	oldURL := os.Getenv(keeperEnv)
-	os.Setenv(keeperEnv, keeperURL)
-	cleanup := func() { os.Setenv(keeperEnv, oldURL) }
+	_ = os.Setenv(keeperEnv, keeperURL)
+	cleanup := func() { _ = os.Setenv(keeperEnv, oldURL) }
 
 	k, err := secrets.OpenKeeper(ctx, keeperURL)
 	if err != nil {

@@ -26,7 +26,7 @@ func TestPrefixedBucket(t *testing.T) {
 	}
 
 	wrapped := blob.PrefixedBucket(bucket, "foo/bar/")
-	defer wrapped.Close()
+	defer closeWithErrorCheck(t, wrapped)
 
 	got, err := wrapped.ReadAll(ctx, "baz.txt")
 	if err != nil {
@@ -60,7 +60,7 @@ func TestSingleKeyBucket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer wrapped.Close()
+	defer closeWithErrorCheck(t, wrapped)
 	got, err := wrapped.ReadAll(ctx, "")
 	if err != nil {
 		t.Fatal(err)

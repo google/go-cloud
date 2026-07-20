@@ -17,6 +17,7 @@ package gcpkms
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
@@ -67,7 +68,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{
 		client: client,
 		close: func() {
-			client.Close()
+			_ = client.Close()
 			done()
 		},
 	}, nil
@@ -105,10 +106,17 @@ func TestNoConnectionError(t *testing.T) {
 	defer done()
 
 	keeper := OpenKeeper(client, "", nil)
-	defer keeper.Close()
+	defer closeWithErrorCheck(t, keeper)
 
 	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want rpc error")
+	}
+}
+
+func closeWithErrorCheck(t *testing.T, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to Close: %v", err)
 	}
 }
 
@@ -125,12 +133,12 @@ func TestAdditionalAuthenticatedData(t *testing.T) {
 		AdditionalAuthenticatedData: []byte("sample AAD"),
 	}
 	k1a := OpenKeeper(client, KeyResourceID(project, location, keyRing, keyID1), &opts)
-	defer k1a.Close()
+	defer closeWithErrorCheck(t, k1a)
 	k1b := OpenKeeper(client, KeyResourceID(project, location, keyRing, keyID1), &opts)
-	defer k1b.Close()
+	defer closeWithErrorCheck(t, k1b)
 	opts.AdditionalAuthenticatedData = []byte("different AAD")
 	k2 := OpenKeeper(client, KeyResourceID(project, location, keyRing, keyID1), &opts)
-	defer k2.Close()
+	defer closeWithErrorCheck(t, k2)
 
 	// Encrypt/Decrypt with an AAD should work.
 	secret := []byte("a secret")

@@ -28,7 +28,11 @@ import (
 func RunBenchmarks(b *testing.B, coll *docstore.Collection) {
 	b.Helper()
 
-	defer coll.Close()
+	defer func() {
+		if err := coll.Close(); err != nil {
+			b.Errorf("failed to close: %v", err)
+		}
+	}()
 	ClearCollection(b, coll)
 	b.Run("BenchmarkSingleActionPut", func(b *testing.B) {
 		benchmarkSingleActionPut(b, 10, coll)

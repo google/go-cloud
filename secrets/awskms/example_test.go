@@ -42,7 +42,7 @@ func ExampleOpenKeeper() {
 
 	// Construct a *secrets.Keeper.
 	keeper := awskms.OpenKeeper(client, "alias/test-secrets", nil)
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 }
 
 func Example_openFromURL() {
@@ -59,7 +59,7 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeperByID.Close()
+	defer func() { _ = keeperByID.Close() }()
 
 	// 2. By alias.
 	keeperByAlias, err := secrets.OpenKeeper(ctx,
@@ -67,7 +67,7 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeperByAlias.Close()
+	defer func() { _ = keeperByAlias.Close() }()
 
 	// 3. By ARN. Note that ARN may contain ":" characters, which cannot be escaped
 	// in the Host part of a URL, so the "awskms:///<ARN>" form should be used.
@@ -78,5 +78,5 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeperByARN.Close()
+	defer func() { _ = keeperByARN.Close() }()
 }

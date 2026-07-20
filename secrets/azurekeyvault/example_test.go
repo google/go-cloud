@@ -34,7 +34,7 @@ func ExampleOpenKeeper() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 }
 
 func Example_openFromURL() {
@@ -51,5 +51,5 @@ func Example_openFromURL() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer keeper.Close()
+	defer func() { _ = keeper.Close() }()
 }

@@ -65,7 +65,7 @@ func (cf *CertFetcher) RDSCertPool(ctx context.Context) (*x509.CertPool, error) 
 }
 
 // Fetch fetches the RDS CA certificates. It is safe to call from multiple goroutines.
-func (cf *CertFetcher) Fetch(ctx context.Context) ([]*x509.Certificate, error) {
+func (cf *CertFetcher) Fetch(ctx context.Context) (certs []*x509.Certificate, err error) {
 	client := cf.Client
 	if client == nil {
 		client = http.DefaultClient
@@ -74,7 +74,11 @@ func (cf *CertFetcher) Fetch(ctx context.Context) ([]*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetch RDS certificates: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil && err == nil {
+			err = e
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("fetch RDS certificates: HTTP %s", resp.Status)
 	}
@@ -82,7 +86,6 @@ func (cf *CertFetcher) Fetch(ctx context.Context) ([]*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetch RDS certificates: %v", err)
 	}
-	var certs []*x509.Certificate
 	for len(pemData) > 0 {
 		var block *pem.Block
 		block, pemData = pem.Decode(pemData)

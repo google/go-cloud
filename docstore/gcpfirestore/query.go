@@ -43,7 +43,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 	}
 	req := &pb.RunQueryRequest{
 		Parent:    path.Dir(c.collPath),
-		QueryType: &pb.RunQueryRequest_StructuredQuery{sq},
+		QueryType: &pb.RunQueryRequest_StructuredQuery{StructuredQuery: sq},
 	}
 	if q.BeforeQuery != nil {
 		if err := q.BeforeQuery(driver.AsFunc(req)); err != nil {
@@ -241,10 +241,11 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []drive
 		p.Where = pfs[0]
 	} else if len(pfs) > 1 {
 		p.Where = &pb.StructuredQuery_Filter{
-			FilterType: &pb.StructuredQuery_Filter_CompositeFilter{&pb.StructuredQuery_CompositeFilter{
-				Op:      pb.StructuredQuery_CompositeFilter_AND,
-				Filters: pfs,
-			}},
+			FilterType: &pb.StructuredQuery_Filter_CompositeFilter{
+				CompositeFilter: &pb.StructuredQuery_CompositeFilter{
+					Op:      pb.StructuredQuery_CompositeFilter_AND,
+					Filters: pfs,
+				}},
 		}
 	}
 
@@ -298,7 +299,7 @@ func (c *collection) filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter,
 				"name field filter value %v of type %[1]T is not a string", f.Value)
 		}
 		return newFieldFilter([]string{"__name__"}, f.Op,
-			&pb.Value{ValueType: &pb.Value_ReferenceValue{c.collPath + "/" + v.String()}})
+			&pb.Value{ValueType: &pb.Value_ReferenceValue{ReferenceValue: c.collPath + "/" + v.String()}})
 	}
 	// "= nil" and "= NaN" are handled specially.
 	if uop, ok := unaryOpFor(f.Value); ok {

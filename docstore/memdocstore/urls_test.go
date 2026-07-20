@@ -23,35 +23,42 @@ import (
 
 func TestOpenCollectionFromURL(t *testing.T) {
 	tests := []struct {
-		URL     string
-		wantErr bool
+		URL      string
+		collName string
+		wantErr  bool
 	}{
 		// OK.
-		{"mem://coll/_id", false},
+		{"mem://coll/_id", "coll", false},
 		// "coll" already has key "_id".
-		{"mem://coll/foo.bar", true},
-		{"mem://coll2/foo.bar", false},
+		{"mem://coll/foo.bar", "coll", true},
+		{"mem://coll2/foo.bar", "coll2", false},
 		// Missing collection.
-		{"mem://", true},
+		{"mem://", "", true},
 		// Missing key.
-		{"mem://coll", true},
+		{"mem://coll", "coll", true},
 		// Key with slash.
-		{"mem://coll/my/key", true},
+		{"mem://coll/my/key", "coll", true},
 		// Passing revision field.
-		{"mem://coll/_id?revision_field=123", false},
+		{"mem://coll/_id?revision_field=123", "coll", false},
 		// Passing filename.
-		{"mem://coll/_id?filename=foo.out", false},
+		{"mem://coll/_id?filename=foo.out", "coll", false},
 		// Invalid parameter.
-		{"mem://coll/key?param=value", true},
+		{"mem://coll/key?param=value", "coll", true},
 	}
 	ctx := context.Background()
+	colls := map[string]*docstore.Collection{}
 	for _, test := range tests {
 		d, err := docstore.OpenCollection(ctx, test.URL)
 		if d != nil {
-			defer d.Close()
+			colls[test.collName] = d
 		}
 		if (err != nil) != test.wantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.wantErr)
+		}
+	}
+	for collName, coll := range colls {
+		if err := coll.Close(); err != nil {
+			t.Errorf("failed to Close %q: %v", collName, err)
 		}
 	}
 }

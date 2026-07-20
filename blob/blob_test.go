@@ -22,7 +22,6 @@ import (
 	"io"
 	"net/url"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -35,6 +34,13 @@ var (
 	errFake     = errors.New("fake")
 	errNotFound = errors.New("fake not found")
 )
+
+func closeWithErrorCheck(t *testing.T, c io.Closer) {
+	t.Helper()
+	if err := c.Close(); err != nil {
+		t.Errorf("failed to close: %v", err)
+	}
+}
 
 func TestExists(t *testing.T) {
 	tests := []struct {
@@ -67,7 +73,7 @@ func TestExists(t *testing.T) {
 		t.Run(test.Description, func(t *testing.T) {
 			drv := &fakeAttributes{attributesErr: test.Err}
 			b := NewBucket(drv)
-			defer b.Close()
+			defer closeWithErrorCheck(t, b)
 			got, gotErr := b.Exists(context.Background(), "key")
 			if got != test.Want {
 				t.Errorf("got %v want %v", got, test.Want)
@@ -111,7 +117,7 @@ func TestListIterator(t *testing.T) {
 		wantPageSizes: []int{0, 0, 0, 0, 0, 0},
 	}
 	b := NewBucket(db)
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 	iter := b.List(nil)
 	var got []string
 	for {
@@ -138,7 +144,7 @@ func TestListPage(t *testing.T) {
 		wantPageSizes: []int{2, 2, 2, 2, 2, 1, 1, 2, 2, 2},
 	}
 	b := NewBucket(db)
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 
 	nextToken := FirstPageToken
 	got := [][]string{}
@@ -241,7 +247,7 @@ func TestUploader(t *testing.T) {
 	ctx := context.Background()
 	lb := &loaderBucket{}
 	b := NewBucket(lb)
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 	err := b.Upload(ctx, "key", nil, &WriterOptions{ContentType: "text/html"})
 	if err != nil {
 		t.Fatalf("Upload failed: %v", err)
@@ -255,7 +261,7 @@ func TestDownloader(t *testing.T) {
 	ctx := context.Background()
 	lb := &loaderBucket{}
 	b := NewBucket(lb)
-	defer b.Close()
+	defer closeWithErrorCheck(t, b)
 	err := b.Download(ctx, "key", nil, nil)
 	if err != nil {
 		t.Fatalf("Download failed: %v", err)
@@ -271,13 +277,13 @@ func TestSeekAfterReadFailure(t *testing.T) {
 	ctx := context.Background()
 
 	bucket := NewBucket(&oneTimeReadBucket{first: true})
-	defer bucket.Close()
+	defer closeWithErrorCheck(t, bucket)
 
 	reader, err := bucket.NewRangeReader(ctx, filename, 0, 100, nil)
 	if err != nil {
 		t.Fatalf("failed NewRangeReader: %v", err)
 	}
-	defer reader.Close()
+	defer closeWithErrorCheck(t, reader)
 
 	b := make([]byte, 10)
 
@@ -334,12 +340,14 @@ func (b *oneTimeReadBucket) ErrorCode(err error) gcerrors.ErrorCode { return gce
 func (b *oneTimeReadBucket) Close() error                           { return nil }
 
 // erroringBucket implements driver.Bucket. All interface methods that return
-// errors are implemented, and return errFake.
+// errors are implemented, and return errFake, except Close which depends on
+// closeErr.
 // In addition, when passed the key "work", NewRangeReader and NewTypedWriter
 // will return a Reader/Writer respectively, that always return errFake
 // from Read/Write and Close.
 type erroringBucket struct {
 	driver.Bucket
+	closeErr error
 }
 
 type erroringReader struct {
@@ -401,7 +409,7 @@ func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver
 }
 
 func (b *erroringBucket) Close() error {
-	return errFake
+	return b.closeErr
 }
 
 func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
@@ -413,7 +421,7 @@ func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	buf := bytes.Repeat([]byte{'A'}, sniffLen)
-	b := NewBucket(&erroringBucket{})
+	b := NewBucket(&erroringBucket{closeErr: errFake})
 
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
@@ -457,7 +465,7 @@ func TestErrorsAreWrapped(t *testing.T) {
 	w, _ := b.NewWriter(ctx, "", nil)
 	_, err = w.Write(buf)
 	verifyWrap("NewWriter (no ContentType)", err)
-	w.Close()
+	_ = w.Close()
 	err = b.WriteAll(ctx, "", buf, nil)
 	verifyWrap("WriteAll (no ContentType)", err)
 
@@ -488,11 +496,6 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap("Close", err)
 }
 
-var (
-	testOpenOnce sync.Once
-	testOpenGot  *url.URL
-)
-
 // TestBucketIsClosed verifies that all Bucket functions return an error
 // if the Bucket is closed.
 func TestBucketIsClosed(t *testing.T) {
@@ -500,7 +503,7 @@ func TestBucketIsClosed(t *testing.T) {
 	buf := bytes.Repeat([]byte{'A'}, sniffLen)
 
 	bucket := NewBucket(&erroringBucket{})
-	bucket.Close()
+	closeWithErrorCheck(t, bucket)
 
 	if _, err := bucket.Attributes(ctx, ""); err != errClosed {
 		t.Error(err)

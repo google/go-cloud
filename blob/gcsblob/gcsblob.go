@@ -386,8 +386,6 @@ type bucket struct {
 	opts   *Options
 }
 
-var emptyBody = io.NopCloser(strings.NewReader(""))
-
 // reader reads a GCS object. It implements driver.Reader.
 type reader struct {
 	body  io.ReadCloser

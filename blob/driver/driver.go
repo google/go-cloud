@@ -454,7 +454,7 @@ func (b *singleKeyBucket) Attributes(ctx context.Context, _ string) (*Attributes
 }
 
 func (b *singleKeyBucket) ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error) {
-	return nil, errors.New("List not supported for SingleKey buckets")
+	return nil, errors.New("List not supported for SingleKey buckets") // nolint
 }
 
 func (b *singleKeyBucket) NewRangeReader(ctx context.Context, _ string, offset, length int64, opts *ReaderOptions) (Reader, error) {

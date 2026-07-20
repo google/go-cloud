@@ -412,11 +412,6 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap("Close", err)
 }
 
-var (
-	testOpenOnce sync.Once
-	testOpenGot  *url.URL
-)
-
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
 
