@@ -17,7 +17,6 @@ package hashivault
 import (
 	"context"
 	"errors"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -133,48 +132,9 @@ func TestNoConnectionError(t *testing.T) {
 	}
 }
 
-func fakeConnectionStringInEnv() func() {
-	oldURLVal := os.Getenv("VAULT_SERVER_URL")
-	oldTokenVal := os.Getenv("VAULT_SERVER_TOKEN")
-	os.Setenv("VAULT_SERVER_URL", "http://myvaultserver")
-	os.Setenv("VAULT_SERVER_TOKEN", "faketoken")
-	return func() {
-		os.Setenv("VAULT_SERVER_URL", oldURLVal)
-		os.Setenv("VAULT_SERVER_TOKEN", oldTokenVal)
-	}
-}
-
-func alternativeConnectionStringEnvVars() func() {
-	oldURLVal := os.Getenv("VAULT_ADDR")
-	oldTokenVal := os.Getenv("VAULT_TOKEN")
-	os.Setenv("VAULT_ADDR", "http://myalternativevaultserver")
-	os.Setenv("VAULT_TOKEN", "faketoken2")
-	return func() {
-		os.Setenv("VAULT_ADDR", oldURLVal)
-		os.Setenv("VAULT_TOKEN", oldTokenVal)
-	}
-}
-
-func unsetConnectionStringEnvVars() func() {
-	oldURLVal := os.Getenv("VAULT_ADDR")
-	oldTokenVal := os.Getenv("VAULT_TOKEN")
-	oldServerURLVal := os.Getenv("VAULT_SERVER_URL")
-	oldServerTokenVal := os.Getenv("VAULT_SERVER_TOKEN")
-	os.Unsetenv("VAULT_ADDR")
-	os.Unsetenv("VAULT_TOKEN")
-	os.Unsetenv("VAULT_SERVER_URL")
-	os.Unsetenv("VAULT_SERVER_TOKEN")
-	return func() {
-		os.Setenv("VAULT_ADDR", oldURLVal)
-		os.Setenv("VAULT_SERVER_URL", oldServerURLVal)
-		os.Setenv("VAULT_TOKEN", oldTokenVal)
-		os.Setenv("VAULT_SERVER_TOKEN", oldServerTokenVal)
-	}
-}
-
 func TestOpenKeeper(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("VAULT_SERVER_URL", "http://myvaultserver")
+	t.Setenv("VAULT_SERVER_TOKEN", "faketoken")
 
 	tests := []struct {
 		URL     string
@@ -204,8 +164,8 @@ func TestOpenKeeper(t *testing.T) {
 
 func TestGetVaultConnectionDetails(t *testing.T) {
 	t.Run("Test Current Env Vars", func(t *testing.T) {
-		cleanup := fakeConnectionStringInEnv()
-		defer cleanup()
+		t.Setenv("VAULT_SERVER_URL", "http://myvaultserver")
+		t.Setenv("VAULT_SERVER_TOKEN", "faketoken")
 
 		serverUrl, err := getVaultURL()
 		if err != nil {
@@ -222,8 +182,8 @@ func TestGetVaultConnectionDetails(t *testing.T) {
 	})
 
 	t.Run("Test Alternative Env Vars", func(t *testing.T) {
-		cleanup := alternativeConnectionStringEnvVars()
-		defer cleanup()
+		t.Setenv("VAULT_ADDR", "http://myalternativevaultserver")
+		t.Setenv("VAULT_TOKEN", "faketoken2")
 
 		serverUrl, err := getVaultURL()
 		if err != nil {
@@ -239,8 +199,10 @@ func TestGetVaultConnectionDetails(t *testing.T) {
 		}
 	})
 	t.Run("Test Unset Env Vars Throws Error", func(t *testing.T) {
-		cleanup := unsetConnectionStringEnvVars()
-		defer cleanup()
+		t.Setenv("VAULT_ADDR", "")
+		t.Setenv("VAULT_TOKEN", "")
+		t.Setenv("VAULT_SERVER_URL", "")
+		t.Setenv("VAULT_SERVER_TOKEN", "")
 
 		serverUrl, err := getVaultURL()
 		if err == nil {

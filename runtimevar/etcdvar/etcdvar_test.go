@@ -17,7 +17,6 @@ package etcdvar
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -156,7 +155,7 @@ func TestOpenVariable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = os.Setenv("ETCD_SERVER_URL", "http://localhost:2379")
+	t.Setenv("ETCD_SERVER_URL", "http://localhost:2379")
 
 	ctx := context.Background()
 	if err := h.CreateVariable(ctx, "string-var", []byte("hello world")); err != nil {

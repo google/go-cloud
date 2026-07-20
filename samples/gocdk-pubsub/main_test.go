@@ -16,7 +16,6 @@ package main
 
 import (
 	"flag"
-	"os"
 	"testing"
 
 	"github.com/google/go-cmdtest"
@@ -36,7 +35,7 @@ func Test(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Setenv("RABBIT_SERVER_URL", rabbitURL)
+	t.Setenv("RABBIT_SERVER_URL", rabbitURL)
 	if err := initRabbit(); err != nil {
 		t.Fatal(err)
 	}

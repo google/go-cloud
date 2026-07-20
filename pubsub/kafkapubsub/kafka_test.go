@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -461,17 +460,8 @@ func BenchmarkKafka(b *testing.B) {
 	drivertest.RunBenchmarks(b, topic, sub)
 }
 
-func fakeConnectionStringInEnv() func() {
-	oldEnvVal := os.Getenv("KAFKA_BROKERS")
-	os.Setenv("KAFKA_BROKERS", "localhost:10000")
-	return func() {
-		os.Setenv("KAFKA_BROKERS", oldEnvVal)
-	}
-}
-
 func TestOpenTopicFromURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("KAFKA_BROKERS", "localhost:10000")
 
 	tests := []struct {
 		URL     string
@@ -507,8 +497,7 @@ func TestOpenTopicFromURL(t *testing.T) {
 }
 
 func TestOpenSubscriptionFromURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("KAFKA_BROKERS", "localhost:10000")
 
 	tests := []struct {
 		URL     string

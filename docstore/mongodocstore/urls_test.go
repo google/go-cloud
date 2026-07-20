@@ -17,23 +17,13 @@ package mongodocstore
 import (
 	"context"
 	"net/url"
-	"os"
 	"testing"
 
 	"gocloud.dev/docstore"
 )
 
-func fakeConnectionStringInEnv() func() {
-	oldURLVal := os.Getenv("MONGO_SERVER_URL")
-	os.Setenv("MONGO_SERVER_URL", "mongodb://localhost")
-	return func() {
-		os.Setenv("MONGO_SERVER_URL", oldURLVal)
-	}
-}
-
 func TestOpenCollectionURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("MONGO_SERVER_URL", "mongodb://localhost")
 
 	tests := []struct {
 		URL     string
@@ -66,10 +56,6 @@ func TestOpenCollectionURL(t *testing.T) {
 }
 
 func TestDefaultDialerOpenCollectionURL(t *testing.T) {
-	// Defer cleanup
-	oldURLVal := os.Getenv("MONGO_SERVER_URL")
-	defer os.Setenv("MONGO_SERVER_URL", oldURLVal)
-
 	tests := []struct {
 		name                  string
 		currentMongoServerURL string
@@ -112,14 +98,14 @@ func TestDefaultDialerOpenCollectionURL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// Set MONGO_SERVER_URL
-			os.Setenv("MONGO_SERVER_URL", test.currentMongoServerURL)
+			t.Setenv("MONGO_SERVER_URL", test.currentMongoServerURL)
 			_, err = d.OpenCollectionURL(ctx, u)
 			if err != nil && !test.currentWantErr {
 				t.Error(err)
 			}
 
 			// Update MONGO_SERVER_URL
-			os.Setenv("MONGO_SERVER_URL", test.newMongoServerURL)
+			t.Setenv("MONGO_SERVER_URL", test.newMongoServerURL)
 			_, err = d.OpenCollectionURL(ctx, u)
 			if err != nil && !test.newWantErr {
 				t.Error(err)

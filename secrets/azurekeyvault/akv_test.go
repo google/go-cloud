@@ -105,7 +105,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		var creds azcore.TokenCredential
 		var err error
 		if *setup.Record {
-			initEnv()
+			initEnv(t)
 			creds, err = azidentity.NewEnvironmentCredential(nil)
 		} else {
 			creds = &dummyToken{}
@@ -128,7 +128,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	}, nil
 }
 
-func initEnv() {
+func initEnv(t *testing.T) {
 	// For Client Credentials authorization, set AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
 	// For Client Certificate and Azure Managed Service Identity, see doc below for help
 	// https://github.com/Azure/azure-sdk-for-go
@@ -137,8 +137,8 @@ func initEnv() {
 		os.Getenv("AZURE_CLIENT_SECRET") == "" {
 		log.Fatal("Missing environment for recording tests, set AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET")
 	}
-	_ = os.Setenv("AZURE_ENVIRONMENT", "AzurePublicCloud")
-	_ = os.Setenv("AZURE_AD_RESOURCE", "https://vault.azure.net")
+	t.Setenv("AZURE_ENVIRONMENT", "AzurePublicCloud")
+	t.Setenv("AZURE_AD_RESOURCE", "https://vault.azure.net")
 }
 
 func TestConformance(t *testing.T) {

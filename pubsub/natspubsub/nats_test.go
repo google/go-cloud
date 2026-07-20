@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"gocloud.dev/gcerrors"
@@ -509,14 +508,6 @@ func BenchmarkNatsPubSub(b *testing.B) {
 	}
 }
 
-func fakeConnectionStringInEnv() func() {
-	oldEnvVal := os.Getenv("NATS_SERVER_URL")
-	os.Setenv("NATS_SERVER_URL", fmt.Sprintf("nats://localhost:%d", testPort))
-	return func() {
-		os.Setenv("NATS_SERVER_URL", oldEnvVal)
-	}
-}
-
 func TestOpenTopicFromURL(t *testing.T) {
 	ctx := context.Background()
 	dh, err := newHarness(ctx, t)
@@ -525,8 +516,7 @@ func TestOpenTopicFromURL(t *testing.T) {
 	}
 	defer dh.Close()
 
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("NATS_SERVER_URL", fmt.Sprintf("nats://localhost:%d", testPort))
 
 	tests := []struct {
 		URL     string
@@ -557,8 +547,7 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}
 	defer dh.Close()
 
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("NATS_SERVER_URL", fmt.Sprintf("nats://localhost:%d", testPort))
 
 	tests := []struct {
 		URL     string

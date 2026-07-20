@@ -192,11 +192,9 @@ func TestOpenVariableURL(t *testing.T) {
 	nonexistentPath := filepath.Join(dir, "filenotfound")
 	ctx := context.Background()
 	secretsPath := filepath.Join(dir, "mysecret.txt")
-	cleanup, err := setupTestSecrets(ctx, dir, secretsPath)
-	if err != nil {
+	if err := setupTestSecrets(ctx, t, dir, secretsPath); err != nil {
 		t.Fatal(err)
 	}
-	defer cleanup()
 
 	// Convert paths to a URL path, adding a leading "/" if needed on Windows
 	// (on Unix, dirpath already has a leading "/").
@@ -281,23 +279,21 @@ func TestOpenVariableURL(t *testing.T) {
 	}
 }
 
-func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), error) {
+func setupTestSecrets(ctx context.Context, t *testing.T, dir, secretsPath string) error {
 	const keeperEnv = "RUNTIMEVAR_KEEPER_URL"
 	const keeperURL = "base64key://smGbjm71Nxd1Ig5FS0wj9SlbzAIrnolCz9bQQ6uAhl4="
-	oldURL := os.Getenv(keeperEnv)
-	_ = os.Setenv(keeperEnv, keeperURL)
-	cleanup := func() { _ = os.Setenv(keeperEnv, oldURL) }
+	t.Setenv(keeperEnv, keeperURL)
 
 	k, err := secrets.OpenKeeper(ctx, keeperURL)
 	if err != nil {
-		return cleanup, err
+		return err
 	}
 	sc, err := k.Encrypt(ctx, []byte(`{"Foo":"Bar"}`))
 	if err != nil {
-		return cleanup, err
+		return err
 	}
 	if err := os.WriteFile(secretsPath, sc, 0o666); err != nil {
-		return cleanup, err
+		return err
 	}
-	return cleanup, nil
+	return nil
 }

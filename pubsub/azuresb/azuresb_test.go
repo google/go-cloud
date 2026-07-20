@@ -415,17 +415,8 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	drivertest.RunBenchmarks(b, topic, sub)
 }
 
-func fakeConnectionStringInEnv() func() {
-	oldEnvVal := os.Getenv("SERVICEBUS_CONNECTION_STRING")
-	_ = os.Setenv("SERVICEBUS_CONNECTION_STRING", "Endpoint=sb://foo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mykey")
-	return func() {
-		_ = os.Setenv("SERVICEBUS_CONNECTION_STRING", oldEnvVal)
-	}
-}
-
 func TestOpenTopicFromURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("SERVICEBUS_CONNECTION_STRING", "Endpoint=sb://foo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mykey")
 
 	tests := []struct {
 		URL     string
@@ -452,8 +443,7 @@ func TestOpenTopicFromURL(t *testing.T) {
 }
 
 func TestOpenSubscriptionFromURL(t *testing.T) {
-	cleanup := fakeConnectionStringInEnv()
-	defer cleanup()
+	t.Setenv("SERVICEBUS_CONNECTION_STRING", "Endpoint=sb://foo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mykey")
 
 	tests := []struct {
 		URL     string
