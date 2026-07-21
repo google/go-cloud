@@ -67,6 +67,42 @@ func TestHexEscape(t *testing.T) {
 	}
 }
 
+// TestHexEscapeInjective verifies that two different inputs never escape to
+// the same output for a given shouldEscape function, and that every escaped
+// string still unescapes back to its original input. Regression test: a
+// caller-supplied string that already contains the literal text of an
+// escape sequence (e.g. "__0x2f__") used to be indistinguishable, after
+// escaping, from a different string whose escaped rune produced that same
+// text (e.g. a "/" that shouldEscape flagged). Two callers choosing
+// different keys could therefore end up addressing the same escaped
+// storage key.
+func TestHexEscapeInjective(t *testing.T) {
+	// Mirrors the "escape a '/' right after '..'" rule used by
+	// blob/fileblob, blob/gcsblob, blob/s3blob, and blob/azureblob.
+	dotDotSlash := func(r []rune, i int) bool {
+		return i > 1 && r[i] == '/' && r[i-1] == '.' && r[i-2] == '.'
+	}
+
+	pairs := [][2]string{
+		{"a/../b", "a/..__0x2f__b"},
+		{"x/../y", "x/..__0x2f__y"},
+		{"../z", "..__0x2f__z"},
+	}
+	for _, p := range pairs {
+		e0 := HexEscape(p[0], dotDotSlash)
+		e1 := HexEscape(p[1], dotDotSlash)
+		if e0 == e1 {
+			t.Errorf("collision: HexEscape(%q) == HexEscape(%q) == %q", p[0], p[1], e0)
+		}
+		if got := HexUnescape(e0); got != p[0] {
+			t.Errorf("HexUnescape(HexEscape(%q)) = %q, want %q", p[0], got, p[0])
+		}
+		if got := HexUnescape(e1); got != p[1] {
+			t.Errorf("HexUnescape(HexEscape(%q)) = %q, want %q", p[1], got, p[1])
+		}
+	}
+}
+
 func TestHexEscapeUnescapeWeirdStrings(t *testing.T) {
 	for name, s := range WeirdStrings {
 		escaped := HexEscape(s, func(r []rune, i int) bool { return !IsASCIIAlphanumeric(r[i]) })
