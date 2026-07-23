@@ -451,6 +451,14 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 func toInCondition(f driver.Filter) expression.ConditionBuilder {
 	name := expression.Name(strings.Join(f.FieldPath, "."))
 	vslice := reflect.ValueOf(f.Value)
+	if vslice.Len() == 0 {
+		// An empty "in" list can never match anything; build an
+		// always-false condition instead of indexing into the empty
+		// slice below. expression.Not of this gives an always-true
+		// condition for "not-in", matching the usual "x IN ()" / "x
+		// NOT IN ()" semantics used elsewhere (e.g., MongoDB's $in/$nin).
+		return expression.Equal(expression.Value(true), expression.Value(false))
+	}
 	right := expression.Value(vslice.Index(0).Interface())
 	other := make([]expression.OperandBuilder, vslice.Len()-1)
 	for i := 1; i < vslice.Len(); i++ {

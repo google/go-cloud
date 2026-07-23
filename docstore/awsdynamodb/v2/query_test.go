@@ -413,6 +413,29 @@ func TestQueryNoScans(t *testing.T) {
 	}
 }
 
+// planQuery must not panic on an empty "in"/"not-in" filter value.
+// docstore's own Where() validator (validFilterSlice) accepts an empty
+// slice as valid, so toInCondition must handle a zero-length slice rather
+// than indexing into it unconditionally.
+func TestEmptyInFilterDoesNotPanic(t *testing.T) {
+	c := &collection{
+		table:        "T",
+		partitionKey: "tableP",
+		description:  &dyn2Types.TableDescription{},
+		opts:         &Options{},
+	}
+	for _, op := range []string{"in", "not-in"} {
+		q := &driver.Query{
+			Filters: []driver.Filter{
+				{FieldPath: []string{"category"}, Op: op, Value: []string{}},
+			},
+		}
+		if _, err := c.planQuery(q); err != nil {
+			t.Errorf("op %q: planQuery returned error: %v", op, err)
+		}
+	}
+}
+
 // Make a key schema from the names of the partition and sort keys.
 func keySchema(pkey, skey string) []dyn2Types.KeySchemaElement {
 	return []dyn2Types.KeySchemaElement{
