@@ -77,7 +77,7 @@ func (o *lazyCredsOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB
 		o.opener = &URLOpener{CertSource: certSource}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("gcpmysql open %v: %v", u, o.err)
+		return nil, fmt.Errorf("gcpmysql open %v: %v", u.Redacted(), o.err)
 	}
 	return o.opener.OpenMySQLURL(ctx, u)
 }

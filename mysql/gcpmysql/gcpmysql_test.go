@@ -19,12 +19,29 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
 	drvr "github.com/go-sql-driver/mysql"
 	"gocloud.dev/internal/testing/terraform"
 	"gocloud.dev/mysql"
 )
+
+func TestOpenMySQLURLDoesNotLeakPasswordOnCredentialsFailure(t *testing.T) {
+	const password = "S3cr3tDBPassw0rd"
+	u, err := url.Parse(fmt.Sprintf("gcpmysql://dbuser:%s@myproject/us-central1/myinstance/mydb", password))
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+	o := new(lazyCredsOpener)
+	_, err = o.OpenMySQLURL(context.Background(), u)
+	if err == nil {
+		t.Skip("Application Default Credentials are available in this environment; skipping negative-path test")
+	}
+	if strings.Contains(err.Error(), password) {
+		t.Errorf("OpenMySQLURL error contains the raw password: %q", err.Error())
+	}
+}
 
 func TestOpen(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
