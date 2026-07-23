@@ -16,8 +16,11 @@ package gcppostgres
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
 	"gocloud.dev/internal/testing/terraform"
@@ -87,6 +90,36 @@ func TestURLOpener(t *testing.T) {
 				t.Error("Close:", err)
 			}
 		})
+	}
+}
+
+// stubCertSource is a minimal proxy.CertSource used only to reach
+// URLOpener.OpenPostgresURL's error paths without needing real GCP
+// credentials or network access.
+type stubCertSource struct{}
+
+func (stubCertSource) Local(instance string) (tls.Certificate, error) {
+	return tls.Certificate{}, fmt.Errorf("stub: not implemented")
+}
+
+func (stubCertSource) Remote(instance string) (cert *x509.Certificate, addr, name, version string, err error) {
+	return nil, "", "", "", fmt.Errorf("stub: not implemented")
+}
+
+func TestOpenPostgresURLDoesNotLeakPassword(t *testing.T) {
+	const password = "S3cr3tDBPassw0rd"
+	// Missing the dbname path segment, which fails instanceFromURL.
+	u, err := url.Parse(fmt.Sprintf("gcppostgres://dbuser:%s@myproject/us-central1/mydb", password))
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+	opener := &URLOpener{CertSource: stubCertSource{}}
+	_, err = opener.OpenPostgresURL(context.Background(), u)
+	if err == nil {
+		t.Fatal("OpenPostgresURL: got nil error, want error for malformed URL")
+	}
+	if strings.Contains(err.Error(), password) {
+		t.Errorf("OpenPostgresURL error contains the raw password: %q", err.Error())
 	}
 }
 

@@ -80,7 +80,7 @@ func (o *lazyCredsOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql
 		o.opener = &URLOpener{CertSource: certSource}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("gcppostgres open %v: %v", u, o.err)
+		return nil, fmt.Errorf("gcppostgres open %v: %v", u.Redacted(), o.err)
 	}
 	return o.opener.OpenPostgresURL(ctx, u)
 }
@@ -103,7 +103,7 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 	}
 	instance, dbName, err := instanceFromURL(u)
 	if err != nil {
-		return nil, fmt.Errorf("gcppostgres: open %v: %v", u, err)
+		return nil, fmt.Errorf("gcppostgres: open %v: %v", u.Redacted(), err)
 	}
 
 	query := u.Query()
