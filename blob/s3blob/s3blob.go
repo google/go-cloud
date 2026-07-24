@@ -49,6 +49,7 @@
 //   - ReaderOptions.BeforeRead: *s3.GetObjectInput or *[]func(*s3.Options)
 //   - Attributes: s3.HeadObjectOutput
 //   - CopyOptions.BeforeCopy: s3.CopyObjectInput
+//   - DeleteOptions.BeforeDelete: *s3.DeleteObjectInput
 //   - WriterOptions.BeforeWrite: *transfermanager.UploadObjectInput, *transfermanager.Client
 //   - SignedURLOptions.BeforeSign: *s3.GetObjectInput, when Options.Method == http.MethodGet, or
 //       *s3.PutObjectInput, when Options.Method == http.MethodPut
@@ -861,7 +862,11 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 }
 
 // Delete implements driver.Delete.
-func (b *bucket) Delete(ctx context.Context, key string) error {
+func (b *bucket) Delete(ctx context.Context, key string, opts *driver.DeleteOptions) error {
+	// S3 DeleteObject succeeds even if the key doesn't exist, so we check
+	// existence first to return NotFound. This happens before BeforeDelete,
+	// so it always checks the current object, even if the callback sets a
+	// VersionId on the DeleteObjectInput.
 	if _, err := b.Attributes(ctx, key); err != nil {
 		return err
 	}
@@ -869,6 +874,18 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
+	}
+	if opts.BeforeDelete != nil {
+		asFunc := func(i any) bool {
+			if p, ok := i.(**s3.DeleteObjectInput); ok {
+				*p = input
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeDelete(asFunc); err != nil {
+			return err
+		}
 	}
 	_, err := b.client.DeleteObject(ctx, input)
 	return err

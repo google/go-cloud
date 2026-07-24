@@ -200,6 +200,14 @@ func (verifyContentLanguage) BeforeCopy(as func(any) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeDelete(as func(any) bool) error {
+	var objp **storage.ObjectHandle
+	if !as(&objp) {
+		return errors.New("BeforeDelete.As failed to get ObjectHandle")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeList(as func(any) bool) error {
 	var q *storage.Query
 	if !as(&q) {

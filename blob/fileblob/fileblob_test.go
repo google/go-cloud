@@ -392,8 +392,9 @@ func (verifyAs) BeforeCopy(as func(any) bool) error {
 	}
 	return nil
 }
-func (verifyAs) BeforeList(as func(any) bool) error { return nil }
-func (verifyAs) BeforeSign(as func(any) bool) error { return nil }
+func (verifyAs) BeforeDelete(as func(any) bool) error { return nil }
+func (verifyAs) BeforeList(as func(any) bool) error   { return nil }
+func (verifyAs) BeforeSign(as func(any) bool) error   { return nil }
 func (verifyAs) AttributesCheck(attrs *blob.Attributes) error {
 	var fi os.FileInfo
 	if !attrs.As(&fi) {

@@ -400,7 +400,7 @@ func (b *erroringBucket) Copy(ctx context.Context, dstKey, srcKey string, opts *
 	return errFake
 }
 
-func (b *erroringBucket) Delete(ctx context.Context, key string) error {
+func (b *erroringBucket) Delete(ctx context.Context, key string, opts *driver.DeleteOptions) error {
 	return errFake
 }
 
@@ -488,6 +488,8 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 	err = b.Delete(ctx, "")
 	verifyWrap("Delete", err)
+	err = b.DeleteWithOptions(ctx, "", nil)
+	verifyWrap("DeleteWithOptions", err)
 
 	_, err = b.SignedURL(ctx, "", nil)
 	verifyWrap("SignedURL", err)
@@ -532,6 +534,9 @@ func TestBucketIsClosed(t *testing.T) {
 		t.Error(err)
 	}
 	if err := bucket.Delete(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.DeleteWithOptions(ctx, "", nil); err != errClosed {
 		t.Error(err)
 	}
 	if _, err := bucket.SignedURL(ctx, "", nil); err != errClosed {

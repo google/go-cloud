@@ -171,6 +171,14 @@ func (v verifyContentLanguage) BeforeCopy(as func(any) bool) error {
 	return nil
 }
 
+func (v verifyContentLanguage) BeforeDelete(as func(any) bool) error {
+	var in *s3.DeleteObjectInput
+	if !as(&in) {
+		return errors.New("BeforeDelete.As failed")
+	}
+	return nil
+}
+
 func (v verifyContentLanguage) BeforeList(as func(any) bool) error {
 	if v.usingLegacyList {
 		var req *s3.ListObjectsInput

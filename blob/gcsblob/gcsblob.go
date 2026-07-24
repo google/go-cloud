@@ -51,6 +51,7 @@
 //   - ListOptions.BeforeList: *storage.Query
 //   - Reader: *storage.Reader
 //   - ReaderOptions.BeforeRead: **storage.ObjectHandle, *storage.Reader (if accessing both, must be in that order)
+//   - DeleteOptions.BeforeDelete: **storage.ObjectHandle
 //   - Attributes: storage.ObjectAttrs
 //   - CopyOptions.BeforeCopy: *CopyObjectHandles, *storage.Copier (if accessing both, must be in that order)
 //   - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer (if accessing both, must be in that order)
@@ -751,11 +752,27 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 }
 
 // Delete implements driver.Delete.
-func (b *bucket) Delete(ctx context.Context, key string) error {
+func (b *bucket) Delete(ctx context.Context, key string, opts *driver.DeleteOptions) error {
 	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	return obj.Delete(ctx)
+
+	// Extra level of indirection so BeforeDelete can replace obj if needed;
+	// e.g. ObjectHandle.If returns a new ObjectHandle to apply a precondition.
+	objp := &obj
+	if opts.BeforeDelete != nil {
+		asFunc := func(i any) bool {
+			if p, ok := i.(***storage.ObjectHandle); ok {
+				*p = objp
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeDelete(asFunc); err != nil {
+			return err
+		}
+	}
+	return (*objp).Delete(ctx)
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.SignedURLOptions) (string, error) {

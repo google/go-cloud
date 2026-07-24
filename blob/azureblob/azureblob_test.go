@@ -213,6 +213,14 @@ func (verifyContentLanguage) BeforeCopy(as func(any) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeDelete(as func(any) bool) error {
+	var azOpts *azblobblob.DeleteOptions
+	if !as(&azOpts) {
+		return errors.New("BeforeDelete.As failed")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeList(as func(any) bool) error {
 	var azOpts *container.ListBlobsHierarchyOptions
 	if !as(&azOpts) {

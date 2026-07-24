@@ -84,6 +84,7 @@
 //   - Reader.BeforeRead: *azblob.DownloadStreamOptions
 //   - Attributes: azblobblob.GetPropertiesResponse
 //   - CopyOptions.BeforeCopy: *azblobblob.StartCopyFromURLOptions
+//   - DeleteOptions.BeforeDelete: *azblobblob.DeleteOptions
 //   - WriterOptions.BeforeWrite: *azblob.UploadStreamOptions
 //   - SignedURLOptions.BeforeSign: *sas.BlobPermissions
 package azureblob
@@ -570,10 +571,23 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 }
 
 // Delete implements driver.Delete.
-func (b *bucket) Delete(ctx context.Context, key string) error {
+func (b *bucket) Delete(ctx context.Context, key string, opts *driver.DeleteOptions) error {
 	key = escapeKey(key, false)
 	blobClient := b.client.NewBlobClient(key)
-	_, err := blobClient.Delete(ctx, nil)
+	azOpts := &azblobblob.DeleteOptions{}
+	if opts.BeforeDelete != nil {
+		asFunc := func(i any) bool {
+			if p, ok := i.(**azblobblob.DeleteOptions); ok {
+				*p = azOpts
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeDelete(asFunc); err != nil {
+			return err
+		}
+	}
+	_, err := blobClient.Delete(ctx, azOpts)
 	return err
 }
 

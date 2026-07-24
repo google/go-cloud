@@ -428,7 +428,13 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 }
 
 // Delete implements driver.Delete.
-func (b *bucket) Delete(ctx context.Context, key string) error {
+func (b *bucket) Delete(ctx context.Context, key string, opts *driver.DeleteOptions) error {
+	if opts.BeforeDelete != nil {
+		if err := opts.BeforeDelete(func(any) bool { return false }); err != nil {
+			return err
+		}
+	}
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

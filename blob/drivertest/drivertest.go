@@ -109,6 +109,9 @@ type AsTest interface {
 	// BeforeCopy will be passed directly to CopyOptions as part of copying
 	// the test blob.
 	BeforeCopy(as func(any) bool) error
+	// BeforeDelete will be passed directly to DeleteOptions as part of
+	// deleting the test blob.
+	BeforeDelete(as func(any) bool) error
 	// BeforeList will be passed directly to ListOptions as part of listing the
 	// test blob.
 	BeforeList(as func(any) bool) error
@@ -187,6 +190,13 @@ func (verifyAsFailsOnNil) BeforeWrite(as func(any) bool) error {
 func (verifyAsFailsOnNil) BeforeCopy(as func(any) bool) error {
 	if as(nil) {
 		return errors.New("want BeforeCopy's As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeDelete(as func(any) bool) error {
+	if as(nil) {
+		return errors.New("want BeforeDelete's As to return false when passed nil")
 	}
 	return nil
 }
@@ -2161,6 +2171,54 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got %v want error to include missing key", err)
 		}
 	})
+
+	t.Run("BeforeDelete", func(t *testing.T) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		defer closeWithErrorCheck(t, b)
+
+		if err := b.WriteAll(ctx, key, []byte("Hello world"), nil); err != nil {
+			t.Fatal(err)
+		}
+
+		// BeforeDelete must be called exactly once for a successful delete.
+		calls := 0
+		if err := b.DeleteWithOptions(ctx, key, &blob.DeleteOptions{
+			BeforeDelete: func(func(any) bool) error { calls++; return nil },
+		}); err != nil {
+			t.Errorf("DeleteWithOptions got unexpected error: %v", err)
+		}
+		if calls != 1 {
+			t.Errorf("BeforeDelete called %d times, want 1", calls)
+		}
+
+		// An error returned from BeforeDelete aborts the delete and propagates.
+		if err := b.WriteAll(ctx, key, []byte("Hello world"), nil); err != nil {
+			t.Fatal(err)
+		}
+		wantErr := errors.New("BeforeDelete failed")
+		err = b.DeleteWithOptions(ctx, key, &blob.DeleteOptions{
+			BeforeDelete: func(func(any) bool) error { return wantErr },
+		})
+		if !errors.Is(err, wantErr) {
+			t.Errorf("DeleteWithOptions with failing BeforeDelete got %v, want %v", err, wantErr)
+		}
+		// The blob must still exist since the delete was aborted.
+		if exists, err := b.Exists(ctx, key); err != nil {
+			t.Errorf("Exists after aborted delete got error: %v", err)
+		} else if !exists {
+			t.Errorf("blob should still exist after an aborted delete")
+		}
+		deleteWithErrorCheck(ctx, t, b, key)
+	})
 }
 
 // testConcurrentWriteAndRead tests that concurrent writing to multiple blob
@@ -2725,11 +2783,12 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 
-	// Copy the blob, using the provided callback.
+	// Copy the blob, using the provided callback, then delete the copy,
+	// using the provided callback.
 	if err := b.Copy(ctx, copyKey, key, &blob.CopyOptions{BeforeCopy: st.BeforeCopy}); err != nil {
 		t.Error(err)
-	} else {
-		defer deleteWithErrorCheck(ctx, t, b, copyKey)
+	} else if err := b.DeleteWithOptions(ctx, copyKey, &blob.DeleteOptions{BeforeDelete: st.BeforeDelete}); err != nil {
+		t.Error(err)
 	}
 
 	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
