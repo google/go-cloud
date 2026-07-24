@@ -789,6 +789,9 @@ func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.Signed
 	if b.opts.GoogleAccessID == "" || numSigners != 1 {
 		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "gcsblob: to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey, Options.SignBytes, or Options.MakeSignBytes")
 	}
+	if dopts.EnforceAbsentContentType {
+		return "", gcerr.New(gcerr.Unimplemented, nil, 1, "gcsblob: does not support enforcing an absent Content-Type on PUT")
+	}
 
 	key = escapeKey(key)
 	opts := &storage.SignedURLOptions{
