@@ -704,3 +704,43 @@ func Test_documentIterator_Next(t *testing.T) {
 		})
 	}
 }
+
+// Regression test: docstore's Where() accepts "in"/"not-in" on any field,
+// including a table's key fields. bestQueryable can then pick a Query plan
+// while a key-field filter uses one of those ops, reaching toKeyCondition with
+// an op it cannot express as a KeyCondition. That path must not panic (an
+// unrecovered panic there crashes the calling process); the filter should be
+// handled as a regular FilterExpression instead. Covers the op on both the
+// partition key and the sort key.
+func TestKeyFilterWithInOpDoesNotPanic(t *testing.T) {
+	c := &collection{
+		table:        "T",
+		partitionKey: "pk",
+		sortKey:      "sk",
+		description:  &dyn2Types.TableDescription{},
+		opts:         &Options{AllowScans: true},
+	}
+	for _, op := range []string{"in", "not-in"} {
+		for _, keyField := range []string{"pk", "sk"} {
+			// An "=" on the partition key is always present so bestQueryable
+			// selects a Query plan (reaching toKeyCondition); the in/not-in
+			// filter targets a key field on top of that.
+			q := &driver.Query{
+				Filters: []driver.Filter{
+					{FieldPath: []string{"pk"}, Op: driver.EqualOp, Value: "x"},
+					{FieldPath: []string{keyField}, Op: op, Value: []string{"a", "b"}},
+				},
+			}
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("op %q on %q: planQuery panicked: %v", op, keyField, r)
+					}
+				}()
+				// Only assert on the absence of a panic; whether the plan
+				// returns nil or a graceful error is not the contract here.
+				_, _ = c.planQuery(q)
+			}()
+		}
+	}
+}

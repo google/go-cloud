@@ -419,7 +419,12 @@ func toKeyCondition(f driver.Filter, pkey, skey string) (expression.KeyCondition
 		case ">":
 			return expression.KeyGreaterThan(key, val), true
 		default:
-			panic(fmt.Sprint("invalid filter operation:", f.Op))
+			// Ops such as "in"/"not-in" are valid docstore filters (Where()
+			// accepts them on any field) but cannot form a DynamoDB
+			// KeyConditionExpression. Report "not a key condition" so the
+			// filter is routed to the FilterExpression path instead of
+			// panicking and crashing the process.
+			return expression.KeyConditionBuilder{}, false
 		}
 	}
 	return expression.KeyConditionBuilder{}, false
