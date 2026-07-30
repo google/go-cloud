@@ -735,6 +735,27 @@ func TestExtractBody(t *testing.T) {
 			wantAttrs: map[string]string{},
 		},
 		{
+			// Boundary case: an envelope missing exactly one of the four
+			// required fields (here, MessageId) must still be rejected, to
+			// confirm all four are actually required rather than any subset.
+			name:      "envelope missing only MessageId is not unwrapped",
+			body:      `{"Type":"Notification","TopicArn":"any","Timestamp":"2026-07-30T00:00:00.000Z","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantBody:  `{"Type":"Notification","TopicArn":"any","Timestamp":"2026-07-30T00:00:00.000Z","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantAttrs: map[string]string{},
+		},
+		{
+			name:      "envelope missing only Timestamp is not unwrapped",
+			body:      `{"Type":"Notification","MessageId":"abc","TopicArn":"any","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantBody:  `{"Type":"Notification","MessageId":"abc","TopicArn":"any","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantAttrs: map[string]string{},
+		},
+		{
+			name:      "envelope with wrong Type is not unwrapped",
+			body:      `{"Type":"SubscriptionConfirmation","MessageId":"abc","TopicArn":"any","Timestamp":"2026-07-30T00:00:00.000Z","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantBody:  `{"Type":"SubscriptionConfirmation","MessageId":"abc","TopicArn":"any","Timestamp":"2026-07-30T00:00:00.000Z","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantAttrs: map[string]string{},
+		},
+		{
 			name:      "non-JSON body is left alone",
 			body:      "hello world",
 			wantBody:  "hello world",
