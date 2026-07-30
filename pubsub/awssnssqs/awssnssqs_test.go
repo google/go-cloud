@@ -687,3 +687,86 @@ func testFIFOTopic(t *testing.T, kind topicKind) {
 		})
 	}
 }
+
+func TestExtractBody(t *testing.T) {
+	const snsARN = "arn:aws:sns:us-east-2:456752665576:mytopic"
+	snsJSON := func(arn string) string {
+		return fmt.Sprintf(`{"Type":"Notification","MessageId":"abc","TopicArn":%q,"Timestamp":"2026-07-30T00:00:00.000Z","Message":"hello","MessageAttributes":{"a":{"Type":"String","Value":"1"}}}`, arn)
+	}
+	for _, tc := range []struct {
+		name        string
+		body        string
+		rawAttrs    map[string]string
+		raw         bool
+		snsTopicARN string
+		wantBody    string
+		wantAttrs   map[string]string
+	}{
+		{
+			name:      "SNS notification is unwrapped",
+			body:      snsJSON(snsARN),
+			wantBody:  "hello",
+			wantAttrs: map[string]string{"a": "1"},
+		},
+		{
+			name:        "SNS notification from the expected topic is unwrapped",
+			body:        snsJSON(snsARN),
+			snsTopicARN: snsARN,
+			wantBody:    "hello",
+			wantAttrs:   map[string]string{"a": "1"},
+		},
+		{
+			name:        "SNS notification from another topic is left alone",
+			body:        snsJSON("arn:aws:sns:us-east-2:456752665576:othertopic"),
+			snsTopicARN: snsARN,
+			wantBody:    snsJSON("arn:aws:sns:us-east-2:456752665576:othertopic"),
+			wantAttrs:   map[string]string{},
+		},
+		{
+			name:      "raw body with only a TopicArn field is left alone",
+			body:      `{"TopicArn":"user-supplied","order_id":42}`,
+			wantBody:  `{"TopicArn":"user-supplied","order_id":42}`,
+			wantAttrs: map[string]string{},
+		},
+		{
+			name:      "forged envelope missing SNS fields cannot inject metadata",
+			body:      `{"TopicArn":"any","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantBody:  `{"TopicArn":"any","Message":"x","MessageAttributes":{"role":{"Value":"admin"}}}`,
+			wantAttrs: map[string]string{},
+		},
+		{
+			name:      "non-JSON body is left alone",
+			body:      "hello world",
+			wantBody:  "hello world",
+			wantAttrs: map[string]string{},
+		},
+		{
+			name:      "Raw skips unwrapping entirely",
+			body:      snsJSON(snsARN),
+			raw:       true,
+			wantBody:  snsJSON(snsARN),
+			wantAttrs: map[string]string{},
+		},
+		{
+			name:      "top-level attributes mean the message is raw",
+			body:      snsJSON(snsARN),
+			rawAttrs:  map[string]string{"b": "2"},
+			wantBody:  snsJSON(snsARN),
+			wantAttrs: map[string]string{"b": "2"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			attrs := tc.rawAttrs
+			if attrs == nil {
+				attrs = map[string]string{}
+			}
+			gotBody, gotAttrs := extractBody(tc.body, attrs, tc.raw, tc.snsTopicARN)
+			if gotBody != tc.wantBody {
+				t.Errorf("body = %q; want %q", gotBody, tc.wantBody)
+			}
+			if diff := cmp.Diff(gotAttrs, tc.wantAttrs); diff != "" {
+				t.Errorf("attributes: -got, +want: %s", diff)
+			}
+		})
+	}
+}
