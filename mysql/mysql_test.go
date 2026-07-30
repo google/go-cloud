@@ -104,6 +104,11 @@ func TestConfigFromURLCleartextPasswords(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "default, no TLS, other query params present",
+			url:  "mysql://user:password@localhost/db?timeout=5s",
+			want: false,
+		},
+		{
 			name: "default, TLS with verification",
 			url:  "mysql://user:password@localhost/db?tls=true",
 			want: true,
