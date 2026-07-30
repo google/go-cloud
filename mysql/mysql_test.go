@@ -99,9 +99,24 @@ func TestConfigFromURLCleartextPasswords(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "default",
+			name: "default, no TLS",
 			url:  "mysql://user:password@localhost/db",
+			want: false,
+		},
+		{
+			name: "default, TLS with verification",
+			url:  "mysql://user:password@localhost/db?tls=true",
 			want: true,
+		},
+		{
+			name: "default, TLS without verification",
+			url:  "mysql://user:password@localhost/db?tls=skip-verify",
+			want: false,
+		},
+		{
+			name: "default, TLS with plaintext fallback",
+			url:  "mysql://user:password@localhost/db?tls=preferred",
+			want: false,
 		},
 		{
 			name: "explicit false",
@@ -111,6 +126,11 @@ func TestConfigFromURLCleartextPasswords(t *testing.T) {
 		{
 			name: "explicit true",
 			url:  "mysql://user:password@localhost/db?allowCleartextPasswords=true",
+			want: true,
+		},
+		{
+			name: "explicit true without TLS",
+			url:  "mysql://user:password@localhost/db?allowCleartextPasswords=true&tls=false",
 			want: true,
 		},
 	} {
