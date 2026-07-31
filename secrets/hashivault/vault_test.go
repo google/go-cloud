@@ -17,6 +17,9 @@ package hashivault
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -214,4 +217,135 @@ func TestGetVaultConnectionDetails(t *testing.T) {
 			t.Errorf("export '': got %q", vaultToken)
 		}
 	})
+}
+
+func TestVaultPath(t *testing.T) {
+	tests := []struct {
+		prefix, keyID, want string
+		wantErr             bool
+	}{
+		{"transit/decrypt", "mykey", "transit/decrypt/mykey", false},
+		{"transit/decrypt", "tenant-a/subkey", "transit/decrypt/tenant-a/subkey", false},
+		{"transit/decrypt", "tenant-a/../tenant-b", "transit/decrypt/tenant-b", false},
+		{"transit/decrypt", "../../sys/health", "", true},
+		{"transit/decrypt", "a/../../../auth/token/create", "", true},
+		{"transit/decrypt", "..", "", true},
+		{"transit/decrypt", "../decrypt-sibling", "", true},
+	}
+	for _, tc := range tests {
+		got, err := vaultPath(tc.prefix, tc.keyID)
+		if (err != nil) != tc.wantErr {
+			t.Errorf("vaultPath(%q, %q) error = %v, wantErr %v", tc.prefix, tc.keyID, err, tc.wantErr)
+			continue
+		}
+		if err == nil && got != tc.want {
+			t.Errorf("vaultPath(%q, %q) = %q, want %q", tc.prefix, tc.keyID, got, tc.want)
+		}
+	}
+}
+
+func TestDecryptRejectsKeyIDThatEscapesEnginePrefix(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data":{"plaintext":"aGVsbG8="}}`)
+	}))
+	defer srv.Close()
+
+	client, err := api.NewClient(&api.Config{Address: srv.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A legitimate keyID reaches the expected path.
+	gotPath = ""
+	k := newKeeper(client, "tenant-a-key", nil)
+	if _, err := k.Decrypt(context.Background(), []byte("Y2lwaGVydGV4dA==")); err != nil {
+		t.Fatalf("Decrypt with a normal keyID: %v", err)
+	}
+	if want := "/v1/transit/decrypt/tenant-a-key"; gotPath != want {
+		t.Errorf("request path = %q, want %q", gotPath, want)
+	}
+
+	// A keyID crafted to escape the transit/decrypt prefix must be rejected
+	// before any request is sent, not merely fail server-side.
+	for _, keyID := range []string{"../../sys/health", "a/../../../auth/token/create"} {
+		gotPath = ""
+		k := newKeeper(client, keyID, nil)
+		if _, err := k.Decrypt(context.Background(), []byte("Y2lwaGVydGV4dA==")); err == nil {
+			t.Errorf("Decrypt with keyID %q: got no error, want rejection", keyID)
+		}
+		if gotPath != "" {
+			t.Errorf("Decrypt with keyID %q: request reached the server at path %q; want no request sent", keyID, gotPath)
+		}
+	}
+}
+
+func TestEncryptRejectsKeyIDThatEscapesEnginePrefix(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data":{"ciphertext":"vault:v1:abc"}}`)
+	}))
+	defer srv.Close()
+
+	client, err := api.NewClient(&api.Config{Address: srv.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A legitimate keyID reaches the expected path.
+	gotPath = ""
+	k := newKeeper(client, "tenant-a-key", nil)
+	if _, err := k.Encrypt(context.Background(), []byte("hello")); err != nil {
+		t.Fatalf("Encrypt with a normal keyID: %v", err)
+	}
+	if want := "/v1/transit/encrypt/tenant-a-key"; gotPath != want {
+		t.Errorf("request path = %q, want %q", gotPath, want)
+	}
+
+	// A keyID crafted to escape the transit/encrypt prefix must be rejected
+	// before any request is sent, not merely fail server-side.
+	for _, keyID := range []string{"../../sys/health", "a/../../../auth/token/create"} {
+		gotPath = ""
+		k := newKeeper(client, keyID, nil)
+		if _, err := k.Encrypt(context.Background(), []byte("hello")); err == nil {
+			t.Errorf("Encrypt with keyID %q: got no error, want rejection", keyID)
+		}
+		if gotPath != "" {
+			t.Errorf("Encrypt with keyID %q: request reached the server at path %q; want no request sent", keyID, gotPath)
+		}
+	}
+}
+
+func TestOpenKeeperRejectsKeyIDThatEscapesEnginePrefix(t *testing.T) {
+	// End-to-end through secrets.OpenKeeper and the URL opener, not just the
+	// driver.Keeper methods directly, to confirm a URL-supplied keyID is
+	// covered too (e.g. "hashivault://../../sys/health").
+	t.Setenv("VAULT_SERVER_URL", "http://myvaultserver")
+	t.Setenv("VAULT_SERVER_TOKEN", "faketoken")
+
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"data":{"plaintext":"aGVsbG8="}}`)
+	}))
+	defer srv.Close()
+
+	client, err := api.NewClient(&api.Config{Address: srv.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keeper := OpenKeeper(client, "../../sys/health", nil)
+	defer keeper.Close()
+	if _, err := keeper.Decrypt(context.Background(), []byte("Y2lwaGVydGV4dA==")); err == nil {
+		t.Error("Decrypt via a keyID that escapes the engine prefix: got no error, want rejection")
+	}
+	if gotPath != "" {
+		t.Errorf("request reached the server at path %q; want no request sent", gotPath)
+	}
 }

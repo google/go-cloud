@@ -38,6 +38,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/api"
@@ -197,12 +198,13 @@ type keeper struct {
 
 // Decrypt decrypts the ciphertext into a plaintext.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
-	out, err := k.client.Logical().Write(
-		path.Join(k.opts.Engine+"/decrypt", k.keyID),
-		map[string]any{
-			"ciphertext": string(ciphertext),
-		},
-	)
+	p, err := vaultPath(k.opts.Engine+"/decrypt", k.keyID)
+	if err != nil {
+		return nil, err
+	}
+	out, err := k.client.Logical().Write(p, map[string]any{
+		"ciphertext": string(ciphertext),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -211,16 +213,32 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 
 // Encrypt encrypts a plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
-	secret, err := k.client.Logical().Write(
-		path.Join(k.opts.Engine+"/encrypt", k.keyID),
-		map[string]any{
-			"plaintext": plaintext,
-		},
-	)
+	p, err := vaultPath(k.opts.Engine+"/encrypt", k.keyID)
+	if err != nil {
+		return nil, err
+	}
+	secret, err := k.client.Logical().Write(p, map[string]any{
+		"plaintext": plaintext,
+	})
 	if err != nil {
 		return nil, err
 	}
 	return []byte(secret.Data["ciphertext"].(string)), nil
+}
+
+// vaultPath joins prefix and keyID into a Vault API path, and verifies that
+// the result is actually inside prefix. path.Join cleans ".." segments, so a
+// keyID such as "../../sys/health" would otherwise silently make the request
+// escape the intended secrets engine and operation (decrypt vs. encrypt) --
+// something Vault's own path-prefix-scoped ACL policies can't defend against,
+// since as far as Vault is concerned it's simply the path the client asked
+// for.
+func vaultPath(prefix, keyID string) (string, error) {
+	p := path.Join(prefix, keyID)
+	if p != prefix && !strings.HasPrefix(p, prefix+"/") {
+		return "", fmt.Errorf("hashivault: keyID %q escapes the %q path", keyID, prefix)
+	}
+	return p, nil
 }
 
 // Close implements driver.Keeper.Close.
