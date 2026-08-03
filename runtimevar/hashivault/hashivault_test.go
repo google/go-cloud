@@ -262,6 +262,50 @@ func TestEngineVersionPaths(t *testing.T) {
 	}
 }
 
+func TestSecretPathEscape(t *testing.T) {
+	ctx := context.Background()
+	client, err := Dial(ctx, &Config{
+		Token: "fake",
+		APIConfig: api.Config{
+			Address: "http://localhost:8200",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		SecretPath string
+		WantPath   string // empty means an error is expected
+	}{
+		{"tenant-a/config", "secret/data/tenant-a/config"},
+		{"tenant-a/../tenant-b/config", "secret/data/tenant-b/config"}, // stays within the mount, allowed
+		{"../../sys/health", ""},
+		{"a/../../../auth/token/create", ""},
+		{"../secret/data/other-tenant", ""},
+	}
+
+	for _, test := range tests {
+		w, err := newWatcher(client, test.SecretPath, runtimevar.StringDecoder, nil)
+		if test.WantPath == "" {
+			if err == nil {
+				t.Errorf("SecretPath=%q: expected an error rejecting the escape, got none (path=%q)",
+					test.SecretPath, w.(*watcher).path)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("SecretPath=%q: newWatcher failed: %v", test.SecretPath, err)
+			continue
+		}
+		watcher := w.(*watcher)
+		if watcher.path != test.WantPath {
+			t.Errorf("SecretPath=%q: got path %q, want %q", test.SecretPath, watcher.path, test.WantPath)
+		}
+		w.Close()
+	}
+}
+
 func TestInvalidEngineVersion(t *testing.T) {
 	ctx := context.Background()
 	client, err := Dial(ctx, &Config{
