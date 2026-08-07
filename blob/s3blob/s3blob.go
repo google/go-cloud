@@ -744,6 +744,12 @@ func unescapeKey(key string) string {
 func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key)
 	tm := transfermanager.New(b.client, func(o *transfermanager.Options) {
+		// The transfer manager's own RequestChecksumCalculation takes precedence
+		// over the client's, so thread the bucket's setting through. Under
+		// when_required this leaves the upload checksum algorithm empty, and the
+		// request carries x-amz-content-sha256: UNSIGNED-PAYLOAD with no
+		// x-amz-checksum-* header — what third-party S3-compatible stores expect.
+		o.RequestChecksumCalculation = b.requestChecksumCalculation
 		if opts.BufferSize != 0 {
 			o.PartSizeBytes = int64(opts.BufferSize)
 		}
@@ -766,10 +772,6 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 		Metadata:    md,
-	}
-	if b.requestChecksumCalculation == aws.RequestChecksumCalculationWhenRequired {
-		// This value disables checksumming.
-		req.ChecksumSHA256 = aws.String("UNSIGNED-PAYLOAD")
 	}
 
 	if opts.IfNotExist {
