@@ -470,6 +470,46 @@ func TestChecksumConfigurationPassthrough(t *testing.T) {
 	}
 }
 
+func TestRequestChecksumCalculation(t *testing.T) {
+	ctx := context.Background()
+	for description, enumValue := range map[string]aws.RequestChecksumCalculation{
+		"WhenRequired":  aws.RequestChecksumCalculationWhenRequired,
+		"WhenSupported": aws.RequestChecksumCalculationWhenSupported} {
+		t.Run(description, func(t *testing.T) {
+
+			key := "checksum-calc-" + description
+			keyValue := "anything"
+
+			h, err := newHarness(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer h.Close()
+
+			h.(*harness).opts = &Options{RequestChecksumCalculation: enumValue}
+			drv, err := h.MakeDriver(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b := blob.NewBucket(drv)
+			defer func() {
+				if err := b.Close(); err != nil {
+					t.Errorf("failed to close: %v", err)
+				}
+			}()
+			if err := b.WriteAll(ctx, key, []byte(keyValue), nil); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := b.Delete(ctx, key); err != nil {
+					t.Errorf("failed to delete key %q: %v", key, err)
+				}
+			}()
+		})
+	}
+
+}
+
 func TestToServerSideEncryptionType(t *testing.T) {
 	tests := []struct {
 		value         string
