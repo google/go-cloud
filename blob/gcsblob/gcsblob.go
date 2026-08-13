@@ -75,8 +75,10 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/storage"
+	"github.com/google/uuid"
 	"github.com/google/wire"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -824,4 +826,273 @@ func bufferSize(size int) int {
 		return size
 	}
 	return 0 // disable buffering
+}
+
+// MULTIPART
+
+const (
+	gcsmpPrefix = ".gcsmp."
+)
+
+// multipartOpts represents the serialized options for a multipart upload in GCS.
+type multipartOpts struct {
+	ContentType        string            `json:"contentType"`
+	CacheControl       string            `json:"cacheControl,omitempty"`
+	ContentDisposition string            `json:"contentDisposition"`
+	ContentEncoding    string            `json:"contentEncoding"`
+	ContentLanguage    string            `json:"contentLanguage"`
+	Metadata           map[string]string `json:"metadata"`
+	MD5                []byte            `json:"md5"`
+	CRC32C             *uint32           `json:"crc32c,omitempty"`
+}
+
+// NewMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) NewMultipartUploader(ctx context.Context, key string, opts *driver.MultipartUploaderOptions) (driver.MultipartUploader, error) {
+	if opts.BeforeUpload != nil {
+		if err := opts.BeforeUpload(func(i any) bool {
+			p, ok := i.(**storage.BucketHandle)
+			if !ok {
+				return false
+			}
+			*p = b.client.Bucket(b.name)
+			return true
+		}); err != nil {
+			return nil, err
+		}
+	}
+	if opts == nil {
+		opts = &driver.MultipartUploaderOptions{}
+	}
+
+	uploadID := uuid.New().String()
+	ekey := escapeKey(key)
+
+	mOpts := multipartOpts{
+		ContentType:        opts.ContentType,
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		Metadata:           opts.Metadata,
+		MD5:                opts.MD5,
+		CRC32C:             opts.CRC32C,
+	}
+
+	optsBytes, err := json.Marshal(mOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	optsKey := ekey + gcsmpPrefix + uploadID + ".opts"
+	obj := b.client.Bucket(b.name).Object(optsKey)
+	w := obj.NewWriter(ctx)
+	if _, err := w.Write(optsBytes); err != nil {
+		_ = w.Close()
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+
+	return &multipartUploader{
+		b:        b,
+		key:      ekey,
+		uploadID: uploadID,
+		opts:     &mOpts,
+	}, nil
+}
+
+// OpenMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) OpenMultipartUploader(ctx context.Context, key string, uploadID string) (driver.MultipartUploader, error) {
+	ekey := escapeKey(key)
+
+	optsKey := ekey + gcsmpPrefix + uploadID + ".opts"
+	obj := b.client.Bucket(b.name).Object(optsKey)
+
+	r, err := obj.NewReader(ctx)
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			return nil, fmt.Errorf("multipart upload %q not found", uploadID)
+		}
+		return nil, err
+	}
+	defer func() { _ = r.Close() }()
+
+	optsBytes, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var mOpts multipartOpts
+	if err := json.Unmarshal(optsBytes, &mOpts); err != nil {
+		return nil, fmt.Errorf("corrupt multipart opts for %q: %w", uploadID, err)
+	}
+
+	return &multipartUploader{
+		b:        b,
+		key:      ekey,
+		uploadID: uploadID,
+		opts:     &mOpts,
+	}, nil
+}
+
+type multipartUploader struct {
+	b        *bucket
+	key      string
+	uploadID string
+	opts     *multipartOpts
+}
+
+func (u *multipartUploader) UploadID() string {
+	return u.uploadID
+}
+
+func (u *multipartUploader) UploadPart(ctx context.Context, part driver.UploaderPart, r io.Reader) (driver.UploaderPart, error) {
+	partKey := u.key + gcsmpPrefix + u.uploadID + ".part." + strconv.FormatInt(part.Number, 10)
+	obj := u.b.client.Bucket(u.b.name).Object(partKey)
+
+	w := obj.NewWriter(ctx)
+	if len(part.MD5) > 0 {
+		w.MD5 = part.MD5
+	}
+	if part.CRC32C != nil {
+		w.CRC32C = *part.CRC32C
+		w.SendCRC32C = true
+	}
+
+	n, err := io.Copy(w, r)
+	if err != nil {
+		_ = w.Close()
+		return part, err
+	}
+	if err := w.Close(); err != nil {
+		return part, err
+	}
+
+	part.ID = partKey
+	part.Size = n
+	return part, nil
+}
+
+func (u *multipartUploader) Abort(ctx context.Context) error {
+	prefix := u.key + gcsmpPrefix + u.uploadID
+	bkt := u.b.client.Bucket(u.b.name)
+
+	iter := bkt.Objects(ctx, &storage.Query{Prefix: prefix})
+
+	var eg errgroup.Group
+	for {
+		attrs, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		name := attrs.Name
+		eg.Go(func() error {
+			return bkt.Object(name).Delete(ctx)
+		})
+	}
+
+	return eg.Wait()
+}
+
+func (u *multipartUploader) Commit(ctx context.Context, parts []driver.UploaderPart) error {
+	if len(parts) == 0 {
+		return errors.New("multipart upload requires at least one part")
+	}
+
+	sortedParts := make([]driver.UploaderPart, len(parts))
+	copy(sortedParts, parts)
+	sort.Slice(sortedParts, func(i, j int) bool {
+		return sortedParts[i].Number < sortedParts[j].Number
+	})
+
+	bkt := u.b.client.Bucket(u.b.name)
+
+	var pendingKeys []string
+	for _, p := range sortedParts {
+		if p.ID != "" {
+			pendingKeys = append(pendingKeys, p.ID)
+		} else {
+			pendingKeys = append(pendingKeys, u.key+gcsmpPrefix+u.uploadID+".part."+strconv.FormatInt(p.Number, 10))
+		}
+	}
+
+	depth := 0
+	const maxCompose = 32
+
+	for len(pendingKeys) > maxCompose {
+		depth++
+		var nextKeys []string
+		var eg errgroup.Group
+
+		var chunks [][]string
+		for i := 0; i < len(pendingKeys); i += maxCompose {
+			end := min(i+maxCompose, len(pendingKeys))
+			chunks = append(chunks, pendingKeys[i:end])
+		}
+
+		nextKeys = make([]string, len(chunks))
+
+		for i, chunk := range chunks {
+			eg.Go(func() error {
+				tempName := u.key + gcsmpPrefix + u.uploadID + ".temp." + strconv.Itoa(depth) + "." + strconv.Itoa(i)
+				tempObj := bkt.Object(tempName)
+
+				srcs := make([]*storage.ObjectHandle, len(chunk))
+				for j, srcKey := range chunk {
+					srcs[j] = bkt.Object(srcKey)
+				}
+
+				c := tempObj.ComposerFrom(srcs...)
+				if _, err := c.Run(ctx); err != nil {
+					return err
+				}
+
+				nextKeys[i] = tempName
+				return nil
+			})
+		}
+
+		if err := eg.Wait(); err != nil {
+			return err
+		}
+
+		pendingKeys = nextKeys
+	}
+
+	finalObj := bkt.Object(u.key)
+	srcs := make([]*storage.ObjectHandle, len(pendingKeys))
+	for i, k := range pendingKeys {
+		srcs[i] = bkt.Object(k)
+	}
+
+	c := finalObj.ComposerFrom(srcs...)
+
+	if u.opts.ContentType != "" {
+		c.ContentType = u.opts.ContentType
+	}
+	if u.opts.ContentDisposition != "" {
+		c.ContentDisposition = u.opts.ContentDisposition
+	}
+	if u.opts.ContentEncoding != "" {
+		c.ContentEncoding = u.opts.ContentEncoding
+	}
+	if u.opts.ContentLanguage != "" {
+		c.ContentLanguage = u.opts.ContentLanguage
+	}
+	if len(u.opts.Metadata) > 0 {
+		c.Metadata = u.opts.Metadata
+	}
+
+	if _, err := c.Run(ctx); err != nil {
+		return err
+	}
+
+	_ = u.Abort(context.Background())
+
+	return nil
 }

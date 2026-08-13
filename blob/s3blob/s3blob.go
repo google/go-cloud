@@ -58,6 +58,8 @@ package s3blob // import "gocloud.dev/blob/s3blob"
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -949,4 +951,214 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	default:
 		return "", fmt.Errorf("unsupported Method %q", opts.Method)
 	}
+}
+
+// NewMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) NewMultipartUploader(ctx context.Context, key string, opts *driver.MultipartUploaderOptions) (driver.MultipartUploader, error) {
+	key = escapeKey(key)
+
+	md := make(map[string]string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
+		k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
+			c := runes[i]
+			return c == '@' || c == ':' || c == '='
+		})
+		md[k] = url.PathEscape(v)
+	}
+
+	req := &s3.CreateMultipartUploadInput{
+		Bucket:   aws.String(b.name),
+		Key:      aws.String(key),
+		Metadata: md,
+	}
+	if opts.ContentType != "" {
+		req.ContentType = aws.String(opts.ContentType)
+	}
+	if opts.CacheControl != "" {
+		req.CacheControl = aws.String(opts.CacheControl)
+	}
+	if opts.ContentDisposition != "" {
+		req.ContentDisposition = aws.String(opts.ContentDisposition)
+	}
+	if opts.ContentEncoding != "" {
+		req.ContentEncoding = aws.String(opts.ContentEncoding)
+	}
+	if opts.ContentLanguage != "" {
+		req.ContentLanguage = aws.String(opts.ContentLanguage)
+	}
+	if b.encryptionType != "" {
+		req.ServerSideEncryption = b.encryptionType
+	}
+	if b.kmsKeyId != "" {
+		req.SSEKMSKeyId = aws.String(b.kmsKeyId)
+	}
+
+	if opts.CRC32C != nil {
+		req.ChecksumAlgorithm = types.ChecksumAlgorithmCrc32c
+	}
+
+	if opts.BeforeUpload != nil {
+		if err := opts.BeforeUpload(func(i any) bool {
+			p, ok := i.(**s3.CreateMultipartUploadInput)
+			if !ok {
+				return false
+			}
+			*p = req
+			return true
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	resp, err := b.client.CreateMultipartUpload(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &multipartUploader{
+		b:        b,
+		key:      key, // already escaped
+		uploadID: aws.ToString(resp.UploadId),
+		crc32c:   opts.CRC32C,
+	}, nil
+}
+
+// OpenMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) OpenMultipartUploader(ctx context.Context, key string, uploadID string) (driver.MultipartUploader, error) {
+	key = escapeKey(key)
+	// Confirm the upload exists rather than letting a mistyped or expired
+	// upload ID fail much later, at Commit, with an error that says nothing
+	// about which of the two it was.
+	if _, err := b.client.ListParts(ctx, &s3.ListPartsInput{
+		Bucket:   aws.String(b.name),
+		Key:      aws.String(key),
+		UploadId: aws.String(uploadID),
+		MaxParts: aws.Int32(1),
+	}); err != nil {
+		return nil, err
+	}
+	return &multipartUploader{
+		b:        b,
+		key:      key,
+		uploadID: uploadID,
+	}, nil
+}
+
+// multipartUploader implements driver.MultipartUploader.
+type multipartUploader struct {
+	b        *bucket
+	key      string
+	uploadID string
+	crc32c   *uint32
+}
+
+func (u *multipartUploader) UploadID() string {
+	return u.uploadID
+}
+
+func (u *multipartUploader) UploadPart(ctx context.Context, part driver.UploaderPart, r io.Reader) (driver.UploaderPart, error) {
+	if err := checkPartNumber(part.Number); err != nil {
+		return driver.UploaderPart{}, err
+	}
+	req := &s3.UploadPartInput{
+		Bucket:     aws.String(u.b.name),
+		Key:        aws.String(u.key),
+		UploadId:   aws.String(u.uploadID),
+		PartNumber: aws.Int32(int32(part.Number)),
+		Body:       r,
+	}
+	if len(part.MD5) > 0 {
+		req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(part.MD5))
+	}
+	if part.CRC32C != nil {
+		req.ChecksumCRC32C = aws.String(encodeCRC32C(*part.CRC32C))
+		req.ChecksumAlgorithm = types.ChecksumAlgorithmCrc32c
+	}
+
+	resp, err := u.b.client.UploadPart(ctx, req)
+	if err != nil {
+		return driver.UploaderPart{}, err
+	}
+
+	return driver.UploaderPart{
+		ID:     aws.ToString(resp.ETag),
+		Number: part.Number,
+		Offset: part.Offset,
+		Size:   part.Size,
+		MD5:    part.MD5,
+		CRC32C: part.CRC32C,
+	}, nil
+}
+
+func (u *multipartUploader) Commit(ctx context.Context, parts []driver.UploaderPart) error {
+	// S3 requires strictly ascending part numbers.
+	// Sort the slice by Number to assist orchestrators.
+	sortedParts := make([]driver.UploaderPart, len(parts))
+	copy(sortedParts, parts)
+	sort.Slice(sortedParts, func(i, j int) bool {
+		return sortedParts[i].Number < sortedParts[j].Number
+	})
+
+	completedParts := make([]types.CompletedPart, len(sortedParts))
+	for i, p := range sortedParts {
+		if err := checkPartNumber(p.Number); err != nil {
+			return err
+		}
+		cp := types.CompletedPart{
+			ETag:       aws.String(p.ID),
+			PartNumber: aws.Int32(int32(p.Number)),
+		}
+		if p.CRC32C != nil {
+			cp.ChecksumCRC32C = aws.String(encodeCRC32C(*p.CRC32C))
+		}
+		completedParts[i] = cp
+	}
+
+	req := &s3.CompleteMultipartUploadInput{
+		Bucket:   aws.String(u.b.name),
+		Key:      aws.String(u.key),
+		UploadId: aws.String(u.uploadID),
+		MultipartUpload: &types.CompletedMultipartUpload{
+			Parts: completedParts,
+		},
+	}
+	if u.crc32c != nil {
+		req.ChecksumCRC32C = aws.String(encodeCRC32C(*u.crc32c))
+	}
+
+	_, err := u.b.client.CompleteMultipartUpload(ctx, req)
+	return err
+}
+
+func (u *multipartUploader) Abort(ctx context.Context) error {
+	req := &s3.AbortMultipartUploadInput{
+		Bucket:   aws.String(u.b.name),
+		Key:      aws.String(u.key),
+		UploadId: aws.String(u.uploadID),
+	}
+
+	_, err := u.b.client.AbortMultipartUpload(ctx, req)
+	return err
+}
+
+// encodeCRC32C renders a Castagnoli CRC32 the way S3 expects it: four bytes,
+// big endian, base64 encoded.
+func encodeCRC32C(crc uint32) string {
+	var b [4]byte
+	binary.BigEndian.PutUint32(b[:], crc)
+	return base64.StdEncoding.EncodeToString(b[:])
+}
+
+// maxS3PartNumber is the largest part number S3 accepts; parts are numbered
+// from 1. See
+// https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html.
+const maxS3PartNumber = 10000
+
+// checkPartNumber rejects part numbers S3 will not accept, in particular ones
+// that would be silently truncated by the conversion to int32.
+func checkPartNumber(n int64) error {
+	if n < 1 || n > maxS3PartNumber {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "s3blob: part number %d out of range; S3 allows 1 to %d", n, maxS3PartNumber)
+	}
+	return nil
 }

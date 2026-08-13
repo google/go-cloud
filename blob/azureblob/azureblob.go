@@ -90,7 +90,10 @@
 package azureblob
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -112,6 +115,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blockblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
+	"github.com/google/uuid"
 	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
@@ -859,6 +863,237 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		})
 	}
 	return page, nil
+}
+
+// MULTIPART
+
+const (
+	azmpPrefix = ".azmp."
+)
+
+// multipartOpts represents the serialized options for a multipart upload in Azure.
+type multipartOpts struct {
+	ContentType        string            `json:"contentType"`
+	CacheControl       string            `json:"cacheControl,omitempty"`
+	ContentDisposition string            `json:"contentDisposition"`
+	ContentEncoding    string            `json:"contentEncoding"`
+	ContentLanguage    string            `json:"contentLanguage"`
+	Metadata           map[string]string `json:"metadata"`
+	MD5                []byte            `json:"md5"`
+	CRC32C             *uint32           `json:"crc32c,omitempty"`
+}
+
+// NewMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) NewMultipartUploader(ctx context.Context, key string, opts *driver.MultipartUploaderOptions) (driver.MultipartUploader, error) {
+	if opts.BeforeUpload != nil {
+		if err := opts.BeforeUpload(func(i any) bool { return false }); err != nil {
+			return nil, err
+		}
+	}
+	if opts == nil {
+		opts = &driver.MultipartUploaderOptions{}
+	}
+
+	uploadID := uuid.New().String()
+	ekey := escapeKey(key, false)
+
+	mOpts := multipartOpts{
+		ContentType:        opts.ContentType,
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		Metadata:           opts.Metadata,
+		MD5:                opts.MD5,
+		CRC32C:             opts.CRC32C,
+	}
+
+	optsBytes, err := json.Marshal(mOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Upload opts file just like gcsblob
+	optsKey := ekey + azmpPrefix + uploadID + ".opts"
+	blobClient := b.client.NewBlockBlobClient(optsKey)
+
+	// Fast upload for tiny opts
+	_, err = blobClient.UploadBuffer(ctx, optsBytes, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &multipartUploader{
+		b:        b,
+		key:      ekey,
+		uploadID: uploadID,
+		opts:     &mOpts,
+	}, nil
+}
+
+// OpenMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) OpenMultipartUploader(ctx context.Context, key string, uploadID string) (driver.MultipartUploader, error) {
+	ekey := escapeKey(key, false)
+
+	optsKey := ekey + azmpPrefix + uploadID + ".opts"
+	blobClient := b.client.NewBlockBlobClient(optsKey)
+
+	resp, err := blobClient.DownloadStream(ctx, nil)
+	if err != nil {
+		if bloberror.HasCode(err, bloberror.BlobNotFound) {
+			return nil, fmt.Errorf("multipart upload %q not found", uploadID)
+		}
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	optsBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var mOpts multipartOpts
+	if err := json.Unmarshal(optsBytes, &mOpts); err != nil {
+		return nil, fmt.Errorf("corrupt multipart opts for %q: %w", uploadID, err)
+	}
+
+	return &multipartUploader{
+		b:        b,
+		key:      ekey,
+		uploadID: uploadID,
+		opts:     &mOpts,
+	}, nil
+}
+
+type multipartUploader struct {
+	b        *bucket
+	key      string
+	uploadID string
+	opts     *multipartOpts
+}
+
+func (u *multipartUploader) UploadID() string {
+	return u.uploadID
+}
+
+func (u *multipartUploader) UploadPart(ctx context.Context, part driver.UploaderPart, r io.Reader) (driver.UploaderPart, error) {
+	// Azure enforces Block IDs to be equally sized per blob.
+	// Max size is 64 bytes. We use Base64(UUID + "-" + PartNumber(5 digits zero-padded)).
+	// E.g. base64("123e4567-e89b-12d3-a456-426614174000-00001") -> 56 chars padding.
+	rawID := fmt.Sprintf("%s-%05d", u.uploadID, part.Number)
+	blockID := base64.StdEncoding.EncodeToString([]byte(rawID))
+
+	blobClient := u.b.client.NewBlockBlobClient(u.key)
+	stageOpts := &blockblob.StageBlockOptions{}
+	if len(part.MD5) > 0 {
+		stageOpts.TransactionalValidation = azblobblob.TransferValidationTypeMD5(part.MD5)
+	}
+
+	// Ensure we provide a ReadSeekCloser for Azure block upload
+	readSeeker, ok := r.(io.ReadSeekCloser)
+	if ok {
+		_, err := blobClient.StageBlock(ctx, blockID, readSeeker, stageOpts)
+		if err != nil {
+			return part, err
+		}
+	} else {
+		buf, err := io.ReadAll(r)
+		if err != nil {
+			return part, err
+		}
+		part.Size = int64(len(buf))
+
+		rs := bytes.NewReader(buf)
+		rsc := &byteReader{Reader: rs}
+		_, err = blobClient.StageBlock(ctx, blockID, rsc, stageOpts)
+		if err != nil {
+			return part, err
+		}
+	}
+
+	part.ID = blockID
+	return part, nil
+}
+
+type byteReader struct {
+	*bytes.Reader
+}
+
+func (b *byteReader) Close() error {
+	return nil
+}
+
+func (u *multipartUploader) Abort(ctx context.Context) error {
+	// Attempt to wipe out the opts file immediately.
+	// Staged blocks are GC'ed by Azure dynamically in 7 days, freeing us from listing uncommitted block payloads.
+	optsKey := u.key + azmpPrefix + u.uploadID + ".opts"
+	_, err := u.b.client.NewBlobClient(optsKey).Delete(ctx, nil)
+	if err != nil && !bloberror.HasCode(err, bloberror.BlobNotFound) {
+		return err
+	}
+	return nil
+}
+
+func (u *multipartUploader) Commit(ctx context.Context, parts []driver.UploaderPart) error {
+	if len(parts) == 0 {
+		return errors.New("multipart upload requires at least one part")
+	}
+
+	// Order strictly
+	sortedParts := make([]driver.UploaderPart, len(parts))
+	copy(sortedParts, parts)
+	sort.Slice(sortedParts, func(i, j int) bool {
+		return sortedParts[i].Number < sortedParts[j].Number
+	})
+
+	var blockIDs []string
+	for _, p := range sortedParts {
+		if p.ID != "" {
+			blockIDs = append(blockIDs, p.ID)
+		} else {
+			rawID := fmt.Sprintf("%s-%05d", u.uploadID, p.Number)
+			blockIDs = append(blockIDs, base64.StdEncoding.EncodeToString([]byte(rawID)))
+		}
+	}
+
+	blobClient := u.b.client.NewBlockBlobClient(u.key)
+
+	headers := &azblobblob.HTTPHeaders{}
+	if u.opts.ContentType != "" {
+		headers.BlobContentType = &u.opts.ContentType
+	}
+	if u.opts.ContentDisposition != "" {
+		headers.BlobContentDisposition = &u.opts.ContentDisposition
+	}
+	if u.opts.ContentEncoding != "" {
+		headers.BlobContentEncoding = &u.opts.ContentEncoding
+	}
+	if u.opts.ContentLanguage != "" {
+		headers.BlobContentLanguage = &u.opts.ContentLanguage
+	}
+
+	commitOpts := &blockblob.CommitBlockListOptions{
+		HTTPHeaders: headers,
+	}
+
+	if len(u.opts.Metadata) > 0 {
+		encodedMap := make(map[string]*string)
+		for k, v := range u.opts.Metadata {
+			val := v
+			encodedMap[escape.HexUnescape(k)] = &val
+		}
+		commitOpts.Metadata = encodedMap
+	}
+
+	_, err := blobClient.CommitBlockList(ctx, blockIDs, commitOpts)
+	if err != nil {
+		return err
+	}
+
+	// Fire and forget Abort to clean up sidecar
+	_ = u.Abort(context.Background())
+
+	return nil
 }
 
 // SignedURL implements driver.SignedURL.

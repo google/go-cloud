@@ -63,6 +63,7 @@
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/md5"
@@ -71,6 +72,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"hash/crc32"
 	"io"
 	"io/fs"
 	"net/url"
@@ -80,6 +82,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"encoding/json"
+	"github.com/google/uuid"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
@@ -1095,4 +1100,277 @@ func (h *URLSignerHMAC) checkMAC(q url.Values) bool {
 	expected := h.getMAC(q)
 	// This compares the Base-64 encoded MACs
 	return hmac.Equal([]byte(mac), []byte(expected))
+}
+
+// MULTIPART
+
+const (
+	filempPrefix = ".filemp."
+)
+
+// multipartOpts represents the serialized options for a multipart upload in fileblob.
+type multipartOpts struct {
+	ContentType        string            `json:"contentType"`
+	CacheControl       string            `json:"cacheControl,omitempty"`
+	ContentDisposition string            `json:"contentDisposition"`
+	ContentEncoding    string            `json:"contentEncoding"`
+	ContentLanguage    string            `json:"contentLanguage"`
+	Metadata           map[string]string `json:"metadata"`
+	MD5                []byte            `json:"md5"`
+	CRC32C             *uint32           `json:"crc32c,omitempty"`
+	TmpPath            string            `json:"tmpPath"`
+}
+
+// NewMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) NewMultipartUploader(ctx context.Context, key string, opts *driver.MultipartUploaderOptions) (driver.MultipartUploader, error) {
+	if opts == nil {
+		opts = &driver.MultipartUploaderOptions{}
+	}
+
+	uploadID := uuid.New().String()
+	ekey := escapeKey(key)
+
+	path, err := b.path(key)
+	if err != nil {
+		return nil, err
+	}
+
+	var holdingDir string
+	if b.opts.NoTempDir {
+		holdingDir = filepath.Join(filepath.Dir(path), filempPrefix+uploadID)
+	} else {
+		holdingDir = filepath.Join(os.TempDir(), filempPrefix+uploadID)
+	}
+
+	if err := os.MkdirAll(holdingDir, b.opts.DirFileMode); err != nil {
+		return nil, err
+	}
+
+	// Create a single shared sparse .tmp file for all parts immediately.
+	tmpFile, err := createTemp(path, b.opts.NoTempDir)
+	if err != nil {
+		_ = os.RemoveAll(holdingDir)
+		return nil, err
+	}
+	tmpName := tmpFile.Name()
+	_ = tmpFile.Close() // Will be re-opened concurrently by UploadPart
+
+	if opts.BeforeUpload != nil {
+		if err := opts.BeforeUpload(func(i any) bool {
+			p, ok := i.(**os.File)
+			if !ok {
+				return false
+			}
+			*p = tmpFile
+			return true
+		}); err != nil {
+			_ = os.Remove(tmpName)
+			_ = os.RemoveAll(holdingDir)
+			return nil, err
+		}
+	}
+
+	mOpts := multipartOpts{
+		ContentType:        opts.ContentType,
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		Metadata:           opts.Metadata,
+		MD5:                opts.MD5,
+		CRC32C:             opts.CRC32C,
+		TmpPath:            tmpName,
+	}
+
+	optsBytes, err := json.Marshal(mOpts)
+	if err != nil {
+		_ = os.Remove(tmpName)
+		_ = os.RemoveAll(holdingDir)
+		return nil, err
+	}
+
+	optsPath := filepath.Join(holdingDir, "opts.json")
+	if err := os.WriteFile(optsPath, optsBytes, 0666); err != nil {
+		_ = os.Remove(tmpName)
+		_ = os.RemoveAll(holdingDir)
+		return nil, err
+	}
+
+	return &multipartUploader{
+		b:          b,
+		key:        key,
+		ekey:       ekey,
+		uploadID:   uploadID,
+		holdingDir: holdingDir,
+		opts:       &mOpts,
+	}, nil
+}
+
+// OpenMultipartUploader implements driver.MultipartUploaderBucket.
+func (b *bucket) OpenMultipartUploader(ctx context.Context, key string, uploadID string) (driver.MultipartUploader, error) {
+	ekey := escapeKey(key)
+
+	path, err := b.path(key)
+	if err != nil {
+		return nil, err
+	}
+
+	var holdingDir string
+	if b.opts.NoTempDir {
+		holdingDir = filepath.Join(filepath.Dir(path), filempPrefix+uploadID)
+	} else {
+		holdingDir = filepath.Join(os.TempDir(), filempPrefix+uploadID)
+	}
+
+	optsPath := filepath.Join(holdingDir, "opts.json")
+	optsBytes, err := os.ReadFile(optsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("multipart upload %q not found", uploadID)
+		}
+		return nil, err
+	}
+
+	var mOpts multipartOpts
+	if err := json.Unmarshal(optsBytes, &mOpts); err != nil {
+		return nil, fmt.Errorf("corrupt multipart opts for %q: %w", uploadID, err)
+	}
+
+	return &multipartUploader{
+		b:          b,
+		key:        key,
+		ekey:       ekey,
+		uploadID:   uploadID,
+		holdingDir: holdingDir,
+		opts:       &mOpts,
+	}, nil
+}
+
+type multipartUploader struct {
+	b          *bucket
+	key        string
+	ekey       string
+	uploadID   string
+	holdingDir string
+	opts       *multipartOpts
+}
+
+func (u *multipartUploader) UploadID() string {
+	return u.uploadID
+}
+
+func (u *multipartUploader) UploadPart(ctx context.Context, part driver.UploaderPart, r io.Reader) (driver.UploaderPart, error) {
+	if err := ctx.Err(); err != nil {
+		return part, err
+	}
+
+	// Open the shared .tmp file for jumping and writing
+	f, err := os.OpenFile(u.opts.TmpPath, os.O_RDWR, 0666)
+	if err != nil {
+		return part, err
+	}
+	defer func() { _ = f.Close() }()
+
+	var md5hash hash.Hash
+	var crc32c hash.Hash32
+
+	if len(part.MD5) > 0 {
+		md5hash = md5.New()
+	}
+	if part.CRC32C != nil {
+		crc32c = crc32.New(crc32.MakeTable(crc32.Castagnoli))
+	}
+
+	buf := make([]byte, 32*1024)
+	offset := part.Offset
+	var totalWritten int64
+	for {
+		nr, er := r.Read(buf)
+		if nr > 0 {
+			if md5hash != nil {
+				md5hash.Write(buf[:nr])
+			}
+			if crc32c != nil {
+				crc32c.Write(buf[:nr])
+			}
+			nw, ew := f.WriteAt(buf[:nr], offset)
+			if nw > 0 {
+				offset += int64(nw)
+				totalWritten += int64(nw)
+			}
+			if ew != nil {
+				return part, ew
+			}
+			if nr != nw {
+				return part, io.ErrShortWrite
+			}
+		}
+		if er != nil {
+			if er != io.EOF {
+				return part, er
+			}
+			break
+		}
+	}
+
+	// Verify checksums inline if provided
+	if md5hash != nil {
+		if !bytes.Equal(part.MD5, md5hash.Sum(nil)) {
+			return part, fmt.Errorf("fileblob: md5 mismatch for part %d", part.Number)
+		}
+	}
+	if crc32c != nil {
+		if *part.CRC32C != crc32c.Sum32() {
+			return part, fmt.Errorf("fileblob: crc32c mismatch for part %d", part.Number)
+		}
+	}
+
+	part.Size = totalWritten
+	// Using TmpPath as ID so framework doesn't complain of missing ID
+	part.ID = u.opts.TmpPath
+	return part, nil
+}
+
+func (u *multipartUploader) Abort(ctx context.Context) error {
+	_ = os.Remove(u.opts.TmpPath)
+	return os.RemoveAll(u.holdingDir)
+}
+
+func (u *multipartUploader) Commit(ctx context.Context, parts []driver.UploaderPart) error {
+	if len(parts) == 0 {
+		return errors.New("multipart upload requires at least one part")
+	}
+
+	path, err := u.b.path(u.key)
+	if err != nil {
+		return err
+	}
+
+	// Because we used WriteAt directly referencing the exact disjoint geometry into
+	// a single .tmp file securely concurrently, we completely avoid merging loops and doubling disk space!
+
+	// Create attributes file natively if requested.
+	if u.b.opts.Metadata != MetadataDontWrite {
+		attrs := xattrs{
+			CacheControl:       u.opts.CacheControl,
+			ContentDisposition: u.opts.ContentDisposition,
+			ContentEncoding:    u.opts.ContentEncoding,
+			ContentLanguage:    u.opts.ContentLanguage,
+			ContentType:        u.opts.ContentType,
+			Metadata:           u.opts.Metadata,
+			MD5:                u.opts.MD5,
+		}
+		if err := setAttrs(path, attrs); err != nil {
+			return err
+		}
+	}
+
+	// Atomic filesystem rename from Temp file to Final key
+	if err := os.Rename(u.opts.TmpPath, path); err != nil {
+		_ = os.Remove(path + attrsExt)
+		return err
+	}
+
+	// Erase the disconnected holding directory wrapper
+	return os.RemoveAll(u.holdingDir)
 }
