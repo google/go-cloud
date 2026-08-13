@@ -292,6 +292,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestIfNotExist", func(t *testing.T) {
 		testIfNotExist(t, newHarness)
 	})
+	t.Run("TestMultipartUploader", func(t *testing.T) {
+		testMultipartUploader(t, newHarness)
+	})
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("TestAs", func(t *testing.T) {
 		for _, st := range asTests {
@@ -2914,4 +2917,298 @@ func benchmarkWriteReadDelete(b *testing.B, bkt *blob.Bucket) {
 			}
 		}
 	})
+}
+
+// testMultipartUploader tests the functionality of the MultipartUploader API dynamically
+func testMultipartUploader(t *testing.T, newHarness HarnessMaker) {
+	t.Helper()
+
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = drv.Close() }()
+
+	mpuDrv, ok := drv.(driver.MultipartUploaderBucket)
+	if !ok {
+		t.Skip("driver does not implement driver.MultipartUploaderBucket")
+	}
+
+	b := blob.NewBucket(drv)
+	defer func() { _ = b.Close() }()
+
+	// The type assertion above is necessary but not sufficient. The Bucket
+	// wrappers in package driver implement MultipartUploaderBucket
+	// unconditionally and report the lack of support from the call instead,
+	// so a driver without multipart still has to be detected here.
+	if probe, err := b.NewMultipartUploader(ctx, "multipart-support-probe", nil); err != nil {
+		if gcerrors.Code(err) == gcerrors.Unimplemented {
+			t.Skip("driver does not support multipart uploads")
+		}
+		t.Fatalf("NewMultipartUploader failed: %v", err)
+	} else if err := probe.Abort(ctx); err != nil {
+		t.Fatalf("aborting the probe upload failed: %v", err)
+	}
+
+	// Use chunks larger than 5MB to be natively compatible with AWS S3's minimum part size requirements.
+	const mb = 1024 * 1024
+	part1Bytes := bytes.Repeat([]byte("A"), 5*mb+1024)
+	part2Bytes := bytes.Repeat([]byte("B"), 5*mb+1024)
+	part3Bytes := bytes.Repeat([]byte("C"), 1*mb+1024)
+
+	totalBytes := make([]byte, 0, len(part1Bytes)+len(part2Bytes)+len(part3Bytes))
+	totalBytes = append(totalBytes, part1Bytes...)
+	totalBytes = append(totalBytes, part2Bytes...)
+	totalBytes = append(totalBytes, part3Bytes...)
+
+	var t1MD5, t2MD5, t3MD5 [16]byte
+	t1MD5 = md5.Sum(part1Bytes)
+	t2MD5 = md5.Sum(part2Bytes)
+	t3MD5 = md5.Sum(part3Bytes)
+
+	// Test case 1: Standard out-of-order upload sequence
+	t.Run("StandardUpload", func(t *testing.T) {
+		key := "multipart-standard"
+
+		const (
+			wantContentType  = "application/octet-stream"
+			wantCacheControl = "no-cache"
+		)
+		wantMetadata := map[string]string{"foo": "bar"}
+
+		var beforeUploadCalls int
+		opts := &driver.MultipartUploaderOptions{
+			ContentType:  wantContentType,
+			CacheControl: wantCacheControl,
+			Metadata:     map[string]string{"foo": "bar"},
+			BeforeUpload: func(asFunc func(any) bool) error {
+				beforeUploadCalls++
+				return nil
+			},
+		}
+
+		mpu, err := mpuDrv.NewMultipartUploader(ctx, key, opts)
+		if err != nil {
+			t.Fatalf("NewMultipartUploader failed: %v", err)
+		}
+
+		uploadID := mpu.UploadID()
+		if uploadID == "" {
+			t.Fatalf("expected non-empty UploadID")
+		}
+
+		var parts []driver.UploaderPart
+
+		// Part 2 (verifying out of order natively if supported and offsets)
+		p2, err := mpu.UploadPart(ctx, driver.UploaderPart{
+			Number: 2,
+			Offset: int64(len(part1Bytes)),
+			Size:   int64(len(part2Bytes)),
+			MD5:    t2MD5[:],
+		}, bytes.NewReader(part2Bytes))
+		if err != nil {
+			t.Fatalf("UploadPart 2 failed: %v", err)
+		}
+		parts = append(parts, p2)
+
+		// Part 1
+		p1, err := mpu.UploadPart(ctx, driver.UploaderPart{
+			Number: 1,
+			Offset: 0,
+			Size:   int64(len(part1Bytes)),
+			MD5:    t1MD5[:],
+		}, bytes.NewReader(part1Bytes))
+		if err != nil {
+			t.Fatalf("UploadPart 1 failed: %v", err)
+		}
+		parts = append(parts, p1)
+
+		// Part 3
+		p3, err := mpu.UploadPart(ctx, driver.UploaderPart{
+			Number: 3,
+			Offset: int64(len(part1Bytes) + len(part2Bytes)),
+			Size:   int64(len(part3Bytes)),
+			MD5:    t3MD5[:],
+		}, bytes.NewReader(part3Bytes))
+		if err != nil {
+			t.Fatalf("UploadPart 3 failed: %v", err)
+		}
+		parts = append(parts, p3)
+
+		if err := mpu.Commit(ctx, parts); err != nil {
+			t.Fatalf("Commit failed: %v", err)
+		}
+
+		// Read back via the standard bucket
+		rc, err := drv.NewRangeReader(ctx, key, 0, -1, &driver.ReaderOptions{})
+		if err != nil {
+			t.Fatalf("Failed to read after commit: %v", err)
+		}
+		got, err := io.ReadAll(rc)
+		_ = rc.Close()
+		if err != nil {
+			t.Fatalf("ReadAll failed: %v", err)
+		}
+
+		if !bytes.Equal(got, totalBytes) {
+			t.Fatalf("Data mismatch: length got %d, want %d", len(got), len(totalBytes))
+		}
+
+		// The options given to NewMultipartUploader have to survive to the
+		// committed object. Nothing checked this before, so every driver's
+		// metadata plumbing was untested.
+		if beforeUploadCalls != 1 {
+			t.Errorf("BeforeUpload was called %d times, want exactly 1", beforeUploadCalls)
+		}
+		attrs, err := drv.Attributes(ctx, key)
+		if err != nil {
+			t.Fatalf("Attributes after commit failed: %v", err)
+		}
+		if attrs.Size != int64(len(totalBytes)) {
+			t.Errorf("got Size %d, want %d", attrs.Size, len(totalBytes))
+		}
+		// Only hold multipart to the standard an ordinary write meets on this
+		// driver: some are configured to store no metadata at all, and for
+		// those it is undefined whether any is read back.
+		if storesMetadata(ctx, t, drv) {
+			if attrs.ContentType != wantContentType {
+				t.Errorf("got ContentType %q, want %q", attrs.ContentType, wantContentType)
+			}
+			if attrs.CacheControl != wantCacheControl {
+				t.Errorf("got CacheControl %q, want %q", attrs.CacheControl, wantCacheControl)
+			}
+			for k, want := range wantMetadata {
+				if got := attrs.Metadata[k]; got != want {
+					t.Errorf("got Metadata[%q] = %q, want %q (all: %v)", k, got, want, attrs.Metadata)
+				}
+			}
+		}
+		_ = drv.Delete(ctx, key, &driver.DeleteOptions{})
+	})
+
+	// Test case 2: Abort
+	t.Run("Abort", func(t *testing.T) {
+		key := "multipart-abort"
+		mpu, err := mpuDrv.NewMultipartUploader(ctx, key, nil)
+		if err != nil {
+			t.Fatalf("NewMultipartUploader failed: %v", err)
+		}
+
+		_, err = mpu.UploadPart(ctx, driver.UploaderPart{
+			Number: 1,
+			Offset: 0,
+			Size:   int64(len(part1Bytes)),
+		}, bytes.NewReader(part1Bytes))
+		if err != nil {
+			t.Fatalf("UploadPart failed: %v", err)
+		}
+
+		if err := mpu.Abort(ctx); err != nil {
+			t.Fatalf("Abort failed: %v", err)
+		}
+
+		_, err = drv.NewRangeReader(ctx, key, 0, -1, &driver.ReaderOptions{})
+		if err == nil {
+			t.Fatalf("Expected error when reading an aborted multipart upload")
+		}
+	})
+
+	// Test case 3: Open / Resume
+	t.Run("Resume", func(t *testing.T) {
+		key := "multipart-resume"
+
+		mpu, err := mpuDrv.NewMultipartUploader(ctx, key, nil)
+		if err != nil {
+			t.Fatalf("NewMultipartUploader failed: %v", err)
+		}
+		uploadID := mpu.UploadID()
+
+		// Start with an upload then intentionally completely drop it!
+		p1, err := mpu.UploadPart(ctx, driver.UploaderPart{
+			Number: 1,
+			Offset: 0,
+			Size:   int64(len(part1Bytes)),
+		}, bytes.NewReader(part1Bytes))
+		if err != nil {
+			t.Fatalf("UploadPart 1 failed: %v", err)
+		}
+
+		// Simulate process crash/recovery by opening a brand new uploader instance dynamically using OpenMultipartUploader
+		mpuRecovered, err := mpuDrv.OpenMultipartUploader(ctx, key, uploadID)
+		if err != nil {
+			// Some services inherently might not have a dedicated explicit "Open" cache capability locally outside memory
+			// if they strictly use driver-side ephemeral buffers, but for GCS, S3, Azure, Fileblob and SFTP this should work dynamically natively.
+			t.Skipf("OpenMultipartUploader natively failed or unsupported: %v", err)
+		}
+
+		p2, err := mpuRecovered.UploadPart(ctx, driver.UploaderPart{
+			Number: 2,
+			Offset: int64(len(part1Bytes)),
+			Size:   int64(len(part2Bytes)),
+		}, bytes.NewReader(part2Bytes))
+		if err != nil {
+			t.Fatalf("UploadPart 2 failed: %v", err)
+		}
+
+		p3, err := mpuRecovered.UploadPart(ctx, driver.UploaderPart{
+			Number: 3,
+			Offset: int64(len(part1Bytes) + len(part2Bytes)),
+			Size:   int64(len(part3Bytes)),
+		}, bytes.NewReader(part3Bytes))
+		if err != nil {
+			t.Fatalf("UploadPart 3 failed: %v", err)
+		}
+
+		if err := mpuRecovered.Commit(ctx, []driver.UploaderPart{p1, p2, p3}); err != nil {
+			t.Fatalf("Commit recovered failed: %v", err)
+		}
+
+		rc, err := drv.NewRangeReader(ctx, key, 0, -1, &driver.ReaderOptions{})
+		if err != nil {
+			t.Fatalf("Failed to read after commit: %v", err)
+		}
+		got, err := io.ReadAll(rc)
+		_ = rc.Close()
+		if err != nil {
+			t.Fatalf("ReadAll failed: %v", err)
+		}
+
+		if !bytes.Equal(got, totalBytes) {
+			t.Fatalf("Data mismatch on restored multipart upload")
+		}
+		_ = drv.Delete(ctx, key, &driver.DeleteOptions{})
+	})
+}
+
+// storesMetadata reports whether an ordinary write on this driver preserves
+// content type and metadata. Some drivers are configured not to store any, and
+// multipart should not be held to a higher standard than the write path.
+func storesMetadata(ctx context.Context, t *testing.T, drv driver.Bucket) bool {
+	t.Helper()
+	const key = "multipart-metadata-probe"
+	w, err := drv.NewTypedWriter(ctx, key, "text/plain", &driver.WriterOptions{
+		Metadata: map[string]string{"probe": "yes"},
+	})
+	if err != nil {
+		t.Fatalf("probing metadata support: %v", err)
+	}
+	if _, err := w.Write([]byte("probe")); err != nil {
+		t.Fatalf("probing metadata support: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("probing metadata support: %v", err)
+	}
+	defer func() { _ = drv.Delete(ctx, key, &driver.DeleteOptions{}) }()
+	attrs, err := drv.Attributes(ctx, key)
+	if err != nil {
+		t.Fatalf("probing metadata support: %v", err)
+	}
+	return attrs.Metadata["probe"] == "yes"
 }

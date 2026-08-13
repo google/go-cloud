@@ -21,6 +21,25 @@
 // *blob.Bucket implements io/fs.FS and io/fs.SubFS, so it can be used with
 // functions in that package.
 //
+// # Multipart uploads
+//
+// Bucket.NewMultipartUploader starts an upload assembled from parts that may
+// be uploaded in any order, concurrently, or from different processes. Parts
+// are numbered from 1 and are assembled in ascending order regardless of the
+// order they were uploaded in; UploadPart returns a part value carrying the
+// identifier that Commit needs, so keep it. Nothing is readable at the key
+// until Commit succeeds, and an upload that is not going to be committed
+// should be ended with Abort so its parts are not left behind.
+//
+// An upload survives the process that started it: UploadID returns a durable
+// identifier, and Bucket.OpenMultipartUploader reopens the upload elsewhere.
+//
+// Support is driver-dependent. Drivers that do not implement it return an
+// error for which gcerrors.Code returns Unimplemented, so check for that
+// rather than assuming. Backends also impose their own limits -- S3, for
+// example, allows part numbers 1 through 10000 and requires every part except
+// the last to be at least 5 MiB.
+//
 // # Errors
 //
 // The errors returned from this package can be inspected in several ways:
@@ -1376,6 +1395,238 @@ func (b *Bucket) Close() error {
 		return errClosed
 	}
 	return wrapError(b.b, b.b.Close(), "")
+}
+
+// MultipartUploaderOptions sets options for NewMultipartUploader.
+type MultipartUploaderOptions struct {
+	// ContentType specifies the MIME type of the blob being written.
+	//
+	// Unlike WriterOptions, an empty ContentType is not sniffed from the
+	// content: the bytes arrive as independent parts, possibly out of order
+	// and possibly from different processes, so there is no first block to
+	// sniff.
+	ContentType string
+
+	// CacheControl specifies caching attributes that services may use when
+	// serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	ContentDisposition string
+
+	// ContentEncoding specifies the encoding used for the blob's content.
+	ContentEncoding string
+
+	// ContentLanguage specifies the language used in the blob's content.
+	ContentLanguage string
+
+	// Metadata holds key/value strings to be associated with the blob, or nil.
+	// Keys may not be empty, and are lowercased before being written.
+	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") will result in
+	// an error.
+	Metadata map[string]string
+
+	// ContentMD5 is used as a message integrity check.
+	ContentMD5 []byte
+
+	// ContentCRC32C, if non-nil, is the Castagnoli CRC32 of the object,
+	// used as a message integrity check. A nil pointer means no checksum
+	// was supplied; zero is a legitimate checksum value and must not be
+	// used to mean "unset".
+	ContentCRC32C *uint32
+
+	// BeforeUpload is a callback that will be called before the upload is
+	// created. asFunc converts its argument to driver-specific types; see
+	// https://gocloud.dev/concepts/as/ for background information.
+	BeforeUpload func(asFunc func(any) bool) error
+}
+
+// UploaderPart describes a single uploaded part of a multipart transfer.
+type UploaderPart struct {
+	ID     string
+	Number int64
+	Offset int64
+	Size   int64
+	MD5    []byte
+	CRC32C *uint32
+}
+
+// MultipartUploader provides methods for managing a multipart upload session.
+type MultipartUploader struct {
+	b      driver.Bucket
+	key    string
+	u      driver.MultipartUploader
+	tracer *gcdkotel.Tracer
+}
+
+// UploadID returns the durable identifier for this multipart upload.
+func (u *MultipartUploader) UploadID() string {
+	return u.u.UploadID()
+}
+
+// UploadPart uploads one logical part.
+func (u *MultipartUploader) UploadPart(ctx context.Context, part UploaderPart, r io.Reader) (_ UploaderPart, err error) {
+	ctx, span := u.tracer.Start(ctx, "UploadPart")
+	defer func() { u.tracer.End(ctx, span, err) }()
+
+	dp, err := u.u.UploadPart(ctx, driver.UploaderPart{
+		ID:     part.ID,
+		Number: part.Number,
+		Offset: part.Offset,
+		Size:   part.Size,
+		MD5:    part.MD5,
+		CRC32C: part.CRC32C,
+	}, r)
+	if err != nil {
+		return UploaderPart{}, wrapError(u.b, err, u.key)
+	}
+	return UploaderPart{
+		ID:     dp.ID,
+		Number: dp.Number,
+		Offset: dp.Offset,
+		Size:   dp.Size,
+		MD5:    dp.MD5,
+		CRC32C: dp.CRC32C,
+	}, nil
+}
+
+// Commit finalizes the object using the provided parts.
+func (u *MultipartUploader) Commit(ctx context.Context, parts []UploaderPart) (err error) {
+	ctx, span := u.tracer.Start(ctx, "Commit")
+	defer func() { u.tracer.End(ctx, span, err) }()
+
+	dparts := make([]driver.UploaderPart, len(parts))
+	for i, p := range parts {
+		dparts[i] = driver.UploaderPart{
+			ID:     p.ID,
+			Number: p.Number,
+			Offset: p.Offset,
+			Size:   p.Size,
+			MD5:    p.MD5,
+			CRC32C: p.CRC32C,
+		}
+	}
+	return wrapError(u.b, u.u.Commit(ctx, dparts), u.key)
+}
+
+// Abort cancels the multipart upload.
+func (u *MultipartUploader) Abort(ctx context.Context) (err error) {
+	ctx, span := u.tracer.Start(ctx, "Abort")
+	defer func() { u.tracer.End(ctx, span, err) }()
+
+	return wrapError(u.b, u.u.Abort(ctx), u.key)
+}
+
+// NewMultipartUploader returns a MultipartUploader that manages an out-of-order,
+// distributed, or parallel upload session for a large blob.
+//
+// If the driver does not support this functionality, NewMultipartUploader
+// will return an error for which gcerrors.Code will return gcerrors.Unimplemented.
+func (b *Bucket) NewMultipartUploader(ctx context.Context, key string, opts *MultipartUploaderOptions) (_ *MultipartUploader, err error) {
+	if !utf8.ValidString(key) {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewMultipartUploader key must be a valid UTF-8 string: %q", key)
+	}
+	mb, ok := b.b.(driver.MultipartUploaderBucket)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.Unimplemented, nil, "blob: driver does not support MultipartUploader for bucket")
+	}
+
+	if opts == nil {
+		opts = &MultipartUploaderOptions{}
+	}
+
+	dopts := &driver.MultipartUploaderOptions{
+		ContentType:        opts.ContentType,
+		CacheControl:       opts.CacheControl,
+		BeforeUpload:       opts.BeforeUpload,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		MD5:                opts.ContentMD5,
+		CRC32C:             opts.ContentCRC32C,
+	}
+	if len(opts.Metadata) > 0 {
+		md := make(map[string]string, len(opts.Metadata))
+		for k, v := range opts.Metadata {
+			if k == "" {
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: MultipartUploaderOptions.Metadata keys may not be empty strings")
+			}
+			if !utf8.ValidString(k) {
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: MultipartUploaderOptions.Metadata keys must be valid UTF-8 strings: %q", k)
+			}
+			if !utf8.ValidString(v) {
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: MultipartUploaderOptions.Metadata values must be valid UTF-8 strings: %q", v)
+			}
+			lowerK := strings.ToLower(k)
+			if _, found := md[lowerK]; found {
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: MultipartUploaderOptions.Metadata has a duplicate case-insensitive metadata key: %q", lowerK)
+			}
+			md[lowerK] = v
+		}
+		dopts.Metadata = md
+	}
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
+
+	ctx, span := b.tracer.Start(ctx, "NewMultipartUploader")
+	defer func() { b.tracer.End(ctx, span, err) }()
+
+	mu, err := mb.NewMultipartUploader(ctx, key, dopts)
+	if err != nil {
+		return nil, wrapError(b.b, err, key)
+	}
+	return &MultipartUploader{
+		b:      b.b,
+		key:    key,
+		u:      mu,
+		tracer: b.tracer,
+	}, nil
+}
+
+// OpenMultipartUploader resumes an existing upload session by opening it using an UploadID.
+//
+// The options the upload was created with are not recoverable from the
+// UploadID, so a resumed upload commits without them; in particular, an upload
+// created with MultipartUploaderOptions.ContentCRC32C set is not checksummed
+// when it is committed from a resumed uploader. Complete an upload from the
+// uploader that created it when that matters.
+//
+// If the driver does not support this functionality, OpenMultipartUploader
+// will return an error for which gcerrors.Code will return gcerrors.Unimplemented.
+func (b *Bucket) OpenMultipartUploader(ctx context.Context, key string, uploadID string) (_ *MultipartUploader, err error) {
+	if !utf8.ValidString(key) {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: OpenMultipartUploader key must be a valid UTF-8 string: %q", key)
+	}
+	mb, ok := b.b.(driver.MultipartUploaderBucket)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.Unimplemented, nil, "blob: driver does not support MultipartUploader for bucket")
+	}
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
+
+	ctx, span := b.tracer.Start(ctx, "OpenMultipartUploader")
+	defer func() { b.tracer.End(ctx, span, err) }()
+
+	mu, err := mb.OpenMultipartUploader(ctx, key, uploadID)
+	if err != nil {
+		return nil, wrapError(b.b, err, key)
+	}
+	return &MultipartUploader{
+		b:      b.b,
+		key:    key,
+		u:      mu,
+		tracer: b.tracer,
+	}, nil
 }
 
 // DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.

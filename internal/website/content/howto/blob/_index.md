@@ -152,6 +152,24 @@ start reading from an arbitrary offset in the blob, use `NewRangeReader`.
 
 [`io.Reader`]: https://golang.org/pkg/io/#Reader
 
+### Uploading in Parts {#multipart}
+
+For a large blob, or one produced by more than one worker, you can assemble the
+object from parts instead of writing it as a single stream. Parts are numbered
+from 1 and are assembled in ascending order whatever order they are uploaded
+in, so they can be uploaded concurrently, and `UploadID` is durable enough to
+resume the upload from another process via `Bucket.OpenMultipartUploader`.
+
+Nothing is readable at the key until `Commit` succeeds. An upload you are not
+going to commit should be ended with `Abort` so its parts are not left behind.
+
+{{< goexample src="gocloud.dev/blob.ExampleBucket_NewMultipartUploader" imports="0" >}}
+
+Not every driver supports multipart uploads; those that do not return an error
+for which `gcerrors.Code` returns `Unimplemented`. Backends impose their own
+limits too — S3 allows part numbers 1 through 10000 and requires every part but
+the last to be at least 5 MiB.
+
 ### Deleting a Bucket {#deleting}
 
 You can delete blobs using the `Bucket.Delete` method.

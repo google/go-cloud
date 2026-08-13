@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 )
 
 // ReaderOptions controls Reader behaviors.
@@ -389,6 +390,118 @@ type SignedURLOptions struct {
 	BeforeSign func(asFunc func(any) bool) error
 }
 
+// MultipartUploaderOptions controls behaviors of MultipartUploader.
+type MultipartUploaderOptions struct {
+	// ContentType specifies the MIME type of the object to be written.
+	//
+	// Unlike WriterOptions, an empty ContentType is not sniffed from the
+	// content: the bytes arrive as independent parts, possibly out of order
+	// and possibly from different processes, so there is no first block to
+	// sniff.
+	ContentType string
+
+	// CacheControl specifies caching attributes that services may use when
+	// serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	ContentDisposition string
+
+	// ContentEncoding specifies the encoding used for the blob's content.
+	ContentEncoding string
+
+	// ContentLanguage specifies the language used in the blob's content.
+	ContentLanguage string
+
+	// Metadata holds key/value strings to be associated with the blob.
+	Metadata map[string]string
+
+	// MD5 is used as a message integrity check.
+	MD5 []byte
+
+	// CRC32C, if non-nil, is the Castagnoli CRC32 of the object, used as a
+	// message integrity check. A nil pointer means no checksum was
+	// supplied; zero is a legitimate checksum value and must not be used
+	// to mean "unset".
+	CRC32C *uint32
+
+	// BeforeUpload is a callback that must be called exactly once before the
+	// upload is created, unless NewMultipartUploader returns an error before
+	// then, in which case it should not be called at all.
+	// asFunc allows drivers to expose driver-specific types;
+	// see Bucket.As for more details.
+	BeforeUpload func(asFunc func(any) bool) error
+}
+
+// UploaderPart describes a single part of a multipart transfer.
+//
+// The same type is used to describe a part being uploaded and the result of
+// uploading it: UploadPart takes one and returns one. Which fields matter
+// depends on the direction and, for two of them, on the driver.
+type UploaderPart struct {
+	// ID identifies the stored part. It is set by the driver and returned
+	// from UploadPart; the caller passes it back unchanged in Commit. For S3
+	// it is the part's ETag. Callers should treat it as opaque.
+	ID string
+
+	// Number is the part's position in the finished object, set by the
+	// caller. Parts may be uploaded in any order but are assembled in
+	// ascending Number. S3 requires 1 to 10000.
+	Number int64
+
+	// Offset is the part's byte offset within the finished object, set by the
+	// caller. It is only meaningful to drivers that assemble the object
+	// themselves, such as fileblob; S3, GCS and Azure ignore it.
+	Offset int64
+
+	// Size is the part's length in bytes. Drivers that know it after the
+	// upload set it on the returned part.
+	Size int64
+
+	// MD5, if non-empty, is checked against the part's content by drivers
+	// that support it. It is set by the caller.
+	MD5 []byte
+
+	// CRC32C, if non-nil, is the Castagnoli CRC32 of the part, checked by
+	// drivers that support it. It is set by the caller. Nil means no checksum
+	// was supplied; zero is a legitimate value.
+	CRC32C *uint32
+}
+
+// MultipartUploader is an optional interface that allows a driver to perform
+// multipart uploads.
+type MultipartUploader interface {
+	// UploadID returns the durable identifier for this multipart upload.
+	UploadID() string
+
+	// UploadPart uploads one logical part.
+	UploadPart(ctx context.Context, part UploaderPart, r io.Reader) (UploaderPart, error)
+
+	// Commit finalizes the object using the provided parts.
+	Commit(ctx context.Context, parts []UploaderPart) error
+
+	// Abort cancels the multipart upload.
+	Abort(ctx context.Context) error
+}
+
+// errNoMultipartUploader is returned by the Bucket wrappers in this package
+// when the Bucket they wrap does not support multipart uploads. The wrappers
+// have to implement MultipartUploaderBucket unconditionally -- the portable
+// type decides by type assertion, and a wrapper that did not implement it
+// would take multipart support away from every driver that has it -- so the
+// "not supported" answer has to come from the call instead. It carries its own
+// code because the wrapped driver's ErrorCode will not recognize it.
+var errNoMultipartUploader = gcerr.Newf(gcerr.Unimplemented, nil, "blob: driver does not support multipart uploads")
+
+// MultipartUploaderBucket is an optional interface that allows a Bucket to
+// create and open multipart uploaders.
+type MultipartUploaderBucket interface {
+	NewMultipartUploader(ctx context.Context, key string, opts *MultipartUploaderOptions) (MultipartUploader, error)
+	OpenMultipartUploader(ctx context.Context, key string, uploadID string) (MultipartUploader, error)
+}
+
 // prefixedBucket implements Bucket by prepending prefix to all keys.
 type prefixedBucket struct {
 	base   Bucket
@@ -446,6 +559,32 @@ func (b *prefixedBucket) Delete(ctx context.Context, key string, opts *DeleteOpt
 func (b *prefixedBucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	return b.base.SignedURL(ctx, b.prefix+key, opts)
 }
+
+// NewMultipartUploader implements MultipartUploaderBucket, forwarding to the
+// wrapped Bucket when it supports multipart uploads. Without this, wrapping a
+// Bucket in a prefix would silently take multipart support away from it.
+func (b *prefixedBucket) NewMultipartUploader(ctx context.Context, key string, opts *MultipartUploaderOptions) (MultipartUploader, error) {
+	mb, ok := b.base.(MultipartUploaderBucket)
+	if !ok {
+		return nil, errNoMultipartUploader
+	}
+	if key == "" {
+		return nil, errors.New("invalid key (empty string)")
+	}
+	return mb.NewMultipartUploader(ctx, b.prefix+key, opts)
+}
+
+func (b *prefixedBucket) OpenMultipartUploader(ctx context.Context, key string, uploadID string) (MultipartUploader, error) {
+	mb, ok := b.base.(MultipartUploaderBucket)
+	if !ok {
+		return nil, errNoMultipartUploader
+	}
+	if key == "" {
+		return nil, errors.New("invalid key (empty string)")
+	}
+	return mb.OpenMultipartUploader(ctx, b.prefix+key, uploadID)
+}
+
 func (b *prefixedBucket) Close() error { return b.base.Close() }
 
 // singleKeyBucket implements Bucket by hardwiring a specific key.
@@ -489,4 +628,23 @@ func (b *singleKeyBucket) Delete(ctx context.Context, _ string, opts *DeleteOpti
 func (b *singleKeyBucket) SignedURL(ctx context.Context, _ string, opts *SignedURLOptions) (string, error) {
 	return b.base.SignedURL(ctx, b.key, opts)
 }
+
+// NewMultipartUploader implements MultipartUploaderBucket, forwarding to the
+// wrapped Bucket with the single key substituted, as the other methods do.
+func (b *singleKeyBucket) NewMultipartUploader(ctx context.Context, _ string, opts *MultipartUploaderOptions) (MultipartUploader, error) {
+	mb, ok := b.base.(MultipartUploaderBucket)
+	if !ok {
+		return nil, errNoMultipartUploader
+	}
+	return mb.NewMultipartUploader(ctx, b.key, opts)
+}
+
+func (b *singleKeyBucket) OpenMultipartUploader(ctx context.Context, _ string, uploadID string) (MultipartUploader, error) {
+	mb, ok := b.base.(MultipartUploaderBucket)
+	if !ok {
+		return nil, errNoMultipartUploader
+	}
+	return mb.OpenMultipartUploader(ctx, b.key, uploadID)
+}
+
 func (b *singleKeyBucket) Close() error { return b.base.Close() }

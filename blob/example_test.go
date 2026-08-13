@@ -22,11 +22,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"cloud.google.com/go/storage"
 	"github.com/aws/smithy-go"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
+	"gocloud.dev/blob/memblob"
 
 	_ "gocloud.dev/blob/gcsblob"
 	_ "gocloud.dev/blob/s3blob"
@@ -604,4 +606,51 @@ func newTempDir() (string, func()) {
 		panic(err)
 	}
 	return dir, func() { _ = os.RemoveAll(dir) }
+}
+
+func ExampleBucket_NewMultipartUploader() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	ctx := context.Background()
+	b := memblob.OpenBucket(nil)
+	defer func() { _ = b.Close() }()
+
+	// A multipart upload assembles one blob from parts that may be uploaded
+	// in any order, from more than one goroutine, or even from more than one
+	// process. Not every driver supports it; those that do not return an
+	// error for which gcerrors.Code returns Unimplemented.
+	u, err := b.NewMultipartUploader(ctx, "big.txt", &blob.MultipartUploaderOptions{
+		ContentType: "text/plain",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Parts are numbered from 1 and are assembled in ascending order,
+	// whatever order they are uploaded in. Keep the result of each
+	// UploadPart: it carries the identifier Commit needs.
+	bodies := []string{"Hello, ", "World!"}
+	parts := make([]blob.UploaderPart, len(bodies))
+	for i := len(bodies) - 1; i >= 0; i-- { // deliberately out of order
+		part, err := u.UploadPart(ctx, blob.UploaderPart{Number: int64(i + 1)}, strings.NewReader(bodies[i]))
+		if err != nil {
+			// Abandon the upload so its parts are not left behind.
+			_ = u.Abort(ctx)
+			log.Fatal(err)
+		}
+		parts[i] = part
+	}
+
+	// Nothing is readable at the key until Commit succeeds.
+	if err := u.Commit(ctx, parts); err != nil {
+		log.Fatal(err)
+	}
+
+	data, err := b.ReadAll(ctx, "big.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(data))
+
+	// Output:
+	// Hello, World!
 }

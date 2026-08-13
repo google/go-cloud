@@ -89,6 +89,9 @@ type Options struct {
 	NoMD5 bool
 }
 
+// errInvalidKey is returned for an empty key.
+var errInvalidKey = errors.New("invalid key (empty string)")
+
 type blobEntry struct {
 	Content    []byte
 	Attributes *driver.Attributes
@@ -99,6 +102,9 @@ type bucket struct {
 
 	mu    sync.Mutex
 	blobs map[string]*blobEntry
+	// uploads holds in-progress multipart uploads, keyed by upload ID.
+	uploads      map[string]*uploadSession
+	nextUploadID int64
 }
 
 // openBucket creates a driver.Bucket backed by memory.
@@ -295,7 +301,7 @@ func (r *reader) As(i any) bool { return false }
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if key == "" {
-		return nil, errors.New("invalid key (empty string)")
+		return nil, errInvalidKey
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
