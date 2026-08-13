@@ -251,6 +251,13 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Close the handle before writing to the file by name. On Windows an open
+	// handle blocks deletion, so leaving it open makes t.TempDir's cleanup fail
+	// with "The process cannot access the file because it is being used by
+	// another process".
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(f.Name(), jsonCred, 0o666); err != nil {
 		t.Fatal(err)
 	}
