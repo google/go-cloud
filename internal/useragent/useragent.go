@@ -70,6 +70,12 @@ func (t *userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error
 // header for all requests.
 func HTTPClient(client *http.Client, api string) *http.Client {
 	c := *client
-	c.Transport = &userAgentTransport{base: c.Transport, api: api}
+	base := c.Transport
+	if base == nil {
+		// A nil Transport means the client uses http.DefaultTransport
+		// implicitly; wrapping it as-is would panic on the first request.
+		base = http.DefaultTransport
+	}
+	c.Transport = &userAgentTransport{base: base, api: api}
 	return &c
 }
