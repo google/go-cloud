@@ -87,8 +87,11 @@ APIs externally, in separate repositories.
 
 If you have a new API or driver that you believe are important and mature enough
 to be included, feel free to open an issue to discuss this; our default will
-likely be to suggest starting in a separate repository. We'll also be happy
-to maintain a list of such external APIs and drivers in this README.
+likely be to suggest starting in a separate repository.
+
+### Known External Drivers
+
+*   [gocloud-ext](https://github.com/TuSKan/gocloud-ext) — `blob` drivers for HTTP and WebDAV (`httpblob`) and for SFTP (`sftpblob`).
 
 ## Current features
 
@@ -97,6 +100,8 @@ The Go CDK provides generic APIs for:
 *   Unstructured binary (blob) storage
 *   Publish/Subscribe (pubsub)
 *   Variables that change at runtime (runtimevar)
+*   Document storage (docstore)
+*   Secrets (secrets)
 *   Connecting to MySQL (including MariaDB) and PostgreSQL databases (mysql, postgres)
 *   Server startup and diagnostics: request logging, tracing, and health
     checking (server)
