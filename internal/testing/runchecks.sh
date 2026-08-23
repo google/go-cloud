@@ -45,7 +45,7 @@ rootdir="$(pwd)"
 # for the latest Go version.
 latest_go_version=0
 go_version=$(go version)
-if [[ ${go_version} == *go1\.26* ]]; then
+if [[ ${go_version} == *go1\.27* ]]; then
   latest_go_version=1
 fi
 echo "Go Version: ${go_version}; latest=${latest_go_version}"

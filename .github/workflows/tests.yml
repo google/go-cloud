@@ -25,25 +25,25 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         # When updating this, make sure to also update the
         # latest_go_version variable in internal/testing/runchecks.sh.
-        go-version: [1.26.x]
+        go-version: [1.27.x]
         include:
-          - go-version: 1.25.x
+          - go-version: 1.26.x
             os: ubuntu-latest
 
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 2  # required for codecov
       - name: Run Tests
         shell: bash
         run: 'internal/testing/runchecks.sh'
-      - uses: codecov/codecov-action@v7
+      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - if: matrix.os == 'ubuntu-latest'
