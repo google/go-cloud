@@ -61,7 +61,7 @@ func parseResponseChecksumValidation(value string) (aws.ResponseChecksumValidati
 	}
 }
 
-// NewDefaultV2Config returns a aws.Config for AWS SDK v2, using the default options.
+// NewDefaultV2Config returns an aws.Config for AWS SDK v2, using the default options.
 func NewDefaultV2Config(ctx context.Context) (aws.Config, error) {
 	return config.LoadDefaultConfig(ctx)
 }
@@ -181,18 +181,6 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error
 		}
 		opts = append(opts, config.WithRegion(baseConfig.Region))
 	}
-	if endpoint != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(
-			func(service, region string, options ...any) (aws.Endpoint, error) {
-				return aws.Endpoint{
-					PartitionID:       "aws",
-					URL:               endpoint,
-					SigningRegion:     region,
-					HostnameImmutable: hostnameImmutable,
-				}, nil
-			})
-		opts = append(opts, config.WithEndpointResolverWithOptions(customResolver))
-	}
 
 	var rateLimiter retry.RateLimiter
 	rateLimiter = ratelimit.None
@@ -205,5 +193,20 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error
 		})
 	}))
 
-	return config.LoadDefaultConfig(ctx, opts...)
+	cfg, err := config.LoadDefaultConfig(ctx, opts...)
+	if err != nil {
+		return aws.Config{}, err
+	}
+	if endpoint != "" {
+		cfg.EndpointResolverWithOptions = aws.EndpointResolverWithOptionsFunc(
+			func(service, region string, options ...any) (aws.Endpoint, error) {
+				return aws.Endpoint{
+					PartitionID:       "aws",
+					URL:               endpoint,
+					SigningRegion:     region,
+					HostnameImmutable: hostnameImmutable,
+				}, nil
+			})
+	}
+	return cfg, nil
 }
