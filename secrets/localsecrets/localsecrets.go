@@ -79,7 +79,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if err != nil {
 		// Note: don't include u in this error, since u.Host holds the raw
 		// key material for this scheme and would leak it into logs/errors.
-		return nil, fmt.Errorf("open keeper %s: failed to get key: %v", u.Scheme, err)
+		return nil, fmt.Errorf("open keeper %s: failed to get key: %w", u.Scheme, err)
 	}
 	return NewKeeper(sk), nil
 }

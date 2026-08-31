@@ -419,13 +419,13 @@ func (i *credInfoT) NewClient(svcURL ServiceURL, containerName ContainerName) (*
 	case credTypeDefault:
 		cred, err := azidentity.NewDefaultAzureCredential(nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed azidentity.NewDefaultAzureCredential: %v", err)
+			return nil, fmt.Errorf("failed azidentity.NewDefaultAzureCredential: %w", err)
 		}
 		return container.NewClient(containerURL, cred, azClientOpts)
 	case credTypeSharedKey:
 		sharedKeyCred, err := azblob.NewSharedKeyCredential(i.AccountName, i.AccountKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed azblob.NewSharedKeyCredential: %v", err)
+			return nil, fmt.Errorf("failed azblob.NewSharedKeyCredential: %w", err)
 		}
 		return container.NewClientWithSharedKeyCredential(containerURL, sharedKeyCred, azClientOpts)
 	case credTypeSASViaNone:

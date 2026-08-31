@@ -116,7 +116,7 @@ func (o *lazyCredsOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*run
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
+		return nil, fmt.Errorf("open variable %v: %w", u, o.err)
 	}
 	return o.opener.OpenVariableURL(ctx, u)
 }
@@ -158,14 +158,14 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q.Del("decoder")
 	decoder, err := runtimevar.DecoderByName(ctx, decoderName, o.Decoder)
 	if err != nil {
-		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %w", u, err)
 	}
 	opts := o.Options
 	if s := q.Get("wait"); s != "" {
 		q.Del("wait")
 		d, err := time.ParseDuration(s)
 		if err != nil {
-			return nil, fmt.Errorf("open variable %v: invalid wait %q: %v", u, s, err)
+			return nil, fmt.Errorf("open variable %v: invalid wait %q: %w", u, s, err)
 		}
 		opts.WaitDuration = d
 	}

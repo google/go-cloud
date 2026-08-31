@@ -43,7 +43,7 @@ func (o *lazySessionOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (
 		o.opener = &URLOpener{}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+		return nil, fmt.Errorf("open collection %s: %w", u, o.err)
 	}
 	return o.opener.OpenCollectionURL(ctx, u)
 }
@@ -109,11 +109,11 @@ func (o *URLOpener) processURL(u *url.URL) (db *dyn.Client, tableName, partition
 
 	cfg, err := gcaws.V2ConfigFromURLParams(context.Background(), q)
 	if err != nil {
-		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
+		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %w", u, err)
 	}
 	db, err = Dial(cfg)
 	if err != nil {
-		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %v", u, err)
+		return nil, "", "", "", nil, fmt.Errorf("open collection %s: %w", u, err)
 	}
 	return db, tableName, partitionKey, sortKey, opts, nil
 }

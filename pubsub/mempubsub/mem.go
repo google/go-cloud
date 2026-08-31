@@ -104,7 +104,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		var err error
 		ackDeadline, err = time.ParseDuration(s)
 		if err != nil {
-			return nil, fmt.Errorf("open subscription %v: invalid ackdeadline %q: %v", u, s, err)
+			return nil, fmt.Errorf("open subscription %v: invalid ackdeadline %q: %w", u, s, err)
 		}
 		q.Del("ackdeadline")
 	}

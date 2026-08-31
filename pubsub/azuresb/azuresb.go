@@ -126,7 +126,7 @@ func (o *defaultOpener) defaultOpener() (*URLOpener, error) {
 func (o *defaultOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	opener, err := o.defaultOpener()
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: %w", u, err)
 	}
 	return opener.OpenTopicURL(ctx, u)
 }
@@ -134,7 +134,7 @@ func (o *defaultOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.T
 func (o *defaultOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	opener, err := o.defaultOpener()
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: %w", u, err)
 	}
 	return opener.OpenSubscriptionURL(ctx, u)
 }
@@ -206,7 +206,7 @@ func (o *URLOpener) sbClient(kind string, u *url.URL) (*servicebus.Client, error
 	// Auth using Azure AAD Workload Identity/AAD Pod Identities/AKS Kubelet Identity/Service Principal.
 	client, err := NewClientFromServiceBusHostname(o.ServiceBusHostname, o.ServiceBusClientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("open %s %v: invalid service bus hostname %q: %v", kind, u, o.ServiceBusHostname, err)
+		return nil, fmt.Errorf("open %s %v: invalid service bus hostname %q: %w", kind, u, o.ServiceBusHostname, err)
 	}
 	return client, nil
 }
@@ -223,7 +223,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	topicName := path.Join(u.Host, u.Path)
 	sbSender, err := NewSender(sbClient, topicName, o.ServiceBusSenderOptions)
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: couldn't open topic %q: %v", u, topicName, err)
+		return nil, fmt.Errorf("open topic %v: couldn't open topic %q: %w", u, topicName, err)
 	}
 	return OpenTopic(ctx, sbSender, &o.TopicOptions)
 }
@@ -246,7 +246,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		q.Del("listener_timeout")
 		d, err := time.ParseDuration(lts)
 		if err != nil {
-			return nil, fmt.Errorf("open subscription %v: invalid listener_timeout %q: %v", u, lts, err)
+			return nil, fmt.Errorf("open subscription %v: invalid listener_timeout %q: %w", u, lts, err)
 		}
 		opts.ListenerTimeout = d
 	}
@@ -254,7 +254,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		q.Del("max_recv_batch_size")
 		mrbs, err := strconv.Atoi(mrbss)
 		if err != nil {
-			return nil, fmt.Errorf("open subscription %v: invalid max_recv_batch_size %q: %v", u, mrbss, err)
+			return nil, fmt.Errorf("open subscription %v: invalid max_recv_batch_size %q: %w", u, mrbss, err)
 		}
 		opts.ReceiveBatcherOptions.MaxBatchSize = mrbs
 	}
@@ -263,7 +263,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	}
 	sbReceiver, err := NewReceiver(sbClient, topicName, subName, o.ServiceBusReceiverOptions)
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: couldn't open subscription %q: %v", u, subName, err)
+		return nil, fmt.Errorf("open subscription %v: couldn't open subscription %q: %w", u, subName, err)
 	}
 	return OpenSubscription(ctx, sbClient, sbReceiver, &opts)
 }

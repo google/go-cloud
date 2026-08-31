@@ -68,13 +68,13 @@ func (o *defaultOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runti
 		}
 		bucket, err := blob.OpenBucket(ctx, bucketURL)
 		if err != nil {
-			o.err = fmt.Errorf("failed to open default bucket %q: %v", bucketURL, err)
+			o.err = fmt.Errorf("failed to open default bucket %q: %w", bucketURL, err)
 			return
 		}
 		o.opener = &URLOpener{Bucket: bucket}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
+		return nil, fmt.Errorf("open variable %v: %w", u, o.err)
 	}
 	return o.opener.OpenVariableURL(ctx, u)
 }
@@ -114,7 +114,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q.Del("decoder")
 	decoder, err := runtimevar.DecoderByName(ctx, decoderName, o.Decoder)
 	if err != nil {
-		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %w", u, err)
 	}
 
 	opts := o.Options
@@ -122,7 +122,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		q.Del("wait")
 		d, err := time.ParseDuration(s)
 		if err != nil {
-			return nil, fmt.Errorf("open variable %v: invalid wait %q: %v", u, s, err)
+			return nil, fmt.Errorf("open variable %v: invalid wait %q: %w", u, s, err)
 		}
 		opts.WaitDuration = d
 	}

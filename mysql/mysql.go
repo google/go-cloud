@@ -50,7 +50,7 @@ func (uo *URLOpener) OpenMySQLURL(_ context.Context, u *url.URL) (*sql.DB, error
 	}
 	c, err := mysql.NewConnector(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("mysql: could not create connector: %v", err)
+		return nil, fmt.Errorf("mysql: could not create connector: %w", err)
 	}
 	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }

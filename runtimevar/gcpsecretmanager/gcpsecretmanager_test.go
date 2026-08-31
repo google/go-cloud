@@ -250,7 +250,7 @@ func openVariable(ctx context.Context, URL string) (err error) {
 
 		if closeErr := v.Close(); closeErr != nil {
 			if grpcErr, ok := closeErr.(*gcerr.Error); ok && grpcErr.Code != gcerr.Canceled {
-				err = fmt.Errorf("close failed: %v. prev error: %v", closeErr, err)
+				err = fmt.Errorf("close failed: %w. prev error: %w", closeErr, err)
 			}
 		}
 	}()

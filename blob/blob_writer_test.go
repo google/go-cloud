@@ -69,7 +69,7 @@ func randomData(nBytes int64) ([]byte, error) {
 	var buf bytes.Buffer
 	n, err := io.CopyN(&buf, rand.Reader, nBytes)
 	if err != nil || n != nBytes {
-		return nil, fmt.Errorf("failed to get random data (%d want %d): %v", n, nBytes, err)
+		return nil, fmt.Errorf("failed to get random data (%d want %d): %w", n, nBytes, err)
 	}
 	return buf.Bytes(), nil
 }

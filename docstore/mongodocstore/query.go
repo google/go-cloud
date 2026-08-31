@@ -144,7 +144,7 @@ func (it *docIterator) nextMap(ctx context.Context) (map[string]interface{}, err
 	}
 	var m map[string]interface{}
 	if err := it.cursor.Decode(&m); err != nil {
-		return nil, fmt.Errorf("cursor.Decode: %v", err)
+		return nil, fmt.Errorf("cursor.Decode: %w", err)
 	}
 	return m, nil
 }

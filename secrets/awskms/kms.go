@@ -132,7 +132,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 
 	cfg, err := gcaws.V2ConfigFromURLParams(ctx, queryParams)
 	if err != nil {
-		return nil, fmt.Errorf("open keeper %v: %v", u, err)
+		return nil, fmt.Errorf("open keeper %v: %w", u, err)
 	}
 	client, err := Dial(cfg)
 	if err != nil {

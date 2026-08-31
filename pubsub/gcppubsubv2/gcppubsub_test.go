@@ -63,7 +63,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 	client, err := Client(ctx, projectID, nil)
 	if err != nil {
-		return nil, fmt.Errorf("making client: %v", err)
+		return nil, fmt.Errorf("making client: %w", err)
 	}
 	return &harness{closer: func() {}, client: client, numTopics: 0, numSubs: 0}, nil
 }
@@ -242,7 +242,7 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 func (gcpAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var s *status.Status
 	if !t.ErrorAs(err, &s) {
-		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
+		return fmt.Errorf("failed to convert %w (%T) to a gRPC Status", err, err)
 	}
 	if s.Code() != codes.NotFound {
 		return fmt.Errorf("got code %s, want NotFound", s.Code())
@@ -253,7 +253,7 @@ func (gcpAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 func (gcpAsTest) SubscriptionErrorCheck(sub *pubsub.Subscription, err error) error {
 	var s *status.Status
 	if !sub.ErrorAs(err, &s) {
-		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
+		return fmt.Errorf("failed to convert %w (%T) to a gRPC Status", err, err)
 	}
 	if s.Code() != codes.NotFound {
 		return fmt.Errorf("got code %s, want NotFound", s.Code())

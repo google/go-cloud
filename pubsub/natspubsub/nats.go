@@ -153,11 +153,11 @@ type serverVersion struct {
 func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	err := o.defaultConn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: failed to open default connection: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: failed to open default connection: %w", u, err)
 	}
 	useV2, err := queryUseV2(u.Query())
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: %w", u, err)
 	}
 	if useV2 {
 		return o.openerV2.OpenTopicURL(ctx, u)
@@ -168,11 +168,11 @@ func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.T
 func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	err := o.defaultConn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %w", u, err)
 	}
 	useV2, err := queryUseV2(u.Query())
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: %w", u, err)
 	}
 	if useV2 {
 		return o.openerV2.OpenSubscriptionURL(ctx, u)
@@ -193,15 +193,15 @@ func parseServerVersion(version string) (serverVersion, error) {
 	)
 	major, err = strconv.Atoi(m[1])
 	if err != nil {
-		return serverVersion{}, fmt.Errorf("failed to parse server version major number %q: %v", m[1], err)
+		return serverVersion{}, fmt.Errorf("failed to parse server version major number %q: %w", m[1], err)
 	}
 	minor, err = strconv.Atoi(m[2])
 	if err != nil {
-		return serverVersion{}, fmt.Errorf("failed to parse server version minor number %q: %v", m[2], err)
+		return serverVersion{}, fmt.Errorf("failed to parse server version minor number %q: %w", m[2], err)
 	}
 	patch, err = strconv.Atoi(m[3])
 	if err != nil {
-		return serverVersion{}, fmt.Errorf("failed to parse server version patch number %q: %v", m[3], err)
+		return serverVersion{}, fmt.Errorf("failed to parse server version patch number %q: %w", m[3], err)
 	}
 	return serverVersion{major: major, minor: minor, patch: patch}, nil
 }
@@ -316,7 +316,7 @@ func openTopic(nc *nats.Conn, subject string, useV2 bool) (driver.Topic, error) 
 	if useV2 {
 		sv, err := parseServerVersion(nc.ConnectedServerVersion())
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse NATS server version %q: %v", nc.ConnectedServerVersion(), err)
+			return nil, fmt.Errorf("failed to parse NATS server version %q: %w", nc.ConnectedServerVersion(), err)
 		}
 		// Check if the server version is at least 2.2.0.
 		if sv.major < 2 && sv.minor < 2 {

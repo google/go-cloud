@@ -47,7 +47,7 @@ func (o *defaultDialer) OpenCollectionURL(ctx context.Context, u *url.URL) (*doc
 
 	if currentEnv == "" {
 		o.err = errors.New("MONGO_SERVER_URL environment variable is not set")
-		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+		return nil, fmt.Errorf("open collection %s: %w", u, o.err)
 	}
 
 	// If MONGO_SERVER_URL has been updated, then update o.opener as well

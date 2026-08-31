@@ -93,7 +93,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 
 	_, err = c.Sys().Health()
 	if err != nil {
-		return nil, fmt.Errorf("vault server not healthy (run runtimevar/hashivault/localvault.sh): %v", err)
+		return nil, fmt.Errorf("vault server not healthy (run runtimevar/hashivault/localvault.sh): %w", err)
 	}
 
 	return &harness{client: c}, nil

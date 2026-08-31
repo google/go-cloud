@@ -71,7 +71,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	gcp := &gcloud{projectID}
 	dbConnStr, err := run(gcp.cmd("sql", "instances", "describe", "--format", "value(connectionName)", dbInstance)...)
 	if err != nil {
-		return fmt.Errorf("getting connection string: %v", err)
+		return fmt.Errorf("getting connection string: %w", err)
 	}
 
 	// Create a temporary directory to hold the service account key.
@@ -79,26 +79,26 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	// https://github.com/google/go-cloud/issues/110.
 	serviceAccountVolDir, err := os.MkdirTemp("", "guestbook-service-acct")
 	if err != nil {
-		return fmt.Errorf("creating temp dir to hold service account key: %v", err)
+		return fmt.Errorf("creating temp dir to hold service account key: %w", err)
 	}
 	serviceAccountVolDir, err = filepath.EvalSymlinks(serviceAccountVolDir)
 	if err != nil {
-		return fmt.Errorf("evaluating any symlinks: %v", err)
+		return fmt.Errorf("evaluating any symlinks: %w", err)
 	}
 	defer os.RemoveAll(serviceAccountVolDir)
 	log.Printf("Created %v", serviceAccountVolDir)
 
 	// Furnish a new service account key.
 	if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "create", "--iam-account="+serviceAccount, serviceAccountVolDir+"/key.json")...); err != nil {
-		return fmt.Errorf("creating new service account key: %v", err)
+		return fmt.Errorf("creating new service account key: %w", err)
 	}
 	keyJSONb, err := os.ReadFile(filepath.Join(serviceAccountVolDir, "key.json"))
 	if err != nil {
-		return fmt.Errorf("reading key.json file: %v", err)
+		return fmt.Errorf("reading key.json file: %w", err)
 	}
 	var k key
 	if err := json.Unmarshal(keyJSONb, &k); err != nil {
-		return fmt.Errorf("parsing key.json: %v", err)
+		return fmt.Errorf("parsing key.json: %w", err)
 	}
 	serviceAccountKeyID := k.PrivateKeyID
 	defer func() {
@@ -130,7 +130,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	connect.Stdin = schema
 	connect.Stderr = os.Stderr
 	if err := connect.Run(); err != nil {
-		return fmt.Errorf("running %v: %v", connect.Args, err)
+		return fmt.Errorf("running %v: %w", connect.Args, err)
 	}
 
 	return nil
@@ -142,7 +142,7 @@ func run(args ...string) (stdout string, err error) {
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	stdoutb, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("running %v: %v", cmd.Args, err)
+		return "", fmt.Errorf("running %v: %w", cmd.Args, err)
 	}
 	return strings.TrimSpace(string(stdoutb)), nil
 }

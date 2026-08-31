@@ -95,7 +95,7 @@ func (o *lazyCredsOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secre
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open keeper %v: %v", u, o.err)
+		return nil, fmt.Errorf("open keeper %v: %w", u, o.err)
 	}
 	return o.opener.OpenKeeperURL(ctx, u)
 }

@@ -98,7 +98,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		certPool, err := c.provider.AzureCertPool(ctx)
 		if err != nil {
 			c.sem <- struct{}{} // release
-			return nil, fmt.Errorf("connect Azure MySql: %v", err)
+			return nil, fmt.Errorf("connect Azure MySql: %w", err)
 		}
 		c.cfg.TLS = &tls.Config{RootCAs: certPool}
 		close(c.ready)
@@ -106,11 +106,11 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	case <-c.ready:
 		// Already succeeded.
 	case <-ctx.Done():
-		return nil, fmt.Errorf("connect Azure MySql: waiting for certificates: %v", ctx.Err())
+		return nil, fmt.Errorf("connect Azure MySql: waiting for certificates: %w", ctx.Err())
 	}
 	inner, err := mysql.NewConnector(c.cfg)
 	if err != nil {
-		return nil, fmt.Errorf("connect Azure MySql: create connector: %v", err)
+		return nil, fmt.Errorf("connect Azure MySql: create connector: %w", err)
 	}
 	return inner.Connect(ctx)
 }

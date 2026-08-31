@@ -63,7 +63,7 @@ func runLocalDB(containerName, guestbookDir string) error {
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("running %v: %v: %s", cmd.Args, err, out)
+		return fmt.Errorf("running %v: %w: %s", cmd.Args, err, out)
 	}
 	containerID := strings.TrimSpace(string(out))
 	defer func() {
@@ -97,11 +97,11 @@ func runLocalDB(containerName, guestbookDir string) error {
 	log.Printf("Initializing database schema and users")
 	schema, err := os.ReadFile(filepath.Join(guestbookDir, "schema.sql"))
 	if err != nil {
-		return fmt.Errorf("reading schema: %v", err)
+		return fmt.Errorf("reading schema: %w", err)
 	}
 	roles, err := os.ReadFile(filepath.Join(guestbookDir, "roles.sql"))
 	if err != nil {
-		return fmt.Errorf("reading roles: %v", err)
+		return fmt.Errorf("reading roles: %w", err)
 	}
 	tooMany := 10
 	var i int
@@ -131,7 +131,7 @@ func runLocalDB(containerName, guestbookDir string) error {
 	attach.Stdout = os.Stdout
 	attach.Stderr = os.Stderr
 	if err := attach.Run(); err != nil {
-		return fmt.Errorf("running %v: %q", attach.Args, err)
+		return fmt.Errorf("running %v: %w", attach.Args, err)
 	}
 
 	return nil

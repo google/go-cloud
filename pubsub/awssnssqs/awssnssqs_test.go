@@ -102,7 +102,7 @@ func createTopic(ctx context.Context, topicName string, snsClient *sns.Client, s
 		input := &sns.CreateTopicInput{Name: aws.String(topicName), Attributes: attributes}
 		out, err := snsClient.CreateTopic(ctx, input)
 		if err != nil {
-			return nil, nil, fmt.Errorf("creating SNS topic %q: %v", topicName, err)
+			return nil, nil, fmt.Errorf("creating SNS topic %q: %w", topicName, err)
 		}
 		dt = openSNSTopic(ctx, snsClient, *out.TopicArn, &TopicOptions{})
 		cleanup = func() {
@@ -113,7 +113,7 @@ func createTopic(ctx context.Context, topicName string, snsClient *sns.Client, s
 		// Create an SQS queue.
 		qURL, _, err := createSQSQueue(ctx, sqsClient, topicName, attributes)
 		if err != nil {
-			return nil, nil, fmt.Errorf("creating SQS queue %q: %v", topicName, err)
+			return nil, nil, fmt.Errorf("creating SQS queue %q: %w", topicName, err)
 		}
 		dt = openSQSTopic(ctx, sqsClient, qURL, &TopicOptions{})
 		cleanup = func() {
@@ -149,7 +149,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, sn
 		// Create an SQS queue, and subscribe it to the SNS topic.
 		qURL, qARN, err := createSQSQueue(ctx, sqsClient, subName, nil)
 		if err != nil {
-			return nil, nil, fmt.Errorf("creating SQS queue %q: %v", subName, err)
+			return nil, nil, fmt.Errorf("creating SQS queue %q: %w", subName, err)
 		}
 		ds = openSubscription(ctx, sqsClient, qURL, &SubscriptionOptions{})
 
@@ -166,7 +166,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, sn
 		}
 		out, err := snsClient.Subscribe(ctx, req)
 		if err != nil {
-			return nil, nil, fmt.Errorf("subscribing: %v", err)
+			return nil, nil, fmt.Errorf("subscribing: %w", err)
 		}
 		cleanup = func() {
 			_, _ = snsClient.Unsubscribe(ctx, &sns.UnsubscribeInput{SubscriptionArn: out.SubscriptionArn})
@@ -186,7 +186,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, sn
 func createSQSQueue(ctx context.Context, sqsClient *sqs.Client, topicName string, attributes map[string]string) (string, string, error) {
 	out, err := sqsClient.CreateQueue(ctx, &sqs.CreateQueueInput{QueueName: aws.String(topicName), Attributes: attributes})
 	if err != nil {
-		return "", "", fmt.Errorf("creating SQS queue %q: %v", topicName, err)
+		return "", "", fmt.Errorf("creating SQS queue %q: %w", topicName, err)
 	}
 	qURL := aws.ToString(out.QueueUrl)
 
@@ -196,7 +196,7 @@ func createSQSQueue(ctx context.Context, sqsClient *sqs.Client, topicName string
 		AttributeNames: []sqstypes.QueueAttributeName{"QueueArn"},
 	})
 	if err != nil {
-		return "", "", fmt.Errorf("getting queue ARN for %s: %v", qURL, err)
+		return "", "", fmt.Errorf("getting queue ARN for %s: %w", qURL, err)
 	}
 	qARN := out2.Attributes["QueueArn"]
 
@@ -219,7 +219,7 @@ func createSQSQueue(ctx context.Context, sqsClient *sqs.Client, topicName string
 		Attributes: map[string]string{"Policy": queuePolicy},
 		QueueUrl:   aws.String(qURL),
 	}); err != nil {
-		return "", "", fmt.Errorf("setting policy: %v", err)
+		return "", "", fmt.Errorf("setting policy: %w", err)
 	}
 	return qURL, qARN, nil
 }

@@ -159,7 +159,7 @@ func (o *lazySessionOpener) defaultOpener(u *url.URL) (*URLOpener, error) {
 func (o *lazySessionOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	opener, err := o.defaultOpener(u)
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: failed to open default session: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: failed to open default session: %w", u, err)
 	}
 	return opener.OpenTopicURL(ctx, u)
 }
@@ -167,7 +167,7 @@ func (o *lazySessionOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubs
 func (o *lazySessionOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	opener, err := o.defaultOpener(u)
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: failed to open default session: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: failed to open default session: %w", u, err)
 	}
 	return opener.OpenSubscriptionURL(ctx, u)
 }
@@ -219,7 +219,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	qURL := "https://" + path.Join(u.Host, u.Path)
 	cfg, err := gcaws.V2ConfigFromURLParams(ctx, u.Query())
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: %w", u, err)
 	}
 	switch u.Scheme {
 	case SNSScheme:
@@ -240,7 +240,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		var err error
 		opts.Raw, err = strconv.ParseBool(rawStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for raw: %v", rawStr, err)
+			return nil, fmt.Errorf("invalid value %q for raw: %w", rawStr, err)
 		}
 		q.Del("raw")
 	}
@@ -252,7 +252,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		var err error
 		opts.NackLazy, err = strconv.ParseBool(nackLazyStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for nacklazy: %v", nackLazyStr, err)
+			return nil, fmt.Errorf("invalid value %q for nacklazy: %w", nackLazyStr, err)
 		}
 		q.Del("nacklazy")
 	}
@@ -260,14 +260,14 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		var err error
 		opts.WaitTime, err = time.ParseDuration(waitTimeStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value %q for waittime: %v", waitTimeStr, err)
+			return nil, fmt.Errorf("invalid value %q for waittime: %w", waitTimeStr, err)
 		}
 		q.Del("waittime")
 	}
 	qURL := "https://" + path.Join(u.Host, u.Path)
 	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: %w", u, err)
 	}
 	return OpenSubscription(ctx, sqs.NewFromConfig(cfg), qURL, &opts), nil
 }

@@ -63,7 +63,7 @@ func (cf *CertFetcher) Fetch(ctx context.Context) (certs []*x509.Certificate, er
 	}
 	resp, err := ctxhttp.Get(ctx, client, caBundleURL)
 	if err != nil {
-		return nil, fmt.Errorf("fetch Azure certificates: %v", err)
+		return nil, fmt.Errorf("fetch Azure certificates: %w", err)
 	}
 	defer func() {
 		if e := resp.Body.Close(); e != nil && err == nil {
@@ -75,7 +75,7 @@ func (cf *CertFetcher) Fetch(ctx context.Context) (certs []*x509.Certificate, er
 	}
 	pemData, err := io.ReadAll(&io.LimitedReader{R: resp.Body, N: 1 << 20}) // limit to 1MiB
 	if err != nil {
-		return nil, fmt.Errorf("fetch Azure certificates: %v", err)
+		return nil, fmt.Errorf("fetch Azure certificates: %w", err)
 	}
 	for len(pemData) > 0 {
 		var block *pem.Block
@@ -88,7 +88,7 @@ func (cf *CertFetcher) Fetch(ctx context.Context) (certs []*x509.Certificate, er
 		}
 		c, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("fetch Azure certificates: %v", err)
+			return nil, fmt.Errorf("fetch Azure certificates: %w", err)
 		}
 		certs = append(certs, c)
 	}

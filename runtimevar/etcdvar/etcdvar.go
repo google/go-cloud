@@ -71,13 +71,13 @@ func (o *defaultDialer) OpenVariableURL(ctx context.Context, u *url.URL) (*runti
 		}
 		client, err := clientv3.NewFromURL(serverURL)
 		if err != nil {
-			o.err = fmt.Errorf("failed to connect to default client %q: %v", serverURL, err)
+			o.err = fmt.Errorf("failed to connect to default client %q: %w", serverURL, err)
 			return
 		}
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
+		return nil, fmt.Errorf("open variable %v: %w", u, o.err)
 	}
 	return o.opener.OpenVariableURL(ctx, u)
 }
@@ -109,7 +109,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q.Del("decoder")
 	decoder, err := runtimevar.DecoderByName(ctx, decoderName, o.Decoder)
 	if err != nil {
-		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %w", u, err)
 	}
 
 	for param := range q {

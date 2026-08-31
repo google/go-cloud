@@ -77,7 +77,7 @@ func (o *lazyCredsOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB
 		o.opener = &URLOpener{CertSource: certSource}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("gcpmysql open %v: %v", u.Redacted(), o.err)
+		return nil, fmt.Errorf("gcpmysql open %v: %w", u.Redacted(), o.err)
 	}
 	return o.opener.OpenMySQLURL(ctx, u)
 }
@@ -103,7 +103,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 		cfg, err = configFromURL(u)
 	)
 	if err != nil {
-		return nil, fmt.Errorf("gcpmysql: open config %v", err)
+		return nil, fmt.Errorf("gcpmysql: open config %w", err)
 	}
 	cfg.DialFunc = func(ctx context.Context, _, addr string) (net.Conn, error) {
 		// MySQL driver's addr is in the form "[host]:3306" after normalized.
@@ -116,7 +116,7 @@ func (uo *URLOpener) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	}
 	c, err := mysql.NewConnector(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("gcpmysql: open connector %v", err)
+		return nil, fmt.Errorf("gcpmysql: open connector %w", err)
 	}
 	return otelsql.OpenDB(c, uo.TraceOpts...), nil
 }

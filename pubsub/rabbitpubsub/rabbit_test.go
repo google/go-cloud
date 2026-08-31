@@ -320,10 +320,10 @@ func (r rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 func (rabbitAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var aerr *amqp.Error
 	if !t.ErrorAs(err, &aerr) {
-		return fmt.Errorf("failed to convert %v (%T) to an amqp.Error", err, err)
+		return fmt.Errorf("failed to convert %w (%T) to an amqp.Error", err, err)
 	}
 	if !errors.As(err, &aerr) {
-		return fmt.Errorf("failed to use errors.As to convert %v (%T) to an amqp.Error", err, err)
+		return fmt.Errorf("failed to use errors.As to convert %w (%T) to an amqp.Error", err, err)
 	}
 	if aerr.Code != amqp.NotFound {
 		return fmt.Errorf("got code %v, want NotFound", aerr.Code)
@@ -332,10 +332,10 @@ func (rabbitAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	err = MultiError{err}
 	var merr MultiError
 	if !t.ErrorAs(err, &merr) {
-		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
+		return fmt.Errorf("failed to convert %w (%T) to a MultiError", err, err)
 	}
 	if !errors.As(err, &merr) {
-		return fmt.Errorf("failed to use errors.As to convert %v (%T) to a MultiError", err, err)
+		return fmt.Errorf("failed to use errors.As to convert %w (%T) to a MultiError", err, err)
 	}
 	var perr *os.PathError
 	if t.ErrorAs(err, &perr) {
@@ -347,10 +347,10 @@ func (rabbitAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 func (rabbitAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
 	var aerr *amqp.Error
 	if !s.ErrorAs(err, &aerr) {
-		return fmt.Errorf("failed to convert %v (%T) to an amqp.Error", err, err)
+		return fmt.Errorf("failed to convert %w (%T) to an amqp.Error", err, err)
 	}
 	if !errors.As(err, &aerr) {
-		return fmt.Errorf("failed to use errors.As to convert %v (%T) to an amqp.Error", err, err)
+		return fmt.Errorf("failed to use errors.As to convert %w (%T) to an amqp.Error", err, err)
 	}
 	if aerr.Code != amqp.NotFound {
 		return fmt.Errorf("got code %v, want NotFound", aerr.Code)
@@ -359,7 +359,7 @@ func (rabbitAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) er
 	err = MultiError{err}
 	var merr MultiError
 	if !s.ErrorAs(err, &merr) {
-		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
+		return fmt.Errorf("failed to convert %w (%T) to a MultiError", err, err)
 	}
 	var perr *os.PathError
 	if s.ErrorAs(err, &perr) {

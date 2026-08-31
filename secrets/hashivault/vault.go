@@ -127,13 +127,13 @@ func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets
 		cfg := Config{Token: token, APIConfig: api.Config{Address: serverURL}}
 		client, err := Dial(ctx, &cfg)
 		if err != nil {
-			o.err = fmt.Errorf("failed to Dial default Vault server at %q: %v", serverURL, err)
+			o.err = fmt.Errorf("failed to Dial default Vault server at %q: %w", serverURL, err)
 			return
 		}
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open keeper %v: %v", u, o.err)
+		return nil, fmt.Errorf("open keeper %v: %w", u, o.err)
 	}
 	return o.opener.OpenKeeperURL(ctx, u)
 }

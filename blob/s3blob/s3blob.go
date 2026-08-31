@@ -172,7 +172,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		var err error
 		accelerate, err = strconv.ParseBool(accelerateParam)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for %q: %v", accelerateParamKey, err)
+			return nil, fmt.Errorf("invalid value for %q: %w", accelerateParamKey, err)
 		}
 	}
 
@@ -185,7 +185,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		q.Del(disableHTTPSParamKey)
 		value, err := strconv.ParseBool(disableHTTPSParam)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for %q: %v", disableHTTPSParamKey, err)
+			return nil, fmt.Errorf("invalid value for %q: %w", disableHTTPSParamKey, err)
 		}
 		opts = append(opts, func(o *s3.Options) {
 			o.EndpointOptions.DisableHTTPS = value
@@ -196,7 +196,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 			q.Del(key)
 			value, err := strconv.ParseBool(usePathStyleParam)
 			if err != nil {
-				return nil, fmt.Errorf("invalid value for %q: %v", key, err)
+				return nil, fmt.Errorf("invalid value for %q: %w", key, err)
 			}
 			opts = append(opts, func(o *s3.Options) {
 				o.UsePathStyle = value
@@ -206,7 +206,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 
 	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 	if err != nil {
-		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+		return nil, fmt.Errorf("open bucket %v: %w", u, err)
 	}
 	client := s3.NewFromConfig(cfg, opts...)
 

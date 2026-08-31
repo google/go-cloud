@@ -208,7 +208,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		o.opener = &URLOpener{Client: client, Options: opts}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
+		return nil, fmt.Errorf("open bucket %v: %w", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
 }
@@ -241,7 +241,7 @@ type URLOpener struct {
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	opts, client, err := o.forParams(ctx, u.Query())
 	if err != nil {
-		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+		return nil, fmt.Errorf("open bucket %v: %w", u, err)
 	}
 	return OpenBucket(ctx, client, u.Host, opts)
 }

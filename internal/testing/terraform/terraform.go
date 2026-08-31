@@ -28,11 +28,11 @@ func ReadOutput(dir string) (map[string]Output, error) {
 	c.Dir = dir
 	data, err := c.Output()
 	if err != nil {
-		return nil, fmt.Errorf("read terraform output: %v", err)
+		return nil, fmt.Errorf("read terraform output: %w", err)
 	}
 	var parsed map[string]Output
 	if err := json.Unmarshal(data, &parsed); err != nil {
-		return nil, fmt.Errorf("read terraform output: %v", err)
+		return nil, fmt.Errorf("read terraform output: %w", err)
 	}
 	return parsed, nil
 }

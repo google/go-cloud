@@ -154,7 +154,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	}
 	opts, err := o.forParams(ctx, u.Query())
 	if err != nil {
-		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+		return nil, fmt.Errorf("open bucket %v: %w", u, err)
 	}
 	return OpenBucket(filepath.FromSlash(path), opts)
 }
@@ -211,7 +211,7 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 		// parsed as decimal 777, yielding unexpected permission bits.
 		fm, err := strconv.ParseUint(fms, 0, 32)
 		if err != nil {
-			return nil, fmt.Errorf("fileblob.OpenBucket: invalid dir_file_mode %q: %v", fms, err)
+			return nil, fmt.Errorf("fileblob.OpenBucket: invalid dir_file_mode %q: %w", fms, err)
 		}
 		opts.DirFileMode = os.FileMode(fm)
 	}
@@ -285,7 +285,7 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 
 	absdir, err := filepath.Abs(dir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert %s into an absolute path: %v", dir, err)
+		return nil, fmt.Errorf("failed to convert %s into an absolute path: %w", dir, err)
 	}
 	info, err := os.Stat(absdir)
 
@@ -293,7 +293,7 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	if err != nil && opts.CreateDir && os.IsNotExist(err) {
 		err = os.MkdirAll(absdir, opts.DirFileMode)
 		if err != nil {
-			return nil, fmt.Errorf("tried to create directory but failed: %v", err)
+			return nil, fmt.Errorf("tried to create directory but failed: %w", err)
 		}
 		info, err = os.Stat(absdir)
 	}

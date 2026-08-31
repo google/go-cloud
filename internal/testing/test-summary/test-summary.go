@@ -79,7 +79,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 
 		var event TestEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
-			return "", false, fmt.Errorf("%q: %v", scanner.Text(), err)
+			return "", false, fmt.Errorf("%q: %w", scanner.Text(), err)
 		}
 		testpath := filepath.Join(event.Package, event.Test)
 

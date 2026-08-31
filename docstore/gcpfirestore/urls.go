@@ -58,7 +58,7 @@ func (o *lazyCredsOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*d
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+		return nil, fmt.Errorf("open collection %s: %w", u, o.err)
 	}
 	return o.opener.OpenCollectionURL(ctx, u)
 }

@@ -67,16 +67,16 @@ func provisionDb(dbHost, region, securityGroupID, dbName, dbPassword, schemaPath
 	// https://github.com/google/go-cloud/issues/110.
 	tempdir, err := os.MkdirTemp("", "guestbook-ca")
 	if err != nil {
-		return fmt.Errorf("creating temp dir for certs: %v", err)
+		return fmt.Errorf("creating temp dir for certs: %w", err)
 	}
 	defer os.RemoveAll(tempdir)
 	tempdir, err = filepath.EvalSymlinks(tempdir)
 	if err != nil {
-		return fmt.Errorf("evaluating any symlinks: %v", err)
+		return fmt.Errorf("evaluating any symlinks: %w", err)
 	}
 	resp, err := http.Get("https://s3.amazonaws.com/rds-downloads/rds-ca-2015-root.pem")
 	if err != nil {
-		return fmt.Errorf("fetching pem file: %v", err)
+		return fmt.Errorf("fetching pem file: %w", err)
 	}
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("response status code is %d, want 200", resp.StatusCode)
@@ -88,7 +88,7 @@ func provisionDb(dbHost, region, securityGroupID, dbName, dbPassword, schemaPath
 		return err
 	}
 	if _, err := io.Copy(caFile, resp.Body); err != nil {
-		return fmt.Errorf("copying response to file: %v", err)
+		return fmt.Errorf("copying response to file: %w", err)
 	}
 
 	log.Print("Adding a temporary ingress rule")
@@ -115,7 +115,7 @@ func provisionDb(dbHost, region, securityGroupID, dbName, dbPassword, schemaPath
 	connect.Stdin = schema
 	connect.Stderr = os.Stderr
 	if err := connect.Run(); err != nil {
-		return fmt.Errorf("running %v: %v", connect.Args, err)
+		return fmt.Errorf("running %v: %w", connect.Args, err)
 	}
 
 	return nil
@@ -127,7 +127,7 @@ func run(args ...string) (stdout string, err error) {
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	stdoutb, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("running %v: %v", cmd.Args, err)
+		return "", fmt.Errorf("running %v: %w", cmd.Args, err)
 	}
 	return strings.TrimSpace(string(stdoutb)), nil
 }

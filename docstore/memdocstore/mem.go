@@ -603,7 +603,7 @@ func loadDocs(filename string) (m mapOfDocs, err error) {
 		}
 	}()
 	if err := gob.NewDecoder(f).Decode(&m); err != nil {
-		return nil, fmt.Errorf("failed to decode from %q: %v", filename, err)
+		return nil, fmt.Errorf("failed to decode from %q: %w", filename, err)
 	}
 	return m, nil
 }
@@ -619,7 +619,7 @@ func saveDocs(filename string, m mapOfDocs) error {
 	}
 	if err := gob.NewEncoder(f).Encode(m); err != nil {
 		_ = f.Close()
-		return fmt.Errorf("failed to encode to %q: %v", filename, err)
+		return fmt.Errorf("failed to encode to %q: %w", filename, err)
 	}
 	return f.Close()
 }

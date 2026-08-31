@@ -163,7 +163,7 @@ func (o *lazyCredsOpener) defaultConn(ctx context.Context) (*URLOpener, error) {
 func (o *lazyCredsOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	opener, err := o.defaultConn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: failed to open default connection: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: failed to open default connection: %w", u, err)
 	}
 	return opener.OpenTopicURL(ctx, u)
 }
@@ -171,7 +171,7 @@ func (o *lazyCredsOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub
 func (o *lazyCredsOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	opener, err := o.defaultConn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %w", u, err)
 	}
 	return opener.OpenSubscriptionURL(ctx, u)
 }
@@ -212,7 +212,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 		case "max_send_batch_size":
 			maxBatchSize, err := queryParameterInt(value)
 			if err != nil {
-				return nil, fmt.Errorf("open topic %v: invalid query parameter %q: %v", u, param, err)
+				return nil, fmt.Errorf("open topic %v: invalid query parameter %q: %w", u, param, err)
 			}
 
 			if maxBatchSize <= 0 || maxBatchSize > 1000 {
@@ -247,7 +247,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		case "max_recv_batch_size":
 			maxBatchSize, err := queryParameterInt(value)
 			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %w", u, param, err)
 			}
 
 			if maxBatchSize <= 0 || maxBatchSize > 1000 {
@@ -259,7 +259,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 			var err error
 			nackLazy, err := queryParameterBool(value)
 			if err != nil {
-				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %v", u, param, err)
+				return nil, fmt.Errorf("open subscription %v: invalid query parameter %q: %w", u, param, err)
 			}
 			opts.NackLazy = nackLazy
 		default:

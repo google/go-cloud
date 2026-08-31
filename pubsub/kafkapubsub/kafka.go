@@ -117,7 +117,7 @@ func (o *defaultOpener) defaultOpener() (*URLOpener, error) {
 func (o *defaultOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	opener, err := o.defaultOpener()
 	if err != nil {
-		return nil, fmt.Errorf("open topic %v: %v", u, err)
+		return nil, fmt.Errorf("open topic %v: %w", u, err)
 	}
 	return opener.OpenTopicURL(ctx, u)
 }
@@ -125,7 +125,7 @@ func (o *defaultOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.T
 func (o *defaultOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	opener, err := o.defaultOpener()
 	if err != nil {
-		return nil, fmt.Errorf("open subscription %v: %v", u, err)
+		return nil, fmt.Errorf("open subscription %v: %w", u, err)
 	}
 	return opener.OpenSubscriptionURL(ctx, u)
 }
