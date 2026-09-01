@@ -75,7 +75,6 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/storage"
-	"cloud.google.com/go/storage/experimental"
 	"github.com/google/wire"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
@@ -274,7 +273,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	}
 	var clientOpts []option.ClientOption
 	if params.useZonal {
-		clientOpts = append(clientOpts, experimental.WithZonalBucketAPIs())
+		clientOpts = append(clientOpts, storage.WithAppendableUploads(), storage.WithGRPCBidiReads())
 	}
 	clientOpts = append(clientOpts, opts.ClientOptions...)
 	ts := o.TokenSource
@@ -475,7 +474,8 @@ func httpClientOptions(client *gcp.HTTPClient, emulatorHost string) []option.Cli
 // Rapid Storage (zonal) buckets accept only appendable object uploads, and
 // reject every other write. They need the zonal bucket APIs:
 //
-//	c, cleanup, err := gcsblob.DialGRPC(ctx, ts, experimental.WithZonalBucketAPIs())
+//	c, cleanup, err := gcsblob.DialGRPC(ctx, ts,
+//		storage.WithAppendableUploads(), storage.WithGRPCBidiReads())
 //
 // Do not pass that option for other bucket types, which reject appendable
 // uploads in turn.
@@ -521,7 +521,8 @@ func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 // This is the entry point for Rapid Storage (zonal) buckets, which reject every
 // write over JSON/HTTP:
 //
-//	c, cleanup, err := gcsblob.DialGRPC(ctx, ts, experimental.WithZonalBucketAPIs())
+//	c, cleanup, err := gcsblob.DialGRPC(ctx, ts,
+//		storage.WithAppendableUploads(), storage.WithGRPCBidiReads())
 //	if err != nil { ... }
 //	defer cleanup()
 //	b, err := gcsblob.OpenBucketGRPC(c, "my-rapid-bucket", nil)
@@ -878,8 +879,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		// The storage client reads this field only on the appendable write
 		// path, so it does nothing over JSON/HTTP or plain gRPC. Setting it
 		// unconditionally is deliberate: it also covers callers who turn on
-		// appendable uploads by passing experimental.WithZonalBucketAPIs
-		// through Options.ClientOptions rather than setting UseZonalAPIs.
+		// appendable uploads by passing storage.WithAppendableUploads
+		// through Options.ClientOptions rather than using the zonal URL
+		// parameter.
 		// Callers who do want an object left open for later appends can set
 		// this back to false from WriterOptions.BeforeWrite.
 		w.FinalizeOnClose = true
