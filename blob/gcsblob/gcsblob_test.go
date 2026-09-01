@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -116,6 +117,62 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
+func TestOpenBucketGRPC(t *testing.T) {
+	ctx := context.Background()
+	client, cleanup, err := DialGRPC(ctx, nil) // unauthenticated; no RPCs are made here
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	for _, test := range []struct {
+		name       string
+		client     *storage.Client
+		bucketName string
+		opts       *Options
+		wantErr    string
+	}{
+		{name: "ok", client: client, bucketName: "mybucket"},
+		{name: "ok, nil Options", client: client, bucketName: "mybucket", opts: nil},
+		{name: "nil client", bucketName: "mybucket", wantErr: "client is required"},
+		{name: "empty bucket name", client: client, wantErr: "bucketName is required"},
+		{
+			name:       "Options.Client also set",
+			client:     client,
+			bucketName: "mybucket",
+			opts:       &Options{Client: client},
+			wantErr:    "Options.Client must be nil",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			b, err := OpenBucketGRPC(test.client, test.bucketName, test.opts)
+			if test.wantErr != "" {
+				if err == nil {
+					t.Fatalf("got nil error, want one containing %q", test.wantErr)
+				}
+				if !strings.Contains(err.Error(), test.wantErr) {
+					t.Errorf("got error %q, want it to contain %q", err, test.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The caller owns the client, so closing the bucket must leave it
+			// usable rather than closing it.
+			if err := b.Close(); err != nil {
+				t.Errorf("Close: %v", err)
+			}
+			if _, err := OpenBucketGRPC(client, "mybucket", nil); err != nil {
+				t.Errorf("client was closed by bucket.Close: %v", err)
+			}
+		})
+	}
+}
+
+// HTTPClient returns nil: without a GoogleAccessID and a signer, SignedURL
+// reports Unimplemented and drivertest skips the checks that would need this.
+// SignedURL is signed client-side and is unaffected by the transport.
 func BenchmarkGcsblob(b *testing.B) {
 	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
@@ -561,6 +618,7 @@ func TestURLOpenerForParams(t *testing.T) {
 		currOpts   Options
 		query      url.Values
 		wantOpts   Options
+		wantParams urlParams
 		wantClient bool
 		wantErr    bool
 	}{
@@ -593,6 +651,7 @@ func TestURLOpenerForParams(t *testing.T) {
 				"access_id": {"-"},
 			},
 			wantOpts:   Options{}, // cleared
+			wantParams: urlParams{anonymous: true},
 			wantClient: true,
 		},
 		{
@@ -614,6 +673,7 @@ func TestURLOpenerForParams(t *testing.T) {
 				"anonymous": {"true"},
 			},
 			wantOpts:   Options{}, // cleared
+			wantParams: urlParams{anonymous: true},
 			wantClient: true,
 		},
 		{
@@ -639,6 +699,61 @@ func TestURLOpenerForParams(t *testing.T) {
 			wantOpts: Options{},
 		},
 		{
+			name: "GRPC",
+			query: url.Values{
+				"grpc": {"true"},
+			},
+			wantOpts:   Options{},
+			wantParams: urlParams{useGRPC: true},
+		},
+		{
+			name: "Invalid value for grpc",
+			query: url.Values{
+				"grpc": {"bad"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Zonal",
+			query: url.Values{
+				"zonal": {"true"},
+			},
+			wantOpts: Options{},
+			// zonal=true implies grpc=true.
+			wantParams: urlParams{useGRPC: true, useZonal: true},
+		},
+		{
+			name: "Zonal with explicit grpc",
+			query: url.Values{
+				"grpc":  {"true"},
+				"zonal": {"true"},
+			},
+			wantOpts:   Options{},
+			wantParams: urlParams{useGRPC: true, useZonal: true},
+		},
+		{
+			name: "Zonal false",
+			query: url.Values{
+				"zonal": {"false"},
+			},
+			wantOpts: Options{},
+		},
+		{
+			name: "Zonal conflicts with grpc=false",
+			query: url.Values{
+				"grpc":  {"false"},
+				"zonal": {"true"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid value for zonal",
+			query: url.Values{
+				"zonal": {"bad"},
+			},
+			wantErr: true,
+		},
+		{
 			name: "AccessID change clears PrivateKey and MakeSignBytes",
 			currOpts: Options{
 				GoogleAccessID: "foo",
@@ -659,7 +774,7 @@ func TestURLOpenerForParams(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			o := &URLOpener{Options: test.currOpts}
-			got, gotClient, err := o.forParams(ctx, test.query)
+			got, gotClient, gotParams, err := o.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -668,6 +783,9 @@ func TestURLOpenerForParams(t *testing.T) {
 			}
 			if diff := cmp.Diff(got, &test.wantOpts); diff != "" {
 				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(gotParams, test.wantParams, cmp.AllowUnexported(urlParams{})); diff != "" {
+				t.Errorf("opener.forParams(...) params diff (-want +got):\n%s", diff)
 			}
 			if test.wantClient != (gotClient != nil) {
 				t.Errorf("opener.forParams client return value was unexpected, got %v want %v", gotClient != nil, test.wantClient)
@@ -705,6 +823,19 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"gs://mybucket?universe_domain=example.com", false},
 		// OK, universe_domain with empty value.
 		{"gs://mybucket?universe_domain=", false},
+		// OK, using the gRPC API.
+		{"gs://mybucket?grpc=true", false},
+		// Invalid value for grpc.
+		{"gs://mybucket?grpc=bad", true},
+		// OK, using the zonal APIs (required for Rapid Storage buckets).
+		{"gs://mybucket?zonal=true", false},
+		// Invalid value for zonal.
+		{"gs://mybucket?zonal=bad", true},
+		// zonal=true cannot be combined with grpc=false.
+		{"gs://mybucket?zonal=true&grpc=false", true},
+		// OK, gRPC without credentials.
+		{"gs://mybucket?grpc=true&anonymous=true", false},
+		{"gs://mybucket?zonal=true&anonymous=true", false},
 		// Invalid private_key_path.
 		{"gs://mybucket?private_key_path=invalid-path", true},
 		// Invalid parameter.
