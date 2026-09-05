@@ -19,7 +19,7 @@
 // See https://gocloud.dev/howto/blob/ for a detailed how-to guide.
 //
 // *blob.Bucket implements io/fs.FS and io/fs.SubFS, so it can be used with
-// functions in that package.
+// functions in those packages.
 //
 // # Errors
 //
