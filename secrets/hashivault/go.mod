@@ -47,7 +47,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-replayers/grpcreplay v1.4.0 // indirect
+	github.com/google/go-replayers/grpcreplay v1.5.0 // indirect
 	github.com/google/go-replayers/httpreplay v1.2.0 // indirect
 	github.com/google/martian/v3 v3.3.3 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect

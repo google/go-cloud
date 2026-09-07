@@ -125,7 +125,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/go-replayers/grpcreplay v1.4.0 // indirect
+	github.com/google/go-replayers/grpcreplay v1.5.0 // indirect
 	github.com/google/go-replayers/httpreplay v1.2.0 // indirect
 	github.com/google/martian/v3 v3.3.3 // indirect
 	github.com/google/renameio v0.1.0 // indirect
