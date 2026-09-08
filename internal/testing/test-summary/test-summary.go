@@ -70,7 +70,6 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 
 	start := time.Now()
 	for scanner.Scan() {
-		fmt.Printf("RAW: %s\n", scanner.Text())
 		// When the build fails, go test -json doesn't emit a valid JSON value, only
 		// a line of output starting with FAIL. Report a more reasonable error in
 		// this case.
@@ -87,8 +86,6 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 		// The Test field, if non-empty, specifies the test, example, or benchmark
 		// function that caused the event. Events for the overall package test do
 		// not set Test.
-		fmt.Printf("JSON Test: %s\n", event.Test)
-		fmt.Printf("JSON Action: %s\n", event.Action)
 		if event.Action == "fail" && event.Test != "" {
 			failedTests = append(failedTests, testpath)
 		}
