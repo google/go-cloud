@@ -58,6 +58,10 @@ type Harness interface {
 	// HTTPClient should return an unauthorized *http.Client, or nil.
 	// Required if the service supports SignedURL.
 	HTTPClient() *http.Client
+	// SupportsCopy should return true iff the driver supports Copy.
+	SupportsCopy() bool
+	// SupportsNonSlashDelimiters should return true iff the driver supports non-"/" delimiters.
+	SupportsNonSlashDelimiters() bool
 	// Close closes resources used by the harness.
 	Close()
 }
@@ -905,7 +909,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 	// no guarantee that after we create them they will be immediately returned
 	// from List. The very first time the test is run against a Bucket, it may be
 	// flaky due to this race.
-	init := func(t *testing.T, delim string) (driver.Bucket, *blob.Bucket, func()) {
+	init := func(t *testing.T, delim string) (driver.Bucket, *blob.Bucket, bool, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
 			t.Fatal(err)
@@ -929,12 +933,12 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				}
 			}
 		}
-		return drv, b, func() { _ = b.Close(); h.Close() }
+		return drv, b, h.SupportsNonSlashDelimiters(), func() { _ = b.Close(); h.Close() }
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			drv, b, done := init(t, tc.delim)
+			drv, b, supportsNonSlash, done := init(t, tc.delim)
 			defer done()
 
 			// Fetch without using delimiter.
@@ -947,6 +951,9 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 			}
 
 			// Fetch using delimiter, recursively.
+			if !supportsNonSlash {
+				return
+			}
 			got, err = doList(ctx, b, keyPrefix+tc.delim, tc.delim, true)
 			if err != nil {
 				t.Fatal(err)
@@ -1932,6 +1939,10 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer h.Close()
+		if !h.SupportsCopy() {
+			return
+		}
+
 		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -1955,6 +1966,10 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer h.Close()
+		if !h.SupportsCopy() {
+			return
+		}
+
 		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -2048,6 +2063,10 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer h.Close()
+		if !h.SupportsCopy() {
+			return
+		}
+
 		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -2435,6 +2454,9 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			}
 
 			// Copy the blob.
+			if !h.SupportsCopy() {
+				return
+			}
 			copyToKey := key + "-copy"
 			if err := b.Copy(ctx, copyToKey, key, nil); err != nil {
 				t.Fatal(err)
@@ -2785,10 +2807,12 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 
 	// Copy the blob, using the provided callback, then delete the copy,
 	// using the provided callback.
-	if err := b.Copy(ctx, copyKey, key, &blob.CopyOptions{BeforeCopy: st.BeforeCopy}); err != nil {
-		t.Error(err)
-	} else if err := b.DeleteWithOptions(ctx, copyKey, &blob.DeleteOptions{BeforeDelete: st.BeforeDelete}); err != nil {
-		t.Error(err)
+	if h.SupportsCopy() {
+		if err := b.Copy(ctx, copyKey, key, &blob.CopyOptions{BeforeCopy: st.BeforeCopy}); err != nil && gcerrors.Code(err) == gcerrors.Unimplemented {
+			t.Error(err)
+		} else if err := b.DeleteWithOptions(ctx, copyKey, &blob.DeleteOptions{BeforeDelete: st.BeforeDelete}); err != nil {
+			t.Error(err)
+		}
 	}
 
 	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
