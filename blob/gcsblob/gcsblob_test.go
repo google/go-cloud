@@ -221,26 +221,8 @@ func (h *grpcHarness) HTTPClient() *http.Client { return nil }
 
 func (h *grpcHarness) Close() { h.cleanup() }
 
-// TestConformanceGRPC runs the conformance suite over the Cloud Storage gRPC
-// API, replaying from testdata/TestConformanceGRPC.
-//
-// Those golden files are not committed yet, so the test skips unless -record is
-// set. To record them:
-//
-//  1. Point bucketName at a bucket to which you can write.
-//  2. rm -rf blob/gcsblob/testdata/TestConformanceGRPC
-//  3. go test ./blob/gcsblob/ -run 'TestConformanceGRPC$' -record
-//  4. Restore bucketName and drop the skip below.
-//
-// Recording needs Application Default Credentials with write access to that
-// bucket. The bucket name is part of every recorded request, so bucketName and
-// the golden files always have to be regenerated together. Note that it is
-// shared with TestConformance, whose golden files were recorded against the
-// same bucket, so either re-record both or restore bucketName afterwards.
+// TestConformanceGRPC runs the conformance suite over the Cloud Storage gRPC API.
 func TestConformanceGRPC(t *testing.T) {
-	if !*setup.Record {
-		t.Skip("no golden files recorded yet; re-record them as described above and drop this skip")
-	}
 	drivertest.RunConformanceTests(t, newGRPCHarness(false), []drivertest.AsTest{verifyContentLanguage{}})
 }
 
