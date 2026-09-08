@@ -155,7 +155,9 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 	o.init.Do(func() {
 		var opts Options
 		var creds *google.Credentials
-		if os.Getenv("STORAGE_EMULATOR_HOST") != "" {
+		// STORAGE_EMULATOR_HOST_GRPC is the gRPC equivalent; a local emulator
+		// needs separate ports for HTTP and gRPC, so either may be set.
+		if os.Getenv("STORAGE_EMULATOR_HOST") != "" || os.Getenv("STORAGE_EMULATOR_HOST_GRPC") != "" {
 			creds, _ = google.CredentialsFromJSON(ctx, []byte(`{"type": "service_account", "project_id": "my-project-id"}`))
 		} else {
 			var err error
@@ -205,7 +207,9 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 			o.err = err
 			return
 		}
-		o.opener = &URLOpener{Client: client, Options: opts}
+		// TokenSource is needed for grpc=true and zonal=true URLs, which build a
+		// separate gRPC client that cannot reuse the HTTP one.
+		o.opener = &URLOpener{Client: client, TokenSource: gcp.CredentialsTokenSource(creds), Options: opts}
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open bucket %v: %w", u, o.err)
@@ -228,10 +232,24 @@ const Scheme = "gs"
 //     a value of "-" forces the use of an unauthenticated client.
 //   - private_key_path: Path to read for Options.PrivateKey; only used in SignedURL.
 //   - universe_domain: Sets the universe domain for the client.
+//   - grpc: A value of "true" uses the Cloud Storage gRPC API instead of the
+//     JSON/HTTP API. The bucket is opened with a client from DialGRPC.
+//   - zonal: A value of "true" additionally enables the zonal bucket APIs, which
+//     are required for Rapid Storage buckets. Implies grpc=true.
+//
+// gRPC is not automatically faster than JSON/HTTP. For small-object latency
+// against regional, dual-region and multi-region buckets it measured no better,
+// so prefer the default unless you have measured a win for your workload.
 type URLOpener struct {
 	// Client must be set to a non-nil HTTP client authenticated with
 	// Cloud Storage scope or equivalent (unless anonymous=true).
 	Client *gcp.HTTPClient
+
+	// TokenSource is used to authenticate the gRPC client built for URLs with
+	// grpc=true or zonal=true. The gRPC API cannot reuse an HTTP client, so
+	// Client is not enough on its own. It is not needed for URLs that use the
+	// default JSON/HTTP API, nor for anonymous=true.
+	TokenSource gcp.TokenSource
 
 	// Options specifies the default options to pass to OpenBucket.
 	Options Options
@@ -239,36 +257,105 @@ type URLOpener struct {
 
 // OpenBucketURL opens the GCS bucket with the same name as the URL's host.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	opts, client, err := o.forParams(ctx, u.Query())
+	opts, client, params, err := o.forParams(ctx, u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %w", u, err)
 	}
-	return OpenBucket(ctx, client, u.Host, opts)
+	if !params.useGRPC {
+		return OpenBucket(ctx, client, u.Host, opts)
+	}
+
+	// The gRPC API cannot reuse an HTTP client, so build a dedicated client from
+	// the same credentials. The bucket owns it and closes it, since nothing else
+	// holds a reference.
+	if opts.Client != nil {
+		return nil, fmt.Errorf("open bucket %v: Options.Client cannot be combined with grpc=true or zonal=true", u)
+	}
+	var clientOpts []option.ClientOption
+	if params.useZonal {
+		clientOpts = append(clientOpts, storage.WithAppendableUploads(), storage.WithGRPCBidiReads())
+	}
+	clientOpts = append(clientOpts, opts.ClientOptions...)
+	ts := o.TokenSource
+	if params.anonymous {
+		ts = nil
+	} else if ts == nil {
+		return nil, fmt.Errorf("open bucket %v: URLOpener.TokenSource is required for grpc=true or zonal=true", u)
+	}
+	gc, cleanup, err := DialGRPC(ctx, ts, clientOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("open bucket %v: %w", u, err)
+	}
+	drv, err := openBucketGRPC(gc, u.Host, opts, true)
+	if err != nil {
+		cleanup()
+		return nil, fmt.Errorf("open bucket %v: %w", u, err)
+	}
+	return blob.NewBucket(drv), nil
 }
 
-func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp.HTTPClient, error) {
+// urlParams holds the transport choices parsed out of a bucket URL.
+type urlParams struct {
+	// useGRPC is set by grpc=true, and implied by zonal=true.
+	useGRPC bool
+	// useZonal is set by zonal=true.
+	useZonal bool
+	// anonymous is set when the URL asked for an unauthenticated client, via
+	// anonymous=true or access_id=-.
+	anonymous bool
+}
+
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp.HTTPClient, urlParams, error) {
+	var params urlParams
 	for k := range q {
-		if k != "access_id" && k != "private_key_path" && k != "anonymous" && k != "universe_domain" {
-			return nil, nil, fmt.Errorf("invalid query parameter %q", k)
+		if k != "access_id" && k != "private_key_path" && k != "anonymous" && k != "universe_domain" && k != "grpc" && k != "zonal" {
+			return nil, nil, params, fmt.Errorf("invalid query parameter %q", k)
 		}
 	}
 	opts := new(Options)
 	*opts = o.Options
 	client := o.Client
+	grpcInURL := false
+	if g := q.Get("grpc"); g != "" {
+		useGRPC, err := strconv.ParseBool(g)
+		if err != nil {
+			return nil, nil, params, fmt.Errorf("invalid value %q for query parameter \"grpc\": %w", g, err)
+		}
+		params.useGRPC = useGRPC
+		grpcInURL = true
+	}
+	if z := q.Get("zonal"); z != "" {
+		useZonal, err := strconv.ParseBool(z)
+		if err != nil {
+			return nil, nil, params, fmt.Errorf("invalid value %q for query parameter \"zonal\": %w", z, err)
+		}
+		params.useZonal = useZonal
+	}
+	// The zonal APIs exist only on the gRPC client, so zonal=true implies
+	// grpc=true. Asking for both zonal=true and grpc=false is a contradiction,
+	// so report it instead of picking a winner.
+	if params.useZonal {
+		if grpcInURL && !params.useGRPC {
+			return nil, nil, params, errors.New("query parameter \"zonal=true\" cannot be combined with \"grpc=false\"")
+		}
+		params.useGRPC = true
+	}
 	if anon := q.Get("anonymous"); anon != "" {
 		isAnon, err := strconv.ParseBool(anon)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid value %q for query parameter \"anonymous\": %w", anon, err)
+			return nil, nil, params, fmt.Errorf("invalid value %q for query parameter \"anonymous\": %w", anon, err)
 		}
 		if isAnon {
 			opts.clear()
 			client = gcp.NewAnonymousHTTPClient(gcp.DefaultTransport())
+			params.anonymous = true
 		}
 	}
 	if accessID := q.Get("access_id"); accessID != "" && accessID != opts.GoogleAccessID {
 		opts.clear()
 		if accessID == "-" {
 			client = gcp.NewAnonymousHTTPClient(gcp.DefaultTransport())
+			params.anonymous = true
 		} else {
 			opts.GoogleAccessID = accessID
 		}
@@ -276,7 +363,7 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp
 	if keyPath := q.Get("private_key_path"); keyPath != "" {
 		pk, err := os.ReadFile(keyPath)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, params, err
 		}
 		opts.PrivateKey = pk
 	} else if _, exists := q["private_key_path"]; exists {
@@ -285,7 +372,7 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp
 		// is intentional such as for tests or involving a key stored in a HSM/TPM.
 		opts.PrivateKey = nil
 	}
-	return opts, client, nil
+	return opts, client, params, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.
@@ -315,7 +402,9 @@ type Options struct {
 	// Client provides a *storage.Client to use, instead of constructing one based on
 	// the HTTPClient. When set, you must pass nil as the gcp.HTTPClient to OpenBucket.
 	//
-	// For example, this can be used to create a Bucket backed by a gRPC client.
+	// Use this to open a bucket over the Cloud Storage gRPC API, including a
+	// Rapid Storage (zonal) bucket; see DialGRPC. The caller owns the client and
+	// is responsible for closing it.
 	Client *storage.Client
 
 	// ClientOptions are passed when constructing the storage.Client.
@@ -352,16 +441,7 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 		return nil, errors.New("gcsblob.OpenBucket: client is required")
 	}
 
-	// We wrap the provided http.Client to add a Go CDK User-Agent.
-	clientOpts := []option.ClientOption{option.WithHTTPClient(useragent.HTTPClient(&client.Client, "blob"))}
-	if host := os.Getenv("STORAGE_EMULATOR_HOST"); host != "" {
-		clientOpts = []option.ClientOption{
-			option.WithoutAuthentication(),
-			option.WithEndpoint("http://" + host + "/storage/v1/"),
-			option.WithHTTPClient(http.DefaultClient),
-		}
-	}
-	clientOpts = append(clientOpts, opts.ClientOptions...)
+	clientOpts := append(httpClientOptions(client, os.Getenv("STORAGE_EMULATOR_HOST")), opts.ClientOptions...)
 	c, err := storage.NewClient(ctx, clientOpts...)
 	if err != nil {
 		return nil, err
@@ -369,8 +449,63 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 	return &bucket{name: bucketName, client: c, opts: opts}, nil
 }
 
-// OpenBucket returns a *blob.Bucket backed by an existing GCS bucket. See the
-// package documentation for an example.
+// httpClientOptions returns the client options for the JSON/HTTP storage API.
+func httpClientOptions(client *gcp.HTTPClient, emulatorHost string) []option.ClientOption {
+	if emulatorHost != "" {
+		return []option.ClientOption{
+			option.WithoutAuthentication(),
+			option.WithEndpoint("http://" + emulatorHost + "/storage/v1/"),
+			option.WithHTTPClient(http.DefaultClient),
+		}
+	}
+	// We wrap the provided http.Client to add a Go CDK User-Agent.
+	return []option.ClientOption{option.WithHTTPClient(useragent.HTTPClient(&client.Client, "blob"))}
+}
+
+// DialGRPC returns a *storage.Client that talks to Cloud Storage over gRPC
+// instead of the default JSON/HTTP API. Pass it as Options.Client, along with a
+// nil gcp.HTTPClient, to open a bucket that uses it:
+//
+//	c, cleanup, err := gcsblob.DialGRPC(ctx, gcp.CredentialsTokenSource(creds))
+//	if err != nil { ... }
+//	defer cleanup()
+//	b, err := gcsblob.OpenBucket(ctx, nil, "my-bucket", &gcsblob.Options{Client: c})
+//
+// Rapid Storage (zonal) buckets accept only appendable object uploads, and
+// reject every other write. They need the zonal bucket APIs:
+//
+//	c, cleanup, err := gcsblob.DialGRPC(ctx, ts,
+//		storage.WithAppendableUploads(), storage.WithGRPCBidiReads())
+//
+// Do not pass that option for other bucket types, which reject appendable
+// uploads in turn.
+//
+// A nil ts returns an unauthenticated client. The caller owns the returned
+// client and must call the returned clean-up function when done with it.
+//
+// Emulator support is left to storage.NewGRPCClient, which reads
+// STORAGE_EMULATOR_HOST_GRPC rather than STORAGE_EMULATOR_HOST, since a local
+// emulator needs separate ports for HTTP and gRPC. It also strips the scheme
+// from the host and dials insecurely, neither of which could be done correctly
+// from here.
+func DialGRPC(ctx context.Context, ts gcp.TokenSource, opts ...option.ClientOption) (*storage.Client, func(), error) {
+	clientOpts := []option.ClientOption{useragent.ClientOption("blob")}
+	if ts == nil {
+		clientOpts = append(clientOpts, option.WithoutAuthentication())
+	} else {
+		clientOpts = append(clientOpts, option.WithTokenSource(ts))
+	}
+	clientOpts = append(clientOpts, opts...)
+	c, err := storage.NewGRPCClient(ctx, clientOpts...)
+	if err != nil {
+		return nil, nil, err
+	}
+	return c, func() { _ = c.Close() }, nil
+}
+
+// OpenBucket returns a *blob.Bucket backed by an existing GCS bucket, using the
+// JSON/HTTP API. For the gRPC API, including Rapid Storage (zonal) buckets, see
+// OpenBucketGRPC. See the package documentation for an example.
 func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, client, bucketName, opts)
 	if err != nil {
@@ -379,12 +514,69 @@ func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 	return blob.NewBucket(drv), nil
 }
 
+// OpenBucketGRPC returns a *blob.Bucket backed by an existing GCS bucket, using
+// a client that talks to Cloud Storage over gRPC rather than the default
+// JSON/HTTP API. Use DialGRPC to construct client.
+//
+// This is the entry point for Rapid Storage (zonal) buckets, which reject every
+// write over JSON/HTTP:
+//
+//	c, cleanup, err := gcsblob.DialGRPC(ctx, ts,
+//		storage.WithAppendableUploads(), storage.WithGRPCBidiReads())
+//	if err != nil { ... }
+//	defer cleanup()
+//	b, err := gcsblob.OpenBucketGRPC(c, "my-rapid-bucket", nil)
+//
+// The caller owns client. Closing the returned bucket does not close it.
+//
+// It is an error to also set Options.Client. Options.ClientOptions is ignored,
+// since those options are applied when client is constructed.
+func OpenBucketGRPC(client *storage.Client, bucketName string, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucketGRPC(client, bucketName, opts, false)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(drv), nil
+}
+
+// openBucketGRPC returns the driver behind OpenBucketGRPC. owned reports
+// whether the bucket has to close client itself, which is true only when the
+// bucket built the client rather than receiving it from the caller.
+func openBucketGRPC(client *storage.Client, bucketName string, opts *Options, owned bool) (*bucket, error) {
+	if client == nil {
+		return nil, errors.New("gcsblob.OpenBucketGRPC: client is required")
+	}
+	if opts == nil {
+		opts = &Options{}
+	}
+	if opts.Client != nil {
+		return nil, errors.New("gcsblob.OpenBucketGRPC: Options.Client must be nil; pass the client as the first argument")
+	}
+	o := *opts
+	o.Client = client
+	// ctx is unused once a client exists, so it is not part of the signature;
+	// compare secrets/gcpkms.OpenKeeper.
+	drv, err := openBucket(context.Background(), nil, bucketName, &o)
+	if err != nil {
+		return nil, err
+	}
+	if owned {
+		drv.ownedClient = client
+	}
+	return drv, nil
+}
+
 // bucket represents a GCS bucket, which handles read, write and delete operations
 // on objects within it.
 type bucket struct {
 	name   string
 	client *storage.Client
-	opts   *Options
+	// ownedClient is non-nil when this bucket created client itself and must
+	// close it. That happens only for URLs that select the gRPC API, where the
+	// client owns a connection pool that would otherwise leak. Clients supplied
+	// through Options.Client belong to the caller and are left alone.
+	ownedClient *storage.Client
+	opts        *Options
 }
 
 // reader reads a GCS object. It implements driver.Reader.
@@ -438,6 +630,9 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 func (b *bucket) Close() error {
+	if b.ownedClient != nil {
+		return b.ownedClient.Close()
+	}
 	return nil
 }
 
@@ -672,6 +867,24 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		w.Metadata = opts.Metadata
 		w.MD5 = opts.ContentMD5
 		w.ForceEmptyContentType = opts.DisableContentTypeDetection
+		// Zonal buckets upload with "appendable object" semantics: the object
+		// appears as soon as the first bytes are flushed and stays open for
+		// more writes until someone finalizes it. Closing the Writer does not
+		// finalize it by default, which leaves behind an object exposing only
+		// whatever prefix had been flushed. For a write small enough to fit in
+		// one buffer that is a zero-length object, even though Close returned
+		// no error. Finalize on Close so that a closed blob.Writer always
+		// leaves a complete object, as the blob API promises.
+		//
+		// The storage client reads this field only on the appendable write
+		// path, so it does nothing over JSON/HTTP or plain gRPC. Setting it
+		// unconditionally is deliberate: it also covers callers who turn on
+		// appendable uploads by passing storage.WithAppendableUploads
+		// through Options.ClientOptions rather than using the zonal URL
+		// parameter.
+		// Callers who do want an object left open for later appends can set
+		// this back to false from WriterOptions.BeforeWrite.
+		w.FinalizeOnClose = true
 		return w
 	}
 
