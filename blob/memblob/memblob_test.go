@@ -51,6 +51,9 @@ func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bu
 	return nil, nil
 }
 
+func (*harness) SupportsCopy() bool               { return true }
+func (*harness) SupportsNonSlashDelimiters() bool { return true }
+
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {

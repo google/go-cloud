@@ -83,6 +83,9 @@ func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bu
 	return openBucket(ctx, h.client, "go-cdk-bucket-does-not-exist", h.opts)
 }
 
+func (*harness) SupportsCopy() bool               { return true }
+func (*harness) SupportsNonSlashDelimiters() bool { return true }
+
 func (h *harness) Close() {
 	h.closer()
 }

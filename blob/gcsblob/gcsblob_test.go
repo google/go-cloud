@@ -55,7 +55,9 @@ const (
 	//    and pass a path to it via the --privatekey flag.
 	// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 	//    name from the Terraform output instead (saving a copy of it for replay).
-	bucketName       = "go-cloud-blob-test-bucket"
+	bucketName = "go-cloud-blob-test-bucket"
+	// This bucket should be zonal.
+	bucketNameZonal  = "go-cloud-blob-test-bucket-zonal"
 	serviceAccountID = "storage-updater@go-cloud-test-216917.iam.gserviceaccount.com"
 )
 
@@ -109,6 +111,9 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
 	return openBucket(ctx, h.client, "bucket-does-not-exist", h.opts)
 }
+
+func (*harness) SupportsCopy() bool               { return true }
+func (*harness) SupportsNonSlashDelimiters() bool { return true }
 
 func (h *harness) Close() {
 	h.closer()
@@ -179,8 +184,8 @@ const storageGRPCEndpoint = "storage.googleapis.com:443"
 // recording to and replaying from golden files the same way newHarness does.
 type grpcHarness struct {
 	client  *storage.Client
+	zonal   bool
 	cleanup func()
-	bucket  string
 }
 
 func newGRPCHarness(zonal bool) func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -200,14 +205,18 @@ func newGRPCHarness(zonal bool) func(ctx context.Context, t *testing.T) (drivert
 		}
 		return &grpcHarness{
 			client:  client,
+			zonal:   zonal,
 			cleanup: func() { _ = client.Close(); done() },
-			bucket:  bucketName,
 		}, nil
 	}
 }
 
 func (h *grpcHarness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, nil, h.bucket, &Options{Client: h.client})
+	name := bucketName
+	if h.zonal {
+		name = bucketNameZonal
+	}
+	return openBucket(ctx, nil, name, &Options{Client: h.client})
 }
 
 func (h *grpcHarness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bucket, error) {
@@ -219,6 +228,9 @@ func (h *grpcHarness) MakeDriverForNonexistentBucket(ctx context.Context) (drive
 // SignedURL is signed client-side and is unaffected by the transport.
 func (h *grpcHarness) HTTPClient() *http.Client { return nil }
 
+func (h *grpcHarness) SupportsCopy() bool               { return !h.zonal }
+func (h *grpcHarness) SupportsNonSlashDelimiters() bool { return !h.zonal }
+
 func (h *grpcHarness) Close() { h.cleanup() }
 
 // TestConformanceGRPC runs the conformance suite over the Cloud Storage gRPC API.
@@ -226,42 +238,9 @@ func TestConformanceGRPC(t *testing.T) {
 	drivertest.RunConformanceTests(t, newGRPCHarness(false), []drivertest.AsTest{verifyContentLanguage{}})
 }
 
-// TestConformanceGRPCZonal is TestConformanceGRPC with the zonal bucket APIs
-// enabled, which is what a Rapid Storage bucket requires.
-//
-// It is skipped unconditionally. Against a Rapid Storage bucket 55 checks pass
-// and 33 fail, and every failure is a Cloud Storage restriction rather than a
-// driver bug. drivertest cannot currently express "this driver does not support
-// X": the only opt-out is returning gcerrors.Unimplemented, and every place
-// that honors it guards SignedURL, while testCopy treats any error from Copy as
-// a failure.
-//
-// Once specific conformance tests can be disabled, these are the ones to
-// disable, and why:
-//
-//   - TestCopy, TestKeys and TestAs. Rapid Storage does not support object
-//     rewrite, so Copy fails with "Rapid storage class objects do not support
-//     rewrite". Only TestCopy is about copying; TestKeys and TestAs copy
-//     incidentally, and TestKeys accounts for 19 of the 33 failures because it
-//     copies once per key it exercises.
-//     https://docs.cloud.google.com/storage/docs/rapid/rapid-bucket
-//
-//   - TestListDelimiters/backslash and TestListDelimiters/abc. Rapid Storage
-//     requires a hierarchical namespace, and such buckets only support "/" as a
-//     delimiter; anything else fails with "Invalid argument".
-//     TestListDelimiters/fwdslash passes.
-//
-//   - TestWrite/Content_md5_match, TestWrite/Content_md5_did_not_match,_blob_existed,
-//     TestWrite/a_small_text_file_gets_a_ContentType and
-//     TestWrite/write_with_explicit_ContentType_overrides_discovery. These
-//     rewrite one object in a tight loop and hit "exceeded the rate limit for
-//     object mutation operations". That is the general Cloud Storage
-//     per-object mutation limit rather than a Rapid Storage restriction, and it
-//     only appears when the client is close enough to the bucket to trip it:
-//     these four failed from a VM in the bucket's zone but not from a laptop.
-//     They may not need a permanent skip.
+// TestConformanceGRPCZonal runs the conformance suite over the Cloud Storage
+// gRPC API with the zonal bucket APIs enabled, which is what a Rapid Storage
 func TestConformanceGRPCZonal(t *testing.T) {
-	t.Skip("Rapid Storage does not support object rewrite or non-\"/\" list delimiters; see the comment above for the tests that need to be skipped")
 	drivertest.RunConformanceTests(t, newGRPCHarness(true), []drivertest.AsTest{verifyContentLanguage{}})
 }
 
