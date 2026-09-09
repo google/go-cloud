@@ -32,8 +32,7 @@ import (
 )
 
 var (
-	progress = flag.Bool("progress", false, "display test progress")
-	verbose  = flag.Bool("verbose", false, "display all test output")
+	verbose = flag.Bool("verbose", false, "display all test output")
 )
 
 // TestEvent is copied from "go doc test2json".
@@ -74,50 +73,47 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 		// a line of output starting with FAIL. Report a more reasonable error in
 		// this case.
 		if strings.HasPrefix(scanner.Text(), "FAIL") {
-			return "", true, fmt.Errorf("No test output: %q", scanner.Text())
+			fmt.Println(scanner.Text())
+			continue
 		}
 
 		var event TestEvent
 		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
 			return "", false, fmt.Errorf("%q: %w", scanner.Text(), err)
 		}
-		testpath := filepath.Join(event.Package, event.Test)
 
 		// The Test field, if non-empty, specifies the test, example, or benchmark
 		// function that caused the event. Events for the overall package test do
 		// not set Test.
-		if event.Action == "fail" && event.Test != "" {
+		testpath := filepath.Join(event.Package, event.Test)
+		testName := event.Test
+		isPackageLevel := testName == ""
+		counts[event.Action]++
+		actionMsg := fmt.Sprintf("%s %s (%.2fs)", event.Action, testpath, event.Elapsed)
+		switch event.Action {
+		case "fail":
+			fmt.Println(actionMsg)
+			// For failed tests, print all the output we collected for them before
+			// the "fail" event.
+			if !isPackageLevel && !*verbose {
+				fmt.Println("\nSTART of failed test output")
+				fmt.Println("  " + strings.Join(testOutputs[testpath], "  "))
+				fmt.Println("END of failed test output")
+				fmt.Println()
+			}
 			failedTests = append(failedTests, testpath)
-		}
-
-		if event.Action == "output" {
+		case "pass":
+			// Only print package-level pass actions.
+			if isPackageLevel {
+				fmt.Println(actionMsg)
+			}
+		case "output":
 			if *verbose {
 				fmt.Print(event.Output)
 			}
 			testOutputs[testpath] = append(testOutputs[testpath], event.Output)
 		}
 
-		// We don't want to count package passes/fails because these don't
-		// represent specific tests being run. However, skips of an entire package
-		// are not duplicated with individual test skips.
-		if event.Test != "" || event.Action == "skip" {
-			counts[event.Action]++
-		}
-
-		// For failed tests, print all the output we collected for them before
-		// the "fail" event.
-		if event.Action == "fail" {
-			fmt.Println(strings.Join(testOutputs[testpath], ""))
-		}
-
-		if *progress {
-			// Only print progress for fail events for packages and tests, or
-			// pass events for packages only (not individual tests, since this is
-			// too noisy).
-			if event.Action == "fail" || (event.Test == "" && event.Action == "pass") {
-				fmt.Printf("%s %s (%.2fs)\n", event.Action, testpath, event.Elapsed)
-			}
-		}
 	}
 	if err := scanner.Err(); err != nil {
 		return "", false, err
@@ -129,7 +125,7 @@ func run(r io.Reader) (msg string, failures bool, err error) {
 	summary := fmt.Sprintf("ran %d; passed %d; failed %d; skipped %d (in %.1f sec)", p+f+s, p, f, s, time.Since(start).Seconds())
 	if len(failedTests) > 0 {
 		var sb strings.Builder
-		sb.WriteString("Failures (reporting up to 10):\n")
+		sb.WriteString("\nFailures (reporting up to 10):\n")
 		for i := 0; i < len(failedTests) && i < 10; i++ {
 			fmt.Fprintf(&sb, "  %s\n", failedTests[i])
 		}
