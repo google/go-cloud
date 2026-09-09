@@ -27,11 +27,12 @@ func Test(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join("gocloud.dev", "internal", "docstore", "internal", "fields", "TestUnexportedAnonymousNonStruct")
-	want := fmt.Sprintf(`Failures (reporting up to 10):
+	want := fmt.Sprintf(`
+Failures (reporting up to 10):
   %s
 ran 6; passed 3; failed 1; skipped 2 (in `, path)
 	if !strings.HasPrefix(got, want) {
-		t.Errorf("\ngot  %s\nwant %s", got, want)
+		t.Errorf("\ngot\n\n%q\n\nwant\n\n%q", got, want)
 	}
 	if !fails {
 		t.Error("wanted fails true, got false")
