@@ -19,7 +19,9 @@ package xrayserver // import "gocloud.dev/server/xrayserver"
 import (
 	"context"
 	"fmt"
-	ec2res "go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"os"
+
+	ec2res "go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -28,7 +30,6 @@ import (
 	"gocloud.dev/server"
 	"gocloud.dev/server/requestlog"
 	"google.golang.org/grpc"
-	"os"
 
 	"github.com/google/wire"
 	"go.opentelemetry.io/otel/metric"

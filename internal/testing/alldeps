@@ -32,7 +32,6 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator
 github.com/IBM/sarama
 github.com/XSAM/otelsql
-github.com/aws/aws-sdk-go
 github.com/aws/aws-sdk-go-v2
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream
 github.com/aws/aws-sdk-go-v2/config
@@ -111,7 +110,6 @@ github.com/jcmturner/dnsutils/v2
 github.com/jcmturner/gofork
 github.com/jcmturner/gokrb5/v8
 github.com/jcmturner/rpc/v2
-github.com/jmespath/go-jmespath
 github.com/klauspost/compress
 github.com/kylelemons/godebug
 github.com/lib/pq
@@ -142,7 +140,7 @@ go.mongodb.org/mongo-driver
 go.opencensus.io
 go.opentelemetry.io/auto/sdk
 go.opentelemetry.io/contrib/bridges/prometheus
-go.opentelemetry.io/contrib/detectors/aws/ec2
+go.opentelemetry.io/contrib/detectors/aws/ec2/v2
 go.opentelemetry.io/contrib/detectors/gcp
 go.opentelemetry.io/contrib/exporters/autoexport
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
