@@ -69,7 +69,7 @@ while read -r path || [[ -n "$path" ]]; do
   fi
 
   gotestflags=("-json" "-race")
-  testsummaryflags=("")
+  testsummaryflags=("--verbose")
 
   if [[ $latest_go_version -eq 1 ]]; then
     # Only do coverage for the latest Linux build because it is slow, and
