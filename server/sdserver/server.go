@@ -19,22 +19,23 @@ package sdserver // import "gocloud.dev/server/sdserver"
 import (
 	"context"
 	"fmt"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/trace"
-	"gocloud.dev/server"
 	"os"
 
-	gcpmex "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric"
-	gcptex "github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace"
-	gcppropagator "github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator"
 	"github.com/google/wire"
-	gcpres "go.opentelemetry.io/contrib/detectors/gcp"
+	gcpdetector "go.opentelemetry.io/contrib/detectors/gcp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 	"gocloud.dev/gcp"
+	"gocloud.dev/server"
 	"gocloud.dev/server/requestlog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 // Set is a Wire provider set that provides the diagnostic hooks for
@@ -54,26 +55,24 @@ var Set = wire.NewSet(
 	wire.Bind(new(requestlog.Logger), new(*requestlog.StackdriverLogger)),
 )
 
-func NewResource(ctx context.Context) (*resource.Resource, error) {
-
-	res, err := resource.New(ctx,
-		resource.WithDetectors(gcpres.NewDetector()),
-		resource.WithTelemetrySDK(),
-		resource.WithProcess(),
-		resource.WithOS(),
-		resource.WithContainer(),
-		resource.WithHost(),
+func NewResource(ctx context.Context) (*sdkresource.Resource, error) {
+	res, err := sdkresource.New(ctx,
+		sdkresource.WithDetectors(gcpdetector.NewDetector()),
+		sdkresource.WithTelemetrySDK(),
+		sdkresource.WithProcess(),
+		sdkresource.WithOS(),
+		sdkresource.WithContainer(),
+		sdkresource.WithHost(),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.Merge(resource.Default(), res)
+	return sdkresource.Merge(sdkresource.Default(), res)
 }
 
 func NewTextMapPropagator() propagation.TextMapPropagator {
 	return propagation.NewCompositeTextMapPropagator(
-		gcppropagator.CloudTraceOneWayPropagator{},
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	)
@@ -86,11 +85,19 @@ func NewTraceSampler(ctx context.Context) sdktrace.Sampler {
 
 // NewTraceExporter returns a new OpenTelemetry gcp trace exporter.
 func NewTraceExporter(projectID gcp.ProjectID) (sdktrace.SpanExporter, error) {
-	exporter, err := gcptex.New(gcptex.WithProjectID(string(projectID)))
+	ctx := context.Background()
+	creds, err := oauth.NewApplicationDefault(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load application default credentials: %w", err)
 	}
-
+	exporter, err := otlptracegrpc.New(
+		ctx,
+		otlptracegrpc.WithEndpoint("telemetry.googleapis.com:443"),
+		otlptracegrpc.WithDialOption(grpc.WithPerRPCCredentials(creds)),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OTLP trace exporter: %w", err)
+	}
 	return exporter, nil
 }
 
@@ -98,41 +105,38 @@ func NewTraceExporter(projectID gcp.ProjectID) (sdktrace.SpanExporter, error) {
 //
 // The second return value is a Wire cleanup function that calls Close on the provider,
 func NewTraceProvider(ctx context.Context, exporter sdktrace.SpanExporter, sampler sdktrace.Sampler) (*sdktrace.TracerProvider, func(), error) {
-
 	res, err := NewResource(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithSampler(sampler),
 		sdktrace.WithResource(res),
 	)
-
 	return tp, func() { _ = tp.Shutdown(ctx) }, nil
 }
 
 // NewMetricsReader returns a new OpenTelemetry gcp metrics reader and exporter.
 func NewMetricsReader(projectID gcp.ProjectID) (sdkmetric.Reader, error) {
-	metricExporter, err := gcpmex.New(gcpmex.WithProjectID(string(projectID)))
+	ctx := context.Background()
+	exporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithEndpoint("telemetry.googleapis.com:443"),
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create OTLP exporter: %w", err)
 	}
-
-	return sdkmetric.NewPeriodicReader(metricExporter), nil
+	return sdkmetric.NewPeriodicReader(exporter), nil
 }
 
 // NewMeterProvider returns a new metric provider for our service to utilise.
 //
 // The second return value is a Wire cleanup function that calls Close on the provider.
 func NewMeterProvider(ctx context.Context, reader sdkmetric.Reader) (*sdkmetric.MeterProvider, func(), error) {
-
 	res, err := NewResource(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
 		sdkmetric.WithReader(reader),

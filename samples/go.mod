@@ -62,7 +62,6 @@ require (
 	cloud.google.com/go/pubsub v1.51.1 // indirect
 	cloud.google.com/go/pubsub/v2 v2.7.0 // indirect
 	cloud.google.com/go/storage v1.67.0 // indirect
-	cloud.google.com/go/trace v1.16.0 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/Azure/azure-amqp-common-go/v3 v3.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.1 // indirect
@@ -76,9 +75,7 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v1.38.3 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.37.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.61.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.37.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.61.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/propagator v0.61.0 // indirect
 	github.com/IBM/sarama v1.60.2 // indirect
 	github.com/XSAM/otelsql v0.43.0 // indirect
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
