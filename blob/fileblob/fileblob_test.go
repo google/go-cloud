@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -682,5 +683,68 @@ func TestSkipMetadata(t *testing.T) {
 		if err := b.Delete(ctx, "key"); err != nil {
 			t.Errorf("failed to delete: %v", err)
 		}
+	}
+}
+
+// TestListPagedSortsBeforeDirectory checks that paging doesn't skip keys when a
+// file sorts before the "directory" key generated for its sibling directory.
+// For example, "dir-file" sorts before "dir/" because '-' < '/', but the walk
+// visits "dir/" first, so the file can show up after the page is already full.
+func TestListPagedSortsBeforeDirectory(t *testing.T) {
+	tests := []struct {
+		name string
+		keys []string
+	}{
+		{"one sibling", []string{"dir/a", "dir/b", "dir-file", "f"}},
+		{"several siblings", []string{"a/b", "a-c", "a-d"}},
+		{"nested", []string{"x/y/z", "x-w", "x-v"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			b, err := OpenBucket(t.TempDir(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer closeWithErrorCheck(t, b)
+			for _, key := range test.keys {
+				if err := b.WriteAll(ctx, key, []byte("hello"), nil); err != nil {
+					t.Fatal(err)
+				}
+			}
+			opts := &blob.ListOptions{Delimiter: "/"}
+
+			// An unpaged list gives the keys in the order they should appear.
+			var want []string
+			iter := b.List(opts)
+			for {
+				obj, err := iter.Next(ctx)
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				want = append(want, obj.Key)
+			}
+
+			// Paging must not change the set of keys, or their order.
+			for pageSize := 1; pageSize <= len(test.keys); pageSize++ {
+				var got []string
+				for token := blob.FirstPageToken; token != nil; {
+					objs, next, err := b.ListPage(ctx, token, pageSize, opts)
+					if err != nil {
+						t.Fatal(err)
+					}
+					for _, obj := range objs {
+						got = append(got, obj.Key)
+					}
+					token = next
+				}
+				if !slices.Equal(got, want) {
+					t.Errorf("pageSize %d: got %v, want %v", pageSize, got, want)
+				}
+			}
+		})
 	}
 }
