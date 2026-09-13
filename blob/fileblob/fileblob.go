@@ -536,11 +536,13 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil
 		}
 		// If we've already got a full page of results, set NextPageToken and stop.
-		// Unless the current object is a directory, in which case there may
-		// still be objects coming that are alphabetically before it (since
-		// we appended the delimiter). In that case, keep going; we'll trim the
-		// extra entries (if any) before returning.
-		if len(result.Objects) == pageSize && !obj.IsDir {
+		// We can only stop if this object is guaranteed to belong after the page,
+		// i.e. it sorts after the last object in it. That isn't always the case:
+		// adding the delimiter can make an object sort before one we've already
+		// added (e.g., the file "a-b" sorts before the "directory" "a/", but is
+		// visited after it), so keep going in that case; we'll trim the extra
+		// entries before returning.
+		if len(result.Objects) == pageSize && !obj.IsDir && obj.Key > result.Objects[pageSize-1].Key {
 			result.NextPageToken = []byte(result.Objects[pageSize-1].Key)
 			return io.EOF
 		}
