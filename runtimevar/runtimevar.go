@@ -472,7 +472,7 @@ func StringDecode(ctx context.Context, b []byte, obj any) error {
 // BytesDecode copies the slice of bytes b into obj.
 func BytesDecode(ctx context.Context, b []byte, obj any) error {
 	v := obj.(*[]byte)
-	*v = b[:]
+	*v = bytes.Clone(b)
 	return nil
 }
 
