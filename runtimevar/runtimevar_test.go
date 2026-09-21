@@ -629,6 +629,21 @@ func TestBytesDecoder(t *testing.T) {
 	if diff := cmp.Diff(got, input); diff != "" {
 		t.Errorf("output got %v, want %q", got, input)
 	}
+	// Mutating the decoded output must not mutate the input.
+	got.([]byte)[0] = 'J'
+	if input[0] != 'h' {
+		t.Errorf("BytesDecode aliases input: input=%q after mutating output", input)
+	}
+	// Mutating the input after decoding must not mutate the decoded output.
+	input2 := []byte("hello world")
+	got2, err := BytesDecoder.Decode(context.Background(), input2)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	input2[0] = 'J'
+	if got2.([]byte)[0] != 'h' {
+		t.Errorf("BytesDecode aliases input: output=%q after mutating input", got2)
+	}
 }
 
 func TestDecryptDecoder(t *testing.T) {
