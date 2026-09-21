@@ -15,6 +15,7 @@
 package fileblob
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -576,7 +577,7 @@ func TestDirFileModeFromURL(t *testing.T) {
 	}
 }
 
-func TestEscapeBucketRoot(t *testing.T) {
+func TestEscapeBucketRootWithListPrefix(t *testing.T) {
 	ctx := context.Background()
 	tdir := t.TempDir()
 	dir := filepath.Join(tdir, "go-cloud-fileblob")
@@ -595,11 +596,6 @@ func TestEscapeBucketRoot(t *testing.T) {
 	_, err = it.Next(ctx)
 	if err == nil || err == io.EOF || !strings.Contains(err.Error(), "escapes bucket root") {
 		t.Fatalf("Got no error or unexpected error when trying to escape bucket root via List (got %v)", err)
-	}
-
-	err = b.Delete(ctx, "..")
-	if err == nil || !strings.Contains(err.Error(), "escapes bucket root") {
-		t.Fatalf("Got no error or unexpected error when trying to escape bucket root via Delete (got %v)", err)
 	}
 }
 
@@ -638,6 +634,99 @@ func TestEscapeBucketRootAtRoot(t *testing.T) {
 	_, err = it.Next(ctx)
 	if err != io.EOF {
 		t.Fatalf("Expecting an EOF on next item in list, got: %#v", err)
+	}
+}
+
+func TestEscapeFile(t *testing.T) {
+	ctx := context.Background()
+	dir := filepath.Join(os.TempDir(), "go-cloud-fileblob-escapefile")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	victim := dir + ".attrs" // OUTSIDE the bucket
+	const victimData = "IMPORTANT DATA"
+	if err := os.WriteFile(victim, []byte(victimData), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := OpenBucket(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeWithErrorCheck(t, b)
+
+	// .. is explicitly out-of-bucket.
+	// a/.. resolves to the bucket itself.
+	for _, key := range []string{"..", "a/.."} {
+		// Try both a Delete and a Write.
+		if err = b.WriteAll(ctx, key, []byte("OUT-OF-BUCKET-WRITE"), nil); err == nil {
+			t.Errorf("wanted error from WriteAll to %q, got nil", key)
+		}
+		if err = b.Delete(ctx, key); err == nil {
+			t.Errorf("wanted error from Delete of %q, got nil", key)
+		}
+		// Make sure the bucket and victim weren't deleted or overwitten.
+		if _, err := os.Stat(dir); err != nil {
+			t.Errorf("bucket was deleted by Delete of %q", key)
+		}
+		if _, err := os.Stat(victim); err != nil {
+			t.Errorf("out-of-bucket victim was deleted by Delete of %q", key)
+		}
+		if got, err := os.ReadFile(victim); err != nil {
+			t.Errorf("couldn't read out-of-bucket victim after WriteAll to %q: %v", key, err)
+		} else if string(got) != victimData {
+			t.Errorf("out-of-bucket victim was overwritten by write to %q, new content is %q", key, string(got))
+		}
+	}
+}
+
+func TestMd5SpoofInList(t *testing.T) {
+	ctx := context.Background()
+	dir := filepath.Join(os.TempDir(), "go-cloud-fileblob-spoofmd5")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const victimKey = "victim"
+
+	cwd, err := os.MkdirTemp("", "gocdk-cwd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(cwd); err != nil {
+		t.Fatal(err)
+	}
+
+	// Plant a spoofed attrs file at a CWD-relative path matching the key.
+	if err := os.WriteFile(filepath.Join(cwd, victimKey+".attrs"), []byte(`{"user.content_type":"text/spoofed","md5":"3q2+7w=="}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := OpenBucket(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeWithErrorCheck(t, b)
+
+	if err := b.WriteAll(ctx, victimKey, []byte("real content"), nil); err != nil {
+		t.Fatalf("failed during write: %v", err)
+	}
+
+	var md5FromList []byte
+	it := b.List(&blob.ListOptions{})
+	for {
+		o, err := it.Next(ctx)
+		if err != nil {
+			break
+		}
+		md5FromList = o.MD5
+	}
+	a, err := b.Attributes(ctx, victimKey)
+	if err != nil {
+		t.Errorf("failed to get Attributes: %v", err)
+	}
+	md5FromAttributes := a.MD5
+	if !bytes.Equal(md5FromList, md5FromAttributes) {
+		t.Error("md5 from List and from Attributes didn't match")
 	}
 }
 

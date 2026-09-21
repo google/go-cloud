@@ -87,7 +87,7 @@ while read -r path || [[ -n "$path" ]]; do
   test_result=0
   (cd "$path" && go test "${gotestflags[@]}" ./...) | ./internal/testing/test-summary/test-summary "${testsummaryflags[@]}" || test_result=1
   if [ ${test_result} -eq 1 ]; then
-    echo "*** GoCDK presumit failure: tests for $path"
+    echo "*** GoCDK presubmit failure: tests for $path"
     result=1
   fi
   if [ -f modcoverage.out ] && [ $result -eq 0 ]; then
@@ -145,7 +145,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo "Ensuring .go files are formatted with gofmt -s..."
   DIFF="$(gofmt -s -d .)"
   if [ -n "$DIFF" ]; then
-    echo "*** GoCDK presumit failure: please run 'gofmt -s -w .' and commit the result"
+    echo "*** GoCDK presubmit failure: please run 'gofmt -s -w .' and commit the result"
     echo "$DIFF";
     exit 1;
   else
@@ -157,7 +157,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
   ( ./internal/testing/listdeps.sh | diff -u ./internal/testing/alldeps - && echo "  OK" ) || {
-    echo "*** GoCDK presumit failure: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
+    echo "*** GoCDK presubmit failure: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
     # Module behavior may differ across versions.
     echo "using the most recent go version."
   }
@@ -169,7 +169,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo "Ensuring that any new packages have the corresponding entries in Hugo..."
   missing_packages="$(internal/website/listnewpkgs.sh)"
   if ! [[ -z "$missing_packages" ]]; then
-    echo "*** GoCDK presumit failure: missing package meta tags for:" 1>&2
+    echo "*** GoCDK presubmit failure: missing package meta tags for:" 1>&2
     echo "$missing_packages" 1>&2
     result=1
   else
@@ -179,7 +179,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo
   echo "Ensuring that all examples used in Hugo match what's in source..."
   (internal/website/gatherexamples/run.sh | diff -u internal/website/data/examples.json - > /dev/null && echo "  OK") || {
-    echo "*** GoCDK presumit failure: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
+    echo "*** GoCDK presubmit failure: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
     result=1
   }
 fi;
