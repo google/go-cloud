@@ -84,7 +84,12 @@ while read -r path || [[ -n "$path" ]]; do
   fi
 
   # Run the tests.
-  (cd "$path" && go test "${gotestflags[@]}" ./...) | ./internal/testing/test-summary/test-summary "${testsummaryflags[@]}" || result=1
+  test_result=0
+  (cd "$path" && go test "${gotestflags[@]}" ./...) | ./internal/testing/test-summary/test-summary "${testsummaryflags[@]}" || test_result=1
+  if [ ${test_result} -eq 1 ]; then
+    echo "*** GoCDK presumit failure: tests for $path"
+    result=1
+  fi
   if [ -f modcoverage.out ] && [ $result -eq 0 ]; then
     cat modcoverage.out >> coverage.out
     rm modcoverage.out
@@ -107,7 +112,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo
   while read -r path || [[ -n "$path" ]]; do
     echo "Module: $path"
-    ( cd "$path" && "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "FAIL: please run ./internal/testing/gomodcleanup.sh" && result=1; }
+    ( cd "$path" && "$rootdir"/internal/testing/check_mod_tidy.sh && echo "  OK" ) || { echo "*** GoCDK presubmit failure: please run ./internal/testing/gomodcleanup.sh" && tidy_result=1; }
   done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
   # The above filters out comments and empty lines from allmodules and only takes
   # the first (whitespace-separated) field from each line.
@@ -125,7 +130,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo
   while read -r path || [[ -n "$path" ]]; do
     echo "Module: $path"
-    ( cd "$path" && wire diff ./... && echo "  OK" ) || { echo "FAIL: wire diff found diffs!" && result=1; }
+    ( cd "$path" && wire diff ./... && echo "  OK" ) || { echo "*** GoCDK presubmit failure: wire diff found diffs!" && wire_result=1; }
   done < <( sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' )
   # The above filters out comments and empty lines from allmodules and only takes
   # the first (whitespace-separated) field from each line.
@@ -140,7 +145,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo "Ensuring .go files are formatted with gofmt -s..."
   DIFF="$(gofmt -s -d .)"
   if [ -n "$DIFF" ]; then
-    echo "FAIL: please run 'gofmt -s -w .' and commit the result"
+    echo "*** GoCDK presumit failure: please run 'gofmt -s -w .' and commit the result"
     echo "$DIFF";
     exit 1;
   else
@@ -152,7 +157,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo
   echo "Ensuring that there are no dependencies not listed in ./internal/testing/alldeps..."
   ( ./internal/testing/listdeps.sh | diff -u ./internal/testing/alldeps - && echo "  OK" ) || {
-    echo "FAIL: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
+    echo "*** GoCDK presumit failure: dependencies changed; run: internal/testing/listdeps.sh > internal/testing/alldeps" && result=1
     # Module behavior may differ across versions.
     echo "using the most recent go version."
   }
@@ -164,7 +169,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo "Ensuring that any new packages have the corresponding entries in Hugo..."
   missing_packages="$(internal/website/listnewpkgs.sh)"
   if ! [[ -z "$missing_packages" ]]; then
-    echo "FAIL: missing package meta tags for:" 1>&2
+    echo "*** GoCDK presumit failure: missing package meta tags for:" 1>&2
     echo "$missing_packages" 1>&2
     result=1
   else
@@ -174,7 +179,7 @@ if [[ ${latest_go_version} -eq 1 ]]; then
   echo
   echo "Ensuring that all examples used in Hugo match what's in source..."
   (internal/website/gatherexamples/run.sh | diff -u internal/website/data/examples.json - > /dev/null && echo "  OK") || {
-    echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
+    echo "*** GoCDK presumit failure: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
     result=1
   }
 fi;
@@ -184,7 +189,7 @@ echo
 if [[ ${result} -eq 0 ]]; then
   echo "SUCCESS!"
 else
-  echo "FAILED; see above for more info."
+  echo "FAILED; search for 'GoCDK presubmit failure' for more info."
 fi
 
 exit $result
