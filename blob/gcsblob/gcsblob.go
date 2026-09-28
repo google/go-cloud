@@ -143,16 +143,37 @@ func readDefaultCredentials(credFileAsJSON []byte) (AccessID string, PrivateKey 
 	return
 }
 
-// lazyCredsOpener obtains Application Default Credentials on the first call
-// to OpenBucketURL.
-type lazyCredsOpener struct {
-	init   sync.Once
+type openerOrError struct {
 	opener *URLOpener
 	err    error
 }
 
+// lazyCredsOpener obtains Application Default Credentials on the first call
+// to OpenBucketURL per universe_domain query parameter value.
+type lazyCredsOpener struct {
+	mutex   sync.Mutex
+	openers map[string]*openerOrError // per universe_domain query parameter value
+}
+
 func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	o.init.Do(func() {
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
+
+	if o.openers == nil {
+		o.openers = map[string]*openerOrError{}
+	}
+
+	// Check if universe_domain is specified in the URL query parameters.
+	// We'll cache a separate opener per domain.
+	universeDomain := u.Query().Get("universe_domain")
+	openerOrErr := o.openers[universeDomain]
+	var opener *URLOpener
+	var openerErr error
+	if openerOrErr != nil {
+		opener = openerOrErr.opener
+		openerErr = openerOrErr.err
+	} else {
+		// Cache miss.
 		var opts Options
 		var creds *google.Credentials
 		// STORAGE_EMULATOR_HOST_GRPC is the gRPC equivalent; a local emulator
@@ -161,8 +182,6 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 			creds, _ = google.CredentialsFromJSON(ctx, []byte(`{"type": "service_account", "project_id": "my-project-id"}`))
 		} else {
 			var err error
-			// Check if universe_domain is specified in the URL query parameters
-			universeDomain := u.Query().Get("universe_domain")
 			if universeDomain != "" {
 				creds, err = gcp.DefaultCredentialsWithParams(ctx, google.CredentialsParams{
 					UniverseDomain: universeDomain,
@@ -203,18 +222,20 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		}
 
 		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
-		if err != nil {
-			o.err = err
-			return
+		if err == nil {
+			// TokenSource is needed for grpc=true and zonal=true URLs, which build a
+			// separate gRPC client that cannot reuse the HTTP one.
+			opener = &URLOpener{Client: client, TokenSource: gcp.CredentialsTokenSource(creds), Options: opts}
+		} else {
+			openerErr = err
 		}
-		// TokenSource is needed for grpc=true and zonal=true URLs, which build a
-		// separate gRPC client that cannot reuse the HTTP one.
-		o.opener = &URLOpener{Client: client, TokenSource: gcp.CredentialsTokenSource(creds), Options: opts}
-	})
-	if o.err != nil {
-		return nil, fmt.Errorf("open bucket %v: %w", u, o.err)
+		// Update cache.
+		o.openers[universeDomain] = &openerOrError{opener, openerErr}
 	}
-	return o.opener.OpenBucketURL(ctx, u)
+	if openerErr != nil {
+		return nil, fmt.Errorf("open bucket %v: %w", u, openerErr)
+	}
+	return opener.OpenBucketURL(ctx, u)
 }
 
 // Scheme is the URL scheme gcsblob registers its URLOpener under on
