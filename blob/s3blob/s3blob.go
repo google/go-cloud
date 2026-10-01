@@ -69,6 +69,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	tmtypes "github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -410,14 +411,16 @@ func (b *bucket) Close() error {
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	var code string
 	var ae smithy.APIError
-	var oe *smithy.OperationError
+	var re *awshttp.ResponseError
 	if errors.As(err, &ae) {
 		code = ae.ErrorCode()
-	} else if errors.As(err, &oe) && strings.Contains(oe.Error(), "301") {
-		// AWS returns an OperationError with a missing redirect for invalid buckets.
-		code = "NoSuchBucket"
-	} else {
-		return gcerrors.Unknown
+	} else if errors.As(err, &re) {
+		c := re.HTTPStatusCode()
+		if c == http.StatusNotFound || c == http.StatusMovedPermanently {
+			return gcerrors.NotFound
+		} else if c == http.StatusUnauthorized || c == http.StatusForbidden {
+			return gcerrors.PermissionDenied
+		}
 	}
 	switch {
 	case code == "NoSuchBucket" || code == "NoSuchKey" || code == "NotFound" || code == "ObjectNotInActiveTierError":
