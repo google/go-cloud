@@ -1096,6 +1096,7 @@ func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, time
 			b.StartTimer()
 		}
 	}
+	b.ReportMetric(nMessages, "items/op")
 }
 
 func publishNConcurrently(topic *pubsub.Topic, nMessages, nGoroutines int, attrs map[string]string, body []byte) error {
