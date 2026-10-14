@@ -21,14 +21,15 @@ github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus
 github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys
 github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob
+github.com/Azure/azure-sdk-for-go/sdk/storage/internal
 github.com/Azure/go-amqp
 github.com/AzureAD/microsoft-authentication-library-for-go
 github.com/GoogleCloudPlatform/cloudsql-proxy
-github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping
 github.com/IBM/sarama
 github.com/XSAM/otelsql
+github.com/apache/arrow-go/v18
 github.com/aws/aws-sdk-go-v2
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream
 github.com/aws/aws-sdk-go-v2/config
@@ -76,9 +77,11 @@ github.com/go-jose/go-jose/v4
 github.com/go-logr/logr
 github.com/go-logr/stdr
 github.com/go-sql-driver/mysql
+github.com/goccy/go-json
 github.com/golang-jwt/jwt/v5
 github.com/golang/protobuf
 github.com/golang/snappy
+github.com/google/flatbuffers
 github.com/google/go-cmp
 github.com/google/go-replayers/grpcreplay
 github.com/google/go-replayers/httpreplay
@@ -108,6 +111,7 @@ github.com/jcmturner/gofork
 github.com/jcmturner/gokrb5/v8
 github.com/jcmturner/rpc/v2
 github.com/klauspost/compress
+github.com/klauspost/cpuid/v2
 github.com/kylelemons/godebug
 github.com/lib/pq
 github.com/mitchellh/mapstructure
@@ -130,6 +134,7 @@ github.com/spiffe/go-spiffe/v2
 github.com/xdg-go/scram
 github.com/xdg-go/stringprep
 github.com/youmark/pkcs8
+github.com/zeebo/xxh3
 go.etcd.io/etcd/api/v3
 go.etcd.io/etcd/client/pkg/v3
 go.etcd.io/etcd/client/v3
@@ -179,6 +184,7 @@ gocloud.dev/runtimevar/hashivault
 gocloud.dev/samples
 gocloud.dev/secrets/hashivault
 golang.org/x/crypto
+golang.org/x/exp
 golang.org/x/mod
 golang.org/x/net
 golang.org/x/oauth2
