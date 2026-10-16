@@ -58,6 +58,7 @@ func HexEscape(s string, shouldEscape func(s []rune, i int) bool) string {
 	runes := []rune(s)
 	escapeAt := make([]bool, len(runes))
 	var pending []int
+	n := 0
 	for i := range runes {
 		// In addition to whatever the caller wants escaped, always escape
 		// the start of any substring that HexUnescape would itself parse as
@@ -74,6 +75,7 @@ func HexEscape(s string, shouldEscape func(s []rune, i int) bool) string {
 		if shouldEscape(runes, i) || isEscapeSequence(runes, i) {
 			escapeAt[i] = true
 			pending = append(pending, i)
+			n++
 		}
 	}
 	// Escaping a rune emits "__0x<hex>__", which starts with "__". If the
@@ -90,11 +92,6 @@ func HexEscape(s string, shouldEscape func(s []rune, i int) bool) string {
 		if j, ok := danglingEscapePrefix(runes, i); ok && !escapeAt[j] {
 			escapeAt[j] = true
 			pending = append(pending, j)
-		}
-	}
-	n := 0
-	for _, e := range escapeAt {
-		if e {
 			n++
 		}
 	}
