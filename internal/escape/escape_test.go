@@ -131,12 +131,12 @@ func TestHexEscapeInjective(t *testing.T) {
 func TestHexEscapeRoundTripExhaustive(t *testing.T) {
 	alphabet := []rune{'_', '0', 'x', '2', 'f', '/'}
 	rules := map[string]func(r []rune, i int) bool{
-		"slash":           func(r []rune, i int) bool { return r[i] == '/' },
-		"non-alnum-not-_": func(r []rune, i int) bool { return !IsASCIIAlphanumeric(r[i]) && r[i] != '_' },
-		"non-alnum":       func(r []rune, i int) bool { return !IsASCIIAlphanumeric(r[i]) },
-		"none":            func(r []rune, i int) bool { return false },
+		"slash":     func(r []rune, i int) bool { return r[i] == '/' },
+		"non-alnum": func(r []rune, i int) bool { return !IsASCIIAlphanumeric(r[i]) },
+		"none":      func(r []rune, i int) bool { return false },
 	}
-	const maxLen = 8
+	// Long enough for both forms of dangling prefix, "__0x2/" and "__0x2_/".
+	const maxLen = 7
 	buf := make([]rune, 0, maxLen)
 	var walk func(name string, rule func(r []rune, i int) bool)
 	walk = func(name string, rule func(r []rune, i int) bool) {
