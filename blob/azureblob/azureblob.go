@@ -1059,7 +1059,6 @@ func (w *writer) open(r io.Reader, closePipeOnError bool) {
 		if w.err != nil {
 			if closePipeOnError {
 				w.pr.CloseWithError(w.err)
-				w.pr = nil
 			}
 		}
 	}()
@@ -1070,9 +1069,9 @@ func (w *writer) open(r io.Reader, closePipeOnError bool) {
 // create an empty file at the given key.
 func (w *writer) Close() (err error) {
 	if !w.upload {
-		if w.pr != nil {
+		if pr := w.pr; pr != nil {
 			defer func() {
-				if e := w.pr.Close(); e != nil && err == nil {
+				if e := pr.Close(); e != nil && err == nil {
 					err = e
 				}
 			}()

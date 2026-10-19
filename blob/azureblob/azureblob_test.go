@@ -22,12 +22,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	azblobblob "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
@@ -37,6 +40,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/testing/setup"
 )
 
@@ -115,6 +119,20 @@ func (ri *requestInterceptor) RoundTrip(req *http.Request) (*http.Response, erro
 		req = &reqClone
 	}
 	return ri.base.RoundTrip(req)
+}
+
+// rewriteTransport rewrites request URLs to target, so that requests for the
+// fake storage account are served by a local test server.
+type rewriteTransport struct {
+	base   http.RoundTripper
+	target *url.URL
+}
+
+func (t *rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.URL.Scheme = t.target.Scheme
+	req.URL.Host = t.target.Host
+	return t.base.RoundTrip(req)
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -325,6 +343,62 @@ func TestOpenBucket(t *testing.T) {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestWriterCloseCommitError(t *testing.T) {
+	// A server that accepts the whole request body and then rejects the
+	// upload with the error Azure Storage returns for a failed
+	// If-None-Match precondition.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.Header().Set("x-ms-error-code", "BlobAlreadyExists")
+		w.WriteHeader(http.StatusConflict)
+		_, _ = io.WriteString(w, "<?xml version=\"1.0\" encoding=\"utf-8\"?><Error><Code>BlobAlreadyExists</Code></Error>")
+	}))
+	defer srv.Close()
+
+	target, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := container.NewClientWithNoCredential(
+		"https://myaccount.blob.core.windows.net/mycontainer",
+		&container.ClientOptions{
+			ClientOptions: azcore.ClientOptions{
+				Transport: &http.Client{Transport: &rewriteTransport{base: http.DefaultTransport, target: target}},
+			},
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	b, err := OpenBucket(ctx, client, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(b *blob.Bucket) {
+		if err := b.Close(); err != nil {
+			t.Errorf("failed to Close: %v", err)
+		}
+	}(b)
+
+	// Write a blob with IfNotExist set: the server accepts the body, then
+	// fails the commit, so the error can only surface from Close.
+	w, err := b.NewWriter(ctx, "writer-commit-error-blob", &blob.WriterOptions{
+		ContentType: "text/plain",
+		IfNotExist:  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Write([]byte("hello world")); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err == nil {
+		t.Fatal("got nil error, want BlobAlreadyExists")
+	} else if code := gcerrors.Code(err); code != gcerrors.FailedPrecondition {
+		t.Errorf("got error code %v, want FailedPrecondition", code)
 	}
 }
 
