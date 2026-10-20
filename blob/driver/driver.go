@@ -35,6 +35,14 @@ type ReaderOptions struct {
 	// asFunc allows drivers to expose driver-specific types;
 	// see Bucket.As for more details.
 	BeforeRead func(asFunc func(any) bool) error
+	// BufferSize changes the default size in bytes of the chunks that a
+	// parallel download fetches per request, if supported. Only used when a
+	// DownloaderAt download is performed; ignored otherwise.
+	BufferSize int
+	// MaxConcurrency changes the default number of parts fetched concurrently
+	// by a parallel download, if supported. Only used when a DownloaderAt
+	// download is performed; ignored otherwise.
+	MaxConcurrency int
 }
 
 // Reader reads an object from the blob.

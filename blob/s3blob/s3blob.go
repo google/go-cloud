@@ -698,6 +698,12 @@ func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts
 		// RANGE uses byte-range GETs and works on any object; PART only works
 		// for objects that were uploaded in multiple parts.
 		o.GetObjectType = tmtypes.GetObjectRanges
+		if opts.BufferSize != 0 {
+			o.PartSizeBytes = int64(opts.BufferSize)
+		}
+		if opts.MaxConcurrency != 0 {
+			o.Concurrency = opts.MaxConcurrency
+		}
 	})
 	in := &transfermanager.DownloadObjectInput{
 		Bucket:   aws.String(b.name),

@@ -2377,7 +2377,7 @@ func testUploadDownload(t *testing.T, newHarness HarnessMaker) {
 		}()
 		defer closeWithErrorCheck(t, tmpFile)
 
-		err = b.Download(ctx, key, tmpFile, nil)
+		err = b.Download(ctx, key, tmpFile, &blob.ReaderOptions{AllowParallelDownload: true})
 		if err != nil {
 			t.Fatal(err)
 		}
