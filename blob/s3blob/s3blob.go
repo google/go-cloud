@@ -46,7 +46,10 @@
 //   - ListOptions.BeforeList: *s3.ListObjectsV2Input or *[]func(*s3.Options), or *s3.ListObjectsInput
 //     when Options.UseLegacyList == true
 //   - Reader: s3.GetObjectOutput
-//   - ReaderOptions.BeforeRead: *s3.GetObjectInput or *[]func(*s3.Options)
+//   - ReaderOptions.BeforeRead: *s3.GetObjectInput or *[]func(*s3.Options).
+//     When Bucket.Download is called with an io.WriterAt destination, the
+//     download is performed with the transfer manager instead, and BeforeRead
+//     exposes *transfermanager.DownloadObjectInput or *transfermanager.Client.
 //   - Attributes: s3.HeadObjectOutput
 //   - CopyOptions.BeforeCopy: s3.CopyObjectInput
 //   - DeleteOptions.BeforeDelete: *s3.DeleteObjectInput
