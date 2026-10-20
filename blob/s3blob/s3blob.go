@@ -404,6 +404,8 @@ type bucket struct {
 	requestChecksumCalculation aws.RequestChecksumCalculation
 }
 
+var _ driver.DownloaderAt = (*bucket)(nil)
+
 func (b *bucket) Close() error {
 	return nil
 }
@@ -674,6 +676,49 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		},
 		raw: resp,
 	}, nil
+}
+
+// DownloadAt implements driver.DownloaderAt. It uses the S3 transfer manager to
+// fetch the object with concurrent ranged GETs, writing parts directly into w.
+// This driver already uses the transfer manager for uploads.
+//
+// Note: unlike NewRangeReader, opts.BeforeRead here exposes
+// *transfermanager.DownloadObjectInput and *transfermanager.Client, not
+// *s3.GetObjectInput.
+func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
+	key = escapeKey(key)
+	tm := transfermanager.New(b.client, func(o *transfermanager.Options) {
+		// Thread the bucket's checksum setting through, matching the upload
+		// path; see NewTypedWriter for why this matters for S3-compatible
+		// stores.
+		o.RequestChecksumCalculation = b.requestChecksumCalculation
+		// RANGE uses byte-range GETs and works on any object; PART only works
+		// for objects that were uploaded in multiple parts.
+		o.GetObjectType = tmtypes.GetObjectRanges
+	})
+	in := &transfermanager.DownloadObjectInput{
+		Bucket:   aws.String(b.name),
+		Key:      aws.String(key),
+		WriterAt: w,
+	}
+	if opts.BeforeRead != nil {
+		asFunc := func(i any) bool {
+			if p, ok := i.(**transfermanager.DownloadObjectInput); ok {
+				*p = in
+				return true
+			}
+			if p, ok := i.(**transfermanager.Client); ok {
+				*p = tm
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeRead(asFunc); err != nil {
+			return err
+		}
+	}
+	_, err := tm.DownloadObject(ctx, in)
+	return err
 }
 
 // etagToMD5 processes an ETag header and returns an MD5 hash if possible.
