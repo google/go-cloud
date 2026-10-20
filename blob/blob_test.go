@@ -294,6 +294,7 @@ type downloaderAtBucket struct {
 	driver.Bucket
 	r            stubReader
 	downloadedAt bool
+	gotOpts      *driver.ReaderOptions
 }
 
 func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
@@ -302,6 +303,7 @@ func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, off
 
 func (b *downloaderAtBucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
 	b.downloadedAt = true
+	b.gotOpts = opts
 	return nil
 }
 
@@ -349,6 +351,29 @@ func TestDownloaderAt(t *testing.T) {
 	}
 	if !b3.r.downloaded {
 		t.Error("reader Download wasn't called when the driver lacks DownloaderAt")
+	}
+}
+
+func TestDownloaderAtOptions(t *testing.T) {
+	ctx := context.Background()
+	b := &downloaderAtBucket{}
+	bucket := NewBucket(b)
+	defer closeWithErrorCheck(t, bucket)
+
+	if err := bucket.Download(ctx, "key", &memWriterAt{}, &ReaderOptions{
+		BufferSize:     16 << 20,
+		MaxConcurrency: 8,
+	}); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if b.gotOpts == nil {
+		t.Fatal("DownloadAt wasn't called")
+	}
+	if got, want := b.gotOpts.BufferSize, 16<<20; got != want {
+		t.Errorf("BufferSize = %d, want %d", got, want)
+	}
+	if got, want := b.gotOpts.MaxConcurrency, 8; got != want {
+		t.Errorf("MaxConcurrency = %d, want %d", got, want)
 	}
 }
 
