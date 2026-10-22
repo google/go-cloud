@@ -3,6 +3,10 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n)",
 		"code": "if err := bucket.Delete(ctx, \"foo.txt\"); err != nil {\n\treturn err\n}"
 	},
+	"gocloud.dev/blob.ExampleBucket_Download": {
+		"imports": "import (\n\t\"context\"\n\t\"os\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "// Create a local file to download into.\nf, err := os.Create(\"foo.txt\")\nif err != nil {\n\treturn err\n}\ndefer func() { _ = f.Close() }()\n\n// Download the key \"foo.txt\" into f. Because *os.File is an io.WriterAt,\n// some drivers (e.g. S3) download it in parallel, which can be\n// significantly faster for large blobs. Drivers that don't support this\n// fall back to a single sequential stream.\nif err := bucket.Download(ctx, \"foo.txt\", f, nil); err != nil {\n\treturn err\n}"
+	},
 	"gocloud.dev/blob.ExampleBucket_NewRangeReader": {
 		"imports": "import (\n\t\"context\"\n\t\"io\"\n\t\"os\"\n\n\t\"gocloud.dev/blob\"\n)",
 		"code": "// Open the key \"foo.txt\" for reading at offset 1024 and read up to 4096 bytes.\nr, err := bucket.NewRangeReader(ctx, \"foo.txt\", 1024, 4096, nil)\nif err != nil {\n\treturn err\n}\ndefer func() { _ = r.Close() }()\n// Copy from the read range to stdout.\nif _, err := io.Copy(os.Stdout, r); err != nil {\n\treturn err\n}"
