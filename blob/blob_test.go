@@ -271,6 +271,87 @@ func TestDownloader(t *testing.T) {
 	}
 }
 
+// memWriterAt is a minimal in-memory io.Writer + io.WriterAt, like *os.File,
+// used to exercise the Download path that routes to driver.DownloaderAt.
+type memWriterAt struct{ data []byte }
+
+func (m *memWriterAt) Write(p []byte) (int, error) {
+	m.data = append(m.data, p...)
+	return len(p), nil
+}
+
+func (m *memWriterAt) WriteAt(p []byte, off int64) (int, error) {
+	if end := int(off) + len(p); end > len(m.data) {
+		m.data = append(m.data, make([]byte, end-len(m.data))...)
+	}
+	copy(m.data[off:], p)
+	return len(p), nil
+}
+
+// downloaderAtBucket implements NewRangeReader (returning a stubReader) and the
+// optional driver.DownloaderAt, each recording whether it was called.
+type downloaderAtBucket struct {
+	driver.Bucket
+	r            stubReader
+	downloadedAt bool
+}
+
+func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
+	return &b.r, nil
+}
+
+func (b *downloaderAtBucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
+	b.downloadedAt = true
+	return nil
+}
+
+func (*downloaderAtBucket) Close() error { return nil }
+
+func TestDownloaderAt(t *testing.T) {
+	ctx := context.Background()
+
+	// io.WriterAt destination + driver implements DownloaderAt: DownloadAt is used.
+	b1 := &downloaderAtBucket{}
+	bucket1 := NewBucket(b1)
+	defer closeWithErrorCheck(t, bucket1)
+	if err := bucket1.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if !b1.downloadedAt {
+		t.Error("DownloadAt wasn't called for an io.WriterAt destination")
+	}
+	if b1.r.downloaded {
+		t.Error("reader Download was called; expected DownloadAt")
+	}
+
+	// Non-io.WriterAt destination: falls back to the reader even though the
+	// driver implements DownloaderAt.
+	b2 := &downloaderAtBucket{}
+	bucket2 := NewBucket(b2)
+	defer closeWithErrorCheck(t, bucket2)
+	if err := bucket2.Download(ctx, "key", &bytes.Buffer{}, nil); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if b2.downloadedAt {
+		t.Error("DownloadAt was called for a non-io.WriterAt destination")
+	}
+	if !b2.r.downloaded {
+		t.Error("reader Download wasn't called for a non-io.WriterAt destination")
+	}
+
+	// io.WriterAt destination but the driver does not implement DownloaderAt:
+	// falls back to the reader.
+	b3 := &loaderBucket{}
+	bucket3 := NewBucket(b3)
+	defer closeWithErrorCheck(t, bucket3)
+	if err := bucket3.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if !b3.r.downloaded {
+		t.Error("reader Download wasn't called when the driver lacks DownloaderAt")
+	}
+}
+
 func TestSeekAfterReadFailure(t *testing.T) {
 	const filename = "f.txt"
 
