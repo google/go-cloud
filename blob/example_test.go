@@ -71,6 +71,28 @@ func ExampleBucket_NewRangeReader() {
 	}
 }
 
+func ExampleBucket_Download() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+	var bucket *blob.Bucket
+
+	// Create a local file to download into.
+	f, err := os.Create("foo.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+
+	// Download the key "foo.txt" into f. Because *os.File is an io.WriterAt,
+	// some drivers (e.g. S3) download it in parallel, which can be
+	// significantly faster for large blobs. Drivers that don't support this
+	// fall back to a single sequential stream.
+	if err := bucket.Download(ctx, "foo.txt", f, nil); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func ExampleBucket_NewWriter() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 	// PRAGMA: On gocloud.dev, hide lines until the next blank line.

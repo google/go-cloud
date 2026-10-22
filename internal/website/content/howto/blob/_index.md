@@ -150,7 +150,16 @@ start reading from an arbitrary offset in the blob, use `NewRangeReader`.
 
 {{< goexample src="gocloud.dev/blob.ExampleBucket_NewRangeReader" imports="0" >}}
 
+To read a whole blob into a destination, use `Download`. When the destination
+implements [`io.WriterAt`][] (for example an [`*os.File`][]), some drivers
+download the blob in parallel, which can be significantly faster for large
+blobs; other drivers fall back to a single sequential stream.
+
+{{< goexample src="gocloud.dev/blob.ExampleBucket_Download" imports="0" >}}
+
 [`io.Reader`]: https://golang.org/pkg/io/#Reader
+[`io.WriterAt`]: https://golang.org/pkg/io/#WriterAt
+[`*os.File`]: https://golang.org/pkg/os/#File
 
 ### Deleting a Bucket {#deleting}
 

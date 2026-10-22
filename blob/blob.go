@@ -800,11 +800,37 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) 
 }
 
 // Download writes the content of a blob into an io.Writer w.
+//
+// If w is an io.WriterAt and the driver implements driver.DownloaderAt, the
+// download may be performed with concurrent ranged reads directly into w.
 func (b *Bucket) Download(ctx context.Context, key string, w io.Writer, opts *ReaderOptions) error {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
 		return errClosed
+	}
+	if opts == nil {
+		opts = &ReaderOptions{}
+	}
+	// If the destination supports random-access writes and the driver can
+	// download directly into an io.WriterAt, use that and skip opening a Reader
+	// entirely. This avoids the eager read NewReader would otherwise issue and
+	// then discard.
+	if wa, ok := w.(io.WriterAt); ok {
+		if d, ok := b.b.(driver.DownloaderAt); ok {
+			if !utf8.ValidString(key) {
+				return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Download key must be a valid UTF-8 string: %q", key)
+			}
+			dopts := &driver.ReaderOptions{
+				BeforeRead:     opts.BeforeRead,
+				BufferSize:     opts.BufferSize,
+				MaxConcurrency: opts.MaxConcurrency,
+			}
+			ctx, span := b.tracer.Start(ctx, "Download")
+			err := wrapError(b.b, d.DownloadAt(ctx, key, wa, dopts), key)
+			b.tracer.End(ctx, span, err)
+			return err
+		}
 	}
 	r, err := b.NewReader(ctx, key, opts)
 	if err != nil {
@@ -1431,6 +1457,17 @@ type ReaderOptions struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeRead func(asFunc func(any) bool) error
+
+	// BufferSize changes the default size in bytes of the chunks that a
+	// parallel download fetches per request; larger blobs are split into more
+	// requests. It is only used when Download performs a parallel download (the
+	// destination is an io.WriterAt and the driver supports it), and may be
+	// ignored by some drivers.
+	BufferSize int
+
+	// MaxConcurrency changes the default number of parts fetched concurrently
+	// by a parallel download. It has the same applicability as BufferSize.
+	MaxConcurrency int
 }
 
 // WriterOptions sets options for NewWriter.
