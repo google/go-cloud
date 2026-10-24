@@ -16,7 +16,12 @@ package aws_test
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -137,6 +142,31 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			query:      url.Values{"role": {"arn:aws:iam::123456789012:role/MyRole"}, "region": {"us-west-2"}},
 			wantRegion: "us-west-2",
 		},
+		{
+			name:    "Role options without role",
+			query:   url.Values{"role_session_name": {"s"}},
+			wantErr: true,
+		},
+		{
+			name:    "Web identity token file without role",
+			query:   url.Values{"web_identity_token_file": {"/tmp/token"}},
+			wantErr: true,
+		},
+		{
+			name:    "Role with invalid duration",
+			query:   url.Values{"role": {"arn:aws:iam::123456789012:role/MyRole"}, "role_duration": {"bad"}},
+			wantErr: true,
+		},
+		{
+			name:    "Role with external ID and web identity",
+			query:   url.Values{"role": {"arn:aws:iam::123456789012:role/MyRole"}, "role_external_id": {"e"}, "web_identity_token_file": {"/tmp/token"}},
+			wantErr: true,
+		},
+		{
+			name:    "Role with anonymous",
+			query:   url.Values{"role": {"arn:aws:iam::123456789012:role/MyRole"}, "anonymous": {"true"}},
+			wantErr: true,
+		},
 		// Can't test "profile", since AWS validates that the profile exists.
 	}
 
@@ -200,6 +230,126 @@ func TestV2ConfigFromURLParams(t *testing.T) {
 			r, ok := got.Retryer().(*retry.Standard)
 			if !ok {
 				t.Errorf("expected a standard retryer, got %v, expected retry.Standard", r)
+			}
+		})
+	}
+}
+
+// fakeSTS returns credentials whose access key ID is the requested action.
+type fakeSTS struct {
+	*httptest.Server
+	got url.Values
+}
+
+func newFakeSTS(t *testing.T) *fakeSTS {
+	f := &fakeSTS{}
+	f.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("parsing STS request: %v", err)
+		}
+		f.got = r.PostForm
+		action := r.PostForm.Get("Action")
+		w.Header().Set("Content-Type", "text/xml")
+		_, _ = fmt.Fprintf(w, `<%[1]sResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <%[1]sResult>
+    <Credentials>
+      <AccessKeyId>%[1]s</AccessKeyId>
+      <SecretAccessKey>secret</SecretAccessKey>
+      <SessionToken>token</SessionToken>
+      <Expiration>2100-01-01T00:00:00Z</Expiration>
+    </Credentials>
+  </%[1]sResult>
+  <ResponseMetadata><RequestId>id</RequestId></ResponseMetadata>
+</%[1]sResponse>`, action)
+	}))
+	t.Cleanup(f.Close)
+	return f
+}
+
+func writeTokenFile(t *testing.T) string {
+	path := filepath.Join(t.TempDir(), "token")
+	if err := os.WriteFile(path, []byte("my-oidc-token"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestV2ConfigFromURLParamsAssumeRole(t *testing.T) {
+	ctx := context.Background()
+	sts := newFakeSTS(t)
+	t.Setenv("AWS_ACCESS_KEY_ID", "base-key")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "base-secret")
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_ENDPOINT_URL_STS", sts.URL)
+	t.Setenv("AWS_CONFIG_FILE", filepath.Join(t.TempDir(), "config"))
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(t.TempDir(), "credentials"))
+
+	const roleARN = "arn:aws:iam::123456789012:role/my-role"
+	tests := []struct {
+		name       string
+		query      url.Values
+		wantAction string
+		wantForm   url.Values
+	}{
+		{
+			name: "AssumeRole",
+			query: url.Values{
+				"role":              {roleARN},
+				"role_session_name": {"my-session"},
+				"role_external_id":  {"my-external-id"},
+				"role_duration":     {"30m"},
+			},
+			wantAction: "AssumeRole",
+			wantForm: url.Values{
+				"RoleArn":         {roleARN},
+				"RoleSessionName": {"my-session"},
+				"ExternalId":      {"my-external-id"},
+				"DurationSeconds": {"1800"},
+			},
+		},
+		{
+			name: "AssumeRoleWithWebIdentity",
+			query: url.Values{
+				"role":                    {roleARN},
+				"role_session_name":       {"my-session"},
+				"role_duration":           {"1h"},
+				"web_identity_token_file": {writeTokenFile(t)},
+			},
+			wantAction: "AssumeRoleWithWebIdentity",
+			wantForm: url.Values{
+				"RoleArn":          {roleARN},
+				"RoleSessionName":  {"my-session"},
+				"WebIdentityToken": {"my-oidc-token"},
+				"DurationSeconds":  {"3600"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			q := url.Values{}
+			for k, v := range test.query {
+				q[k] = v
+			}
+			// The service endpoint must not be used for STS.
+			q.Set("endpoint", "http://localhost:1")
+			cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
+			if err != nil {
+				t.Fatal(err)
+			}
+			creds, err := cfg.Credentials.Retrieve(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if creds.AccessKeyID != test.wantAction {
+				t.Errorf("got access key ID %q, want %q", creds.AccessKeyID, test.wantAction)
+			}
+			if got := sts.got.Get("Action"); got != test.wantAction {
+				t.Errorf("got STS action %q, want %q", got, test.wantAction)
+			}
+			for k := range test.wantForm {
+				if got, want := sts.got.Get(k), test.wantForm.Get(k); got != want {
+					t.Errorf("got STS %s %q, want %q", k, got, want)
+				}
 			}
 		})
 	}
