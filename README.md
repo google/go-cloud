@@ -92,6 +92,7 @@ likely be to suggest starting in a separate repository.
 ### Known External Drivers
 
 *   [gocloud-ext](https://github.com/TuSKan/gocloud-ext) — `blob` drivers for HTTP and WebDAV (`httpblob`) and for SFTP (`sftpblob`).
+*   [postgresblob](https://github.com/gopherium/framework/tree/main/postgresblob): a `blob` driver for PostgreSQL.
 
 ## Current features
 
