@@ -53,8 +53,10 @@ const (
 	// 4. Download a private key to a .pem file as described here:
 	//    https://godoc.org/cloud.google.com/go/storage#SignedURLOptions
 	//    and pass a path to it via the --privatekey flag.
-	// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
-	//    name from the Terraform output instead (saving a copy of it for replay).
+	//    * Download p12 key
+	//    * openssl pkcs12 -in gcs-private-key.p12 -passin pass:notasecret -out gcs-private-key.pem -nodes
+	//    * Edit gcs-private-key.pem and delete the first part of the .pem file, up to and include -----END CERTIFICATE-----
+
 	bucketName = "go-cloud-blob-test-bucket"
 	// This bucket should be zonal.
 	bucketNameZonal  = "go-cloud-blob-test-bucket-zonal"
