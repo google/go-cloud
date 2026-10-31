@@ -656,6 +656,63 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}, nil
 }
 
+var _ driver.DownloaderAt = (*bucket)(nil)
+
+// DownloadAt implements driver.DownloaderAt. When the destination is an
+// *os.File, it uses the azblob DownloadFile helper, which fetches the blob in
+// parallel blocks; DownloadFile is a method on the same *blob.Client the driver
+// already uses, so this adds no new import or dependency. For any other
+// io.WriterAt, azblob has no parallel download, so it falls back to a single
+// sequential stream.
+func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
+	key = escapeKey(key, false)
+	blobClient := b.client.NewBlobClient(key)
+
+	if f, ok := w.(*os.File); ok {
+		downloadOpts := &azblobblob.DownloadFileOptions{}
+		if opts.BeforeRead != nil {
+			asFunc := func(i any) bool {
+				if p, ok := i.(**azblobblob.DownloadFileOptions); ok {
+					*p = downloadOpts
+					return true
+				}
+				if p, ok := i.(**azblobblob.Client); ok {
+					*p = blobClient
+					return true
+				}
+				return false
+			}
+			if err := opts.BeforeRead(asFunc); err != nil {
+				return err
+			}
+		}
+		_, err := blobClient.DownloadFile(ctx, f, downloadOpts)
+		return err
+	}
+
+	// No native parallel download into a generic io.WriterAt; stream sequentially.
+	downloadOpts := &azblob.DownloadStreamOptions{}
+	if opts.BeforeRead != nil {
+		asFunc := func(i any) bool {
+			if p, ok := i.(**azblobblob.DownloadStreamOptions); ok {
+				*p = downloadOpts
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeRead(asFunc); err != nil {
+			return err
+		}
+	}
+	resp, err := blobClient.DownloadStream(ctx, downloadOpts)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, err = io.Copy(io.NewOffsetWriter(w, 0), resp.Body)
+	return err
+}
+
 func getSize(contentLength *int64, contentRange string) int64 {
 	var size int64
 	// Default size to ContentLength, but that's incorrect for partial-length reads,
