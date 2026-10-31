@@ -128,6 +128,15 @@ const (
 	defaultUploadBlockSize = 8 * 1024 * 1024 // configure the upload buffer size
 )
 
+// AllowedStorageDomains is a set of Azure domains that can be configured via URL.
+// It can be overridden by applications that needs to expand the set.
+var AllowedStorageDomains = map[string]bool{
+	"blob.core.windows.net":       true,
+	"blob.core.usgovcloudapi.net": true,
+	"blob.core.chinacloudapi.cn":  true,
+	"blob.core.cloudapi.de":       true,
+}
+
 // ptrVal returns the value pointed to by p, or the zero value if p is nil.
 func ptrVal[T any](p *T) (v T) {
 	if p != nil {
@@ -169,6 +178,7 @@ type ServiceURLOptions struct {
 	// domain to target for the blob storage account (i.e. public, government, china).
 	// Defaults to "blob.core.windows.net". Possible values will look similar
 	// to this but are different for each cloud (i.e. "blob.core.govcloudapi.net" for USGovernment).
+	// The set of allowed values is configured via AllowedStorageDomains.
 	// Check the Azure developer guide for the cloud environment where your bucket resides.
 	// See the docstring for NewServiceURL to see examples of how this is used
 	// along with the other Options fields.
@@ -190,6 +200,8 @@ type ServiceURLOptions struct {
 	// IsLocalEmulator should be set to true when targeting Local Storage Emulator (Azurite).
 	// See the docstring for NewServiceURL to see examples of how this is used
 	// along with the other Options fields.
+	// Note that if you want to use a local emulator with a StorageDomain other than
+	// localhost/127.0.0.1, you'll need to configure AllowedStorageDomains to allow it.
 	IsLocalEmulator bool
 }
 
@@ -274,6 +286,10 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 //   - If opts.IsLocalEmulator is true, or the domain starts with "localhost"
 //     or "127.0.0.1", the account name and domain are flipped, e.g.:
 //     http://127.0.0.1:10000/myaccount
+//   - Protocol must be "http" or "https"; "http" is only allowed with
+//     domains starting with "127.0.0.1" or "localhost".
+//   - Domain can only be overridden to an allowlist of domains, configured
+//     via AllowedStorageDomains.
 func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	if opts == nil {
 		opts = &ServiceURLOptions{}
@@ -282,16 +298,27 @@ func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	if accountName == "" {
 		return "", errors.New("azureblob: Options.AccountName is required")
 	}
-	domain := opts.StorageDomain
+	domain := strings.ToLower(opts.StorageDomain)
 	if domain == "" {
 		domain = "blob.core.windows.net"
 	}
-	protocol := opts.Protocol
+	protocol := strings.ToLower(opts.Protocol)
 	if protocol == "" {
 		protocol = "https"
-	} else if protocol != "http" && protocol != "https" {
+	}
+	switch protocol {
+	case "http":
+		if !strings.HasPrefix(domain, "127.0.0.1") && !strings.HasPrefix(domain, "localhost") {
+			return "", fmt.Errorf("protocol %q not allowed with domain %q", protocol, domain)
+		}
+	case "https":
+		if !AllowedStorageDomains[domain] {
+			return "", fmt.Errorf("domain %q not allowed", domain)
+		}
+	default:
 		return "", fmt.Errorf("invalid protocol %q", protocol)
 	}
+
 	var svcURL string
 	if strings.HasPrefix(domain, "127.0.0.1") || strings.HasPrefix(domain, "localhost") || opts.IsLocalEmulator {
 		svcURL = fmt.Sprintf("%s://%s/%s", protocol, domain, accountName)
@@ -321,42 +348,7 @@ func (o *lazyOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucke
 			ServiceURLOptions: *opts,
 		}
 	})
-	// The SAS token is part of the service URL, so URL parameters must not send
-	// it to another origin.
-	if o.opener.ServiceURLOptions.SASToken != "" {
-		defaultURL, err := NewServiceURL(&o.opener.ServiceURLOptions)
-		if err != nil {
-			return nil, err
-		}
-		opts, err := o.opener.ServiceURLOptions.withOverrides(u.Query())
-		if err != nil {
-			return nil, err
-		}
-		overriddenURL, err := NewServiceURL(opts)
-		if err != nil {
-			return nil, err
-		}
-		same, err := sameServiceOrigin(defaultURL, overriddenURL)
-		if err != nil {
-			return nil, err
-		}
-		if !same {
-			return nil, errors.New("azureblob: bucket URL cannot change the service endpoint when AZURE_STORAGE_SAS_TOKEN is set")
-		}
-	}
 	return o.opener.OpenBucketURL(ctx, u)
-}
-
-func sameServiceOrigin(a, b ServiceURL) (bool, error) {
-	aURL, err := url.Parse(string(a))
-	if err != nil {
-		return false, err
-	}
-	bURL, err := url.Parse(string(b))
-	if err != nil {
-		return false, err
-	}
-	return strings.EqualFold(aURL.Scheme, bURL.Scheme) && strings.EqualFold(aURL.Host, bURL.Host), nil
 }
 
 type credTypeEnumT int
