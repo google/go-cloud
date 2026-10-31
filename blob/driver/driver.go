@@ -353,6 +353,17 @@ type Bucket interface {
 	Close() error
 }
 
+// DownloaderAt is an optional interface for Bucket. If a driver implements it,
+// blob.Bucket.Download uses DownloadAt when the download destination is an
+// io.WriterAt, e.g. to fetch the object with a provider's parallel/ranged
+// downloader. Implementing it avoids the eager read that would otherwise be
+// issued via NewRangeReader and then discarded.
+//
+// If set, opts.BeforeRead is called once before the download begins.
+type DownloaderAt interface {
+	DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *ReaderOptions) error
+}
+
 // SignedURLOptions sets options for SignedURL.
 type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.
