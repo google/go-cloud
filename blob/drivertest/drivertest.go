@@ -26,6 +26,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -62,6 +63,11 @@ type Harness interface {
 	SupportsCopy() bool
 	// SupportsNonSlashDelimiters should return true iff the driver supports non-"/" delimiters.
 	SupportsNonSlashDelimiters() bool
+	// SkipDownloadAt should return true to skip the DownloadAt test.
+	// This is a temporary measure while maintainers down't have access to
+	// accounts in order to update record/replay tests.
+	// TODO(rvangent): Remove once we have accounts.
+	SkipDownloadAt() bool
 	// Close closes resources used by the harness.
 	Close()
 }
@@ -2355,7 +2361,34 @@ func testUploadDownload(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	if bb.String() != contents {
-		t.Errorf("read data mismatch for key %s", key)
+		t.Errorf("Download: read data mismatch for key %s", key)
+	}
+
+	if !h.SkipDownloadAt() {
+		// Read the blob into an io.WriterAt (enables DownloadAt optimization for some drivers).
+		tmpFile, err := os.CreateTemp("", "io-writer-at")
+		if err != nil {
+			t.Fatalf("failed to create temp file: %v", err)
+		}
+		defer func() {
+			if err := os.Remove(tmpFile.Name()); err != nil {
+				t.Errorf("failed to remove temp file: %v", err)
+			}
+		}()
+		defer closeWithErrorCheck(t, tmpFile)
+
+		err = b.Download(ctx, key, tmpFile, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fileContents, err := os.ReadFile(tmpFile.Name())
+		if err != nil {
+			log.Fatalf("Failed to read from Download destination file: %v", err)
+		}
+
+		if string(fileContents) != contents {
+			t.Errorf("DownloadAt: read data mismatch for key %s", key)
+		}
 	}
 
 	// Write the same blob using Upload and ContentMD5 checking (this disables the Upload optimization).

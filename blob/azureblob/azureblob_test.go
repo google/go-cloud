@@ -157,6 +157,7 @@ func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bu
 
 func (*harness) SupportsCopy() bool               { return true }
 func (*harness) SupportsNonSlashDelimiters() bool { return true }
+func (*harness) SkipDownloadAt() bool             { return false }
 
 func (h *harness) Close() {
 	h.closer()
