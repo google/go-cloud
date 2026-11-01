@@ -86,6 +86,9 @@ func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bu
 func (*harness) SupportsCopy() bool               { return true }
 func (*harness) SupportsNonSlashDelimiters() bool { return true }
 
+// TODO(rvangent): Clean up once we have an S3 account and can update goldens.
+func (*harness) SkipDownloadAt() bool { return true }
+
 func (h *harness) Close() {
 	h.closer()
 }

@@ -116,6 +116,7 @@ func (h *harness) MakeDriverForNonexistentBucket(ctx context.Context) (driver.Bu
 
 func (*harness) SupportsCopy() bool               { return true }
 func (*harness) SupportsNonSlashDelimiters() bool { return true }
+func (*harness) SkipDownloadAt() bool             { return false }
 
 func (h *harness) Close() {
 	h.closer()
@@ -228,10 +229,11 @@ func (h *grpcHarness) MakeDriverForNonexistentBucket(ctx context.Context) (drive
 // HTTPClient returns nil: without a GoogleAccessID and a signer, SignedURL
 // reports Unimplemented and drivertest skips the checks that would need this.
 // SignedURL is signed client-side and is unaffected by the transport.
-func (h *grpcHarness) HTTPClient() *http.Client { return nil }
+func (*grpcHarness) HTTPClient() *http.Client { return nil }
 
 func (h *grpcHarness) SupportsCopy() bool               { return !h.zonal }
 func (h *grpcHarness) SupportsNonSlashDelimiters() bool { return !h.zonal }
+func (*grpcHarness) SkipDownloadAt() bool               { return false }
 
 func (h *grpcHarness) Close() { h.cleanup() }
 
