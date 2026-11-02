@@ -372,6 +372,14 @@ type DownloaderAt interface {
 	DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *ReaderOptions) error
 }
 
+// ParallelDownloadDefaulter is an optional interface for buckets. If a driver
+// implements it, Bucket.Download treats the returned value as the default for
+// ReaderOptions.AllowParallelDownload (for example, set from the OpenBucket
+// URL) when the per-call ReaderOptions does not request a parallel download.
+type ParallelDownloadDefaulter interface {
+	DefaultAllowParallelDownload() bool
+}
+
 // SignedURLOptions sets options for SignedURL.
 type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.

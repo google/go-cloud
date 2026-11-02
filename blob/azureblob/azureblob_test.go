@@ -756,6 +756,14 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?localemu=true", false},
 		// With invalid local emulator.
 		{"azblob://mybucket?localemu=42", true},
+		// OK, parallel download defaults.
+		{"azblob://mybucket?allow_parallel_download=true&download_part_size=16777216&download_concurrency=8", false},
+		// Invalid allow_parallel_download.
+		{"azblob://mybucket?allow_parallel_download=bogus", true},
+		// Invalid download_part_size.
+		{"azblob://mybucket?download_part_size=notanint", true},
+		// Invalid download_concurrency.
+		{"azblob://mybucket?download_concurrency=notanint", true},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}

@@ -812,11 +812,21 @@ func (b *Bucket) Download(ctx context.Context, key string, w io.Writer, opts *Re
 	if opts == nil {
 		opts = &ReaderOptions{}
 	}
-	// If the caller opted in to parallel downloads, the destination supports
-	// random-access writes, and the driver can download directly into an
-	// io.WriterAt, use that and skip opening a Reader entirely. This avoids the
-	// eager read NewReader would otherwise issue and then discard.
-	if opts.AllowParallelDownload {
+	// Parallel download is enabled per-call via opts.AllowParallelDownload, or
+	// as a bucket-wide default if the driver provides one (e.g. set from the
+	// OpenBucket URL). The default can only enable it; a per-call false cannot
+	// turn off a default-enabled bucket.
+	allowParallel := opts.AllowParallelDownload
+	if !allowParallel {
+		if d, ok := b.b.(driver.ParallelDownloadDefaulter); ok {
+			allowParallel = d.DefaultAllowParallelDownload()
+		}
+	}
+	// If parallel download is enabled, the destination supports random-access
+	// writes, and the driver can download directly into an io.WriterAt, use
+	// that and skip opening a Reader entirely. This avoids the eager read
+	// NewReader would otherwise issue and then discard.
+	if allowParallel {
 		if wa, ok := w.(io.WriterAt); ok {
 			if d, ok := b.b.(driver.DownloaderAt); ok {
 				if !utf8.ValidString(key) {

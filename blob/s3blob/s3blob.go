@@ -127,6 +127,10 @@ const Scheme = "s3"
 //   - use_path_style: A value of true sets the UsePathStyle option.
 //   - s3ForcePathStyle: Same as use_path_style, for backwards compatibility with V1.
 //   - disable_https: A value of true disables HTTPS in the Endpoint options.
+//   - allow_parallel_download: A value of true makes Download fetch into an
+//     io.WriterAt destination using parallel ranged requests by default.
+//   - download_part_size: The default part size in bytes for parallel downloads.
+//   - download_concurrency: The default number of parts fetched concurrently for parallel downloads.
 type URLOpener struct {
 	// Options specifies the options to pass to OpenBucket.
 	Options Options
@@ -139,6 +143,10 @@ const (
 	usePathStyleParamKey       = "use_path_style"
 	legacyUsePathStyleParamKey = "s3ForcePathStyle" // for backwards compatibility
 	disableHTTPSParamKey       = "disable_https"
+
+	allowParallelDownloadParamKey = "allow_parallel_download"
+	downloadPartSizeParamKey      = "download_part_size"
+	downloadConcurrencyParamKey   = "download_concurrency"
 )
 
 func toServerSideEncryptionType(value string) (types.ServerSideEncryption, error) {
@@ -208,6 +216,31 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		}
 	}
 
+	if v := q.Get(allowParallelDownloadParamKey); v != "" {
+		q.Del(allowParallelDownloadParamKey)
+		value, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %q: %w", allowParallelDownloadParamKey, err)
+		}
+		o.Options.AllowParallelDownload = value
+	}
+	if v := q.Get(downloadPartSizeParamKey); v != "" {
+		q.Del(downloadPartSizeParamKey)
+		value, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %q: %w", downloadPartSizeParamKey, err)
+		}
+		o.Options.DownloadPartSize = value
+	}
+	if v := q.Get(downloadConcurrencyParamKey); v != "" {
+		q.Del(downloadConcurrencyParamKey)
+		value, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %q: %w", downloadConcurrencyParamKey, err)
+		}
+		o.Options.DownloadConcurrency = value
+	}
+
 	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %w", u, err)
@@ -243,6 +276,17 @@ type Options struct {
 	// requests. This may need to be set to when_required to preserve compatibility for
 	// third-party S3 providers: https://github.com/aws/aws-sdk-go-v2/discussions/2960.
 	RequestChecksumCalculation aws.RequestChecksumCalculation
+
+	// AllowParallelDownload sets the default for
+	// blob.ReaderOptions.AllowParallelDownload on Download calls that don't set
+	// it. See the "URLs" section for the equivalent URL parameter.
+	AllowParallelDownload bool
+
+	// DownloadPartSize and DownloadConcurrency set the defaults for
+	// blob.ReaderOptions.BufferSize and MaxConcurrency on parallel downloads
+	// that don't set them. Zero means use the transfer manager default.
+	DownloadPartSize    int
+	DownloadConcurrency int
 }
 
 // openBucket returns an S3 Bucket.
@@ -263,6 +307,9 @@ func openBucket(ctx context.Context, client *s3.Client, bucketName string, opts 
 		kmsKeyId:                   opts.KMSEncryptionID,
 		encryptionType:             opts.EncryptionType,
 		requestChecksumCalculation: opts.RequestChecksumCalculation,
+		allowParallelDownload:      opts.AllowParallelDownload,
+		downloadPartSize:           opts.DownloadPartSize,
+		downloadConcurrency:        opts.DownloadConcurrency,
 	}, nil
 }
 
@@ -405,7 +452,13 @@ type bucket struct {
 	encryptionType             types.ServerSideEncryption
 	kmsKeyId                   string
 	requestChecksumCalculation aws.RequestChecksumCalculation
+
+	allowParallelDownload bool
+	downloadPartSize      int
+	downloadConcurrency   int
 }
+
+func (b *bucket) DefaultAllowParallelDownload() bool { return b.allowParallelDownload }
 
 var _ driver.DownloaderAt = (*bucket)(nil)
 
@@ -690,6 +743,15 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // *s3.GetObjectInput.
 func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
 	key = escapeKey(key)
+	// Per-call ReaderOptions win; otherwise fall back to the bucket defaults
+	// (e.g. set from the OpenBucket URL).
+	partSize, concurrency := opts.BufferSize, opts.MaxConcurrency
+	if partSize == 0 {
+		partSize = b.downloadPartSize
+	}
+	if concurrency == 0 {
+		concurrency = b.downloadConcurrency
+	}
 	tm := transfermanager.New(b.client, func(o *transfermanager.Options) {
 		// Thread the bucket's checksum setting through, matching the upload
 		// path; see NewTypedWriter for why this matters for S3-compatible
@@ -698,11 +760,11 @@ func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts
 		// RANGE uses byte-range GETs and works on any object; PART only works
 		// for objects that were uploaded in multiple parts.
 		o.GetObjectType = tmtypes.GetObjectRanges
-		if opts.BufferSize != 0 {
-			o.PartSizeBytes = int64(opts.BufferSize)
+		if partSize != 0 {
+			o.PartSizeBytes = int64(partSize)
 		}
-		if opts.MaxConcurrency != 0 {
-			o.Concurrency = opts.MaxConcurrency
+		if concurrency != 0 {
+			o.Concurrency = concurrency
 		}
 	})
 	in := &transfermanager.DownloadObjectInput{

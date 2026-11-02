@@ -157,7 +157,23 @@ var Set = wire.NewSet(
 )
 
 // Options sets options for constructing a *blob.Bucket backed by Azure Blob.
-type Options struct{}
+type Options struct {
+	// AllowParallelDownload sets the default for
+	// blob.ReaderOptions.AllowParallelDownload on Download calls that don't set
+	// it. See the "URLs" section for the equivalent URL parameter.
+	AllowParallelDownload bool
+
+	// DownloadPartSize and DownloadConcurrency set the defaults for
+	// blob.ReaderOptions.BufferSize and MaxConcurrency on parallel downloads
+	// that don't set them. They map to the azblob DownloadFile block size and
+	// concurrency. Zero means use the azblob default.
+	DownloadPartSize    int
+	DownloadConcurrency int
+}
+
+func (b *bucket) DefaultAllowParallelDownload() bool {
+	return b.opts != nil && b.opts.AllowParallelDownload
+}
 
 // ServiceURL represents an Azure service URL.
 type ServiceURL string
@@ -442,6 +458,10 @@ const Scheme = "azblob"
 //   - protocol: Overrides Options.Protocol.
 //   - cdn: Overrides Options.IsCDN.
 //   - localemu: Overrides Options.IsLocalEmulator.
+//   - allow_parallel_download: A value of true makes Download fetch into an
+//     *os.File destination using parallel block requests by default.
+//   - download_part_size: The default block size in bytes for parallel downloads.
+//   - download_concurrency: The default number of blocks fetched concurrently for parallel downloads.
 type URLOpener struct {
 	// MakeClient must be set to a non-nil value.
 	MakeClient func(svcURL ServiceURL, containerName ContainerName) (*container.Client, error)
@@ -456,7 +476,36 @@ type URLOpener struct {
 
 // OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	opts, err := o.ServiceURLOptions.withOverrides(u.Query())
+	// Pull out the download params before withOverrides, which rejects any
+	// query parameter it doesn't recognize. Don't mutate the caller's URL.
+	q := cloneValues(u.Query())
+	bucketOpts := o.Options
+	if v := q.Get("allow_parallel_download"); v != "" {
+		q.Del("allow_parallel_download")
+		value, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for query parameter \"allow_parallel_download\": %w", v, err)
+		}
+		bucketOpts.AllowParallelDownload = value
+	}
+	if v := q.Get("download_part_size"); v != "" {
+		q.Del("download_part_size")
+		value, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for query parameter \"download_part_size\": %w", v, err)
+		}
+		bucketOpts.DownloadPartSize = value
+	}
+	if v := q.Get("download_concurrency"); v != "" {
+		q.Del("download_concurrency")
+		value, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %q for query parameter \"download_concurrency\": %w", v, err)
+		}
+		bucketOpts.DownloadConcurrency = value
+	}
+
+	opts, err := o.ServiceURLOptions.withOverrides(q)
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +517,15 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	if err != nil {
 		return nil, err
 	}
-	return OpenBucket(ctx, client, &o.Options)
+	return OpenBucket(ctx, client, &bucketOpts)
+}
+
+func cloneValues(v url.Values) url.Values {
+	out := make(url.Values, len(v))
+	for k, vs := range v {
+		out[k] = append([]string(nil), vs...)
+	}
+	return out
 }
 
 // bucket represents a Azure Storage Account Container, which handles read,
@@ -669,12 +726,21 @@ func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts
 	blobClient := b.client.NewBlobClient(key)
 
 	if f, ok := w.(*os.File); ok {
-		downloadOpts := &azblobblob.DownloadFileOptions{}
-		if opts.BufferSize != 0 {
-			downloadOpts.BlockSize = int64(opts.BufferSize)
+		// Per-call ReaderOptions win; otherwise fall back to the bucket
+		// defaults (e.g. set from the OpenBucket URL).
+		partSize, concurrency := opts.BufferSize, opts.MaxConcurrency
+		if partSize == 0 {
+			partSize = b.opts.DownloadPartSize
 		}
-		if opts.MaxConcurrency != 0 {
-			downloadOpts.Concurrency = uint16(opts.MaxConcurrency)
+		if concurrency == 0 {
+			concurrency = b.opts.DownloadConcurrency
+		}
+		downloadOpts := &azblobblob.DownloadFileOptions{}
+		if partSize != 0 {
+			downloadOpts.BlockSize = int64(partSize)
+		}
+		if concurrency != 0 {
+			downloadOpts.Concurrency = uint16(concurrency)
 		}
 		if opts.BeforeRead != nil {
 			asFunc := func(i any) bool {

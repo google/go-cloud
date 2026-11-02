@@ -339,6 +339,14 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"s3://mybucket?s3ForcePathStyle=true", false},
 		// OK, use disable_https
 		{"s3://mybucket?disable_https=true", false},
+		// OK, parallel download defaults.
+		{"s3://mybucket?allow_parallel_download=true&download_part_size=16777216&download_concurrency=8", false},
+		// Invalid allow_parallel_download.
+		{"s3://mybucket?allow_parallel_download=bogus", true},
+		// Invalid download_part_size.
+		{"s3://mybucket?download_part_size=notanint", true},
+		// Invalid download_concurrency.
+		{"s3://mybucket?download_concurrency=notanint", true},
 		// OK, use FIPS endpoints
 		{"s3://mybucket?fips=true", false},
 		// OK, use anonymous.

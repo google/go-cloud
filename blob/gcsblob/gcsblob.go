@@ -258,6 +258,10 @@ const Scheme = "gs"
 //     JSON/HTTP API. The bucket is opened with a client from DialGRPC.
 //   - zonal: A value of "true" additionally enables the zonal bucket APIs, which
 //     are required for Rapid Storage buckets. Implies grpc=true.
+//   - allow_parallel_download: A value of true makes Download fetch into an
+//     io.WriterAt destination using parallel ranged requests by default.
+//   - download_part_size: The default part size in bytes for parallel downloads.
+//   - download_concurrency: The default number of parts fetched concurrently for parallel downloads.
 //
 // gRPC is not automatically faster than JSON/HTTP. For small-object latency
 // against regional, dual-region and multi-region buckets it measured no better,
@@ -330,7 +334,8 @@ type urlParams struct {
 func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp.HTTPClient, urlParams, error) {
 	var params urlParams
 	for k := range q {
-		if k != "access_id" && k != "private_key_path" && k != "anonymous" && k != "universe_domain" && k != "grpc" && k != "zonal" {
+		if k != "access_id" && k != "private_key_path" && k != "anonymous" && k != "universe_domain" && k != "grpc" && k != "zonal" &&
+			k != "allow_parallel_download" && k != "download_part_size" && k != "download_concurrency" {
 			return nil, nil, params, fmt.Errorf("invalid query parameter %q", k)
 		}
 	}
@@ -394,6 +399,27 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp
 		// is intentional such as for tests or involving a key stored in a HSM/TPM.
 		opts.PrivateKey = nil
 	}
+	if v := q.Get("allow_parallel_download"); v != "" {
+		value, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, nil, params, fmt.Errorf("invalid value %q for query parameter \"allow_parallel_download\": %w", v, err)
+		}
+		opts.AllowParallelDownload = value
+	}
+	if v := q.Get("download_part_size"); v != "" {
+		value, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, nil, params, fmt.Errorf("invalid value %q for query parameter \"download_part_size\": %w", v, err)
+		}
+		opts.DownloadPartSize = value
+	}
+	if v := q.Get("download_concurrency"); v != "" {
+		value, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, nil, params, fmt.Errorf("invalid value %q for query parameter \"download_concurrency\": %w", v, err)
+		}
+		opts.DownloadConcurrency = value
+	}
 	return opts, client, params, nil
 }
 
@@ -432,6 +458,21 @@ type Options struct {
 	// ClientOptions are passed when constructing the storage.Client.
 	// Ignored if Client is set.
 	ClientOptions []option.ClientOption
+
+	// AllowParallelDownload sets the default for
+	// blob.ReaderOptions.AllowParallelDownload on Download calls that don't set
+	// it. See the "URLs" section for the equivalent URL parameter.
+	AllowParallelDownload bool
+
+	// DownloadPartSize and DownloadConcurrency set the defaults for
+	// blob.ReaderOptions.BufferSize and MaxConcurrency on parallel downloads
+	// that don't set them. Zero means use the transfer manager default.
+	DownloadPartSize    int
+	DownloadConcurrency int
+}
+
+func (b *bucket) DefaultAllowParallelDownload() bool {
+	return b.opts != nil && b.opts.AllowParallelDownload
 }
 
 // clear clears all the fields of o.
@@ -852,12 +893,21 @@ var _ driver.DownloaderAt = (*bucket)(nil)
 // w. transfermanager is a subpackage of cloud.google.com/go/storage, which this
 // driver already depends on, and it reuses the driver's existing *storage.Client.
 func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
-	var topts []transfermanager.Option
-	if opts.BufferSize != 0 {
-		topts = append(topts, transfermanager.WithPartSize(int64(opts.BufferSize)))
+	// Per-call ReaderOptions win; otherwise fall back to the bucket defaults
+	// (e.g. set from the OpenBucket URL).
+	partSize, concurrency := opts.BufferSize, opts.MaxConcurrency
+	if partSize == 0 {
+		partSize = b.opts.DownloadPartSize
 	}
-	if opts.MaxConcurrency != 0 {
-		topts = append(topts, transfermanager.WithWorkers(opts.MaxConcurrency))
+	if concurrency == 0 {
+		concurrency = b.opts.DownloadConcurrency
+	}
+	var topts []transfermanager.Option
+	if partSize != 0 {
+		topts = append(topts, transfermanager.WithPartSize(int64(partSize)))
+	}
+	if concurrency != 0 {
+		topts = append(topts, transfermanager.WithWorkers(concurrency))
 	}
 	d, err := transfermanager.NewDownloader(b.client, topts...)
 	if err != nil {

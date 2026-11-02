@@ -888,6 +888,14 @@ func TestOpenBucketFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"gs://mybucket", false},
+		// OK, parallel download defaults.
+		{"gs://mybucket?allow_parallel_download=true&download_part_size=16777216&download_concurrency=8", false},
+		// Invalid allow_parallel_download.
+		{"gs://mybucket?allow_parallel_download=bogus", true},
+		// Invalid download_part_size.
+		{"gs://mybucket?download_part_size=notanint", true},
+		// Invalid download_concurrency.
+		{"gs://mybucket?download_concurrency=notanint", true},
 		// OK, setting access_id.
 		{"gs://mybucket?access_id=foo", false},
 		// OK, setting private_key_path.

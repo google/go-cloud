@@ -295,11 +295,14 @@ type downloaderAtBucket struct {
 	r            stubReader
 	downloadedAt bool
 	gotOpts      *driver.ReaderOptions
+	allowDefault bool
 }
 
 func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	return &b.r, nil
 }
+
+func (b *downloaderAtBucket) DefaultAllowParallelDownload() bool { return b.allowDefault }
 
 func (b *downloaderAtBucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
 	b.downloadedAt = true
@@ -368,6 +371,36 @@ func TestDownloaderAt(t *testing.T) {
 	}
 	if !b4.r.downloaded {
 		t.Error("reader Download wasn't called when the driver lacks DownloaderAt")
+	}
+}
+
+func TestDownloaderAtDefault(t *testing.T) {
+	ctx := context.Background()
+
+	// Driver default enables parallel download even though the per-call opts
+	// don't request it.
+	b1 := &downloaderAtBucket{allowDefault: true}
+	bucket1 := NewBucket(b1)
+	defer closeWithErrorCheck(t, bucket1)
+	if err := bucket1.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if !b1.downloadedAt {
+		t.Error("DownloadAt wasn't called when the driver defaults parallel download on")
+	}
+
+	// No per-call opt in and no driver default: falls back to the reader.
+	b2 := &downloaderAtBucket{allowDefault: false}
+	bucket2 := NewBucket(b2)
+	defer closeWithErrorCheck(t, bucket2)
+	if err := bucket2.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if b2.downloadedAt {
+		t.Error("DownloadAt was called without opt-in or a driver default")
+	}
+	if !b2.r.downloaded {
+		t.Error("reader Download wasn't called")
 	}
 }
 
