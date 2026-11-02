@@ -852,7 +852,14 @@ var _ driver.DownloaderAt = (*bucket)(nil)
 // w. transfermanager is a subpackage of cloud.google.com/go/storage, which this
 // driver already depends on, and it reuses the driver's existing *storage.Client.
 func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
-	d, err := transfermanager.NewDownloader(b.client)
+	var topts []transfermanager.Option
+	if opts.BufferSize != 0 {
+		topts = append(topts, transfermanager.WithPartSize(int64(opts.BufferSize)))
+	}
+	if opts.MaxConcurrency != 0 {
+		topts = append(topts, transfermanager.WithWorkers(opts.MaxConcurrency))
+	}
+	d, err := transfermanager.NewDownloader(b.client, topts...)
 	if err != nil {
 		return err
 	}
