@@ -818,8 +818,8 @@ func (b *Bucket) SetDefaultReaderOptions(opts ReaderOptions) error {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	cp := opts
-	b.defaultReaderOptions = &cp
+	// opts is a value parameter, so it is already a copy owned by this call.
+	b.defaultReaderOptions = &opts
 	return nil
 }
 
