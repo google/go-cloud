@@ -395,6 +395,73 @@ func TestDownloaderAtOptions(t *testing.T) {
 	}
 }
 
+func TestSetDefaultReaderOptions(t *testing.T) {
+	ctx := context.Background()
+
+	// BeforeRead is not allowlisted.
+	if err := NewBucket(&downloaderAtBucket{}).SetDefaultReaderOptions(ReaderOptions{
+		BeforeRead: func(func(any) bool) error { return nil },
+	}); err == nil {
+		t.Error("SetDefaultReaderOptions with BeforeRead should return an error")
+	}
+
+	// A default of AllowParallelDownload=true makes a nil-opts Download use the
+	// parallel path, and the part size/concurrency defaults flow to the driver.
+	b := &downloaderAtBucket{}
+	bucket := NewBucket(b)
+	defer closeWithErrorCheck(t, bucket)
+	if err := bucket.SetDefaultReaderOptions(ReaderOptions{
+		AllowParallelDownload: true,
+		BufferSize:            16 << 20,
+		MaxConcurrency:        8,
+	}); err != nil {
+		t.Fatalf("SetDefaultReaderOptions failed: %v", err)
+	}
+	if err := bucket.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if !b.downloadedAt {
+		t.Error("DownloadAt wasn't called with a nil opts and a default of AllowParallelDownload=true")
+	}
+	if b.gotOpts == nil {
+		t.Fatal("DownloadAt wasn't called")
+	}
+	if got, want := b.gotOpts.BufferSize, 16<<20; got != want {
+		t.Errorf("BufferSize = %d, want %d", got, want)
+	}
+	if got, want := b.gotOpts.MaxConcurrency, 8; got != want {
+		t.Errorf("MaxConcurrency = %d, want %d", got, want)
+	}
+
+	// Without a default, a nil-opts Download falls back to the reader.
+	b2 := &downloaderAtBucket{}
+	bucket2 := NewBucket(b2)
+	defer closeWithErrorCheck(t, bucket2)
+	if err := bucket2.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if b2.downloadedAt {
+		t.Error("DownloadAt was called without a default or per-call opt-in")
+	}
+	if !b2.r.downloaded {
+		t.Error("reader Download wasn't called")
+	}
+
+	// An explicit non-nil opts is used as-is; the default is not applied.
+	b3 := &downloaderAtBucket{}
+	bucket3 := NewBucket(b3)
+	defer closeWithErrorCheck(t, bucket3)
+	if err := bucket3.SetDefaultReaderOptions(ReaderOptions{AllowParallelDownload: true}); err != nil {
+		t.Fatalf("SetDefaultReaderOptions failed: %v", err)
+	}
+	if err := bucket3.Download(ctx, "key", &memWriterAt{}, &ReaderOptions{}); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if b3.downloadedAt {
+		t.Error("DownloadAt was called; an explicit opts should not inherit the default")
+	}
+}
+
 func TestSeekAfterReadFailure(t *testing.T) {
 	const filename = "f.txt"
 
