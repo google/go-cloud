@@ -222,6 +222,10 @@ func (w *stubWriter) Upload(r io.Reader) error {
 	return nil
 }
 
+func (w *stubWriter) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
 func (*stubWriter) Close() error { return nil }
 
 // loaderBucket implements driver.Bucket's NewTypedWriter and NewRangedReader methods,
@@ -293,8 +297,10 @@ func (m *memWriterAt) WriteAt(p []byte, off int64) (int, error) {
 type downloaderAtBucket struct {
 	driver.Bucket
 	r            stubReader
+	w            stubWriter
 	downloadedAt bool
-	gotOpts      *driver.ReaderOptions
+	gotReadOpts  *driver.ReaderOptions
+	gotWriteOpts *driver.WriterOptions
 }
 
 func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
@@ -303,8 +309,13 @@ func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, off
 
 func (b *downloaderAtBucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
 	b.downloadedAt = true
-	b.gotOpts = opts
+	b.gotReadOpts = opts
 	return nil
+}
+
+func (b *downloaderAtBucket) NewTypedWriter(ctx context.Context, key, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	b.gotWriteOpts = opts
+	return &b.w, nil
 }
 
 func (*downloaderAtBucket) Close() error { return nil }
@@ -384,13 +395,13 @@ func TestDownloaderAtOptions(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Download failed: %v", err)
 	}
-	if b.gotOpts == nil {
+	if b.gotReadOpts == nil {
 		t.Fatal("DownloadAt wasn't called")
 	}
-	if got, want := b.gotOpts.BufferSize, 16<<20; got != want {
+	if got, want := b.gotReadOpts.BufferSize, 16<<20; got != want {
 		t.Errorf("BufferSize = %d, want %d", got, want)
 	}
-	if got, want := b.gotOpts.MaxConcurrency, 8; got != want {
+	if got, want := b.gotReadOpts.MaxConcurrency, 8; got != want {
 		t.Errorf("MaxConcurrency = %d, want %d", got, want)
 	}
 }
@@ -423,13 +434,13 @@ func TestSetDefaultReaderOptions(t *testing.T) {
 	if !b.downloadedAt {
 		t.Error("DownloadAt wasn't called with a nil opts and a default of AllowParallelDownload=true")
 	}
-	if b.gotOpts == nil {
+	if b.gotReadOpts == nil {
 		t.Fatal("DownloadAt wasn't called")
 	}
-	if got, want := b.gotOpts.BufferSize, 16<<20; got != want {
+	if got, want := b.gotReadOpts.BufferSize, 16<<20; got != want {
 		t.Errorf("BufferSize = %d, want %d", got, want)
 	}
-	if got, want := b.gotOpts.MaxConcurrency, 8; got != want {
+	if got, want := b.gotReadOpts.MaxConcurrency, 8; got != want {
 		t.Errorf("MaxConcurrency = %d, want %d", got, want)
 	}
 
@@ -459,6 +470,62 @@ func TestSetDefaultReaderOptions(t *testing.T) {
 	}
 	if b3.downloadedAt {
 		t.Error("DownloadAt was called; an explicit opts should not inherit the default")
+	}
+}
+
+func TestSetDefaultWriterOptions(t *testing.T) {
+	ctx := context.Background()
+
+	// ContentMD5 is not allowlisted.
+	if err := NewBucket(&downloaderAtBucket{}).SetDefaultWriterOptions(WriterOptions{
+		ContentMD5: []byte("foo"),
+	}); err == nil {
+		t.Error("SetDefaultWriterOptions with ContentMD5 should return an error")
+	}
+
+	// BeforeWrite is not allowlisted.
+	if err := NewBucket(&downloaderAtBucket{}).SetDefaultWriterOptions(WriterOptions{
+		BeforeWrite: func(func(any) bool) error { return nil },
+	}); err == nil {
+		t.Error("SetDefaultWriterOptions with BeforeWrite should return an error")
+	}
+
+	// WriterOptions defaults flow to the driver.
+	b := &downloaderAtBucket{}
+	bucket := NewBucket(b)
+	defer closeWithErrorCheck(t, bucket)
+	if err := bucket.SetDefaultWriterOptions(WriterOptions{
+		BufferSize:     16 << 20,
+		MaxConcurrency: 8,
+	}); err != nil {
+		t.Fatalf("SetDefaultWriterOptions failed: %v", err)
+	}
+	if err := bucket.WriteAll(ctx, "key", []byte("contents"), nil); err != nil {
+		t.Fatalf("WriteAll failed: %v", err)
+	}
+	if b.gotWriteOpts == nil {
+		t.Fatal("NewTypedWriter wasn't called")
+	}
+	if got, want := b.gotWriteOpts.BufferSize, 16<<20; got != want {
+		t.Errorf("BufferSize = %d, want %d", got, want)
+	}
+	if got, want := b.gotWriteOpts.MaxConcurrency, 8; got != want {
+		t.Errorf("MaxConcurrency = %d, want %d", got, want)
+	}
+
+	// An explicit non-nil opts is used as-is; the default is not applied.
+	b.gotWriteOpts = nil
+	if err := bucket.WriteAll(ctx, "key", []byte("contents"), &WriterOptions{}); err != nil {
+		t.Fatalf("WriteAll failed: %v", err)
+	}
+	if b.gotWriteOpts == nil {
+		t.Error("NewTypedWriter wasn't called")
+	}
+	if got, want := b.gotWriteOpts.BufferSize, 0; got != want {
+		t.Errorf("BufferSize = %d, want %d", got, want)
+	}
+	if got, want := b.gotWriteOpts.MaxConcurrency, 0; got != want {
+		t.Errorf("MaxConcurrency = %d, want %d", got, want)
 	}
 }
 

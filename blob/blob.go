@@ -723,7 +723,7 @@ type Bucket struct {
 	// from the io/fs package.
 	ioFSCallback func() (context.Context, *ReaderOptions)
 
-	// mu protects closed and defaultReaderOptions.
+	// mu protects closed, defaultReaderOptions, and defaultWriterOptions.
 	// Read locks are kept to allow holding a read lock for long-running calls,
 	// and thereby prevent closing until a call finishes.
 	mu     sync.RWMutex
@@ -732,6 +732,10 @@ type Bucket struct {
 	// ReaderOptions when a read method is called with nil opts. Set via
 	// SetDefaultReaderOptions.
 	defaultReaderOptions *ReaderOptions
+	// defaultWriterOptions, if non-nil, is used in place of an empty
+	// WriterOptions when a rite method is called with nil opts. Set via
+	// SetDefaultWriterOptions.
+	defaultWriterOptions *WriterOptions
 }
 
 const pkgName = "gocloud.dev/blob"
@@ -1147,6 +1151,43 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	return r, nil
 }
 
+// SetDefaultWriterOptions sets default WriterOptions used by Write function
+// when they are called with a nil opts. A copy of opts is stored, and a copy is substituted
+// for a nil opts on each call.
+//
+// Not all fields may be defaulted; currently setting ContentMD5 or BeforeWrite
+// returns an error, since those are per-call concerns.
+//
+// It is intended to be called once after opening a Bucket, before concurrent
+// use, but it is safe to call concurrently.
+func (b *Bucket) SetDefaultWriterOptions(opts WriterOptions) error {
+	if opts.ContentMD5 != nil {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SetDefaultWriterOptions does not allow setting ContentMD5")
+	}
+	if opts.BeforeWrite != nil {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SetDefaultWriterOptions does not allow setting BeforeWrite")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	// opts is a value parameter, so it is already a copy owned by this call.
+	b.defaultWriterOptions = &opts
+	return nil
+}
+
+// writerOptionsOrDefault returns opts if it is non-nil, otherwise a copy of the
+// bucket's default WriterOptions (or an empty one if none is set). Callers must
+// hold b.mu (read or write).
+func (b *Bucket) writerOptionsOrDefault(opts *WriterOptions) *WriterOptions {
+	if opts != nil {
+		return opts
+	}
+	if b.defaultWriterOptions != nil {
+		cp := *b.defaultWriterOptions
+		return &cp
+	}
+	return &WriterOptions{}
+}
+
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
 //
 // If opts.ContentMD5 is not set, WriteAll will compute the MD5 of p and use it
@@ -1154,15 +1195,13 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 //
 // Using Upload may be more efficient.
 func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) (err error) {
-	realOpts := new(WriterOptions)
-	if opts != nil {
-		*realOpts = *opts
-	}
-	if len(realOpts.ContentMD5) == 0 {
+	opts = b.writerOptionsOrDefault(opts)
+	optsToUse := *opts
+	if len(optsToUse.ContentMD5) == 0 {
 		sum := md5.Sum(p)
-		realOpts.ContentMD5 = sum[:]
+		optsToUse.ContentMD5 = sum[:]
 	}
-	w, err := b.NewWriter(ctx, key, realOpts)
+	w, err := b.NewWriter(ctx, key, &optsToUse)
 	if err != nil {
 		return err
 	}
@@ -1206,9 +1245,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	if !utf8.ValidString(key) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewWriter key must be a valid UTF-8 string: %q", key)
 	}
-	if opts == nil {
-		opts = &WriterOptions{}
-	}
+	opts = b.writerOptionsOrDefault(opts)
 	dopts := &driver.WriterOptions{
 		CacheControl:                opts.CacheControl,
 		ContentDisposition:          opts.ContentDisposition,
