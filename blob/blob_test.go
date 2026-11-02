@@ -294,6 +294,7 @@ type downloaderAtBucket struct {
 	driver.Bucket
 	r            stubReader
 	downloadedAt bool
+	gotOpts      *driver.ReaderOptions
 }
 
 func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
@@ -302,6 +303,7 @@ func (b *downloaderAtBucket) NewRangeReader(ctx context.Context, key string, off
 
 func (b *downloaderAtBucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts *driver.ReaderOptions) error {
 	b.downloadedAt = true
+	b.gotOpts = opts
 	return nil
 }
 
@@ -309,46 +311,87 @@ func (*downloaderAtBucket) Close() error { return nil }
 
 func TestDownloaderAt(t *testing.T) {
 	ctx := context.Background()
+	parallel := &ReaderOptions{AllowParallelDownload: true}
 
-	// io.WriterAt destination + driver implements DownloaderAt: DownloadAt is used.
+	// AllowParallelDownload + io.WriterAt destination + driver implements
+	// DownloaderAt: DownloadAt is used.
 	b1 := &downloaderAtBucket{}
 	bucket1 := NewBucket(b1)
 	defer closeWithErrorCheck(t, bucket1)
-	if err := bucket1.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+	if err := bucket1.Download(ctx, "key", &memWriterAt{}, parallel); err != nil {
 		t.Fatalf("Download failed: %v", err)
 	}
 	if !b1.downloadedAt {
-		t.Error("DownloadAt wasn't called for an io.WriterAt destination")
+		t.Error("DownloadAt wasn't called with AllowParallelDownload and an io.WriterAt destination")
 	}
 	if b1.r.downloaded {
 		t.Error("reader Download was called; expected DownloadAt")
 	}
 
-	// Non-io.WriterAt destination: falls back to the reader even though the
-	// driver implements DownloaderAt.
+	// Without AllowParallelDownload: falls back to the reader even though the
+	// destination is an io.WriterAt and the driver implements DownloaderAt.
 	b2 := &downloaderAtBucket{}
 	bucket2 := NewBucket(b2)
 	defer closeWithErrorCheck(t, bucket2)
-	if err := bucket2.Download(ctx, "key", &bytes.Buffer{}, nil); err != nil {
+	if err := bucket2.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
 		t.Fatalf("Download failed: %v", err)
 	}
 	if b2.downloadedAt {
-		t.Error("DownloadAt was called for a non-io.WriterAt destination")
+		t.Error("DownloadAt was called without AllowParallelDownload")
 	}
 	if !b2.r.downloaded {
+		t.Error("reader Download wasn't called without AllowParallelDownload")
+	}
+
+	// AllowParallelDownload but a non-io.WriterAt destination: falls back to the
+	// reader.
+	b3 := &downloaderAtBucket{}
+	bucket3 := NewBucket(b3)
+	defer closeWithErrorCheck(t, bucket3)
+	if err := bucket3.Download(ctx, "key", &bytes.Buffer{}, parallel); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if b3.downloadedAt {
+		t.Error("DownloadAt was called for a non-io.WriterAt destination")
+	}
+	if !b3.r.downloaded {
 		t.Error("reader Download wasn't called for a non-io.WriterAt destination")
 	}
 
-	// io.WriterAt destination but the driver does not implement DownloaderAt:
-	// falls back to the reader.
-	b3 := &loaderBucket{}
-	bucket3 := NewBucket(b3)
-	defer closeWithErrorCheck(t, bucket3)
-	if err := bucket3.Download(ctx, "key", &memWriterAt{}, nil); err != nil {
+	// AllowParallelDownload + io.WriterAt but the driver does not implement
+	// DownloaderAt: falls back to the reader.
+	b4 := &loaderBucket{}
+	bucket4 := NewBucket(b4)
+	defer closeWithErrorCheck(t, bucket4)
+	if err := bucket4.Download(ctx, "key", &memWriterAt{}, parallel); err != nil {
 		t.Fatalf("Download failed: %v", err)
 	}
-	if !b3.r.downloaded {
+	if !b4.r.downloaded {
 		t.Error("reader Download wasn't called when the driver lacks DownloaderAt")
+	}
+}
+
+func TestDownloaderAtOptions(t *testing.T) {
+	ctx := context.Background()
+	b := &downloaderAtBucket{}
+	bucket := NewBucket(b)
+	defer closeWithErrorCheck(t, bucket)
+
+	if err := bucket.Download(ctx, "key", &memWriterAt{}, &ReaderOptions{
+		AllowParallelDownload: true,
+		BufferSize:            16 << 20,
+		MaxConcurrency:        8,
+	}); err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if b.gotOpts == nil {
+		t.Fatal("DownloadAt wasn't called")
+	}
+	if got, want := b.gotOpts.BufferSize, 16<<20; got != want {
+		t.Errorf("BufferSize = %d, want %d", got, want)
+	}
+	if got, want := b.gotOpts.MaxConcurrency, 8; got != want {
+		t.Errorf("MaxConcurrency = %d, want %d", got, want)
 	}
 }
 

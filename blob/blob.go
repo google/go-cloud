@@ -812,20 +812,26 @@ func (b *Bucket) Download(ctx context.Context, key string, w io.Writer, opts *Re
 	if opts == nil {
 		opts = &ReaderOptions{}
 	}
-	// If the destination supports random-access writes and the driver can
-	// download directly into an io.WriterAt, use that and skip opening a Reader
-	// entirely. This avoids the eager read NewReader would otherwise issue and
-	// then discard.
-	if wa, ok := w.(io.WriterAt); ok {
-		if d, ok := b.b.(driver.DownloaderAt); ok {
-			if !utf8.ValidString(key) {
-				return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Download key must be a valid UTF-8 string: %q", key)
+	// If the caller opted in to parallel downloads, the destination supports
+	// random-access writes, and the driver can download directly into an
+	// io.WriterAt, use that and skip opening a Reader entirely. This avoids the
+	// eager read NewReader would otherwise issue and then discard.
+	if opts.AllowParallelDownload {
+		if wa, ok := w.(io.WriterAt); ok {
+			if d, ok := b.b.(driver.DownloaderAt); ok {
+				if !utf8.ValidString(key) {
+					return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Download key must be a valid UTF-8 string: %q", key)
+				}
+				dopts := &driver.ReaderOptions{
+					BeforeRead:     opts.BeforeRead,
+					BufferSize:     opts.BufferSize,
+					MaxConcurrency: opts.MaxConcurrency,
+				}
+				ctx, span := b.tracer.Start(ctx, "Download")
+				err := wrapError(b.b, d.DownloadAt(ctx, key, wa, dopts), key)
+				b.tracer.End(ctx, span, err)
+				return err
 			}
-			dopts := &driver.ReaderOptions{BeforeRead: opts.BeforeRead}
-			ctx, span := b.tracer.Start(ctx, "Download")
-			err := wrapError(b.b, d.DownloadAt(ctx, key, wa, dopts), key)
-			b.tracer.End(ctx, span, err)
-			return err
 		}
 	}
 	r, err := b.NewReader(ctx, key, opts)
@@ -1453,6 +1459,25 @@ type ReaderOptions struct {
 	// asFunc converts its argument to driver-specific types.
 	// See https://gocloud.dev/concepts/as/ for background information.
 	BeforeRead func(asFunc func(any) bool) error
+
+	// AllowParallelDownload opts in to parallel downloads in Download. When it
+	// is true, the destination is an io.WriterAt, and the driver supports it,
+	// Download fetches the blob with concurrent ranged requests instead of a
+	// single stream. It is off by default because parallel downloads are not
+	// always faster: some S3-compatible backends are slower with concurrent
+	// ranges, and splitting into N requests increases request count and skips
+	// the whole-object checksum validation a single stream performs.
+	AllowParallelDownload bool
+
+	// BufferSize changes the default size in bytes of the chunks that a
+	// parallel download fetches per request; larger blobs are split into more
+	// requests. It is only used when AllowParallelDownload enables a parallel
+	// download, and may be ignored by some drivers.
+	BufferSize int
+
+	// MaxConcurrency changes the default number of parts fetched concurrently
+	// by a parallel download. It has the same applicability as BufferSize.
+	MaxConcurrency int
 }
 
 // WriterOptions sets options for NewWriter.
