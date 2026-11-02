@@ -723,11 +723,15 @@ type Bucket struct {
 	// from the io/fs package.
 	ioFSCallback func() (context.Context, *ReaderOptions)
 
-	// mu protects the closed variable.
+	// mu protects closed and defaultReaderOptions.
 	// Read locks are kept to allow holding a read lock for long-running calls,
 	// and thereby prevent closing until a call finishes.
 	mu     sync.RWMutex
 	closed bool
+	// defaultReaderOptions, if non-nil, is used in place of an empty
+	// ReaderOptions when a read method is called with nil opts. Set via
+	// SetDefaultReaderOptions.
+	defaultReaderOptions *ReaderOptions
 }
 
 const pkgName = "gocloud.dev/blob"
@@ -799,6 +803,40 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) 
 	return io.ReadAll(r)
 }
 
+// SetDefaultReaderOptions sets default ReaderOptions used by NewReader,
+// NewRangeReader, and Download when they are called with a nil opts. A copy of
+// opts is stored, and a copy is substituted for a nil opts on each call.
+//
+// Only performance-related fields may be defaulted. Setting any other field
+// (currently BeforeRead) returns an error, since those are per-call concerns.
+//
+// It is intended to be called once after opening a Bucket, before concurrent
+// use, but it is safe to call concurrently.
+func (b *Bucket) SetDefaultReaderOptions(opts ReaderOptions) error {
+	if opts.BeforeRead != nil {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SetDefaultReaderOptions does not allow setting BeforeRead")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	// opts is a value parameter, so it is already a copy owned by this call.
+	b.defaultReaderOptions = &opts
+	return nil
+}
+
+// readerOptionsOrDefault returns opts if it is non-nil, otherwise a copy of the
+// bucket's default ReaderOptions (or an empty one if none is set). Callers must
+// hold b.mu (read or write).
+func (b *Bucket) readerOptionsOrDefault(opts *ReaderOptions) *ReaderOptions {
+	if opts != nil {
+		return opts
+	}
+	if b.defaultReaderOptions != nil {
+		cp := *b.defaultReaderOptions
+		return &cp
+	}
+	return &ReaderOptions{}
+}
+
 // Download writes the content of a blob into an io.Writer w.
 //
 // If w is an io.WriterAt and the driver implements driver.DownloaderAt, the
@@ -809,9 +847,7 @@ func (b *Bucket) Download(ctx context.Context, key string, w io.Writer, opts *Re
 	if b.closed {
 		return errClosed
 	}
-	if opts == nil {
-		opts = &ReaderOptions{}
-	}
+	opts = b.readerOptionsOrDefault(opts)
 	// If the caller opted in to parallel downloads, the destination supports
 	// random-access writes, and the driver can download directly into an
 	// io.WriterAt, use that and skip opening a Reader entirely. This avoids the
@@ -1068,9 +1104,7 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 	if !utf8.ValidString(key) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewRangeReader key must be a valid UTF-8 string: %q", key)
 	}
-	if opts == nil {
-		opts = &ReaderOptions{}
-	}
+	opts = b.readerOptionsOrDefault(opts)
 	dopts := &driver.ReaderOptions{
 		BeforeRead: opts.BeforeRead,
 	}
