@@ -68,6 +68,7 @@ func benchmarkSingleActionPut(b *testing.B, n int, coll *docstore.Collection) {
 			}
 		}
 	})
+	b.ReportMetric(float64(n), "items/op")
 }
 
 func benchmarkSingleActionGet(b *testing.B, n int, coll *docstore.Collection) {
@@ -96,6 +97,7 @@ func benchmarkSingleActionGet(b *testing.B, n int, coll *docstore.Collection) {
 			}
 		}
 	})
+	b.ReportMetric(float64(n), "items/op")
 }
 
 func benchmarkActionListPut(b *testing.B, n int, coll *docstore.Collection) {
@@ -119,6 +121,7 @@ func benchmarkActionListPut(b *testing.B, n int, coll *docstore.Collection) {
 			}
 		}
 	})
+	b.ReportMetric(float64(n), "items/op")
 }
 
 func benchmarkActionListGet(b *testing.B, n int, coll *docstore.Collection) {
@@ -149,4 +152,5 @@ func benchmarkActionListGet(b *testing.B, n int, coll *docstore.Collection) {
 			}
 		}
 	})
+	b.ReportMetric(float64(n), "items/op")
 }
