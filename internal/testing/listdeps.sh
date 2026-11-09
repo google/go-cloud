@@ -27,9 +27,11 @@ function cleanup() {
 }
 trap cleanup EXIT
 
+echo "Using go version: " >&2
+go version >&2
 
 sed -e '/^#/d' -e '/^$/d' allmodules | awk '{print $1}' | while read -r path || [[ -n "$path" ]]; do
-  ( cd "$path" && go list -mod=readonly -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> "$tmpfile")
+  ( cd "$path" && GOWORK=off GOOS=linus GOARCH=amd64 CGO_ENABLED=1 go list -mod=readonly -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> "$tmpfile")
 done
 
 # Sort using the native byte values to keep results from different environment consistent.
