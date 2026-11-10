@@ -12,34 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package benchlatency is a standalone, open-loop latency-distribution harness
-// for Go CDK data-plane operations (blob/pubsub/docstore calls that hit a live
-// cloud backend). It exists to capture p50/p90/p99/max tail latency -- the
-// equivalent of JMH's SampleTime mode -- without the coordinated omission that
-// per-op timing inside a testing.B loop suffers from.
-//
-// Why this is NOT a testing.B benchmark:
-//
-// Timing every operation inside a `for pb.Next()` loop is a closed-loop
-// measurement: the next request is not issued until the previous one returns.
-// When the backend stalls, the loop stalls with it and simply fails to record
-// the requests that *would* have queued during the stall. This is "coordinated
-// omission" (Gil Tene): it systematically under-reports tail latency exactly
-// when the system is unhealthy, producing optimistic p99/p999 numbers. See the
-// package README for the full rationale.
-//
-// This harness instead uses OPEN-LOOP dispatch: operation i is scheduled at
-// start + i/Rate on the wall clock, regardless of whether earlier operations
-// have completed, and its latency is recorded as (completion time - INTENDED
-// start time). If the dispatcher itself falls behind (GC pause, CPU-starved
-// client), the late operations are still sent, and the delay is charged to
-// them rather than silently dropped. Result.MaxLag reports how far behind the
-// dispatcher fell, so a run where the client was the bottleneck is visible.
-//
-// Recording keeps raw samples and computes exact nearest-rank percentiles with
-// only the standard library, which suits the minute-scale runs this harness
-// targets. Memory is O(samples); hour-scale soak tests would want a
-// fixed-footprint histogram (e.g. HdrHistogram) instead.
+// Package benchlatency measures the latency distribution of an operation sent
+// at a fixed rate, timing each call from its intended start.
 package benchlatency
 
 import (
@@ -53,50 +27,39 @@ import (
 	"time"
 )
 
-// Op is a single unit of work to measure -- e.g. one blob read, one pubsub
-// send, one docstore Get. It must be safe to call concurrently. Returning an
-// error records the sample as a failure (still timed, so a slow error still
-// counts against the tail).
+// Op is one operation to measure, such as a blob read. It must be safe for
+// concurrent use.
 type Op func(ctx context.Context) error
 
-// Config controls an open-loop run.
+// Config controls a Run.
 type Config struct {
-	// Rate is the target dispatch rate in operations per second. This is the
-	// defining knob of open-loop measurement: operations are launched on this
-	// schedule regardless of whether prior operations have completed. Must be
-	// > 0.
+	// Rate is the target dispatch rate in operations per second. Must be > 0.
 	Rate float64
 
-	// Duration is the wall-clock length of the measured window. Must be > 0.
+	// Duration is the length of the measured window. Must be > 0.
 	Duration time.Duration
 
-	// Warmup is run before the measured window (connection setup, TLS
-	// handshakes, cache warm-up). Operations scheduled during warmup are
-	// dispatched but not recorded. Zero disables warmup.
+	// Warmup precedes the measured window; its operations are sent but not recorded.
 	Warmup time.Duration
 
-	// MaxInFlight caps concurrent in-flight operations to bound resource use
-	// against a runaway backend. Zero means unlimited. Skipped dispatches are
-	// omitted from the distribution entirely, and they would have been the
-	// slowest, so a nonzero Throttled count means the tail is understated and
-	// Rate exceeds what the backend sustains.
+	// MaxInFlight caps concurrent operations; 0 means no limit.
 	MaxInFlight int
 }
 
-// Result is the outcome of a run. Counts cover the measured window only.
+// Result is the outcome of a Run. Counts cover the measured window only.
 type Result struct {
-	Count     int64         // recorded samples
-	Errors    int64         // recorded operations that returned an error
-	Throttled int64         // scheduled operations skipped due to MaxInFlight
-	Rate      float64       // target rate that was requested
+	Count     int64         // recorded operations
+	Errors    int64         // recorded operations that failed; fast failures can flatter the tail
+	Throttled int64         // operations skipped due to MaxInFlight; nonzero means the tail is understated
+	Rate      float64       // requested rate
 	Actual    float64       // recorded operations completed within Duration, per second
-	MaxLag    time.Duration // worst delay between an op's intended and actual dispatch
+	MaxLag    time.Duration // worst delay between an operation's intended and actual dispatch
 
 	sorted []time.Duration
 }
 
-// P returns the latency at the given percentile (0..100), e.g. P(99), using
-// the nearest-rank method. It returns 0 if nothing was recorded.
+// P returns the nearest-rank latency at percentile pct (0 to 100), or 0 if
+// nothing was recorded.
 func (r *Result) P(pct float64) time.Duration {
 	n := len(r.sorted)
 	if n == 0 {
@@ -109,7 +72,7 @@ func (r *Result) P(pct float64) time.Duration {
 // Max returns the maximum recorded latency.
 func (r *Result) Max() time.Duration { return r.P(100) }
 
-// Report writes a human-readable summary (fixed percentile ladder) to w.
+// Report writes a summary of r to w, labeled with name.
 func (r *Result) Report(w io.Writer, name string) {
 	_, _ = fmt.Fprintf(w, "%s: n=%d errors=%d throttled=%d lag=%s  actual=%.0f/s (target=%.0f/s)\n",
 		name, r.Count, r.Errors, r.Throttled, r.MaxLag.Round(time.Microsecond), r.Actual, r.Rate)
@@ -119,9 +82,8 @@ func (r *Result) Report(w io.Writer, name string) {
 	_, _ = fmt.Fprintf(w, "  max   %10s\n", r.Max().Round(time.Microsecond))
 }
 
-// Run executes op in open loop under cfg and returns the latency distribution.
-// If ctx is canceled before Run finishes, it waits for in-flight operations and
-// returns ctx.Err().
+// Run calls op at cfg.Rate and returns the latency distribution. If ctx is
+// canceled, Run waits for in-flight operations and returns ctx.Err().
 func Run(ctx context.Context, cfg Config, op Op) (*Result, error) {
 	if !(cfg.Rate > 0) || math.IsInf(cfg.Rate, 0) {
 		return nil, fmt.Errorf("benchlatency: Rate must be finite and > 0, got %v", cfg.Rate)
@@ -153,9 +115,7 @@ func Run(ctx context.Context, cfg Config, op Op) (*Result, error) {
 	total := float64(cfg.Warmup + cfg.Duration)
 	interval := float64(time.Second) / cfg.Rate
 
-	// The schedule is computed, not ticked: a time.Ticker drops ticks for a
-	// slow receiver, which would silently skip exactly the operations a stalled
-	// client should have sent.
+	// Compute the schedule; a time.Ticker would drop ticks when the loop falls behind.
 	timer := time.NewTimer(time.Hour)
 	defer timer.Stop()
 	for i := 0; ; i++ {
@@ -192,8 +152,7 @@ func Run(ctx context.Context, cfg Config, op Op) (*Result, error) {
 			defer wg.Done()
 			defer inflight.Add(-1)
 			err := op(ctx)
-			// Latency is measured from the INTENDED start, folding in any
-			// wait time between schedule and completion.
+			// Measure from the intended start so time spent waiting counts.
 			done := time.Now()
 			lat := done.Sub(intended)
 			if !measured {

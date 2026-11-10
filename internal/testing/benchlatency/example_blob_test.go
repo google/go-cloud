@@ -21,18 +21,14 @@ import (
 	"time"
 
 	"gocloud.dev/blob"
-	_ "gocloud.dev/blob/memblob" // swap for gcsblob/s3blob to hit a live cloud
+	_ "gocloud.dev/blob/memblob"
 	"gocloud.dev/internal/testing/benchlatency"
 )
 
-// Example_blobRead shows how to characterize p50/p99/max latency of a blob read
-// against a live cloud backend. It uses memblob here so the example is runnable
-// in CI; for real tail-latency numbers, open a gs://, s3:// or azblob:// bucket
-// instead and run it from an env-gated test (NOT under `go test -bench`).
 func Example_blobRead() {
 	ctx := context.Background()
 
-	// In production: blob.OpenBucket(ctx, "gs://my-benchmark-bucket")
+	// Open the bucket to measure. Use a real bucket URL for live numbers.
 	bucket, err := blob.OpenBucket(ctx, "mem://")
 	if err != nil {
 		fmt.Println(err)
@@ -40,30 +36,30 @@ func Example_blobRead() {
 	}
 	defer func() { _ = bucket.Close() }()
 
-	// Seed one object to read.
+	// Write one object to read.
 	const key = "benchlatency-object"
 	if err := bucket.WriteAll(ctx, key, bytes.Repeat([]byte("x"), 1024), nil); err != nil {
 		fmt.Println(err)
 		return
 	}
 
+	// Measure reads at 1000 per second for 1s, after a 200ms warmup.
 	op := func(ctx context.Context) error {
 		_, err := bucket.ReadAll(ctx, key)
 		return err
 	}
 
 	res, err := benchlatency.Run(ctx, benchlatency.Config{
-		Rate:     1000,                   // 1000 reads/sec, open loop
-		Duration: time.Second,            // real runs: 30s-5m
-		Warmup:   200 * time.Millisecond, // discard connection warmup
+		Rate:     1000,
+		Duration: time.Second,
+		Warmup:   200 * time.Millisecond,
 	}, op)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// In a real run, call res.Report(os.Stdout, "blob.ReadAll"). We suppress
-	// the nondeterministic latency numbers here so the example output is stable.
+	// Latencies vary between runs, so check them instead of calling res.Report.
 	if res.Count > 0 && res.P(99) >= res.P(50) {
 		fmt.Println("ok")
 	}

@@ -28,9 +28,7 @@ import (
 
 func noop(context.Context) error { return nil }
 
-// TestRunLocal exercises the harness against an in-process op with a known,
-// injected latency floor. It's a unit test of the harness itself -- no cloud,
-// no network -- so it runs in CI. Real data-plane usage lives in the example.
+// TestRunLocal runs the harness against an in-process op with a known latency floor.
 func TestRunLocal(t *testing.T) {
 	const floor = 2 * time.Millisecond
 	op := func(ctx context.Context) error {
@@ -83,8 +81,8 @@ func TestConfigValidation(t *testing.T) {
 	}
 }
 
-// TestNoDroppedDispatches starves the dispatcher of CPU. Every scheduled
-// operation must still be sent and recorded (a time.Ticker would drop them).
+// TestNoDroppedDispatches verifies that no scheduled operation is dropped when
+// the dispatcher is starved of CPU.
 func TestNoDroppedDispatches(t *testing.T) {
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(1))
 	stop := make(chan struct{})
@@ -117,8 +115,7 @@ func TestNoDroppedDispatches(t *testing.T) {
 	}
 }
 
-// TestWarmupExcluded checks that operations scheduled during warmup are not
-// recorded, even if they complete inside the measured window.
+// TestWarmupExcluded verifies that operations scheduled during warmup are not recorded.
 func TestWarmupExcluded(t *testing.T) {
 	slow := func(context.Context) error { time.Sleep(50 * time.Millisecond); return nil }
 	res, err := Run(context.Background(), Config{
@@ -165,7 +162,7 @@ func TestMaxInFlightThrottles(t *testing.T) {
 	}
 }
 
-// TestContextCanceled checks that cancellation interrupts the wait for the
+// TestContextCanceled verifies that cancellation interrupts the wait for the
 // next dispatch and that Run still waits for in-flight operations.
 func TestContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -178,8 +175,7 @@ func TestContextCanceled(t *testing.T) {
 		return ctx.Err()
 	}
 	begin := time.Now()
-	// The second dispatch is 10s away, so returning early proves the wait was
-	// interrupted.
+	// The second dispatch is 10s away, so a quick return means the wait was interrupted.
 	_, err := Run(ctx, Config{Rate: 0.1, Duration: time.Minute}, op)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("err = %v, want %v", err, context.DeadlineExceeded)
@@ -192,8 +188,7 @@ func TestContextCanceled(t *testing.T) {
 	}
 }
 
-// TestCanceledWhileDraining cancels after the last dispatch, while operations
-// are still in flight; the partial result must not be returned.
+// TestCanceledWhileDraining verifies that canceling while operations drain returns ctx.Err().
 func TestCanceledWhileDraining(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -237,8 +232,7 @@ func TestTinyRate(t *testing.T) {
 	}
 }
 
-// TestPercentiles pins the nearest-rank definition: P(p) is the smallest
-// sample with at least p% of samples at or below it.
+// TestPercentiles verifies the nearest-rank definition.
 func TestPercentiles(t *testing.T) {
 	ms := func(n int) []time.Duration {
 		s := make([]time.Duration, n)
@@ -269,10 +263,8 @@ func TestPercentiles(t *testing.T) {
 	}
 }
 
-// TestCoordinatedOmissionCorrection drives a backend whose stalls are SHARED:
-// every request that arrives during a freeze waits for it. Open-loop dispatch
-// keeps sending through the freeze, so the waiting requests reach the tail. A
-// closed loop would be blocked in one request and miss the rest.
+// TestCoordinatedOmissionCorrection verifies that a stall shared by all
+// requests shows up in the tail.
 func TestCoordinatedOmissionCorrection(t *testing.T) {
 	const freeze = 100 * time.Millisecond
 	var mu sync.Mutex
