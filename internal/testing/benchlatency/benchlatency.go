@@ -22,6 +22,7 @@ import (
 	"io"
 	"math"
 	"slices"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -78,7 +79,7 @@ func (r *Result) Report(w io.Writer, name string) {
 	_, _ = fmt.Fprintf(w, "%s: n=%d errors=%d throttled=%d lag=%s  actual=%.0f/s (target=%.0f/s)\n",
 		name, r.Count, r.Errors, r.Throttled, r.MaxLag.Round(time.Microsecond), r.Actual, r.Rate)
 	for _, pct := range []float64{50, 90, 95, 99, 99.9} {
-		_, _ = fmt.Fprintf(w, "  p%-4s %10s\n", trimPct(pct), r.P(pct).Round(time.Microsecond))
+		_, _ = fmt.Fprintf(w, "  p%-4s %10s\n", strconv.FormatFloat(pct, 'f', -1, 64), r.P(pct).Round(time.Microsecond))
 	}
 	_, _ = fmt.Fprintf(w, "  max   %10s\n", r.Max().Round(time.Microsecond))
 }
@@ -103,8 +104,8 @@ func Run(ctx context.Context, cfg Config, op Op) (*Result, error) {
 		wg        sync.WaitGroup
 		mu        sync.Mutex
 		samples   []time.Duration
-		errs      atomic.Int64
-		throttled atomic.Int64
+		errs      int64
+		throttled int64
 		inflight  atomic.Int64
 		onTime    int64
 		maxLag    time.Duration
@@ -143,14 +144,12 @@ func Run(ctx context.Context, cfg Config, op Op) (*Result, error) {
 		}
 		if cfg.MaxInFlight > 0 && inflight.Load() >= int64(cfg.MaxInFlight) {
 			if measured {
-				throttled.Add(1)
+				throttled++
 			}
 			continue
 		}
 		inflight.Add(1)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer inflight.Add(-1)
 			err := op(ctx)
 			// Measure from the intended start so time spent waiting counts.
@@ -159,16 +158,16 @@ func Run(ctx context.Context, cfg Config, op Op) (*Result, error) {
 			if !measured {
 				return
 			}
-			if err != nil {
-				errs.Add(1)
-			}
 			mu.Lock()
+			if err != nil {
+				errs++
+			}
 			samples = append(samples, lat)
 			if !done.After(end) {
 				onTime++
 			}
 			mu.Unlock()
-		}()
+		})
 	}
 	wg.Wait()
 	if err := ctx.Err(); err != nil {
@@ -178,18 +177,11 @@ func Run(ctx context.Context, cfg Config, op Op) (*Result, error) {
 	slices.Sort(samples)
 	return &Result{
 		Count:     int64(len(samples)),
-		Errors:    errs.Load(),
-		Throttled: throttled.Load(),
+		Errors:    errs,
+		Throttled: throttled,
 		Rate:      cfg.Rate,
 		Actual:    float64(onTime) / cfg.Duration.Seconds(),
 		MaxLag:    maxLag,
 		sorted:    samples,
 	}, nil
-}
-
-func trimPct(p float64) string {
-	if p == math.Trunc(p) {
-		return fmt.Sprintf("%d", int64(p))
-	}
-	return fmt.Sprintf("%.1f", p)
 }
