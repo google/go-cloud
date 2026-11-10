@@ -28,7 +28,7 @@ import (
 )
 
 // Op is one operation to measure, such as a blob read. It must be safe for
-// concurrent use.
+// concurrent use and should return promptly once ctx is done.
 type Op func(ctx context.Context) error
 
 // Config controls a Run.
@@ -42,15 +42,16 @@ type Config struct {
 	// Warmup precedes the measured window; its operations are sent but not recorded.
 	Warmup time.Duration
 
-	// MaxInFlight caps concurrent operations; 0 means no limit.
+	// MaxInFlight caps concurrent operations; 0 means no limit. Operations
+	// skipped at the cap are not recorded.
 	MaxInFlight int
 }
 
 // Result is the outcome of a Run. Counts cover the measured window only.
 type Result struct {
 	Count     int64         // recorded operations
-	Errors    int64         // recorded operations that failed; fast failures can flatter the tail
-	Throttled int64         // operations skipped due to MaxInFlight; nonzero means the tail is understated
+	Errors    int64         // recorded operations that failed
+	Throttled int64         // operations skipped due to MaxInFlight
 	Rate      float64       // requested rate
 	Actual    float64       // recorded operations completed within Duration, per second
 	MaxLag    time.Duration // worst delay between an operation's intended and actual dispatch
