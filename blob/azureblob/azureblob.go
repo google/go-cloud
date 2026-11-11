@@ -94,7 +94,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"sort"
@@ -102,6 +104,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -274,6 +277,42 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 	return &retval, nil
 }
 
+func isAlphanumeric(s string) bool {
+	return !strings.ContainsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	})
+}
+
+func verifyLocalhost(domain string) error {
+	host := domain
+
+	// SplitHostPort fails if there is no port, so only overwrite host if it succeeds
+	if h, _, err := net.SplitHostPort(domain); err == nil {
+		host = h
+	} else {
+		// Handle bracketed IPv6 without a port, e.g., "[::1]"
+		host = strings.Trim(host, "[]")
+	}
+
+	// Normalize case and trailing FQDN dot (e.g., "LOCALHOST.")
+	host = strings.ToLower(strings.TrimSuffix(host, "."))
+
+	// Check standard localhost domain names (RFC 6761)
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return nil
+	}
+
+	// Check if the host is a loopback IP (127.0.0.0/8 for IPv4, ::1 for IPv6)
+	ip, err := netip.ParseAddr(host)
+	if err != nil {
+		return fmt.Errorf("failed to netip.ParseAddr for local emulator domain %q host %q: %w", domain, host, err)
+	}
+	if !ip.IsLoopback() {
+		return fmt.Errorf("local emulator domain %q host %q refers to a non-loopback IP %v", domain, host, ip)
+	}
+	return nil
+}
+
 // NewServiceURL generates a URL for addressing an Azure Blob service
 // account. It uses several parameters, each of which can be specified
 // via ServiceURLOptions.
@@ -283,13 +322,12 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 //   - If opts.SASToken is provided, it is appended to the URL as a query
 //     parameter.
 //   - If opts.IsCDN is true, the <account name> part is dropped.
-//   - If opts.IsLocalEmulator is true, or the domain starts with "localhost"
-//     or "127.0.0.1", the account name and domain are flipped, e.g.:
+//   - If opts.IsLocalEmulator is true, the account name and domain are flipped, e.g.:
 //     http://127.0.0.1:10000/myaccount
-//   - Protocol must be "http" or "https"; "http" is only allowed with
-//     domains starting with "127.0.0.1" or "localhost".
+//   - Protocol must be "http" or "https"; "http" is required iff opts.IsLocalEmulator is true.
 //   - Domain can only be overridden to an allowlist of domains, configured
-//     via AllowedStorageDomains.
+//     via AllowedStorageDomains. When opts.IsLocalEmulator is true, domain must be a loopback
+//     address.
 func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	if opts == nil {
 		opts = &ServiceURLOptions{}
@@ -297,6 +335,9 @@ func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	accountName := opts.AccountName
 	if accountName == "" {
 		return "", errors.New("azureblob: Options.AccountName is required")
+	}
+	if !isAlphanumeric(accountName) {
+		return "", fmt.Errorf("azureblob: Options.AccountName %q contains a non-alphanumeric character", accountName)
 	}
 	domain := strings.ToLower(opts.StorageDomain)
 	if domain == "" {
@@ -308,10 +349,16 @@ func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	}
 	switch protocol {
 	case "http":
-		if !strings.HasPrefix(domain, "127.0.0.1") && !strings.HasPrefix(domain, "localhost") {
-			return "", fmt.Errorf("protocol %q not allowed with domain %q", protocol, domain)
+		if !opts.IsLocalEmulator {
+			return "", fmt.Errorf("protocol %q only allowed when IsLocalEmulator is true", protocol)
+		}
+		if err := verifyLocalhost(domain); err != nil {
+			return "", err
 		}
 	case "https":
+		if opts.IsLocalEmulator {
+			return "", fmt.Errorf("protocol %q not allowed when IsLocalEmulator is true", protocol)
+		}
 		if !AllowedStorageDomains[domain] {
 			return "", fmt.Errorf("domain %q not allowed", domain)
 		}
@@ -320,7 +367,7 @@ func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	}
 
 	var svcURL string
-	if strings.HasPrefix(domain, "127.0.0.1") || strings.HasPrefix(domain, "localhost") || opts.IsLocalEmulator {
+	if opts.IsLocalEmulator {
 		svcURL = fmt.Sprintf("%s://%s/%s", protocol, domain, accountName)
 	} else if opts.IsCDN {
 		svcURL = fmt.Sprintf("%s://%s", protocol, domain)
