@@ -37,13 +37,13 @@ require (
 	go.opentelemetry.io/otel/sdk/log v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
-	gocloud.dev v0.47.0
-	gocloud.dev/docstore/mongodocstore v0.47.0
-	gocloud.dev/pubsub/kafkapubsub v0.47.0
-	gocloud.dev/pubsub/natspubsub v0.47.0
-	gocloud.dev/pubsub/rabbitpubsub v0.47.0
-	gocloud.dev/runtimevar/hashivault v0.47.0
-	gocloud.dev/secrets/hashivault v0.47.0
+	gocloud.dev v0.48.0
+	gocloud.dev/docstore/mongodocstore v0.48.0
+	gocloud.dev/pubsub/kafkapubsub v0.48.0
+	gocloud.dev/pubsub/natspubsub v0.48.0
+	gocloud.dev/pubsub/rabbitpubsub v0.48.0
+	gocloud.dev/runtimevar/hashivault v0.48.0
+	gocloud.dev/secrets/hashivault v0.48.0
 	google.golang.org/genproto v0.0.0-20261019180522-ce908d29299b
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
@@ -218,17 +218,3 @@ require (
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
-
-replace gocloud.dev => ..
-
-replace gocloud.dev/docstore/mongodocstore => ../docstore/mongodocstore
-
-replace gocloud.dev/pubsub/kafkapubsub => ../pubsub/kafkapubsub
-
-replace gocloud.dev/pubsub/natspubsub => ../pubsub/natspubsub
-
-replace gocloud.dev/pubsub/rabbitpubsub => ../pubsub/rabbitpubsub
-
-replace gocloud.dev/runtimevar/hashivault => ../runtimevar/hashivault
-
-replace gocloud.dev/secrets/hashivault => ../secrets/hashivault
