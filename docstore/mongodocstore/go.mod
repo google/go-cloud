@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/wire v0.7.0
 	go.mongodb.org/mongo-driver v1.17.10
-	gocloud.dev v0.47.0
+	gocloud.dev v0.48.0
 )
 
 require (
@@ -79,5 +79,3 @@ require (
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
-
-replace gocloud.dev => ../..
