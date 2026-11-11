@@ -632,9 +632,10 @@ func TestNewServiceURL(t *testing.T) {
 		{
 			// Setting protocol from ServiceURLOptions.
 			opts: ServiceURLOptions{
-				AccountName:   "myaccount",
-				Protocol:      "http",
-				StorageDomain: "localhost",
+				AccountName:     "myaccount",
+				Protocol:        "http",
+				StorageDomain:   "localhost",
+				IsLocalEmulator: true,
 			},
 			want: "http://localhost/myaccount",
 		},
@@ -647,6 +648,7 @@ func TestNewServiceURL(t *testing.T) {
 			},
 			query: url.Values{
 				"protocol": {"http"},
+				"localemu": {"true"},
 			},
 			want: "http://localhost/myaccount",
 		},
@@ -669,44 +671,35 @@ func TestNewServiceURL(t *testing.T) {
 			want: "https://blob.core.windows.net",
 		},
 		{
-			// Local emulator, implicit from domain.
+			// Local emulator, non-loopback domain.
 			opts: ServiceURLOptions{
-				AccountName:   "myaccount",
-				Protocol:      "http",
-				StorageDomain: "localhost:10001",
+				AccountName:     "myaccount",
+				StorageDomain:   "localhost:10001@example.com",
+				IsLocalEmulator: true,
 			},
-			want: "http://localhost:10001/myaccount",
-		},
-		{
-			// Local emulator, implicit from domain through URL parameter.
-			opts: ServiceURLOptions{
-				AccountName: "myaccount",
-			},
-			query: url.Values{
-				"protocol": {"http"},
-				"domain":   {"127.0.0.1:10001"},
-			},
-			want: "http://127.0.0.1:10001/myaccount",
+			wantErrURL: true,
 		},
 		{
 			// Local emulator, explicit through ServiceURLOptions.
 			opts: ServiceURLOptions{
 				AccountName:     "myaccount",
-				StorageDomain:   "mylocalemulator",
+				StorageDomain:   "localhost:8080",
+				Protocol:        "http",
 				IsLocalEmulator: true,
 			},
-			want: "https://mylocalemulator/myaccount",
+			want: "http://localhost:8080/myaccount",
 		},
 		{
 			// Local emulator, explicit through URL parameter.
 			opts: ServiceURLOptions{
 				AccountName:   "myaccount",
-				StorageDomain: "mylocalemulator",
+				StorageDomain: "127.0.0.1:8080",
 			},
 			query: url.Values{
 				"localemu": {"true"},
+				"protocol": {"http"},
 			},
-			want: "https://mylocalemulator/myaccount",
+			want: "http://127.0.0.1:8080/myaccount",
 		},
 	}
 
@@ -720,7 +713,7 @@ func TestNewServiceURL(t *testing.T) {
 		}
 		got, err := NewServiceURL(opts)
 		if (err != nil) != test.wantErrURL {
-			t.Errorf("NewServiceURL got err %v want error %v", err, test.wantErrURL)
+			t.Fatalf("NewServiceURL got err %v want error %v", err, test.wantErrURL)
 		}
 		if got != test.want {
 			t.Errorf("got %q want %q", got, test.want)
@@ -729,7 +722,7 @@ func TestNewServiceURL(t *testing.T) {
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
-	t.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
+	t.Setenv("AZURE_STORAGE_ACCOUNT", "myaccount")
 	t.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
 
 	tests := []struct {
@@ -743,19 +736,25 @@ func TestOpenBucketFromURL(t *testing.T) {
 		// With duplicate storage domain.
 		{"azblob://mybucket?domain=blob.core.usgovcloudapi.net&domain=blob.core.windows.net", true},
 		// With protocol.
-		{"azblob://mybucket?domain=localhost&protocol=http", false},
+		{"azblob://mybucket?domain=localhost&protocol=http&localemu=true", false},
 		// With invalid protocol.
 		{"azblob://mybucket?protocol=ftp", true},
 		// With Account.
 		{"azblob://mybucket?storage_account=test", false},
+		// With invalid Account.
+		{"azblob://mybucket?storage_account=test.com", true},
 		// With CDN.
 		{"azblob://mybucket?cdn=true", false},
 		// With invalid CDN.
 		{"azblob://mybucket?cdn=42", true},
 		// With local emulator.
-		{"azblob://mybucket?localemu=true", false},
+		{"azblob://mybucket?localemu=true&protocol=http&domain=localhost:8080", false},
 		// With invalid local emulator.
 		{"azblob://mybucket?localemu=42", true},
+		// With invalid local emulator protocl.
+		{"azblob://mybucket?localemu=true&protcol=https&domain=localhost", true},
+		// With invalid local emulator domain.
+		{"azblob://mybucket?localemu=true&domain=example.com", true},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}
