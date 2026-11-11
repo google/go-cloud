@@ -2912,7 +2912,8 @@ func testIfNotExist(t *testing.T, newHarness HarnessMaker) {
 
 func benchmarkRead(b *testing.B, bkt *blob.Bucket) {
 	ctx := context.Background()
-	const key = "readbenchmark-blob"
+	// Unique per call: providers like GCS rate-limit repeated writes to one object.
+	key := fmt.Sprintf("readbenchmark-blob-%d", time.Now().UnixNano())
 
 	content := loadTestData(b, "test-large.jpg")
 	if err := bkt.WriteAll(ctx, key, content, nil); err != nil {
@@ -2945,15 +2946,16 @@ func benchmarkRead(b *testing.B, bkt *blob.Bucket) {
 
 func benchmarkWriteReadDelete(b *testing.B, bkt *blob.Bucket) {
 	ctx := context.Background()
-	const baseKey = "writereaddeletebenchmark-blob-"
+	// A fresh key per iteration: providers like GCS rate-limit repeated writes to one object.
+	baseKey := fmt.Sprintf("writereaddeletebenchmark-blob-%d-", time.Now().UnixNano())
 
 	content := loadTestData(b, "test-large.jpg")
 	var nextID uint32
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
-		key := fmt.Sprintf("%s%d", baseKey, atomic.AddUint32(&nextID, 1))
 		for pb.Next() {
+			key := fmt.Sprintf("%s%d", baseKey, atomic.AddUint32(&nextID, 1))
 			if err := bkt.WriteAll(ctx, key, content, nil); err != nil {
 				b.Error(err)
 				continue
