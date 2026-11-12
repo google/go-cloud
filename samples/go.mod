@@ -37,13 +37,13 @@ require (
 	go.opentelemetry.io/otel/sdk/log v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
-	gocloud.dev v0.48.1
-	gocloud.dev/docstore/mongodocstore v0.48.1
-	gocloud.dev/pubsub/kafkapubsub v0.48.1
-	gocloud.dev/pubsub/natspubsub v0.48.1
-	gocloud.dev/pubsub/rabbitpubsub v0.48.1
-	gocloud.dev/runtimevar/hashivault v0.48.1
-	gocloud.dev/secrets/hashivault v0.48.1
+	gocloud.dev v0.49.0
+	gocloud.dev/docstore/mongodocstore v0.49.0
+	gocloud.dev/pubsub/kafkapubsub v0.49.0
+	gocloud.dev/pubsub/natspubsub v0.49.0
+	gocloud.dev/pubsub/rabbitpubsub v0.49.0
+	gocloud.dev/runtimevar/hashivault v0.49.0
+	gocloud.dev/secrets/hashivault v0.49.0
 	google.golang.org/genproto v0.0.0-20261019180522-ce908d29299b
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )

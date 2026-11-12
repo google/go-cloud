@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/wire v0.7.0
 	go.mongodb.org/mongo-driver v1.17.10
-	gocloud.dev v0.48.1
+	gocloud.dev v0.49.0
 )
 
 require (
