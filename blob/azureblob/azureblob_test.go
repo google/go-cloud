@@ -671,11 +671,21 @@ func TestNewServiceURL(t *testing.T) {
 			want: "https://blob.core.windows.net",
 		},
 		{
+			// Local emulator, missing http protocol.
+			opts: ServiceURLOptions{
+				AccountName:     "myaccount",
+				StorageDomain:   "localhost:10001",
+				IsLocalEmulator: true,
+			},
+			wantErrURL: true,
+		},
+		{
 			// Local emulator, non-loopback domain.
 			opts: ServiceURLOptions{
 				AccountName:     "myaccount",
 				StorageDomain:   "localhost:10001@example.com",
 				IsLocalEmulator: true,
+				Protocol:        "http",
 			},
 			wantErrURL: true,
 		},
@@ -706,17 +716,17 @@ func TestNewServiceURL(t *testing.T) {
 	for _, test := range tests {
 		opts, err := test.opts.withOverrides(test.query)
 		if (err != nil) != test.wantErrOverrides {
-			t.Fatalf("withOverrides got err %v want error %v", err, test.wantErrOverrides)
+			t.Fatalf("(%v, %v): withOverrides got err %v want error %v", test.opts, test.query, err, test.wantErrOverrides)
 		}
 		if err != nil {
 			continue
 		}
 		got, err := NewServiceURL(opts)
 		if (err != nil) != test.wantErrURL {
-			t.Fatalf("NewServiceURL got err %v want error %v", err, test.wantErrURL)
+			t.Fatalf("(%v, %v): NewServiceURL got err %v want error %v", test.opts, test.query, err, test.wantErrURL)
 		}
 		if got != test.want {
-			t.Errorf("got %q want %q", got, test.want)
+			t.Errorf("(%v, %v): got %q want %q", test.opts, test.query, got, test.want)
 		}
 	}
 }
@@ -749,12 +759,14 @@ func TestOpenBucketFromURL(t *testing.T) {
 		{"azblob://mybucket?cdn=42", true},
 		// With local emulator.
 		{"azblob://mybucket?localemu=true&protocol=http&domain=localhost:8080", false},
-		// With invalid local emulator.
+		// With invalid localemu value.
 		{"azblob://mybucket?localemu=42", true},
-		// With invalid local emulator protocl.
+		// With invalid local emulator protocol (implicit).
+		{"azblob://mybucket?localemu=true&domain=localhost", true},
+		// With invalid local emulator protocol (explicit).
 		{"azblob://mybucket?localemu=true&protcol=https&domain=localhost", true},
 		// With invalid local emulator domain.
-		{"azblob://mybucket?localemu=true&domain=example.com", true},
+		{"azblob://mybucket?localemu=true&protcol=http&domain=example.com", true},
 		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}

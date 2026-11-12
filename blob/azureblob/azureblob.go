@@ -277,6 +277,12 @@ func (o *ServiceURLOptions) withOverrides(urlValues url.Values) (*ServiceURLOpti
 	return &retval, nil
 }
 
+func isNumeric(s string) bool {
+	return !strings.ContainsFunc(s, func(r rune) bool {
+		return !unicode.IsNumber(r)
+	})
+}
+
 func isAlphanumeric(s string) bool {
 	return !strings.ContainsFunc(s, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
@@ -287,8 +293,12 @@ func verifyLocalhost(domain string) error {
 	host := domain
 
 	// SplitHostPort fails if there is no port, so only overwrite host if it succeeds
-	if h, _, err := net.SplitHostPort(domain); err == nil {
+	h, port, err := net.SplitHostPort(domain)
+	if err == nil {
 		host = h
+		if !isNumeric(port) {
+			return fmt.Errorf("local emulator domain %q port %q must be numeric", domain, port)
+		}
 	} else {
 		// Handle bracketed IPv6 without a port, e.g., "[::1]"
 		host = strings.Trim(host, "[]")
