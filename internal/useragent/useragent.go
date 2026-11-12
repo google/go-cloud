@@ -27,7 +27,7 @@ import (
 
 const (
 	prefix  = "go-cloud"
-	version = "0.48.1"
+	version = "0.49.0"
 )
 
 // ClientOption returns an option.ClientOption that sets a Go CDK User-Agent.

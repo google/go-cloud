@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	go.etcd.io/etcd/api/v3 v3.7.2
 	go.etcd.io/etcd/client/v3 v3.7.2
-	gocloud.dev v0.48.1
+	gocloud.dev v0.49.0
 	google.golang.org/grpc v1.84.0
 )
 

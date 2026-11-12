@@ -18,7 +18,7 @@ go 1.26.0
 
 require (
 	github.com/hashicorp/vault/api v1.23.0
-	gocloud.dev v0.48.1
+	gocloud.dev v0.49.0
 )
 
 require (

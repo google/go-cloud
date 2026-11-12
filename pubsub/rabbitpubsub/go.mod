@@ -18,7 +18,7 @@ go 1.26.0
 
 require (
 	github.com/rabbitmq/amqp091-go v1.15.0
-	gocloud.dev v0.48.1
+	gocloud.dev v0.49.0
 )
 
 require (

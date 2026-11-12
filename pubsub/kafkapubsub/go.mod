@@ -19,7 +19,7 @@ go 1.26.0
 require (
 	github.com/IBM/sarama v1.61.1
 	github.com/google/go-cmp v0.7.0
-	gocloud.dev v0.48.1
+	gocloud.dev v0.49.0
 )
 
 require (
