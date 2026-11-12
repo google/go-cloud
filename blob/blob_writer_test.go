@@ -20,6 +20,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -211,4 +212,48 @@ func TestCopyBytes(t *testing.T) {
 	if !cmp.Equal(got, data) {
 		t.Errorf("got %v, want %v", got, data)
 	}
+}
+
+// TestSetDefaultWriterOptionsConcurrent verifies that SetDefaultWriterOptions
+// can be called concurrently with WriteAll and NewWriter. Run with -race.
+func TestSetDefaultWriterOptionsConcurrent(t *testing.T) {
+	ctx := context.Background()
+	bucket := memblob.OpenBucket(nil)
+	defer closeWithErrorCheck(t, bucket)
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			if err := bucket.SetDefaultWriterOptions(blob.WriterOptions{BufferSize: i}); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			if err := bucket.WriteAll(ctx, "a", []byte("hello"), nil); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			w, err := bucket.NewWriter(ctx, "b", nil)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			if err := w.Close(); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	}()
+	wg.Wait()
 }

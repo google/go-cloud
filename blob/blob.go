@@ -1195,7 +1195,9 @@ func (b *Bucket) writerOptionsOrDefault(opts *WriterOptions) *WriterOptions {
 //
 // Using Upload may be more efficient.
 func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) (err error) {
+	b.mu.RLock()
 	opts = b.writerOptionsOrDefault(opts)
+	b.mu.RUnlock()
 	optsToUse := *opts
 	if len(optsToUse.ContentMD5) == 0 {
 		sum := md5.Sum(p)
@@ -1245,6 +1247,8 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	if !utf8.ValidString(key) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewWriter key must be a valid UTF-8 string: %q", key)
 	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	opts = b.writerOptionsOrDefault(opts)
 	dopts := &driver.WriterOptions{
 		CacheControl:                opts.CacheControl,
@@ -1281,8 +1285,6 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		}
 		dopts.Metadata = md
 	}
-	b.mu.RLock()
-	defer b.mu.RUnlock()
 	if b.closed {
 		return nil, errClosed
 	}
