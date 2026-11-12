@@ -799,7 +799,7 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) 
 	if b.closed {
 		return nil, errClosed
 	}
-	r, err := b.NewReader(ctx, key, nil)
+	r, err := b.newRangeReader(ctx, key, 0, -1, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -874,7 +874,7 @@ func (b *Bucket) Download(ctx context.Context, key string, w io.Writer, opts *Re
 			}
 		}
 	}
-	r, err := b.NewReader(ctx, key, opts)
+	r, err := b.newRangeReader(ctx, key, 0, -1, opts)
 	if err != nil {
 		return err
 	}
@@ -1073,6 +1073,8 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err
 
 // NewReader is a shortcut for NewRangeReader with offset=0 and length=-1.
 func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions) (*Reader, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	return b.newRangeReader(ctx, key, 0, -1, opts)
 }
 
@@ -1093,12 +1095,14 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	return b.newRangeReader(ctx, key, offset, length, opts)
 }
 
+// newRangeReader implements NewRangeReader. Callers must hold b.mu (read or
+// write); sync.RWMutex read locks must not be acquired recursively.
 func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
 	if b.closed {
 		return nil, errClosed
 	}
