@@ -18,9 +18,12 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"sync"
 	"testing"
 	"testing/iotest"
+	"time"
 
+	"gocloud.dev/blob"
 	"gocloud.dev/blob/memblob"
 )
 
@@ -80,4 +83,54 @@ func TestReader(t *testing.T) {
 	} else if !bytes.Equal(buffer.Bytes(), data) {
 		t.Fatal("wrote invalid bytes")
 	}
+}
+
+// TestSetDefaultReaderOptionsConcurrent verifies that SetDefaultReaderOptions
+// can be called concurrently with ReadAll and Download without deadlocking.
+func TestSetDefaultReaderOptionsConcurrent(t *testing.T) {
+	ctx := context.Background()
+	bucket := memblob.OpenBucket(nil)
+	if err := bucket.WriteAll(ctx, "key", []byte("hello"), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 1000; j++ {
+				if _, err := bucket.ReadAll(ctx, "key"); err != nil {
+					t.Error(err)
+					return
+				}
+				if err := bucket.Download(ctx, "key", io.Discard, nil); err != nil {
+					t.Error(err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for j := 0; j < 1000; j++ {
+			if err := bucket.SetDefaultReaderOptions(blob.ReaderOptions{BufferSize: j}); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	}()
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		// Don't Close the bucket; it would block on the deadlocked calls.
+		t.Fatal("deadlock: ReadAll/Download did not finish while SetDefaultReaderOptions was called concurrently")
+	}
+	closeWithErrorCheck(t, bucket)
 }
