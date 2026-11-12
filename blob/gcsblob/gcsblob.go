@@ -881,6 +881,7 @@ func (b *bucket) DownloadAt(ctx context.Context, key string, w io.WriterAt, opts
 			return false
 		}
 		if err := opts.BeforeRead(asFunc); err != nil {
+			_, _ = d.WaitAndClose()
 			return err
 		}
 	}

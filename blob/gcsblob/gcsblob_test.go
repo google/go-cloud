@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -507,6 +508,38 @@ func TestBeforeReadNonExistentKey(t *testing.T) {
 	})
 	if err == nil || gcerrors.Code(err) != gcerrors.NotFound {
 		t.Errorf("got error %v, wanted NotFound for Read", err)
+	}
+}
+
+// TestDownloadAtBeforeReadError verifies that DownloadAt stops the transfer
+// manager's workers when BeforeRead returns an error.
+func TestDownloadAtBeforeReadError(t *testing.T) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx, option.WithoutAuthentication(), option.WithEndpoint("http://127.0.0.1:0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = client.Close() }()
+	drv := &bucket{name: "bucket", client: client, opts: &Options{}}
+
+	before := runtime.NumGoroutine()
+	errBeforeRead := errors.New("before read failed")
+	for i := 0; i < 10; i++ {
+		err := drv.DownloadAt(ctx, "key", nil, &driver.ReaderOptions{
+			MaxConcurrency: 4,
+			BeforeRead:     func(func(any) bool) error { return errBeforeRead },
+		})
+		if !errors.Is(err, errBeforeRead) {
+			t.Fatalf("got error %v, want %v", err, errBeforeRead)
+		}
+	}
+	// Workers exit asynchronously after WaitAndClose, so allow them some time.
+	deadline := time.Now().Add(5 * time.Second)
+	for runtime.NumGoroutine() > before && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := runtime.NumGoroutine(); got > before {
+		t.Errorf("got %d goroutines after DownloadAt, want at most %d", got, before)
 	}
 }
 
