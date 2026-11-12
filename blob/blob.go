@@ -598,19 +598,26 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 		// We need to load the next page.
 		i.opts.PageToken = i.page.NextPageToken
 	}
+	if err := i.loadPage(ctx); err != nil {
+		return nil, err
+	}
+	return i.Next(ctx)
+}
+
+// loadPage loads the next page of results while holding b.mu.
+func (i *ListIterator) loadPage(ctx context.Context) error {
 	i.b.mu.RLock()
 	defer i.b.mu.RUnlock()
 	if i.b.closed {
-		return nil, errClosed
+		return errClosed
 	}
-	// Loading a new page.
 	p, err := i.b.b.ListPaged(ctx, i.opts)
 	if err != nil {
-		return nil, wrapError(i.b.b, err, "")
+		return wrapError(i.b.b, err, "")
 	}
 	i.page = p
 	i.nextIdx = 0
-	return i.Next(ctx)
+	return nil
 }
 
 type errorState struct {
