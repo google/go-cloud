@@ -324,10 +324,12 @@ type slowCallSub struct {
 	driver.Subscription
 	slowCall time.Duration
 
-	mu     sync.Mutex
-	left   int
-	sent   int
-	slowed bool
+	mu          sync.Mutex
+	left        int
+	sent        int
+	slowed      bool
+	inFlight    int
+	maxInFlight int // most ReceiveBatch calls running at once
 }
 
 func (*slowCallSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
@@ -336,6 +338,8 @@ func (*slowCallSub) Close() error                                              {
 
 func (s *slowCallSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	s.mu.Lock()
+	s.inFlight++
+	s.maxInFlight = max(s.maxInFlight, s.inFlight)
 	slow := maxMessages < 1000 && !s.slowed && s.left > 0 && s.sent >= 1000
 	if slow {
 		s.slowed = true
@@ -348,6 +352,7 @@ func (s *slowCallSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dri
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.inFlight--
 	var msgs []*driver.Message
 	for ; len(msgs) < maxMessages && s.left > 0; s.left-- {
 		s.sent++
@@ -361,19 +366,24 @@ func (s *slowCallSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dri
 func TestReceiveSlowCall(t *testing.T) {
 	t.Skip("Skipped by default")
 
-	const slowCall = 5 * time.Second
+	const (
+		slowCall    = 5 * time.Second
+		maxHandlers = 10
+	)
 	tests := []struct {
-		description string
-		numMsgs     int
-		processTime time.Duration
+		description  string
+		numMsgs      int
+		processTime  time.Duration
+		maxBatchSize int
 	}{
-		{description: "no processing", numMsgs: 10000},
-		{description: "process 10ms", numMsgs: 3000, processTime: 10 * time.Millisecond},
+		{description: "no processing", numMsgs: 10000, maxBatchSize: 1000},
+		{description: "process 10ms", numMsgs: 3000, processTime: 10 * time.Millisecond, maxBatchSize: 1000},
+		{description: "small batches", numMsgs: 10000, maxBatchSize: 100},
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			fake := &slowCallSub{left: test.numMsgs, slowCall: slowCall}
-			sub := newSubscription(fake, &batcher.Options{MaxBatchSize: 1000, MaxHandlers: 10}, nil)
+			sub := newSubscription(fake, &batcher.Options{MaxBatchSize: test.maxBatchSize, MaxHandlers: maxHandlers}, nil)
 			defer func() {
 				if err := sub.Shutdown(context.Background()); err != nil {
 					t.Errorf("failed to Shutdown: %v", err)
@@ -418,6 +428,11 @@ func TestReceiveSlowCall(t *testing.T) {
 			t.Logf("total %v, longest time with no message handled %v", elapsed, maxGap)
 			if elapsed > slowCall/2 {
 				t.Errorf("took %v to handle %d messages; want less than %v", elapsed, test.numMsgs, slowCall/2)
+			}
+			fake.mu.Lock()
+			defer fake.mu.Unlock()
+			if fake.maxInFlight > maxHandlers {
+				t.Errorf("got %d concurrent ReceiveBatch calls; want at most %d", fake.maxInFlight, maxHandlers)
 			}
 		})
 	}
