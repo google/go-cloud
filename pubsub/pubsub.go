@@ -382,6 +382,8 @@ type Subscription struct {
 	err              error             // permanent error
 	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
 	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
+	fetches          int               // number of fetches (getNextBatch calls) in flight
+	fetchesNoMsgs    int               // in-flight fetches that haven't returned any messages yet
 	runningBatchSize float64           // running number of messages to request via ReceiveBatch
 	throughputStart  time.Time         // start time for throughput measurement
 	throughputCount  int               // number of msgs given out via Receive since throughputStart
@@ -447,6 +449,11 @@ const (
 	// drivers to get lots of messages at once; setting it too small risks having
 	// drivers spend a long time in ReceiveBatch trying to achieve it.
 	maxBatchSize = 3000
+
+	// The maximum number of fetches in flight. A second fetch starts only when
+	// the queue is empty and every fetch in flight has already returned some
+	// messages, so one slow ReceiveBatch call doesn't stall the subscription.
+	maxFetches = 2
 )
 
 // updateBatchSize updates the number of messages to request in ReceiveBatch
@@ -545,13 +552,19 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			return nil, err
 		}
 
-		if s.waitc == nil && float64(len(s.q)) <= s.runningBatchSize*prefetchRatio {
+		if (s.fetches == 0 && float64(len(s.q)) <= s.runningBatchSize*prefetchRatio) ||
+			(s.fetches < maxFetches && len(s.q) == 0 && s.fetchesNoMsgs == 0) {
 			// We think we're going to run out of messages in expectedReceiveBatchDuration,
 			// and there's no outstanding ReceiveBatch call, so initiate one in the
-			// background.
-			// Completion will be signalled to this goroutine, and to any other
-			// waiting goroutines, by closing s.waitc.
-			s.waitc = make(chan struct{})
+			// background. Or, we've run out, and the fetch in flight is only waiting
+			// on its slowest ReceiveBatch calls.
+			// New messages and completion will be signalled to this goroutine,
+			// and to any other waiting goroutines, by closing s.waitc.
+			if s.waitc == nil {
+				s.waitc = make(chan struct{})
+			}
+			s.fetches++
+			s.fetchesNoMsgs++
 			batchSize := s.updateBatchSize()
 			// log.Printf("BATCH SIZE %d", batchSize)
 
@@ -560,11 +573,16 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					s.preReceiveBatchHook(batchSize)
 				}
 				resultChannel := s.getNextBatch(batchSize)
+				gotMsgs := false
 				for msgsOrError := range resultChannel {
 					if len(msgsOrError.msgs) > 0 {
 						// messages received from channel
 						s.mu.Lock()
 						s.q = append(s.q, msgsOrError.msgs...)
+						if !gotMsgs {
+							gotMsgs = true
+							s.fetchesNoMsgs--
+						}
 						// Wake all waiters, not just one; the batch may have
 						// enough messages for all of them.
 						close(s.waitc)
@@ -580,8 +598,15 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 				}
 				// batch reception finished
 				s.mu.Lock()
+				if !gotMsgs {
+					s.fetchesNoMsgs--
+				}
+				s.fetches--
 				close(s.waitc)
 				s.waitc = nil
+				if s.fetches > 0 {
+					s.waitc = make(chan struct{})
+				}
 				s.mu.Unlock()
 			}()
 		}
