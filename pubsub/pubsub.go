@@ -565,9 +565,11 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 						// messages received from channel
 						s.mu.Lock()
 						s.q = append(s.q, msgsOrError.msgs...)
+						// Wake all waiters, not just one; the batch may have
+						// enough messages for all of them.
+						close(s.waitc)
+						s.waitc = make(chan struct{})
 						s.mu.Unlock()
-						// notify that queue should now have messages
-						s.waitc <- struct{}{}
 					} else if msgsOrError.err != nil {
 						// err can receive message only after batch group completes
 						// Non-retryable error from ReceiveBatch -> permanent error
