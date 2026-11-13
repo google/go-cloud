@@ -202,9 +202,7 @@ func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error
 		}
 		stsClient := sts.NewFromConfig(baseConfig)
 		provider := role.provider(stsClient, roleARN)
-		opts = []func(*config.LoadOptions) error{
-			config.WithCredentialsProvider(provider),
-		}
+		opts = append(opts, config.WithCredentialsProvider(provider))
 		if baseConfig.Region == "" {
 			return aws.Config{}, fmt.Errorf("STS client created with empty region: all other parameters must be collected before assuming role")
 		}

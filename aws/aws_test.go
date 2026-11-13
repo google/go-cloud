@@ -28,6 +28,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
+	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
 	gcaws "gocloud.dev/aws"
 )
 
@@ -352,5 +353,72 @@ func TestV2ConfigFromURLParamsAssumeRole(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestV2ConfigFromURLParamsAssumeRoleKeepsOptions(t *testing.T) {
+	ctx := context.Background()
+	t.Setenv("AWS_ACCESS_KEY_ID", "base-key")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "base-secret")
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_CONFIG_FILE", filepath.Join(t.TempDir(), "config"))
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(t.TempDir(), "credentials"))
+
+	q := url.Values{
+		"role":                         {"arn:aws:iam::123456789012:role/my-role"},
+		"fips":                         {"true"},
+		"dualstack":                    {"true"},
+		"request_checksum_calculation": {"when_required"},
+		"response_checksum_validation": {"when_required"},
+	}
+	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eo := awssts.NewFromConfig(cfg).Options().EndpointOptions
+	if eo.UseFIPSEndpoint != aws.FIPSEndpointStateEnabled {
+		t.Errorf("got UseFIPSEndpoint %v, want enabled", eo.UseFIPSEndpoint)
+	}
+	if eo.UseDualStackEndpoint != aws.DualStackEndpointStateEnabled {
+		t.Errorf("got UseDualStackEndpoint %v, want enabled", eo.UseDualStackEndpoint)
+	}
+	if cfg.RequestChecksumCalculation != aws.RequestChecksumCalculationWhenRequired {
+		t.Errorf("got RequestChecksumCalculation %v, want when_required", cfg.RequestChecksumCalculation)
+	}
+	if cfg.ResponseChecksumValidation != aws.ResponseChecksumValidationWhenRequired {
+		t.Errorf("got ResponseChecksumValidation %v, want when_required", cfg.ResponseChecksumValidation)
+	}
+}
+
+func TestV2ConfigFromURLParamsAssumeRoleKeepsProfile(t *testing.T) {
+	ctx := context.Background()
+	sts := newFakeSTS(t)
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_ENDPOINT_URL_STS", sts.URL)
+	configFile := filepath.Join(t.TempDir(), "config")
+	profile := "[profile my-profile]\naws_access_key_id = profile-key\naws_secret_access_key = profile-secret\nrequest_checksum_calculation = when_required\n"
+	if err := os.WriteFile(configFile, []byte(profile), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("AWS_CONFIG_FILE", configFile)
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(t.TempDir(), "credentials"))
+
+	q := url.Values{
+		"role":    {"arn:aws:iam::123456789012:role/my-role"},
+		"profile": {"my-profile"},
+	}
+	cfg, err := gcaws.V2ConfigFromURLParams(ctx, q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.RequestChecksumCalculation != aws.RequestChecksumCalculationWhenRequired {
+		t.Errorf("got RequestChecksumCalculation %v, want when_required from the profile", cfg.RequestChecksumCalculation)
+	}
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if creds.AccessKeyID != "AssumeRole" {
+		t.Errorf("got access key ID %q, want the assumed role's credentials", creds.AccessKeyID)
 	}
 }
