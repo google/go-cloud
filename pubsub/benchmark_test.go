@@ -345,10 +345,14 @@ func (s *slowCallSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dri
 		s.slowed = true
 	}
 	s.mu.Unlock()
+	d := 50 * time.Millisecond
 	if slow {
-		time.Sleep(s.slowCall)
-	} else {
-		time.Sleep(50 * time.Millisecond)
+		d = s.slowCall
+	}
+	// Return early on Shutdown, so the slow call doesn't outlive the test.
+	select {
+	case <-time.After(d):
+	case <-ctx.Done():
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
