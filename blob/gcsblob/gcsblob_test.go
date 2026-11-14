@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -507,6 +509,65 @@ func TestBeforeReadNonExistentKey(t *testing.T) {
 	})
 	if err == nil || gcerrors.Code(err) != gcerrors.NotFound {
 		t.Errorf("got error %v, wanted NotFound for Read", err)
+	}
+}
+
+// closeCountingTransport counts how many response bodies are closed.
+type closeCountingTransport struct {
+	base   http.RoundTripper
+	closed atomic.Int32
+}
+
+func (t *closeCountingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.base.RoundTrip(req)
+	if err == nil {
+		resp.Body = &countingBody{ReadCloser: resp.Body, closed: &t.closed}
+	}
+	return resp, err
+}
+
+type countingBody struct {
+	io.ReadCloser
+	closed *atomic.Int32
+}
+
+func (b *countingBody) Close() error {
+	b.closed.Add(1)
+	return b.ReadCloser.Close()
+}
+
+// TestNewRangeReaderBeforeReadError verifies that NewRangeReader closes the
+// Reader made for BeforeRead when BeforeRead returns an error.
+func TestNewRangeReaderBeforeReadError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "hello world")
+	}))
+	defer srv.Close()
+
+	ctx := context.Background()
+	rt := &closeCountingTransport{base: http.DefaultTransport}
+	client, err := storage.NewClient(ctx, option.WithHTTPClient(&http.Client{Transport: rt}), option.WithEndpoint(srv.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = client.Close() }()
+	drv := &bucket{name: "bucket", client: client, opts: &Options{}}
+
+	errBeforeRead := errors.New("before read failed")
+	_, err = drv.NewRangeReader(ctx, "key", 0, -1, &driver.ReaderOptions{
+		BeforeRead: func(as func(any) bool) error {
+			var r *storage.Reader
+			if !as(&r) {
+				return errors.New("BeforeRead.As failed to get Reader")
+			}
+			return errBeforeRead
+		},
+	})
+	if !errors.Is(err, errBeforeRead) {
+		t.Fatalf("got error %v, want %v", err, errBeforeRead)
+	}
+	if got := rt.closed.Load(); got != 1 {
+		t.Errorf("closed %d response bodies, want 1", got)
 	}
 }
 
