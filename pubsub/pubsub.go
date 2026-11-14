@@ -382,6 +382,9 @@ type Subscription struct {
 	err              error             // permanent error
 	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
 	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
+	fetches          int               // number of fetches (getNextBatch calls) in flight
+	fetchesNoMsgs    int               // in-flight full fetches that haven't returned any messages yet
+	callsInFlight    int               // ReceiveBatch calls in flight, across all fetches
 	runningBatchSize float64           // running number of messages to request via ReceiveBatch
 	throughputStart  time.Time         // start time for throughput measurement
 	throughputCount  int               // number of msgs given out via Receive since throughputStart
@@ -447,6 +450,11 @@ const (
 	// drivers to get lots of messages at once; setting it too small risks having
 	// drivers spend a long time in ReceiveBatch trying to achieve it.
 	maxBatchSize = 3000
+
+	// The maximum number of fetches in flight. A second fetch starts only when
+	// the queue is empty and every fetch in flight has already returned some
+	// messages, so one slow ReceiveBatch call doesn't stall the subscription.
+	maxFetches = 2
 )
 
 // updateBatchSize updates the number of messages to request in ReceiveBatch
@@ -545,29 +553,66 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			return nil, err
 		}
 
-		if s.waitc == nil && float64(len(s.q)) <= s.runningBatchSize*prefetchRatio {
+		maxCalls := 1
+		if s.recvBatchOpts != nil && s.recvBatchOpts.MaxHandlers > 1 {
+			maxCalls = s.recvBatchOpts.MaxHandlers
+		}
+		if (s.fetches == 0 && float64(len(s.q)) <= s.runningBatchSize*prefetchRatio) ||
+			(s.fetches < maxFetches && len(s.q) == 0 && s.fetchesNoMsgs == 0 && s.callsInFlight < maxCalls) {
 			// We think we're going to run out of messages in expectedReceiveBatchDuration,
 			// and there's no outstanding ReceiveBatch call, so initiate one in the
-			// background.
-			// Completion will be signalled to this goroutine, and to any other
-			// waiting goroutines, by closing s.waitc.
-			s.waitc = make(chan struct{})
+			// background. Or, we've run out, and the fetch in flight is only waiting
+			// on its slowest ReceiveBatch calls.
+			// New messages and completion will be signalled to this goroutine,
+			// and to any other waiting goroutines, by closing s.waitc.
+			if s.waitc == nil {
+				s.waitc = make(chan struct{})
+			}
 			batchSize := s.updateBatchSize()
 			// log.Printf("BATCH SIZE %d", batchSize)
+			batches := batcher.Split(batchSize, s.recvBatchOpts)
+			// Stay within MaxHandlers across fetches. A fetch cut short this way
+			// doesn't hold up the next fetch.
+			capped := false
+			if avail := maxCalls - s.callsInFlight; len(batches) > avail {
+				batches = batches[:avail]
+				capped = true
+			}
+			s.callsInFlight += len(batches)
+			s.fetches++
+			if !capped {
+				s.fetchesNoMsgs++
+			}
 
 			go func() {
 				if s.preReceiveBatchHook != nil {
 					s.preReceiveBatchHook(batchSize)
 				}
-				resultChannel := s.getNextBatch(batchSize)
+				resultChannel := s.getNextBatch(batches)
+				gotMsgs := false
+				returned := 0
 				for msgsOrError := range resultChannel {
+					if msgsOrError.err == nil {
+						returned++
+						s.mu.Lock()
+						s.callsInFlight--
+						s.mu.Unlock()
+					}
 					if len(msgsOrError.msgs) > 0 {
 						// messages received from channel
 						s.mu.Lock()
 						s.q = append(s.q, msgsOrError.msgs...)
+						if !gotMsgs {
+							gotMsgs = true
+							if !capped {
+								s.fetchesNoMsgs--
+							}
+						}
+						// Wake all waiters, not just one; the batch may have
+						// enough messages for all of them.
+						close(s.waitc)
+						s.waitc = make(chan struct{})
 						s.mu.Unlock()
-						// notify that queue should now have messages
-						s.waitc <- struct{}{}
 					} else if msgsOrError.err != nil {
 						// err can receive message only after batch group completes
 						// Non-retryable error from ReceiveBatch -> permanent error
@@ -578,8 +623,16 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 				}
 				// batch reception finished
 				s.mu.Lock()
+				if !gotMsgs && !capped {
+					s.fetchesNoMsgs--
+				}
+				s.callsInFlight -= len(batches) - returned
+				s.fetches--
 				close(s.waitc)
 				s.waitc = nil
+				if s.fetches > 0 {
+					s.waitc = make(chan struct{})
+				}
 				s.mu.Unlock()
 			}()
 		}
@@ -649,11 +702,7 @@ type msgsOrError struct {
 
 // getNextBatch gets the next batch of messages from the server. It will return a channel that will itself return the
 // messages as they come from each independent batch, or an operation error
-func (s *Subscription) getNextBatch(nMessages int) chan msgsOrError {
-	// Split nMessages into batches based on recvBatchOpts; we'll make a
-	// separate ReceiveBatch call for each batch, and aggregate the results in
-	// msgs.
-	batches := batcher.Split(nMessages, s.recvBatchOpts)
+func (s *Subscription) getNextBatch(batches []int) chan msgsOrError {
 	result := make(chan msgsOrError, len(batches))
 	g, ctx := errgroup.WithContext(s.backgroundCtx)
 	for _, maxMessagesInBatch := range batches {
