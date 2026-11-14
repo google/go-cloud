@@ -21,15 +21,19 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	raw "cloud.google.com/go/pubsub/v2"
 	"cloud.google.com/go/pubsub/v2/apiv1/pubsubpb"
+	"cloud.google.com/go/pubsub/v2/pstest"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -447,4 +451,85 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 			shutdownSubscription(ctx, t, sub)
 		}
 	}
+}
+
+func TestShutdownNacksBufferedMessages(t *testing.T) {
+	ctx := context.Background()
+	srv := pstest.NewServer()
+	defer func() { _ = srv.Close() }()
+	conn, err := grpc.NewClient(srv.Addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	client, err := Client(ctx, "p", conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = client.Close() }()
+	const topicName = "projects/p/topics/t"
+	if _, err := client.TopicAdminClient.CreateTopic(ctx, &pubsubpb.Topic{Name: topicName}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.SubscriptionAdminClient.CreateSubscription(ctx, &pubsubpb.Subscription{
+		Name:               "projects/p/subscriptions/s",
+		Topic:              topicName,
+		AckDeadlineSeconds: 10,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	const n = 10
+	for i := 0; i < n; i++ {
+		srv.Publish(topicName, []byte(fmt.Sprint(i)), nil)
+	}
+
+	// Receive one message, so that the driver buffers the others, then shut down.
+	ds := openSubscription(client.Subscriber("s"), nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
+	m, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+	waitFor(t, ds, "the other messages to be buffered", func() bool {
+		_, ok := ds.acks[m.LoggableID]
+		return !ok && len(ds.acks) == n-1
+	})
+	if err := sub.Shutdown(ctx); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, ds, "Receive to return", func() bool { return !ds.receiving })
+
+	// The other messages were nacked, i.e. got a modack with a deadline of 0.
+	for _, pm := range srv.Messages() {
+		if pm.ID == m.LoggableID {
+			if pm.Acks != 1 {
+				t.Errorf("message %s: got %d acks, want 1", pm.ID, pm.Acks)
+			}
+			continue
+		}
+		nacked := false
+		for _, ma := range pm.Modacks {
+			if ma.AckDeadline == 0 {
+				nacked = true
+			}
+		}
+		if !nacked {
+			t.Errorf("message %s was not nacked", pm.ID)
+		}
+	}
+}
+
+// waitFor waits up to 5s for cond to be true, holding ds.mu while checking it.
+func waitFor(t *testing.T, ds *subscription, what string, cond func() bool) {
+	t.Helper()
+	for start := time.Now(); time.Since(start) < 5*time.Second; time.Sleep(10 * time.Millisecond) {
+		ds.mu.Lock()
+		ok := cond()
+		ds.mu.Unlock()
+		if ok {
+			return
+		}
+	}
+	t.Fatalf("timed out waiting for %s", what)
 }
