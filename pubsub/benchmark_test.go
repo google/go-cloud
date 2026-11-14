@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"gocloud.dev/pubsub/batcher"
 	"gocloud.dev/pubsub/driver"
 	"golang.org/x/sync/errgroup"
 )
@@ -313,5 +314,130 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	}
 	for n := nLines; n < numLinesPerTest; n++ {
 		fmt.Println()
+	}
+}
+
+// slowCallSub returns messages from a fixed backlog. Each ReceiveBatch call
+// takes 50ms, except the first call for fewer than 1000 messages made after
+// 1000 messages have been returned, which takes slowCall.
+type slowCallSub struct {
+	driver.Subscription
+	slowCall time.Duration
+
+	mu          sync.Mutex
+	left        int
+	sent        int
+	slowed      bool
+	inFlight    int
+	maxInFlight int // most ReceiveBatch calls running at once
+}
+
+func (*slowCallSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
+func (*slowCallSub) CanNack() bool                                             { return false }
+func (*slowCallSub) Close() error                                              { return nil }
+
+func (s *slowCallSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	s.mu.Lock()
+	s.inFlight++
+	s.maxInFlight = max(s.maxInFlight, s.inFlight)
+	slow := maxMessages < 1000 && !s.slowed && s.left > 0 && s.sent >= 1000
+	if slow {
+		s.slowed = true
+	}
+	s.mu.Unlock()
+	d := 50 * time.Millisecond
+	if slow {
+		d = s.slowCall
+	}
+	// Return early on Shutdown, so the slow call doesn't outlive the test.
+	select {
+	case <-time.After(d):
+	case <-ctx.Done():
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.inFlight--
+	var msgs []*driver.Message
+	for ; len(msgs) < maxMessages && s.left > 0; s.left-- {
+		s.sent++
+		msgs = append(msgs, &driver.Message{AckID: s.sent})
+	}
+	return msgs, nil
+}
+
+// TestReceiveSlowCall checks that one slow ReceiveBatch call does not hold up
+// Receive while more messages are available.
+func TestReceiveSlowCall(t *testing.T) {
+	t.Skip("Skipped by default")
+
+	const (
+		slowCall    = 5 * time.Second
+		maxHandlers = 10
+	)
+	tests := []struct {
+		description  string
+		numMsgs      int
+		processTime  time.Duration
+		maxBatchSize int
+	}{
+		{description: "no processing", numMsgs: 10000, maxBatchSize: 1000},
+		{description: "process 10ms", numMsgs: 3000, processTime: 10 * time.Millisecond, maxBatchSize: 1000},
+		{description: "small batches", numMsgs: 10000, maxBatchSize: 100},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			fake := &slowCallSub{left: test.numMsgs, slowCall: slowCall}
+			sub := newSubscription(fake, &batcher.Options{MaxBatchSize: test.maxBatchSize, MaxHandlers: maxHandlers}, nil)
+			defer func() {
+				if err := sub.Shutdown(context.Background()); err != nil {
+					t.Errorf("failed to Shutdown: %v", err)
+				}
+			}()
+
+			var mu sync.Mutex
+			start := time.Now()
+			last := start
+			var maxGap time.Duration
+			remaining := test.numMsgs
+			var grp errgroup.Group
+			for i := 0; i < 100; i++ {
+				grp.Go(func() error {
+					for {
+						mu.Lock()
+						if remaining == 0 {
+							mu.Unlock()
+							return nil
+						}
+						remaining--
+						mu.Unlock()
+						m, err := sub.Receive(context.Background())
+						if err != nil {
+							return err
+						}
+						time.Sleep(test.processTime)
+						m.Ack()
+						mu.Lock()
+						if now := time.Now(); now.After(last) {
+							maxGap = max(maxGap, now.Sub(last))
+							last = now
+						}
+						mu.Unlock()
+					}
+				})
+			}
+			if err := grp.Wait(); err != nil {
+				t.Fatal(err)
+			}
+			elapsed := time.Since(start)
+			t.Logf("total %v, longest time with no message handled %v", elapsed, maxGap)
+			if elapsed > slowCall/2 {
+				t.Errorf("took %v to handle %d messages; want less than %v", elapsed, test.numMsgs, slowCall/2)
+			}
+			fake.mu.Lock()
+			defer fake.mu.Unlock()
+			if fake.maxInFlight > maxHandlers {
+				t.Errorf("got %d concurrent ReceiveBatch calls; want at most %d", fake.maxInFlight, maxHandlers)
+			}
+		})
 	}
 }
