@@ -18,12 +18,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -542,5 +546,64 @@ func TestToServerSideEncryptionType(t *testing.T) {
 		if sseType != test.sseType {
 			t.Errorf("%s: got type %v, want type %v", test.value, sseType, test.sseType)
 		}
+	}
+}
+
+// closeCountingTransport counts how many response bodies are closed.
+type closeCountingTransport struct {
+	base   http.RoundTripper
+	closed atomic.Int32
+}
+
+func (t *closeCountingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.base.RoundTrip(req)
+	if err == nil {
+		resp.Body = &countingBody{ReadCloser: resp.Body, closed: &t.closed}
+	}
+	return resp, err
+}
+
+type countingBody struct {
+	io.ReadCloser
+	closed *atomic.Int32
+}
+
+func (b *countingBody) Close() error {
+	b.closed.Add(1)
+	return b.ReadCloser.Close()
+}
+
+func TestZeroLengthReadClosesBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Range", "bytes 0-0/10")
+		w.WriteHeader(http.StatusPartialContent)
+		_, _ = io.WriteString(w, "x")
+	}))
+	defer srv.Close()
+
+	rt := &closeCountingTransport{base: http.DefaultTransport}
+	client := s3.New(s3.Options{
+		Region:       "us-east-1",
+		BaseEndpoint: aws.String(srv.URL),
+		UsePathStyle: true,
+		Credentials:  credentials.NewStaticCredentialsProvider("key", "secret", ""),
+		HTTPClient:   &http.Client{Transport: rt},
+	})
+	ctx := context.Background()
+	b, err := OpenBucket(ctx, client, "mybucket", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = b.Close() }()
+
+	r, err := b.NewRangeReader(ctx, "mykey", 0, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if got := rt.closed.Load(); got != 1 {
+		t.Errorf("closed %d response bodies, want 1", got)
 	}
 }
