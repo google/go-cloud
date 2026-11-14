@@ -825,6 +825,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			return false
 		}
 		if err := opts.BeforeRead(asFunc); err != nil {
+			if r != nil {
+				_ = r.Close()
+			}
 			return nil, err
 		}
 	}
