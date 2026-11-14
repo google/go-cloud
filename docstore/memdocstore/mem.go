@@ -374,7 +374,8 @@ func (c *collection) update(doc storedDoc, mods []driver.Mod) error {
 	// To make update atomic, we first convert the actions into a form that can't
 	// fail.
 	type guaranteedMod struct {
-		parentMap    map[string]any // the map holding the key to be modified
+		fieldPath    []string
+		parentMap    map[string]any // the map holding the key to be modified; nil if it doesn't exist yet
 		key          string
 		encodedValue any // the value after encoding
 	}
@@ -384,7 +385,9 @@ func (c *collection) update(doc storedDoc, mods []driver.Mod) error {
 	for i, mod := range mods {
 		gmod := &gmods[i]
 		// Check that the field path is valid. That is, every component of the path
-		// but the last refers to a map, and no component along the way is nil.
+		// but the last that is present refers to a map. Missing maps are
+		// created below, when the mods are executed.
+		gmod.fieldPath = mod.FieldPath
 		if gmod.parentMap, err = getParentMap(doc, mod.FieldPath, false); err != nil {
 			return err
 		}
@@ -406,9 +409,14 @@ func (c *collection) update(doc storedDoc, mods []driver.Mod) error {
 	}
 	// Now execute the guaranteed mods.
 	for _, m := range gmods {
-		if m.encodedValue == nil {
+		switch {
+		case m.encodedValue == nil:
 			delete(m.parentMap, m.key)
-		} else {
+		case m.parentMap == nil:
+			// A map along the field path doesn't exist yet, so create it.
+			// This can't fail because we checked the field path above.
+			_ = setAtFieldPath(doc, m.fieldPath, m.encodedValue)
+		default:
 			m.parentMap[m.key] = m.encodedValue
 		}
 	}

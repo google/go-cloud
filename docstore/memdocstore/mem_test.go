@@ -141,6 +141,104 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 }
 
+func TestUpdateCreatesMissingMaps(t *testing.T) {
+	// Check that an update of a nested field creates the maps along the
+	// field path that don't exist yet.
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name   string
+		mods   docstore.Mods
+		atomic bool
+		want   docmap
+	}{
+		{
+			name: "set",
+			mods: docstore.Mods{"a.b": 2},
+			want: docmap{"a": map[string]any{"b": int64(2)}},
+		},
+		{
+			name: "increment",
+			mods: docstore.Mods{"a.b": docstore.Increment(5)},
+			want: docmap{"a": map[string]any{"b": int64(5)}},
+		},
+		{
+			name: "deep",
+			mods: docstore.Mods{"a.b.c": "C", "a.d": "D", "e": "E"},
+			want: docmap{"a": map[string]any{"b": map[string]any{"c": "C"}, "d": "D"}, "e": "E"},
+		},
+		{
+			name: "delete",
+			mods: docstore.Mods{"a.b": nil, "e": "E"},
+			want: docmap{"e": "E"},
+		},
+		{
+			name:   "atomic writes",
+			mods:   docstore.Mods{"a.b": 2},
+			atomic: true,
+			want:   docmap{"a": map[string]any{"b": int64(2)}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dc, err := newCollection(drivertest.KeyField, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			coll := docstore.NewCollection(dc)
+			defer closeWithErrorCheck(t, coll)
+			doc := docmap{drivertest.KeyField: "testUpdateCreatesMissingMaps", dc.RevisionField(): nil}
+			if err := coll.Put(ctx, doc); err != nil {
+				t.Fatal(err)
+			}
+			actions := coll.Actions()
+			if tc.atomic {
+				actions = actions.AtomicWrites()
+			}
+			if err := actions.Update(doc, tc.mods).Do(ctx); err != nil {
+				t.Fatal(err)
+			}
+			got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
+			if err := coll.Get(ctx, got); err != nil {
+				t.Fatal(err)
+			}
+			tc.want[drivertest.KeyField] = doc[drivertest.KeyField]
+			tc.want[dc.RevisionField()] = got[dc.RevisionField()]
+			if diff := cmp.Diff(got, tc.want); diff != "" {
+				t.Errorf("got=-, want=+: %s", diff)
+			}
+		})
+	}
+
+	t.Run("atomic on error", func(t *testing.T) {
+		// A failing mod must not leave behind maps created for another mod.
+		dc, err := newCollection(drivertest.KeyField, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		coll := docstore.NewCollection(dc)
+		defer closeWithErrorCheck(t, coll)
+		doc := docmap{drivertest.KeyField: "testUpdateCreatesMissingMapsAtomic", "z": "Z", dc.RevisionField(): nil}
+		if err := coll.Put(ctx, doc); err != nil {
+			t.Fatal(err)
+		}
+		mods := docstore.Mods{"a.b": 2, "z.c": "C"} // "z" is not a map, so "z.c" is an error
+		if err := coll.Update(ctx, doc, mods); err == nil {
+			t.Fatal("got nil, want error")
+		}
+		got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
+		if err := coll.Get(ctx, got); err != nil {
+			t.Fatal(err)
+		}
+		want := docmap{
+			drivertest.KeyField: doc[drivertest.KeyField],
+			dc.RevisionField():  got[dc.RevisionField()],
+			"z":                 "Z",
+		}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("got=-, want=+: %s", diff)
+		}
+	})
+}
+
 func TestQueryNested(t *testing.T) {
 	ctx := context.Background()
 
