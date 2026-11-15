@@ -461,6 +461,7 @@ type subscription struct {
 	dms        []*driver.Message            // buffered messages for next ReceiveBatch
 	receiveErr error                        // error returned by last Receive, to be returned by next ReceiveBatch
 	acks       map[driver.AckID]*ackableMsg // returned messages that haven't yet been acked/nacked
+	closed     bool                         // true after Close; new messages are nacked right away
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -563,6 +564,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				// Ack or Nack is called.
 				ackCh := make(chan bool)
 				s.mu.Lock()
+				if s.closed {
+					s.mu.Unlock()
+					rawm.Nack()
+					return
+				}
 				s.acks[rawm.ID] = &ackableMsg{rawm, ackCh}
 				s.dms = append(s.dms, dm)
 				s.mu.Unlock()
@@ -663,6 +669,17 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // Close implements driver.Subscription.Close.
 func (s *subscription) Close() error {
+	// Nack the messages that haven't been acked or nacked, including buffered
+	// ones that were never returned, so that their callbacks return. Otherwise
+	// Receive never returns and keeps extending their ack deadlines.
+	s.mu.Lock()
+	s.closed = true
+	for id, a := range s.acks {
+		a.ch <- false
+		close(a.ch)
+		delete(s.acks, id)
+	}
+	s.mu.Unlock()
 	s.receiveCancel()
 	return nil
 }
