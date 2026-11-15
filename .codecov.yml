@@ -4,6 +4,11 @@ codecov:
 ignore:
   - "**/drivertest/*.go"
   - "samples"
+  - "internal/setup"
+  - "internal/releasehelper"
+  - "internal/testing/setup"
+  - "internal/testing/terraform"
+  - "internal/website"
 coverage:
   status:
     project:

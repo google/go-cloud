@@ -1792,7 +1792,8 @@ func PrefixedBucket(bucket *Bucket, prefix string) *Bucket {
 	return NewBucket(driver.NewPrefixedBucket(bucket.b, prefix))
 }
 
-// SingleKeyBucket returns a *Bucket based on b that always references singleKey.
+// SingleKeyBucket returns a *Bucket based on b that always references singleKey;
+// The key parameter to bucket functions is ignored.
 // List methods will not work.
 // singleKey acts as srcKey for Copy.
 //

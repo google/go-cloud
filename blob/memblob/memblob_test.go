@@ -16,6 +16,8 @@ package memblob
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
 	"testing"
 
@@ -57,13 +59,83 @@ func (*harness) SkipDownloadAt() bool             { return false }
 
 func (h *harness) Close() {}
 
+type verifyAs struct{}
+
+func (verifyAs) Name() string { return "verify As types for memblob" }
+
+func (verifyAs) BucketCheck(b *blob.Bucket) error {
+	var s string
+	if b.As(&s) {
+		return errors.New("Bucket.As unexpectedly succeeded")
+	}
+	return nil
+}
+
+func (verifyAs) BeforeRead(as func(any) bool) error {
+	var s string
+	if as(&s) {
+		return errors.New("BeforeRead.As unexpectedly succeeded")
+	}
+	return nil
+}
+
+func (verifyAs) BeforeWrite(as func(any) bool) error {
+	var s string
+	if as(&s) {
+		return errors.New("BeforeWrite.As unexpectedly succeeded")
+	}
+	return nil
+}
+
+func (verifyAs) BeforeCopy(as func(any) bool) error {
+	var s string
+	if as(&s) {
+		return errors.New("BeforeCopy.As unexpectedly succeeded")
+	}
+	return nil
+}
+func (verifyAs) BeforeDelete(as func(any) bool) error { return nil }
+func (verifyAs) BeforeList(as func(any) bool) error   { return nil }
+func (verifyAs) BeforeSign(as func(any) bool) error   { return nil }
+func (verifyAs) AttributesCheck(attrs *blob.Attributes) error {
+	var s string
+	if attrs.As(s) {
+		return errors.New("Attributes.As unexpectedly succeeded")
+	}
+	return nil
+}
+
+func (verifyAs) ReaderCheck(r *blob.Reader) error {
+	var ior io.Reader
+	if r.As(&ior) {
+		return errors.New("Reader.As unexpectedly succeeded")
+	}
+	return nil
+}
+
+func (verifyAs) ListObjectCheck(o *blob.ListObject) error {
+	var s string
+	if o.As(&s) {
+		return errors.New("ListObject.As unexpectedly succeeded")
+	}
+	return nil
+}
+
+func (v verifyAs) ErrorCheck(b *blob.Bucket, err error) error {
+	var err2 error
+	if b.ErrorAs(err, &err2) {
+		return errors.New("ErrorAs unexpectedly succeeded")
+	}
+	return nil
+}
+
 func TestConformance(t *testing.T) {
 	newHarnessNoPrefix := func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		t.Helper()
 
 		return newHarness(ctx, t, "")
 	}
-	drivertest.RunConformanceTests(t, newHarnessNoPrefix, nil)
+	drivertest.RunConformanceTests(t, newHarnessNoPrefix, []drivertest.AsTest{verifyAs{}})
 }
 
 func TestConformanceWithPrefix(t *testing.T) {
@@ -73,7 +145,7 @@ func TestConformanceWithPrefix(t *testing.T) {
 
 		return newHarness(ctx, t, prefix)
 	}
-	drivertest.RunConformanceTests(t, newHarnessWithPrefix, nil)
+	drivertest.RunConformanceTests(t, newHarnessWithPrefix, []drivertest.AsTest{verifyAs{}})
 }
 
 func BenchmarkMemblob(b *testing.B) {
