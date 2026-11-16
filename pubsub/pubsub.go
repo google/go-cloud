@@ -374,6 +374,8 @@ type Subscription struct {
 	canNack       bool            // true iff the driver supports Nack
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
 	cancel        func()          // for canceling backgroundCtx
+	recvCtx       context.Context // for background ReceiveBatch calls; child of backgroundCtx
+	recvCancel    func()          // for canceling recvCtx
 
 	recvBatchOpts *batcher.Options
 
@@ -704,7 +706,7 @@ type msgsOrError struct {
 // messages as they come from each independent batch, or an operation error
 func (s *Subscription) getNextBatch(batches []int) chan msgsOrError {
 	result := make(chan msgsOrError, len(batches))
-	g, ctx := errgroup.WithContext(s.backgroundCtx)
+	g, ctx := errgroup.WithContext(s.recvCtx)
 	for _, maxMessagesInBatch := range batches {
 		// Make a copy of the loop variable since it will be used by a goroutine.
 		curMaxMessagesInBatch := maxMessagesInBatch
@@ -748,6 +750,25 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 		return s.err
 	}
 	s.err = errSubscriptionShutdown
+	if s.canNack && s.ackBatcher != nil {
+		// Stop in-flight ReceiveBatch calls and wait for their messages to land
+		// in s.q, then nack everything Receive never returned, so it is
+		// redelivered without waiting for the ack deadline to expire.
+		s.recvCancel()
+		for s.fetches > 0 && ctx.Err() == nil {
+			waitc := s.waitc
+			s.mu.Unlock()
+			select {
+			case <-waitc:
+			case <-ctx.Done():
+			}
+			s.mu.Lock()
+		}
+		for _, m := range s.q {
+			_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: m.AckID, IsAck: false})
+		}
+		s.q = nil
+	}
 	s.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -803,11 +824,14 @@ var NewSubscription = newSubscription
 // defaults.
 func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batcher.Options) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
+	recvCtx, recvCancel := context.WithCancel(ctx)
 	s := &Subscription{
 		driver:           ds,
 		tracer:           gcdkotel.NewTracer(pkgName, gcdkotel.ProviderName(ds)),
 		cancel:           cancel,
 		backgroundCtx:    ctx,
+		recvCtx:          recvCtx,
+		recvCancel:       recvCancel,
 		recvBatchOpts:    recvBatchOpts,
 		runningBatchSize: initialBatchSize,
 		canNack:          ds.CanNack(),
