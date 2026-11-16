@@ -702,6 +702,8 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	var body io.ReadCloser
 	if length == 0 {
+		// The body isn't used, so close it now.
+		_ = blobDownloadResponse.Body.Close()
 		body = http.NoBody
 	} else {
 		body = blobDownloadResponse.Body
