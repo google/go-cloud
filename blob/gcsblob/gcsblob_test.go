@@ -397,8 +397,9 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 // GCS-specific unit tests.
 func TestBufferSize(t *testing.T) {
 	tests := []struct {
-		size int
-		want int
+		size     int
+		sizeHint int
+		want     int
 	}{
 		{
 			size: 5 * 1024 * 1024,
@@ -412,12 +413,94 @@ func TestBufferSize(t *testing.T) {
 			size: -1024,
 			want: 0,
 		},
+		{
+			sizeHint: 10 * 1024,
+			want:     10*1024 + 1,
+		},
+		{
+			sizeHint: googleapi.DefaultUploadChunkSize - 1,
+			want:     googleapi.DefaultUploadChunkSize,
+		},
+		{
+			sizeHint: googleapi.DefaultUploadChunkSize,
+			want:     googleapi.DefaultUploadChunkSize,
+		},
+		{
+			size:     5 * 1024 * 1024,
+			sizeHint: 10 * 1024,
+			want:     5 * 1024 * 1024,
+		},
+		{
+			size:     -1024,
+			sizeHint: 10 * 1024,
+			want:     0,
+		},
 	}
 	for i, test := range tests {
-		got := bufferSize(test.size)
+		got := bufferSize(test.size, test.sizeHint)
 		if got != test.want {
 			t.Errorf("%d) got buffer size %d, want %d", i, got, test.want)
 		}
+	}
+}
+
+// TestWriteAllChunkSize checks that WriteAll doesn't give the storage.Writer
+// a buffer larger than the blob.
+func TestWriteAllChunkSize(t *testing.T) {
+	ctx := context.Background()
+	b, err := OpenBucket(ctx, &gcp.HTTPClient{}, "bucket", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeWithErrorCheck(t, b)
+
+	errStop := errors.New("stop before upload")
+	chunkSize := func(t *testing.T, write func(*blob.WriterOptions) error, bufferSize int) int {
+		got := -1
+		opts := &blob.WriterOptions{
+			BufferSize:  bufferSize,
+			ContentType: "application/octet-stream",
+			BeforeWrite: func(as func(any) bool) error {
+				var sw *storage.Writer
+				if as(&sw) {
+					got = sw.ChunkSize
+				}
+				return errStop
+			},
+		}
+		if err := write(opts); !errors.Is(err, errStop) {
+			t.Fatalf("got err %v, want %v", err, errStop)
+		}
+		return got
+	}
+	writeAll := func(n int) func(*blob.WriterOptions) error {
+		return func(opts *blob.WriterOptions) error {
+			return b.WriteAll(ctx, "key", make([]byte, n), opts)
+		}
+	}
+	newWriter := func(opts *blob.WriterOptions) error {
+		_, err := b.NewWriter(ctx, "key", opts)
+		return err
+	}
+
+	tests := []struct {
+		description string
+		write       func(*blob.WriterOptions) error
+		bufferSize  int
+		want        int
+	}{
+		{"WriteAll small", writeAll(10 * 1024), 0, 10*1024 + 1},
+		{"WriteAll empty", writeAll(0), 0, 2},
+		{"WriteAll default size", writeAll(googleapi.DefaultUploadChunkSize), 0, googleapi.DefaultUploadChunkSize},
+		{"WriteAll with BufferSize", writeAll(10 * 1024), 5 * 1024 * 1024, 5 * 1024 * 1024},
+		{"NewWriter", newWriter, 0, googleapi.DefaultUploadChunkSize},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			if got := chunkSize(t, test.write, test.bufferSize); got != test.want {
+				t.Errorf("got ChunkSize %d, want %d", got, test.want)
+			}
+		})
 	}
 }
 

@@ -84,6 +84,10 @@ type WriterOptions struct {
 	BufferSize int
 	// MaxConcurrency changes the default concurrency for uploading parts.
 	MaxConcurrency int
+	// SizeHint, if positive, is an upper bound on the number of bytes that
+	// will be written. Drivers may use it to avoid allocating buffers larger
+	// than the blob. Bucket.WriteAll sets it.
+	SizeHint int
 	// CacheControl specifies caching attributes that services may use
 	// when serving the blob.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control

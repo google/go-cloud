@@ -1214,7 +1214,7 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 		sum := md5.Sum(p)
 		optsToUse.ContentMD5 = sum[:]
 	}
-	w, err := b.NewWriter(ctx, key, &optsToUse)
+	w, err := b.newWriter(ctx, key, &optsToUse, max(len(p), 1))
 	if err != nil {
 		return err
 	}
@@ -1255,6 +1255,11 @@ func (b *Bucket) Upload(ctx context.Context, key string, r io.Reader, opts *Writ
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
+	return b.newWriter(ctx, key, opts, 0)
+}
+
+// newWriter is NewWriter with a driver.WriterOptions.SizeHint.
+func (b *Bucket) newWriter(ctx context.Context, key string, opts *WriterOptions, sizeHint int) (_ *Writer, err error) {
 	if !utf8.ValidString(key) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewWriter key must be a valid UTF-8 string: %q", key)
 	}
@@ -1269,6 +1274,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		ContentMD5:                  opts.ContentMD5,
 		BufferSize:                  opts.BufferSize,
 		MaxConcurrency:              opts.MaxConcurrency,
+		SizeHint:                    sizeHint,
 		BeforeWrite:                 opts.BeforeWrite,
 		DisableContentTypeDetection: opts.DisableContentTypeDetection,
 		IfNotExist:                  opts.IfNotExist,
