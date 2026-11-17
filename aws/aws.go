@@ -92,7 +92,7 @@ func NewDefaultV2Config(ctx context.Context) (aws.Config, error) {
 //   - fips: A value of "true" enables the use of FIPS endpoints.
 //   - rate_limiter_capacity: A integer value configures the capacity of a token bucket used
 //     in client-side rate limits. If no value is set, the client-side rate limiting is disabled.
-//     See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/retries-timeouts/#client-side-rate-limiting.
+//     See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-retries-timeouts.html#client-side-rate-limiting.
 //   - request_checksum_calculation: Request checksum calculation mode (when_supported, when_required)
 //   - response_checksum_validation: Response checksum validation mode (when_supported, when_required)
 func V2ConfigFromURLParams(ctx context.Context, q url.Values) (aws.Config, error) {
