@@ -140,7 +140,7 @@ you may need to manually Base64 decode the message payload.
 
 [Base64]: https://en.wikipedia.org/wiki/Base64
 [SQS Subscribe]: {{< relref "./subscribe.md#sqs" >}}
-[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
+[AWS V2 Config]: https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html
 
 #### Amazon SNS Constructor {#sns-ctor}
 

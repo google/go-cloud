@@ -226,7 +226,7 @@ Full details about acceptable URLs can be found under the API reference for
 {{< goexample "gocloud.dev/blob/s3blob.Example_openBucketFromURL" >}}
 
 [AWS CLI]: https://aws.amazon.com/cli/
-[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
+[AWS V2 Config]: https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html
 [`s3blob.URLOpener`]: https://godoc.org/gocloud.dev/blob/s3blob#URLOpener
 
 #### S3 Constructor {#s3-ctor}

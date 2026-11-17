@@ -28,7 +28,7 @@ func ExampleOpenVariable() {
 	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	// Establish a AWS V2 Config.
-	// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.
+	// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
