@@ -76,6 +76,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -423,7 +424,6 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	// added. It is used to avoid adding it again; all files in this "directory"
 	// are collapsed to the single directory entry.
 	var lastPrefix string
-	var lastKeyAdded string
 
 	// If the Prefix contains a "/", we can set the root of the Walk
 	// to the path specified by the Prefix as any files below the path will not
@@ -440,9 +440,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		return nil, fmt.Errorf("fileblob: key %q escapes bucket root", opts.Prefix)
 	}
 
-	// Do a full recursive scan of the root directory.
+	// Do a full recursive scan of the root directory, in key order.
 	var result driver.ListPage
-	err := filepath.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
+	err := walkDirInKeyOrder(root, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			// Couldn't read this file/directory for some reason; just skip it.
 			return nil
@@ -540,40 +540,73 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		if pageToken != "" && obj.Key <= pageToken {
 			return nil
 		}
-		// If we've already got a full page of results, set NextPageToken and stop.
-		// We can only stop if this object is guaranteed to belong after the page,
-		// i.e. it sorts after the last object in it. That isn't always the case:
-		// adding the delimiter can make an object sort before one we've already
-		// added (e.g., the file "a-b" sorts before the "directory" "a/", but is
-		// visited after it), so keep going in that case; we'll trim the extra
-		// entries before returning.
-		if len(result.Objects) == pageSize && !obj.IsDir && obj.Key > result.Objects[pageSize-1].Key {
+		// Objects are visited in key order, so once we have a full page,
+		// this object and everything after it belongs on a later page.
+		if len(result.Objects) == pageSize {
 			result.NextPageToken = []byte(result.Objects[pageSize-1].Key)
 			return io.EOF
 		}
 		result.Objects = append(result.Objects, obj)
-		// Normally, objects are added in the correct order (by Key).
-		// However, sometimes adding the file delimiter messes that up (e.g.,
-		// if the file delimiter is later in the alphabet than the last character
-		// of a key).
-		// Detect if this happens and swap if needed.
-		if len(result.Objects) > 1 && obj.Key < lastKeyAdded {
-			i := len(result.Objects) - 1
-			result.Objects[i-1], result.Objects[i] = result.Objects[i], result.Objects[i-1]
-			lastKeyAdded = result.Objects[i].Key
-		} else {
-			lastKeyAdded = obj.Key
-		}
 		return nil
 	})
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
-	if len(result.Objects) > pageSize {
-		result.Objects = result.Objects[0:pageSize]
-		result.NextPageToken = []byte(result.Objects[pageSize-1].Key)
-	}
 	return &result, nil
+}
+
+// walkDirInKeyOrder is like filepath.WalkDir, but visits the entries of each
+// directory in the order of the keys they map to, so that files are visited in
+// lexicographic key order. filepath.WalkDir sorts by file name, which visits
+// directory "a" (keys "a/...") before file "a-b" even though "a-b" < "a/".
+func walkDirInKeyOrder(root string, fn fs.WalkDirFunc) error {
+	info, err := os.Lstat(root)
+	if err != nil {
+		err = fn(root, nil, err)
+	} else {
+		err = walkDirEntryInKeyOrder(root, fs.FileInfoToDirEntry(info), fn)
+	}
+	if err == filepath.SkipDir || err == filepath.SkipAll {
+		return nil
+	}
+	return err
+}
+
+func walkDirEntryInKeyOrder(path string, d fs.DirEntry, fn fs.WalkDirFunc) error {
+	if err := fn(path, d, nil); err != nil || !d.IsDir() {
+		if err == filepath.SkipDir && d.IsDir() {
+			err = nil
+		}
+		return err
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		if err := fn(path, d, err); err != nil {
+			if err == filepath.SkipDir {
+				err = nil
+			}
+			return err
+		}
+	}
+	// A directory holds keys with its name plus "/" as a prefix.
+	entryKey := func(e fs.DirEntry) string {
+		if e.IsDir() {
+			return unescapeKey(e.Name()) + "/"
+		}
+		return unescapeKey(e.Name())
+	}
+	slices.SortFunc(entries, func(a, b fs.DirEntry) int {
+		return strings.Compare(entryKey(a), entryKey(b))
+	})
+	for _, e := range entries {
+		if err := walkDirEntryInKeyOrder(filepath.Join(path, e.Name()), e, fn); err != nil {
+			if err == filepath.SkipDir {
+				break
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // As implements driver.As.
