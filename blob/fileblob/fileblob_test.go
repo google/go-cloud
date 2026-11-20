@@ -838,3 +838,66 @@ func TestListPagedSortsBeforeDirectory(t *testing.T) {
 		})
 	}
 }
+
+// TestListNoDelimiterKeyOrder checks that listing without a delimiter returns
+// keys in lexicographic order, paged or not. "a-b" sorts before "a/x" because
+// '-' < '/', even though the walk visits directory "a" before file "a-b".
+func TestListNoDelimiterKeyOrder(t *testing.T) {
+	tests := []struct {
+		name string
+		keys []string
+	}{
+		{"sibling after directory", []string{"a/x", "a/y", "a/z", "a-b"}},
+		{"nested", []string{"x/y/z", "x/y-w", "x-v", "x/a"}},
+		{"several siblings", []string{"logs/1", "logs/2", "logs-archive", "logs.txt"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			b, err := OpenBucket(t.TempDir(), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer closeWithErrorCheck(t, b)
+			for _, key := range test.keys {
+				if err := b.WriteAll(ctx, key, []byte("hello"), nil); err != nil {
+					t.Fatal(err)
+				}
+			}
+			want := slices.Sorted(slices.Values(test.keys))
+
+			var got []string
+			iter := b.List(nil)
+			for {
+				obj, err := iter.Next(ctx)
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				got = append(got, obj.Key)
+			}
+			if !slices.Equal(got, want) {
+				t.Errorf("List: got %v, want %v", got, want)
+			}
+
+			for pageSize := 1; pageSize <= len(test.keys); pageSize++ {
+				var got []string
+				for token := blob.FirstPageToken; token != nil; {
+					objs, next, err := b.ListPage(ctx, token, pageSize, nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+					for _, obj := range objs {
+						got = append(got, obj.Key)
+					}
+					token = next
+				}
+				if !slices.Equal(got, want) {
+					t.Errorf("pageSize %d: got %v, want %v", pageSize, got, want)
+				}
+			}
+		})
+	}
+}
