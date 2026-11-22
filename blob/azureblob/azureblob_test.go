@@ -713,6 +713,42 @@ func TestNewServiceURL(t *testing.T) {
 			},
 			want: "http://127.0.0.1:8080/myaccount",
 		},
+		{
+			// Local emulator, non-bare URL with encoded "/".
+			opts: ServiceURLOptions{
+				AccountName:   "myaccount",
+				StorageDomain: "attacker.example%2F.localhost",
+			},
+			query: url.Values{
+				"localemu": {"true"},
+				"protocol": {"http"},
+			},
+			wantErrURL: true,
+		},
+		{
+			// Local emulator, non-bare URL with encoded "?".
+			opts: ServiceURLOptions{
+				AccountName:   "myaccount",
+				StorageDomain: "attacker.example%3F.localhost",
+			},
+			query: url.Values{
+				"localemu": {"true"},
+				"protocol": {"http"},
+			},
+			wantErrURL: true,
+		},
+		{
+			// Local emulator, non-bare URL with encoded "#".
+			opts: ServiceURLOptions{
+				AccountName:   "myaccount",
+				StorageDomain: "attacker.example%23.localhost",
+			},
+			query: url.Values{
+				"localemu": {"true"},
+				"protocol": {"http"},
+			},
+			wantErrURL: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -725,7 +761,7 @@ func TestNewServiceURL(t *testing.T) {
 		}
 		got, err := NewServiceURL(opts)
 		if (err != nil) != test.wantErrURL {
-			t.Fatalf("(%v, %v): NewServiceURL got err %v want error %v", test.opts, test.query, err, test.wantErrURL)
+			t.Fatalf("(%v, %v): NewServiceURL got err %v result URL %q, want error %v", test.opts, test.query, err, got, test.wantErrURL)
 		}
 		if got != test.want {
 			t.Errorf("(%v, %v): got %q want %q", test.opts, test.query, got, test.want)

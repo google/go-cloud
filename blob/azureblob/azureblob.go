@@ -290,9 +290,17 @@ func isAlphanumeric(s string) bool {
 }
 
 func verifyLocalhost(domain string) error {
+	// Ensure the domain is a bare host[:port].
+	u, err := url.Parse("http://" + domain)
+	if err != nil {
+		return fmt.Errorf("failed to parse local emulator domain %q as a URL: %w", domain, err)
+	}
+	if u.Host != domain || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("local emulator domain %q must be a bare host[:port]", domain)
+	}
 	host := domain
 
-	// SplitHostPort fails if there is no port, so only overwrite host if it succeeds
+	// SplitHostPort fails if there is no port, so only overwrite host if it succeeds.
 	h, port, err := net.SplitHostPort(domain)
 	if err == nil {
 		host = h
@@ -300,19 +308,19 @@ func verifyLocalhost(domain string) error {
 			return fmt.Errorf("local emulator domain %q port %q must be numeric", domain, port)
 		}
 	} else {
-		// Handle bracketed IPv6 without a port, e.g., "[::1]"
+		// Handle bracketed IPv6 without a port, e.g., "[::1]".
 		host = strings.Trim(host, "[]")
 	}
 
-	// Normalize case and trailing FQDN dot (e.g., "LOCALHOST.")
+	// Normalize case and trailing FQDN dot (e.g., "LOCALHOST.").
 	host = strings.ToLower(strings.TrimSuffix(host, "."))
 
-	// Check standard localhost domain names (RFC 6761)
+	// Check standard localhost domain names (RFC 6761).
 	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
 		return nil
 	}
 
-	// Check if the host is a loopback IP (127.0.0.0/8 for IPv4, ::1 for IPv6)
+	// Check if the host is a loopback IP (127.0.0.0/8 for IPv4, ::1 for IPv6).
 	ip, err := netip.ParseAddr(host)
 	if err != nil {
 		return fmt.Errorf("failed to netip.ParseAddr for local emulator domain %q host %q: %w", domain, host, err)
