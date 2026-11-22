@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/oteltest"
@@ -336,6 +337,104 @@ func TestIndependentBatchReturn(t *testing.T) {
 		return
 	}
 	m.Ack()
+}
+
+// prefetchDriverSub returns all its messages on the first ReceiveBatch call
+// and records what is acked and nacked. If late is set, that call returns only
+// once its context is canceled, like a receive still in flight at Shutdown.
+type prefetchDriverSub struct {
+	driver.Subscription
+	canNack bool
+	late    bool
+	msgs    []*driver.Message
+
+	mu    sync.Mutex
+	calls int
+	acks  []driver.AckID
+	nacks []driver.AckID
+}
+
+func (s *prefetchDriverSub) ReceiveBatch(ctx context.Context, _ int) ([]*driver.Message, error) {
+	s.mu.Lock()
+	s.calls++
+	first := s.calls == 1
+	s.mu.Unlock()
+	if !first || s.late {
+		<-ctx.Done()
+	}
+	if !first {
+		return nil, ctx.Err()
+	}
+	return s.msgs, nil
+}
+
+func (s *prefetchDriverSub) SendAcks(_ context.Context, ids []driver.AckID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.acks = append(s.acks, ids...)
+	return nil
+}
+
+func (s *prefetchDriverSub) SendNacks(_ context.Context, ids []driver.AckID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.nacks = append(s.nacks, ids...)
+	return nil
+}
+
+func (s *prefetchDriverSub) CanNack() bool        { return s.canNack }
+func (*prefetchDriverSub) IsRetryable(error) bool { return false }
+func (*prefetchDriverSub) Close() error           { return nil }
+
+// TestShutdownNacksPrefetched verifies that Shutdown nacks messages that were
+// prefetched but never returned by Receive, including ones from a ReceiveBatch
+// call still in flight at Shutdown.
+func TestShutdownNacksPrefetched(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		canNack, late bool
+		wantAcks      []driver.AckID
+		wantNacks     []driver.AckID
+	}{
+		{name: "queued", canNack: true, wantAcks: []driver.AckID{0}, wantNacks: []driver.AckID{1, 2, 3, 4}},
+		{name: "in flight", canNack: true, late: true, wantNacks: []driver.AckID{0, 1, 2, 3, 4}},
+		{name: "can't nack", wantAcks: []driver.AckID{0}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			ds := &prefetchDriverSub{canNack: test.canNack, late: test.late}
+			for i := 0; i < 5; i++ {
+				ds.msgs = append(ds.msgs, &driver.Message{AckID: i, Body: []byte("m")})
+			}
+			s := NewSubscription(ds, nil, nil)
+			if test.late {
+				rctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+				defer cancel()
+				if _, err := s.Receive(rctx); err != context.DeadlineExceeded {
+					t.Fatalf("Receive: got %v, want context.DeadlineExceeded", err)
+				}
+			} else {
+				m, err := s.Receive(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				m.Ack()
+			}
+			if err := s.Shutdown(ctx); err != nil {
+				t.Fatal(err)
+			}
+
+			ds.mu.Lock()
+			defer ds.mu.Unlock()
+			if diff := cmp.Diff(test.wantAcks, ds.acks, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("acks (-want +got):\n%s", diff)
+			}
+			sortIDs := cmpopts.SortSlices(func(a, b driver.AckID) bool { return a.(int) < b.(int) })
+			if diff := cmp.Diff(test.wantNacks, ds.nacks, sortIDs, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("nacks (-want +got):\n%s", diff)
+			}
+		})
+	}
 }
 
 func TestRetryTopic(t *testing.T) {
