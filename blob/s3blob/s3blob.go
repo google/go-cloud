@@ -668,6 +668,8 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	body := resp.Body
 	if length == 0 {
+		// The 1-byte body isn't used, so close it now.
+		_ = resp.Body.Close()
 		body = http.NoBody
 	}
 	return &reader{

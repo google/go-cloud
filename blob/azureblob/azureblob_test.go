@@ -28,7 +28,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -784,5 +786,71 @@ func TestOpenBucketFromURL(t *testing.T) {
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+// closeCountingTransport counts how many response bodies are closed.
+type closeCountingTransport struct {
+	base   http.RoundTripper
+	closed atomic.Int32
+}
+
+func (t *closeCountingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.base.RoundTrip(req)
+	if err == nil {
+		resp.Body = &countingBody{ReadCloser: resp.Body, closed: &t.closed}
+	}
+	return resp, err
+}
+
+type countingBody struct {
+	io.ReadCloser
+	closed *atomic.Int32
+}
+
+func (b *countingBody) Close() error {
+	b.closed.Add(1)
+	return b.ReadCloser.Close()
+}
+
+func TestZeroLengthReadClosesBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+		_, _ = io.WriteString(w, "hello world")
+	}))
+	defer srv.Close()
+
+	target, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rt := &closeCountingTransport{base: &rewriteTransport{base: http.DefaultTransport, target: target}}
+	client, err := container.NewClientWithNoCredential(
+		"https://myaccount.blob.core.windows.net/mycontainer",
+		&container.ClientOptions{
+			ClientOptions: azcore.ClientOptions{
+				Transport: &http.Client{Transport: rt},
+			},
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	b, err := OpenBucket(ctx, client, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = b.Close() }()
+
+	r, err := b.NewRangeReader(ctx, "mykey", 0, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if got := rt.closed.Load(); got != 1 {
+		t.Errorf("closed %d response bodies, want 1", got)
 	}
 }
