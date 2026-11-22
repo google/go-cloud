@@ -65,7 +65,7 @@
 	},
 	"gocloud.dev/blob/s3blob.ExampleOpenBucket": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/s3\"\n\t\"gocloud.dev/blob/s3blob\"\n)",
-		"code": "// Establish a AWS Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create a *blob.Bucket.\nclient := s3.NewFromConfig(cfg)\nbucket, err := s3blob.OpenBucket(ctx, client, \"my-bucket\", nil)\nif err != nil {\n\treturn err\n}\ndefer func() { _ = bucket.Close() }()"
+		"code": "// Establish a AWS Config.\n// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create a *blob.Bucket.\nclient := s3.NewFromConfig(cfg)\nbucket, err := s3blob.OpenBucket(ctx, client, \"my-bucket\", nil)\nif err != nil {\n\treturn err\n}\ndefer func() { _ = bucket.Close() }()"
 	},
 	"gocloud.dev/blob/s3blob.Example_openBucketFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/s3blob\"\n)",
@@ -181,15 +181,15 @@
 	},
 	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSNSTopic": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/sns\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
-		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create a *pubsub.Topic.\nconst topicARN = \"arn:aws:sns:us-east-2:123456789012:mytopic\"\nclient := sns.NewFromConfig(cfg)\ntopic := awssnssqs.OpenSNSTopic(ctx, client, topicARN, nil)\ndefer func() { _ = topic.Shutdown(ctx) }()"
+		"code": "// Establish a AWS V2 Config.\n// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create a *pubsub.Topic.\nconst topicARN = \"arn:aws:sns:us-east-2:123456789012:mytopic\"\nclient := sns.NewFromConfig(cfg)\ntopic := awssnssqs.OpenSNSTopic(ctx, client, topicARN, nil)\ndefer func() { _ = topic.Shutdown(ctx) }()"
 	},
 	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSQSTopic": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/sqs\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
-		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create a *pubsub.Topic.\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/myqueue\"\nclient := sqs.NewFromConfig(cfg)\ntopic := awssnssqs.OpenSQSTopic(ctx, client, queueURL, nil)\ndefer func() { _ = topic.Shutdown(ctx) }()"
+		"code": "// Establish a AWS V2 Config.\n// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create a *pubsub.Topic.\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/myqueue\"\nclient := sqs.NewFromConfig(cfg)\ntopic := awssnssqs.OpenSQSTopic(ctx, client, queueURL, nil)\ndefer func() { _ = topic.Shutdown(ctx) }()"
 	},
 	"gocloud.dev/pubsub/awssnssqs.ExampleOpenSubscription": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/sqs\"\n\t\"gocloud.dev/pubsub/awssnssqs\"\n)",
-		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Construct a *pubsub.Subscription.\n// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue\"\nclient := sqs.NewFromConfig(cfg)\nsubscription := awssnssqs.OpenSubscription(ctx, client, queueURL, nil)\ndefer func() { _ = subscription.Shutdown(ctx) }()"
+		"code": "// Establish a AWS V2 Config.\n// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Construct a *pubsub.Subscription.\n// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html\nconst queueURL = \"https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue\"\nclient := sqs.NewFromConfig(cfg)\nsubscription := awssnssqs.OpenSubscription(ctx, client, queueURL, nil)\ndefer func() { _ = subscription.Shutdown(ctx) }()"
 	},
 	"gocloud.dev/pubsub/awssnssqs.Example_openSNSTopicFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/pubsub\"\n\t_ \"gocloud.dev/pubsub/awssnssqs\"\n)",
@@ -353,7 +353,7 @@
 	},
 	"gocloud.dev/runtimevar/awsparamstore.ExampleOpenVariable": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/ssm\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awsparamstore\"\n)",
-		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\nctx := context.Background()\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\nclient := ssm.NewFromConfig(cfg)\nv, err := awsparamstore.OpenVariable(client, \"cfg-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer func() { _ = v.Close() }()"
+		"code": "// Establish a AWS V2 Config.\n// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.\nctx := context.Background()\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\nclient := ssm.NewFromConfig(cfg)\nv, err := awsparamstore.OpenVariable(client, \"cfg-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer func() { _ = v.Close() }()"
 	},
 	"gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/awsparamstore\"\n)",
@@ -361,7 +361,7 @@
 	},
 	"gocloud.dev/runtimevar/awssecretsmanager.ExampleOpenVariable": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"github.com/aws/aws-sdk-go-v2/service/secretsmanager\"\n\t\"gocloud.dev/runtimevar\"\n\t\"gocloud.dev/runtimevar/awssecretsmanager\"\n)",
-		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\nctx := context.Background()\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\n// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).\nclient := secretsmanager.NewFromConfig(cfg)\nv, err := awssecretsmanager.OpenVariable(client, \"secret-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer func() { _ = v.Close() }()"
+		"code": "// Establish a AWS V2 Config.\n// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.\nctx := context.Background()\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Construct a *runtimevar.Variable that watches the variable.\n// `secret-variable-name` must be a friendly name of the secret, NOT the Amazon Resource Name (ARN).\nclient := secretsmanager.NewFromConfig(cfg)\nv, err := awssecretsmanager.OpenVariable(client, \"secret-variable-name\", runtimevar.StringDecoder, nil)\nif err != nil {\n\treturn err\n}\ndefer func() { _ = v.Close() }()"
 	},
 	"gocloud.dev/runtimevar/awssecretsmanager.Example_openVariableFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/runtimevar\"\n\t_ \"gocloud.dev/runtimevar/awssecretsmanager\"\n)",
@@ -429,7 +429,7 @@
 	},
 	"gocloud.dev/secrets/awskms.ExampleOpenKeeper": {
 		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go-v2/config\"\n\t\"gocloud.dev/secrets/awskms\"\n)",
-		"code": "// Establish a AWS V2 Config.\n// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/ for more info.\nctx := context.Background()\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Get a client to use with the KMS API.\nclient, err := awskms.Dial(cfg)\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper := awskms.OpenKeeper(client, \"alias/test-secrets\", nil)\ndefer func() { _ = keeper.Close() }()"
+		"code": "// Establish a AWS V2 Config.\n// See https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html for more info.\nctx := context.Background()\ncfg, err := config.LoadDefaultConfig(ctx)\nif err != nil {\n\treturn err\n}\n\n// Get a client to use with the KMS API.\nclient, err := awskms.Dial(cfg)\nif err != nil {\n\treturn err\n}\n\n// Construct a *secrets.Keeper.\nkeeper := awskms.OpenKeeper(client, \"alias/test-secrets\", nil)\ndefer func() { _ = keeper.Close() }()"
 	},
 	"gocloud.dev/secrets/awskms.Example_openFromURL": {
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/secrets\"\n\t_ \"gocloud.dev/secrets/awskms\"\n)",

@@ -182,7 +182,7 @@ https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-par
 
 It will create an AWS Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
 
-[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
+[AWS V2 Config]: https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html
 
 {{< goexample
 "gocloud.dev/runtimevar/awsparamstore.Example_openVariableFromURL" >}}
@@ -207,7 +207,7 @@ https://aws.amazon.com/secrets-manager
 
 It will create an AWS Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
 
-[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
+[AWS V2 Config]: https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html
 
 {{< goexample
 "gocloud.dev/runtimevar/awssecretsmanager.Example_openVariableFromURL" >}}

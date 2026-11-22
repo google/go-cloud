@@ -197,7 +197,7 @@ application connects to the correct region.
 
 It will create an AWS Config based on the AWS SDK V2; see [AWS V2 Config][] to learn more.
 
-[AWS V2 Config]: https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/
+[AWS V2 Config]: https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html
 
 {{< goexample "gocloud.dev/secrets/awskms.Example_openFromURL" >}}
 
