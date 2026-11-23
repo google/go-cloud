@@ -27,11 +27,13 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	dyn "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	dyn2Types "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/googleapis/gax-go/v2"
 	"gocloud.dev/docstore"
 	"gocloud.dev/gcerrors"
 )
@@ -41,11 +43,19 @@ import (
 type fakeDB struct {
 	t       *testing.T
 	keys    []string // key attribute names
-	maxResp int      // if > 0, the most items a BatchGetItem call returns
+	maxResp int      // if > 0, the most items a BatchGetItem call returns; if < 0, it returns none
+	errAt   int      // if > 0, the number of the BatchGetItem call that fails
+	onCall  func(n int)
 
 	mu    sync.Mutex
 	items map[string]map[string]any // by fakeKey
-	calls [][]map[string]any        // keys of each BatchGetItem call
+	calls []fakeCall                // each BatchGetItem call
+}
+
+type fakeCall struct {
+	keys       []map[string]any
+	projection string
+	consistent bool
 }
 
 type attr = map[string]any
@@ -115,19 +125,17 @@ func (f *fakeDB) serve(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		responses := map[string][]any{}
 		unprocessed := map[string]any{}
+		var n int
 		for table, ka := range req.RequestItems {
-			f.calls = append(f.calls, ka.Keys)
+			f.calls = append(f.calls, fakeCall{ka.Keys, ka.ProjectionExpression, ka.ConsistentRead})
+			n = len(f.calls)
 			keys := ka.Keys
-			if f.maxResp > 0 && len(keys) > f.maxResp {
-				// Like DynamoDB, return the other keys with the same
-				// projection and consistency settings.
-				un := map[string]any{"Keys": keys[f.maxResp:], "ConsistentRead": ka.ConsistentRead}
-				if ka.ProjectionExpression != "" {
-					un["ProjectionExpression"] = ka.ProjectionExpression
-					un["ExpressionAttributeNames"] = ka.ExpressionAttributeNames
-				}
-				unprocessed[table] = un
-				keys = keys[:f.maxResp]
+			// Unlike DynamoDB, don't return the projection or consistency
+			// settings with the unprocessed keys, so that tests check that
+			// retries keep them anyway.
+			if limit := max(f.maxResp, 0); f.maxResp != 0 && len(keys) > limit {
+				unprocessed[table] = map[string]any{"Keys": keys[limit:]}
+				keys = keys[:limit]
 			}
 			for _, key := range keys {
 				if item, ok := f.items[f.fakeKey(key)]; ok {
@@ -137,7 +145,19 @@ func (f *fakeDB) serve(w http.ResponseWriter, r *http.Request) {
 			// DynamoDB returns items in no particular order.
 			slices.Reverse(responses[table])
 		}
+		errAt, onCall := f.errAt, f.onCall
 		f.mu.Unlock()
+		if onCall != nil {
+			onCall(n)
+		}
+		if n == errAt {
+			w.Header().Set("Content-Type", "application/x-amz-json-1.0")
+			w.WriteHeader(http.StatusBadRequest)
+			if _, err := fmt.Fprint(w, `{"__type":"com.amazonaws.dynamodb.v20120810#ResourceNotFoundException","message":"fake failure"}`); err != nil {
+				f.t.Errorf("writing error response: %v", err)
+			}
+			return
+		}
 		resp = map[string]any{"Responses": responses, "UnprocessedKeys": unprocessed}
 	default:
 		f.t.Errorf("unexpected operation %q", op)
@@ -150,7 +170,12 @@ func (f *fakeDB) serve(w http.ResponseWriter, r *http.Request) {
 
 func openFake(t *testing.T, f *fakeDB, pkey, skey string) *docstore.Collection {
 	t.Helper()
-	coll, err := OpenCollection(f.client(), "t", pkey, skey, nil)
+	return openFakeOpts(t, f, pkey, skey, nil)
+}
+
+func openFakeOpts(t *testing.T, f *fakeDB, pkey, skey string, opts *Options) *docstore.Collection {
+	t.Helper()
+	coll, err := OpenCollection(f.client(), "t", pkey, skey, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -439,8 +464,8 @@ func TestBatchGetBadKeys(t *testing.T) {
 			f.mu.Lock()
 			defer f.mu.Unlock()
 			var sent []string
-			for _, keys := range f.calls {
-				for _, k := range keys {
+			for _, call := range f.calls {
+				for _, k := range call.keys {
 					sent = append(sent, f.fakeKey(k))
 				}
 			}
@@ -477,5 +502,220 @@ func TestBatchGetDuplicateKeys(t *testing.T) {
 	}
 	if d1["V"] != "v1" || d2["V"] != "v2" {
 		t.Errorf("got %v and %v, want V v1 and v2", d1, d2)
+	}
+}
+
+func shortBackoff(t *testing.T) {
+	old := batchGetBackoff
+	batchGetBackoff = gax.Backoff{Initial: time.Millisecond, Max: time.Millisecond}
+	t.Cleanup(func() { batchGetBackoff = old })
+}
+
+// putN adds items with id 1 to n. (Docstore treats a zero key as missing.)
+func (f *fakeDB) putN(n int) {
+	for i := 1; i <= n; i++ {
+		f.put(map[string]any{"id": num(fmt.Sprint(i)), "V": str(fmt.Sprintf("v%d", i))})
+	}
+}
+
+// getN gets items with id 1 to n. The document and error for id i are at i-1.
+func getN(ctx context.Context, coll *docstore.Collection, n int, fps ...docstore.FieldPath) ([]map[string]any, []error) {
+	docs := make([]map[string]any, n)
+	actions := coll.Actions()
+	for i := range docs {
+		docs[i] = map[string]any{"id": i + 1}
+		actions.Get(docs[i], fps...)
+	}
+	errs := make([]error, n)
+	var alerr docstore.ActionListError
+	if err := actions.Do(ctx); errors.As(err, &alerr) {
+		for _, e := range alerr {
+			errs[e.Index] = e.Err
+		}
+	} else if err != nil {
+		for i := range errs {
+			errs[i] = err
+		}
+	}
+	return docs, errs
+}
+
+// When DynamoDB returns only some of the items, the rest are asked for again,
+// with the same projection and consistency settings.
+func TestBatchGetUnprocessedKeys(t *testing.T) {
+	ctx := context.Background()
+	shortBackoff(t)
+	f := newFakeDB(t, "id")
+	f.putN(95) // ids 96 to 100 don't exist
+	f.maxResp = 30
+	coll := openFakeOpts(t, f, "id", "", &Options{ConsistentRead: true})
+
+	docs, errs := getN(ctx, coll, 100, docstore.FieldPath("V"))
+	for i, d := range docs {
+		if i < 95 {
+			if errs[i] != nil || d["V"] != fmt.Sprintf("v%d", i+1) {
+				t.Errorf("Get %d: got %v, error %v; want V v%d", i, d, errs[i], i+1)
+			}
+		} else if gcerrors.Code(errs[i]) != gcerrors.NotFound {
+			t.Errorf("Get %d: got error %v, want NotFound", i, errs[i])
+		}
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.calls) != 4 {
+		t.Errorf("got %d BatchGetItem calls, want 4", len(f.calls))
+	}
+	want := f.calls[0]
+	for i, call := range f.calls {
+		if call.projection == "" || call.projection != want.projection || !call.consistent {
+			t.Errorf("call %d: got projection %q, consistent %t; want %q, true", i, call.projection, call.consistent, want.projection)
+		}
+	}
+}
+
+func TestBatchGetUnprocessedKeysBeforeDo(t *testing.T) {
+	ctx := context.Background()
+	shortBackoff(t)
+	f := newFakeDB(t, "id")
+	f.putN(10)
+	f.maxResp = 3
+	coll := openFake(t, f, "id", "")
+
+	var n int
+	actions := coll.Actions().BeforeDo(func(asFunc func(any) bool) error {
+		var in *dyn.BatchGetItemInput
+		if asFunc(&in) {
+			n++
+			ka := in.RequestItems["t"]
+			ka.ConsistentRead = aws.Bool(true)
+			in.RequestItems["t"] = ka
+		}
+		return nil
+	})
+	docs := make([]map[string]any, 10)
+	for i := range docs {
+		docs[i] = map[string]any{"id": i + 1}
+		actions.Get(docs[i])
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Errorf("BeforeDo called %d times, want 1", n)
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.calls) != 4 {
+		t.Errorf("got %d BatchGetItem calls, want 4", len(f.calls))
+	}
+	for i, call := range f.calls {
+		if !call.consistent {
+			t.Errorf("call %d: lost the change made by BeforeDo", i)
+		}
+	}
+}
+
+// If a retry fails, Gets that already have their item keep it, and the others
+// get the error.
+func TestBatchGetUnprocessedKeysError(t *testing.T) {
+	ctx := context.Background()
+	shortBackoff(t)
+	f := newFakeDB(t, "id")
+	f.putN(10)
+	f.maxResp = 4
+	f.errAt = 2
+	coll := openFake(t, f, "id", "")
+
+	docs, errs := getN(ctx, coll, 10)
+	for i, d := range docs {
+		if i < 4 {
+			if errs[i] != nil || d["V"] != fmt.Sprintf("v%d", i+1) {
+				t.Errorf("Get %d: got %v, error %v; want V v%d", i, d, errs[i], i+1)
+			}
+		} else if errs[i] == nil || !strings.Contains(errs[i].Error(), "fake failure") {
+			t.Errorf("Get %d: got error %v, want fake failure", i, errs[i])
+		}
+	}
+	if got := f.numCalls(); got != 2 {
+		t.Errorf("got %d BatchGetItem calls, want 2", got)
+	}
+}
+
+// Retries stop when the context is done. Here it is canceled during the second
+// call, so only the items from the first call are returned.
+func TestBatchGetUnprocessedKeysCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	shortBackoff(t)
+	f := newFakeDB(t, "id")
+	f.putN(10)
+	f.maxResp = 3
+	f.onCall = func(n int) {
+		if n == 2 {
+			cancel()
+		}
+	}
+	coll := openFake(t, f, "id", "")
+
+	_, errs := getN(ctx, coll, 10)
+	for i, err := range errs {
+		if i < 3 {
+			if err != nil {
+				t.Errorf("Get %d: got error %v, want nil", i, err)
+			}
+		} else if gcerrors.Code(err) != gcerrors.Canceled {
+			t.Errorf("Get %d: got error %v, want Canceled", i, err)
+		}
+	}
+	if got := f.numCalls(); got != 2 {
+		t.Errorf("got %d BatchGetItem calls, want 2", got)
+	}
+}
+
+// If DynamoDB keeps processing none of the keys, batchGet gives up.
+func TestBatchGetUnprocessedKeysNoProgress(t *testing.T) {
+	ctx := context.Background()
+	shortBackoff(t)
+	f := newFakeDB(t, "id")
+	f.putN(10)
+	f.maxResp = -1
+	coll := openFake(t, f, "id", "")
+
+	_, errs := getN(ctx, coll, 10)
+	for i, err := range errs {
+		if gcerrors.Code(err) != gcerrors.ResourceExhausted {
+			t.Errorf("Get %d: got error %v, want ResourceExhausted", i, err)
+		}
+	}
+	if got := f.numCalls(); got != maxBatchGetNoProgress {
+		t.Errorf("got %d BatchGetItem calls, want %d", got, maxBatchGetNoProgress)
+	}
+}
+
+// Calls that process no keys don't count against the limit if a later call
+// processes some.
+func TestBatchGetUnprocessedKeysSlowProgress(t *testing.T) {
+	ctx := context.Background()
+	shortBackoff(t)
+	f := newFakeDB(t, "id")
+	f.putN(3)
+	f.maxResp = -1
+	f.onCall = func(n int) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		// Return one item on every fourth call.
+		if n%4 == 3 {
+			f.maxResp = 1
+		} else {
+			f.maxResp = -1
+		}
+	}
+	coll := openFake(t, f, "id", "")
+
+	docs, errs := getN(ctx, coll, 3)
+	for i, d := range docs {
+		if errs[i] != nil || d["V"] != fmt.Sprintf("v%d", i+1) {
+			t.Errorf("Get %d: got %v, error %v; want V v%d", i, d, errs[i], i+1)
+		}
 	}
 }

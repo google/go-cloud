@@ -44,6 +44,7 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
@@ -51,6 +52,7 @@ import (
 	dyn2Types "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/smithy-go"
 	"github.com/google/wire"
+	"github.com/googleapis/gax-go/v2"
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/gcerrors"
@@ -201,6 +203,14 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs
 	t.Wait()
 }
 
+// maxBatchGetNoProgress is how many BatchGetItem calls in a row may process
+// none of their keys before batchGet gives up on them.
+const maxBatchGetNoProgress = 5
+
+// batchGetBackoff is the backoff between BatchGetItem calls for unprocessed
+// keys. Tests make it shorter.
+var batchGetBackoff = gax.Backoff{Initial: 100 * time.Millisecond, Max: 5 * time.Second}
+
 func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions, start, end int) {
 	keys := make([]map[string]dyn2Types.AttributeValue, 0, end-start+1)
 	// byKey maps the key of each Get that is sent to its index in gets. Keys
@@ -274,23 +284,59 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 			return
 		}
 	}
-	out, err := c.db.BatchGetItem(ctx, in)
-	if err != nil {
-		setErr(err)
-		return
-	}
 	found := make([]bool, end-start+1)
-	for _, item := range out.Responses[c.table] {
-		ks, err := c.keyString(item)
+	// setPendingErr sets err on the Gets that don't have a result yet.
+	setPendingErr := func(err error) {
+		for _, i := range byKey {
+			if !found[i-start] {
+				errs[gets[i].Index] = err
+			}
+		}
+	}
+	bo := batchGetBackoff
+	noProgress := 0
+	for {
+		sent := len(in.RequestItems[c.table].Keys)
+		out, err := c.db.BatchGetItem(ctx, in)
 		if err != nil {
-			continue
+			setPendingErr(err)
+			return
 		}
-		i, ok := byKey[ks]
-		if !ok {
-			continue
+		for _, item := range out.Responses[c.table] {
+			ks, err := c.keyString(item)
+			if err != nil {
+				continue
+			}
+			i, ok := byKey[ks]
+			if !ok {
+				continue
+			}
+			errs[gets[i].Index] = decodeDoc(&dyn2Types.AttributeValueMemberM{Value: item}, gets[i].Doc)
+			found[i-start] = true
 		}
-		errs[gets[i].Index] = decodeDoc(&dyn2Types.AttributeValueMemberM{Value: item}, gets[i].Doc)
-		found[i-start] = true
+		// DynamoDB can return only some of the items, for example when the
+		// response would be over 16 MB. Ask again for the rest, as the AWS
+		// documentation recommends.
+		unprocessed := out.UnprocessedKeys[c.table].Keys
+		if len(unprocessed) == 0 {
+			break
+		}
+		// DynamoDB returns an error rather than process none of the keys,
+		// but don't loop forever if it doesn't.
+		if len(unprocessed) < sent {
+			noProgress = 0
+		} else if noProgress++; noProgress == maxBatchGetNoProgress {
+			setPendingErr(gcerr.Newf(gcerr.ResourceExhausted, nil, "BatchGetItem processed none of %d keys in %d attempts", sent, noProgress))
+			return
+		}
+		if err := gax.Sleep(ctx, bo.Pause()); err != nil {
+			setPendingErr(err)
+			return
+		}
+		// Keep the projection, consistency and any changes made by BeforeDo.
+		next := in.RequestItems[c.table]
+		next.Keys = unprocessed
+		in.RequestItems = map[string]dyn2Types.KeysAndAttributes{c.table: next}
 	}
 	for _, i := range byKey {
 		if !found[i-start] {
