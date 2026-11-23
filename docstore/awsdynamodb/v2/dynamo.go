@@ -324,7 +324,10 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		// DynamoDB returns an error rather than process none of the keys,
 		// but don't loop forever if it doesn't.
 		if len(unprocessed) < sent {
+			// Some keys were read, so start the backoff again. It only grows
+			// while DynamoDB reads none of the keys.
 			noProgress = 0
+			bo = batchGetBackoff
 		} else if noProgress++; noProgress == maxBatchGetNoProgress {
 			setPendingErr(gcerr.Newf(gcerr.ResourceExhausted, nil, "BatchGetItem processed none of %d keys in %d attempts", sent, noProgress))
 			return
@@ -333,7 +336,8 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 			setPendingErr(err)
 			return
 		}
-		// Keep the projection, consistency and any changes made by BeforeDo.
+		// Send only this table's unprocessed keys, keeping the projection,
+		// consistency and any BeforeDo changes to this table's request.
 		next := in.RequestItems[c.table]
 		next.Keys = unprocessed
 		in.RequestItems = map[string]dyn2Types.KeysAndAttributes{c.table: next}
