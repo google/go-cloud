@@ -1,0 +1,246 @@
+{
+  "Initial": "AQAAAA7ilYw3He77Af9M",
+  "Version": "0.2",
+  "Converter": {
+    "ScrubBody": null,
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Obs-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Obs-Date$"
+    ],
+    "RemoveParams": null
+  },
+  "Entries": [
+    {
+      "ID": "f1edc76092dc6c65",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ],
+          "X-Obs-Meta-Key_a": [
+            "value-a"
+          ],
+          "X-Obs-Meta-Key_b": [
+            "value-b"
+          ],
+          "X-Obs-Meta-Key_c": [
+            "vAlUe-c"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "1a51bebd5c9f1879",
+      "Request": {
+        "Method": "HEAD",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/blob-for-metadata",
+        "Header": {
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Last-Modified": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "X-Obs-Meta-Key_a": [
+            "value-a"
+          ],
+          "X-Obs-Meta-Key_b": [
+            "value-b"
+          ],
+          "X-Obs-Meta-Key_c": [
+            "vAlUe-c"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "4c0bc8c960da01e9",
+      "Request": {
+        "Method": "HEAD",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/blob-for-metadata",
+        "Header": {
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Last-Modified": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "X-Obs-Meta-Key_a": [
+            "value-a"
+          ],
+          "X-Obs-Meta-Key_b": [
+            "value-b"
+          ],
+          "X-Obs-Meta-Key_c": [
+            "vAlUe-c"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "23d26299cd357bb8",
+      "Request": {
+        "Method": "DELETE",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 204,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ]
+        },
+        "Body": ""
+      }
+    }
+  ]
+}

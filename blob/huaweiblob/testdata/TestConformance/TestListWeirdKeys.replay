@@ -1,0 +1,949 @@
+{
+  "Initial": "AQAAAA7ilYw3GdWOgP9M",
+  "Version": "0.2",
+  "Converter": {
+    "ScrubBody": null,
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Obs-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Obs-Date$"
+    ],
+    "RemoveParams": null
+  },
+  "Entries": [
+    {
+      "ID": "e718b189bfc6fb0c",
+      "Request": {
+        "Method": "GET",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/?list-type=2\u0026max-keys=1000\u0026prefix=list-weirdkeys-",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "194"
+          ],
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPExpc3RCdWNrZXRSZXN1bHQ+PE5hbWU+Z28tY2xvdWQtdGVzdGluZy0yPC9OYW1lPjxQcmVmaXg+bGlzdC13ZWlyZGtleXMtPC9QcmVmaXg+PE1heEtleXM+MTAwMDwvTWF4S2V5cz48SXNUcnVuY2F0ZWQ+ZmFsc2U8L0lzVHJ1bmNhdGVkPjwvTGlzdEJ1Y2tldFJlc3VsdD4="
+      }
+    },
+    {
+      "ID": "d431eb4b97634e8a",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-@",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "8e3db7ace2b554c5",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-%5B%5C%5D%5E_",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "5a87c19a1d4c98ed",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-foo/bar/baz",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "5e47b0c70415f752",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-__0x10____0x11____0x12____0x13____0x14____0x15____0x16____0x17____0x18____0x19____0x1a____0x1b____0x1c____0x1d____0x1e____0x1f__",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "cec5b782bb5085de",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-%20%21%22%23$%25\u0026%27%28%29%2A+,-./",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "4f09af28eb752149",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-:;%3C=%3E%3F",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "388cd286011931a9",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-%60",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "3312e8da6d652616",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-foo%5Cbar%5Cbaz",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "337d2440f87f8bdd",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "2632cdc369c5eab5",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-foo%20bar%20baz",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "195e4d7633d4ccd8",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-__0x0____0x1____0x2____0x3____0x4____0x5____0x6____0x7____0x8____0x9____0xa____0xb____0xc____0xd____0xe____0xf__",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "905d9a239e8af92e",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-foo//bar///baz",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "a55929f430397b13",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "84abc55793872aaa",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-foo%22bar%22baz",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "537438f54bc433ea",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-%E2%98%BA%E2%98%BA%E2%98%BA",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "5fc673a634fbf44a",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-%7B%7C%7D~%7F",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "f7bef2a02cc27368",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-..__0x2f__foo/..__0x2f__bar/..__0x2f__..__0x2f__baz..__0x2f__",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "2fb829d8883efe52",
+      "Request": {
+        "Method": "PUT",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/list-weirdkeys-12345",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "46ae488a1f3f0bf5",
+      "Request": {
+        "Method": "GET",
+        "URL": "http://127.0.0.1:28080/go-cloud-testing-2/?list-type=2\u0026max-keys=1000\u0026prefix=list-weirdkeys-",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Obs-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Obs-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": [
+          ""
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Type": [
+            "application/xml"
+          ],
+          "Date": [
+            "Mon, 23 Nov 2026 01:21:59 GMT"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPExpc3RCdWNrZXRSZXN1bHQ+PE5hbWU+Z28tY2xvdWQtdGVzdGluZy0yPC9OYW1lPjxQcmVmaXg+bGlzdC13ZWlyZGtleXMtPC9QcmVmaXg+PE1heEtleXM+MTAwMDwvTWF4S2V5cz48SXNUcnVuY2F0ZWQ+ZmFsc2U8L0lzVHJ1bmNhdGVkPjxLZXlDb3VudD4xODwvS2V5Q291bnQ+PENvbnRlbnRzPjxLZXk+bGlzdC13ZWlyZGtleXMtICEmIzM0OyMkJSZhbXA7JiMzOTsoKSorLC0uLzwvS2V5PjxMYXN0TW9kaWZpZWQ+MjAyNi0xMS0yM1QwMToyMTo1OS40MzRaPC9MYXN0TW9kaWZpZWQ+PEVUYWc+JiMzNDs1ZDQxNDAyYWJjNGIyYTc2Yjk3MTlkOTExMDE3YzU5MiYjMzQ7PC9FVGFnPjxTaXplPjU8L1NpemU+PFN0b3JhZ2VDbGFzcz5TVEFOREFSRDwvU3RvcmFnZUNsYXNzPjxPd25lcj48SUQ+bW9jay1vd25lci1pZDwvSUQ+PERpc3BsYXlOYW1lPm1vY2stb3duZXI8L0Rpc3BsYXlOYW1lPjwvT3duZXI+PC9Db250ZW50cz48Q29udGVudHM+PEtleT5saXN0LXdlaXJka2V5cy0uLlxmb29cLi5cYmFyXC4uXC4uXGJhei4uXDwvS2V5PjxMYXN0TW9kaWZpZWQ+MjAyNi0xMS0yM1QwMToyMTo1OS40MzVaPC9MYXN0TW9kaWZpZWQ+PEVUYWc+JiMzNDs1ZDQxNDAyYWJjNGIyYTc2Yjk3MTlkOTExMDE3YzU5MiYjMzQ7PC9FVGFnPjxTaXplPjU8L1NpemU+PFN0b3JhZ2VDbGFzcz5TVEFOREFSRDwvU3RvcmFnZUNsYXNzPjxPd25lcj48SUQ+bW9jay1vd25lci1pZDwvSUQ+PERpc3BsYXlOYW1lPm1vY2stb3duZXI8L0Rpc3BsYXlOYW1lPjwvT3duZXI+PC9Db250ZW50cz48Q29udGVudHM+PEtleT5saXN0LXdlaXJka2V5cy0uLlxmb29cXGJhclxcXGJhejwvS2V5PjxMYXN0TW9kaWZpZWQ+MjAyNi0xMS0yM1QwMToyMTo1OS40MzRaPC9MYXN0TW9kaWZpZWQ+PEVUYWc+JiMzNDs1ZDQxNDAyYWJjNGIyYTc2Yjk3MTlkOTExMDE3YzU5MiYjMzQ7PC9FVGFnPjxTaXplPjU8L1NpemU+PFN0b3JhZ2VDbGFzcz5TVEFOREFSRDwvU3RvcmFnZUNsYXNzPjxPd25lcj48SUQ+bW9jay1vd25lci1pZDwvSUQ+PERpc3BsYXlOYW1lPm1vY2stb3duZXI8L0Rpc3BsYXlOYW1lPjwvT3duZXI+PC9Db250ZW50cz48Q29udGVudHM+PEtleT5saXN0LXdlaXJka2V5cy0uLl9fMHgyZl9fZm9vLy4uX18weDJmX19iYXIvLi5fXzB4MmZfXy4uX18weDJmX19iYXouLl9fMHgyZl9fPC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNVo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLTEyMzQ1PC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNVo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLTo7Jmx0Oz0mZ3Q7PzwvS2V5PjxMYXN0TW9kaWZpZWQ+MjAyNi0xMS0yM1QwMToyMTo1OS40MzRaPC9MYXN0TW9kaWZpZWQ+PEVUYWc+JiMzNDs1ZDQxNDAyYWJjNGIyYTc2Yjk3MTlkOTExMDE3YzU5MiYjMzQ7PC9FVGFnPjxTaXplPjU8L1NpemU+PFN0b3JhZ2VDbGFzcz5TVEFOREFSRDwvU3RvcmFnZUNsYXNzPjxPd25lcj48SUQ+bW9jay1vd25lci1pZDwvSUQ+PERpc3BsYXlOYW1lPm1vY2stb3duZXI8L0Rpc3BsYXlOYW1lPjwvT3duZXI+PC9Db250ZW50cz48Q29udGVudHM+PEtleT5saXN0LXdlaXJka2V5cy1APC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNFo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLVtcXV5fPC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNFo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLV9fMHgwX19fXzB4MV9fX18weDJfX19fMHgzX19fXzB4NF9fX18weDVfX19fMHg2X19fXzB4N19fX18weDhfX19fMHg5X19fXzB4YV9fX18weGJfX19fMHhjX19fXzB4ZF9fX18weGVfX19fMHhmX188L0tleT48TGFzdE1vZGlmaWVkPjIwMjYtMTEtMjNUMDE6MjE6NTkuNDM1WjwvTGFzdE1vZGlmaWVkPjxFVGFnPiYjMzQ7NWQ0MTQwMmFiYzRiMmE3NmI5NzE5ZDkxMTAxN2M1OTImIzM0OzwvRVRhZz48U2l6ZT41PC9TaXplPjxTdG9yYWdlQ2xhc3M+U1RBTkRBUkQ8L1N0b3JhZ2VDbGFzcz48T3duZXI+PElEPm1vY2stb3duZXItaWQ8L0lEPjxEaXNwbGF5TmFtZT5tb2NrLW93bmVyPC9EaXNwbGF5TmFtZT48L093bmVyPjwvQ29udGVudHM+PENvbnRlbnRzPjxLZXk+bGlzdC13ZWlyZGtleXMtX18weDEwX19fXzB4MTFfX19fMHgxMl9fX18weDEzX19fXzB4MTRfX19fMHgxNV9fX18weDE2X19fXzB4MTdfX19fMHgxOF9fX18weDE5X19fXzB4MWFfX19fMHgxYl9fX18weDFjX19fXzB4MWRfX19fMHgxZV9fX18weDFmX188L0tleT48TGFzdE1vZGlmaWVkPjIwMjYtMTEtMjNUMDE6MjE6NTkuNDM0WjwvTGFzdE1vZGlmaWVkPjxFVGFnPiYjMzQ7NWQ0MTQwMmFiYzRiMmE3NmI5NzE5ZDkxMTAxN2M1OTImIzM0OzwvRVRhZz48U2l6ZT41PC9TaXplPjxTdG9yYWdlQ2xhc3M+U1RBTkRBUkQ8L1N0b3JhZ2VDbGFzcz48T3duZXI+PElEPm1vY2stb3duZXItaWQ8L0lEPjxEaXNwbGF5TmFtZT5tb2NrLW93bmVyPC9EaXNwbGF5TmFtZT48L093bmVyPjwvQ29udGVudHM+PENvbnRlbnRzPjxLZXk+bGlzdC13ZWlyZGtleXMtYDwvS2V5PjxMYXN0TW9kaWZpZWQ+MjAyNi0xMS0yM1QwMToyMTo1OS40MzRaPC9MYXN0TW9kaWZpZWQ+PEVUYWc+JiMzNDs1ZDQxNDAyYWJjNGIyYTc2Yjk3MTlkOTExMDE3YzU5MiYjMzQ7PC9FVGFnPjxTaXplPjU8L1NpemU+PFN0b3JhZ2VDbGFzcz5TVEFOREFSRDwvU3RvcmFnZUNsYXNzPjxPd25lcj48SUQ+bW9jay1vd25lci1pZDwvSUQ+PERpc3BsYXlOYW1lPm1vY2stb3duZXI8L0Rpc3BsYXlOYW1lPjwvT3duZXI+PC9Db250ZW50cz48Q29udGVudHM+PEtleT5saXN0LXdlaXJka2V5cy1mb28gYmFyIGJhejwvS2V5PjxMYXN0TW9kaWZpZWQ+MjAyNi0xMS0yM1QwMToyMTo1OS40MzVaPC9MYXN0TW9kaWZpZWQ+PEVUYWc+JiMzNDs1ZDQxNDAyYWJjNGIyYTc2Yjk3MTlkOTExMDE3YzU5MiYjMzQ7PC9FVGFnPjxTaXplPjU8L1NpemU+PFN0b3JhZ2VDbGFzcz5TVEFOREFSRDwvU3RvcmFnZUNsYXNzPjxPd25lcj48SUQ+bW9jay1vd25lci1pZDwvSUQ+PERpc3BsYXlOYW1lPm1vY2stb3duZXI8L0Rpc3BsYXlOYW1lPjwvT3duZXI+PC9Db250ZW50cz48Q29udGVudHM+PEtleT5saXN0LXdlaXJka2V5cy1mb28mIzM0O2JhciYjMzQ7YmF6PC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNVo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLWZvby8vYmFyLy8vYmF6PC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNVo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLWZvby9iYXIvYmF6PC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNFo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLWZvb1xiYXJcYmF6PC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNFo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLXt8fX5/PC9LZXk+PExhc3RNb2RpZmllZD4yMDI2LTExLTIzVDAxOjIxOjU5LjQzNVo8L0xhc3RNb2RpZmllZD48RVRhZz4mIzM0OzVkNDE0MDJhYmM0YjJhNzZiOTcxOWQ5MTEwMTdjNTkyJiMzNDs8L0VUYWc+PFNpemU+NTwvU2l6ZT48U3RvcmFnZUNsYXNzPlNUQU5EQVJEPC9TdG9yYWdlQ2xhc3M+PE93bmVyPjxJRD5tb2NrLW93bmVyLWlkPC9JRD48RGlzcGxheU5hbWU+bW9jay1vd25lcjwvRGlzcGxheU5hbWU+PC9Pd25lcj48L0NvbnRlbnRzPjxDb250ZW50cz48S2V5Pmxpc3Qtd2VpcmRrZXlzLeKYuuKYuuKYujwvS2V5PjxMYXN0TW9kaWZpZWQ+MjAyNi0xMS0yM1QwMToyMTo1OS40MzVaPC9MYXN0TW9kaWZpZWQ+PEVUYWc+JiMzNDs1ZDQxNDAyYWJjNGIyYTc2Yjk3MTlkOTExMDE3YzU5MiYjMzQ7PC9FVGFnPjxTaXplPjU8L1NpemU+PFN0b3JhZ2VDbGFzcz5TVEFOREFSRDwvU3RvcmFnZUNsYXNzPjxPd25lcj48SUQ+bW9jay1vd25lci1pZDwvSUQ+PERpc3BsYXlOYW1lPm1vY2stb3duZXI8L0Rpc3BsYXlOYW1lPjwvT3duZXI+PC9Db250ZW50cz48L0xpc3RCdWNrZXRSZXN1bHQ+"
+      }
+    }
+  ]
+}

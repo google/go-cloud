@@ -290,6 +290,29 @@ an Azure Service Client before you can open a container.
 [Azure Storage Block Blobs]: https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs
 [`azureblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket
 
+### Huawei Cloud OBS {#huawei-obs}
+
+[Huawei Cloud Object Storage Service][] (OBS) URLs in the Go CDK use the `obs`
+scheme. You should specify the `endpoint` and `region` query parameters to
+ensure your application connects to the correct endpoint and region.
+
+Full details about acceptable URLs can be found under the API reference for
+[`huaweiblob.URLOpener`][].
+
+{{< goexample "gocloud.dev/blob/huaweiblob.Example_openBucketFromURL" >}}
+
+[Huawei Cloud Object Storage Service]: https://www.huaweicloud.com/intl/en-us/product/obs.html
+[`huaweiblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/huaweiblob#URLOpener
+
+#### Huawei Cloud OBS Constructor {#huawei-obs-ctor}
+
+The [`huaweiblob.OpenBucket`][] constructor opens an OBS bucket. You must
+provide the endpoint, bucket name, and access key credentials:
+
+{{< goexample "gocloud.dev/blob/huaweiblob.ExampleOpenBucket" >}}
+
+[`huaweiblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/huaweiblob#OpenBucket
+
 ### Local Storage {#local}
 
 The Go CDK provides blob drivers for storing data in memory and on the local

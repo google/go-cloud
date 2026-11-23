@@ -59,6 +59,14 @@
 		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/gcsblob\"\n)",
 		"code": "// blob.OpenBucket creates a *blob.Bucket from a URL.\n// This URL will open the bucket \"my-bucket\" using default credentials.\nbucket, err := blob.OpenBucket(ctx, \"gs://my-bucket\")\nif err != nil {\n\treturn err\n}\ndefer func() { _ = bucket.Close() }()"
 	},
+	"gocloud.dev/blob/huaweiblob.ExampleOpenBucket": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/blob/huaweiblob\"\n)",
+		"code": "ctx := context.Background()\n\n// Create an *http.Client, using credentials from the environment or\n// from your application's configuration, then open the bucket.\n//   client, err := obs.New(...)\n//   ...\nbucket, err := huaweiblob.OpenBucket(ctx, \u0026huaweiblob.Options{\n\tEndpoint:    \"https://obs.cn-north-4.myhuaweicloud.com\",\n\tBucketName:  \"my-bucket\",\n\tAccessKeyID: \"your-access-key\",\n\tSecretKey:   \"your-secret-key\",\n\tRegion:      \"cn-north-4\",\n})\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()\n\n// Now we can use the bucket, e.g., to read or write an object.\ndata, err := bucket.ReadAll(ctx, \"my-key\")\nif err != nil {\n\treturn err\n}\nfmt.Println(string(data))"
+	},
+	"gocloud.dev/blob/huaweiblob.Example_openBucketFromURL": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "ctx := context.Background()\n\n// blob.OpenBucket creates a *blob.Bucket from a URL.\n// Use the URL Query parameters to set the required options:\n//   - endpoint (repeatable), access_key, secret_key, region.\nbucket, err := blob.OpenBucket(ctx, \"obs://my-bucket?endpoint=https%3A%2F%2Fobs.cn-north-4.myhuaweicloud.com\u0026access_key=your-access-key\u0026secret_key=your-secret-key\u0026region=cn-north-4\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()\n\n// Now we can use the bucket, e.g., to read or write an object.\ndata, err := bucket.ReadAll(ctx, \"my-key\")\nif err != nil {\n\treturn err\n}\nfmt.Println(string(data))"
+	},
 	"gocloud.dev/blob/memblob.ExampleOpenBucket": {
 		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/blob/memblob\"\n)",
 		"code": "// Create an in-memory bucket.\nbucket := memblob.OpenBucket(nil)\ndefer func() { _ = bucket.Close() }()\n\n// Now we can use bucket to read or write files to the bucket.\nerr := bucket.WriteAll(ctx, \"my-key\", []byte(\"hello world\"), nil)\nif err != nil {\n\treturn err\n}\ndata, err := bucket.ReadAll(ctx, \"my-key\")\nif err != nil {\n\treturn err\n}\nfmt.Println(string(data))\n\n// Output:\n// hello world"

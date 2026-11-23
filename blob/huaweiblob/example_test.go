@@ -24,9 +24,7 @@ import (
 )
 
 func ExampleOpenBucket() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments
-	// like these are ignored by the go command, but are used by the
-	// documentation generator.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	ctx := context.Background()
 
@@ -55,9 +53,7 @@ func ExampleOpenBucket() {
 }
 
 func Example_openBucketFromURL() {
-	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments
-	// like these are ignored by the go command, but are used by the
-	// documentation generator.
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
 
 	ctx := context.Background()
 

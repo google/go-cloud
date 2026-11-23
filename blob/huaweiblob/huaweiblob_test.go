@@ -37,11 +37,11 @@ import (
 const (
 	bucketName = "go-cloud-testing-2"
 	region     = "cn-north-4"
-	// endpoint is used without an "http" prefix: the driver will use
-	// virtual-hosted style with HTTPS, e.g.
-	// https://<bucket>.<endpoint>/<path>. This keeps the recorded and
-	// replayed URLs identical.
-	endpoint = "obs.cn-north-4.myhuaweicloud.com"
+	// endpoint uses an "http" prefix so the driver sends path-style
+	// requests (http://<endpoint>/<bucket>/<key>) to the local OBS mock.
+	// This keeps the recorded and replayed URLs identical and allows
+	// offline replay without network access or real credentials.
+	endpoint = "http://127.0.0.1:28080"
 )
 
 type harness struct {

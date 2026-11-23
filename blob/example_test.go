@@ -29,6 +29,7 @@ import (
 	"gocloud.dev/blob/fileblob"
 
 	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/huaweiblob"
 	_ "gocloud.dev/blob/s3blob"
 )
 

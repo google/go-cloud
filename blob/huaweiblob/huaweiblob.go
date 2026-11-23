@@ -1,4 +1,4 @@
-// Copyright 2018-2019 The Go Cloud Development Kit Authors
+// Copyright 2026 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -502,11 +502,11 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 // listBucketResult mirrors the S3-compatible ListObjects V2 response XML that
 // OBS returns for GET /?list-type=2.
 type listBucketResult struct {
-	XMLName                xml.Name           `xml:"ListBucketResult"`
-	IsTruncated            bool               `xml:"IsTruncated"`
-	NextContinuationToken  string             `xml:"NextContinuationToken"`
-	Contents               []listContents     `xml:"Contents"`
-	CommonPrefixes         []listCommonPrefix `xml:"CommonPrefixes"`
+	XMLName               xml.Name           `xml:"ListBucketResult"`
+	IsTruncated           bool               `xml:"IsTruncated"`
+	NextContinuationToken string             `xml:"NextContinuationToken"`
+	Contents              []listContents     `xml:"Contents"`
+	CommonPrefixes        []listCommonPrefix `xml:"CommonPrefixes"`
 }
 
 // listContents is a single object listed by ListPaged; exposed via
@@ -754,7 +754,10 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	dstKey = escapeKey(dstKey)
 	srcKey = escapeKey(srcKey)
 	headers := map[string]string{
-		"x-copy-source": "/" + b.bucketName + "/" + srcKey,
+		// OBS requires the source object name to be URL-encoded; raw control
+		// characters (e.g. 0x7F) or "%" in the key would otherwise produce an
+		// invalid header value or be mis-decoded by the service.
+		"x-copy-source": "/" + b.bucketName + "/" + url.PathEscape(srcKey),
 	}
 	var req *http.Request
 	if opts.BeforeCopy != nil {
