@@ -478,6 +478,13 @@ func TestWriteAllChunkSize(t *testing.T) {
 			return b.WriteAll(ctx, "key", make([]byte, n), opts)
 		}
 	}
+	// Without ContentType, the driver writer is created after content type detection.
+	writeAllDetect := func(n int) func(*blob.WriterOptions) error {
+		return func(opts *blob.WriterOptions) error {
+			opts.ContentType = ""
+			return b.WriteAll(ctx, "key", make([]byte, n), opts)
+		}
+	}
 	newWriter := func(opts *blob.WriterOptions) error {
 		_, err := b.NewWriter(ctx, "key", opts)
 		return err
@@ -491,6 +498,7 @@ func TestWriteAllChunkSize(t *testing.T) {
 	}{
 		{"WriteAll small", writeAll(10 * 1024), 0, 10*1024 + 1},
 		{"WriteAll empty", writeAll(0), 0, 2},
+		{"WriteAll small without ContentType", writeAllDetect(10 * 1024), 0, 10*1024 + 1},
 		{"WriteAll default size", writeAll(googleapi.DefaultUploadChunkSize), 0, googleapi.DefaultUploadChunkSize},
 		{"WriteAll with BufferSize", writeAll(10 * 1024), 5 * 1024 * 1024, 5 * 1024 * 1024},
 		{"NewWriter", newWriter, 0, googleapi.DefaultUploadChunkSize},

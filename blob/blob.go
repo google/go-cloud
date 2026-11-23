@@ -1346,7 +1346,7 @@ func (b *Bucket) newWriter(ctx context.Context, key string, opts *WriterOptions,
 		w.opts = dopts
 		w.buf = bytes.NewBuffer([]byte{})
 	}
-	_, file, lineno, ok := runtime.Caller(1)
+	_, file, lineno, ok := runtime.Caller(2)
 	runtime.SetFinalizer(w, func(w *Writer) {
 		if !w.closed {
 			var caller string
