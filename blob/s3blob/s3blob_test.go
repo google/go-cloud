@@ -24,8 +24,10 @@ import (
 	"net/url"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
@@ -605,5 +607,79 @@ func TestZeroLengthReadClosesBody(t *testing.T) {
 	}
 	if got := rt.closed.Load(); got != 1 {
 		t.Errorf("closed %d response bodies, want 1", got)
+	}
+}
+
+func TestURLOpenerConfigureTransport(t *testing.T) {
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	var configured atomic.Int32
+	var gotMaxIdle atomic.Int32
+	opener := &URLOpener{
+		ConfigureTransport: func(tr *http.Transport) {
+			configured.Add(1)
+			// Starts from the AWS SDK defaults.
+			gotMaxIdle.Store(int32(tr.MaxIdleConnsPerHost))
+			tr.MaxIdleConnsPerHost = 64
+		},
+	}
+	u, err := url.Parse("s3://mybucket?region=us-east-1&anonymous=true&use_path_style=true&endpoint=" + url.QueryEscape(srv.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	b, err := opener.OpenBucketURL(ctx, u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+
+	if _, err := b.Exists(ctx, "key"); err != nil {
+		t.Fatalf("Exists: %v", err)
+	}
+	if got := configured.Load(); got != 1 {
+		t.Errorf("ConfigureTransport called %d times, want 1", got)
+	}
+	if got, want := gotMaxIdle.Load(), int32(awshttp.DefaultHTTPTransportMaxIdleConnsPerHost); got != want {
+		t.Errorf("transport passed to ConfigureTransport had MaxIdleConnsPerHost %d, want SDK default %d", got, want)
+	}
+	if requests.Load() == 0 {
+		t.Error("no request reached the test server")
+	}
+
+	var client *s3.Client
+	if !b.As(&client) {
+		t.Fatal("As(*s3.Client) failed")
+	}
+	bc, ok := client.Options().HTTPClient.(*awshttp.BuildableClient)
+	if !ok {
+		t.Fatalf("HTTPClient is %T, want *awshttp.BuildableClient", client.Options().HTTPClient)
+	}
+	if got := bc.GetTransport().MaxIdleConnsPerHost; got != 64 {
+		t.Errorf("MaxIdleConnsPerHost = %d, want 64", got)
+	}
+}
+
+func TestConfigureHTTPClientKeepsBase(t *testing.T) {
+	base := awshttp.NewBuildableClient().WithTransportOptions(func(tr *http.Transport) {
+		tr.IdleConnTimeout = 42 * time.Second
+	})
+	got := configureHTTPClient(base, func(tr *http.Transport) {
+		tr.MaxConnsPerHost = 7
+	})
+	tr := got.(*awshttp.BuildableClient).GetTransport()
+	if tr.MaxConnsPerHost != 7 {
+		t.Errorf("MaxConnsPerHost = %d, want 7", tr.MaxConnsPerHost)
+	}
+	if tr.IdleConnTimeout != 42*time.Second {
+		t.Errorf("IdleConnTimeout = %v, want the base client's 42s", tr.IdleConnTimeout)
+	}
+	if base.GetTransport().MaxConnsPerHost == 7 {
+		t.Error("base client was modified")
 	}
 }

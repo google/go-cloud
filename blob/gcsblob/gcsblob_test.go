@@ -39,6 +39,7 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
@@ -1223,5 +1224,73 @@ func TestRemainingSignedURLSchemes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestNewDefaultURLOpenerConfigureTransport(t *testing.T) {
+	// The emulator setting skips loading real credentials.
+	t.Setenv("STORAGE_EMULATOR_HOST", "localhost:1")
+
+	var configured atomic.Int32
+	opener := NewDefaultURLOpener(func(tr *http.Transport) {
+		configured.Add(1)
+		tr.MaxIdleConnsPerHost = 64
+	}).(*lazyCredsOpener)
+
+	ctx := context.Background()
+	for _, s := range []string{"gs://bucket1", "gs://bucket2"} {
+		u, err := url.Parse(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := opener.OpenBucketURL(ctx, u)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer b.Close()
+	}
+	if got := configured.Load(); got != 1 {
+		t.Errorf("configure called %d times, want 1", got)
+	}
+
+	urlOpener := opener.openers[""].opener
+	checkBase := func(name string, rt http.RoundTripper) {
+		t.Helper()
+		tr, ok := rt.(*http.Transport)
+		if !ok {
+			t.Fatalf("%s: base transport is %T, want *http.Transport", name, rt)
+		}
+		if tr.MaxIdleConnsPerHost != 64 {
+			t.Errorf("%s: MaxIdleConnsPerHost = %d, want 64", name, tr.MaxIdleConnsPerHost)
+		}
+		if tr == http.DefaultTransport {
+			t.Errorf("%s: http.DefaultTransport was modified instead of a clone", name)
+		}
+	}
+	ot, ok := urlOpener.Client.Transport.(*oauth2.Transport)
+	if !ok {
+		t.Fatalf("authenticated client: Transport is %T, want *oauth2.Transport", urlOpener.Client.Transport)
+	}
+	checkBase("authenticated client", ot.Base)
+	// The anonymous client uses the transport directly, with no OAuth wrapper.
+	checkBase("anonymous client", urlOpener.anonymousClient().Transport)
+
+	if got := http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost; got == 64 {
+		t.Error("http.DefaultTransport was modified")
+	}
+}
+
+func TestNewDefaultURLOpenerNilConfigure(t *testing.T) {
+	t.Setenv("STORAGE_EMULATOR_HOST", "localhost:1")
+	opener := NewDefaultURLOpener(nil).(*lazyCredsOpener)
+	u, _ := url.Parse("gs://bucket")
+	b, err := opener.OpenBucketURL(context.Background(), u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	ot := opener.openers[""].opener.Client.Transport.(*oauth2.Transport)
+	if ot.Base != http.DefaultTransport {
+		t.Errorf("base transport = %v, want http.DefaultTransport", ot.Base)
 	}
 }

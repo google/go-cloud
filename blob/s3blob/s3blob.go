@@ -130,6 +130,16 @@ const Scheme = "s3"
 type URLOpener struct {
 	// Options specifies the options to pass to OpenBucket.
 	Options Options
+
+	// ConfigureTransport, if non-nil, is called with the *http.Transport
+	// that the S3 client uses for requests to the bucket. The transport
+	// starts from the AWS SDK defaults, so set only the fields to change,
+	// for example MaxIdleConnsPerHost or MaxConnsPerHost to size the
+	// connection pool.
+	//
+	// It does not apply to requests made to fetch credentials, such as
+	// assuming a role with STS.
+	ConfigureTransport func(*http.Transport)
 }
 
 const (
@@ -212,6 +222,9 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %w", u, err)
 	}
+	if o.ConfigureTransport != nil {
+		cfg.HTTPClient = configureHTTPClient(cfg.HTTPClient, o.ConfigureTransport)
+	}
 	client := s3.NewFromConfig(cfg, opts...)
 
 	// The S3 upload manager doesn't use the config or options to set the
@@ -220,6 +233,19 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	o.Options.RequestChecksumCalculation = cfg.RequestChecksumCalculation
 
 	return OpenBucket(ctx, client, u.Host, &o.Options)
+}
+
+// configureHTTPClient returns a copy of base with configure applied to its
+// transport. base is normally the *awshttp.BuildableClient that the AWS config
+// loader created, which may already carry settings such as a custom CA bundle;
+// building on it keeps them. WithTransportOptions copies the client, so the
+// bucket gets its own connection pool.
+func configureHTTPClient(base aws.HTTPClient, configure func(*http.Transport)) aws.HTTPClient {
+	bc, ok := base.(*awshttp.BuildableClient)
+	if !ok {
+		bc = awshttp.NewBuildableClient()
+	}
+	return bc.WithTransportOptions(configure)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by S3.

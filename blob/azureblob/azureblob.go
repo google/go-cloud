@@ -91,6 +91,7 @@ package azureblob
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -398,15 +399,55 @@ func NewServiceURL(opts *ServiceURLOptions) (ServiceURL, error) {
 	return ServiceURL(svcURL), nil
 }
 
+// NewDefaultURLOpener returns a URL opener that behaves like the one azureblob
+// registers on blob.DefaultURLMux: it reads credentials and service URL
+// options from the environment on first use, as described in the package
+// documentation.
+//
+// If configure is non-nil, it is called once with the *http.Transport used
+// for requests to Azure Storage; set only the fields to change, for example
+// MaxIdleConnsPerHost or MaxConnsPerHost to size the connection pool. The
+// Azure SDK's own default transport is not exported, so the transport starts
+// as a clone of http.DefaultTransport with a minimum TLS version of 1.2. It
+// does not have the SDK default's HTTP/2 health-check pings. Buckets opened by
+// the returned opener share the transport, and so one connection pool.
+//
+// Register it on your own blob.URLMux:
+//
+//	mux := new(blob.URLMux)
+//	mux.RegisterBucket(azureblob.Scheme, azureblob.NewDefaultURLOpener(func(t *http.Transport) {
+//		t.MaxIdleConnsPerHost = 64
+//	}))
+func NewDefaultURLOpener(configure func(*http.Transport)) blob.BucketURLOpener {
+	return &lazyOpener{configure: configure}
+}
+
 // lazyOpener obtains credentials and creates a client on the first call to OpenBucketURL.
 type lazyOpener struct {
+	// configure, if non-nil, is applied to the HTTP transport; see
+	// NewDefaultURLOpener.
+	configure func(*http.Transport)
+
 	init   sync.Once
 	opener *URLOpener
+}
+
+// newTransporter returns the HTTP client for o's container clients, or nil to
+// use the Azure SDK default.
+func (o *lazyOpener) newTransporter() policy.Transporter {
+	if o.configure == nil {
+		return nil
+	}
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+	o.configure(t)
+	return &http.Client{Transport: t}
 }
 
 func (o *lazyOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	o.init.Do(func() {
 		credInfo := newCredInfoFromEnv()
+		credInfo.Transport = o.newTransporter()
 		opts := NewDefaultServiceURLOptions()
 		o.opener = &URLOpener{
 			MakeClient:        credInfo.NewClient,
@@ -434,6 +475,10 @@ type credInfoT struct {
 
 	// For credTypeConnectionString
 	ConnectionString string
+
+	// Transport, if non-nil, sends the container client's HTTP requests
+	// instead of the Azure SDK default.
+	Transport policy.Transporter
 }
 
 func newCredInfoFromEnv() *credInfoT {
@@ -466,6 +511,9 @@ func (i *credInfoT) NewClient(svcURL ServiceURL, containerName ContainerName) (*
 	azClientOpts := &container.ClientOptions{}
 	azClientOpts.Telemetry = policy.TelemetryOptions{
 		ApplicationID: useragent.AzureUserAgentPrefix("blob"),
+	}
+	if i.Transport != nil {
+		azClientOpts.Transport = i.Transport
 	}
 
 	containerURL, err := url.JoinPath(string(svcURL), string(containerName))
