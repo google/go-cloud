@@ -945,7 +945,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key, contentType string, op
 		w.ContentEncoding = opts.ContentEncoding
 		w.ContentLanguage = opts.ContentLanguage
 		w.ContentType = contentType
-		w.ChunkSize = bufferSize(opts.BufferSize)
+		w.ChunkSize = bufferSize(opts.BufferSize, opts.SizeHint)
 		w.Metadata = opts.Metadata
 		w.MD5 = opts.ContentMD5
 		w.ForceEmptyContentType = opts.DisableContentTypeDetection
@@ -1112,8 +1112,14 @@ func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.Signed
 	return storage.SignedURL(b.name, key, opts)
 }
 
-func bufferSize(size int) int {
+func bufferSize(size, sizeHint int) int {
 	if size == 0 {
+		// The Writer allocates a buffer of this size, so don't make it much
+		// larger than the blob. It must be larger than the blob for the upload
+		// to fit in a single request.
+		if sizeHint > 0 && sizeHint < googleapi.DefaultUploadChunkSize {
+			return sizeHint + 1
+		}
 		return googleapi.DefaultUploadChunkSize
 	} else if size > 0 {
 		return size
