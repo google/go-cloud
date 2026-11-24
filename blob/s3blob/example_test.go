@@ -17,6 +17,7 @@ package s3blob_test
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -53,6 +54,27 @@ func Example_openBucketFromURL() {
 
 	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	bucket, err := blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = bucket.Close() }()
+}
+
+func Example_openBucketFromURLWithTransport() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	// ConfigureTransport customizes the default HTTP transport.
+	mux := new(blob.URLMux)
+	mux.RegisterBucket(s3blob.Scheme, &s3blob.URLOpener{
+		ConfigureTransport: func(t *http.Transport) {
+			t.MaxIdleConnsPerHost = 64
+			t.MaxConnsPerHost = 128
+		},
+	})
+
+	bucket, err := mux.OpenBucket(ctx, "s3://my-bucket?region=us-west-1")
 	if err != nil {
 		log.Fatal(err)
 	}

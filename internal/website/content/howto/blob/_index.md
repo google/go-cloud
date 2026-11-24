@@ -74,6 +74,27 @@ See the [guide below][] for constructor usage for each supported service.
 [Concepts: URLs]: {{< ref "/concepts/urls.md" >}}
 [guide below]: {{< ref "#services" >}}
 
+### Customizing the HTTP Transport {#transport}
+
+To customize the default HTTP transport, register the driver's URL opener on
+your own [`blob.URLMux`][] with a function that edits the default
+[`*http.Transport`][]:
+
+```go
+customize := func(t *http.Transport) {
+	// Change the transport fields you need.
+}
+mux := new(blob.URLMux)
+mux.RegisterBucket(s3blob.Scheme, &s3blob.URLOpener{ConfigureTransport: customize})
+mux.RegisterBucket(gcsblob.Scheme, gcsblob.NewDefaultURLOpener(customize))
+mux.RegisterBucket(azureblob.Scheme, azureblob.NewDefaultURLOpener(customize))
+```
+
+See each driver's API reference for details.
+
+[`blob.URLMux`]: https://godoc.org/gocloud.dev/blob#URLMux
+[`*http.Transport`]: https://pkg.go.dev/net/http#Transport
+
 ### Prefixed Buckets {#prefix}
 
 You can wrap a `*blob.Bucket` to always operate on a subfolder of the bucket

@@ -17,6 +17,7 @@ package gcsblob_test
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/gcsblob"
@@ -63,6 +64,25 @@ func Example_openBucketFromURL() {
 	// blob.OpenBucket creates a *blob.Bucket from a URL.
 	// This URL will open the bucket "my-bucket" using default credentials.
 	bucket, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = bucket.Close() }()
+}
+
+func Example_openBucketFromURLWithTransport() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	// NewDefaultURLOpener customizes the default HTTP transport.
+	mux := new(blob.URLMux)
+	mux.RegisterBucket(gcsblob.Scheme, gcsblob.NewDefaultURLOpener(func(t *http.Transport) {
+		t.MaxIdleConnsPerHost = 64
+		t.MaxConnsPerHost = 128
+	}))
+
+	bucket, err := mux.OpenBucket(ctx, "gs://my-bucket")
 	if err != nil {
 		log.Fatal(err)
 	}

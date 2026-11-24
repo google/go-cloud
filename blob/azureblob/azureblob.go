@@ -54,7 +54,8 @@
 // service endpoint; use the environment variables above instead.
 //
 // To customize the URL opener, or for more details on the URL format,
-// see URLOpener.
+// see URLOpener. To customize the default HTTP transport, use
+// NewDefaultURLOpener.
 //
 // See https://gocloud.dev/concepts/urls/ for background information.
 //

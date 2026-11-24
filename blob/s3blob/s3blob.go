@@ -22,7 +22,8 @@
 // and configuration.
 //
 // To customize the URL opener, or for more details on the URL format,
-// see URLOpener.
+// see URLOpener. To customize the default HTTP transport, set
+// URLOpener.ConfigureTransport.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
 // # Escaping

@@ -17,6 +17,7 @@ package azureblob_test
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
@@ -96,4 +97,23 @@ func Example_openBucketFromURL() {
 		log.Fatal(err)
 	}
 	defer func() { _ = localbucket.Close() }()
+}
+
+func Example_openBucketFromURLWithTransport() {
+	// PRAGMA: This example is used on gocloud.dev; PRAGMA comments adjust how it is shown and can be ignored.
+	// PRAGMA: On gocloud.dev, hide lines until the next blank line.
+	ctx := context.Background()
+
+	// NewDefaultURLOpener customizes the default HTTP transport.
+	mux := new(blob.URLMux)
+	mux.RegisterBucket(azureblob.Scheme, azureblob.NewDefaultURLOpener(func(t *http.Transport) {
+		t.MaxIdleConnsPerHost = 64
+		t.MaxConnsPerHost = 128
+	}))
+
+	bucket, err := mux.OpenBucket(ctx, "azblob://my-container")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() { _ = bucket.Close() }()
 }
