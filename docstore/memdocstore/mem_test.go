@@ -26,6 +26,7 @@ import (
 	"gocloud.dev/docstore"
 	"gocloud.dev/docstore/driver"
 	"gocloud.dev/docstore/drivertest"
+	"gocloud.dev/gcerrors"
 )
 
 type harness struct{}
@@ -138,6 +139,45 @@ func TestUpdateAtomic(t *testing.T) {
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestAtomicWritesFailureLeavesNoWrites(t *testing.T) {
+	// A failing action in an atomic write must undo the actions that ran
+	// before it.
+	ctx := context.Background()
+	dc, err := newCollection(drivertest.KeyField, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+	defer closeWithErrorCheck(t, coll)
+	for _, doc := range []docmap{
+		{drivertest.KeyField: "b", "n": 1},
+		{drivertest.KeyField: "c", "s": "S"},
+	} {
+		if err := coll.Put(ctx, doc); err != nil {
+			t.Fatal(err)
+		}
+	}
+	errs := coll.Actions().AtomicWrites().
+		Put(docmap{drivertest.KeyField: "a", "x": 1}).
+		Update(docmap{drivertest.KeyField: "b"}, docstore.Mods{"n": docstore.Increment(1), "m.k": "K"}).
+		Update(docmap{drivertest.KeyField: "c"}, docstore.Mods{"s": docstore.Increment(1)}).
+		Do(ctx)
+	if errs == nil {
+		t.Fatal("got nil, want errors")
+	}
+	if err := coll.Get(ctx, docmap{drivertest.KeyField: "a"}); gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("Get(a): got %v, want NotFound", err)
+	}
+	got := docmap{drivertest.KeyField: "b"}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	want := docmap{drivertest.KeyField: "b", "n": int64(1)}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("got=-, want=+: %s", diff)
 	}
 }
 
