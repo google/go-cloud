@@ -41,6 +41,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 
@@ -201,22 +202,37 @@ func (c *collection) runGets(ctx context.Context, actions []*driver.Action, errs
 }
 
 func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs []error, opts *driver.RunActionsOptions, start, end int) {
+	keys := make([]map[string]dyn2Types.AttributeValue, 0, end-start+1)
+	// byKey maps the key of each Get that is sent to its index in gets. Keys
+	// are compared the way DynamoDB compares them, so items in the response can
+	// be matched to their Gets whatever Go types the documents use for keys.
+	byKey := make(map[string]int, end-start+1)
+	for i := start; i <= end; i++ {
+		av, ks, err := c.batchGetKey(gets[i].Doc)
+		if err == nil {
+			if _, ok := byKey[ks]; ok {
+				err = gcerr.Newf(gcerr.InvalidArgument, nil, "duplicate key in action list: %v", gets[i].Key)
+			}
+		}
+		if err != nil {
+			// Only this Get fails. A bad key would make DynamoDB reject the
+			// whole request.
+			errs[gets[i].Index] = err
+			continue
+		}
+		byKey[ks] = i
+		keys = append(keys, av)
+	}
+	if len(keys) == 0 {
+		return
+	}
 	// errors need to be mapped to the actions' indices.
 	setErr := func(err error) {
-		for i := start; i <= end; i++ {
+		for _, i := range byKey {
 			errs[gets[i].Index] = err
 		}
 	}
 
-	keys := make([]map[string]dyn2Types.AttributeValue, 0, end-start+1)
-	for i := start; i <= end; i++ {
-		av, err := encodeDocKeyFields(gets[i].Doc, c.partitionKey, c.sortKey)
-		if err != nil {
-			errs[gets[i].Index] = err
-		}
-
-		keys = append(keys, av.Value)
-	}
 	ka := dyn2Types.KeysAndAttributes{
 		Keys:           keys,
 		ConsistentRead: aws.Bool(c.opts.ConsistentRead),
@@ -264,43 +280,73 @@ func (c *collection) batchGet(ctx context.Context, gets []*driver.Action, errs [
 		return
 	}
 	found := make([]bool, end-start+1)
-	am := mapActionIndices(gets, start, end)
 	for _, item := range out.Responses[c.table] {
-		if item != nil {
-			key := map[string]any{c.partitionKey: nil}
-			if c.sortKey != "" {
-				key[c.sortKey] = nil
-			}
-			keysOnly, err := driver.NewDocument(key)
-			if err != nil {
-				panic(err)
-			}
-			err = decodeDoc(&dyn2Types.AttributeValueMemberM{Value: item}, keysOnly)
-			if err != nil {
-				continue
-			}
-			decKey, err := c.Key(keysOnly)
-			if err != nil {
-				continue
-			}
-			i := am[decKey]
-			errs[gets[i].Index] = decodeDoc(&dyn2Types.AttributeValueMemberM{Value: item}, gets[i].Doc)
-			found[i-start] = true
+		ks, err := c.keyString(item)
+		if err != nil {
+			continue
 		}
+		i, ok := byKey[ks]
+		if !ok {
+			continue
+		}
+		errs[gets[i].Index] = decodeDoc(&dyn2Types.AttributeValueMemberM{Value: item}, gets[i].Doc)
+		found[i-start] = true
 	}
-	for delta, f := range found {
-		if !f {
-			errs[gets[start+delta].Index] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", gets[start+delta].Doc)
+	for _, i := range byKey {
+		if !found[i-start] {
+			errs[gets[i].Index] = gcerr.Newf(gcerr.NotFound, nil, "item %v not found", gets[i].Doc)
 		}
 	}
 }
 
-func mapActionIndices(actions []*driver.Action, start, end int) map[any]int {
-	m := make(map[any]int)
-	for i := start; i <= end; i++ {
-		m[actions[i].Key] = i
+// batchGetKey encodes the key fields of doc for a BatchGetItem request. It
+// also returns the key's string from keyString.
+func (c *collection) batchGetKey(doc driver.Document) (map[string]dyn2Types.AttributeValue, string, error) {
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	if err != nil {
+		return nil, "", gcerr.Newf(gcerr.InvalidArgument, err, "bad document key")
 	}
-	return m
+	ks, err := c.keyString(av.Value)
+	if err != nil {
+		return nil, "", gcerr.Newf(gcerr.InvalidArgument, err, "bad document key")
+	}
+	return av.Value, ks, nil
+}
+
+// keyString returns a string made from the key attributes of item. Two keys
+// have the same string if and only if DynamoDB treats them as the same key:
+// numbers are compared by value, so 1, 1.0 and 1E0 are the same key and large
+// integers are not rounded. It returns an error for a key DynamoDB would
+// reject, such as a missing or empty key attribute.
+func (c *collection) keyString(item map[string]dyn2Types.AttributeValue) (string, error) {
+	var b strings.Builder
+	for _, name := range []string{c.partitionKey, c.sortKey} {
+		if name == "" {
+			continue
+		}
+		var typ, val string
+		switch v := item[name].(type) {
+		case *dyn2Types.AttributeValueMemberS:
+			typ, val = "S", v.Value
+		case *dyn2Types.AttributeValueMemberN:
+			r, ok := new(big.Rat).SetString(v.Value)
+			if !ok {
+				return "", fmt.Errorf("key field %q: invalid number %q", name, v.Value)
+			}
+			typ, val = "N", r.RatString()
+		case *dyn2Types.AttributeValueMemberB:
+			typ, val = "B", string(v.Value)
+		case nil, *dyn2Types.AttributeValueMemberNULL:
+			return "", fmt.Errorf("missing key field %q", name)
+		default:
+			return "", fmt.Errorf("key field %q must be a string, number or binary value", name)
+		}
+		if val == "" {
+			return "", fmt.Errorf("key field %q is empty", name)
+		}
+		fmt.Fprintf(&b, "%s%d:%s", typ, len(val), val)
+	}
+	return b.String(), nil
 }
 
 // runWrites executes all the writes as separate RPCs, concurrently.
