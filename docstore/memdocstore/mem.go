@@ -265,15 +265,13 @@ func (c *collection) runAtomicWrites(ctx context.Context, actions []*driver.Acti
 	// were before, so that a failing action can undo the ones that already ran.
 	original := map[any]storedDoc{}
 	for _, info := range actionInfos {
-		a := info.action
-		original[a.Key] = c.docs[a.Key]
-		current := info.current
-		if a.Kind == driver.Update {
+		original[info.action.Key] = c.docs[info.action.Key]
+		if info.action.Kind == driver.Update {
 			// Update changes the document in place, so work on a copy.
-			current = copyMap(current)
-			c.docs[a.Key] = current
+			info.current = info.current.copy()
+			c.docs[info.action.Key] = info.current
 		}
-		if err := c.executeAction(a, current, info.exists); err != nil {
+		if err := c.executeAction(info.action, info.current, info.exists); err != nil {
 			for key, doc := range original {
 				if doc == nil {
 					delete(c.docs, key)
@@ -290,12 +288,12 @@ func (c *collection) runAtomicWrites(ctx context.Context, actions []*driver.Acti
 	}
 }
 
-// copyMap returns a copy of m that shares no nested maps with it.
-func copyMap(m map[string]any) map[string]any {
-	cp := make(map[string]any, len(m))
-	for k, v := range m {
+// copy returns a copy of d that shares no nested maps with it.
+func (d storedDoc) copy() storedDoc {
+	cp := make(storedDoc, len(d))
+	for k, v := range d {
 		if vm, ok := v.(map[string]any); ok {
-			v = copyMap(vm)
+			v = map[string]any(storedDoc(vm).copy())
 		}
 		cp[k] = v
 	}

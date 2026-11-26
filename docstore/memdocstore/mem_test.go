@@ -155,6 +155,7 @@ func TestAtomicWritesFailureLeavesNoWrites(t *testing.T) {
 	for _, doc := range []docmap{
 		{drivertest.KeyField: "b", "n": 1},
 		{drivertest.KeyField: "c", "s": "S"},
+		{drivertest.KeyField: "d", "y": 2},
 	} {
 		if err := coll.Put(ctx, doc); err != nil {
 			t.Fatal(err)
@@ -163,6 +164,7 @@ func TestAtomicWritesFailureLeavesNoWrites(t *testing.T) {
 	errs := coll.Actions().AtomicWrites().
 		Put(docmap{drivertest.KeyField: "a", "x": 1}).
 		Update(docmap{drivertest.KeyField: "b"}, docstore.Mods{"n": docstore.Increment(1), "m.k": "K"}).
+		Delete(docmap{drivertest.KeyField: "d"}).
 		Update(docmap{drivertest.KeyField: "c"}, docstore.Mods{"s": docstore.Increment(1)}).
 		Do(ctx)
 	if errs == nil {
@@ -176,6 +178,14 @@ func TestAtomicWritesFailureLeavesNoWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := docmap{drivertest.KeyField: "b", "n": int64(1)}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("got=-, want=+: %s", diff)
+	}
+	got = docmap{drivertest.KeyField: "d"}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatalf("Get(d): %v", err)
+	}
+	want = docmap{drivertest.KeyField: "d", "y": int64(2)}
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("got=-, want=+: %s", diff)
 	}
