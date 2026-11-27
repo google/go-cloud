@@ -191,6 +191,27 @@ func TestAtomicWritesFailureLeavesNoWrites(t *testing.T) {
 	}
 }
 
+func TestStoredDocCopy(t *testing.T) {
+	d := storedDoc{
+		"m": map[string]any{"k": "v"},
+		"l": []any{map[string]any{"k": "v"}, []any{1}},
+		"b": []byte("b"),
+	}
+	cp := d.copy()
+	cp["m"].(map[string]any)["k"] = "changed"
+	cp["l"].([]any)[0].(map[string]any)["k"] = "changed"
+	cp["l"].([]any)[1].([]any)[0] = 2
+	cp["b"].([]byte)[0] = 'x'
+	want := storedDoc{
+		"m": map[string]any{"k": "v"},
+		"l": []any{map[string]any{"k": "v"}, []any{1}},
+		"b": []byte("b"),
+	}
+	if diff := cmp.Diff(d, want); diff != "" {
+		t.Errorf("changing the copy changed the original (got=-, want=+): %s", diff)
+	}
+}
+
 func TestUpdateCreatesMissingMaps(t *testing.T) {
 	// Check that an update of a nested field creates the maps along the
 	// field path that don't exist yet.
