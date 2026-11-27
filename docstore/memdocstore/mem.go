@@ -261,19 +261,22 @@ func (c *collection) runAtomicWrites(ctx context.Context, actions []*driver.Acti
 		}
 	}
 
-	// Now execute all actions atomically. Keep the stored documents as they
-	// were before, so that a failing action can undo the ones that already ran.
+	// Now execute all actions atomically. Keep each document as it was before,
+	// so that a failing action can undo the ones that already ran.
 	original := map[any]storedDoc{}
 	for _, info := range actionInfos {
-		original[info.action.Key] = c.docs[info.action.Key]
+		prev := c.docs[info.action.Key]
 		if info.action.Kind == driver.Update {
-			// Update changes the document in place, so work on a copy.
-			info.current = info.current.copy()
-			c.docs[info.action.Key] = info.current
+			// Update changes the stored document in place.
+			prev = prev.copy()
 		}
+		original[info.action.Key] = prev
 		if err := c.executeAction(info.action, info.current, info.exists); err != nil {
 			for key, doc := range original {
 				if doc == nil {
+					// There was no document with this key before, so the
+					// action was a Create, Put or Replace that added one.
+					// Remove it.
 					delete(c.docs, key)
 				} else {
 					c.docs[key] = doc
