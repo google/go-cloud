@@ -39,6 +39,7 @@
 package memdocstore // import "gocloud.dev/docstore/memdocstore"
 
 import (
+	"bytes"
 	"context"
 	"encoding/gob"
 	"fmt"
@@ -143,6 +144,34 @@ func newCollection(keyField string, keyFunc func(docstore.Document) any, opts *O
 // the client," in a more typical driver that acts as a network client) from
 // those stored in a collection (those "on the server").
 type storedDoc map[string]any
+
+// copy returns a copy of d that shares no maps or lists with it.
+func (d storedDoc) copy() storedDoc {
+	return storedDoc(copyValue(map[string]any(d)).(map[string]any))
+}
+
+// copyValue returns a deep copy of v. The encoder stores maps as
+// map[string]any, lists as []any and bytes as []byte; the other values it
+// stores (nil, bool, int64, float64, string and time.Time) are immutable.
+func copyValue(v any) any {
+	switch v := v.(type) {
+	case []byte:
+		return bytes.Clone(v)
+	case map[string]any:
+		cp := make(map[string]any, len(v))
+		for k, x := range v {
+			cp[k] = copyValue(x)
+		}
+		return cp
+	case []any:
+		cp := make([]any, len(v))
+		for i, x := range v {
+			cp[i] = copyValue(x)
+		}
+		return cp
+	}
+	return v
+}
 
 type collection struct {
 	keyField    string
@@ -261,9 +290,27 @@ func (c *collection) runAtomicWrites(ctx context.Context, actions []*driver.Acti
 		}
 	}
 
-	// Now execute all actions atomically
+	// Now execute all actions atomically. Keep each document as it was before,
+	// so that a failing action can undo the ones that already ran.
+	original := map[any]storedDoc{}
 	for _, info := range actionInfos {
+		prev := c.docs[info.action.Key]
+		if info.action.Kind == driver.Update {
+			// Update changes the stored document in place.
+			prev = prev.copy()
+		}
+		original[info.action.Key] = prev
 		if err := c.executeAction(info.action, info.current, info.exists); err != nil {
+			for key, doc := range original {
+				if doc == nil {
+					// There was no document with this key before, so the
+					// action was a Create, Put or Replace that added one.
+					// Remove it.
+					delete(c.docs, key)
+				} else {
+					c.docs[key] = doc
+				}
+			}
 			// If any action fails, mark all actions as failed
 			for _, a2 := range actions {
 				errs[a2.Index] = err
