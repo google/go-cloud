@@ -31,7 +31,8 @@
 // https://cloud.google.com/iam/docs/creating-managing-service-account-keys
 //
 // To customize the URL opener, or for more details on the URL format,
-// see URLOpener.
+// see URLOpener. To customize the default HTTP transport, use
+// NewDefaultURLOpener.
 // See https://gocloud.dev/concepts/urls/ for background information.
 //
 // # Escaping
@@ -149,11 +150,46 @@ type openerOrError struct {
 	err    error
 }
 
+// NewDefaultURLOpener returns a URL opener that behaves like the one gcsblob
+// registers on blob.DefaultURLMux: it obtains Application Default Credentials
+// on first use. If configure is non-nil, it is called once with the
+// *http.Transport used for requests to Cloud Storage, which starts as a clone
+// of http.DefaultTransport; set only the fields to change, for example
+// MaxIdleConnsPerHost or MaxConnsPerHost to size the connection pool.
+//
+// Buckets opened by the returned opener share one transport, and so one
+// connection pool, per universe_domain. configure does not apply to URLs with
+// grpc=true or zonal=true, which do not use HTTP.
+//
+// Register it on your own blob.URLMux:
+//
+//	mux := new(blob.URLMux)
+//	mux.RegisterBucket(gcsblob.Scheme, gcsblob.NewDefaultURLOpener(func(t *http.Transport) {
+//		t.MaxIdleConnsPerHost = 64
+//	}))
+func NewDefaultURLOpener(configure func(*http.Transport)) blob.BucketURLOpener {
+	return &lazyCredsOpener{configure: configure}
+}
+
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenBucketURL per universe_domain query parameter value.
 type lazyCredsOpener struct {
+	// configure, if non-nil, is applied to the HTTP transport; see
+	// NewDefaultURLOpener.
+	configure func(*http.Transport)
+
 	mutex   sync.Mutex
 	openers map[string]*openerOrError // per universe_domain query parameter value
+}
+
+// newTransport returns the base HTTP transport for o's clients.
+func (o *lazyCredsOpener) newTransport() http.RoundTripper {
+	if o.configure == nil {
+		return gcp.DefaultTransport()
+	}
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	o.configure(t)
+	return t
 }
 
 func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
@@ -177,6 +213,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		// Cache miss.
 		var opts Options
 		var creds *google.Credentials
+		transport := o.newTransport()
 		// STORAGE_EMULATOR_HOST_GRPC is the gRPC equivalent; a local emulator
 		// needs separate ports for HTTP and gRPC, so either may be set.
 		if os.Getenv("STORAGE_EMULATOR_HOST") != "" || os.Getenv("STORAGE_EMULATOR_HOST_GRPC") != "" {
@@ -222,11 +259,11 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 			opts.MakeSignBytes = iam.CreateMakeSignBytesWith(ctx, opts.GoogleAccessID)
 		}
 
-		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		client, err := gcp.NewHTTPClient(transport, creds.TokenSource)
 		if err == nil {
 			// TokenSource is needed for grpc=true and zonal=true URLs, which build a
 			// separate gRPC client that cannot reuse the HTTP one.
-			opener = &URLOpener{Client: client, TokenSource: gcp.CredentialsTokenSource(creds), Options: opts}
+			opener = &URLOpener{Client: client, TokenSource: gcp.CredentialsTokenSource(creds), Options: opts, transport: transport}
 		} else {
 			openerErr = err
 		}
@@ -275,6 +312,20 @@ type URLOpener struct {
 
 	// Options specifies the default options to pass to OpenBucket.
 	Options Options
+
+	// transport, if non-nil, is the base transport for the unauthenticated
+	// clients built for anonymous=true and access_id=-. It is set by
+	// NewDefaultURLOpener so those URLs share its tuned transport.
+	transport http.RoundTripper
+}
+
+// anonymousClient returns an unauthenticated HTTP client.
+func (o *URLOpener) anonymousClient() *gcp.HTTPClient {
+	transport := o.transport
+	if transport == nil {
+		transport = gcp.DefaultTransport()
+	}
+	return gcp.NewAnonymousHTTPClient(transport)
 }
 
 // OpenBucketURL opens the GCS bucket with the same name as the URL's host.
@@ -369,14 +420,14 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, *gcp
 		}
 		if isAnon {
 			opts.clear()
-			client = gcp.NewAnonymousHTTPClient(gcp.DefaultTransport())
+			client = o.anonymousClient()
 			params.anonymous = true
 		}
 	}
 	if accessID := q.Get("access_id"); accessID != "" && accessID != opts.GoogleAccessID {
 		opts.clear()
 		if accessID == "-" {
-			client = gcp.NewAnonymousHTTPClient(gcp.DefaultTransport())
+			client = o.anonymousClient()
 			params.anonymous = true
 		} else {
 			opts.GoogleAccessID = accessID

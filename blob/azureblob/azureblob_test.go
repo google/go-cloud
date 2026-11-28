@@ -19,10 +19,12 @@ package azureblob
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -888,5 +890,65 @@ func TestZeroLengthReadClosesBody(t *testing.T) {
 	}
 	if got := rt.closed.Load(); got != 1 {
 		t.Errorf("closed %d response bodies, want 1", got)
+	}
+}
+
+func TestNewDefaultURLOpenerConfigureTransport(t *testing.T) {
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	t.Setenv("AZURE_STORAGE_ACCOUNT", "myaccount")
+	t.Setenv("AZURE_STORAGE_KEY", "")
+	t.Setenv("AZURE_STORAGE_SAS_TOKEN", "sv=2020-02-10")
+	t.Setenv("AZURE_STORAGE_CONNECTION_STRING", "")
+	t.Setenv("AZURE_STORAGEBLOB_CONNECTIONSTRING", "")
+
+	var configured, dials atomic.Int32
+	var gotTLS *tls.Config
+	opener := NewDefaultURLOpener(func(tr *http.Transport) {
+		configured.Add(1)
+		gotTLS = tr.TLSClientConfig
+		tr.MaxIdleConnsPerHost = 64
+		dial := tr.DialContext
+		tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dials.Add(1)
+			return dial(ctx, network, addr)
+		}
+	})
+	srvURL, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	// Open two buckets to check they share the transport.
+	for _, name := range []string{"container1", "container2"} {
+		u, err := url.Parse("azblob://" + name + "?localemu=true&protocol=http&domain=" + srvURL.Host)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := opener.OpenBucketURL(ctx, u)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer b.Close()
+		// The server answers 404; only the request path matters here.
+		_, _ = b.Exists(ctx, "key")
+	}
+
+	if got := configured.Load(); got != 1 {
+		t.Errorf("configure called %d times, want 1", got)
+	}
+	if gotTLS == nil || gotTLS.MinVersion != tls.VersionTLS12 {
+		t.Errorf("transport passed to configure has TLSClientConfig %+v, want MinVersion TLS 1.2", gotTLS)
+	}
+	if got := requests.Load(); got < 2 {
+		t.Errorf("server got %d requests, want at least 2", got)
+	}
+	if dials.Load() == 0 {
+		t.Error("requests did not go through the configured transport")
 	}
 }
